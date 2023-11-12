@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "ubo-app"
+version = "0.1.0"
+description = ""
+authors = ["Sassan Haradji <sassanh@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{ include = "ubo_app" }]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+psutil = "^5.9.6"
+ubo-gui = "^0.4.0"
+python-redux = "^0.1.0"
+
+[tool.poetry.group.dev.dependencies]
+screeninfo = "^0.8.1"
+poethepoet = "^0.24.2"
+
+[tool.poetry.scripts]
+ubo = "ubo_app.menu:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+lint = "pyright -p pyproject.toml ."
+
+[tool.ruff]
+select = ['ALL']
+ignore = []
+
+fixable = ['ALL']
+unfixable = []
+
+[tool.ruff.flake8-builtins]
+builtins-ignorelist = ['type']
+
+[tool.ruff.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "double"
+
+[tool.ruff.format]
+quote-style = 'single'
