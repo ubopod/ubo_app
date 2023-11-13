@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import datetime
 import os
-import threading
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
@@ -15,12 +14,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.stencilview import StencilView
 
-from ubo_app.store import autorun, dispatch
-from ubo_app.store.status_icons import (
-    IconRegistrationAction,
-    IconRegistrationActionPayload,
-    IconState,
-)
+from ubo_app.store import autorun
 
 os.environ['KIVY_METRICS_DENSITY'] = '1'
 os.environ['KIVY_NO_CONFIG'] = '1'
@@ -35,6 +29,8 @@ from ubo_gui.volume import VolumeWidget  # noqa: E402
 
 if TYPE_CHECKING:
     from menu import Menu
+
+    from ubo_app.store.status_icons import IconState
 
 
 SETTINGS_MENU: Menu = {
@@ -111,14 +107,6 @@ HOME_MENU: Menu = {
         },
     ],
 }
-
-
-dispatch(
-    IconRegistrationAction(
-        type='REGISTER_ICON',
-        payload=IconRegistrationActionPayload(icon='wifi_off'),
-    ),
-)
 
 
 class MenuApp(UboApp):
@@ -273,27 +261,3 @@ class MenuApp(UboApp):
         layout.add_widget(home_footer_layout)
 
         return layout
-
-
-def main() -> None:
-    """Instantiate the `MenuApp` and run it."""
-    app = MenuApp()
-
-    Clock.schedule_interval(
-        lambda *_: dispatch(
-            [
-                IconRegistrationAction(
-                    type='REGISTER_ICON',
-                    payload=IconRegistrationActionPayload(icon='wifi', priority=-1),
-                )
-                for _ in range(2)
-            ],
-        ),
-        3,
-    )
-
-    app.run()
-
-
-if __name__ == '__main__':
-    main()

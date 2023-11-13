@@ -7,18 +7,44 @@ license = "Apache-2.0"
 readme = "README.md"
 packages = [{ include = "ubo_app" }]
 
+
+[[tool.poetry.source]]
+name = "piwheels"
+url = "https://www.piwheels.org/simple/"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+
 [tool.poetry.dependencies]
 python = "^3.9"
 psutil = "^5.9.6"
-ubo-gui = "^0.4.0"
+ubo-gui = [
+  { version = "^0.4.4", markers = "extra!='dev'", optional = false },
+  { version = "^0.4.4", markers = "extra=='dev'", extras = [
+    "dev",
+  ], optional = true },
+]
+headless-kivy-pi = [
+  { version = "^0.4.2", markers = "extra!='dev'" },
+  { version = "^0.4.2", markers = "extra=='dev'", extras = [
+    "dev",
+  ], optional = true },
+]
 python-redux = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
-screeninfo = "^0.8.1"
-poethepoet = "^0.24.2"
+poethepoet = { version = "^0.24.2", optional = true }
+ubo-gui = { version = "^0.4.4" }
+headless-kivy-pi = { version = "^0.4.2" }
+
+[tool.poetry.extras]
+dev = ['poethepoet', 'ubo-gui', 'headless-kivy-pi']
 
 [tool.poetry.scripts]
-ubo = "ubo_app.menu:main"
+ubo = "ubo_app:main"
 
 [build-system]
 requires = ["poetry-core"]
