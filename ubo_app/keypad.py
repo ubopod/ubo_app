@@ -40,13 +40,13 @@ class ButtonName(Enum):
 ButtonStatus = Literal['pressed', 'released']
 
 
-@dataclass
+@dataclass(frozen=True)
 class ButtonEvent:
     status: ButtonStatus
     timestamp: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class Event:
     inputs: UnaryStruct
     timestamp: float

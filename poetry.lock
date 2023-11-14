@@ -144,18 +144,14 @@ reference = "piwheels"
 
 [[package]]
 name = "adafruit-platformdetect"
-version = "3.53.0"
+version = "3.54.0"
 description = "Platform detection for use by libraries like Adafruit-Blinka."
 optional = false
 python-versions = "*"
 files = [
-    {file = "Adafruit_PlatformDetect-3.53.0-py3-none-any.whl", hash = "sha256:7d039d5d4546b45859209daea6322c188f291633c43b0c01a8be7ee364263abf"},
+    {file = "Adafruit-PlatformDetect-3.54.0.tar.gz", hash = "sha256:3fe7fb781a83d3f28812bcbff34edd4100afb68901d9c62ee22d07e824d82168"},
+    {file = "Adafruit_PlatformDetect-3.54.0-py3-none-any.whl", hash = "sha256:fecae7a6612bbcd32d1f40c2d2f1aa263c554be5e52cc6fa4eebaf8b80c33519"},
 ]
-
-[package.source]
-type = "legacy"
-url = "https://www.piwheels.org/simple"
-reference = "piwheels"
 
 [[package]]
 name = "adafruit-pureio"
@@ -594,13 +590,13 @@ reference = "piwheels"
 
 [[package]]
 name = "python-redux"
-version = "0.1.0"
+version = "0.2.0"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.1.0-py3-none-any.whl", hash = "sha256:8b8daf983057a83e49e81d43d62e19e5dda68a807cc1d2cf15b9c9d2487aab2b"},
-    {file = "python_redux-0.1.0.tar.gz", hash = "sha256:7e073021ff8da2cf804e85486ce18335b7e8ac332ae75919f4e05f747f0a3c75"},
+    {file = "python_redux-0.2.0-py3-none-any.whl", hash = "sha256:a191a601f6f64acc4cdc595a18d06e4e0eabaee140c0816fd931138a141c20dd"},
+    {file = "python_redux-0.2.0.tar.gz", hash = "sha256:58329d22ed4ea5351ad92879a4d2f30c26195f21d12e1f2dd64127fe4d8730e4"},
 ]
 
 [[package]]
@@ -813,4 +809,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "6c278f159a5ed9f6ce46d9df27a2758b2e2de1bcbdcf123526aa3935682bcd99"
+content-hash = "ac82fbf7bab8edd898e6934448e47cab6005285c01cbbe2d0fc7fe0cb16193b7"

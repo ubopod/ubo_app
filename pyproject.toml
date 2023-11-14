@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.1.1"
+version = "0.2.0"
 description = ""
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -33,7 +33,7 @@ headless-kivy-pi = [
     "dev",
   ], optional = true },
 ]
-python-redux = "^0.1.0"
+python-redux = "^0.2.0"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = { version = "^0.24.2", optional = true }

@@ -1,6 +1,4 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
-import os
-
 from kivy.clock import Clock
 
 from ubo_app.menu import MenuApp

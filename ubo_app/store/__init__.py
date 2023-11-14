@@ -1,10 +1,12 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias, TypedDict, cast
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 from redux import (
     BaseAction,
+    BaseState,
     InitAction,
     InitializationActionError,
     ReducerType,
@@ -18,11 +20,13 @@ if TYPE_CHECKING:
     from .status_icons import StatusIconsState
 
 
-class MainState(TypedDict):
+@dataclass(frozen=True)
+class MainState(BaseState):
     pass
 
 
-class RootState(TypedDict):
+@dataclass(frozen=True)
+class RootState(BaseState):
     main: MainState
     status_icons: StatusIconsState
 
@@ -33,7 +37,7 @@ MainAction: TypeAlias = InitAction
 def main_reducer(state: MainState | None, action: MainAction) -> MainState:
     if state is None:
         if action.type == 'INIT':
-            return {}
+            return MainState()
         raise InitializationActionError
 
     return state
