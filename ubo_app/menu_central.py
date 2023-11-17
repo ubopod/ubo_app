@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from functools import cached_property
+from functools import cached_property, reduce
 from threading import Thread
 from typing import TYPE_CHECKING
 
@@ -12,70 +12,15 @@ from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
 from ubo_gui.menu.constants import SHORT_WIDTH
-from ubo_gui.notification import notification_manager
 from ubo_gui.volume import VolumeWidget
+
+from ubo_app.store.main_selectors import current_menu
+
+from .store import autorun
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Menu
-
-
-SETTINGS_MENU: Menu = {
-    'title': 'Settings',
-    'heading': 'Please choose',
-    'sub_heading': 'This is sub heading',
-    'items': lambda: [],
-}
-
-MAIN_MENU: Menu = {
-    'title': 'Main',
-    'heading': 'What are you going to do?',
-    'sub_heading': 'Choose from the options',
-    'items': [
-        {
-            'label': 'Settings',
-            'icon': 'settings',
-            'sub_menu': SETTINGS_MENU,
-        },
-        {
-            'label': 'Apps',
-            'action': lambda: print('Apps'),
-            'icon': 'apps',
-        },
-        {
-            'label': 'About',
-            'action': lambda: print('About'),
-            'icon': 'info',
-        },
-    ],
-}
-HOME_MENU: Menu = {
-    'title': 'Dashboard',
-    'items': [
-        {
-            'label': '',
-            'sub_menu': MAIN_MENU,
-            'icon': 'menu',
-            'is_short': True,
-        },
-        {
-            'label': '',
-            'sub_menu': {
-                'title': lambda: f'Notifications ({notification_manager.unread_count})',
-                'items': notification_manager.menu_items,
-            },
-            'color': 'yellow',
-            'icon': 'info',
-            'is_short': True,
-        },
-        {
-            'label': 'Turn off',
-            'action': lambda: print('Turning off'),
-            'icon': 'power_settings_new',
-            'is_short': True,
-        },
-    ],
-}
 
 
 class MenuAppCentral(UboApp):
@@ -83,7 +28,14 @@ class MenuAppCentral(UboApp):
     def menu_widget(self: MenuAppCentral) -> MenuWidget:
         """Build the main menu and initiate it."""
         menu_widget = MenuWidget()
-        menu_widget.set_current_menu(HOME_MENU)
+
+        @autorun(lambda _: current_menu())
+        def sync_menu(menu: Menu) -> None:
+            menu_widget.set_current_menu(menu)
+
+        @autorun(lambda state: state.main.page)
+        def sync_page(page: int) -> None:
+            menu_widget.page_index = page
 
         def title_callback(_: MenuWidget, title: str) -> None:
             self.root.title = title
@@ -156,8 +108,9 @@ class MenuAppCentral(UboApp):
         right_column.width = dp(SHORT_WIDTH)
         horizontal_layout.add_widget(right_column)
 
-        def handle_depth_change(_: Widget, depth: int) -> None:
-            if depth == 0:
+        @autorun(lambda state: len(state.main.path) == 0)
+        def handle_depth_change(is_deep: bool) -> None:
+            if is_deep:
                 self.menu_widget.size_hint = (None, 1)
                 self.menu_widget.width = dp(SHORT_WIDTH)
                 central_column.size_hint = (1, 1)

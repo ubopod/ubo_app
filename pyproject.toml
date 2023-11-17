@@ -22,8 +22,8 @@ priority = "primary"
 python = "^3.9"
 psutil = "^5.9.6"
 ubo-gui = [
-  { version = "^0.4.4", markers = "extra!='dev'", optional = false },
-  { version = "^0.4.4", markers = "extra=='dev'", extras = [
+  { version = "^0.4.5", markers = "extra!='dev'", optional = false },
+  { version = "^0.4.5", markers = "extra=='dev'", extras = [
     "dev",
   ], optional = true },
 ]
@@ -33,7 +33,7 @@ headless-kivy-pi = [
     "dev",
   ], optional = true },
 ]
-python-redux = "^0.2.0"
+python-redux = "^0.3.2"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = { version = "^0.24.2", optional = true }

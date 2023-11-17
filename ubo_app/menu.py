@@ -13,8 +13,9 @@ setup_headless()
 
 from ubo_gui.app import UboApp  # noqa: E402
 
-from ubo_app.menu_central import MenuAppCentral  # noqa: E402
-from ubo_app.menu_footer import MenuAppFooter  # noqa: E402
+from .menu_central import MenuAppCentral  # noqa: E402
+from .menu_footer import MenuAppFooter  # noqa: E402
+from .store import autorun  # noqa: E402
 
 
 class MenuApp(MenuAppCentral, MenuAppFooter, UboApp):

@@ -1,8 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Literal, TypedDict
+from dataclasses import dataclass, replace
+from typing import Literal
 
 from redux import BaseAction, InitializationActionError
 
@@ -29,7 +29,7 @@ class IconRegistrationActionPayload:
 @dataclass(frozen=True)
 class IconRegistrationAction(BaseAction):
     payload: IconRegistrationActionPayload
-    type: Literal['REGISTER_ICON'] = 'REGISTER_ICON'
+    type: Literal['STATUS_ICONS_REGISTER'] = 'STATUS_ICONS_REGISTER'
 
 
 IconAction = IconRegistrationAction
@@ -41,7 +41,8 @@ def reducer(state: StatusIconsState | None, action: IconAction) -> StatusIconsSt
             return StatusIconsState(icons=[])
         raise InitializationActionError
     if action.type == 'REGISTER_ICON':
-        return StatusIconsState(
+        return replace(
+            state,
             icons=sorted(
                 [
                     *state.icons,

@@ -2,17 +2,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeAlias, cast
+from typing import TYPE_CHECKING, cast
 
 from redux import (
     BaseAction,
     BaseState,
     InitAction,
-    InitializationActionError,
     ReducerType,
     combine_reducers,
     create_store,
 )
+
+from ubo_app.store.main import MainState, main_reducer
 
 from .status_icons import reducer as status_icons_reducer
 
@@ -21,26 +22,9 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class MainState(BaseState):
-    pass
-
-
-@dataclass(frozen=True)
 class RootState(BaseState):
     main: MainState
     status_icons: StatusIconsState
-
-
-MainAction: TypeAlias = InitAction
-
-
-def main_reducer(state: MainState | None, action: MainAction) -> MainState:
-    if state is None:
-        if action.type == 'INIT':
-            return MainState()
-        raise InitializationActionError
-
-    return state
 
 
 root_reducer, reducer_id = combine_reducers(

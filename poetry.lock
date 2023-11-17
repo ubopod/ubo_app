@@ -2,12 +2,13 @@
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.24.0"
+version = "8.25.0"
 description = "CircuitPython APIs for non-CircuitPython versions of Python such as CPython on Linux and MicroPython."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "Adafruit_Blinka-8.24.0-py3-none-any.whl", hash = "sha256:9aff60442085102d4af963a37292761ca19f187de858b2836d9b0a545b2159a4"},
+    {file = "Adafruit-Blinka-8.25.0.tar.gz", hash = "sha256:4cae1655a60c341d97e59108c0fa4f3963e8373b6195381e3b7f76ce1f4c2a5b"},
+    {file = "Adafruit_Blinka-8.25.0-py3-none-any.whl", hash = "sha256:6ccb124143bfc1073af7225445c75781e5415ecb97484bd24a9e0d9dbfb90816"},
 ]
 
 [package.dependencies]
@@ -15,14 +16,6 @@ adafruit-circuitpython-typing = "*"
 Adafruit-PlatformDetect = ">=3.53.0"
 Adafruit-PureIO = ">=1.1.7"
 pyftdi = ">=0.40.0"
-"RPi.GPIO" = "*"
-rpi-ws281x = ">=4.0.0"
-sysv-ipc = ">=1.1.0"
-
-[package.source]
-type = "legacy"
-url = "https://www.piwheels.org/simple"
-reference = "piwheels"
 
 [[package]]
 name = "adafruit-circuitpython-aw9523"
@@ -590,13 +583,13 @@ reference = "piwheels"
 
 [[package]]
 name = "python-redux"
-version = "0.2.0"
+version = "0.3.2"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.2.0-py3-none-any.whl", hash = "sha256:a191a601f6f64acc4cdc595a18d06e4e0eabaee140c0816fd931138a141c20dd"},
-    {file = "python_redux-0.2.0.tar.gz", hash = "sha256:58329d22ed4ea5351ad92879a4d2f30c26195f21d12e1f2dd64127fe4d8730e4"},
+    {file = "python_redux-0.3.2-py3-none-any.whl", hash = "sha256:03871d1a56bb60ebcd208e53230aa65984397bd26d5e0f1f681a722013a91f37"},
+    {file = "python_redux-0.3.2.tar.gz", hash = "sha256:ce24af5172edca3ab734fd3156ff417ee7bf3f698aee9891f2135a9893484b7a"},
 ]
 
 [[package]]
@@ -663,44 +656,6 @@ url = "https://www.piwheels.org/simple"
 reference = "piwheels"
 
 [[package]]
-name = "rpi-gpio"
-version = "0.7.1"
-description = "A module to control Raspberry Pi GPIO channels"
-optional = false
-python-versions = "*"
-files = [
-    {file = "RPi.GPIO-0.7.1-cp35-cp35m-linux_armv6l.whl", hash = "sha256:5073d1972727cfad38a1a42f02da91dc41f137679290aa804ab6c410168347ac"},
-    {file = "RPi.GPIO-0.7.1-cp35-cp35m-linux_armv7l.whl", hash = "sha256:5073d1972727cfad38a1a42f02da91dc41f137679290aa804ab6c410168347ac"},
-    {file = "RPi.GPIO-0.7.1-cp37-cp37m-linux_armv6l.whl", hash = "sha256:e5dfec2c4ccb7dbe9eef3dfc76a3b04121fc62d77fd8fbe1a8e841468a1b0c4c"},
-    {file = "RPi.GPIO-0.7.1-cp37-cp37m-linux_armv7l.whl", hash = "sha256:e5dfec2c4ccb7dbe9eef3dfc76a3b04121fc62d77fd8fbe1a8e841468a1b0c4c"},
-    {file = "RPi.GPIO-0.7.1-cp39-cp39-linux_armv6l.whl", hash = "sha256:231f6142c25975a7e39b96faf4905f05f97dba6809e8c5f0d58f284b35b4b821"},
-    {file = "RPi.GPIO-0.7.1-cp39-cp39-linux_armv7l.whl", hash = "sha256:231f6142c25975a7e39b96faf4905f05f97dba6809e8c5f0d58f284b35b4b821"},
-]
-
-[package.source]
-type = "legacy"
-url = "https://www.piwheels.org/simple"
-reference = "piwheels"
-
-[[package]]
-name = "rpi-ws281x"
-version = "5.0.0"
-description = "Userspace Raspberry Pi PWM/PCM/SPI library for SK6812 and WS281X LEDs."
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "rpi_ws281x-5.0.0-cp37-cp37m-linux_armv6l.whl", hash = "sha256:2d9d8cb8f54bf68c1935a9b466aef8960f2e4aec4328057c0a9e59fc8eaad187"},
-    {file = "rpi_ws281x-5.0.0-cp37-cp37m-linux_armv7l.whl", hash = "sha256:2d9d8cb8f54bf68c1935a9b466aef8960f2e4aec4328057c0a9e59fc8eaad187"},
-    {file = "rpi_ws281x-5.0.0-cp39-cp39-linux_armv6l.whl", hash = "sha256:3c4af921dda22a393e42793e799823918e7d7a5bb71e50e885c22769ffa00c73"},
-    {file = "rpi_ws281x-5.0.0-cp39-cp39-linux_armv7l.whl", hash = "sha256:3c4af921dda22a393e42793e799823918e7d7a5bb71e50e885c22769ffa00c73"},
-]
-
-[package.source]
-type = "legacy"
-url = "https://www.piwheels.org/simple"
-reference = "piwheels"
-
-[[package]]
 name = "screeninfo"
 version = "0.8.1"
 description = "Fetch location and size of physical screens."
@@ -713,24 +668,6 @@ files = [
 [package.dependencies]
 Cython = {version = "*", markers = "sys_platform == \"darwin\""}
 pyobjc-framework-Cocoa = {version = "*", markers = "sys_platform == \"darwin\""}
-
-[package.source]
-type = "legacy"
-url = "https://www.piwheels.org/simple"
-reference = "piwheels"
-
-[[package]]
-name = "sysv-ipc"
-version = "1.1.0"
-description = "System V IPC primitives (semaphores, shared memory and message queues) for Python"
-optional = false
-python-versions = "*"
-files = [
-    {file = "sysv_ipc-1.1.0-cp37-cp37m-linux_armv6l.whl", hash = "sha256:3cc523ce39338200c0ad7735c48267a26735690977b4eb4879bd8e10b4e7a82d"},
-    {file = "sysv_ipc-1.1.0-cp37-cp37m-linux_armv7l.whl", hash = "sha256:3cc523ce39338200c0ad7735c48267a26735690977b4eb4879bd8e10b4e7a82d"},
-    {file = "sysv_ipc-1.1.0-cp39-cp39-linux_armv6l.whl", hash = "sha256:0ef1f4360d0c4e353f63d43743911c060881ebf920c95ec8adfa4fcbf58955da"},
-    {file = "sysv_ipc-1.1.0-cp39-cp39-linux_armv7l.whl", hash = "sha256:0ef1f4360d0c4e353f63d43743911c060881ebf920c95ec8adfa4fcbf58955da"},
-]
 
 [package.source]
 type = "legacy"
@@ -769,19 +706,13 @@ reference = "piwheels"
 
 [[package]]
 name = "ubo-gui"
-version = "0.4.4"
+version = "0.4.5"
 description = "GUI sdk for Ubo Pod"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "ubo_gui-0.4.4-py3-none-any.whl", hash = "sha256:f65e20cf48b4ca564931391dfdb17650f9dbee806ab84d1983c526b7aa0b0ef6"},
-    {file = "ubo_gui-0.4.4.tar.gz", hash = "sha256:9a382ee983df761fa62df86214997ba61d9dba036f85027e73801bcc08922067"},
-]
-
-[package.dependencies]
-headless-kivy-pi = [
-    {version = ">=0.4.2,<0.5.0", optional = true, markers = "extra != \"dev\""},
-    {version = ">=0.4.2,<0.5.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
+    {file = "ubo_gui-0.4.5-py3-none-any.whl", hash = "sha256:68d78a5b02409d78937472b9788a8280f5397068f28cf77aac49534620cd23ab"},
+    {file = "ubo_gui-0.4.5.tar.gz", hash = "sha256:a49325ba141eb79a1faa09cf18aea5785d59488a4ba3120f4849e4061cb4abe5"},
 ]
 
 [package.extras]
@@ -809,4 +740,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "ac82fbf7bab8edd898e6934448e47cab6005285c01cbbe2d0fc7fe0cb16193b7"
+content-hash = "f91f40f54e4de98b6fc15d953c658667fef6026ca80e08086d48e7dc3c22ea15"

@@ -1,3 +1,4 @@
+# ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
 import logging
@@ -5,18 +6,20 @@ import math
 import time
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal
 
 import adafruit_aw9523
-from adafruit_bus_device import i2c_device
+import board
+from kivy.clock import Clock
+from RPi import GPIO
 
-IS_RPI = Path('/etc/rpi-issue').exists()
-if IS_RPI:
-    import board
-    from RPi import GPIO
+from ubo_app.store.keypad import (
+    Key,
+    dispatch_key,
+)
 
 if TYPE_CHECKING:
+    from adafruit_bus_device import i2c_device
     from adafruit_register.i2c_struct import UnaryStruct
 
 INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
@@ -86,7 +89,8 @@ class KeypadStatus:
             self.buttons[button_name]['timestamp'] = time.time()
 
     def get_status(
-        self: KeypadStatus, button_name: ButtonName
+        self: KeypadStatus,
+        button_name: ButtonName,
     ) -> Literal['pressed', 'released']:
         if button_name in self.buttons:
             return self.buttons[button_name]['status']
@@ -129,8 +133,7 @@ class Keypad:
         self.enabled = True
         self.buttons = KeypadStatus()
         self.index = 0
-        if IS_RPI:
-            self.init_i2c()
+        self.init_i2c()
 
     def clear_interrupt_flags(self: Keypad, i2c: i2c_device.I2CDevice) -> None:
         # Write to both registers to reset the interrupt flag
@@ -148,7 +151,8 @@ class Keypad:
         time.sleep(0.1)
 
     def disable_interrupt_for_higher_bits(
-        self: Keypad, i2c: i2c_device.I2CDevice
+        self: Keypad,
+        i2c: i2c_device.I2CDevice,
     ) -> None:
         # disable interrupt for higher bits
         buffer = bytearray(2)
@@ -193,17 +197,21 @@ class Keypad:
         # read register values
         self.inputs = self.aw.inputs
         self.logger.debug(
-            'Initializing inputs', extra={'inputs': f'{self.inputs:016b}'}
+            'Initializing inputs',
+            extra={'inputs': f'{self.inputs:016b}'},
         )
         self.event_queue = [{'inputs': self.inputs, 'timestamp': time.time()}]
         time.sleep(0.5)
 
         # Enable interrupt on the GPIO expander
         GPIO.add_event_detect(
-            INT_EXPANDER, GPIO.FALLING, callback=self.key_press_cb, bouncetime=1
+            INT_EXPANDER,
+            GPIO.FALLING,
+            callback=self.key_press_cb,
+            bouncetime=1,
         )
 
-    def key_press_cb(self: Keypad, _channel):
+    def key_press_cb(self: Keypad, _) -> None:
         """Handle key press dispatched by GPIO interrupt.
 
             This is callback function that gets triggers
@@ -231,7 +239,8 @@ class Keypad:
         self.logger.debug('Current Inputs', extra={'inputs': f'{self.inputs:016b}'})
         previos_event = self.event_queue.pop(0)
         self.logger.debug(
-            'Previous Inputs', extra={'inputs': f'{previos_event.get("inputs"):016b}'}
+            'Previous Inputs',
+            extra={'inputs': f'{previos_event.get("inputs"):016b}'},
         )
         # XOR the last recorded input values with the current input values
         # to see which bits have changed. Technically there can only be one
@@ -275,7 +284,45 @@ class Keypad:
 
     def on_button_event(
         self: Keypad,
-        button_name: ButtonName,
+        button_pressed: ButtonName,
         button_status: ButtonStatus,
     ) -> None:
-        raise NotImplementedError
+        if button_status == 'pressed':
+            if button_pressed == ButtonName.UP:
+                Clock.schedule_once(
+                    lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.UP),
+                    -1,
+                )
+            elif button_pressed == ButtonName.DOWN:
+                Clock.schedule_once(
+                    lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.DOWN),
+                    -1,
+                )
+            elif button_pressed == ButtonName.TOP_LEFT:
+                Clock.schedule_once(
+                    lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.L1),
+                    -1,
+                )
+            elif button_pressed == ButtonName.MIDDLE_LEFT:
+                Clock.schedule_once(
+                    lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.L2),
+                    -1,
+                )
+            elif button_pressed == ButtonName.BOTTOM_LEFT:
+                Clock.schedule_once(
+                    lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.L3),
+                    -1,
+                )
+            elif button_pressed == ButtonName.BACK:
+                Clock.schedule_once(
+                    lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.BACK),
+                    -1,
+                )
+            elif button_pressed == ButtonName.HOME:
+                Clock.schedule_once(
+                    lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.HOME),
+                    -1,
+                )
+            elif button_pressed == ButtonName.MIC:
+                ...
+        self.root.reset_fps_control_queue()
