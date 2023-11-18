@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.1
+
+- chore: add deploy script
+
 ## Version 0.3.0
 
 - feat: implement app registration logic and tools
