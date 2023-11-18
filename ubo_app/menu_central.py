@@ -30,12 +30,12 @@ class MenuAppCentral(UboApp):
         menu_widget = MenuWidget()
 
         @autorun(lambda _: current_menu())
-        def sync_menu(menu: Menu) -> None:
-            menu_widget.set_current_menu(menu)
+        def sync_menu(selector_result: Menu) -> None:
+            menu_widget.set_current_menu(selector_result)
 
         @autorun(lambda state: state.main.page)
-        def sync_page(page: int) -> None:
-            menu_widget.page_index = page
+        def sync_page(selector_result: int) -> None:
+            menu_widget.page_index = selector_result
 
         def title_callback(_: MenuWidget, title: str) -> None:
             self.root.title = title
@@ -51,13 +51,14 @@ class MenuAppCentral(UboApp):
 
         gauge = GaugeWidget(value=0, fill_color='#24D636', label='CPU')
 
-        value = [0]
+        value = 0
 
         def set_value(_: float) -> None:
-            gauge.value = value[0]
+            gauge.value = value
 
         def calculate_value() -> None:
-            value[0] = psutil.cpu_percent(interval=1, percpu=False)
+            nonlocal value
+            value = psutil.cpu_percent(interval=1, percpu=False)
             Clock.schedule_once(set_value)
 
         Clock.schedule_interval(
@@ -108,17 +109,18 @@ class MenuAppCentral(UboApp):
         right_column.width = dp(SHORT_WIDTH)
         horizontal_layout.add_widget(right_column)
 
-        @autorun(lambda state: len(state.main.path) == 0)
-        def handle_depth_change(is_deep: bool) -> None:
+        @autorun(lambda state: len(state.main.path) != 0)
+        def handle_depth_change(selector_result: bool) -> None:  # noqa: FBT001
+            is_deep = selector_result
             if is_deep:
+                self.menu_widget.size_hint = (1, 1)
+                central_column.size_hint = (0, 1)
+                right_column.size_hint = (0, 1)
+            else:
                 self.menu_widget.size_hint = (None, 1)
                 self.menu_widget.width = dp(SHORT_WIDTH)
                 central_column.size_hint = (1, 1)
                 right_column.size_hint = (None, 1)
-            else:
-                self.menu_widget.size_hint = (1, 1)
-                central_column.size_hint = (0, 1)
-                right_column.size_hint = (0, 1)
 
         self.menu_widget.bind(depth=handle_depth_change)
 

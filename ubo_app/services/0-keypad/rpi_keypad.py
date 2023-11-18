@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal
 
 import adafruit_aw9523
 import board
+from kivy import app
 from kivy.clock import Clock
 from RPi import GPIO
 
@@ -72,7 +73,7 @@ class KeypadStatus:
 
     def __init__(self: KeypadStatus) -> None:
         self.buttons = {
-            button_name: {'status': 'released', 'timestamp': time.time()}
+            button_name: ButtonEvent(status='released', timestamp=time.time())
             for button_name in ButtonName
         }
 
@@ -85,21 +86,23 @@ class KeypadStatus:
             msg = 'Invalid status'
             raise KeypadError(msg)
         if button_name in self.buttons:
-            self.buttons[button_name]['status'] = new_status
-            self.buttons[button_name]['timestamp'] = time.time()
+            self.buttons[button_name] = ButtonEvent(
+                status=new_status,
+                timestamp=time.time(),
+            )
 
     def get_status(
         self: KeypadStatus,
         button_name: ButtonName,
     ) -> Literal['pressed', 'released']:
         if button_name in self.buttons:
-            return self.buttons[button_name]['status']
+            return self.buttons[button_name].status
         msg = 'Invalid button name'
         raise KeypadError(msg)
 
     def get_timestamp(self: KeypadStatus, button_name: ButtonName) -> float:
         if button_name in self.buttons:
-            return self.buttons[button_name]['timestamp']
+            return self.buttons[button_name].timestamp
         msg = 'Invalid button name'
         raise KeypadError(msg)
 
@@ -200,7 +203,7 @@ class Keypad:
             'Initializing inputs',
             extra={'inputs': f'{self.inputs:016b}'},
         )
-        self.event_queue = [{'inputs': self.inputs, 'timestamp': time.time()}]
+        self.event_queue = [Event(inputs=self.inputs, timestamp=time.time())]
         time.sleep(0.5)
 
         # Enable interrupt on the GPIO expander
@@ -231,7 +234,7 @@ class Keypad:
             return
         # read register values
         self.inputs = self.aw.inputs
-        event: Event = {'inputs': self.inputs, 'timestamp': time.time()}
+        event = Event(inputs=self.inputs, timestamp=time.time())
         # append the event to the queue. The queue has a depth of 2 and
         # keeps the current and last event.
         self.event_queue.append(event)
@@ -240,12 +243,12 @@ class Keypad:
         previos_event = self.event_queue.pop(0)
         self.logger.debug(
             'Previous Inputs',
-            extra={'inputs': f'{previos_event.get("inputs"):016b}'},
+            extra={'inputs': f'{previos_event.inputs:016b}'},
         )
         # XOR the last recorded input values with the current input values
         # to see which bits have changed. Technically there can only be one
         # bit change in every callback
-        change_mask = previos_event.get('inputs') ^ self.inputs
+        change_mask = previos_event.inputs ^ self.inputs
         self.logger.debug('Change', extra={'change_mask': f'{change_mask:016b}'})
         # use the change mask to see if the button was the change was
         # falling (1->0) indicating a pressed action
@@ -254,7 +257,7 @@ class Keypad:
         self.logger.info('button index', extra={'button_index': self.index})
         # Check for rising edge or falling edge action (press or release)
         self.button_label = self.buttons.get_label(self.index)
-        if (previos_event.get('inputs') & change_mask) == 0:
+        if (previos_event.inputs & change_mask) == 0:
             self.logger.info(
                 'Button pressed',
                 extra={'button': str(self.index), 'label': self.button_label},
@@ -325,4 +328,4 @@ class Keypad:
                 )
             elif button_pressed == ButtonName.MIC:
                 ...
-        self.root.reset_fps_control_queue()
+        app.root.reset_fps_control_queue()

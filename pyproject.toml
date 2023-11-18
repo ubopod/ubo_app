@@ -33,10 +33,10 @@ headless-kivy-pi = [
     "dev",
   ], optional = true },
 ]
-python-redux = "^0.3.2"
+python-redux = { path = '../python-redux', develop = true }
 
 [tool.poetry.group.dev.dependencies]
-poethepoet = { version = "^0.24.2", optional = true }
+poethepoet = { version = "^0.24.2" }
 ubo-gui = { version = "^0.4.4" }
 headless-kivy-pi = { version = "^0.4.2" }
 
@@ -52,6 +52,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
 lint = "pyright -p pyproject.toml ."
+
+[tool.poe.tasks.deploy_to_device]
+cmd = 'scripts/deploy.sh'
 
 [tool.ruff]
 select = ['ALL']

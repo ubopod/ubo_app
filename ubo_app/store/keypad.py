@@ -18,19 +18,6 @@ class Key(str, Enum):
     L3 = 'L3'
 
 
-def dispatch_key(action: KeyActionType, key: Key) -> None:
-    from ubo_app.store import dispatch
-
-    if action == 'KEYPAD_KEY_DOWN':
-        cls = KeypadKeyDownAction
-    elif action == 'KEYPAD_KEY_UP':
-        cls = KeypadKeyUpAction
-    elif action == 'KEYPAD_KEY_PRESS':
-        cls = KeypadKeyPressAction
-
-    dispatch(cls(payload=KeypadActionPayload(key=key)))
-
-
 @dataclass(frozen=True)
 class KeypadActionPayload:
     key: Key
@@ -58,3 +45,18 @@ class KeypadKeyDownAction(KeypadAction):
 @dataclass(frozen=True)
 class KeypadKeyPressAction(KeypadAction):
     type: Literal['KEYPAD_KEY_PRESS'] = 'KEYPAD_KEY_PRESS'
+
+
+def dispatch_key(action: KeyActionType, key: Key) -> None:
+    from ubo_app.store import dispatch
+
+    cls: type[KeypadAction]
+
+    if action == 'KEYPAD_KEY_DOWN':
+        cls = KeypadKeyDownAction
+    elif action == 'KEYPAD_KEY_UP':
+        cls = KeypadKeyUpAction
+    elif action == 'KEYPAD_KEY_PRESS':
+        cls = KeypadKeyPressAction
+
+    dispatch(cls(payload=KeypadActionPayload(key=key)))

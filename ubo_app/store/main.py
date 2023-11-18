@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
-from redux import BaseAction, BaseState, InitAction, InitializationActionError
+from ubo_gui.menu import Item, is_sub_menu_item, menu_items
+from ubo_gui.menu.types import SubMenuItem
 
+from redux import BaseState, InitAction, InitializationActionError, copy
+
+from ubo_app.store.app import RegisterAppAction
 from ubo_app.store.keypad import Key, KeypadAction
 
 from ._menus import HOME_MENU
@@ -22,12 +26,7 @@ class MainState(BaseState):
     path: list[int]
 
 
-@dataclass(frozen=True)
-class SelectAction(BaseAction):
-    type: Literal['MAIN_SELECT'] = 'MAIN_SELECT'
-
-
-MainAction: TypeAlias = InitAction | KeypadAction
+MainAction: TypeAlias = InitAction | KeypadAction | RegisterAppAction
 
 
 def main_reducer(state: MainState | None, action: MainAction) -> MainState:
@@ -51,5 +50,22 @@ def main_reducer(state: MainState | None, action: MainAction) -> MainState:
             return replace(state, page=(state.page + 1) % current_menu_pages_count())
         if action.payload.key == Key.UP:
             return replace(state, page=(state.page - 1) % current_menu_pages_count())
+    elif action.type == 'MAIN_REGISTER_REGULAR_APP':
+        menu = copy.deepcopy(state.menu)
+
+        main_menu_item: Item = menu_items(menu)[0]
+        if not is_sub_menu_item(main_menu_item):
+            msg = 'Main menu item is not `SubMenuItem`'
+            raise TypeError(msg)
+
+        settings_menu_item: Item = menu_items(main_menu_item['sub_menu'])[0]
+        if not is_sub_menu_item(settings_menu_item):
+            msg = 'Settings menu item is not `SubMenuItem`'
+            raise TypeError(msg)
+
+        menu_items(settings_menu_item['sub_menu']).append(
+            action.payload.menu_item,
+        )
+        return replace(state, menu=menu)
 
     return state

@@ -87,7 +87,8 @@ class MenuAppFooter(UboApp):
         )
 
         @autorun(lambda state: state.status_icons.icons)
-        def render_icons(icons: list[IconState]) -> None:
+        def render_icons(selector_result: list[IconState]) -> None:
+            icons = selector_result
             icons_layout.clear_widgets()
             for icon in icons[:5]:
                 label = Label(

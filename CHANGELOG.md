@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.0
+
+- feat: implement app registration logic and tools
+
 ## Version 0.2.1
 
 - feat: loading services dynamically from 'services' directory and direcotires specified in `UBO_SERVICES_PATH`

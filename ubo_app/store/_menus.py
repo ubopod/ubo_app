@@ -3,9 +3,12 @@ from ubo_gui.notification import notification_manager
 
 SETTINGS_MENU: Menu = {
     'title': 'Settings',
-    'heading': 'Please choose',
-    'sub_heading': 'This is sub heading',
-    'items': lambda: [],
+    'items': [],
+}
+
+APPS_MENU: Menu = {
+    'title': 'Apps',
+    'items': [],
 }
 
 MAIN_MENU: Menu = {
@@ -20,8 +23,8 @@ MAIN_MENU: Menu = {
         },
         {
             'label': 'Apps',
-            'action': lambda: print('Apps'),
             'icon': 'apps',
+            'sub_menu': APPS_MENU,
         },
         {
             'label': 'About',
