@@ -6,12 +6,18 @@ from dataclasses import replace
 from functools import reduce
 from typing import TYPE_CHECKING
 
-from ubo_gui.menu import PAGE_SIZE, is_sub_menu_item, menu_items
+from ubo_gui.menu import (
+    PAGE_SIZE,
+    is_action_item,
+    is_application_item,
+    is_sub_menu_item,
+    menu_items,
+)
 
 from . import autorun
 
 if TYPE_CHECKING:
-    from ubo_gui.menu.types import Item, Menu
+    from ubo_gui.menu.types import Menu
 
     from ubo_app.store.main import MainState
 
@@ -46,4 +52,14 @@ def select(state: MainState, index: int) -> MainState:
     index = index + state.page * PAGE_SIZE
     if 'heading' in current_menu():
         index -= 2
-    return replace(state, path=[*state.path, index])
+    items = menu_items(current_menu())
+    if not 0 <= index < len(items):
+        return state
+    item = items[index]
+    if is_sub_menu_item(item):
+        return replace(state, path=[*state.path, index])
+    if is_action_item(item):
+        item['action']()
+    if is_application_item(item):
+        return replace(state, current_application=item['application'])
+    return state

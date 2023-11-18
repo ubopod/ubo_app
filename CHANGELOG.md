@@ -3,6 +3,7 @@
 ## Version 0.3.0
 
 - feat: implement app registration logic and tools
+- feat: add wifi app
 
 ## Version 0.2.1
 

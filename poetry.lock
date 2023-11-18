@@ -583,16 +583,14 @@ reference = "piwheels"
 
 [[package]]
 name = "python-redux"
-version = "0.3.2"
+version = "0.3.4"
 description = "Redux implementation for Python"
 optional = false
-python-versions = "^3.9"
-files = []
-develop = true
-
-[package.source]
-type = "directory"
-url = "../python-redux"
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "python_redux-0.3.4-py3-none-any.whl", hash = "sha256:2027f20463b02f456d1a7aa421541cc49e781fbd06899a8b0b479f42e685d2cd"},
+    {file = "python_redux-0.3.4.tar.gz", hash = "sha256:8cd70ff4b475aca2501f150d8ce23e3665f40032acb3bfa3a7ecdb929f5a014b"},
+]
 
 [[package]]
 name = "pyusb"
@@ -742,4 +740,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "1456574fabf7aa9799ae20dc8c031c93427d26d84e70929834b62cc0cb80ebbf"
+content-hash = "78ab82cd845026bf692ce6dc05b37cfe98ecb1319810c8ed9635a01dea604d8e"

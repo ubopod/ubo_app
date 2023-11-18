@@ -1,8 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
-from ubo_gui.menu import Item
-from ubo_gui.menu.types import ApplicationItem
 
+from ubo_gui.menu.types import ApplicationItem
 from ubo_gui.notification import Importance, notification_manager
 from ubo_gui.prompt import PromptWidget
 

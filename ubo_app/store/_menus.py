@@ -13,18 +13,16 @@ APPS_MENU: Menu = {
 
 MAIN_MENU: Menu = {
     'title': 'Main',
-    'heading': 'What are you going to do?',
-    'sub_heading': 'Choose from the options',
     'items': [
-        {
-            'label': 'Settings',
-            'icon': 'settings',
-            'sub_menu': SETTINGS_MENU,
-        },
         {
             'label': 'Apps',
             'icon': 'apps',
             'sub_menu': APPS_MENU,
+        },
+        {
+            'label': 'Settings',
+            'icon': 'settings',
+            'sub_menu': SETTINGS_MENU,
         },
         {
             'label': 'About',

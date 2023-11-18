@@ -1,7 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from functools import cached_property, reduce
+import uuid
+from functools import cached_property
 from threading import Thread
 from typing import TYPE_CHECKING
 
@@ -20,7 +21,8 @@ from .store import autorun
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
-    from ubo_gui.menu.types import Menu
+    from ubo_gui.menu import Menu
+    from ubo_gui.page import PageWidget
 
 
 class MenuAppCentral(UboApp):
@@ -36,6 +38,12 @@ class MenuAppCentral(UboApp):
         @autorun(lambda state: state.main.page)
         def sync_page(selector_result: int) -> None:
             menu_widget.page_index = selector_result
+            menu_widget.update()
+
+        @autorun(lambda state: state.main.current_application)
+        def sync_application(selector_result: PageWidget) -> None:
+            application_instance = selector_result(name=uuid.uuid4().hex)
+            menu_widget.open_application(application_instance)
 
         def title_callback(_: MenuWidget, title: str) -> None:
             self.root.title = title
@@ -121,7 +129,5 @@ class MenuAppCentral(UboApp):
                 self.menu_widget.width = dp(SHORT_WIDTH)
                 central_column.size_hint = (1, 1)
                 right_column.size_hint = (None, 1)
-
-        self.menu_widget.bind(depth=handle_depth_change)
 
         return horizontal_layout
