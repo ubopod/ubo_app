@@ -40,7 +40,7 @@ def reducer(state: StatusIconsState | None, action: IconAction) -> StatusIconsSt
         if action.type == 'INIT':
             return StatusIconsState(icons=[])
         raise InitializationActionError
-    if action.type == 'REGISTER_ICON':
+    if action.type == 'STATUS_ICONS_REGISTER':
         return replace(
             state,
             icons=sorted(

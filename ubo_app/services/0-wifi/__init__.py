@@ -7,6 +7,10 @@ from ubo_gui.prompt import PromptWidget
 
 from ubo_app.store import dispatch
 from ubo_app.store.app import RegisterAppActionPayload, RegisterSettingAppAction
+from ubo_app.store.status_icons import (
+    IconRegistrationAction,
+    IconRegistrationActionPayload,
+)
 
 
 class WifiPrompt(PromptWidget):
@@ -37,15 +41,21 @@ class WifiPrompt(PromptWidget):
 
 def init_service() -> None:
     dispatch(
-        RegisterSettingAppAction(
-            payload=RegisterAppActionPayload(
-                menu_item=ApplicationItem(
-                    label='WiFi',
-                    application=WifiPrompt,
-                    icon='wifi',
+        [
+            RegisterSettingAppAction(
+                payload=RegisterAppActionPayload(
+                    menu_item=ApplicationItem(
+                        label='WiFi',
+                        application=WifiPrompt,
+                        icon='wifi',
+                    ),
                 ),
             ),
-        ),
+            IconRegistrationAction(
+                type='STATUS_ICONS_REGISTER',
+                payload=IconRegistrationActionPayload(icon='wifi', priority=-1),
+            ),
+        ],
     )
 
 

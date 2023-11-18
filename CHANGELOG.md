@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.2
+
+- refactor: move wifi icon registration to its service
+
 ## Version 0.3.1
 
 - chore: add deploy script
