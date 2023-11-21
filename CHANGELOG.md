@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.3
+
+- chore: add logger
+
 ## Version 0.3.2
 
 - refactor: move wifi icon registration to its service
