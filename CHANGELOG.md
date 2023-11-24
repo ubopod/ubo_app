@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.4
+
+- feat: implement the sound store and connect it to the volume widget and mic button
+
 ## Version 0.3.3
 
 - chore: add logger

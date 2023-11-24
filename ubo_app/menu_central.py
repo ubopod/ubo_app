@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from functools import cached_property
 from threading import Thread
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from kivy.clock import Clock
 from kivy.metrics import dp
@@ -21,7 +21,7 @@ from .store import autorun
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
-    from ubo_gui.menu import Menu
+    from ubo_gui.menu.types import Menu
     from ubo_gui.page import PageWidget
 
 
@@ -34,16 +34,21 @@ class MenuAppCentral(UboApp):
         @autorun(lambda _: current_menu())
         def sync_menu(selector_result: Menu) -> None:
             menu_widget.set_current_menu(selector_result)
+            self.root.reset_fps_control_queue()
 
         @autorun(lambda state: state.main.page)
         def sync_page(selector_result: int) -> None:
             menu_widget.page_index = selector_result
             menu_widget.update()
+            self.root.reset_fps_control_queue()
 
         @autorun(lambda state: state.main.current_application)
-        def sync_application(selector_result: PageWidget) -> None:
-            application_instance = selector_result(name=uuid.uuid4().hex)
+        def sync_application(selector_result: type[PageWidget] | None) -> None:
+            if selector_result is None:
+                return
+            application_instance = cast(Any, selector_result)(name=uuid.uuid4().hex)
             menu_widget.open_application(application_instance)
+            self.root.reset_fps_control_queue()
 
         def title_callback(_: MenuWidget, title: str) -> None:
             self.root.title = title
@@ -112,10 +117,16 @@ class MenuAppCentral(UboApp):
         horizontal_layout.add_widget(central_column)
 
         right_column = BoxLayout(orientation='vertical')
-        right_column.add_widget(VolumeWidget(value=40))
+        volume_widget = VolumeWidget()
+        right_column.add_widget(volume_widget)
         right_column.size_hint = (None, 1)
         right_column.width = dp(SHORT_WIDTH)
         horizontal_layout.add_widget(right_column)
+
+        @autorun(lambda state: state.sound.output_volume)
+        def sync_output_volume(selector_result: float) -> None:
+            volume_widget.value = selector_result * 100
+            self.root.reset_fps_control_queue()
 
         @autorun(lambda state: len(state.main.path) != 0)
         def handle_depth_change(selector_result: bool) -> None:  # noqa: FBT001

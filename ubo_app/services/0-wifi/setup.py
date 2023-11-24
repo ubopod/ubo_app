@@ -12,6 +12,9 @@ from ubo_app.store.status_icons import (
     IconRegistrationActionPayload,
 )
 
+ubo_service_name = 'WiFi'
+ubo_service_description = 'WiFi app for ubo-pod'
+
 
 class WifiPrompt(PromptWidget):
     icon = 'wifi_off'
@@ -52,7 +55,6 @@ def init_service() -> None:
                 ),
             ),
             IconRegistrationAction(
-                type='STATUS_ICONS_REGISTER',
                 payload=IconRegistrationActionPayload(icon='wifi', priority=-1),
             ),
         ],
@@ -61,6 +63,3 @@ def init_service() -> None:
 
 if __name__ == '__ubo_service__':
     init_service()
-
-ubo_service_name = 'WiFi'
-ubo_service_description = 'WiFi app for ubo-pod'

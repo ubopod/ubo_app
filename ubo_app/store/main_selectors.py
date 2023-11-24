@@ -14,6 +14,8 @@ from ubo_gui.menu import (
     menu_items,
 )
 
+from ubo_app.store.main import Selection
+
 from . import autorun
 
 if TYPE_CHECKING:
@@ -23,11 +25,11 @@ if TYPE_CHECKING:
 
 
 @autorun(lambda state: (state.main.path, state.main.menu))
-def current_menu(selector_result: tuple[list[int], Menu]) -> Menu:
+def current_menu(selector_result: tuple[list[Selection], Menu]) -> Menu:
     path, menu = selector_result
 
-    def reducer(menu: Menu, index: int) -> Menu:
-        item = menu_items(menu)[index]
+    def reducer(menu: Menu, selection: Selection) -> Menu:
+        item = menu_items(menu)[selection.index]
 
         if is_sub_menu_item(item):
             return item['sub_menu']
@@ -57,7 +59,11 @@ def select(state: MainState, index: int) -> MainState:
         return state
     item = items[index]
     if is_sub_menu_item(item):
-        return replace(state, path=[*state.path, index])
+        return replace(
+            state,
+            path=[*state.path, Selection(index=index, page=state.page)],
+            page=0,
+        )
     if is_action_item(item):
         item['action']()
     if is_application_item(item):

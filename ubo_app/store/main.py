@@ -1,14 +1,25 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from redux import BaseState, InitAction, InitializationActionError
+from redux import (
+    CompleteReducerResult,
+    Immutable,
+    InitAction,
+    InitializationActionError,
+    ReducerResult,
+)
 from ubo_gui.menu import Item, is_sub_menu_item, menu_items
 
-from ubo_app.store.app import RegisterAppAction
+from ubo_app.store.app import RegisterAppAction, is_app_registration_action
 from ubo_app.store.keypad import Key, KeypadAction
+from ubo_app.store.sound import (
+    SoundChangeVolumeAction,
+    SoundChangeVolumeActionPayload,
+    SoundDevice,
+)
 
 from ._menus import HOME_MENU
 
@@ -18,18 +29,25 @@ if TYPE_CHECKING:
     from ubo_gui.page import PageWidget
 
 
-@dataclass(frozen=True)
-class MainState(BaseState):
+class Selection(Immutable):
+    index: int
+    page: int
+
+
+class MainState(Immutable):
     menu: Menu
     page: int
-    path: list[int]
-    current_application: PageWidget | None = None
+    path: list[Selection]
+    current_application: type[PageWidget] | None = None
 
 
 MainAction: TypeAlias = InitAction | KeypadAction | RegisterAppAction
 
 
-def main_reducer(state: MainState | None, action: MainAction) -> MainState:
+def main_reducer(
+    state: MainState | None,
+    action: MainAction,
+) -> ReducerResult[MainState, SoundChangeVolumeAction]:
     if state is None:
         if action.type == 'INIT':
             return MainState(path=[], page=0, menu=HOME_MENU)
@@ -46,11 +64,36 @@ def main_reducer(state: MainState | None, action: MainAction) -> MainState:
             return select(state, 2)
         if action.payload.key == Key.BACK:
             return replace(state, path=state.path[:-1])
-        if action.payload.key == Key.DOWN:
-            return replace(state, page=(state.page + 1) % current_menu_pages_count())
         if action.payload.key == Key.UP:
+            if len(state.path) == 0:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        SoundChangeVolumeAction(
+                            payload=SoundChangeVolumeActionPayload(
+                                amount=0.05,
+                                device=SoundDevice.OUTPUT,
+                            ),
+                        ),
+                    ],
+                )
             return replace(state, page=(state.page - 1) % current_menu_pages_count())
-    elif action.type in ('MAIN_REGISTER_REGULAR_APP', 'MAIN_REGISTER_SETTING_APP'):
+        if action.payload.key == Key.DOWN:
+            if len(state.path) == 0:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        SoundChangeVolumeAction(
+                            payload=SoundChangeVolumeActionPayload(
+                                amount=-0.05,
+                                device=SoundDevice.OUTPUT,
+                            ),
+                        ),
+                    ],
+                )
+            return replace(state, page=(state.page + 1) % current_menu_pages_count())
+
+    elif is_app_registration_action(action):
         # TODO(sassanh): clone the menu
         # menu = copy.deepcopy(state.menu)
         menu = state.menu
@@ -70,9 +113,7 @@ def main_reducer(state: MainState | None, action: MainAction) -> MainState:
             msg = 'Settings menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
-        menu_items(container_menu_item['sub_menu']).append(
-            action.payload.menu_item,
-        )
+        menu_items(container_menu_item['sub_menu']).append(action.payload.menu_item)
         return replace(state, menu=menu)
 
     return state

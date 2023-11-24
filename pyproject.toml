@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.3.3"
+version = "0.3.4"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -33,7 +33,9 @@ headless-kivy-pi = [
     "dev",
   ], optional = true },
 ]
-python-redux = "^0.5.0"
+python-redux = "^0.6.4"
+
+"RPi.GPIO" = "^0.7.1"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = { version = "^0.24.2" }

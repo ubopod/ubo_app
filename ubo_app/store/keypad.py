@@ -1,11 +1,10 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
-from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
 
-from redux import BaseAction
+from redux import BaseAction, Immutable
 
 
 class Key(str, Enum):
@@ -18,31 +17,26 @@ class Key(str, Enum):
     L3 = 'L3'
 
 
-@dataclass(frozen=True)
-class KeypadActionPayload:
+class KeypadActionPayload(Immutable):
     key: Key
 
 
 KeyActionType = Literal['KEYPAD_KEY_UP', 'KEYPAD_KEY_DOWN', 'KEYPAD_KEY_PRESS']
 
 
-@dataclass(frozen=True)
 class KeypadAction(BaseAction):
     payload: KeypadActionPayload
     type: KeyActionType
 
 
-@dataclass(frozen=True)
 class KeypadKeyUpAction(KeypadAction):
     type: Literal['KEYPAD_KEY_UP'] = 'KEYPAD_KEY_UP'
 
 
-@dataclass(frozen=True)
 class KeypadKeyDownAction(KeypadAction):
     type: Literal['KEYPAD_KEY_DOWN'] = 'KEYPAD_KEY_DOWN'
 
 
-@dataclass(frozen=True)
 class KeypadKeyPressAction(KeypadAction):
     type: Literal['KEYPAD_KEY_PRESS'] = 'KEYPAD_KEY_PRESS'
 

@@ -6,6 +6,11 @@ from typing import TYPE_CHECKING, Literal
 from kivy.core.window import Keyboard, Window, WindowBase
 
 from ubo_app.store.keypad import Key, dispatch_key
+from ubo_app.store.sound import (
+    SoundDevice,
+    SoundToggleMuteStatusAction,
+    SoundToggleMuteStatusActionPayload,
+)
 
 if TYPE_CHECKING:
     Modifier = Literal['ctrl', 'alt', 'meta', 'shift']
@@ -35,6 +40,16 @@ def on_keyboard(
             dispatch_key('KEYPAD_KEY_PRESS', Key.L3)
         elif key == Keyboard.keycodes['left']:
             dispatch_key('KEYPAD_KEY_PRESS', Key.BACK)
+        elif key == Keyboard.keycodes['m']:
+            from ubo_app.store import dispatch
+
+            dispatch(
+                SoundToggleMuteStatusAction(
+                    payload=SoundToggleMuteStatusActionPayload(
+                        device=SoundDevice.INPUT,
+                    ),
+                ),
+            )
 
 
 Window.bind(on_keyboard=on_keyboard)

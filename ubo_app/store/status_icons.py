@@ -1,32 +1,30 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import Literal
 
-from redux import BaseAction, InitializationActionError
+from redux import BaseAction, Immutable, InitializationActionError
 
 
-@dataclass(frozen=True)
-class IconState:
+class IconState(Immutable):
     symbol: str
     color: str
     priority: int
+    id: str | None
 
 
-@dataclass(frozen=True)
-class StatusIconsState:
+class StatusIconsState(Immutable):
     icons: list[IconState]
 
 
-@dataclass(frozen=True)
-class IconRegistrationActionPayload:
+class IconRegistrationActionPayload(Immutable):
     icon: str
     color: str = 'white'
     priority: int = 0
+    id: str | None = None
 
 
-@dataclass(frozen=True)
 class IconRegistrationAction(BaseAction):
     payload: IconRegistrationActionPayload
     type: Literal['STATUS_ICONS_REGISTER'] = 'STATUS_ICONS_REGISTER'
@@ -45,11 +43,16 @@ def reducer(state: StatusIconsState | None, action: IconAction) -> StatusIconsSt
             state,
             icons=sorted(
                 [
-                    *state.icons,
+                    *[
+                        icon_status
+                        for icon_status in state.icons
+                        if icon_status.id != action.payload.id or icon_status.id is None
+                    ],
                     IconState(
                         symbol=action.payload.icon,
                         color=action.payload.color,
                         priority=action.payload.priority,
+                        id=action.payload.id,
                     ),
                 ],
                 key=lambda entry: entry.priority,
