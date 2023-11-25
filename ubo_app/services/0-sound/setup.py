@@ -17,7 +17,7 @@ def init_service() -> None:
         IconRegistrationAction(
             payload=IconRegistrationActionPayload(
                 icon='mic_off',
-                priority=-1,
+                priority=-2,
                 id='sound_mic_status',
             ),
         ),

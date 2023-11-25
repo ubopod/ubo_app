@@ -105,16 +105,17 @@ class MenuAppFooter(UboApp):
 
         home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(16)))
 
-        def handle_depth_change(_: Widget, depth: int) -> None:
-            if depth == 0:
+        @autorun(lambda state: len(state.main.path))
+        def handle_depth_change(selector_result: int) -> None:
+            depth = selector_result
+            is_deep = depth > 0
+            if not is_deep:
                 if normal_footer_layout in layout.children:
                     layout.remove_widget(normal_footer_layout)
                     layout.add_widget(home_footer_layout)
             elif home_footer_layout in layout.children:
                 layout.remove_widget(home_footer_layout)
                 layout.add_widget(normal_footer_layout)
-
-        self.menu_widget.bind(depth=handle_depth_change)
 
         layout.add_widget(home_footer_layout)
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from redux import BaseAction, Immutable
+from redux import BaseAction, BaseEvent, Immutable
 
 
 class Key(str, Enum):
@@ -21,12 +21,12 @@ class KeypadActionPayload(Immutable):
     key: Key
 
 
-KeyActionType = Literal['KEYPAD_KEY_UP', 'KEYPAD_KEY_DOWN', 'KEYPAD_KEY_PRESS']
+KeyType = Literal['KEYPAD_KEY_UP', 'KEYPAD_KEY_DOWN', 'KEYPAD_KEY_PRESS']
 
 
 class KeypadAction(BaseAction):
     payload: KeypadActionPayload
-    type: KeyActionType
+    type: KeyType
 
 
 class KeypadKeyUpAction(KeypadAction):
@@ -41,7 +41,23 @@ class KeypadKeyPressAction(KeypadAction):
     type: Literal['KEYPAD_KEY_PRESS'] = 'KEYPAD_KEY_PRESS'
 
 
-def dispatch_key(action: KeyActionType, key: Key) -> None:
+class KeyEventPayload(Immutable):
+    key: Key
+
+
+class BaseKeyEvent(BaseEvent):
+    payload: KeyEventPayload
+    type: KeyType
+
+
+class KeyPressEvent(BaseKeyEvent):
+    type: Literal['KEYPAD_KEY_PRESS'] = 'KEYPAD_KEY_PRESS'
+
+
+KeyEvent = KeyPressEvent
+
+
+def dispatch_key(action: KeyType, key: Key) -> None:
     from ubo_app.store import dispatch
 
     cls: type[KeypadAction]

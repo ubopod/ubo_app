@@ -71,7 +71,7 @@ def reducer(
                     IconRegistrationAction(
                         payload=IconRegistrationActionPayload(
                             icon='mic_off' if action.payload.mute else 'mic',
-                            priority=-1,
+                            priority=-2,
                             id='sound_mic_status',
                         ),
                     ),
@@ -83,7 +83,9 @@ def reducer(
             actions=[
                 SoundSetMuteStatusAction(
                     payload=SoundSetMuteStatusActionPayload(
-                        mute=not state.is_output_mute,
+                        mute=not state.is_output_mute
+                        if action.payload.device == SoundDevice.OUTPUT
+                        else not state.is_mic_mute,
                         device=action.payload.device,
                     ),
                 ),

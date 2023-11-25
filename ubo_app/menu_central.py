@@ -1,10 +1,9 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import uuid
 from functools import cached_property
 from threading import Thread
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 from kivy.clock import Clock
 from kivy.metrics import dp
@@ -13,16 +12,17 @@ from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
 from ubo_gui.menu.constants import SHORT_WIDTH
+from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
-from ubo_app.store.main_selectors import current_menu
+from ubo_app.store.keypad import Key, KeyPressEvent
+from ubo_app.store.main import SetMenuPathAction, SetMenuPathActionPayload
 
-from .store import autorun
+from .store import autorun, dispatch, subscribe_event
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Menu
-    from ubo_gui.page import PageWidget
 
 
 class MenuAppCentral(UboApp):
@@ -31,30 +31,43 @@ class MenuAppCentral(UboApp):
         """Build the main menu and initiate it."""
         menu_widget = MenuWidget()
 
-        @autorun(lambda _: current_menu())
-        def sync_menu(selector_result: Menu) -> None:
-            menu_widget.set_current_menu(selector_result)
-            self.root.reset_fps_control_queue()
+        @autorun(lambda state: state.main.current_menu)
+        def sync_current_menu(selector_result: Menu | None) -> None:
+            menu_widget.set_root_menu(selector_result)
 
-        @autorun(lambda state: state.main.page)
-        def sync_page(selector_result: int) -> None:
-            menu_widget.page_index = selector_result
-            menu_widget.update()
-            self.root.reset_fps_control_queue()
-
-        @autorun(lambda state: state.main.current_application)
-        def sync_application(selector_result: type[PageWidget] | None) -> None:
-            if selector_result is None:
-                return
-            application_instance = cast(Any, selector_result)(name=uuid.uuid4().hex)
-            menu_widget.open_application(application_instance)
-            self.root.reset_fps_control_queue()
-
-        def title_callback(_: MenuWidget, title: str) -> None:
+        def handle_title_change(_: MenuWidget, title: str) -> None:
             self.root.title = title
 
         self.root.title = menu_widget.title
-        menu_widget.bind(title=title_callback)
+        menu_widget.bind(title=handle_title_change)
+        menu_widget.bind(
+            stack=lambda _, path: dispatch(
+                SetMenuPathAction(
+                    payload=SetMenuPathActionPayload(
+                        path=[
+                            i.name if isinstance(i, PageWidget) else i[0]['title']
+                            for i in path
+                        ],
+                    ),
+                ),
+            ),
+        )
+
+        def handle_key_press_event(key_press_event: KeyPressEvent) -> None:
+            if key_press_event.payload.key == Key.L1:
+                menu_widget.select(0)
+            if key_press_event.payload.key == Key.L2:
+                menu_widget.select(1)
+            if key_press_event.payload.key == Key.L3:
+                menu_widget.select(2)
+            if key_press_event.payload.key == Key.BACK:
+                menu_widget.go_back()
+            if key_press_event.payload.key == Key.UP:
+                menu_widget.go_up()
+            if key_press_event.payload.key == Key.DOWN:
+                menu_widget.go_down()
+
+        subscribe_event('KEYPAD_KEY_PRESS', handle_key_press_event)
 
         return menu_widget
 
@@ -123,14 +136,15 @@ class MenuAppCentral(UboApp):
         right_column.width = dp(SHORT_WIDTH)
         horizontal_layout.add_widget(right_column)
 
-        @autorun(lambda state: state.sound.output_volume)
+        @autorun(
+            lambda state: getattr(getattr(state, 'sound', None), 'output_volume', 0),
+        )
         def sync_output_volume(selector_result: float) -> None:
             volume_widget.value = selector_result * 100
             self.root.reset_fps_control_queue()
 
-        @autorun(lambda state: len(state.main.path) != 0)
-        def handle_depth_change(selector_result: bool) -> None:  # noqa: FBT001
-            is_deep = selector_result
+        def handle_depth_change(_: MenuWidget, depth: int) -> None:
+            is_deep = depth > 0
             if is_deep:
                 self.menu_widget.size_hint = (1, 1)
                 central_column.size_hint = (0, 1)
@@ -140,5 +154,7 @@ class MenuAppCentral(UboApp):
                 self.menu_widget.width = dp(SHORT_WIDTH)
                 central_column.size_hint = (1, 1)
                 right_column.size_hint = (None, 1)
+
+        self.menu_widget.bind(depth=handle_depth_change)
 
         return horizontal_layout

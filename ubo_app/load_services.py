@@ -19,10 +19,13 @@ def load(path: Path) -> Any:
             spec = importlib.util.spec_from_file_location(
                 '__ubo_service__',
                 location=path.as_posix(),
+                submodule_search_locations=[path.parent.as_posix()],
             )
             if not spec:
                 return None
             module = importlib.util.module_from_spec(spec)
+            sys.path.append(path.as_posix())
+            sys.modules[module.__name__] = module
             sys.modules[spec.name] = module
             if spec.loader:
                 spec.loader.exec_module(module)
@@ -45,6 +48,8 @@ def load_services() -> None:
     ]:
         if Path(services_directory_path).is_dir():
             for service_path in Path(services_directory_path).iterdir():
+                if not service_path.is_dir():
+                    continue
                 current_path = os.curdir
                 os.chdir(service_path.as_posix())
 

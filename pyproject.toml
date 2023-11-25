@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.3.4"
+version = "0.3.5"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -19,28 +19,29 @@ priority = "primary"
 
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 psutil = "^5.9.6"
 ubo-gui = [
-  { version = "^0.4.5", markers = "extra!='dev'", optional = false },
-  { version = "^0.4.5", markers = "extra=='dev'", extras = [
+  { version = "^0.6.1", markers = "extra!='dev'", optional = false },
+  { version = "^0.6.1", markers = "extra=='dev'", extras = [
     "dev",
   ], optional = true },
 ]
 headless-kivy-pi = [
-  { version = "^0.4.2", markers = "extra!='dev'" },
-  { version = "^0.4.2", markers = "extra=='dev'", extras = [
+  { version = "^0.5.0", markers = "extra!='dev'" },
+  { version = "^0.5.0", markers = "extra=='dev'", extras = [
     "dev",
   ], optional = true },
 ]
-python-redux = "^0.6.4"
+python-redux = "^0.7.2"
 
-"RPi.GPIO" = "^0.7.1"
+"RPi.GPIO" = { version = "^0.7.1", markers = "platform_machine == 'aarch64'", source = 'piwheels' }
+
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = { version = "^0.24.2" }
-ubo-gui = { version = "^0.4.4" }
-headless-kivy-pi = { version = "^0.4.2" }
+ubo-gui = { version = "^0.6.1" }
+headless-kivy-pi = { version = "^0.5.0" }
 
 [tool.poetry.extras]
 dev = ['poethepoet', 'ubo-gui', 'headless-kivy-pi']

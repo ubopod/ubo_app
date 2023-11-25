@@ -11,6 +11,7 @@ from redux import (
     create_store,
 )
 
+from ubo_app.store.keypad import KeyEvent
 from ubo_app.store.main import MainAction, MainState, main_reducer
 from ubo_app.store.sound import SoundAction, SoundState
 
@@ -28,8 +29,9 @@ class RootState(BaseCombineReducerState):
 
 
 root_reducer, root_reducer_id = combine_reducers(
-    action_type=MainAction | SoundAction | IconAction | CombineReducerAction,
     state_type=RootState,
+    action_type=MainAction | SoundAction | IconAction | CombineReducerAction,
+    event_type=KeyEvent,
     main=main_reducer,
     status_icons=status_icons_reducer,
 )
@@ -42,5 +44,6 @@ store.dispatch(InitAction(type='INIT'))
 autorun = store.autorun
 dispatch = store.dispatch
 subscribe = store.subscribe
+subscribe_event = store.subscribe_event
 
 __ALL__ = (autorun, dispatch, subscribe)

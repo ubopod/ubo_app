@@ -1,10 +1,11 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from dataclasses import replace
-from typing import TYPE_CHECKING
+from dataclasses import field, replace
+from typing import TYPE_CHECKING, Literal
 
 from redux import (
+    BaseAction,
     CompleteReducerResult,
     Immutable,
     InitAction,
@@ -14,7 +15,13 @@ from redux import (
 from ubo_gui.menu import Item, is_sub_menu_item, menu_items
 
 from ubo_app.store.app import RegisterAppAction, is_app_registration_action
-from ubo_app.store.keypad import Key, KeypadAction
+from ubo_app.store.keypad import (
+    Key,
+    KeyEvent,
+    KeyEventPayload,
+    KeypadAction,
+    KeyPressEvent,
+)
 from ubo_app.store.sound import (
     SoundChangeVolumeAction,
     SoundChangeVolumeActionPayload,
@@ -29,74 +36,65 @@ if TYPE_CHECKING:
     from ubo_gui.page import PageWidget
 
 
-class Selection(Immutable):
-    index: int
-    page: int
-
-
 class MainState(Immutable):
-    menu: Menu
-    page: int
-    path: list[Selection]
+    current_menu: Menu | None = None
     current_application: type[PageWidget] | None = None
+    path: list[int] = field(default_factory=list)
 
 
-MainAction: TypeAlias = InitAction | KeypadAction | RegisterAppAction
+class SetMenuPathActionPayload(Immutable):
+    path: list[str]
+
+
+class SetMenuPathAction(BaseAction):
+    type: Literal['MAIN_SET_MENU_PATH'] = 'MAIN_SET_MENU_PATH'
+    payload: SetMenuPathActionPayload
+
+
+MainAction: TypeAlias = (
+    InitAction | KeypadAction | RegisterAppAction | SetMenuPathAction
+)
 
 
 def main_reducer(
     state: MainState | None,
     action: MainAction,
-) -> ReducerResult[MainState, SoundChangeVolumeAction]:
+) -> ReducerResult[MainState, SoundChangeVolumeAction, KeyEvent]:
     if state is None:
         if action.type == 'INIT':
-            return MainState(path=[], page=0, menu=HOME_MENU)
+            return MainState(current_menu=HOME_MENU)
         raise InitializationActionError
 
-    from ubo_app.store.main_selectors import current_menu_pages_count, select
-
     if action.type == 'KEYPAD_KEY_PRESS':
-        if action.payload.key == Key.L1:
-            return select(state, 0)
-        if action.payload.key == Key.L2:
-            return select(state, 1)
-        if action.payload.key == Key.L3:
-            return select(state, 2)
-        if action.payload.key == Key.BACK:
-            return replace(state, path=state.path[:-1])
-        if action.payload.key == Key.UP:
-            if len(state.path) == 0:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        SoundChangeVolumeAction(
-                            payload=SoundChangeVolumeActionPayload(
-                                amount=0.05,
-                                device=SoundDevice.OUTPUT,
-                            ),
-                        ),
-                    ],
-                )
-            return replace(state, page=(state.page - 1) % current_menu_pages_count())
-        if action.payload.key == Key.DOWN:
-            if len(state.path) == 0:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        SoundChangeVolumeAction(
-                            payload=SoundChangeVolumeActionPayload(
-                                amount=-0.05,
-                                device=SoundDevice.OUTPUT,
-                            ),
-                        ),
-                    ],
-                )
-            return replace(state, page=(state.page + 1) % current_menu_pages_count())
+        actions = []
+        if action.payload.key == Key.UP and len(state.path) == 0:
+            actions.append(
+                SoundChangeVolumeAction(
+                    payload=SoundChangeVolumeActionPayload(
+                        amount=0.05,
+                        device=SoundDevice.OUTPUT,
+                    ),
+                ),
+            )
+        if action.payload.key == Key.DOWN and len(state.path) == 0:
+            actions.append(
+                SoundChangeVolumeAction(
+                    payload=SoundChangeVolumeActionPayload(
+                        amount=-0.05,
+                        device=SoundDevice.OUTPUT,
+                    ),
+                ),
+            )
+        return CompleteReducerResult(
+            state=state,
+            actions=actions,
+            events=[KeyPressEvent(payload=KeyEventPayload(key=action.payload.key))],
+        )
 
-    elif is_app_registration_action(action):
+    if is_app_registration_action(action):
         # TODO(sassanh): clone the menu
-        # menu = copy.deepcopy(state.menu)
-        menu = state.menu
+        # menu = copy.deepcopy(state.current_menu)
+        menu = state.current_menu
 
         main_menu_item: Item = menu_items(menu)[0]
         if not is_sub_menu_item(main_menu_item):
@@ -114,6 +112,9 @@ def main_reducer(
             raise TypeError(msg)
 
         menu_items(container_menu_item['sub_menu']).append(action.payload.menu_item)
-        return replace(state, menu=menu)
+        return replace(state, current_menu=menu)
+
+    if action.type == 'MAIN_SET_MENU_PATH':
+        return replace(state, path=action.payload.path)
 
     return state

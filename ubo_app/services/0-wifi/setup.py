@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ubo_gui.menu.types import ApplicationItem
 from ubo_gui.notification import Importance, notification_manager
+from ubo_gui.page import PageWidget
 from ubo_gui.prompt import PromptWidget
 
 from ubo_app.store import dispatch
@@ -16,19 +17,18 @@ ubo_service_name = 'WiFi'
 ubo_service_description = 'WiFi app for ubo-pod'
 
 
+class WifiSetup(PageWidget):
+    pass
+
+
 class WifiPrompt(PromptWidget):
     icon = 'wifi_off'
     prompt = 'Not Connected'
     first_option_label = 'Add'
     first_option_icon = 'add'
 
-    def first_option_callback(self: WifiPrompt) -> None:
-        notification_manager.notify(
-            title='WiFi added',
-            content='This WiFi network has been added',
-            icon='wifi',
-            sender='Wifi',
-        )
+    def first_option_callback(self: WifiPrompt) -> type[PageWidget]:
+        return WifiSetup
 
     second_option_label = 'Forget'
     second_option_icon = 'delete'
@@ -45,6 +45,42 @@ class WifiPrompt(PromptWidget):
 def init_service() -> None:
     dispatch(
         [
+            RegisterSettingAppAction(
+                payload=RegisterAppActionPayload(
+                    menu_item=ApplicationItem(
+                        label='WiFi',
+                        application=WifiPrompt,
+                        icon='wifi',
+                    ),
+                ),
+            ),
+            RegisterSettingAppAction(
+                payload=RegisterAppActionPayload(
+                    menu_item=ApplicationItem(
+                        label='WiFi',
+                        application=WifiPrompt,
+                        icon='wifi',
+                    ),
+                ),
+            ),
+            RegisterSettingAppAction(
+                payload=RegisterAppActionPayload(
+                    menu_item=ApplicationItem(
+                        label='WiFi',
+                        application=WifiPrompt,
+                        icon='wifi',
+                    ),
+                ),
+            ),
+            RegisterSettingAppAction(
+                payload=RegisterAppActionPayload(
+                    menu_item=ApplicationItem(
+                        label='WiFi',
+                        application=WifiPrompt,
+                        icon='wifi',
+                    ),
+                ),
+            ),
             RegisterSettingAppAction(
                 payload=RegisterAppActionPayload(
                     menu_item=ApplicationItem(
