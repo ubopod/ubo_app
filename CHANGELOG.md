@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.4.3
+
+- feat: add wi-fi service and wi-fi flow
+
 ## Version 0.4.2
 
 - feat: add camera service

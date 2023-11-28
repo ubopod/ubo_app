@@ -1,0 +1,31 @@
+<WiFiSetupPage>
+  BoxLayout:
+    orientation: 'vertical'
+    padding: dp(50)
+    spacing: dp(30)
+
+    BoxLayout:
+      orientation: 'horizontal'
+      Label:
+        font_name: 'material_symbols'
+        text: 'photo_camera'
+        size_hint: 1, None
+        font_size: dp(60)
+
+      Label:
+        font_name: 'material_symbols'
+        text: 'qr_code'
+        size_hint: 1, None
+        font_size: dp(60)
+
+    Label:
+      text: 'Scan WiFi QR-Code With Front Camera'
+      text_size: self.width, None
+      font_size: dp(19)
+      halign: 'center'
+      valign: 'middle'
+      size_hint: 1, 1
+
+  ItemWidget:
+    item: root.get_item(2)
+    size_hint: 1, None
