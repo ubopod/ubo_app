@@ -42,7 +42,15 @@ store = create_store(root_reducer)
 store.dispatch(InitAction(type='INIT'))
 
 autorun = store.autorun
-dispatch = store.dispatch
+
+
+def dispatch(items: ActionType | EventType | list[ActionType | EventType]) -> None:
+    from kivy.clock import Clock
+
+    logger.debug(items)
+    Clock.schedule_once(lambda _: store.dispatch(items), -1)
+
+
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
 

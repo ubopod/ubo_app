@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.7
+
+- feat: make `dispatch` always run its actions/events in UI thread
+
 ## Version 0.3.6
 
 - refactor: improve and simplify `pyproject.toml`
