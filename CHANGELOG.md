@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.4.2
+
+- feat: add camera service
+- feat: add camera live viewfinder (bypassing all the Kivy rendering procedures for the sake of performance)
+
 ## Version 0.4.1
 
 - refactor: use latest version of `python-redux` in which `type` field is dropped from actions and events
