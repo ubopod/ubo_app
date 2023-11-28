@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.6
+
+- refactor: improve and simplify `pyproject.toml`
+
 ## Version 0.3.5
 
 - refactor: use latest features of ubo-gui to better connect the main menu to store

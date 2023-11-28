@@ -1,17 +1,12 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.3.5"
+version = "0.3.6"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [{ include = "ubo_app" }]
 
-
-[[tool.poetry.source]]
-name = "piwheels"
-url = "https://www.piwheels.org/simple/"
-priority = "primary"
 
 [[tool.poetry.source]]
 name = "PyPI"
@@ -22,29 +17,19 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.6"
 ubo-gui = [
-  { version = "^0.6.1", markers = "extra!='dev'", optional = false },
-  { version = "^0.6.1", markers = "extra=='dev'", extras = [
-    "dev",
-  ], optional = true },
+  { version = "^0.6.3", markers = "extra=='default'", extras = [
+    'default',
+  ] },
+  { version = "^0.6.3", markers = "extra=='dev'", extras = [
+    'dev',
+  ] },
 ]
-headless-kivy-pi = [
-  { version = "^0.5.0", markers = "extra!='dev'" },
-  { version = "^0.5.0", markers = "extra=='dev'", extras = [
-    "dev",
-  ], optional = true },
-]
-python-redux = "^0.7.2"
-
-"RPi.GPIO" = { version = "^0.7.1", markers = "platform_machine == 'aarch64'", source = 'piwheels' }
-
-
-[tool.poetry.group.dev.dependencies]
-poethepoet = { version = "^0.24.2" }
-ubo-gui = { version = "^0.6.1" }
-headless-kivy-pi = { version = "^0.5.0" }
+python-redux = "^0.8.2"
+pyzbar = "^0.1.9"
 
 [tool.poetry.extras]
-dev = ['poethepoet', 'ubo-gui', 'headless-kivy-pi']
+default = ['ubo-gui']
+dev = ['ubo-gui']
 
 [tool.poetry.scripts]
 ubo = "ubo_app:main"
@@ -57,11 +42,12 @@ build-backend = "poetry.core.masonry.api"
 lint = "pyright -p pyproject.toml ."
 
 [tool.poe.tasks.deploy_to_device]
+args = [{ name = 'deps', type = 'boolean' }]
 cmd = 'scripts/deploy.sh'
 
 [tool.ruff]
 select = ['ALL']
-ignore = []
+ignore = ['INP001']
 
 fixable = ['ALL']
 unfixable = []
@@ -76,3 +62,10 @@ multiline-quotes = "double"
 
 [tool.ruff.format]
 quote-style = 'single'
+
+[tool.pyright]
+executionEnvironments = [
+  { root = "ubo_app/services/0-wifi", extraPaths = [
+    "ubo_app/services/0-wifi",
+  ], stubPaths = 'ubo_app/services/0-wifi/typings' },
+]
