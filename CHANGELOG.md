@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.4.0
+
+- refactor: read `ubo_service_id` and `ubo_service_name` from `__init__.py` file of the service
+- feat: let services import files from their directory (either by `from .` or `from __ubo_service__`)
+
 ## Version 0.3.7
 
 - feat: make `dispatch` always run its actions/events in UI thread

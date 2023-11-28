@@ -8,7 +8,7 @@ from typing import Any
 
 from redux import CombineReducerRegisterAction, CombineReducerRegisterActionPayload
 
-from ubo_app.logger import logger
+from ubo_app.logging import logger
 
 ROOT_PATH = Path(__file__).parent
 
@@ -24,8 +24,6 @@ def load(path: Path) -> Any:
             if not spec:
                 return None
             module = importlib.util.module_from_spec(spec)
-            sys.path.append(path.as_posix())
-            sys.modules[module.__name__] = module
             sys.modules[spec.name] = module
             if spec.loader:
                 spec.loader.exec_module(module)
@@ -53,18 +51,17 @@ def load_services() -> None:
                 current_path = os.curdir
                 os.chdir(service_path.as_posix())
 
-                reducer_module = load(service_path.joinpath('reducer.py'))
+                info = load(service_path.joinpath('__init__.py'))
+                reducer = load(service_path.joinpath('reducer.py'))
+                load(service_path.joinpath('setup.py'))
 
-                module = load(service_path.joinpath('setup.py'))
-
-                if reducer_module is not None and hasattr(reducer_module, 'reducer'):
+                if reducer is not None and hasattr(reducer, 'reducer'):
                     store.dispatch(
                         CombineReducerRegisterAction(
-                            type='REGISTER',
                             _id=store.root_reducer_id,
                             payload=CombineReducerRegisterActionPayload(
-                                key=module.ubo_service_id,
-                                reducer=reducer_module.reducer,
+                                key=info.ubo_service_id,
+                                reducer=reducer.reducer,
                             ),
                         ),
                     )
