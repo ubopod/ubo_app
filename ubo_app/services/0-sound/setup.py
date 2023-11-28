@@ -3,19 +3,15 @@ from __future__ import annotations
 
 from ubo_app.store import dispatch
 from ubo_app.store.status_icons import (
-    IconRegistrationAction,
-    IconRegistrationActionPayload,
+    StatusIconsRegisterAction,
+    StatusIconsRegisterActionPayload,
 )
-
-ubo_service_id = 'sound'
-ubo_service_name = 'Sound'
-ubo_service_description = 'Sound control for ubo-pod'
 
 
 def init_service() -> None:
     dispatch(
-        IconRegistrationAction(
-            payload=IconRegistrationActionPayload(
+        StatusIconsRegisterAction(
+            payload=StatusIconsRegisterActionPayload(
                 icon='mic_off',
                 priority=-2,
                 id='sound_mic_status',

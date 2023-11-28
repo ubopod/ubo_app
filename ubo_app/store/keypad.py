@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
 
 from redux import BaseAction, BaseEvent, Immutable
 
@@ -21,52 +20,29 @@ class KeypadActionPayload(Immutable):
     key: Key
 
 
-KeyType = Literal['KEYPAD_KEY_UP', 'KEYPAD_KEY_DOWN', 'KEYPAD_KEY_PRESS']
-
-
 class KeypadAction(BaseAction):
     payload: KeypadActionPayload
-    type: KeyType
 
 
 class KeypadKeyUpAction(KeypadAction):
-    type: Literal['KEYPAD_KEY_UP'] = 'KEYPAD_KEY_UP'
+    ...
 
 
 class KeypadKeyDownAction(KeypadAction):
-    type: Literal['KEYPAD_KEY_DOWN'] = 'KEYPAD_KEY_DOWN'
+    ...
 
 
 class KeypadKeyPressAction(KeypadAction):
-    type: Literal['KEYPAD_KEY_PRESS'] = 'KEYPAD_KEY_PRESS'
+    ...
 
 
-class KeyEventPayload(Immutable):
+class KeypadEventPayload(Immutable):
     key: Key
 
 
-class BaseKeyEvent(BaseEvent):
-    payload: KeyEventPayload
-    type: KeyType
+class KeypadEvent(BaseEvent):
+    payload: KeypadEventPayload
 
 
-class KeyPressEvent(BaseKeyEvent):
-    type: Literal['KEYPAD_KEY_PRESS'] = 'KEYPAD_KEY_PRESS'
-
-
-KeyEvent = KeyPressEvent
-
-
-def dispatch_key(action: KeyType, key: Key) -> None:
-    from ubo_app.store import dispatch
-
-    cls: type[KeypadAction]
-
-    if action == 'KEYPAD_KEY_DOWN':
-        cls = KeypadKeyDownAction
-    elif action == 'KEYPAD_KEY_UP':
-        cls = KeypadKeyUpAction
-    elif action == 'KEYPAD_KEY_PRESS':
-        cls = KeypadKeyPressAction
-
-    dispatch(cls(payload=KeypadActionPayload(key=key)))
+class KeypadKeyPressEvent(KeypadEvent):
+    ...

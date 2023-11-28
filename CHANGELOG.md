@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.4.1
+
+- refactor: use latest version of `python-redux` in which `type` field is dropped from actions and events
+
 ## Version 0.4.0
 
 - refactor: read `ubo_service_id` and `ubo_service_name` from `__init__.py` file of the service

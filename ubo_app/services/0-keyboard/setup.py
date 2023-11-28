@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING, Literal
 
 from kivy.core.window import Keyboard, Window, WindowBase
 
-from ubo_app.store.keypad import Key, dispatch_key
+from ubo_app.store.keypad import (
+    Key,
+    KeypadActionPayload,
+    KeypadKeyPressAction,
+)
 from ubo_app.store.sound import (
     SoundDevice,
     SoundToggleMuteStatusAction,
@@ -14,9 +18,6 @@ from ubo_app.store.sound import (
 
 if TYPE_CHECKING:
     Modifier = Literal['ctrl', 'alt', 'meta', 'shift']
-
-ubo_service_name = 'keypad'
-ubo_service_description = 'Keypad device'
 
 
 def on_keyboard(
@@ -27,19 +28,21 @@ def on_keyboard(
     modifier: list[Modifier],
 ) -> None:
     """Handle keyboard events."""
+    from ubo_app.store import dispatch
+
     if modifier == []:
         if key == Keyboard.keycodes['up']:
-            dispatch_key('KEYPAD_KEY_PRESS', Key.UP)
+            dispatch(KeypadKeyPressAction(payload=KeypadActionPayload(key=Key.UP)))
         elif key == Keyboard.keycodes['down']:
-            dispatch_key('KEYPAD_KEY_PRESS', Key.DOWN)
+            dispatch(KeypadKeyPressAction(payload=KeypadActionPayload(key=Key.DOWN)))
         elif key == Keyboard.keycodes['1']:
-            dispatch_key('KEYPAD_KEY_PRESS', Key.L1)
+            dispatch(KeypadKeyPressAction(payload=KeypadActionPayload(key=Key.L1)))
         elif key == Keyboard.keycodes['2']:
-            dispatch_key('KEYPAD_KEY_PRESS', Key.L2)
+            dispatch(KeypadKeyPressAction(payload=KeypadActionPayload(key=Key.L2)))
         elif key == Keyboard.keycodes['3']:
-            dispatch_key('KEYPAD_KEY_PRESS', Key.L3)
+            dispatch(KeypadKeyPressAction(payload=KeypadActionPayload(key=Key.L3)))
         elif key == Keyboard.keycodes['left']:
-            dispatch_key('KEYPAD_KEY_PRESS', Key.BACK)
+            dispatch(KeypadKeyPressAction(payload=KeypadActionPayload(key=Key.BACK)))
         elif key == Keyboard.keycodes['m']:
             from ubo_app.store import dispatch
 

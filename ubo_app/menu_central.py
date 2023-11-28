@@ -15,7 +15,7 @@ from ubo_gui.menu.constants import SHORT_WIDTH
 from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
-from ubo_app.store.keypad import Key, KeyPressEvent
+from ubo_app.store.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.main import SetMenuPathAction, SetMenuPathActionPayload
 
 from .store import autorun, dispatch, subscribe_event
@@ -53,7 +53,7 @@ class MenuAppCentral(UboApp):
             ),
         )
 
-        def handle_key_press_event(key_press_event: KeyPressEvent) -> None:
+        def handle_key_press_event(key_press_event: KeypadKeyPressEvent) -> None:
             if key_press_event.payload.key == Key.L1:
                 menu_widget.select(0)
             if key_press_event.payload.key == Key.L2:
@@ -67,7 +67,7 @@ class MenuAppCentral(UboApp):
             if key_press_event.payload.key == Key.DOWN:
                 menu_widget.go_down()
 
-        subscribe_event('KEYPAD_KEY_PRESS', handle_key_press_event)
+        subscribe_event(KeypadKeyPressEvent, handle_key_press_event)
 
         return menu_widget
 

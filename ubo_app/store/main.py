@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import field, replace
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, cast
 
 from redux import (
     BaseAction,
@@ -14,19 +14,21 @@ from redux import (
 )
 from ubo_gui.menu import Item, is_sub_menu_item, menu_items
 
-from ubo_app.store.app import RegisterAppAction, is_app_registration_action
+from ubo_app.store.app import RegisterAppAction, RegisterRegularAppAction
 from ubo_app.store.keypad import (
     Key,
-    KeyEvent,
-    KeyEventPayload,
     KeypadAction,
-    KeyPressEvent,
+    KeypadEvent,
+    KeypadEventPayload,
+    KeypadKeyPressAction,
+    KeypadKeyPressEvent,
 )
 from ubo_app.store.sound import (
     SoundChangeVolumeAction,
     SoundChangeVolumeActionPayload,
     SoundDevice,
 )
+from ubo_app.store.status_icons import IconAction
 
 from ._menus import HOME_MENU
 
@@ -47,25 +49,24 @@ class SetMenuPathActionPayload(Immutable):
 
 
 class SetMenuPathAction(BaseAction):
-    type: Literal['MAIN_SET_MENU_PATH'] = 'MAIN_SET_MENU_PATH'
     payload: SetMenuPathActionPayload
 
 
 MainAction: TypeAlias = (
-    InitAction | KeypadAction | RegisterAppAction | SetMenuPathAction
+    InitAction | IconAction | KeypadAction | RegisterAppAction | SetMenuPathAction
 )
 
 
 def main_reducer(
     state: MainState | None,
     action: MainAction,
-) -> ReducerResult[MainState, SoundChangeVolumeAction, KeyEvent]:
+) -> ReducerResult[MainState, SoundChangeVolumeAction, KeypadEvent]:
     if state is None:
-        if action.type == 'INIT':
+        if isinstance(action, InitAction):
             return MainState(current_menu=HOME_MENU)
         raise InitializationActionError
 
-    if action.type == 'KEYPAD_KEY_PRESS':
+    if isinstance(action, KeypadKeyPressAction):
         actions = []
         if action.payload.key == Key.UP and len(state.path) == 0:
             actions.append(
@@ -88,10 +89,12 @@ def main_reducer(
         return CompleteReducerResult(
             state=state,
             actions=actions,
-            events=[KeyPressEvent(payload=KeyEventPayload(key=action.payload.key))],
+            events=[
+                KeypadKeyPressEvent(payload=KeypadEventPayload(key=action.payload.key)),
+            ],
         )
 
-    if is_app_registration_action(action):
+    if isinstance(action, RegisterAppAction):
         # TODO(sassanh): clone the menu
         # menu = copy.deepcopy(state.current_menu)
         menu = state.current_menu
@@ -102,7 +105,7 @@ def main_reducer(
             raise TypeError(msg)
 
         container_menu_item: Item
-        if action.type == 'MAIN_REGISTER_REGULAR_APP':
+        if isinstance(action, RegisterRegularAppAction):
             container_menu_item = menu_items(main_menu_item['sub_menu'])[0]
         else:
             container_menu_item = menu_items(main_menu_item['sub_menu'])[1]
@@ -111,10 +114,12 @@ def main_reducer(
             msg = 'Settings menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
-        menu_items(container_menu_item['sub_menu']).append(action.payload.menu_item)
+        cast(list[Item], container_menu_item['sub_menu']['items']).append(
+            action.payload.menu_item,
+        )
         return replace(state, current_menu=menu)
 
-    if action.type == 'MAIN_SET_MENU_PATH':
+    if isinstance(action, SetMenuPathAction):
         return replace(state, path=action.payload.path)
 
     return state

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
 
 from redux import BaseAction, Immutable
 
@@ -18,7 +17,6 @@ class SoundSetVolumeActionPayload(Immutable):
 
 
 class SoundSetVolumeAction(BaseAction):
-    type: Literal['SOUND_SET_VOLUME'] = 'SOUND_SET_VOLUME'
     payload: SoundSetVolumeActionPayload
 
 
@@ -28,7 +26,6 @@ class SoundChangeVolumeActionPayload(Immutable):
 
 
 class SoundChangeVolumeAction(BaseAction):
-    type: Literal['SOUND_CHANGE_VOLUME'] = 'SOUND_CHANGE_VOLUME'
     payload: SoundChangeVolumeActionPayload
 
 
@@ -38,7 +35,6 @@ class SoundSetMuteStatusActionPayload(Immutable):
 
 
 class SoundSetMuteStatusAction(BaseAction):
-    type: Literal['SOUND_SET_MUTE_STATUS'] = 'SOUND_SET_MUTE_STATUS'
     payload: SoundSetMuteStatusActionPayload
 
 
@@ -47,7 +43,6 @@ class SoundToggleMuteStatusActionPayload(Immutable):
 
 
 class SoundToggleMuteStatusAction(BaseAction):
-    type: Literal['SOUND_TOGGLE_MUTE_STATUS'] = 'SOUND_TOGGLE_MUTE_STATUS'
     payload: SoundToggleMuteStatusActionPayload
 
 

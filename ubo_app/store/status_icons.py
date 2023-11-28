@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Literal
 
-from redux import BaseAction, Immutable, InitializationActionError
+from redux import BaseAction, Immutable, InitAction, InitializationActionError
 
 
 class IconState(Immutable):
@@ -18,27 +17,26 @@ class StatusIconsState(Immutable):
     icons: list[IconState]
 
 
-class IconRegistrationActionPayload(Immutable):
+class StatusIconsRegisterActionPayload(Immutable):
     icon: str
     color: str = 'white'
     priority: int = 0
     id: str | None = None
 
 
-class IconRegistrationAction(BaseAction):
-    payload: IconRegistrationActionPayload
-    type: Literal['STATUS_ICONS_REGISTER'] = 'STATUS_ICONS_REGISTER'
+class StatusIconsRegisterAction(BaseAction):
+    payload: StatusIconsRegisterActionPayload
 
 
-IconAction = IconRegistrationAction
+IconAction = StatusIconsRegisterAction | InitAction
 
 
 def reducer(state: StatusIconsState | None, action: IconAction) -> StatusIconsState:
     if state is None:
-        if action.type == 'INIT':
+        if isinstance(action, InitAction):
             return StatusIconsState(icons=[])
         raise InitializationActionError
-    if action.type == 'STATUS_ICONS_REGISTER':
+    if isinstance(action, StatusIconsRegisterAction):
         return replace(
             state,
             icons=sorted(

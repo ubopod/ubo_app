@@ -1,7 +1,10 @@
+# pyright: reportMissingImports=false
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
 from pathlib import Path
+
+from ubo_app.store.keypad import KeypadActionPayload, KeypadKeyPressAction
 
 IS_RPI = Path('/etc/rpi-issue').exists()
 if IS_RPI:
@@ -13,14 +16,10 @@ if IS_RPI:
 
     import adafruit_aw9523
     import board
-    from kivy.clock import Clock
     from redux import Immutable
-    from RPi import GPIO  # pyright: ignore [reportMissingImports]
+    from RPi import GPIO
 
-    from ubo_app.store.keypad import (
-        Key,
-        dispatch_key,
-    )
+    from ubo_app.store.keypad import Key
     from ubo_app.store.sound import (
         SoundDevice,
         SoundSetMuteStatusAction,
@@ -36,7 +35,7 @@ if IS_RPI:
     class KeypadError(Exception):
         ...
 
-    class ButtonName(Enum):
+    class ButtonName(str, Enum):
         TOP_LEFT = 'top_left'
         MIDDLE_LEFT = 'middle_left'
         BOTTOM_LEFT = 'bottom_left'
@@ -290,55 +289,61 @@ if IS_RPI:
             button_pressed: ButtonName,
             button_status: ButtonStatus,
         ) -> None:
+            from ubo_app.store import dispatch
+
             if button_status == 'pressed':
                 if button_pressed == ButtonName.UP:
-                    Clock.schedule_once(
-                        lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.UP),
-                        -1,
+                    dispatch(
+                        KeypadKeyPressAction(
+                            payload=KeypadActionPayload(key=Key.UP),
+                        ),
                     )
                 elif button_pressed == ButtonName.DOWN:
-                    Clock.schedule_once(
-                        lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.DOWN),
-                        -1,
+                    dispatch(
+                        KeypadKeyPressAction(
+                            payload=KeypadActionPayload(key=Key.DOWN),
+                        ),
                     )
                 elif button_pressed == ButtonName.TOP_LEFT:
-                    Clock.schedule_once(
-                        lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.L1),
-                        -1,
+                    dispatch(
+                        KeypadKeyPressAction(
+                            payload=KeypadActionPayload(key=Key.L1),
+                        ),
                     )
                 elif button_pressed == ButtonName.MIDDLE_LEFT:
-                    Clock.schedule_once(
-                        lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.L2),
-                        -1,
+                    dispatch(
+                        KeypadKeyPressAction(
+                            payload=KeypadActionPayload(key=Key.L2),
+                        ),
                     )
                 elif button_pressed == ButtonName.BOTTOM_LEFT:
-                    Clock.schedule_once(
-                        lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.L3),
-                        -1,
+                    dispatch(
+                        KeypadKeyPressAction(
+                            payload=KeypadActionPayload(key=Key.L3),
+                        ),
                     )
                 elif button_pressed == ButtonName.BACK:
-                    Clock.schedule_once(
-                        lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.BACK),
-                        -1,
+                    dispatch(
+                        KeypadKeyPressAction(
+                            payload=KeypadActionPayload(key=Key.BACK),
+                        ),
                     )
                 elif button_pressed == ButtonName.HOME:
-                    Clock.schedule_once(
-                        lambda _: dispatch_key('KEYPAD_KEY_PRESS', Key.HOME),
-                        -1,
+                    dispatch(
+                        KeypadKeyPressAction(
+                            payload=KeypadActionPayload(key=Key.HOME),
+                        ),
                     )
             if button_pressed == ButtonName.MIC:
                 from ubo_app.store import dispatch
 
-                Clock.schedule_once(
-                    lambda _: dispatch(
-                        SoundSetMuteStatusAction(
-                            payload=SoundSetMuteStatusActionPayload(
-                                device=SoundDevice.INPUT,
-                                mute=button_status == 'pressed',
-                            ),
+                dispatch(
+                    SoundSetMuteStatusAction(
+                        payload=SoundSetMuteStatusActionPayload(
+                            device=SoundDevice.INPUT,
+                            mute=button_status == 'pressed',
                         ),
                     ),
-                    -1,
                 )
 
     Keypad()
