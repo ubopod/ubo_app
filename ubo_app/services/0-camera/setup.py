@@ -46,7 +46,7 @@ if IS_RPI:
     preview_config = picam2.create_still_configuration(
         {
             'format': 'RGB888',
-            'size': (HeadlessWidget.width, HeadlessWidget.height),
+            'size': (HeadlessWidget.width * 2, HeadlessWidget.height * 2),
         },
     )
     capture_config = picam2.create_video_configuration({'format': 'RGB888'})
@@ -101,8 +101,10 @@ if IS_RPI:
                 check_image()
 
             data = resize_image(data)
-            data = np.rot90(data, 2).astype(np.uint16)
+            data = np.rot90(data, 2)
 
+            # Mirror the image
+            data = data[:, ::-1, :3].astype(np.uint16)
             color = (
                 ((data[:, :, 0] & 0xF8) << 8)
                 | ((data[:, :, 1] & 0xFC) << 3)

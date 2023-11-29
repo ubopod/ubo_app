@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.4.5
+
+- feat: mirror the viewfinder image to match the reality
+- chore: directly add headless-kivy-pi as a dependency
+
 ## Version 0.4.3
 
 - feat: add wi-fi service and wi-fi flow

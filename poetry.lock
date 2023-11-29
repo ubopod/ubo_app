@@ -2,13 +2,13 @@
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.25.0"
+version = "8.26.0"
 description = "CircuitPython APIs for non-CircuitPython versions of Python such as CPython on Linux and MicroPython."
-optional = true
+optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "Adafruit-Blinka-8.25.0.tar.gz", hash = "sha256:4cae1655a60c341d97e59108c0fa4f3963e8373b6195381e3b7f76ce1f4c2a5b"},
-    {file = "Adafruit_Blinka-8.25.0-py3-none-any.whl", hash = "sha256:6ccb124143bfc1073af7225445c75781e5415ecb97484bd24a9e0d9dbfb90816"},
+    {file = "Adafruit-Blinka-8.26.0.tar.gz", hash = "sha256:3d6783456f0558633357ca8982f69400a9dc41e350ce8162a4f6adf9aa463a4f"},
+    {file = "Adafruit_Blinka-8.26.0-py3-none-any.whl", hash = "sha256:df833c5ffc2488a162e5e20745aac16f65df48f726570a710eecc8bdd4847439"},
 ]
 
 [package.dependencies]
@@ -21,7 +21,7 @@ pyftdi = ">=0.40.0"
 name = "adafruit-circuitpython-aw9523"
 version = "1.1.8"
 description = "Python library for AW9523 GPIO expander and LED driver"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "adafruit-circuitpython-aw9523-1.1.8.tar.gz", hash = "sha256:178c071bc6bb0eb974e18b35e9842230383ef789da47814eb89ba8d207258f10"},
@@ -37,7 +37,7 @@ adafruit-circuitpython-register = "*"
 name = "adafruit-circuitpython-busdevice"
 version = "5.2.6"
 description = "CircuitPython bus device classes to manage bus sharing."
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "adafruit-circuitpython-busdevice-5.2.6.tar.gz", hash = "sha256:ed06f5552e5567b0c89589c5bc6ef3adcac67d59eb505ce9127af99f33c2bc90"},
@@ -52,7 +52,7 @@ adafruit-circuitpython-typing = "*"
 name = "adafruit-circuitpython-register"
 version = "1.9.17"
 description = "CircuitPython data descriptor classes to represent hardware registers on I2C and SPI devices."
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "adafruit-circuitpython-register-1.9.17.tar.gz", hash = "sha256:74982b07a8009b2de9cec138c545cddac7370732333d1aa1b50583a54bdc392d"},
@@ -69,7 +69,7 @@ typing-extensions = ">=4.0,<5.0"
 name = "adafruit-circuitpython-requests"
 version = "2.0.2"
 description = "A requests-like library for web interfacing"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "adafruit-circuitpython-requests-2.0.2.tar.gz", hash = "sha256:fec34d21be9d721a44bd1471e3651630eb7d394ce806de2fb39536dac73408aa"},
@@ -83,7 +83,7 @@ Adafruit-Blinka = "*"
 name = "adafruit-circuitpython-rgb-display"
 version = "3.12.2"
 description = "CircuitPython library for RGB displays."
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "adafruit-circuitpython-rgb-display-3.12.2.tar.gz", hash = "sha256:a41afdf15e18734e27e138ef14c72ae03b0307b4b3799c4b17507dac8c2793f8"},
@@ -98,7 +98,7 @@ adafruit-circuitpython-busdevice = "*"
 name = "adafruit-circuitpython-typing"
 version = "1.9.5"
 description = "Types needed for type annotation that are not in `typing`"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "adafruit-circuitpython-typing-1.9.5.tar.gz", hash = "sha256:6a2a7a4f60d54348f3c4aad8f4dd0d0f0aaf9c854ddd1761b20d5146440faa1d"},
@@ -113,20 +113,20 @@ typing-extensions = ">=4.0,<5.0"
 
 [[package]]
 name = "adafruit-platformdetect"
-version = "3.54.0"
+version = "3.55.0"
 description = "Platform detection for use by libraries like Adafruit-Blinka."
-optional = true
+optional = false
 python-versions = "*"
 files = [
-    {file = "Adafruit-PlatformDetect-3.54.0.tar.gz", hash = "sha256:3fe7fb781a83d3f28812bcbff34edd4100afb68901d9c62ee22d07e824d82168"},
-    {file = "Adafruit_PlatformDetect-3.54.0-py3-none-any.whl", hash = "sha256:fecae7a6612bbcd32d1f40c2d2f1aa263c554be5e52cc6fa4eebaf8b80c33519"},
+    {file = "Adafruit-PlatformDetect-3.55.0.tar.gz", hash = "sha256:39ccf92bbc356bc358a175e87fda513e35e1e9e418d18b9b8a0c8fd0358baf63"},
+    {file = "Adafruit_PlatformDetect-3.55.0-py3-none-any.whl", hash = "sha256:7484c4ab131a277f9397da8d6dba12b86064fe3d9729c365b455174d677e3060"},
 ]
 
 [[package]]
 name = "adafruit-pureio"
 version = "1.1.11"
 description = "Pure python (i.e. no native extensions) access to Linux IO    including I2C and SPI. Drop in replacement for smbus and spidev modules."
-optional = true
+optional = false
 python-versions = ">=3.5.0"
 files = [
     {file = "Adafruit_PureIO-1.1.11-py3-none-any.whl", hash = "sha256:281ab2099372cc0decc26326918996cbf21b8eed694ec4764d51eefa029d324e"},
@@ -137,7 +137,7 @@ files = [
 name = "certifi"
 version = "2023.11.17"
 description = "Python package for providing Mozilla's CA Bundle."
-optional = true
+optional = false
 python-versions = ">=3.6"
 files = [
     {file = "certifi-2023.11.17-py3-none-any.whl", hash = "sha256:e036ab49d5b79556f99cfc2d9320b34cfbe5be05c5871b51de9329f0603b0474"},
@@ -148,7 +148,7 @@ files = [
 name = "charset-normalizer"
 version = "3.3.2"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
-optional = true
+optional = false
 python-versions = ">=3.7.0"
 files = [
     {file = "charset-normalizer-3.3.2.tar.gz", hash = "sha256:f30c3cb33b24454a82faecaf01b19c18562b1e89558fb6c56de4d9118a032fd5"},
@@ -258,7 +258,7 @@ files = [
 name = "docutils"
 version = "0.20.1"
 description = "Docutils -- Python Documentation Utilities"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "docutils-0.20.1-py3-none-any.whl", hash = "sha256:96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6"},
@@ -267,13 +267,13 @@ files = [
 
 [[package]]
 name = "headless-kivy-pi"
-version = "0.5.3"
+version = "0.5.6"
 description = "Headless renderer for Kivy framework on Raspberry Pi"
-optional = true
+optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "headless_kivy_pi-0.5.3-py3-none-any.whl", hash = "sha256:2dd0ff7c31f50bfd50f7d02461752d6fb359f33c21072d2b61caf4bccdf77aa7"},
-    {file = "headless_kivy_pi-0.5.3.tar.gz", hash = "sha256:1608693220976f9cb1105fb20be0981ca25514604e7fd5fd04c5f71a57f94283"},
+    {file = "headless_kivy_pi-0.5.6-py3-none-any.whl", hash = "sha256:ffa6a44bf0c5bdda3bb82f8499443ec245d1e8acf42c6ed59eb15c8cf658d984"},
+    {file = "headless_kivy_pi-0.5.6.tar.gz", hash = "sha256:76e31732f9934423f85b30e65c20bb4e387a4c734b0ecf9608722925ba5da245"},
 ]
 
 [package.dependencies]
@@ -292,7 +292,7 @@ dev = ["poethepoet (>=0.24.2,<0.25.0)", "screeninfo (>=0.8.1,<0.9.0)"]
 name = "idna"
 version = "3.6"
 description = "Internationalized Domain Names in Applications (IDNA)"
-optional = true
+optional = false
 python-versions = ">=3.5"
 files = [
     {file = "idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f"},
@@ -303,7 +303,7 @@ files = [
 name = "kivy"
 version = "2.2.1"
 description = "A software library for rapid development of hardware-accelerated multitouch applications."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "Kivy-2.2.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:5aa8a0ca0708dd6edb0127c91712db7b8aad3aea3a79d498df145b8a7ee0aee6"},
@@ -358,7 +358,7 @@ tuio = ["oscpy"]
 name = "kivy-deps-angle"
 version = "0.3.3"
 description = "Repackaged binary dependency of Kivy."
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "kivy_deps.angle-0.3.3-cp310-cp310-win32.whl", hash = "sha256:8e571b2c662480a265420d6ded386df208d83272896daf616256672c5648e538"},
@@ -377,7 +377,7 @@ files = [
 name = "kivy-deps-glew"
 version = "0.3.1"
 description = "Repackaged binary dependency of Kivy."
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "kivy_deps.glew-0.3.1-cp310-cp310-win32.whl", hash = "sha256:8f4b3ed15acb62474909b6d41661ffb4da9eb502bb5684301fb2da668f288a58"},
@@ -396,7 +396,7 @@ files = [
 name = "kivy-deps-sdl2"
 version = "0.6.0"
 description = "Repackaged binary dependency of Kivy."
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "kivy_deps.sdl2-0.6.0-cp310-cp310-win32.whl", hash = "sha256:12706ce376f258233386cff2e1d31163d2d97e34f23730d7a3b1f3931af4c78d"},
@@ -415,7 +415,7 @@ files = [
 name = "kivy-garden"
 version = "0.1.5"
 description = ""
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "Kivy Garden-0.1.5.tar.gz", hash = "sha256:2b8377378e87501d5d271f33d94f0e44c089884572c64f89c9d609b1f86a2748"},
@@ -429,7 +429,7 @@ requests = "*"
 name = "numpy"
 version = "1.26.2"
 description = "Fundamental package for array computing in Python"
-optional = true
+optional = false
 python-versions = ">=3.9"
 files = [
     {file = "numpy-1.26.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:3703fc9258a4a122d17043e57b35e5ef1c5a5837c3db8be396c82e04c1cf9b0f"},
@@ -531,7 +531,7 @@ test = ["enum34", "ipaddress", "mock", "pywin32", "wmi"]
 name = "pyftdi"
 version = "0.55.0"
 description = "FTDI device driver (pure Python)"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "pyftdi-0.55.0-py3-none-any.whl", hash = "sha256:6af7b6c73da1256fd5140076fe77a616c13e44dd0779dd561dac1b5981dbd43f"},
@@ -546,7 +546,7 @@ pyusb = ">=1.0.0,<1.2.0 || >1.2.0"
 name = "pygments"
 version = "2.17.2"
 description = "Pygments is a syntax highlighting package written in Python."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "pygments-2.17.2-py3-none-any.whl", hash = "sha256:b27c2826c47d0f3219f29554824c30c5e8945175d888647acd804ddd04af846c"},
@@ -596,7 +596,7 @@ pyobjc-core = ">=10.0"
 name = "pypiwin32"
 version = "223"
 description = ""
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "pypiwin32-223-py3-none-any.whl", hash = "sha256:67adf399debc1d5d14dffc1ab5acacb800da569754fafdc576b2a039485aa775"},
@@ -610,7 +610,7 @@ pywin32 = ">=223"
 name = "pyserial"
 version = "3.5"
 description = "Python Serial Port Extension"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0"},
@@ -625,19 +625,17 @@ name = "python-redux"
 version = "0.8.2"
 description = "Redux implementation for Python"
 optional = false
-python-versions = "*"
-files = []
-develop = true
-
-[package.source]
-type = "directory"
-url = "../python-redux"
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "python_redux-0.8.2-py3-none-any.whl", hash = "sha256:a709f5123448be24a47fbf7514b4334886556b0ba34ad55e53e0d197e161f2ef"},
+    {file = "python_redux-0.8.2.tar.gz", hash = "sha256:1adf4d8bbddef5088f87eb8ea1f5324f7607aab4846763c531ea944744d7b607"},
+]
 
 [[package]]
 name = "pyusb"
 version = "1.2.1"
 description = "Python USB access module"
-optional = true
+optional = false
 python-versions = ">=3.6.0"
 files = [
     {file = "pyusb-1.2.1-py3-none-any.whl", hash = "sha256:2b4c7cb86dbadf044dfb9d3a4ff69fd217013dbe78a792177a3feb172449ea36"},
@@ -648,7 +646,7 @@ files = [
 name = "pywin32"
 version = "306"
 description = "Python for Window Extensions"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "pywin32-306-cp310-cp310-win32.whl", hash = "sha256:06d3420a5155ba65f0b72f2699b5bacf3109f36acbe8923765c22938a69dfc8d"},
@@ -686,7 +684,7 @@ scripts = ["Pillow (>=3.2.0)"]
 name = "requests"
 version = "2.31.0"
 description = "Python HTTP for Humans."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "requests-2.31.0-py3-none-any.whl", hash = "sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f"},
@@ -733,7 +731,7 @@ files = [
 name = "typing-extensions"
 version = "4.8.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "typing_extensions-4.8.0-py3-none-any.whl", hash = "sha256:8f92fc8806f9a6b641eaa5318da32b44d401efaac0f6678c9bc448ba3605faa0"},
@@ -744,7 +742,7 @@ files = [
 name = "ubo-gui"
 version = "0.6.3"
 description = "GUI sdk for Ubo Pod"
-optional = true
+optional = false
 python-versions = ">=3.11,<4.0"
 files = [
     {file = "ubo_gui-0.6.3-py3-none-any.whl", hash = "sha256:04f8299299c4113bc0d18700d092c0b13884238398cfb8441598dc2ceed4f2ef"},
@@ -752,10 +750,7 @@ files = [
 ]
 
 [package.dependencies]
-headless-kivy-pi = [
-    {version = ">=0.5.3,<0.6.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
-    {version = ">=0.5.3,<0.6.0", optional = true, markers = "extra == \"default\""},
-]
+headless-kivy-pi = {version = ">=0.5.3,<0.6.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""}
 
 [package.extras]
 default = ["headless-kivy-pi (>=0.5.3,<0.6.0)"]
@@ -765,7 +760,7 @@ dev = ["headless-kivy-pi[dev] (>=0.5.3,<0.6.0)"]
 name = "urllib3"
 version = "2.1.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "urllib3-2.1.0-py3-none-any.whl", hash = "sha256:55901e917a5896a349ff771be919f8bd99aff50b79fe58fec595eb37bbc56bb3"},
@@ -778,10 +773,9 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [extras]
-default = ["ubo-gui", "ubo-gui"]
-dev = ["ubo-gui", "ubo-gui"]
+dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "973c37f21a805baf1d57df36dde45226a4f6254f03b0b7f04a0852173e0c5176"
+content-hash = "161f06a76d7f63da2eb6cec2dcf6e5b1d25de20adf1ea479f6617dde3fc5472d"
