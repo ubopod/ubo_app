@@ -1,4 +1,9 @@
-# ruff: noqa: D100, D101, D102, D103, D104, D107
+"""Load UBO services.
+
+Provides a function to load UBO services from the specified
+directories and register their reducers.
+"""
+
 import importlib
 import importlib.util
 import os
@@ -14,6 +19,16 @@ ROOT_PATH = Path(__file__).parent
 
 
 def load(path: Path) -> Any:
+    """Load a Python module from the given path.
+
+    Args:
+    ----
+        path (Path): The path to the module file.
+
+    Returns:
+    -------
+        Any: The loaded module object, or None if the module couldn't be loaded.
+    """
     try:
         if path.exists():
             spec = importlib.util.spec_from_file_location(
@@ -34,6 +49,23 @@ def load(path: Path) -> Any:
 
 
 def load_services() -> None:
+    """Load UBO services from the specified directories and register their reducers.
+
+    This function searches for UBO services in the following directories:
+    - The 'services' directory under the root path of the UBO app.
+    - Additional directories specified in the 'UBO_SERVICES_PATH' environment variable.
+
+    For each service found, it loads the '__init__.py', 'reducer.py', and
+    'setup.py' files.
+    If a reducer is found and has a 'reducer' attribute, it registers the
+    reducer with the store.
+
+    Note: This function assumes that the 'store' object is imported from 'ubo_app'.
+
+    Returns
+    -------
+        None
+    """
     from ubo_app import store
 
     for services_directory_path in [

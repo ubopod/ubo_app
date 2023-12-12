@@ -11,6 +11,14 @@ logger.propagate = False
 
 
 class ExtraFormatter(logging.Formatter):
+    """A custom formatter that includes extra attributes in the log message.
+
+    Attributes
+    ----------
+        def_keys (tuple): A tuple of default attribute keys to exclude from
+        the log message.
+    """
+
     def_keys = (
         'name',
         'msg',
@@ -36,6 +44,16 @@ class ExtraFormatter(logging.Formatter):
     )
 
     def format(self: ExtraFormatter, record: logging.LogRecord) -> str:
+        """Format the log record into a string, including any extra attributes.
+
+        Args:
+        ----
+            record (logging.LogRecord): The log record to format.
+
+        Returns:
+        -------
+            str: The formatted log message.
+        """
         string = super().format(record)
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
         if len(extra) > 0:
