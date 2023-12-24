@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.6.1"
+version = "0.6.2"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -23,14 +23,21 @@ ubo-gui = [
   ] },
 ]
 headless-kivy-pi = [
-  { version = "^0.5.10a5" },
-  { version = "^0.5.10a5", markers = "extra=='dev'", extras = [
+  { version = "^0.5.10" },
+  { version = "^0.5.10", markers = "extra=='dev'", extras = [
     'dev',
   ] },
 ]
 python-redux = "^0.9.1a2"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pyright = "^1.1.342"
+ruff = "^0.1.9"
 
 [tool.poetry.extras]
 dev = ['ubo-gui', 'headless-kivy-pi']
@@ -43,7 +50,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
-lint = "pyright -p pyproject.toml ."
+lint = "sh -c 'pyright -p pyproject.toml .; poetry run ruff .'"
 
 [tool.poe.tasks.deploy_to_device]
 args = [{ name = 'deps', type = 'boolean' }, { name = 'run', type = 'boolean' }]
@@ -51,13 +58,14 @@ cmd = 'scripts/deploy.sh'
 
 [tool.ruff]
 select = ['ALL']
-ignore = ['INP001']
+ignore = ['INP001', 'PLR0911']
+
 
 fixable = ['ALL']
 unfixable = []
 
 [tool.ruff.flake8-builtins]
-builtins-ignorelist = ['type']
+builtins-ignorelist = ['type', 'id']
 
 [tool.ruff.flake8-quotes]
 docstring-quotes = "double"
@@ -66,3 +74,6 @@ multiline-quotes = "double"
 
 [tool.ruff.format]
 quote-style = 'single'
+
+[tool.pyright]
+reportUnusedVariable = false

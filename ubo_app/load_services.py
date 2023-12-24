@@ -12,7 +12,7 @@ import traceback
 import uuid
 from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
+from typing import TYPE_CHECKING, Any, Sequence, cast
 
 from redux import (
     CombineReducerRegisterAction,

@@ -29,7 +29,7 @@ from ubo_app.store.status_icons import (
 Action = InitAction | SoundAction | StatusIconsRegisterAction
 
 
-def reducer(
+def reducer(  # noqa: C901
     state: SoundState | None,
     action: Action,
 ) -> ReducerResult[SoundState, Action, BaseEvent]:

@@ -60,7 +60,7 @@ MainAction: TypeAlias = (
 )
 
 
-def main_reducer(
+def main_reducer(  # noqa: C901
     state: MainState | None,
     action: MainAction,
 ) -> ReducerResult[MainState, SoundChangeVolumeAction, KeypadEvent]:
@@ -102,8 +102,7 @@ def main_reducer(
     if isinstance(action, RegisterAppAction):
         from ubo_gui.menu import Item, is_sub_menu_item, menu_items
 
-        # TODO(sassanh): clone the menu
-        # menu = copy.deepcopy(state.current_menu)
+        # TODO(sassanh): clone the menu instead of modifying it
         menu = state.current_menu
 
         main_menu_item: Item = menu_items(menu)[0]

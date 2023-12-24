@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ubo_app.logging import logger
+
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Item, Menu
 
@@ -30,7 +32,7 @@ MAIN_MENU: Menu = {
         },
         {
             'label': 'About',
-            'action': lambda: print('About'),
+            'action': lambda: logger.info('"About" selected!'),
             'icon': 'info',
         },
     ],
@@ -70,7 +72,7 @@ HOME_MENU: Menu = {
         },
         {
             'label': 'Turn off',
-            'action': lambda: print('Turning off'),
+            'action': lambda: logger.info('"Turn off" selected!'),
             'icon': 'power_settings_new',
             'is_short': True,
         },

@@ -19,7 +19,6 @@ def create_task(awaitable: Awaitable) -> Task:
         try:
             await awaitable
         except BaseException as exception:  # noqa: BLE001
-            print(exception)
             thread = current_thread()
             logger.exception(
                 exception,

@@ -3,10 +3,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 from socket import AddressFamily
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import psutil
-from reducer import IPState
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.store import autorun, dispatch
@@ -16,8 +15,10 @@ from ubo_app.store.status_icons import (
     StatusIconsRegisterActionPayload,
 )
 
+if TYPE_CHECKING:
+    from reducer import IPState
 
-# Move state it to the global store so that other services can also use it
+
 @autorun(lambda state: cast(IPState, getattr(state, 'ip', None)))
 def get_ip_addresses(selector_result: IPState) -> list[SubMenuItem]:
     ip_addresses_by_interface = defaultdict(list)

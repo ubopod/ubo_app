@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.6.2
+
+- fix: avoid dbus connection getting stale
+- style: housekeeping - address as many lint errors as possible
+
 ## Version 0.6.1
 
 - feat: add `ip` service to show ip addresses of different interfaces of the device
@@ -13,7 +18,8 @@
 
 - feat: add `install_service` command line argument to setup systemd service
 - feat: add `VERBOSE` log level to logging
-- feat: add `--run` to deploy script, it doesn't run the app without this option anymore
+- feat: add `--run` to deploy script, it doesn't run the app without this option
+  anymore
 
 ## Version 0.5.0
 
@@ -31,16 +37,20 @@
 ## Version 0.4.2
 
 - feat: add camera service
-- feat: add camera live viewfinder (bypassing all the Kivy rendering procedures for the sake of performance)
+- feat: add camera live viewfinder (bypassing all the Kivy rendering procedures
+  for the sake of performance)
 
 ## Version 0.4.1
 
-- refactor: use latest version of `python-redux` in which `type` field is dropped from actions and events
+- refactor: use latest version of `python-redux` in which `type` field is
+  dropped from actions and events
 
 ## Version 0.4.0
 
-- refactor: read `ubo_service_id` and `ubo_service_name` from `__init__.py` file of the service
-- feat: let services import files from their directory (either by `from .` or `from __ubo_service__`)
+- refactor: read `ubo_service_id` and `ubo_service_name` from `__init__.py` file
+  of the service
+- feat: let services import files from their directory (either by `from .` or
+  `from __ubo_service__`)
 
 ## Version 0.3.7
 
@@ -77,7 +87,8 @@
 
 ## Version 0.2.1
 
-- feat: loading services dynamically from 'services' directory and direcotires specified in `UBO_SERVICES_PATH`
+- feat: loading services dynamically from 'services' directory and direcotires
+  specified in `UBO_SERVICES_PATH`
 - feat: implement keyboard and keypad services
 - feat: implement main store handling main menu events
 

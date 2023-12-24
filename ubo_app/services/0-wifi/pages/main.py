@@ -60,7 +60,16 @@ class WiFiNetworkPage(PromptWidget):
     async def update(self: WiFiNetworkPage) -> None:
         self.prompt = f'SSID: {self.ssid}'
 
-        current_ssid = await get_active_ssid()
+        for _ in range(3):
+            try:
+                current_ssid = await get_active_ssid()
+                break
+            except TimeoutError:
+                continue
+        else:
+            logger.error('`get_active_ssid` timed out 3 times')
+            return
+
         logger.info(
             'Checking ssids for this connection',
             extra={'current_ssid': current_ssid, 'self.ssid': self.ssid},

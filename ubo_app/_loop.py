@@ -4,5 +4,5 @@ from typing import Awaitable
 
 
 def create_task(task: Awaitable) -> Task:
-    msg = 'Current thread is not an ubo service thread'
+    msg = f"Current thread is not an ubo service thread, can't run task {task}"
     raise NotImplementedError(msg)
