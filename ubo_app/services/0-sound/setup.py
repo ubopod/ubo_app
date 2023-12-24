@@ -18,7 +18,3 @@ def init_service() -> None:
             ),
         ),
     )
-
-
-if __name__ == '__ubo_service__':
-    init_service()

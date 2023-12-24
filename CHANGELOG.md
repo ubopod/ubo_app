@@ -1,8 +1,12 @@
 # Changelog
 
-## Version 0.4.5
+## Version 0.5.0
 
-- feat: mirror the viewfinder image to match the reality
+- refactor: make each service run in its own thread
+- fix: weird behavior in RPi's Python, not respecting `submodule_search_locations`
+
+## Version 0.4.4
+
 - chore: directly add headless-kivy-pi as a dependency
 
 ## Version 0.4.3

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.4.5"
+version = "0.5.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -17,19 +17,20 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.6"
 ubo-gui = [
-  { version = "^0.6.3" },
-  { version = "^0.6.3", markers = "extra=='dev'", extras = [
+  { version = "^0.6.4" },
+  { version = "^0.6.4", markers = "extra=='dev'", extras = [
     'dev',
   ] },
 ]
 headless-kivy-pi = [
-  { version = "^0.5.6" },
-  { version = "^0.5.6", markers = "extra=='dev'", extras = [
+  { version = "^0.5.10a5" },
+  { version = "^0.5.10a5", markers = "extra=='dev'", extras = [
     'dev',
   ] },
 ]
-python-redux = "^0.8.2"
+python-redux = "^0.9.1a2"
 pyzbar = "^0.1.9"
+sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 
 [tool.poetry.extras]
 dev = ['ubo-gui', 'headless-kivy-pi']
@@ -45,7 +46,7 @@ build-backend = "poetry.core.masonry.api"
 lint = "pyright -p pyproject.toml ."
 
 [tool.poe.tasks.deploy_to_device]
-args = [{ name = 'deps', type = 'boolean' }]
+args = [{ name = 'deps', type = 'boolean' }, { name = 'run', type = 'boolean' }]
 cmd = 'scripts/deploy.sh'
 
 [tool.ruff]
@@ -65,10 +66,3 @@ multiline-quotes = "double"
 
 [tool.ruff.format]
 quote-style = 'single'
-
-[tool.pyright]
-executionEnvironments = [
-  { root = "ubo_app/services/0-wifi", extraPaths = [
-    "ubo_app/services/0-wifi",
-  ], stubPaths = 'ubo_app/services/0-wifi/typings' },
-]

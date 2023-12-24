@@ -2,54 +2,54 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from pathlib import Path
+import logging
+import math
+import time
+from enum import Enum
+from typing import TYPE_CHECKING, Literal
 
-from ubo_app.store.keypad import KeypadActionPayload, KeypadKeyPressAction
+from redux import Immutable
 
-IS_RPI = Path('/etc/rpi-issue').exists()
-if IS_RPI:
-    import logging
-    import math
-    import time
-    from enum import Enum
-    from typing import TYPE_CHECKING, Literal
+from ubo_app.store.keypad import Key, KeypadActionPayload, KeypadKeyPressAction
+from ubo_app.store.sound import (
+    SoundDevice,
+    SoundSetMuteStatusAction,
+    SoundSetMuteStatusActionPayload,
+)
 
+INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
+
+ButtonStatus = Literal['pressed', 'released']
+
+
+class KeypadError(Exception):
+    ...
+
+
+class ButtonName(str, Enum):
+    TOP_LEFT = 'top_left'
+    MIDDLE_LEFT = 'middle_left'
+    BOTTOM_LEFT = 'bottom_left'
+    UP = 'up'
+    DOWN = 'down'
+    BACK = 'back'
+    HOME = 'home'
+    MIC = 'mic'
+
+
+class ButtonEvent(Immutable):
+    status: ButtonStatus
+    timestamp: float
+
+
+def init_service() -> None:
     import adafruit_aw9523
     import board
-    from redux import Immutable
     from RPi import GPIO
-
-    from ubo_app.store.keypad import Key
-    from ubo_app.store.sound import (
-        SoundDevice,
-        SoundSetMuteStatusAction,
-        SoundSetMuteStatusActionPayload,
-    )
 
     if TYPE_CHECKING:
         from adafruit_bus_device import i2c_device
         from adafruit_register.i2c_struct import UnaryStruct
-
-    INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
-
-    class KeypadError(Exception):
-        ...
-
-    class ButtonName(str, Enum):
-        TOP_LEFT = 'top_left'
-        MIDDLE_LEFT = 'middle_left'
-        BOTTOM_LEFT = 'bottom_left'
-        UP = 'up'
-        DOWN = 'down'
-        BACK = 'back'
-        HOME = 'home'
-        MIC = 'mic'
-
-    ButtonStatus = Literal['pressed', 'released']
-
-    class ButtonEvent(Immutable):
-        status: ButtonStatus
-        timestamp: float
 
     class Event(Immutable):
         inputs: UnaryStruct

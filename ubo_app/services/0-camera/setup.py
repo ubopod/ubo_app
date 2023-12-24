@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from pathlib import Path
+import time
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -21,6 +21,8 @@ from ubo_app.store.camera import (
 if TYPE_CHECKING:
     from numpy._typing import NDArray
 
+THROTTL_TIME = 0.5
+
 
 def resize_image(
     image: NDArray[np.uint8],
@@ -36,38 +38,37 @@ def resize_image(
     return resized[: new_size[0], : new_size[1]]
 
 
-IS_RPI = Path('/etc/rpi-issue').exists()
-if IS_RPI:
+def init_service() -> None:
     from picamera2 import Picamera2  # pyright: ignore [reportMissingImports]
     from pyzbar.pyzbar import decode
 
     picam2 = Picamera2()
-    barcodes = []
     preview_config = picam2.create_still_configuration(
         {
             'format': 'RGB888',
             'size': (HeadlessWidget.width * 2, HeadlessWidget.height * 2),
         },
     )
-    capture_config = picam2.create_video_configuration({'format': 'RGB888'})
+    picam2.configure(preview_config)
+    picam2.set_controls({'AwbEnable': True})
+
+    picam2.start()
 
     def start_camera_viewfinder(start_event: CameraStartViewfinderEvent) -> None:
-        picam2.configure(preview_config)
-        picam2.set_controls({'AwbEnable': True})
-
-        picam2.start()
-
         regex_pattern = start_event.payload.barcode_pattern
         regex = re.compile(regex_pattern) if regex_pattern is not None else None
+        last_match = 0
 
         display = HeadlessWidget._display  # noqa: SLF001
 
-        def check_image() -> None:
+        def check_image(barcodes: list) -> None:
+            nonlocal last_match
+            if time.time() - last_match < THROTTL_TIME:
+                return
             if regex is None:
                 return
-            data = picam2.capture_array('main')
+            last_match = time.time()
 
-            barcodes = decode(data)
             for barcode in barcodes:
                 code = barcode.data.decode()
                 logger.info(
@@ -98,7 +99,7 @@ if IS_RPI:
 
             barcodes = decode(data)
             if len(barcodes) > 0:
-                check_image()
+                check_image(barcodes)
 
             data = resize_image(data)
             data = np.rot90(data, 2)
@@ -122,20 +123,17 @@ if IS_RPI:
                 data_bytes,
             )
 
+        feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder, 0.03)
         HeadlessWidget.pause()
 
-        feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder, 0.03)
-
-        def handle_key_press_event(_: CameraStopViewfinderEvent) -> None:
-            picam2.stop()
-            cancel_key_press_event_subscription()
+        def handle_stop_viewfinder(_: CameraStopViewfinderEvent) -> None:
             feed_viewfinder_scheduler.cancel()
             HeadlessWidget.resume()
-            HeadlessWidget.reset_fps_control_queue()
+            cancel_subscription()
 
-        cancel_key_press_event_subscription = subscribe_event(
+        cancel_subscription = subscribe_event(
             CameraStopViewfinderEvent,
-            handle_key_press_event,
+            handle_stop_viewfinder,
         )
 
     subscribe_event(CameraStartViewfinderEvent, start_camera_viewfinder)

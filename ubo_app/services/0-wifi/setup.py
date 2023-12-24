@@ -81,8 +81,4 @@ def init_service() -> None:
     )
 
     subscribe_event(WiFiCreateEvent, create_wifi_connection)
-    subscribe_event(WiFiUpdateEvent, update_wifi_list)
-
-
-if __name__ == '__ubo_service__':
-    init_service()
+    subscribe_event(WiFiUpdateRequestEvent, lambda _: create_task(request_scan()))

@@ -1,1 +1,0 @@
-wifiManager = 1

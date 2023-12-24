@@ -55,4 +55,5 @@ def on_keyboard(
             )
 
 
-Window.bind(on_keyboard=on_keyboard)
+def init_service() -> None:
+    Window.bind(on_keyboard=on_keyboard)
