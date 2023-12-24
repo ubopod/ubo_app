@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.5.1
+
+- feat: add `install_service` command line argument to setup systemd service
+- feat: add `VERBOSE` log level to logging
+- feat: add `--run` to deploy script, it doesn't run the app without this option anymore
+
 ## Version 0.5.0
 
 - refactor: make each service run in its own thread

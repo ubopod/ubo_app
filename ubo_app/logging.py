@@ -4,9 +4,42 @@ from __future__ import annotations
 import atexit
 import logging
 import sys
+from typing import Mapping, cast
 
-logger = logging.getLogger('ubo-app')
-logger.setLevel(logging.NOTSET)
+VERBOSE = 5
+
+
+class UboLogger(logging.getLoggerClass()):
+    def __init__(self: UboLogger, name: str, level: int = logging.NOTSET) -> None:
+        super().__init__(name, level)
+
+        logging.addLevelName(VERBOSE, 'VERBOSE')
+
+    def verbose(  # noqa: PLR0913
+        self: UboLogger,
+        msg: object,
+        *args: tuple[object],
+        exc_info: logging._ExcInfoType | None = None,
+        stack_info: bool = False,
+        stacklevel: int = 1,
+        extra: Mapping[str, object] | None = None,
+    ) -> None:
+        if self.isEnabledFor(VERBOSE):
+            self._log(
+                VERBOSE,
+                msg,
+                *args,
+                exc_info=exc_info,
+                stack_info=stack_info,
+                stacklevel=stacklevel,
+                extra=extra,
+            )
+
+
+logging.setLoggerClass(UboLogger)
+
+logger = cast(UboLogger, logging.getLogger('ubo-app'))
+logger.setLevel(logging.DEBUG)
 logger.propagate = False
 
 
@@ -35,7 +68,7 @@ class ExtraFormatter(logging.Formatter):
         'message',
     )
 
-    def format(self: ExtraFormatter, record: logging.LogRecord) -> str:
+    def format(self: ExtraFormatter, record: logging.LogRecord) -> str:  # noqa: A003
         string = super().format(record)
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
         if len(extra) > 0:
