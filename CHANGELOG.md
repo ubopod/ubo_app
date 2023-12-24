@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.6.1
+
+- feat: add `ip` service to show ip addresses of different interfaces of the device
+
 ## Version 0.6.0
 
 - refactor: rewrite wifi service using `sdbus_networkmanager`
