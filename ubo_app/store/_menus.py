@@ -1,5 +1,9 @@
-from ubo_gui.menu.types import Menu
-from ubo_gui.notification import notification_manager
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ubo_gui.menu.types import Item, Menu
 
 SETTINGS_MENU: Menu = {
     'title': 'Settings',
@@ -32,6 +36,19 @@ MAIN_MENU: Menu = {
     ],
 }
 
+
+def notifications_title() -> str:
+    from ubo_gui.notification import notification_manager
+
+    return f'Notifications ({notification_manager.unread_count})'
+
+
+def notifications_menu_items() -> list[Item]:
+    from ubo_gui.notification import notification_manager
+
+    return notification_manager.menu_items()
+
+
 HOME_MENU: Menu = {
     'title': 'Dashboard',
     'items': [
@@ -44,8 +61,8 @@ HOME_MENU: Menu = {
         {
             'label': '',
             'sub_menu': {
-                'title': lambda: f'Notifications ({notification_manager.unread_count})',
-                'items': notification_manager.menu_items,
+                'title': notifications_title,
+                'items': notifications_menu_items,
             },
             'color': 'yellow',
             'icon': 'info',

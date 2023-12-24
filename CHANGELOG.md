@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.6.0
+
+- refactor: rewrite wifi service using `sdbus_networkmanager`
+- refactor: update with the latest features of the latest python-redux version
+
 ## Version 0.5.1
 
 - feat: add `install_service` command line argument to setup systemd service

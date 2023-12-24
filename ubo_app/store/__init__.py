@@ -1,12 +1,14 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Callable
 
+from headless_kivy_pi import HeadlessWidget
+from kivy.base import Clock
 from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
-    InitAction,
+    CreateStoreOptions,
     combine_reducers,
     create_store,
 )
@@ -28,7 +30,7 @@ class RootState(BaseCombineReducerState):
     main: MainState
     sound: SoundState
     status_icons: StatusIconsState
-    wi_fi: WiFiState
+    wifi: WiFiState
 
 
 ActionType = MainAction | SoundAction | CombineReducerAction | WiFiAction | CameraAction
@@ -43,21 +45,30 @@ root_reducer, root_reducer_id = combine_reducers(
 )
 
 
-store = create_store(root_reducer)
+def scheduler(main_loop_callback: Callable[[], None]) -> None:
+    Clock.create_trigger(
+        lambda _: main_loop_callback(),
+        0,
+        interval=True,
+    )()
 
-store.dispatch(InitAction())
 
-autorun = store.autorun
+store = create_store(
+    root_reducer,
+    CreateStoreOptions(scheduler=scheduler),
+)
 
 
 def dispatch(items: ActionType | EventType | list[ActionType | EventType]) -> None:
-    from kivy.clock import Clock
+    logger.debug('Dispatch', extra={'items': items})
+    store.dispatch(items)
 
-    logger.debug(items)
-    Clock.schedule_once(lambda _: store.dispatch(items), -1)
 
+autorun = store.autorun
 
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
+
+subscribe(lambda _: HeadlessWidget.render())
 
 __ALL__ = (autorun, dispatch, subscribe)

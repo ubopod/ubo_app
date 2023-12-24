@@ -1,6 +1,16 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import time
+from pathlib import Path
+
+from wifi_manager import (
+    add_wireless_connection,
+    get_connections,
+    request_scan,
+    subscribe_to_wifi_device,
+)
+
 from ubo_app.logging import logger
 from ubo_app.store import dispatch, subscribe_event
 from ubo_app.store.app import RegisterAppActionPayload, RegisterSettingAppAction
@@ -9,58 +19,55 @@ from ubo_app.store.status_icons import (
     StatusIconsRegisterActionPayload,
 )
 from ubo_app.store.wifi import (
-    WiFiConnection,
     WiFiCreateEvent,
+    WiFiType,
     WiFiUpdateAction,
     WiFiUpdateActionPayload,
-    WiFiUpdateEvent,
+    WiFiUpdateRequestAction,
+    WiFiUpdateRequestActionPayload,
+    WiFiUpdateRequestEvent,
 )
+from ubo_app.utils.async_ import create_task
 
-from .pages.main import WiFiMainMenu
-from .wifi_manager import wifi_manager
+IS_RPI = Path('/etc/rpi-issue').exists()
+REFRESH_TIMEOUT = 10
 
 
 def create_wifi_connection(event: WiFiCreateEvent) -> None:
     connection = event.payload.connection
-    connection_type = connection.type
+    ssid = connection.ssid
+    password = connection.password
 
-    if not connection_type:
-        logger.warn('Connection type is required', {'provided_type': connection_type})
+    if not password:
+        logger.warn('Password is required')
         return
 
-    connection_type = connection_type.upper()
+    async def act() -> None:
+        await add_wireless_connection(
+            ssid=ssid,
+            password=password,
+            type=connection.type or WiFiType.nopass,
+            hidden=connection.hidden,
+        )
 
-    if connection_type not in ('WPA', 'WEP', 'OPEN'):
-        logger.warn('Connection type is not valid', {'provided_type': connection_type})
-        return
+        logger.info('Result of running `add_wifi`')
 
-    result = wifi_manager.add_wifi(
-        ssid=connection.ssid,
-        password=connection.password,
-        type=connection_type,
-    )
+        dispatch(
+            WiFiUpdateRequestAction(payload=WiFiUpdateRequestActionPayload(reset=True)),
+        )
 
-    logger.info('Result of running `add_wifi`', {'result': result})
-
-    dispatch(WiFiUpdateEvent())
+    create_task(act())
 
 
-def update_wifi_list(_event: WiFiUpdateEvent | None = None) -> None:
-    connections = [
-        WiFiConnection(ssid=network['ssid']) for network in wifi_manager.list_networks()
-    ]
-    current_ssid, _ = wifi_manager.get_current_network() or ('', '')
+async def update_wifi_list(_: WiFiUpdateRequestEvent | None = None) -> None:
+    connections = await get_connections()
     dispatch(
         WiFiUpdateAction(
             payload=WiFiUpdateActionPayload(
                 connections=connections,
                 is_on=True,
                 current_connection=next(
-                    (
-                        connection
-                        for connection in connections
-                        if connection.ssid == current_ssid
-                    ),
+                    (connection for connection in connections if connection.is_active),
                     None,
                 ),
             ),
@@ -69,10 +76,27 @@ def update_wifi_list(_event: WiFiUpdateEvent | None = None) -> None:
 
 
 def init_service() -> None:
+    from pages import main
+
+    def setup_listeners() -> None:
+        last_update_time = time.time()
+
+        def handle_wifi_event(_: object) -> None:
+            nonlocal last_update_time
+            if time.time() - last_update_time < REFRESH_TIMEOUT:
+                return
+            last_update_time = time.time()
+            create_task(update_wifi_list())
+
+        create_task(subscribe_to_wifi_device(handle_wifi_event))
+
+    create_task(update_wifi_list())
+    setup_listeners()
+
     dispatch(
         [
             RegisterSettingAppAction(
-                payload=RegisterAppActionPayload(menu_item=WiFiMainMenu),
+                payload=RegisterAppActionPayload(menu_item=main.WiFiMainMenu),
             ),
             StatusIconsRegisterAction(
                 payload=StatusIconsRegisterActionPayload(icon='wifi', priority=-1),

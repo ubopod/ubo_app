@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from distutils.util import strtobool
+from typing import cast
 
 from redux import (
     BaseAction,
@@ -19,8 +21,10 @@ from ubo_app.store.wifi import (
     WiFiCreateEventPayload,
     WiFiEvent,
     WiFiState,
+    WiFiType,
     WiFiUpdateAction,
-    WiFiUpdateEvent,
+    WiFiUpdateRequestAction,
+    WiFiUpdateRequestEvent,
 )
 
 
@@ -32,7 +36,7 @@ def reducer(
         if isinstance(action, InitAction):
             return CompleteReducerResult(
                 state=WiFiState(connections=[], is_on=False, current_connection=None),
-                events=[WiFiUpdateEvent()],
+                actions=[WiFiUpdateRequestAction()],
             )
         raise InitializationActionError
 
@@ -50,11 +54,21 @@ def reducer(
                         connection=WiFiConnection(
                             ssid=ssid,
                             password=action.payload.match.get('Password'),
-                            type=action.payload.match.get('Type'),
+                            type=cast(WiFiType, action.payload.match.get('Type')),
+                            hidden=strtobool(
+                                action.payload.match.get('Hidden') or 'false',
+                            )
+                            == 1,
                         ),
                     ),
                 ),
             ],
+        )
+
+    if isinstance(action, WiFiUpdateRequestAction):
+        return CompleteReducerResult(
+            state=replace(state, connections=None) if action.payload.reset else state,
+            events=[WiFiUpdateRequestEvent()],
         )
 
     if isinstance(action, WiFiUpdateAction):

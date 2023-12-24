@@ -41,7 +41,7 @@ class MenuAppFooter(UboApp):
         return clock
 
     @cached_property
-    def footer(self: MenuAppFooter) -> Widget:
+    def footer(self: MenuAppFooter) -> Widget | None:
         layout = BoxLayout()
 
         normal_footer_layout = BoxLayout(orientation='horizontal', spacing=0, padding=0)

@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, cast
 from redux import (
     BaseAction,
     CompleteReducerResult,
+    FinishAction,
     Immutable,
     InitAction,
     InitializationActionError,
     ReducerResult,
 )
-from ubo_gui.menu import Item, is_sub_menu_item, menu_items
 
 from ubo_app.store.app import RegisterAppAction, RegisterRegularAppAction
 from ubo_app.store.keypad import (
@@ -29,8 +29,6 @@ from ubo_app.store.sound import (
     SoundDevice,
 )
 from ubo_app.store.status_icons import IconAction
-
-from ._menus import HOME_MENU
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -53,7 +51,12 @@ class SetMenuPathAction(BaseAction):
 
 
 MainAction: TypeAlias = (
-    InitAction | IconAction | KeypadAction | RegisterAppAction | SetMenuPathAction
+    InitAction
+    | FinishAction
+    | IconAction
+    | KeypadAction
+    | RegisterAppAction
+    | SetMenuPathAction
 )
 
 
@@ -63,6 +66,8 @@ def main_reducer(
 ) -> ReducerResult[MainState, SoundChangeVolumeAction, KeypadEvent]:
     if state is None:
         if isinstance(action, InitAction):
+            from ._menus import HOME_MENU
+
             return MainState(current_menu=HOME_MENU)
         raise InitializationActionError
 
@@ -95,6 +100,8 @@ def main_reducer(
         )
 
     if isinstance(action, RegisterAppAction):
+        from ubo_gui.menu import Item, is_sub_menu_item, menu_items
+
         # TODO(sassanh): clone the menu
         # menu = copy.deepcopy(state.current_menu)
         menu = state.current_menu

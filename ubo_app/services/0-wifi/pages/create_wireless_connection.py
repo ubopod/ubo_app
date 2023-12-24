@@ -22,8 +22,8 @@ barcode_pattern = r"""WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopa
 ?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?"""
 
 
-class WiFiSetupPage(PageWidget):
-    def get_item(self: WiFiSetupPage, index: int) -> ActionItem | None:
+class CreateWirelessConnectionPage(PageWidget):
+    def get_item(self: CreateWirelessConnectionPage, index: int) -> ActionItem | None:
         if index == 2:
             return {
                 'label': 'start',
@@ -41,5 +41,8 @@ class WiFiSetupPage(PageWidget):
 
 
 Builder.load_file(
-    pathlib.Path(__file__).parent.joinpath('setup.kv').resolve().as_posix(),
+    pathlib.Path(__file__)
+    .parent.joinpath('create_wireless_connection.kv')
+    .resolve()
+    .as_posix(),
 )

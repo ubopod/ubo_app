@@ -15,8 +15,11 @@ class WiFiType(str, Enum):
 
 class WiFiConnection(Immutable):
     ssid: str
+    is_active: bool = False
+    signal_strength: int = 0
     password: str | None = None
-    type: str | None = None
+    type: WiFiType | None = None
+    hidden: bool = False
 
 
 class WiFiAction(BaseAction):
@@ -33,8 +36,18 @@ class WiFiUpdateAction(WiFiAction):
     payload: WiFiUpdateActionPayload
 
 
+class WiFiUpdateRequestActionPayload(Immutable):
+    reset: bool = False
+
+
+class WiFiUpdateRequestAction(WiFiAction):
+    payload: WiFiUpdateRequestActionPayload = WiFiUpdateRequestActionPayload(
+        reset=False,
+    )
+
+
 class WiFiState(Immutable):
-    connections: list[WiFiConnection]
+    connections: list[WiFiConnection] | None
     is_on: bool
     current_connection: WiFiConnection | None
 
@@ -51,5 +64,5 @@ class WiFiCreateEvent(WiFiEvent):
     payload: WiFiCreateEventPayload
 
 
-class WiFiUpdateEvent(WiFiEvent):
+class WiFiUpdateRequestEvent(WiFiEvent):
     payload: None = None

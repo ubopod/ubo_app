@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
+from redux import EventSubscriptionOptions
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
@@ -67,7 +68,11 @@ class MenuAppCentral(UboApp):
             if key_press_event.payload.key == Key.DOWN:
                 menu_widget.go_down()
 
-        subscribe_event(KeypadKeyPressEvent, handle_key_press_event)
+        subscribe_event(
+            KeypadKeyPressEvent,
+            handle_key_press_event,
+            EventSubscriptionOptions(run_async=False),
+        )
 
         return menu_widget
 
@@ -112,7 +117,7 @@ class MenuAppCentral(UboApp):
         return gauge
 
     @cached_property
-    def central(self: MenuAppCentral) -> Widget:
+    def central(self: MenuAppCentral) -> Widget | None:
         horizontal_layout = BoxLayout()
 
         self.menu_widget.size_hint = (None, 1)
@@ -141,7 +146,7 @@ class MenuAppCentral(UboApp):
         )
         def sync_output_volume(selector_result: float) -> None:
             volume_widget.value = selector_result * 100
-            self.root.reset_fps_control_queue()
+            self.root.render()
 
         def handle_depth_change(_: MenuWidget, depth: int) -> None:
             is_deep = depth > 0
