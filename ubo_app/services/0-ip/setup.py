@@ -3,20 +3,15 @@ from __future__ import annotations
 
 from collections import defaultdict
 from socket import AddressFamily
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import psutil
+from reducer import IPState
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.app import RegisterAppActionPayload, RegisterSettingAppAction
-from ubo_app.store.status_icons import (
-    StatusIconsRegisterAction,
-    StatusIconsRegisterActionPayload,
-)
-
-if TYPE_CHECKING:
-    from reducer import IPState
+from ubo_app.store.app import RegisterSettingAppAction
+from ubo_app.store.status_icons import StatusIconsRegisterAction
 
 
 @autorun(lambda state: cast(IPState, getattr(state, 'ip', None)))
@@ -62,10 +57,11 @@ def init_service() -> None:
     dispatch(
         [
             RegisterSettingAppAction(
-                payload=RegisterAppActionPayload(menu_item=IPMainMenu),
+                menu_item=IPMainMenu,
             ),
             StatusIconsRegisterAction(
-                payload=StatusIconsRegisterActionPayload(icon='public', priority=-1),
+                icon='public',
+                priority=-1,
             ),
         ],
     )

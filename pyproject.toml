@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.6.2"
+version = "0.7.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -31,6 +31,7 @@ headless-kivy-pi = [
 python-redux = "^0.9.1a2"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
+python-debouncer = "^0.1.0"
 
 [tool.poetry.group.dev]
 optional = true
@@ -50,7 +51,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
-lint = "sh -c 'pyright -p pyproject.toml .; poetry run ruff .'"
+lint = "sh -c 'pyright -p pyproject.toml .; poetry run ruff . --unsafe-fixes'"
 
 [tool.poe.tasks.deploy_to_device]
 args = [{ name = 'deps', type = 'boolean' }, { name = 'run', type = 'boolean' }]

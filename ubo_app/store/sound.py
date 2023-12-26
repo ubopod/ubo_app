@@ -11,39 +11,23 @@ class SoundDevice(str, Enum):
     OUTPUT = 'Output'
 
 
-class SoundSetVolumeActionPayload(Immutable):
+class SoundSetVolumeAction(BaseAction):
     volume: float
     device: SoundDevice
 
 
-class SoundSetVolumeAction(BaseAction):
-    payload: SoundSetVolumeActionPayload
-
-
-class SoundChangeVolumeActionPayload(Immutable):
+class SoundChangeVolumeAction(BaseAction):
     amount: float
     device: SoundDevice
 
 
-class SoundChangeVolumeAction(BaseAction):
-    payload: SoundChangeVolumeActionPayload
-
-
-class SoundSetMuteStatusActionPayload(Immutable):
+class SoundSetMuteStatusAction(BaseAction):
     mute: bool
     device: SoundDevice
 
 
-class SoundSetMuteStatusAction(BaseAction):
-    payload: SoundSetMuteStatusActionPayload
-
-
-class SoundToggleMuteStatusActionPayload(Immutable):
-    device: SoundDevice
-
-
 class SoundToggleMuteStatusAction(BaseAction):
-    payload: SoundToggleMuteStatusActionPayload
+    device: SoundDevice
 
 
 SoundAction = (

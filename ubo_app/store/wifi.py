@@ -13,9 +13,16 @@ class WiFiType(str, Enum):
     nopass = 'NOPASS'
 
 
+class ConnectionState(str, Enum):
+    CONNECTED = 'Connected'
+    CONNECTING = 'Connecting'
+    DISCONNECTED = 'Disconnected'
+    UNKNOWN = 'Unknown'
+
+
 class WiFiConnection(Immutable):
     ssid: str
-    is_active: bool = False
+    state: ConnectionState = ConnectionState.UNKNOWN
     signal_strength: int = 0
     password: str | None = None
     type: WiFiType | None = None
@@ -26,24 +33,14 @@ class WiFiAction(BaseAction):
     ...
 
 
-class WiFiUpdateActionPayload(Immutable):
+class WiFiUpdateAction(WiFiAction):
     connections: list[WiFiConnection]
     is_on: bool
     current_connection: WiFiConnection | None
 
 
-class WiFiUpdateAction(WiFiAction):
-    payload: WiFiUpdateActionPayload
-
-
-class WiFiUpdateRequestActionPayload(Immutable):
-    reset: bool = False
-
-
 class WiFiUpdateRequestAction(WiFiAction):
-    payload: WiFiUpdateRequestActionPayload = WiFiUpdateRequestActionPayload(
-        reset=False,
-    )
+    reset: bool = False
 
 
 class WiFiState(Immutable):
@@ -56,12 +53,8 @@ class WiFiEvent(BaseEvent):
     ...
 
 
-class WiFiCreateEventPayload(Immutable):
-    connection: WiFiConnection
-
-
 class WiFiCreateEvent(WiFiEvent):
-    payload: WiFiCreateEventPayload
+    connection: WiFiConnection
 
 
 class WiFiUpdateRequestEvent(WiFiEvent):

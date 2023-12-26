@@ -10,17 +10,17 @@ from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Coroutine,
     Generator,
     Iterator,
     TypeVar,
+    cast,
 )
 
+from debouncer import DebounceOptions, debounce
+
 from ubo_app.logging import logger
-from ubo_app.store.wifi import WiFiConnection, WiFiType
-from ubo_app.utils.async_ import create_task
+from ubo_app.store.wifi import ConnectionState, WiFiConnection, WiFiType
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -46,7 +46,7 @@ if not IS_RPI:
                 'Accessing fake attribute of a `Fake` instance',
                 extra={'attr': attr},
             )
-            if attr in ['__file__']:
+            if attr == '__file__':
                 return ''
             return Fake()
 
@@ -73,6 +73,7 @@ if not IS_RPI:
 from sdbus import SdBus, sd_bus_open_system, set_default_bus  # noqa: E402
 from sdbus_async.networkmanager import (  # noqa: E402
     AccessPoint,
+    ActiveConnection,
     NetworkConnectionSettings,
     NetworkDeviceGeneric,
     NetworkDeviceWireless,
@@ -80,7 +81,12 @@ from sdbus_async.networkmanager import (  # noqa: E402
     NetworkManagerConnectionProperties,
     NetworkManagerSettings,
 )
-from sdbus_async.networkmanager.enums import DeviceType  # noqa: E402
+from sdbus_async.networkmanager.enums import (  # noqa: E402
+    ConnectionState as SdBusConnectionState,
+)
+from sdbus_async.networkmanager.enums import (  # noqa: E402
+    DeviceType,
+)
 
 system_buses = {}
 
@@ -89,7 +95,7 @@ def get_system_bus() -> SdBus:
     thread = current_thread()
     if thread not in system_buses:
         system_buses[thread] = sd_bus_open_system()
-        set_default_bus(system_buses[thread])
+    set_default_bus(system_buses[thread])
     return system_buses[thread]
 
 
@@ -110,18 +116,7 @@ async def get_wifi_device() -> NetworkDeviceWireless | None:
     return None
 
 
-async def subscribe_to_wifi_device(event_handler: Callable[[object], Any]) -> None:
-    while True:
-        wifi_device = await get_wifi_device()
-        if not wifi_device:
-            continue
-
-        async for event in wifi_device.properties_changed:
-            result = event_handler(event)
-            if isinstance(result, Awaitable):
-                create_task(result)
-
-
+@debounce(wait=0.5, options=DebounceOptions(trailing=True, time_window=2))
 async def request_scan() -> None:
     wifi_device = await get_wifi_device()
     if wifi_device:
@@ -158,6 +153,42 @@ async def get_active_access_point() -> AccessPoint | None:
     return AccessPoint(active_access_point, get_system_bus())
 
 
+async def get_active_access_point_ssid() -> str | None:
+    active_access_point = await get_active_access_point()
+    if not active_access_point:
+        return None
+
+    return (
+        await wait_for(
+            active_access_point.ssid,
+        )
+    ).decode('utf-8')
+
+
+async def get_active_connection() -> ActiveConnection | None:
+    wifi_device = await get_wifi_device()
+    if wifi_device is None:
+        return None
+
+    active_connection = await wait_for(
+        wifi_device.active_connection,
+    )
+    if not active_connection or active_connection == '/':
+        return None
+
+    return ActiveConnection(active_connection, get_system_bus())
+
+
+async def get_active_connection_ssid() -> str | None:
+    active_connection = await get_active_connection()
+    if not active_connection:
+        return None
+
+    connection = NetworkConnectionSettings(await active_connection.connection)
+    settings = await connection.get_settings()
+    return settings['802-11-wireless']['ssid'][1].decode('utf-8')
+
+
 async def get_saved_ssids() -> list[str]:
     network_manager_settings = NetworkManagerSettings(get_system_bus())
     connections = [
@@ -177,18 +208,6 @@ async def get_saved_ssids() -> list[str]:
         for settings in connections_settings
         if '802-11-wireless' in settings
     ]
-
-
-async def get_active_ssid() -> str | None:
-    active_access_point = await get_active_access_point()
-    if not active_access_point:
-        return None
-
-    return (
-        await wait_for(
-            active_access_point.ssid,
-        )
-    ).decode('utf-8')
 
 
 async def add_wireless_connection(
@@ -351,7 +370,8 @@ async def forget_wireless_connection(ssid: str) -> None:
 
 
 async def get_connections() -> list[WiFiConnection]:
-    active_ssid = await get_active_ssid()
+    active_connection = await get_active_connection()
+    active_connection_ssid = await get_active_connection_ssid()
     saved_ssids = await get_saved_ssids()
     access_point_ssids = {
         (
@@ -362,6 +382,18 @@ async def get_connections() -> list[WiFiConnection]:
         for i in await get_access_points()
     }
 
+    active_connection_state = cast(
+        SdBusConnectionState,
+        await active_connection.state if active_connection else None,
+    )
+    state_map = {
+        SdBusConnectionState.ACTIVATED: ConnectionState.CONNECTED,
+        SdBusConnectionState.ACTIVATING: ConnectionState.CONNECTING,
+        SdBusConnectionState.DEACTIVATED: ConnectionState.DISCONNECTED,
+        SdBusConnectionState.DEACTIVATING: ConnectionState.DISCONNECTED,
+        SdBusConnectionState.UNKNOWN: ConnectionState.UNKNOWN,
+    }
+
     return [
         WiFiConnection(
             ssid=ssid,
@@ -370,7 +402,9 @@ async def get_connections() -> list[WiFiConnection]:
             )
             if ssid in access_point_ssids
             else 0,
-            is_active=active_ssid == ssid,
+            state=state_map[active_connection_state]
+            if active_connection_ssid == ssid
+            else ConnectionState.DISCONNECTED,
         )
         for ssid in saved_ssids
     ]

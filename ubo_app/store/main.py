@@ -19,13 +19,11 @@ from ubo_app.store.keypad import (
     Key,
     KeypadAction,
     KeypadEvent,
-    KeypadEventPayload,
     KeypadKeyPressAction,
     KeypadKeyPressEvent,
 )
 from ubo_app.store.sound import (
     SoundChangeVolumeAction,
-    SoundChangeVolumeActionPayload,
     SoundDevice,
 )
 from ubo_app.store.status_icons import IconAction
@@ -42,12 +40,8 @@ class MainState(Immutable):
     path: list[int] = field(default_factory=list)
 
 
-class SetMenuPathActionPayload(Immutable):
-    path: list[str]
-
-
 class SetMenuPathAction(BaseAction):
-    payload: SetMenuPathActionPayload
+    path: list[str]
 
 
 MainAction: TypeAlias = (
@@ -73,29 +67,25 @@ def main_reducer(  # noqa: C901
 
     if isinstance(action, KeypadKeyPressAction):
         actions = []
-        if action.payload.key == Key.UP and len(state.path) == 0:
+        if action.key == Key.UP and len(state.path) == 0:
             actions.append(
                 SoundChangeVolumeAction(
-                    payload=SoundChangeVolumeActionPayload(
-                        amount=0.05,
-                        device=SoundDevice.OUTPUT,
-                    ),
+                    amount=0.05,
+                    device=SoundDevice.OUTPUT,
                 ),
             )
-        if action.payload.key == Key.DOWN and len(state.path) == 0:
+        if action.key == Key.DOWN and len(state.path) == 0:
             actions.append(
                 SoundChangeVolumeAction(
-                    payload=SoundChangeVolumeActionPayload(
-                        amount=-0.05,
-                        device=SoundDevice.OUTPUT,
-                    ),
+                    amount=-0.05,
+                    device=SoundDevice.OUTPUT,
                 ),
             )
         return CompleteReducerResult(
             state=state,
             actions=actions,
             events=[
-                KeypadKeyPressEvent(payload=KeypadEventPayload(key=action.payload.key)),
+                KeypadKeyPressEvent(key=action.key),
             ],
         )
 
@@ -121,11 +111,11 @@ def main_reducer(  # noqa: C901
             raise TypeError(msg)
 
         cast(list[Item], container_menu_item['sub_menu']['items']).append(
-            action.payload.menu_item,
+            action.menu_item,
         )
         return replace(state, current_menu=menu)
 
     if isinstance(action, SetMenuPathAction):
-        return replace(state, path=action.payload.path)
+        return replace(state, path=action.path)
 
     return state

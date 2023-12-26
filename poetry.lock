@@ -475,6 +475,16 @@ files = [
 requests = "*"
 
 [[package]]
+name = "lock"
+version = "2018.3.25.2110"
+description = "module for enabling file locks"
+optional = false
+python-versions = "*"
+files = [
+    {file = "lock-2018.3.25.2110.tar.gz", hash = "sha256:cc5ac770930493eed7a8cfd0cf2568a125faf112eb8aa6b6149b3e581523d0c7"},
+]
+
+[[package]]
 name = "nodeenv"
 version = "1.8.0"
 description = "Node.js virtual environment builder"
@@ -671,13 +681,13 @@ pywin32 = ">=223"
 
 [[package]]
 name = "pyright"
-version = "1.1.342"
+version = "1.1.343"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.342-py3-none-any.whl", hash = "sha256:9a7b95b3a2a90ef7b4297221173956f7f2db2a6cf4f0c7493f2a2349d38305fc"},
-    {file = "pyright-1.1.342.tar.gz", hash = "sha256:c8e9785b9080c1aaf2a2efad706249ec65e15abd5f542ee455956acfd404d273"},
+    {file = "pyright-1.1.343-py3-none-any.whl", hash = "sha256:75a0d24e8227328198bdfa1f4904ce66b78c2bacf49c269d9e6e3b174b026225"},
+    {file = "pyright-1.1.343.tar.gz", hash = "sha256:871e122d74003e8e5fddb17867220b06ee892de61fa967ca7ca031acdc176738"},
 ]
 
 [package.dependencies]
@@ -702,15 +712,44 @@ files = [
 cp2110 = ["hidapi"]
 
 [[package]]
+name = "python-debouncer"
+version = "0.1.0"
+description = "Debouncer and friends for Python"
+optional = false
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "python_debouncer-0.1.0-py3-none-any.whl", hash = "sha256:b80f6ed74131b6f24fe4a08277fb69e51c7d4367fa0bb41bb47f3590439ebdca"},
+    {file = "python_debouncer-0.1.0.tar.gz", hash = "sha256:01cd52780c8d7956978db8a597bd4d7fc8c3cb1bb2d62144a288fcf5167297bb"},
+]
+
+[package.dependencies]
+lock = ">=2018.3.25.2110,<2019.0.0.0"
+python-immutable = ">=1.0.0,<2.0.0"
+
+[[package]]
+name = "python-immutable"
+version = "1.0.1"
+description = "Immutable implementation for Python using dataclasses"
+optional = false
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "python_immutable-1.0.1-py3-none-any.whl", hash = "sha256:6ede14824e27c7e84294686c3d4f76b333a6f45576264e37000345dace10b53e"},
+    {file = "python_immutable-1.0.1.tar.gz", hash = "sha256:02164ec7de854872553c3a9116e775ffbb8854a4039d43b064892800babcfd00"},
+]
+
+[[package]]
 name = "python-redux"
-version = "0.9.1a2"
+version = "0.9.2"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.1a2-py3-none-any.whl", hash = "sha256:a40c6a39854b84a3638b99c2b4c9814efb28323fef0810f49858f3b09d2f0f0d"},
-    {file = "python_redux-0.9.1a2.tar.gz", hash = "sha256:3b67ff807b82bc87ef82f0517ae385651c3c1771c12a5b9cb432518315ab6399"},
+    {file = "python_redux-0.9.2-py3-none-any.whl", hash = "sha256:085ca4b0112c55b7c68b1ed57f9a519719057edab5f625ccfd427cb3b9482bf9"},
+    {file = "python_redux-0.9.2.tar.gz", hash = "sha256:a6cb8454a0715385e3f813cd3b947f326e2bfd3b05b0130ed2f6e77f1e4cb09c"},
 ]
+
+[package.dependencies]
+python-immutable = ">=1.0.0,<2.0.0"
 
 [[package]]
 name = "pyusb"
@@ -929,4 +968,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "f3356e3874d48d89d0abb63cdafb0e965b4fe13fff3c71e5412bfcf2af7e1f2e"
+content-hash = "6a40bbeb084637250fbe98f7c38fe1ae0d3c877635b7c0b44b50544190db411d"

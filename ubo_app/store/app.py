@@ -3,18 +3,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from redux import BaseAction, Immutable
+from redux import BaseAction
 
 if TYPE_CHECKING:
     from ubo_gui.menu import Item
 
 
-class RegisterAppActionPayload(Immutable):
-    menu_item: Item
-
-
 class RegisterAppAction(BaseAction):
-    payload: RegisterAppActionPayload
+    menu_item: Item
 
 
 class RegisterRegularAppAction(RegisterAppAction):

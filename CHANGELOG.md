@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 0.7.0
+
+- refactor: remove all `...Payload` classes as `Action`s and `Event`s have no
+  other fields other than payload due to `type` being obsolete in this implementation
+- refactor: utilize debouncer package in wifi service to listen to and debounce
+  dbus events
+- refactor: improve responsiveness of wifi connection page
+
 ## Version 0.6.2
 
 - fix: avoid dbus connection getting stale

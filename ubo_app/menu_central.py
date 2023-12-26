@@ -17,7 +17,7 @@ from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
 from ubo_app.store.keypad import Key, KeypadKeyPressEvent
-from ubo_app.store.main import SetMenuPathAction, SetMenuPathActionPayload
+from ubo_app.store.main import SetMenuPathAction
 
 from .store import autorun, dispatch, subscribe_event
 
@@ -44,28 +44,26 @@ class MenuAppCentral(UboApp):
         menu_widget.bind(
             stack=lambda _, path: dispatch(
                 SetMenuPathAction(
-                    payload=SetMenuPathActionPayload(
-                        path=[
-                            i.name if isinstance(i, PageWidget) else i[0]['title']
-                            for i in path
-                        ],
-                    ),
+                    path=[
+                        i.name if isinstance(i, PageWidget) else i[0]['title']
+                        for i in path
+                    ],
                 ),
             ),
         )
 
         def handle_key_press_event(key_press_event: KeypadKeyPressEvent) -> None:
-            if key_press_event.payload.key == Key.L1:
+            if key_press_event.key == Key.L1:
                 menu_widget.select(0)
-            if key_press_event.payload.key == Key.L2:
+            if key_press_event.key == Key.L2:
                 menu_widget.select(1)
-            if key_press_event.payload.key == Key.L3:
+            if key_press_event.key == Key.L3:
                 menu_widget.select(2)
-            if key_press_event.payload.key == Key.BACK:
+            if key_press_event.key == Key.BACK:
                 menu_widget.go_back()
-            if key_press_event.payload.key == Key.UP:
+            if key_press_event.key == Key.UP:
                 menu_widget.go_up()
-            if key_press_event.payload.key == Key.DOWN:
+            if key_press_event.key == Key.DOWN:
                 menu_widget.go_down()
 
         subscribe_event(

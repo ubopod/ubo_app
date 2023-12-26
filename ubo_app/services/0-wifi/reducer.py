@@ -18,7 +18,6 @@ from ubo_app.store.wifi import (
     WiFiAction,
     WiFiConnection,
     WiFiCreateEvent,
-    WiFiCreateEventPayload,
     WiFiEvent,
     WiFiState,
     WiFiType,
@@ -50,16 +49,14 @@ def reducer(
             actions=[CameraStopViewFinderAction()],
             events=[
                 WiFiCreateEvent(
-                    payload=WiFiCreateEventPayload(
-                        connection=WiFiConnection(
-                            ssid=ssid,
-                            password=action.payload.match.get('Password'),
-                            type=cast(WiFiType, action.payload.match.get('Type')),
-                            hidden=strtobool(
-                                action.payload.match.get('Hidden') or 'false',
-                            )
-                            == 1,
-                        ),
+                    connection=WiFiConnection(
+                        ssid=ssid,
+                        password=action.payload.match.get('Password'),
+                        type=cast(WiFiType, action.payload.match.get('Type')),
+                        hidden=strtobool(
+                            action.payload.match.get('Hidden') or 'false',
+                        )
+                        == 1,
                     ),
                 ),
             ],
@@ -67,16 +64,16 @@ def reducer(
 
     if isinstance(action, WiFiUpdateRequestAction):
         return CompleteReducerResult(
-            state=replace(state, connections=None) if action.payload.reset else state,
+            state=replace(state, connections=None) if action.reset else state,
             events=[WiFiUpdateRequestEvent()],
         )
 
     if isinstance(action, WiFiUpdateAction):
         return replace(
             state,
-            connections=action.payload.connections,
-            is_on=action.payload.is_on,
-            current_connection=action.payload.current_connection,
+            connections=action.connections,
+            is_on=action.is_on,
+            current_connection=action.current_connection,
         )
 
     return state

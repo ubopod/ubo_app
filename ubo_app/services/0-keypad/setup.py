@@ -10,11 +10,10 @@ from typing import TYPE_CHECKING, Literal
 
 from redux import Immutable
 
-from ubo_app.store.keypad import Key, KeypadActionPayload, KeypadKeyPressAction
+from ubo_app.store.keypad import Key, KeypadKeyPressAction
 from ubo_app.store.sound import (
     SoundDevice,
     SoundSetMuteStatusAction,
-    SoundSetMuteStatusActionPayload,
 )
 
 INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
@@ -295,43 +294,43 @@ def init_service() -> None:
                 if button_pressed == ButtonName.UP:
                     dispatch(
                         KeypadKeyPressAction(
-                            payload=KeypadActionPayload(key=Key.UP),
+                            key=Key.UP,
                         ),
                     )
                 elif button_pressed == ButtonName.DOWN:
                     dispatch(
                         KeypadKeyPressAction(
-                            payload=KeypadActionPayload(key=Key.DOWN),
+                            key=Key.DOWN,
                         ),
                     )
                 elif button_pressed == ButtonName.TOP_LEFT:
                     dispatch(
                         KeypadKeyPressAction(
-                            payload=KeypadActionPayload(key=Key.L1),
+                            key=Key.L1,
                         ),
                     )
                 elif button_pressed == ButtonName.MIDDLE_LEFT:
                     dispatch(
                         KeypadKeyPressAction(
-                            payload=KeypadActionPayload(key=Key.L2),
+                            key=Key.L2,
                         ),
                     )
                 elif button_pressed == ButtonName.BOTTOM_LEFT:
                     dispatch(
                         KeypadKeyPressAction(
-                            payload=KeypadActionPayload(key=Key.L3),
+                            key=Key.L3,
                         ),
                     )
                 elif button_pressed == ButtonName.BACK:
                     dispatch(
                         KeypadKeyPressAction(
-                            payload=KeypadActionPayload(key=Key.BACK),
+                            key=Key.BACK,
                         ),
                     )
                 elif button_pressed == ButtonName.HOME:
                     dispatch(
                         KeypadKeyPressAction(
-                            payload=KeypadActionPayload(key=Key.HOME),
+                            key=Key.HOME,
                         ),
                     )
             if button_pressed == ButtonName.MIC:
@@ -339,10 +338,8 @@ def init_service() -> None:
 
                 dispatch(
                     SoundSetMuteStatusAction(
-                        payload=SoundSetMuteStatusActionPayload(
-                            device=SoundDevice.INPUT,
-                            mute=button_status == 'pressed',
-                        ),
+                        device=SoundDevice.INPUT,
+                        mute=button_status == 'pressed',
                     ),
                 )
 

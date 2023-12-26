@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from redux import BaseAction, BaseEvent, Immutable
+from redux import BaseAction, BaseEvent
 
 
 class Key(str, Enum):
@@ -16,12 +16,8 @@ class Key(str, Enum):
     L3 = 'L3'
 
 
-class KeypadActionPayload(Immutable):
-    key: Key
-
-
 class KeypadAction(BaseAction):
-    payload: KeypadActionPayload
+    key: Key
 
 
 class KeypadKeyUpAction(KeypadAction):
@@ -36,12 +32,8 @@ class KeypadKeyPressAction(KeypadAction):
     ...
 
 
-class KeypadEventPayload(Immutable):
-    key: Key
-
-
 class KeypadEvent(BaseEvent):
-    payload: KeypadEventPayload
+    key: Key
 
 
 class KeypadKeyPressEvent(KeypadEvent):

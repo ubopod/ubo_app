@@ -17,15 +17,11 @@ class StatusIconsState(Immutable):
     icons: list[IconState]
 
 
-class StatusIconsRegisterActionPayload(Immutable):
+class StatusIconsRegisterAction(BaseAction):
     icon: str
     color: str = 'white'
     priority: int = 0
     id: str | None = None
-
-
-class StatusIconsRegisterAction(BaseAction):
-    payload: StatusIconsRegisterActionPayload
 
 
 IconAction = StatusIconsRegisterAction | InitAction
@@ -44,13 +40,13 @@ def reducer(state: StatusIconsState | None, action: IconAction) -> StatusIconsSt
                     *[
                         icon_status
                         for icon_status in state.icons
-                        if icon_status.id != action.payload.id or icon_status.id is None
+                        if icon_status.id != action.id or icon_status.id is None
                     ],
                     IconState(
-                        symbol=action.payload.icon,
-                        color=action.payload.color,
-                        priority=action.payload.priority,
-                        id=action.payload.id,
+                        symbol=action.icon,
+                        color=action.color,
+                        priority=action.priority,
+                        id=action.id,
                     ),
                 ],
                 key=lambda entry: entry.priority,
