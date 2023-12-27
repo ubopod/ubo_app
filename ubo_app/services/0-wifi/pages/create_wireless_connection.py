@@ -10,7 +10,6 @@ from ubo_gui.page import PageWidget
 from ubo_app.store import dispatch
 from ubo_app.store.camera import (
     CameraStartViewfinderAction,
-    CameraStartViewfinderActionPayload,
 )
 
 if TYPE_CHECKING:
@@ -30,16 +29,15 @@ class CreateWirelessConnectionPage(PageWidget):
                 'is_short': True,
                 'icon': 'camera',
                 'action': lambda: dispatch(
-                    CameraStartViewfinderAction(
-                        payload=CameraStartViewfinderActionPayload(
-                            barcode_pattern=barcode_pattern,
-                        ),
-                    ),
+                    CameraStartViewfinderAction(barcode_pattern=barcode_pattern),
                 ),
             }
         return super().get_item(index)
 
 
 Builder.load_file(
-    pathlib.Path(__file__).parent.joinpath('create_wireless_connection.kv').resolve().as_posix(),
+    pathlib.Path(__file__)
+    .parent.joinpath('create_wireless_connection.kv')
+    .resolve()
+    .as_posix(),
 )

@@ -15,7 +15,6 @@ from ubo_app.store.camera import (
     CameraEvent,
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
-    CameraStartViewfinderEventPayload,
     CameraState,
     CameraStopViewFinderAction,
     CameraStopViewfinderEvent,
@@ -40,9 +39,7 @@ def reducer(
             state=replace(state, is_viewfinder_active=True),
             events=[
                 CameraStartViewfinderEvent(
-                    payload=CameraStartViewfinderEventPayload(
-                        barcode_pattern=action.payload.barcode_pattern,
-                    ),
+                    barcode_pattern=action.barcode_pattern,
                 ),
             ],
         )

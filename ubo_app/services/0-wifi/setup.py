@@ -1,11 +1,9 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 from debouncer import DebounceOptions, debounce
-
 from wifi_manager import (
     add_wireless_connection,
     get_connections,

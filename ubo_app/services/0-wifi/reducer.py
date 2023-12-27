@@ -47,7 +47,7 @@ def reducer(
         raise InitializationActionError
 
     if isinstance(action, CameraBarcodeAction):
-        ssid = action.payload.match.get('SSID')
+        ssid = action.match.get('SSID')
         if ssid is None:
             return state
 
@@ -58,10 +58,10 @@ def reducer(
                 WiFiCreateEvent(
                     connection=WiFiConnection(
                         ssid=ssid,
-                        password=action.payload.match.get('Password'),
-                        type=cast(WiFiType, action.payload.match.get('Type')),
+                        password=action.match.get('Password'),
+                        type=cast(WiFiType, action.match.get('Type')),
                         hidden=strtobool(
-                            action.payload.match.get('Hidden') or 'false',
+                            action.match.get('Hidden') or 'false',
                         )
                         == 1,
                     ),

@@ -8,41 +8,29 @@ class CameraAction(BaseAction):
     ...
 
 
-class CameraStartViewfinderActionPayload(Immutable):
+class CameraStartViewfinderAction(CameraAction):
     barcode_pattern: str | None
 
 
-class CameraStartViewfinderAction(CameraAction):
-    payload: CameraStartViewfinderActionPayload
-
-
 class CameraStopViewFinderAction(CameraAction):
-    payload: None = None
-
-
-class CameraBarcodeActionPayload(Immutable):
-    code: str
-    match: dict[str, str | None]
+    ...
 
 
 class CameraBarcodeAction(CameraAction):
-    payload: CameraBarcodeActionPayload
+    code: str
+    match: dict[str, str | None]
 
 
 class CameraEvent(BaseEvent):
     ...
 
 
-class CameraStartViewfinderEventPayload(Immutable):
+class CameraStartViewfinderEvent(CameraEvent):
     barcode_pattern: str | None
 
 
-class CameraStartViewfinderEvent(CameraEvent):
-    payload: CameraStartViewfinderEventPayload
-
-
 class CameraStopViewfinderEvent(CameraEvent):
-    payload: None = None
+    ...
 
 
 class CameraState(Immutable):

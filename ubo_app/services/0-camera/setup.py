@@ -13,7 +13,6 @@ from ubo_app.logging import logger
 from ubo_app.store import dispatch, subscribe_event
 from ubo_app.store.camera import (
     CameraBarcodeAction,
-    CameraBarcodeActionPayload,
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
 )
@@ -55,7 +54,7 @@ def init_service() -> None:
     picam2.start()
 
     def start_camera_viewfinder(start_event: CameraStartViewfinderEvent) -> None:
-        regex_pattern = start_event.payload.barcode_pattern
+        regex_pattern = start_event.barcode_pattern
         regex = re.compile(regex_pattern) if regex_pattern is not None else None
         last_match = 0
 
@@ -86,12 +85,7 @@ def init_service() -> None:
                         },
                     )
                     dispatch(
-                        CameraBarcodeAction(
-                            payload=CameraBarcodeActionPayload(
-                                code=code,
-                                match=match.groupdict(),
-                            ),
-                        ),
+                        CameraBarcodeAction(code=code, match=match.groupdict()),
                     )
 
         def feed_viewfinder(_: object) -> None:

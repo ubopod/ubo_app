@@ -715,13 +715,13 @@ cp2110 = ["hidapi"]
 
 [[package]]
 name = "python-debouncer"
-version = "0.1.0"
+version = "0.1.1"
 description = "Debouncer and friends for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_debouncer-0.1.0-py3-none-any.whl", hash = "sha256:b80f6ed74131b6f24fe4a08277fb69e51c7d4367fa0bb41bb47f3590439ebdca"},
-    {file = "python_debouncer-0.1.0.tar.gz", hash = "sha256:01cd52780c8d7956978db8a597bd4d7fc8c3cb1bb2d62144a288fcf5167297bb"},
+    {file = "python_debouncer-0.1.1-py3-none-any.whl", hash = "sha256:55a56e44facbd8b5bacb85bee9ef68d70d5d694a400f9acf9d71c76bce242d10"},
+    {file = "python_debouncer-0.1.1.tar.gz", hash = "sha256:53b895a62d8a834fd653fada0f71de9579ecfa30d731a2b3bcaf4199b75ec626"},
 ]
 
 [package.dependencies]
@@ -730,24 +730,24 @@ python-immutable = ">=1.0.0,<2.0.0"
 
 [[package]]
 name = "python-immutable"
-version = "1.0.1"
+version = "1.0.2"
 description = "Immutable implementation for Python using dataclasses"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_immutable-1.0.1-py3-none-any.whl", hash = "sha256:6ede14824e27c7e84294686c3d4f76b333a6f45576264e37000345dace10b53e"},
-    {file = "python_immutable-1.0.1.tar.gz", hash = "sha256:02164ec7de854872553c3a9116e775ffbb8854a4039d43b064892800babcfd00"},
+    {file = "python_immutable-1.0.2-py3-none-any.whl", hash = "sha256:603e1275ea79969106d999e553465364b284c90cd4fbae89dadfd1ca597d2d2f"},
+    {file = "python_immutable-1.0.2.tar.gz", hash = "sha256:42de875494a5eefd0288ee9a4e18d8767a2cc4fdd3aa34a3e5b49b72f3bcc7fb"},
 ]
 
 [[package]]
 name = "python-redux"
-version = "0.9.4"
+version = "0.9.6"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.4-py3-none-any.whl", hash = "sha256:10ef47d196936071f4047789a75170a417d9ec077fd28b813b914397a2efda00"},
-    {file = "python_redux-0.9.4.tar.gz", hash = "sha256:bb6973070f677f473c06eca19d7a6085d7e91583a8bcfb3ffcb2dfcbf2436b24"},
+    {file = "python_redux-0.9.6-py3-none-any.whl", hash = "sha256:0b80806a05454d26f42e9b4214aff050eaf2bbac683eae46619a522148e22085"},
+    {file = "python_redux-0.9.6.tar.gz", hash = "sha256:3a2ca44465bd87250cc3ca8d775504ec85f5ec46843f8cd991da0b97b3ee86eb"},
 ]
 
 [package.dependencies]
@@ -981,4 +981,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "06e12314a77022aa5eaf24d47bdcaf72c2819ce100b25110c4d89d3192783b99"
+content-hash = "d5db8519b7ba77f1308450c5334c7b2d7231aa222f5f7f9dacfaa4bb43291b11"

@@ -66,4 +66,4 @@ class WiFiCreateEvent(WiFiEvent):
 
 
 class WiFiUpdateRequestEvent(WiFiEvent):
-    payload: None = None
+    ...

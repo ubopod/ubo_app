@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.7.2
+
+- docs: write `README.md` with installation and usage instructions
+- refactor: remove the leftovers of the action/event payloads
+
 ## Version 0.7.1
 
 - feat: check and update status icons of ip and wifi services
