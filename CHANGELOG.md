@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.7.1
+
+- feat: check and update status icons of ip and wifi services
+- feat: introduce `UBO_DEBUG` environment variable to control the state of debug
+  logs/utilities
+
 ## Version 0.7.0
 
 - refactor: remove all `...Payload` classes as `Action`s and `Event`s have no

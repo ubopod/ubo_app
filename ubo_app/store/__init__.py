@@ -55,17 +55,22 @@ def scheduler(main_loop_callback: Callable[[], None]) -> None:
 
 store = create_store(
     root_reducer,
-    CreateStoreOptions(scheduler=scheduler),
+    CreateStoreOptions(
+        scheduler=scheduler,
+        action_middleware=lambda action: logger.debug(
+            'Action dispatched',
+            extra={'action': action},
+        ),
+        event_middleware=lambda event: logger.debug(
+            'Event dispatched',
+            extra={'event': event},
+        ),
+    ),
 )
 
 
-def dispatch(items: ActionType | EventType | list[ActionType | EventType]) -> None:
-    logger.debug('Dispatch', extra={'items': items})
-    store.dispatch(items)
-
-
 autorun = store.autorun
-
+dispatch = store.dispatch
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
 

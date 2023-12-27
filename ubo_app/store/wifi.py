@@ -1,22 +1,30 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from redux import BaseAction, BaseEvent, Immutable
 
 
-class WiFiType(str, Enum):
+class WiFiType(StrEnum):
     WEP = 'WEP'
     WPA = 'WPA'
     WPA2 = 'WPA2'
     nopass = 'NOPASS'
 
 
-class ConnectionState(str, Enum):
+class ConnectionState(StrEnum):
     CONNECTED = 'Connected'
     CONNECTING = 'Connecting'
     DISCONNECTED = 'Disconnected'
+    UNKNOWN = 'Unknown'
+
+
+class GlobalWiFiState(StrEnum):
+    CONNECTED = 'Connected'
+    DISCONNECTED = 'Disconnected'
+    PENDING = 'Pending'
+    NEEDS_ATTENTION = 'Needs Attention'
     UNKNOWN = 'Unknown'
 
 
@@ -35,7 +43,7 @@ class WiFiAction(BaseAction):
 
 class WiFiUpdateAction(WiFiAction):
     connections: list[WiFiConnection]
-    is_on: bool
+    state: GlobalWiFiState
     current_connection: WiFiConnection | None
 
 
@@ -45,7 +53,7 @@ class WiFiUpdateRequestAction(WiFiAction):
 
 class WiFiState(Immutable):
     connections: list[WiFiConnection] | None
-    is_on: bool
+    state: GlobalWiFiState
     current_connection: WiFiConnection | None
 
 

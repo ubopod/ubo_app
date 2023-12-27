@@ -6,6 +6,8 @@ import logging
 import sys
 from typing import Mapping, cast
 
+from ubo_app.constants import DEBUG_MODE
+
 VERBOSE = 5
 
 
@@ -39,7 +41,10 @@ class UboLogger(logging.getLoggerClass()):
 logging.setLoggerClass(UboLogger)
 
 logger = cast(UboLogger, logging.getLogger('ubo-app'))
-logger.setLevel(logging.DEBUG)
+if DEBUG_MODE:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 logger.propagate = False
 
 

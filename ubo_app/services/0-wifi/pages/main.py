@@ -1,9 +1,9 @@
-# ruff: noqa: D100, D101, D102, D103, D104, D107, N999
+# ruff: noqa: D100, D101, D102, D103, D104, D105, D107, N999
 from __future__ import annotations
 
-import math
 from typing import Any, Sequence, cast
 
+from constants import get_signal_icon
 from debouncer import DebounceOptions, debounce
 from kivy.properties import BooleanProperty
 from ubo_gui.menu.types import (
@@ -81,7 +81,10 @@ class WiFiNetworkPage(PromptWidget):
 
         self.bind(is_active=self.update)
 
-        @debounce(wait=0.5, options=DebounceOptions(trailing=True, time_window=2))
+        @debounce(
+            wait=0.5,
+            options=DebounceOptions(leading=False, trailing=True, time_window=2),
+        )
         async def update_status() -> None:
             self.is_active = await get_active_connection_ssid() == self.ssid
 
@@ -113,13 +116,6 @@ def wireless_connection_items(selector_result: WiFiState) -> Sequence[Item]:
 
         return WiFiNetworkPageWithSSID
 
-    signal_icons = [
-        'signal_wifi_0_bar',
-        'network_wifi_1_bar',
-        'network_wifi_2_bar',
-        'network_wifi_3_bar',
-        'signal_wifi_4_bar',
-    ]
     icons = {
         ConnectionState.CONNECTED: 'link',
         ConnectionState.DISCONNECTED: 'link-off',
@@ -131,7 +127,7 @@ def wireless_connection_items(selector_result: WiFiState) -> Sequence[Item]:
             ApplicationItem(
                 label=connection.ssid,
                 application=wifi_network_creator(connection.ssid),
-                icon=signal_icons[math.floor(connection.signal_strength / 100 * 4.999)]
+                icon=get_signal_icon(connection.signal_strength)
                 if connection.state == ConnectionState.DISCONNECTED
                 else icons[connection.state],
             )
@@ -158,7 +154,7 @@ WiFiMainMenu = SubMenuItem(
         items=[
             ApplicationItem(
                 label='Add',
-                icon='add',
+                icon='wifi_add',
                 application=CreateWirelessConnectionPage,
             ),
             ActionItem(

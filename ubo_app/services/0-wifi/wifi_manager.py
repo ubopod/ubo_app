@@ -20,7 +20,12 @@ from typing import (
 from debouncer import DebounceOptions, debounce
 
 from ubo_app.logging import logger
-from ubo_app.store.wifi import ConnectionState, WiFiConnection, WiFiType
+from ubo_app.store.wifi import (
+    ConnectionState,
+    GlobalWiFiState,
+    WiFiConnection,
+    WiFiType,
+)
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -74,6 +79,7 @@ from sdbus import SdBus, sd_bus_open_system, set_default_bus  # noqa: E402
 from sdbus_async.networkmanager import (  # noqa: E402
     AccessPoint,
     ActiveConnection,
+    DeviceState,
     NetworkConnectionSettings,
     NetworkDeviceGeneric,
     NetworkDeviceWireless,
@@ -114,6 +120,40 @@ async def get_wifi_device() -> NetworkDeviceWireless | None:
         ):
             return NetworkDeviceWireless(device_path, get_system_bus())
     return None
+
+
+async def get_wifi_device_state() -> GlobalWiFiState:
+    wifi_device = await get_wifi_device()
+    if wifi_device is None:
+        return GlobalWiFiState.UNKNOWN
+
+    state = await wifi_device.state
+    if state is DeviceState.UNKNOWN:
+        return GlobalWiFiState.UNKNOWN
+    if state in (
+        DeviceState.DISCONNECTED,
+        DeviceState.FAILED,
+    ):
+        return GlobalWiFiState.DISCONNECTED
+    if state in (
+        DeviceState.UNMANAGED,
+        DeviceState.UNAVAILABLE,
+        DeviceState.NEED_AUTH,
+    ):
+        return GlobalWiFiState.NEEDS_ATTENTION
+    if state in (
+        DeviceState.DEACTIVATING,
+        DeviceState.PREPARE,
+        DeviceState.CONFIG,
+        DeviceState.IP_CONFIG,
+        DeviceState.IP_CHECK,
+        DeviceState.SECONDARIES,
+    ):
+        return GlobalWiFiState.PENDING
+    if state == DeviceState.ACTIVATED:
+        return GlobalWiFiState.CONNECTED
+
+    return GlobalWiFiState.UNKNOWN
 
 
 @debounce(wait=0.5, options=DebounceOptions(trailing=True, time_window=2))

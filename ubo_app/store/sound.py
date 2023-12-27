@@ -1,12 +1,12 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from redux import BaseAction, Immutable
 
 
-class SoundDevice(str, Enum):
+class SoundDevice(StrEnum):
     INPUT = 'Input'
     OUTPUT = 'Output'
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
 from redux import (
     BaseEvent,
     CompleteReducerResult,
@@ -72,8 +73,8 @@ def reducer(  # noqa: C901
                 actions=[
                     StatusIconsRegisterAction(
                         icon='mic_off' if action.mute else 'mic',
-                        priority=-2,
-                        id='sound_mic_status',
+                        priority=SOUND_MIC_STATE_ICON_PRIORITY,
+                        id=SOUND_MIC_STATE_ICON_ID,
                     ),
                 ],
             )

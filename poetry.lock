@@ -433,6 +433,8 @@ files = [
     {file = "kivy_deps.glew-0.3.1-cp310-cp310-win_amd64.whl", hash = "sha256:aef2d2a93f129d8425c75234e7f6cc0a34b59a4aee67f6d2cd7a5fdfa9915b53"},
     {file = "kivy_deps.glew-0.3.1-cp311-cp311-win32.whl", hash = "sha256:ee2f80ef7ac70f4b61c50da8101b024308a8c59a57f7f25a6e09762b6c48f942"},
     {file = "kivy_deps.glew-0.3.1-cp311-cp311-win_amd64.whl", hash = "sha256:22e155ec59ce717387f5d8804811206d200a023ba3d0bc9bbf1393ee28d0053e"},
+    {file = "kivy_deps.glew-0.3.1-cp312-cp312-win32.whl", hash = "sha256:b64ee4e445a04bc7c848c0261a6045fc2f0944cc05d7f953e3860b49f2703424"},
+    {file = "kivy_deps.glew-0.3.1-cp312-cp312-win_amd64.whl", hash = "sha256:3acbbd30da05fc10c185b5d4bb75fbbc882a6ef2192963050c1c94d60a6e795a"},
     {file = "kivy_deps.glew-0.3.1-cp37-cp37m-win32.whl", hash = "sha256:5bf6a63fe9cc4fe7bbf280ec267ec8c47914020a1175fb22152525ff1837b436"},
     {file = "kivy_deps.glew-0.3.1-cp37-cp37m-win_amd64.whl", hash = "sha256:d64a8625799fab7a7efeb3661ef8779a7f9c6d80da53eed87a956320f55530fa"},
     {file = "kivy_deps.glew-0.3.1-cp38-cp38-win32.whl", hash = "sha256:00f4ae0a4682d951266458ddb639451edb24baa54a35215dce889209daf19a06"},
@@ -739,17 +741,28 @@ files = [
 
 [[package]]
 name = "python-redux"
-version = "0.9.2"
+version = "0.9.4"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.2-py3-none-any.whl", hash = "sha256:085ca4b0112c55b7c68b1ed57f9a519719057edab5f625ccfd427cb3b9482bf9"},
-    {file = "python_redux-0.9.2.tar.gz", hash = "sha256:a6cb8454a0715385e3f813cd3b947f326e2bfd3b05b0130ed2f6e77f1e4cb09c"},
+    {file = "python_redux-0.9.4-py3-none-any.whl", hash = "sha256:10ef47d196936071f4047789a75170a417d9ec077fd28b813b914397a2efda00"},
+    {file = "python_redux-0.9.4.tar.gz", hash = "sha256:bb6973070f677f473c06eca19d7a6085d7e91583a8bcfb3ffcb2dfcbf2436b24"},
 ]
 
 [package.dependencies]
 python-immutable = ">=1.0.0,<2.0.0"
+
+[[package]]
+name = "pythonping"
+version = "1.1.4"
+description = "A simple way to ping in Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pythonping-1.1.4-py3-none-any.whl", hash = "sha256:dedd690e36cb8c69703175610cf6ce01ff0c2070b447cc64c31a82951c9a53f6"},
+    {file = "pythonping-1.1.4.tar.gz", hash = "sha256:acef84640fee6f20b725f2a1d2392771f2845554cfabcef30b1fdea5030161af"},
+]
 
 [[package]]
 name = "pyusb"
@@ -968,4 +981,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "6a40bbeb084637250fbe98f7c38fe1ae0d3c877635b7c0b44b50544190db411d"
+content-hash = "06e12314a77022aa5eaf24d47bdcaf72c2819ce100b25110c4d89d3192783b99"

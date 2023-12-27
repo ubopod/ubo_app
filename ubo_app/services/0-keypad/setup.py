@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import math
 import time
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Literal
 
 from redux import Immutable
@@ -25,7 +25,7 @@ class KeypadError(Exception):
     ...
 
 
-class ButtonName(str, Enum):
+class ButtonName(StrEnum):
     TOP_LEFT = 'top_left'
     MIDDLE_LEFT = 'middle_left'
     BOTTOM_LEFT = 'bottom_left'

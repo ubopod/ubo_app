@@ -20,6 +20,7 @@ from redux import (
     FinishEvent,
     ReducerType,
 )
+from ubo_app.constants import DEBUG_MODE, SERVICES_PATH
 
 from ubo_app.logging import logger
 
@@ -115,7 +116,8 @@ class UboServiceThread(threading.Thread):
         self.service_id = service_id
         self.path = path
         self.loop = asyncio.new_event_loop()
-        self.loop.set_debug(enabled=True)
+        if DEBUG_MODE:
+            self.loop.set_debug(enabled=True)
         try:
             if path.exists():
                 module_name = f'{service_id}:ubo_handle'
@@ -185,11 +187,7 @@ def register_service(
 def load_services() -> None:
     for services_directory_path in [
         ROOT_PATH.joinpath('services').as_posix(),
-        *(
-            os.environ.get('UBO_SERVICES_PATH', '').split(':')
-            if os.environ.get('UBO_SERVICES_PATH')
-            else []
-        ),
+        *SERVICES_PATH,
     ]:
         if Path(services_directory_path).is_dir():
             for service_path in Path(services_directory_path).iterdir():

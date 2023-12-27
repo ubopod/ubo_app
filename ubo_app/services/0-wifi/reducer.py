@@ -5,6 +5,7 @@ from dataclasses import replace
 from distutils.util import strtobool
 from typing import cast
 
+from constants import WIFI_STATE_ICON_ID, WIFI_STATE_ICON_PRIORITY, get_signal_icon
 from redux import (
     BaseAction,
     CompleteReducerResult,
@@ -14,7 +15,9 @@ from redux import (
 )
 
 from ubo_app.store.camera import CameraBarcodeAction, CameraStopViewFinderAction
+from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.store.wifi import (
+    GlobalWiFiState,
     WiFiAction,
     WiFiConnection,
     WiFiCreateEvent,
@@ -34,7 +37,11 @@ def reducer(
     if state is None:
         if isinstance(action, InitAction):
             return CompleteReducerResult(
-                state=WiFiState(connections=[], is_on=False, current_connection=None),
+                state=WiFiState(
+                    connections=[],
+                    state=GlobalWiFiState.UNKNOWN,
+                    current_connection=None,
+                ),
                 actions=[WiFiUpdateRequestAction()],
             )
         raise InitializationActionError
@@ -69,11 +76,32 @@ def reducer(
         )
 
     if isinstance(action, WiFiUpdateAction):
-        return replace(
-            state,
-            connections=action.connections,
-            is_on=action.is_on,
-            current_connection=action.current_connection,
+        return CompleteReducerResult(
+            state=replace(
+                state,
+                connections=action.connections,
+                state=action.state,
+                current_connection=action.current_connection,
+            ),
+            actions=[
+                StatusIconsRegisterAction(
+                    icon={
+                        GlobalWiFiState.CONNECTED: get_signal_icon(
+                            action.current_connection.signal_strength
+                            if action.current_connection
+                            else 0,
+                        ),
+                        GlobalWiFiState.DISCONNECTED: 'signal_wifi_off',
+                        GlobalWiFiState.PENDING: 'wifi_find',
+                        GlobalWiFiState.NEEDS_ATTENTION: (
+                            'signal_wifi_statusbar_not_connected'
+                        ),
+                        GlobalWiFiState.UNKNOWN: 'perm_scan_wifi',
+                    }[action.state],
+                    priority=WIFI_STATE_ICON_PRIORITY,
+                    id=WIFI_STATE_ICON_ID,
+                ),
+            ],
         )
 
     return state

@@ -4,17 +4,19 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from debouncer import DebounceOptions, debounce
+
 from wifi_manager import (
     add_wireless_connection,
     get_connections,
     get_wifi_device,
+    get_wifi_device_state,
     request_scan,
 )
 
 from ubo_app.logging import logger
 from ubo_app.store import dispatch, subscribe_event
 from ubo_app.store.app import RegisterSettingAppAction
-from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.store.wifi import (
     ConnectionState,
     WiFiCreateEvent,
@@ -26,7 +28,6 @@ from ubo_app.store.wifi import (
 from ubo_app.utils.async_ import create_task
 
 IS_RPI = Path('/etc/rpi-issue').exists()
-REFRESH_TIMEOUT = 10
 
 
 def create_wifi_connection(event: WiFiCreateEvent) -> None:
@@ -55,12 +56,17 @@ def create_wifi_connection(event: WiFiCreateEvent) -> None:
     create_task(act())
 
 
+@debounce(
+    wait=0.5,
+    options=DebounceOptions(leading=True, trailing=False, time_window=2),
+)
 async def update_wifi_list(_: WiFiUpdateRequestEvent | None = None) -> None:
     connections = await get_connections()
+
     dispatch(
         WiFiUpdateAction(
             connections=connections,
-            is_on=True,
+            state=await get_wifi_device_state(),
             current_connection=next(
                 (
                     connection
@@ -77,16 +83,11 @@ def init_service() -> None:
     from pages import main
 
     async def setup_listeners() -> None:
-        last_update_time = time.time()
-
         wifi_device = await get_wifi_device()
         if not wifi_device:
             return
 
         async for _ in wifi_device.properties_changed:
-            if time.time() - last_update_time < REFRESH_TIMEOUT:
-                return
-            last_update_time = time.time()
             create_task(update_wifi_list())
 
     create_task(update_wifi_list())
@@ -96,10 +97,6 @@ def init_service() -> None:
         [
             RegisterSettingAppAction(
                 menu_item=main.WiFiMainMenu,
-            ),
-            StatusIconsRegisterAction(
-                icon='wifi',
-                priority=-1,
             ),
         ],
     )

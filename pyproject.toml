@@ -28,10 +28,11 @@ headless-kivy-pi = [
     'dev',
   ] },
 ]
-python-redux = "^0.9.1a2"
+python-redux = "^0.9.4"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 python-debouncer = "^0.1.0"
+pythonping = "^1.1.4"
 
 [tool.poetry.group.dev]
 optional = true
