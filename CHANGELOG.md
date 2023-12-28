@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.7.4
+
+- feat: use redux store for ip service so that other services can use its state
+- refactor: use `Sequence` type instead of `list` type whenever it is enough
+
 ## Version 0.7.3
 
 - refactor: use `socket` instead of `pythonping` to reduce dependencies and make

@@ -15,6 +15,7 @@ from redux import (
 
 from ubo_app.logging import logger
 from ubo_app.store.camera import CameraAction, CameraEvent
+from ubo_app.store.ip import IpAction, IpEvent, IpState
 from ubo_app.store.keypad import KeypadEvent
 from ubo_app.store.main import MainAction, MainState, main_reducer
 from ubo_app.store.sound import SoundAction, SoundState
@@ -28,13 +29,21 @@ if TYPE_CHECKING:
 
 class RootState(BaseCombineReducerState):
     main: MainState
-    sound: SoundState
     status_icons: StatusIconsState
+    sound: SoundState
     wifi: WiFiState
+    ip: IpState
 
 
-ActionType = MainAction | SoundAction | CombineReducerAction | WiFiAction | CameraAction
-EventType = KeypadEvent | CameraEvent | WiFiEvent
+ActionType = (
+    MainAction
+    | CombineReducerAction
+    | SoundAction
+    | CameraAction
+    | WiFiAction
+    | IpAction
+)
+EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent
 
 root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,

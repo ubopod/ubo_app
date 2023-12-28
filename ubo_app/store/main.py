@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import field, replace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Sequence, cast
 
 from redux import (
     BaseAction,
@@ -37,11 +37,11 @@ if TYPE_CHECKING:
 class MainState(Immutable):
     current_menu: Menu | None = None
     current_application: type[PageWidget] | None = None
-    path: list[int] = field(default_factory=list)
+    path: Sequence[int] = field(default_factory=list)
 
 
 class SetMenuPathAction(BaseAction):
-    path: list[str]
+    path: Sequence[str]
 
 
 MainAction: TypeAlias = (

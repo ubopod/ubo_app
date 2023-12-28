@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
 from kivy.clock import Clock
 from kivy.metrics import dp
@@ -87,7 +87,7 @@ class MenuAppFooter(UboApp):
         )
 
         @autorun(lambda state: state.status_icons.icons)
-        def render_icons(selector_result: list[IconState]) -> None:
+        def render_icons(selector_result: Sequence[IconState]) -> None:
             icons = selector_result
             icons_layout.clear_widgets()
             for icon in icons[:5]:

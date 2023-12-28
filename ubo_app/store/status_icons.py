@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Sequence
 
 from redux import BaseAction, Immutable, InitAction, InitializationActionError
 
@@ -14,7 +15,7 @@ class IconState(Immutable):
 
 
 class StatusIconsState(Immutable):
-    icons: list[IconState]
+    icons: Sequence[IconState]
 
 
 class StatusIconsRegisterAction(BaseAction):
