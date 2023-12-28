@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.7.5
+
+- feat: add `ethernet` service to show ethernet status in a status bar icon
+- refactor: move `Fake` class from wifi service to ubo_app for the sake of reusability
+
 ## Version 0.7.4
 
 - feat: use redux store for ip service so that other services can use its state

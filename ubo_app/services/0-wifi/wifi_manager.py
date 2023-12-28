@@ -6,26 +6,17 @@ import asyncio
 import uuid
 from pathlib import Path
 from threading import current_thread
-from types import ModuleType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Coroutine,
-    Generator,
-    Iterator,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Coroutine, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
 
-from ubo_app.logging import logger
 from ubo_app.store.wifi import (
     ConnectionState,
     GlobalWiFiState,
     WiFiConnection,
     WiFiType,
 )
+from ubo_app.utils.fake import Fake
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -41,33 +32,6 @@ def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
 IS_RPI = Path('/etc/rpi-issue').exists()
 if not IS_RPI:
     import sys
-
-    class Fake(ModuleType):
-        def __init__(self: Fake) -> None:
-            super().__init__('')
-
-        def __getattr__(self: Fake, attr: str) -> Fake | str:
-            logger.verbose(
-                'Accessing fake attribute of a `Fake` instance',
-                extra={'attr': attr},
-            )
-            if attr == '__file__':
-                return ''
-            return Fake()
-
-        def __call__(self: Fake, *args: object, **kwargs: dict[str, Any]) -> Fake:
-            logger.verbose(
-                'Calling a `Fake` instance',
-                extra={'args_': args, 'kwargs': kwargs},
-            )
-            return Fake()
-
-        def __await__(self: Fake) -> Generator[Fake | None, Any, Any]:
-            yield None
-            return Fake()
-
-        def __iter__(self: Fake) -> Iterator[Fake]:
-            return iter([Fake()])
 
     sys.modules['sdbus'] = Fake()
     sys.modules['sdbus_async'] = Fake()
@@ -132,14 +96,12 @@ async def get_wifi_device_state() -> GlobalWiFiState:
         return GlobalWiFiState.UNKNOWN
     if state in (
         DeviceState.DISCONNECTED,
+        DeviceState.UNMANAGED,
+        DeviceState.UNAVAILABLE,
         DeviceState.FAILED,
     ):
         return GlobalWiFiState.DISCONNECTED
-    if state in (
-        DeviceState.UNMANAGED,
-        DeviceState.UNAVAILABLE,
-        DeviceState.NEED_AUTH,
-    ):
+    if state in (DeviceState.NEED_AUTH,):
         return GlobalWiFiState.NEEDS_ATTENTION
     if state in (
         DeviceState.DEACTIVATING,

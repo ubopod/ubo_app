@@ -77,16 +77,17 @@ async def update_wifi_list(_: WiFiUpdateRequestEvent | None = None) -> None:
     )
 
 
+async def setup_listeners() -> None:
+    wifi_device = await get_wifi_device()
+    if not wifi_device:
+        return
+
+    async for _ in wifi_device.properties_changed:
+        create_task(update_wifi_list())
+
+
 def init_service() -> None:
     from pages import main
-
-    async def setup_listeners() -> None:
-        wifi_device = await get_wifi_device()
-        if not wifi_device:
-            return
-
-        async for _ in wifi_device.properties_changed:
-            create_task(update_wifi_list())
 
     create_task(update_wifi_list())
     create_task(setup_listeners())

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Sequence
 
 from redux import BaseAction, BaseEvent, Immutable
 
@@ -42,19 +43,13 @@ class WiFiAction(BaseAction):
 
 
 class WiFiUpdateAction(WiFiAction):
-    connections: list[WiFiConnection]
+    connections: Sequence[WiFiConnection]
     state: GlobalWiFiState
     current_connection: WiFiConnection | None
 
 
 class WiFiUpdateRequestAction(WiFiAction):
     reset: bool = False
-
-
-class WiFiState(Immutable):
-    connections: list[WiFiConnection] | None
-    state: GlobalWiFiState
-    current_connection: WiFiConnection | None
 
 
 class WiFiEvent(BaseEvent):
@@ -67,3 +62,9 @@ class WiFiCreateEvent(WiFiEvent):
 
 class WiFiUpdateRequestEvent(WiFiEvent):
     ...
+
+
+class WiFiState(Immutable):
+    connections: Sequence[WiFiConnection] | None
+    state: GlobalWiFiState
+    current_connection: WiFiConnection | None

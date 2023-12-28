@@ -2,7 +2,7 @@
 import math
 
 WIFI_STATE_ICON_ID = 'wifi-state'
-WIFI_STATE_ICON_PRIORITY = -2
+WIFI_STATE_ICON_PRIORITY = -12
 SIGNAL_ICONS = [
     'signal_wifi_0_bar',
     'network_wifi_1_bar',
