@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.7.2"
+version = "0.7.3"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -32,7 +32,6 @@ python-redux = "^0.9.6"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 python-debouncer = "^0.1.0"
-pythonping = "^1.1.4"
 
 [tool.poetry.group.dev]
 optional = true

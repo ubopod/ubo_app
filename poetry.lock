@@ -754,17 +754,6 @@ files = [
 python-immutable = ">=1.0.0,<2.0.0"
 
 [[package]]
-name = "pythonping"
-version = "1.1.4"
-description = "A simple way to ping in Python"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pythonping-1.1.4-py3-none-any.whl", hash = "sha256:dedd690e36cb8c69703175610cf6ce01ff0c2070b447cc64c31a82951c9a53f6"},
-    {file = "pythonping-1.1.4.tar.gz", hash = "sha256:acef84640fee6f20b725f2a1d2392771f2845554cfabcef30b1fdea5030161af"},
-]
-
-[[package]]
 name = "pyusb"
 version = "1.2.1"
 description = "Python USB access module"
@@ -981,4 +970,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "d5db8519b7ba77f1308450c5334c7b2d7231aa222f5f7f9dacfaa4bb43291b11"
+content-hash = "c786776b67825cb25f53dc1e47b68c0fc49395323d91b97bb689bd70b0410054"

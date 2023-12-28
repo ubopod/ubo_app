@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.7.3
+
+- refactor: use `socket` instead of `pythonping` to reduce dependencies and make
+  things work without root access
+- fix: correct the priority of the icon of the ip service
+
 ## Version 0.7.2
 
 - docs: write `README.md` with installation and usage instructions

@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import asyncio
+import socket
 from collections import defaultdict
-from socket import AddressFamily
 from typing import cast
 
 import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
-from pythonping import ping
 from reducer import IPState
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
@@ -23,7 +22,7 @@ def get_ip_addresses(_: IPState) -> list[SubMenuItem]:
     ip_addresses_by_interface = defaultdict(list)
     for interface_name, interface_addresses in psutil.net_if_addrs().items():
         for address in interface_addresses:
-            if address.family == AddressFamily.AF_INET:
+            if address.family == socket.AddressFamily.AF_INET:
                 ip_addresses_by_interface[interface_name].append(address.address)
     return [
         SubMenuItem(
@@ -49,8 +48,8 @@ def get_ip_addresses(_: IPState) -> list[SubMenuItem]:
 
 def is_connected() -> bool:
     try:
-        response = ping('1.1.1.1', count=1, timeout=1)
-        return response.success()
+        with socket.create_connection(('1.1.1.1', 53), timeout=2):
+            return True
     except OSError:
         return False
 
