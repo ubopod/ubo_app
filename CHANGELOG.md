@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.6
+
+- style: optimize footer space so that it can show 7 icons
+
 ## Version 0.7.5
 
 - feat: add `ethernet` service to show ethernet status in a status bar icon

@@ -22,21 +22,31 @@ if TYPE_CHECKING:
 class MenuAppFooter(UboApp):
     @cached_property
     def clock_widget(self: MenuAppFooter) -> Label:
-        clock = Label(font_size=dp(20), size_hint=(None, 1))
+        clock = Label(font_size=dp(20), size_hint=(None, 1), valign='middle')
+        clock.bind(
+            texture_size=lambda clock, texture_size: setattr(
+                clock,
+                'width',
+                texture_size[0],
+            ),
+        )
         local_timzone = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
 
         def now() -> datetime.datetime:
             return datetime.datetime.now(local_timzone)
 
-        def set_value(_: int) -> None:
+        def set_value(_: int | None = None) -> None:
             clock.text = now().strftime('%H:%M')
 
-        set_value(0)
+        def update(_: int | None = None) -> None:
+            set_value()
+            now_ = now()
+            Clock.schedule_once(
+                update,
+                60 - now_.second - now_.microsecond / 1000000 + 0.05,
+            )
 
-        def initialize(_: int) -> None:
-            Clock.schedule_interval(set_value, 60)
-
-        Clock.schedule_once(initialize, 60 - now().second + 1)
+        update()
 
         return clock
 
@@ -58,9 +68,9 @@ class MenuAppFooter(UboApp):
 
         home_footer_layout = BoxLayout(orientation='horizontal', spacing=0, padding=0)
 
-        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(16)))
+        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
         home_footer_layout.add_widget(self.clock_widget)
-        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(8)))
+        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(4)))
 
         icons_widget = StencilView(size_hint=(1, 1))
         home_footer_layout.add_widget(icons_widget)
@@ -90,26 +100,26 @@ class MenuAppFooter(UboApp):
         def render_icons(selector_result: Sequence[IconState]) -> None:
             icons = selector_result
             icons_layout.clear_widgets()
-            for icon in icons[:5]:
+            for icon in list(reversed(icons))[:7]:
                 label = Label(
                     text=icon.symbol,
                     color=icon.color,
                     font_name='material_symbols',
                     font_size=dp(20),
-                    font_features='fill=1',
+                    font_features='fill=0',
                     size_hint=(None, 1),
-                    width=dp(24),
+                    width=dp(22),
                 )
                 icons_layout.add_widget(label)
+            icons_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
             icons_layout.bind(minimum_width=icons_layout.setter('width'))
 
-        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(16)))
-
-        @autorun(lambda state: len(state.main.path))
-        def handle_depth_change(selector_result: int) -> None:
-            depth = selector_result
-            is_deep = depth > 0
-            if not is_deep:
+        @autorun(lambda state: state.main.path)
+        def handle_depth_change(path: Sequence[int]) -> None:
+            is_fullscreen = (
+                'TODO' in path
+            )  # TODO(sassanh): Check if the application is fullscreen
+            if not is_fullscreen:
                 if normal_footer_layout in layout.children:
                     layout.remove_widget(normal_footer_layout)
                     layout.add_widget(home_footer_layout)

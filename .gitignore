@@ -98,3 +98,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# headless-kivy-pi
+headless_kivy_pi_buffer.raw
