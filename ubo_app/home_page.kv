@@ -1,0 +1,24 @@
+#:kivy 2.2.1
+
+<HomePage>:
+  BoxLayout:
+    id: layout
+    orientation: 'horizontal'
+
+    NormalMenuPageWidget:
+      items: root.items
+      width: dp(UBO_GUI_SHORT_WIDTH)
+      size_hint: None, 1
+
+    BoxLayout
+      id: central_column
+      orientation: 'vertical'
+      spacing: dp(12)
+      padding: dp(16)
+      size_hint: 1, 1
+
+    BoxLayout
+      id: right_column
+      orientation: 'vertical'
+      width: dp(UBO_GUI_SHORT_WIDTH)
+      size_hint: None, 1

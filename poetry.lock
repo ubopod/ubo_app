@@ -931,22 +931,24 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.7.2a3"
+version = "0.7.5"
 description = "GUI sdk for Ubo Pod"
 optional = false
-python-versions = "^3.11"
-files = []
-develop = true
+python-versions = ">=3.11,<4.0"
+files = [
+    {file = "ubo_gui-0.7.5-py3-none-any.whl", hash = "sha256:6f7315e23b7e00afe27e04327fb319fe31a3d2946259afedf6e7dc69a57ddec7"},
+    {file = "ubo_gui-0.7.5.tar.gz", hash = "sha256:b95f61f3bdfa27e150e0410d311e21011848bfebb0db22d608a15939e8479c23"},
+]
 
 [package.dependencies]
-python-immutable = "^1.0.2"
+headless-kivy-pi = [
+    {version = ">=0.5.3,<0.6.0", optional = true, markers = "extra == \"dev\""},
+    {version = ">=0.5.3,<0.6.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
+]
+python-immutable = ">=1.0.2,<2.0.0"
 
 [package.extras]
 dev = ["headless-kivy-pi (>=0.5.3,<0.6.0)", "headless-kivy-pi[dev] (>=0.5.3,<0.6.0)"]
-
-[package.source]
-type = "directory"
-url = "../ubo-gui"
 
 [[package]]
 name = "urllib3"
@@ -965,9 +967,9 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [extras]
-dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui"]
+dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "c172bb9a324a2ed9084ec97582cb60133646f1bd9b8f137c424bbf61d241761c"
+content-hash = "ad0773f4973606a3f1f018fa062ef5e7c7939004260d089bbf0a129cc9d2c05f"

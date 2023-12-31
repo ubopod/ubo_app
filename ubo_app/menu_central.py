@@ -1,81 +1,62 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import asyncio
+import pathlib
+import threading
 from functools import cached_property
 from threading import Thread
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self, Sequence
 
+from debouncer import DebounceOptions, debounce
+from kivy.app import Builder
 from kivy.clock import Clock
-from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
-from redux import EventSubscriptionOptions
+from redux import EventSubscriptionOptions, FinishEvent
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
-from ubo_gui.menu.constants import SHORT_WIDTH
+from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
+from ubo_app.constants import DEBUG_MODE
 from ubo_app.store.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.main import SetMenuPathAction
+from ubo_app.store.notifications import (
+    NotificationDisplayType,
+    NotificationsClearAction,
+    NotificationsDisplayEvent,
+)
 
 from .store import autorun, dispatch, subscribe_event
 
 if TYPE_CHECKING:
+    from kivy.uix.screenmanager import Screen
     from kivy.uix.widget import Widget
-    from ubo_gui.menu.types import Menu
+    from ubo_gui.menu.types import Item, Menu
 
 
-class MenuAppCentral(UboApp):
-    @cached_property
-    def menu_widget(self: MenuAppCentral) -> MenuWidget:
-        """Build the main menu and initiate it."""
-        menu_widget = MenuWidget()
+class HomePage(PageWidget):
+    def __init__(
+        self: Self,
+        items: Sequence[Item] | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(items, *args, **kwargs)
 
-        @autorun(lambda state: state.main.current_menu)
-        def sync_current_menu(selector_result: Menu | None) -> None:
-            menu_widget.set_root_menu(selector_result)
+        self.ids.central_column.add_widget(self.cpu_gauge)
+        self.ids.central_column.add_widget(self.ram_gauge)
 
-        def handle_title_change(_: MenuWidget, title: str) -> None:
-            self.root.title = title
+        volume_widget = VolumeWidget()
+        self.ids.right_column.add_widget(volume_widget)
 
-        self.root.title = menu_widget.title
-        menu_widget.bind(title=handle_title_change)
-        menu_widget.bind(
-            stack=lambda _, path: dispatch(
-                SetMenuPathAction(
-                    path=[
-                        i.name if isinstance(i, PageWidget) else i[0]['title']
-                        for i in path
-                    ],
-                ),
-            ),
-        )
-
-        def handle_key_press_event(key_press_event: KeypadKeyPressEvent) -> None:
-            if key_press_event.key == Key.L1:
-                menu_widget.select(0)
-            if key_press_event.key == Key.L2:
-                menu_widget.select(1)
-            if key_press_event.key == Key.L3:
-                menu_widget.select(2)
-            if key_press_event.key == Key.BACK:
-                menu_widget.go_back()
-            if key_press_event.key == Key.UP:
-                menu_widget.go_up()
-            if key_press_event.key == Key.DOWN:
-                menu_widget.go_down()
-
-        subscribe_event(
-            KeypadKeyPressEvent,
-            handle_key_press_event,
-            EventSubscriptionOptions(run_async=False),
-        )
-
-        return menu_widget
+        @autorun(lambda state: state.sound.output_volume)
+        def sync_output_volume(selector_result: float) -> None:
+            volume_widget.value = selector_result * 100
 
     @cached_property
-    def cpu_gauge(self: MenuAppCentral) -> GaugeWidget:
+    def cpu_gauge(self: Self) -> GaugeWidget:
         import psutil
 
         gauge = GaugeWidget(value=0, fill_color='#24D636', label='CPU')
@@ -98,7 +79,7 @@ class MenuAppCentral(UboApp):
         return gauge
 
     @cached_property
-    def ram_gauge(self: MenuAppCentral) -> GaugeWidget:
+    def ram_gauge(self: Self) -> GaugeWidget:
         import psutil
 
         gauge = GaugeWidget(
@@ -114,50 +95,133 @@ class MenuAppCentral(UboApp):
 
         return gauge
 
+
+class MenuWidgetWithHomePage(MenuWidget):
+    def get_current_screen(self: Self) -> Screen | None:
+        if self.depth == 0:
+            return HomePage(
+                self.current_menu_items,
+                name=f'Page {self.get_depth()} 0',
+            )
+        return super().get_current_screen()
+
+
+def set_path(_: MenuWidget, stack: list[tuple[Menu, int] | PageWidget]) -> None:
+    dispatch(
+        SetMenuPathAction(
+            path=[
+                i.name
+                if isinstance(i, PageWidget)
+                else i[0].title()
+                if callable(i[0].title)
+                else i[0].title
+                for i in stack
+            ],
+        ),
+    )
+
+
+class WorkerThread(threading.Thread):
+    def __init__(self: WorkerThread) -> None:
+        super().__init__()
+        self.loop = asyncio.new_event_loop()
+        if DEBUG_MODE:
+            self.loop.set_debug(enabled=True)
+
+    def run(self: WorkerThread) -> None:
+        asyncio.set_event_loop(self.loop)
+
+        subscribe_event(FinishEvent, lambda _: self.stop())
+        self.loop.run_forever()
+
+    def stop(self: WorkerThread) -> None:
+        self.loop.call_soon_threadsafe(self.loop.stop)
+
+
+class MenuAppCentral(UboApp):
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
-        horizontal_layout = BoxLayout()
+        """Build the main menu and initiate it."""
+        menu_widget = MenuWidgetWithHomePage()
 
-        self.menu_widget.size_hint = (None, 1)
-        self.menu_widget.width = dp(SHORT_WIDTH)
-        horizontal_layout.add_widget(self.menu_widget)
+        @autorun(lambda state: state.main.menu)
+        @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
+        async def sync_current_menu(menu: Menu | None) -> None:
+            if not menu:
+                return
+            Clock.schedule_once(lambda _: menu_widget.set_root_menu(menu))
 
-        central_column = BoxLayout(
-            orientation='vertical',
-            spacing=dp(12),
-            padding=dp(16),
+        thread = WorkerThread()
+        thread.start()
+        sync_current_menu.subscribe(
+            lambda q: thread.loop.call_soon_threadsafe(
+                lambda: thread.loop.create_task(q),
+            ),
         )
-        central_column.add_widget(self.cpu_gauge)
-        central_column.add_widget(self.ram_gauge)
-        central_column.size_hint = (1, 1)
-        horizontal_layout.add_widget(central_column)
 
-        right_column = BoxLayout(orientation='vertical')
-        volume_widget = VolumeWidget()
-        right_column.add_widget(volume_widget)
-        right_column.size_hint = (None, 1)
-        right_column.width = dp(SHORT_WIDTH)
-        horizontal_layout.add_widget(right_column)
+        def handle_title_change(_: MenuWidget, title: str) -> None:
+            self.root.title = title
 
-        @autorun(
-            lambda state: getattr(getattr(state, 'sound', None), 'output_volume', 0),
+        self.root.title = menu_widget.title
+        menu_widget.bind(title=handle_title_change)
+
+        menu_widget.bind(stack=set_path)
+
+        def handle_key_press_event(key_press_event: KeypadKeyPressEvent) -> None:
+            if key_press_event.key == Key.L1:
+                menu_widget.select(0)
+            if key_press_event.key == Key.L2:
+                menu_widget.select(1)
+            if key_press_event.key == Key.L3:
+                menu_widget.select(2)
+            if key_press_event.key == Key.BACK:
+                menu_widget.go_back()
+            if key_press_event.key == Key.UP:
+                menu_widget.go_up()
+            if key_press_event.key == Key.DOWN:
+                menu_widget.go_down()
+
+        subscribe_event(
+            KeypadKeyPressEvent,
+            handle_key_press_event,
+            EventSubscriptionOptions(run_async=False),
         )
-        def sync_output_volume(selector_result: float) -> None:
-            volume_widget.value = selector_result * 100
-            self.root.render()
 
-        def handle_depth_change(_: MenuWidget, depth: int) -> None:
-            is_deep = depth > 0
-            if is_deep:
-                self.menu_widget.size_hint = (1, 1)
-                central_column.size_hint = (0, 1)
-                right_column.size_hint = (0, 1)
-            else:
-                self.menu_widget.size_hint = (None, 1)
-                self.menu_widget.width = dp(SHORT_WIDTH)
-                central_column.size_hint = (1, 1)
-                right_column.size_hint = (None, 1)
+        def display_notification(event: NotificationsDisplayEvent) -> None:
+            notification = event.notification
+            application = NotificationWidget(
+                title='Notification',
+                notification_title=notification.title,
+                content=notification.content,
+                icon=notification.icon,
+                color=notification.color,
+            )
 
-        self.menu_widget.bind(depth=handle_depth_change)
+            application.bind(
+                on_dismiss=lambda _: (
+                    application.dispatch('on_close'),
+                    dispatch(
+                        NotificationsClearAction(notification=notification),
+                    ),
+                ),
+            )
 
-        return horizontal_layout
+            menu_widget.open_application(application)
+
+            if notification.display_type is NotificationDisplayType.FLASH:
+                Clock.schedule_once(lambda _: application.dispatch('on_close'), 4)
+
+        subscribe_event(
+            NotificationsDisplayEvent,
+            lambda event: Clock.schedule_once(
+                lambda _: display_notification(event),
+                -1,
+            ),
+        )
+
+        return menu_widget
+
+
+Builder.load_file(
+    pathlib.Path(__file__).parent.joinpath('home_page.kv').resolve().as_posix(),
+)

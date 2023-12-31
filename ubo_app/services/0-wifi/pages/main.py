@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D105, D107, N999
 from __future__ import annotations
 
-from typing import Any, Sequence, cast
+from typing import Any, Sequence
 
 from constants import get_signal_icon
 from debouncer import DebounceOptions, debounce
@@ -33,11 +33,11 @@ from ubo_app.utils.async_ import create_task
 from .create_wireless_connection import CreateWirelessConnectionPage
 
 
-class WiFiNetworkPage(PromptWidget):
+class WiFiConnectionPage(PromptWidget):
     ssid: str
     is_active = BooleanProperty(defaultvalue=None)
 
-    def first_option_callback(self: WiFiNetworkPage) -> None:
+    def first_option_callback(self: WiFiConnectionPage) -> None:
         if self.is_active:
             create_task(disconnect_wireless_connection())
         else:
@@ -48,14 +48,14 @@ class WiFiNetworkPage(PromptWidget):
             ),
         )
 
-    def second_option_callback(self: WiFiNetworkPage) -> None:
+    def second_option_callback(self: WiFiConnectionPage) -> None:
         create_task(forget_wireless_connection(self.ssid))
         self.dispatch('on_close')
         dispatch(
             WiFiUpdateRequestAction(reset=True),
         )
 
-    def update(self: WiFiNetworkPage, *_: tuple[Any, ...]) -> None:
+    def update(self: WiFiConnectionPage, *_: tuple[Any, ...]) -> None:
         self.first_option_background_color = (
             PromptWidget.first_option_background_color.defaultvalue
         )
@@ -68,7 +68,7 @@ class WiFiNetworkPage(PromptWidget):
             self.first_option_icon = 'link'
             self.icon = 'wifi_off'
 
-    def __init__(self: WiFiNetworkPage, **kwargs: object) -> None:
+    def __init__(self: WiFiConnectionPage, **kwargs: object) -> None:
         super().__init__(**kwargs, items=None)
         self.prompt = f'SSID: {self.ssid}'
         self.icon = 'hourglass_empty'
@@ -101,17 +101,16 @@ class WiFiNetworkPage(PromptWidget):
         create_task(listener())
 
 
-@autorun(lambda state: cast(WiFiState, getattr(state, 'wifi', None)))
-def wireless_connection_items(selector_result: WiFiState) -> Sequence[Item]:
-    if not selector_result:
+@autorun(lambda state: state.wifi)
+def wireless_connection_items(wifi_state: WiFiState) -> Sequence[Item]:
+    if not wifi_state:
         return []
 
-    wifi_state = selector_result
-
-    def wifi_network_creator(ssid: str) -> type[WiFiNetworkPage]:
-        class WiFiNetworkPageWithSSID(WiFiNetworkPage):
+    def wifi_network_creator(ssid: str) -> type[WiFiConnectionPage]:
+        class WiFiNetworkPageWithSSID(WiFiConnectionPage):
             def __init__(self: WiFiNetworkPageWithSSID, **kwargs: object) -> None:
                 self.ssid = ssid
+                self.title = None
                 super().__init__(**kwargs)
 
         return WiFiNetworkPageWithSSID

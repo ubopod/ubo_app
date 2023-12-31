@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.8
+
+- feat: add notifications service and use it for wireless connection creation
+
 ## Version 0.7.7
 
 - refactor: housekeeping - update dependencies, migrate menu data structures to `Immutable`,

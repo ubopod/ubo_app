@@ -8,18 +8,18 @@
       orientation: 'horizontal'
       Label:
         font_name: 'material_symbols'
-        text: 'photo_camera'
+        text: 'wifi' if root.creating else 'photo_camera'
         size_hint: 1, None
         font_size: dp(60)
 
       Label:
         font_name: 'material_symbols'
-        text: 'qr_code'
+        text: 'hourglass_top' if root.creating else 'qr_code'
         size_hint: 1, None
         font_size: dp(60)
 
     Label:
-      text: 'Scan WiFi QR-Code With Front Camera'
+      text: 'Creating Scanned WiFi Connection' if root.creating else 'Scan WiFi QR-Code With Front Camera'
       text_size: self.width, None
       font_size: dp(19)
       halign: 'center'
@@ -28,4 +28,5 @@
 
   ItemWidget:
     item: root.get_item(2)
+    is_set: not root.creating
     size_hint: 1, None
