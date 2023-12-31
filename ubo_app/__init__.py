@@ -28,9 +28,13 @@ def main() -> None:
 
     from ubo_app.menu import MenuApp
 
-    app = MenuApp()
+    # Needed since redux is scheduled using Clock scheduler and Clock doesn't run before
+    # app is running
+    Clock.tick()
 
     load_services()
+
+    app = MenuApp()
 
     try:
         app.run()

@@ -44,7 +44,7 @@ def reducer(
                 ),
                 actions=[WiFiUpdateRequestAction()],
             )
-        raise InitializationActionError
+        raise InitializationActionError(action)
 
     if isinstance(action, CameraBarcodeAction):
         ssid = action.match.get('SSID')

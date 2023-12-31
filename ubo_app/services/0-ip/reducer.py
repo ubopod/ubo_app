@@ -12,7 +12,12 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.ip import IpState, IpUpdateRequestAction, IpUpdateRequestEvent
+from ubo_app.store.ip import (
+    IpState,
+    IpUpdateAction,
+    IpUpdateRequestAction,
+    IpUpdateRequestEvent,
+)
 
 
 def reducer(
@@ -22,7 +27,10 @@ def reducer(
     if state is None:
         if isinstance(action, InitAction):
             return IpState(interfaces=[])
-        raise InitializationActionError
+        raise InitializationActionError(action)
+
+    if isinstance(action, IpUpdateAction):
+        return replace(state, interfaces=action.interfaces)
 
     if isinstance(action, IpUpdateRequestAction):
         return CompleteReducerResult(

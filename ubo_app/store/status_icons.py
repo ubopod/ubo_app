@@ -32,7 +32,7 @@ def reducer(state: StatusIconsState | None, action: IconAction) -> StatusIconsSt
     if state is None:
         if isinstance(action, InitAction):
             return StatusIconsState(icons=[])
-        raise InitializationActionError
+        raise InitializationActionError(action)
     if isinstance(action, StatusIconsRegisterAction):
         return replace(
             state,

@@ -120,22 +120,20 @@ class UboServiceThread(threading.Thread):
         try:
             if path.exists():
                 module_name = f'{service_id}:ubo_handle'
-                PathFinder.find_spec(
-                    module_name,
-                    [path.as_posix()],
-                    None,
-                )
                 self.spec = PathFinder.find_spec(
                     'ubo_handle',
                     [path.as_posix()],
                     None,
                 )
-                if not self.spec:
+                if not self.spec or not self.spec.origin:
                     return
-                self.spec.__module__ = module_name
-                module = importlib.util.module_from_spec(self.spec)
-                sys.modules[module_name] = module
-                self.module = module
+                self.spec.name = module_name
+                self.spec.loader = UboServiceModuleLoader(
+                    'ubo_handle',
+                    self.spec.origin,
+                )
+                self.module = importlib.util.module_from_spec(self.spec)
+                sys.modules[module_name] = self.module
 
         except Exception as exception:  # noqa: BLE001
             logger.error(f'Error loading "{path}"')

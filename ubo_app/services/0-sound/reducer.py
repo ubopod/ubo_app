@@ -40,7 +40,7 @@ def reducer(  # noqa: C901
                 mic_volume=0.5,
                 is_mic_mute=False,
             )
-        raise InitializationActionError
+        raise InitializationActionError(action)
 
     if isinstance(action, SoundSetVolumeAction):
         if action.device == SoundDevice.OUTPUT:

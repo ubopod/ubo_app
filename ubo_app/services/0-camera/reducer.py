@@ -32,7 +32,7 @@ def reducer(
             return CameraState(
                 is_viewfinder_active=False,
             )
-        raise InitializationActionError
+        raise InitializationActionError(action)
 
     if isinstance(action, CameraStartViewfinderAction):
         return CompleteReducerResult(

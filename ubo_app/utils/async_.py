@@ -8,13 +8,13 @@ from ubo_app.load_services import UboServiceThread
 from ubo_app.logging import logger
 
 if TYPE_CHECKING:
-    from asyncio import Task
+    from asyncio import Handle
 
 
-background_tasks: set[Task] = set()
+background_tasks: set[Handle] = set()
 
 
-def create_task(awaitable: Awaitable) -> Task:
+def create_task(awaitable: Awaitable) -> Handle:
     async def wrapper() -> None:
         try:
             await awaitable
@@ -34,6 +34,6 @@ def create_task(awaitable: Awaitable) -> Task:
 
     import _loop
 
-    task = _loop.create_task(wrapper())
-    background_tasks.add(task)
-    return task
+    handle = _loop.create_task(wrapper())
+    background_tasks.add(handle)
+    return handle

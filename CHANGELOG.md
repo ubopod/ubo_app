@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.7.7
+
+- refactor: housekeeping - update dependencies, migrate menu data structures to `Immutable`,
+  improve typings, organization
+
 ## Version 0.7.6
 
 - style: optimize footer space so that it can show 7 icons

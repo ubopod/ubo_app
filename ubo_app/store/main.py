@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Sequence, cast
 
 from redux import (
     BaseAction,
+    BaseEvent,
     CompleteReducerResult,
     FinishAction,
     Immutable,
@@ -13,8 +14,12 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
+from ubo_gui.menu.types import SubMenuItem
 
-from ubo_app.store.app import RegisterAppAction, RegisterRegularAppAction
+from ubo_app.store.app import (
+    RegisterAppAction,
+    RegisterRegularAppAction,
+)
 from ubo_app.store.keypad import (
     Key,
     KeypadAction,
@@ -31,13 +36,15 @@ from ubo_app.store.status_icons import IconAction
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from ubo_gui.menu.types import Menu
-    from ubo_gui.page import PageWidget
 
 
 class MainState(Immutable):
-    current_menu: Menu | None = None
-    current_application: type[PageWidget] | None = None
+    menu: Menu | None = None
     path: Sequence[int] = field(default_factory=list)
+
+
+class InitEvent(BaseEvent):
+    ...
 
 
 class SetMenuPathAction(BaseAction):
@@ -57,13 +64,16 @@ MainAction: TypeAlias = (
 def main_reducer(  # noqa: C901
     state: MainState | None,
     action: MainAction,
-) -> ReducerResult[MainState, SoundChangeVolumeAction, KeypadEvent]:
+) -> ReducerResult[MainState, SoundChangeVolumeAction, KeypadEvent | InitEvent]:
     if state is None:
         if isinstance(action, InitAction):
             from ._menus import HOME_MENU
 
-            return MainState(current_menu=HOME_MENU)
-        raise InitializationActionError
+            return CompleteReducerResult(
+                state=MainState(menu=HOME_MENU),
+                events=[InitEvent()],
+            )
+        raise InitializationActionError(action)
 
     if isinstance(action, KeypadKeyPressAction):
         actions = []
@@ -90,30 +100,65 @@ def main_reducer(  # noqa: C901
         )
 
     if isinstance(action, RegisterAppAction):
-        from ubo_gui.menu import Item, is_sub_menu_item, menu_items
+        from ubo_gui.menu import Item, menu_items
 
-        # TODO(sassanh): clone the menu instead of modifying it
-        menu = state.current_menu
+        menu = state.menu
+        parent_index = 0 if isinstance(action, RegisterRegularAppAction) else 1
 
-        main_menu_item: Item = menu_items(menu)[0]
-        if not is_sub_menu_item(main_menu_item):
+        if not menu:
+            return state
+
+        root_menu_items = menu_items(menu)
+
+        main_menu_item: Item = root_menu_items[0]
+        if not isinstance(main_menu_item, SubMenuItem):
             msg = 'Main menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
-        container_menu_item: Item
-        if isinstance(action, RegisterRegularAppAction):
-            container_menu_item = menu_items(main_menu_item['sub_menu'])[0]
-        else:
-            container_menu_item = menu_items(main_menu_item['sub_menu'])[1]
+        main_menu_items = menu_items(main_menu_item.sub_menu)
 
-        if not is_sub_menu_item(container_menu_item):
-            msg = 'Settings menu item is not a `SubMenuItem`'
+        desired_menu_item = main_menu_items[parent_index]
+        if not isinstance(desired_menu_item, SubMenuItem):
+            menu_title = (
+                'Applications'
+                if isinstance(action, RegisterRegularAppAction)
+                else 'Settings'
+            )
+            msg = f'{menu_title} menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
-        cast(list[Item], container_menu_item['sub_menu']['items']).append(
+        new_items = [
+            *cast(Sequence[Item], desired_menu_item.sub_menu.items),
             action.menu_item,
+        ]
+        desired_menu_item = replace(
+            desired_menu_item,
+            sub_menu=replace(
+                desired_menu_item.sub_menu,
+                items=new_items,
+            ),
         )
-        return replace(state, current_menu=menu)
+        main_menu_item = replace(
+            main_menu_item,
+            sub_menu=replace(
+                main_menu_item.sub_menu,
+                items=[
+                    desired_menu_item if index == parent_index else item
+                    for index, item in enumerate(main_menu_items)
+                ],
+            ),
+        )
+
+        return replace(
+            state,
+            menu=replace(
+                menu,
+                items=[
+                    main_menu_item if index == 0 else item
+                    for index, item in enumerate(root_menu_items)
+                ],
+            ),
+        )
 
     if isinstance(action, SetMenuPathAction):
         return replace(state, path=action.path)

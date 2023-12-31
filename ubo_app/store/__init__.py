@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
-from headless_kivy_pi import HeadlessWidget
 from kivy.base import Clock
 from redux import (
     BaseCombineReducerState,
@@ -18,6 +17,7 @@ from ubo_app.store.camera import CameraAction, CameraEvent
 from ubo_app.store.ip import IpAction, IpEvent, IpState
 from ubo_app.store.keypad import KeypadEvent
 from ubo_app.store.main import MainAction, MainState, main_reducer
+from ubo_app.store.notifications import NotificationsAction, NotificationsState
 from ubo_app.store.sound import SoundAction, SoundState
 from ubo_app.store.wifi import WiFiAction, WiFiEvent, WiFiState
 
@@ -33,6 +33,7 @@ class RootState(BaseCombineReducerState):
     sound: SoundState
     wifi: WiFiState
     ip: IpState
+    notifications: NotificationsState
 
 
 ActionType = (
@@ -42,6 +43,7 @@ ActionType = (
     | CameraAction
     | WiFiAction
     | IpAction
+    | NotificationsAction
 )
 EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent
 
@@ -65,6 +67,7 @@ def scheduler(main_loop_callback: Callable[[], None]) -> None:
 store = create_store(
     root_reducer,
     CreateStoreOptions(
+        auto_init=True,
         scheduler=scheduler,
         action_middleware=lambda action: logger.debug(
             'Action dispatched',
@@ -77,12 +80,9 @@ store = create_store(
     ),
 )
 
-
 autorun = store.autorun
 dispatch = store.dispatch
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
 
-subscribe(lambda _: HeadlessWidget.render())
-
-__ALL__ = (autorun, dispatch, subscribe)
+__ALL__ = (autorun, dispatch, subscribe, subscribe_event)

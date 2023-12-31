@@ -17,7 +17,7 @@ from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.async_ import create_task
 
 
-@autorun(lambda state: getattr(getattr(state, 'ip', None), 'interfaces', []))
+@autorun(lambda state: state.ip.interfaces)
 def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuItem]:
     if not interfaces:
         return []
@@ -34,7 +34,11 @@ def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuIt
             sub_menu=HeadlessMenu(
                 title=f'IP Addresses - {interface.name}',
                 items=[
-                    ActionItem(label=ip_address, icon='lan', action=print)
+                    ActionItem(
+                        label=ip_address,
+                        icon='lan',
+                        action=lambda: None,
+                    )
                     for ip_address in interface.ip_addresses
                 ],
             ),

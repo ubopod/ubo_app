@@ -2,13 +2,13 @@
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.28.1"
+version = "8.29.0"
 description = "CircuitPython APIs for non-CircuitPython versions of Python such as CPython on Linux and MicroPython."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "Adafruit-Blinka-8.28.1.tar.gz", hash = "sha256:9eb516dbb486465d48fce19b9badf503e5e8149f1769dcb478794da142d0c5bb"},
-    {file = "Adafruit_Blinka-8.28.1-py3-none-any.whl", hash = "sha256:8196def47c28d97ccb6eab469c04bd9c4d47cc86b59ef9cc1d1c1e403c89f5dc"},
+    {file = "Adafruit-Blinka-8.29.0.tar.gz", hash = "sha256:d655051ded683edd7477f231f8edcef4d936ca3aec390df2999e94b48244dd88"},
+    {file = "Adafruit_Blinka-8.29.0-py3-none-any.whl", hash = "sha256:ad7d1a3a52e92ad5ad817c11e45cc5a13594224dc636f15ded63c12ac72268ee"},
 ]
 
 [package.dependencies]
@@ -316,13 +316,13 @@ files = [
 
 [[package]]
 name = "headless-kivy-pi"
-version = "0.5.10"
+version = "0.5.12"
 description = "Headless renderer for Kivy framework on Raspberry Pi"
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "headless_kivy_pi-0.5.10-py3-none-any.whl", hash = "sha256:1d40a7e49fd417c63b373dedee5ecfdb4542b393ce1ed6f71584be2bf2a2a8d9"},
-    {file = "headless_kivy_pi-0.5.10.tar.gz", hash = "sha256:9379738512677bf9deaeaf95208362560f4f2484864591632f69e3f826b56112"},
+    {file = "headless_kivy_pi-0.5.12-py3-none-any.whl", hash = "sha256:e0547de5631611cc995f7431a202ab3ba6c40254b6983935aabc6e97769dfb8a"},
+    {file = "headless_kivy_pi-0.5.12.tar.gz", hash = "sha256:29d182fe200f3fe00bbdda1425f36bea33c3c5e618aee31db24f92130a0d6f01"},
 ]
 
 [package.dependencies]
@@ -683,13 +683,13 @@ pywin32 = ">=223"
 
 [[package]]
 name = "pyright"
-version = "1.1.343"
+version = "1.1.344"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.343-py3-none-any.whl", hash = "sha256:75a0d24e8227328198bdfa1f4904ce66b78c2bacf49c269d9e6e3b174b026225"},
-    {file = "pyright-1.1.343.tar.gz", hash = "sha256:871e122d74003e8e5fddb17867220b06ee892de61fa967ca7ca031acdc176738"},
+    {file = "pyright-1.1.344-py3-none-any.whl", hash = "sha256:ab7117a911ce25fcd317f42272579f9ae53a6abc8b8a15f6aa069a11281953ee"},
+    {file = "pyright-1.1.344.tar.gz", hash = "sha256:ab7c962f00dd8141a5a0192c1060fb34b92d1f9047ad70dda45229938051922b"},
 ]
 
 [package.dependencies]
@@ -715,13 +715,13 @@ cp2110 = ["hidapi"]
 
 [[package]]
 name = "python-debouncer"
-version = "0.1.1"
+version = "0.1.3"
 description = "Debouncer and friends for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_debouncer-0.1.1-py3-none-any.whl", hash = "sha256:55a56e44facbd8b5bacb85bee9ef68d70d5d694a400f9acf9d71c76bce242d10"},
-    {file = "python_debouncer-0.1.1.tar.gz", hash = "sha256:53b895a62d8a834fd653fada0f71de9579ecfa30d731a2b3bcaf4199b75ec626"},
+    {file = "python_debouncer-0.1.3-py3-none-any.whl", hash = "sha256:25908a6ff1e28485c5ac346002d79597261357fbb7ee0fdf372365cac6fe796e"},
+    {file = "python_debouncer-0.1.3.tar.gz", hash = "sha256:b5bb28d28bfa0914cfcc52c6ee54f03543c1e003a23c3433a3d7bd304b4f9bbe"},
 ]
 
 [package.dependencies]
@@ -741,17 +741,18 @@ files = [
 
 [[package]]
 name = "python-redux"
-version = "0.9.6"
+version = "0.9.10"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.6-py3-none-any.whl", hash = "sha256:0b80806a05454d26f42e9b4214aff050eaf2bbac683eae46619a522148e22085"},
-    {file = "python_redux-0.9.6.tar.gz", hash = "sha256:3a2ca44465bd87250cc3ca8d775504ec85f5ec46843f8cd991da0b97b3ee86eb"},
+    {file = "python_redux-0.9.10-py3-none-any.whl", hash = "sha256:f6482a70c698db10c79c12a0e3592bd3225caf91696d5c01d8a90ef730868840"},
+    {file = "python_redux-0.9.10.tar.gz", hash = "sha256:03f0e775865e645186f8b847a5e2444a03cb563f9043b1cf44f81e8192048241"},
 ]
 
 [package.dependencies]
 python-immutable = ">=1.0.0,<2.0.0"
+typing-extensions = ">=4.9.0,<5.0.0"
 
 [[package]]
 name = "pyusb"
@@ -930,23 +931,22 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.6.4"
+version = "0.7.2a3"
 description = "GUI sdk for Ubo Pod"
 optional = false
-python-versions = ">=3.11,<4.0"
-files = [
-    {file = "ubo_gui-0.6.4-py3-none-any.whl", hash = "sha256:1dad9d2f81f18eb1d76d6c9b746af486af84af832f39ef84040bd64236dfddb7"},
-    {file = "ubo_gui-0.6.4.tar.gz", hash = "sha256:9c771bd261060ff21479c7179ad17e03cc44009ed759471cb5a540dddd3980f3"},
-]
+python-versions = "^3.11"
+files = []
+develop = true
 
 [package.dependencies]
-headless-kivy-pi = [
-    {version = ">=0.5.3,<0.6.0", optional = true, markers = "extra == \"dev\""},
-    {version = ">=0.5.3,<0.6.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
-]
+python-immutable = "^1.0.2"
 
 [package.extras]
 dev = ["headless-kivy-pi (>=0.5.3,<0.6.0)", "headless-kivy-pi[dev] (>=0.5.3,<0.6.0)"]
+
+[package.source]
+type = "directory"
+url = "../ubo-gui"
 
 [[package]]
 name = "urllib3"
@@ -965,9 +965,9 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [extras]
-dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
+dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "c786776b67825cb25f53dc1e47b68c0fc49395323d91b97bb689bd70b0410054"
+content-hash = "c172bb9a324a2ed9084ec97582cb60133646f1bd9b8f137c424bbf61d241761c"
