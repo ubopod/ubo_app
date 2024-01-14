@@ -71,7 +71,7 @@ class WiFiConnectionPage(PromptWidget):
     def __init__(self: WiFiConnectionPage, **kwargs: object) -> None:
         super().__init__(**kwargs, items=None)
         self.prompt = f'SSID: {self.ssid}'
-        self.icon = 'hourglass_empty'
+        self.icon = 'hourglass_top'
         self.first_option_background_color = 'black'
         self.first_option_label = ''
         self.first_option_is_short = False

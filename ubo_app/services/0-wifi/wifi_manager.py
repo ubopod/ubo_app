@@ -9,7 +9,14 @@ from threading import current_thread
 from typing import TYPE_CHECKING, Any, Coroutine, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
+from ubo_gui.constants import DANGER_COLOR
 
+from ubo_app.store import dispatch
+from ubo_app.store.notifications import (
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
 from ubo_app.store.wifi import (
     ConnectionState,
     GlobalWiFiState,
@@ -366,8 +373,18 @@ async def forget_wireless_connection(ssid: str) -> None:
             '802-11-wireless' in settings
             and settings['802-11-wireless']['ssid'][1].decode('utf-8') == ssid
         ):
-            await wait_for(
-                network_connection_settings.delete(),
+            await wait_for(network_connection_settings.delete())
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title=f'"{ssid}" Deleted',
+                        content=f"""WiFi connection with ssid "{
+                        ssid}" was deleted successfully""",
+                        display_type=NotificationDisplayType.FLASH,
+                        color=DANGER_COLOR,
+                        icon='signal_wifi_bad',
+                    ),
+                ),
             )
 
 

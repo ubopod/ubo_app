@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.9
+
+- feat: #11 add notification for wifi deletion
+
 ## Version 0.7.8
 
 - feat: add notifications service and use it for wireless connection creation
