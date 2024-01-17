@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from kivy.utils import get_color_from_hex
 from redux import (
     BaseEvent,
     CompleteReducerResult,
@@ -11,7 +12,9 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.led_ring import LedRingBlinkAction
 from ubo_app.store.notifications import (
+    Importance,
     NotificationDisplayType,
     NotificationsAction,
     NotificationsAddAction,
@@ -27,7 +30,7 @@ Action = InitAction | NotificationsAction
 def reducer(
     state: NotificationsState | None,
     action: Action,
-) -> ReducerResult[NotificationsState, Action, BaseEvent]:
+) -> ReducerResult[NotificationsState, LedRingBlinkAction, BaseEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return NotificationsState(
@@ -45,12 +48,28 @@ def reducer(
             events.append(NotificationsDisplayEvent(notification=action.notification))
         if action.notification in state.notifications:
             return CompleteReducerResult(state=state, events=events)
+        kivy_color = get_color_from_hex(action.notification.color)
         return CompleteReducerResult(
             state=replace(
                 state,
                 notifications=[*state.notifications, action.notification],
                 unread_count=state.unread_count + 1,
             ),
+            actions=[
+                LedRingBlinkAction(
+                    color=(
+                        round(kivy_color[0] * 256),
+                        round(kivy_color[1] * 256),
+                        round(kivy_color[2] * 256),
+                    ),
+                    repetitions={
+                        Importance.LOW: 1,
+                        Importance.MEDIUM: 2,
+                        Importance.HIGH: 3,
+                        Importance.CRITICAL: 4,
+                    }[action.notification.importance],
+                ),
+            ],
             events=events,
         )
     if isinstance(action, NotificationsClearAction):

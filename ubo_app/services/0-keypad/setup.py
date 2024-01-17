@@ -8,13 +8,11 @@ import time
 from enum import StrEnum
 from typing import TYPE_CHECKING, Literal
 
+import board
 from redux import Immutable
 
 from ubo_app.store.keypad import Key, KeypadKeyPressAction
-from ubo_app.store.sound import (
-    SoundDevice,
-    SoundSetMuteStatusAction,
-)
+from ubo_app.store.sound import SoundDevice, SoundSetMuteStatusAction
 
 INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
 
@@ -43,7 +41,6 @@ class ButtonEvent(Immutable):
 
 def init_service() -> None:
     import adafruit_aw9523
-    import board
     from RPi import GPIO
 
     if TYPE_CHECKING:

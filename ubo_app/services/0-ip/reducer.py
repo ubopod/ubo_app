@@ -4,7 +4,6 @@ from __future__ import annotations
 from dataclasses import replace
 
 from redux import (
-    Action,
     BaseEvent,
     CompleteReducerResult,
     InitAction,
@@ -19,11 +18,14 @@ from ubo_app.store.ip import (
     IpUpdateRequestEvent,
 )
 
+Action = InitAction | IpUpdateAction | IpUpdateRequestAction
+ResultEvent = IpUpdateRequestEvent
+
 
 def reducer(
     state: IpState | None,
     action: Action,
-) -> ReducerResult[IpState, Action, BaseEvent]:
+) -> ReducerResult[IpState, Action, ResultEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return IpState(interfaces=[])

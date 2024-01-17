@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.10
+
+- feat: #15 add `led_ring` service and use it for notifications
+
 ## Version 0.7.9
 
 - feat: #11 add notification for wifi deletion

@@ -1,0 +1,21 @@
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+Description=Ubo App Service
+Before=ubo_led
+After=network.target
+
+[Service]
+User=root
+ExecStart=/home/pi/ubo-app/bin/ubo
+WorkingDirectory=/home/pi
+StandardOutput=inherit
+StandardError=inherit
+KillMode=control-group
+Restart=always
+RestartPreventExitStatus=255
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

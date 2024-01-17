@@ -1,0 +1,20 @@
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+Description=Ubo LED Service
+Before=hardware-test.service
+
+[Service]
+User=root
+Environment=PYTHONPATH=/home/pi/ubo-venv/lib/python3.9/site-packages/
+ExecStart=/home/pi/ubo-app/bin/python /home/pi/ubo-app/lib/python3.11/site-packages/ubo_app/services/0-rgb-ring/rgb_ring_manager.py
+WorkingDirectory=/home/pi/ubo-app/lib/python3.11/site-packages/ubo_app/
+StandardOutput=inherit
+StandardError=inherit
+KillMode=control-group
+Restart=always
+RestartPreventExitStatus=255
+RuntimeDirectory=ubo
+RuntimeDirectoryMode=0755
+Type=simple

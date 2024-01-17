@@ -30,7 +30,7 @@ virtualenv --system-site-packages ubo-app
 source ubo-app/bin/activate
 pip install ubo-app
 # Run this if you want to run it automatically when RPi boots
-sudo ubo-app/bin/ubo install_service
+sudo ubo-app/bin/ubo install_services
 ```
 
 ## 🤝 Contributing

@@ -14,11 +14,7 @@ from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence, cast
 
-from redux import (
-    CombineReducerRegisterAction,
-    FinishEvent,
-    ReducerType,
-)
+from redux import CombineReducerRegisterAction, FinishEvent, ReducerType
 
 from ubo_app.constants import DEBUG_MODE, SERVICES_PATH
 from ubo_app.logging import logger

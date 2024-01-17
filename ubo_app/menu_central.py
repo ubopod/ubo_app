@@ -154,8 +154,8 @@ class MenuAppCentral(UboApp):
         thread = WorkerThread()
         thread.start()
         sync_current_menu.subscribe(
-            lambda q: thread.loop.call_soon_threadsafe(
-                lambda: thread.loop.create_task(q),
+            lambda task: thread.loop.call_soon_threadsafe(
+                lambda: thread.loop.create_task(task),
             ),
         )
 

@@ -56,12 +56,8 @@ root_reducer, root_reducer_id = combine_reducers(
 )
 
 
-def scheduler(main_loop_callback: Callable[[], None]) -> None:
-    Clock.create_trigger(
-        lambda _: main_loop_callback(),
-        0,
-        interval=True,
-    )()
+def scheduler(func: Callable[[], None], *, interval: bool) -> None:
+    Clock.create_trigger(lambda _: func(), 0, interval=interval)()
 
 
 store = create_store(

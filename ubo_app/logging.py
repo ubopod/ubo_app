@@ -73,7 +73,7 @@ class ExtraFormatter(logging.Formatter):
         'message',
     )
 
-    def format(self: ExtraFormatter, record: logging.LogRecord) -> str:  # noqa: A003
+    def format(self: ExtraFormatter, record: logging.LogRecord) -> str:
         string = super().format(record)
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
         if len(extra) > 0:
