@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ubo_app.logging import logger
 from ubo_app.store import dispatch
-from ubo_app.store.led_ring import LedRingSetIsConnectedAction
+from ubo_app.store.rgb_ring import RgbRingSetIsConnectedAction
 
 LM_SOCKET_PATH = Path('/run/ubo').joinpath('ledmanagersocket.sock').as_posix()
 
@@ -32,9 +32,9 @@ class RgbRingClient:
             self.server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
             try:
                 self.server_socket.connect(LM_SOCKET_PATH)
-                dispatch(LedRingSetIsConnectedAction(is_connected=True))
+                dispatch(RgbRingSetIsConnectedAction(is_connected=True))
             except Exception as exception:  # noqa: BLE001
-                dispatch(LedRingSetIsConnectedAction(is_connected=False))
+                dispatch(RgbRingSetIsConnectedAction(is_connected=False))
                 logger.error('Unable to connect to the socket', exc_info=exception)
                 return
 

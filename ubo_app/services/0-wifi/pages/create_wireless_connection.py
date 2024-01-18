@@ -14,14 +14,14 @@ from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
 from ubo_app.store import dispatch, subscribe_event
-from ubo_app.store.camera import (
-    CameraStartViewfinderAction,
-)
+from ubo_app.store.camera import CameraStartViewfinderAction
 from ubo_app.store.notifications import (
+    Chime,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
 )
+from ubo_app.store.sound import SoundPlayChimeAction
 from ubo_app.store.wifi import WiFiCreateEvent, WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
 
@@ -45,6 +45,7 @@ class CreateWirelessConnectionPage(PageWidget):
             WiFiCreateEvent,
             self.create_wireless_connection,
         )
+        dispatch(SoundPlayChimeAction(name='scan'))
 
     def create_wireless_connection(
         self: CreateWirelessConnectionPage,
@@ -86,6 +87,7 @@ class CreateWirelessConnectionPage(PageWidget):
                             display_type=NotificationDisplayType.FLASH,
                             color=SUCCESS_COLOR,
                             icon='wifi_add',
+                            chime=Chime.ADD,
                         ),
                     ),
                 ],

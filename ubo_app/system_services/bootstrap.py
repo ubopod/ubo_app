@@ -28,7 +28,7 @@ services: list[Service] = [
 ]
 
 
-def setup_services(*, enable: bool = True, start: bool = True) -> None:
+def bootstrap(*, enable: bool = True, start: bool = True) -> None:
     """Create the service files and enable the services."""
     for service in services:
         service_file_path = f'/etc/systemd/system/{service["name"]}.service'
@@ -60,3 +60,8 @@ def setup_services(*, enable: bool = True, start: bool = True) -> None:
             f"""Service '{service['name']}' has been created and {
             'enabled' if enable else 'not enabled'}.""",
         )
+
+    subprocess.run(
+        [Path(__file__).parent.joinpath('install_wm8960.sh').as_posix()],  # noqa: S603
+        check=True,
+    )

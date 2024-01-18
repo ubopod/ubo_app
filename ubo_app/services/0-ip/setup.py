@@ -12,7 +12,12 @@ from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.store import autorun, dispatch, subscribe_event
 from ubo_app.store.app import RegisterSettingAppAction
-from ubo_app.store.ip import IpNetworkInterface, IpUpdateAction, IpUpdateRequestEvent
+from ubo_app.store.ip import (
+    IpNetworkInterface,
+    IpUpdateAction,
+    IpUpdateRequestAction,
+    IpUpdateRequestEvent,
+)
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.async_ import create_task
 
@@ -77,19 +82,25 @@ async def check_connection() -> bool:
         await asyncio.sleep(1)
         if is_connected():
             dispatch(
-                StatusIconsRegisterAction(
-                    icon='public',
-                    priority=INTERNET_STATE_ICON_PRIORITY,
-                    id=INTERNET_STATE_ICON_ID,
-                ),
+                [
+                    IpUpdateRequestAction(),
+                    StatusIconsRegisterAction(
+                        icon='public',
+                        priority=INTERNET_STATE_ICON_PRIORITY,
+                        id=INTERNET_STATE_ICON_ID,
+                    ),
+                ],
             )
         else:
             dispatch(
-                StatusIconsRegisterAction(
-                    icon='public_off',
-                    priority=INTERNET_STATE_ICON_PRIORITY,
-                    id=INTERNET_STATE_ICON_ID,
-                ),
+                [
+                    IpUpdateRequestAction(),
+                    StatusIconsRegisterAction(
+                        icon='public_off',
+                        priority=INTERNET_STATE_ICON_PRIORITY,
+                        id=INTERNET_STATE_ICON_ID,
+                    ),
+                ],
             )
 
 

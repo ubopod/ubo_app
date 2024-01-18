@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from threading import current_thread
 from typing import TYPE_CHECKING, Any, Coroutine, TypeVar
 
 from ubo_app.store.ethernet import GlobalEthernetState
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.fake import Fake
 
 if TYPE_CHECKING:
@@ -21,7 +21,6 @@ def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
     return asyncio.wait_for(task, timeout=10.0)
 
 
-IS_RPI = Path('/etc/rpi-issue').exists()
 if not IS_RPI:
     import sys
 
@@ -37,9 +36,7 @@ from sdbus_async.networkmanager import (  # noqa: E402
     NetworkDeviceGeneric,
     NetworkManager,
 )
-from sdbus_async.networkmanager.enums import (  # noqa: E402
-    DeviceType,
-)
+from sdbus_async.networkmanager.enums import DeviceType  # noqa: E402
 
 system_buses = {}
 

@@ -1,8 +1,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
-from pathlib import Path
-
 from constants import ETHERNET_STATE_ICON_ID, ETHERNET_STATE_ICON_PRIORITY
 from debouncer import DebounceOptions, debounce
 from ethernet_manager import get_ethernet_device, get_ethernet_device_state
@@ -11,8 +9,6 @@ from ubo_app.store import dispatch
 from ubo_app.store.ethernet import GlobalEthernetState
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.async_ import create_task
-
-IS_RPI = Path('/etc/rpi-issue').exists()
 
 
 @debounce(

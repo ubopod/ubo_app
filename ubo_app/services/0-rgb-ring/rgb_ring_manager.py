@@ -19,7 +19,7 @@ from adafruit_blinka.microcontroller.generic_micropython import Pin
 from ubo_gui.menu import warnings
 
 if TYPE_CHECKING:
-    from ubo_app.store.led_ring import Color
+    from ubo_app.store.rgb_ring import Color
 
 BRIGHTNESS = 1.0
 NUM_LEDS = 27
@@ -198,7 +198,7 @@ class LEDManager:
         # repetitions is the number of retepting pluses
         if not self.led_ring_present:
             return
-        dim_steps = 20
+        dim_steps = 5
         color = self.adjust_brightness(color)
         for _ in range(repetitions):
             for i in range(dim_steps):
@@ -208,15 +208,15 @@ class LEDManager:
                 m = i / dim_steps
                 self.pixels.fill((color[0] * m, color[1] * m, color[2] * m))
                 self.pixels.show()
-                time.sleep(wait / 1000)
-            for i in range(dim_steps):
+                time.sleep(wait / 10000)
+            for i in range(1, dim_steps):
                 if self.stop is True:
                     self.blank()
                     return
                 j = (dim_steps - i) / dim_steps
                 self.pixels.fill((color[0] * j, color[1] * j, color[2] * j))
                 self.pixels.show()
-                time.sleep(wait / 1000)
+                time.sleep(wait / 10000)
         self.blank()
 
     def blink(self: LEDManager, color: Color, wait: float, repetitions: int) -> None:

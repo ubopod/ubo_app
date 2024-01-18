@@ -16,9 +16,10 @@ from ubo_app.store.camera import (
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
-    CameraStopViewFinderAction,
+    CameraStopViewfinderAction,
     CameraStopViewfinderEvent,
 )
+from ubo_app.store.keypad import Key, KeypadAction
 
 Action = InitAction | CameraAction
 
@@ -44,12 +45,21 @@ def reducer(
             ],
         )
 
-    if isinstance(action, CameraStopViewFinderAction):
+    if isinstance(action, CameraStopViewfinderAction):
         return CompleteReducerResult(
-            state=replace(state, is_viewfinder_active=True),
+            state=replace(state, is_viewfinder_active=False),
             events=[
                 CameraStopViewfinderEvent(),
             ],
         )
+
+    if isinstance(action, KeypadAction):  # noqa: SIM102
+        if action.key == Key.BACK:
+            return CompleteReducerResult(
+                state=replace(state),
+                actions=[
+                    CameraStopViewfinderAction(),
+                ],
+            )
 
     return state

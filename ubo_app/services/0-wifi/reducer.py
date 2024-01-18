@@ -14,7 +14,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.camera import CameraBarcodeAction, CameraStopViewFinderAction
+from ubo_app.store.camera import CameraBarcodeAction, CameraStopViewfinderAction
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.store.wifi import (
     GlobalWiFiState,
@@ -53,7 +53,7 @@ def reducer(
 
         return CompleteReducerResult(
             state=state,
-            actions=[CameraStopViewFinderAction()],
+            actions=[CameraStopViewfinderAction()],
             events=[
                 WiFiCreateEvent(
                     connection=WiFiConnection(

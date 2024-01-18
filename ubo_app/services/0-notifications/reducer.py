@@ -12,7 +12,6 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.led_ring import LedRingBlinkAction
 from ubo_app.store.notifications import (
     Importance,
     NotificationDisplayType,
@@ -23,14 +22,17 @@ from ubo_app.store.notifications import (
     NotificationsDisplayEvent,
     NotificationsState,
 )
+from ubo_app.store.rgb_ring import RgbRingBlinkAction
+from ubo_app.store.sound import SoundPlayChimeAction
 
 Action = InitAction | NotificationsAction
+ResultAction = RgbRingBlinkAction | SoundPlayChimeAction
 
 
 def reducer(
     state: NotificationsState | None,
     action: Action,
-) -> ReducerResult[NotificationsState, LedRingBlinkAction, BaseEvent]:
+) -> ReducerResult[NotificationsState, ResultAction, BaseEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return NotificationsState(
@@ -56,7 +58,7 @@ def reducer(
                 unread_count=state.unread_count + 1,
             ),
             actions=[
-                LedRingBlinkAction(
+                RgbRingBlinkAction(
                     color=(
                         round(kivy_color[0] * 256),
                         round(kivy_color[1] * 256),
@@ -68,7 +70,9 @@ def reducer(
                         Importance.HIGH: 3,
                         Importance.CRITICAL: 4,
                     }[action.notification.importance],
+                    wait=400,
                 ),
+                SoundPlayChimeAction(name=action.notification.chime),
             ],
             events=events,
         )

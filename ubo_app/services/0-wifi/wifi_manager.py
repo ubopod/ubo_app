@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from pathlib import Path
 from threading import current_thread
 from typing import TYPE_CHECKING, Any, Coroutine, TypeVar, cast
 
@@ -13,6 +12,7 @@ from ubo_gui.constants import DANGER_COLOR
 
 from ubo_app.store import dispatch
 from ubo_app.store.notifications import (
+    Chime,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
@@ -23,6 +23,7 @@ from ubo_app.store.wifi import (
     WiFiConnection,
     WiFiType,
 )
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.fake import Fake
 
 if TYPE_CHECKING:
@@ -36,7 +37,6 @@ def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
     return asyncio.wait_for(task, timeout=10.0)
 
 
-IS_RPI = Path('/etc/rpi-issue').exists()
 if not IS_RPI:
     import sys
 
@@ -61,9 +61,7 @@ from sdbus_async.networkmanager import (  # noqa: E402
 from sdbus_async.networkmanager.enums import (  # noqa: E402
     ConnectionState as SdBusConnectionState,
 )
-from sdbus_async.networkmanager.enums import (  # noqa: E402
-    DeviceType,
-)
+from sdbus_async.networkmanager.enums import DeviceType  # noqa: E402
 
 system_buses = {}
 
@@ -383,6 +381,7 @@ async def forget_wireless_connection(ssid: str) -> None:
                         display_type=NotificationDisplayType.FLASH,
                         color=DANGER_COLOR,
                         icon='signal_wifi_bad',
+                        chime=Chime.DONE,
                     ),
                 ),
             )

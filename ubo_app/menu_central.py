@@ -51,7 +51,7 @@ class HomePage(PageWidget):
         volume_widget = VolumeWidget()
         self.ids.right_column.add_widget(volume_widget)
 
-        @autorun(lambda state: state.sound.output_volume)
+        @autorun(lambda state: state.sound.playback_volume)
         def sync_output_volume(selector_result: float) -> None:
             volume_widget.value = selector_result * 100
 
@@ -142,14 +142,14 @@ class MenuAppCentral(UboApp):
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
-        menu_widget = MenuWidgetWithHomePage()
+        self.menu_widget = MenuWidgetWithHomePage()
 
         @autorun(lambda state: state.main.menu)
         @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
         async def sync_current_menu(menu: Menu | None) -> None:
             if not menu:
                 return
-            Clock.schedule_once(lambda _: menu_widget.set_root_menu(menu))
+            Clock.schedule_once(lambda _: self.menu_widget.set_root_menu(menu))
 
         thread = WorkerThread()
         thread.start()
@@ -162,64 +162,70 @@ class MenuAppCentral(UboApp):
         def handle_title_change(_: MenuWidget, title: str) -> None:
             self.root.title = title
 
-        self.root.title = menu_widget.title
-        menu_widget.bind(title=handle_title_change)
+        self.root.title = self.menu_widget.title
+        self.menu_widget.bind(title=handle_title_change)
 
-        menu_widget.bind(stack=set_path)
-
-        def handle_key_press_event(key_press_event: KeypadKeyPressEvent) -> None:
-            if key_press_event.key == Key.L1:
-                menu_widget.select(0)
-            if key_press_event.key == Key.L2:
-                menu_widget.select(1)
-            if key_press_event.key == Key.L3:
-                menu_widget.select(2)
-            if key_press_event.key == Key.BACK:
-                menu_widget.go_back()
-            if key_press_event.key == Key.UP:
-                menu_widget.go_up()
-            if key_press_event.key == Key.DOWN:
-                menu_widget.go_down()
+        self.menu_widget.bind(stack=set_path)
 
         subscribe_event(
             KeypadKeyPressEvent,
-            handle_key_press_event,
+            self.handle_key_press_event,
             EventSubscriptionOptions(run_async=False),
         )
-
-        def display_notification(event: NotificationsDisplayEvent) -> None:
-            notification = event.notification
-            application = NotificationWidget(
-                title='Notification',
-                notification_title=notification.title,
-                content=notification.content,
-                icon=notification.icon,
-                color=notification.color,
-            )
-
-            application.bind(
-                on_dismiss=lambda _: (
-                    application.dispatch('on_close'),
-                    dispatch(
-                        NotificationsClearAction(notification=notification),
-                    ),
-                ),
-            )
-
-            menu_widget.open_application(application)
-
-            if notification.display_type is NotificationDisplayType.FLASH:
-                Clock.schedule_once(lambda _: application.dispatch('on_close'), 4)
 
         subscribe_event(
             NotificationsDisplayEvent,
             lambda event: Clock.schedule_once(
-                lambda _: display_notification(event),
+                lambda _: self.display_notification(event),
                 -1,
             ),
         )
 
-        return menu_widget
+        return self.menu_widget
+
+    def handle_key_press_event(
+        self: MenuAppCentral,
+        key_press_event: KeypadKeyPressEvent,
+    ) -> None:
+        if key_press_event.key == Key.L1:
+            self.menu_widget.select(0)
+        if key_press_event.key == Key.L2:
+            self.menu_widget.select(1)
+        if key_press_event.key == Key.L3:
+            self.menu_widget.select(2)
+        if key_press_event.key == Key.BACK:
+            self.menu_widget.go_back()
+        if key_press_event.key == Key.UP:
+            self.menu_widget.go_up()
+        if key_press_event.key == Key.DOWN:
+            self.menu_widget.go_down()
+
+    def display_notification(
+        self: MenuAppCentral,
+        event: NotificationsDisplayEvent,
+    ) -> None:
+        notification = event.notification
+        application = NotificationWidget(
+            title='Notification',
+            notification_title=notification.title,
+            content=notification.content,
+            icon=notification.icon,
+            color=notification.color,
+        )
+
+        application.bind(
+            on_dismiss=lambda _: (
+                application.dispatch('on_close'),
+                dispatch(
+                    NotificationsClearAction(notification=notification),
+                ),
+            ),
+        )
+
+        self.menu_widget.open_application(application)
+
+        if notification.display_type is NotificationDisplayType.FLASH:
+            Clock.schedule_once(lambda _: application.dispatch('on_close'), 4)
 
 
 Builder.load_file(

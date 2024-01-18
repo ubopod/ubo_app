@@ -5,7 +5,6 @@ from dataclasses import replace
 
 from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
 from redux import (
-    BaseEvent,
     CompleteReducerResult,
     InitAction,
     InitializationActionError,
@@ -16,57 +15,57 @@ from ubo_app.store.sound import (
     SoundAction,
     SoundChangeVolumeAction,
     SoundDevice,
+    SoundPlayChimeAction,
+    SoundPlayChimeEvent,
     SoundSetMuteStatusAction,
     SoundSetVolumeAction,
     SoundState,
     SoundToggleMuteStatusAction,
 )
-from ubo_app.store.status_icons import (
-    StatusIconsRegisterAction,
-)
+from ubo_app.store.status_icons import StatusIconsRegisterAction
 
 Action = InitAction | SoundAction | StatusIconsRegisterAction
 
 
-def reducer(  # noqa: C901
+def reducer(  # noqa: C901, PLR0912
     state: SoundState | None,
     action: Action,
-) -> ReducerResult[SoundState, Action, BaseEvent]:
+) -> ReducerResult[SoundState, Action, SoundPlayChimeEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return SoundState(
-                output_volume=0.5,
-                is_output_mute=False,
-                mic_volume=0.5,
-                is_mic_mute=False,
+                playback_volume=0.5,
+                is_playback_mute=False,
+                capture_volume=0.5,
+                is_capture_mute=False,
             )
         raise InitializationActionError(action)
 
     if isinstance(action, SoundSetVolumeAction):
         if action.device == SoundDevice.OUTPUT:
-            return replace(state, output_volume=action.volume)
+            return replace(state, playback_volume=action.volume)
         if action.device == SoundDevice.INPUT:
-            return replace(state, input_volume=action.volume)
+            return replace(state, capture_volume=action.volume)
     elif isinstance(action, SoundChangeVolumeAction):
         if action.device == SoundDevice.OUTPUT:
             return replace(
                 state,
-                output_volume=min(
-                    max(state.output_volume + action.amount, 0),
+                playback_volume=min(
+                    max(state.playback_volume + action.amount, 0),
                     1,
                 ),
             )
         if action.device == SoundDevice.INPUT:
             return replace(
                 state,
-                input_volume=min(
-                    max(state.mic_volume + action.amount, 0),
+                capture_volume=min(
+                    max(state.capture_volume + action.amount, 0),
                     1,
                 ),
             )
     elif isinstance(action, SoundSetMuteStatusAction):
         if action.device == SoundDevice.OUTPUT:
-            return replace(state, is_output_mute=action.mute)
+            return replace(state, is_playback_mute=action.mute)
         if action.device == SoundDevice.INPUT:
             return CompleteReducerResult(
                 state=replace(state, is_mic_mute=action.mute),
@@ -83,11 +82,18 @@ def reducer(  # noqa: C901
             state=state,
             actions=[
                 SoundSetMuteStatusAction(
-                    mute=not state.is_output_mute
+                    mute=not state.is_playback_mute
                     if action.device == SoundDevice.OUTPUT
-                    else not state.is_mic_mute,
+                    else not state.is_capture_mute,
                     device=action.device,
                 ),
+            ],
+        )
+    elif isinstance(action, SoundPlayChimeAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[
+                SoundPlayChimeEvent(name=action.name),
             ],
         )
     return state

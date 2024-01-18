@@ -10,85 +10,85 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.led_ring import (
-    LedRingAction,
-    LedRingBlankAction,
-    LedRingBlinkAction,
-    LedRingColorfulCommandAction,
-    LedRingCommandAction,
-    LedRingCommandEvent,
-    LedRingFillDownfromAction,
-    LedRingFillUptoAction,
-    LedRingProgressWheelAction,
-    LedRingProgressWheelStepAction,
-    LedRingPulseAction,
-    LedRingRainbowAction,
-    LedRingSetAllAction,
-    LedRingSetBrightnessAction,
-    LedRingSetEnabledAction,
-    LedRingSetIsBusyAction,
-    LedRingSetIsConnectedAction,
-    LedRingSpinningWheelAction,
-    LedRingState,
+from ubo_app.store.rgb_ring import (
+    RgbRingAction,
+    RgbRingBlankAction,
+    RgbRingBlinkAction,
+    RgbRingColorfulCommandAction,
+    RgbRingCommandAction,
+    RgbRingCommandEvent,
+    RgbRingFillDownfromAction,
+    RgbRingFillUptoAction,
+    RgbRingProgressWheelAction,
+    RgbRingProgressWheelStepAction,
+    RgbRingPulseAction,
+    RgbRingRainbowAction,
+    RgbRingSetAllAction,
+    RgbRingSetBrightnessAction,
+    RgbRingSetEnabledAction,
+    RgbRingSetIsBusyAction,
+    RgbRingSetIsConnectedAction,
+    RgbRingSpinningWheelAction,
+    RgbRingState,
 )
 
-Action = InitAction | LedRingAction
+Action = InitAction | RgbRingAction
 
 
 def reducer(  # noqa: C901, PLR0912
-    state: LedRingState | None,
+    state: RgbRingState | None,
     action: Action,
-) -> ReducerResult[LedRingState, Action, LedRingCommandEvent]:
+) -> ReducerResult[RgbRingState, Action, RgbRingCommandEvent]:
     if state is None:
         if isinstance(action, InitAction):
-            return LedRingState(is_connected=False, is_busy=False)
+            return RgbRingState(is_connected=False, is_busy=False)
         raise InitializationActionError(action)
 
-    if isinstance(action, LedRingSetIsConnectedAction):
+    if isinstance(action, RgbRingSetIsConnectedAction):
         return replace(
             state,
             is_connected=action.is_connected,
         )
 
-    if isinstance(action, LedRingSetIsBusyAction):
+    if isinstance(action, RgbRingSetIsBusyAction):
         return replace(
             state,
             is_busy=action.is_busy,
         )
 
-    if isinstance(action, LedRingCommandAction):
+    if isinstance(action, RgbRingCommandAction):
         if not state.is_connected:
             return state
 
         command = None
 
-        if isinstance(action, LedRingColorfulCommandAction):
+        if isinstance(action, RgbRingColorfulCommandAction):
             (r, g, b, *_) = action.color
-            if isinstance(action, LedRingSetAllAction):
+            if isinstance(action, RgbRingSetAllAction):
                 command = f'set_all {r} {g} {b}'
-            elif isinstance(action, LedRingBlinkAction):
+            elif isinstance(action, RgbRingBlinkAction):
                 command = f'blink {r} {g} {b} {action.wait} {action.repetitions}'
-            elif isinstance(action, LedRingProgressWheelStepAction):
+            elif isinstance(action, RgbRingProgressWheelStepAction):
                 command = f'progress_wheel_step {r} {g} {b}'
-            elif isinstance(action, LedRingPulseAction):
+            elif isinstance(action, RgbRingPulseAction):
                 command = f'pulse {r} {g} {b} {action.wait} {action.repetitions}'
-            elif isinstance(action, LedRingSpinningWheelAction):
+            elif isinstance(action, RgbRingSpinningWheelAction):
                 command = f"""spinning_wheel {r} {g} {b} {action.wait} {action.length} {
                 action.repetitions}"""
-            elif isinstance(action, LedRingProgressWheelAction):
+            elif isinstance(action, RgbRingProgressWheelAction):
                 command = f'progress_wheel {r} {g} {b} {action.percentage}'
-            elif isinstance(action, LedRingFillUptoAction):
+            elif isinstance(action, RgbRingFillUptoAction):
                 command = f'fill_upto {r} {g} {b} {action.percentage} {action.wait}'
-            elif isinstance(action, LedRingFillDownfromAction):
+            elif isinstance(action, RgbRingFillDownfromAction):
                 command = f'fill_downfrom {r} {g} {b} {action.percentage} {action.wait}'
-        elif isinstance(action, LedRingSetEnabledAction):
+        elif isinstance(action, RgbRingSetEnabledAction):
             command = 'set_enabled ' + str(int(action.enabled))
-        elif isinstance(action, LedRingSetBrightnessAction):
+        elif isinstance(action, RgbRingSetBrightnessAction):
             if 0 <= action.brightness <= 1:
                 command = f'set_brightness {action.brightness}'
-        elif isinstance(action, LedRingBlankAction):
+        elif isinstance(action, RgbRingBlankAction):
             command = 'blank'
-        elif isinstance(action, LedRingRainbowAction):
+        elif isinstance(action, RgbRingRainbowAction):
             command = f'rainbow {action.rounds} {action.wait}'
 
         if not command:
@@ -96,7 +96,7 @@ def reducer(  # noqa: C901, PLR0912
 
         return CompleteReducerResult(
             state=state,
-            events=[LedRingCommandEvent(command=command)],
+            events=[RgbRingCommandEvent(command=command)],
         )
 
     return state

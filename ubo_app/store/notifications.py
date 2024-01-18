@@ -5,7 +5,7 @@ import sys
 from dataclasses import field
 from datetime import datetime, timezone
 from enum import StrEnum, auto
-from typing import Sequence
+from typing import Literal, Sequence
 
 from redux import BaseAction, BaseEvent, Immutable
 
@@ -59,10 +59,17 @@ def default_color() -> str:
     return IMPORTANCE_COLORS[parent_frame.f_locals.get('importance', Importance.LOW)]
 
 
+class Chime(StrEnum):
+    ADD = 'add'
+    DONE = 'done'
+    FAIL = 'fail'
+
+
 class Notification(Immutable):
     title: str
     content: str
     importance: Importance = Importance.LOW
+    chime: Chime = Chime.DONE
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
     is_read: bool = False
     sender: str | None = None

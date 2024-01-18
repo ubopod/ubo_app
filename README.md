@@ -20,7 +20,8 @@ botting from that image, you can ignore this section.
 
   ```sh
   sudo apt install pip virtualenv libmtdev libgl1 libegl1 libcap-dev \
-       python3-libcamera libzbar0 --no-install-recommends
+       python3-libcamera python3-alsaaudio python3-pyaudio libzbar0 \
+       --no-install-recommends
   ```
 
 ## 📦 Installation

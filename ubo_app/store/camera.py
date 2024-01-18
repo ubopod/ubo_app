@@ -12,7 +12,7 @@ class CameraStartViewfinderAction(CameraAction):
     barcode_pattern: str | None
 
 
-class CameraStopViewFinderAction(CameraAction):
+class CameraStopViewfinderAction(CameraAction):
     ...
 
 

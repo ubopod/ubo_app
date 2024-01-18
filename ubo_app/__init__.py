@@ -8,7 +8,7 @@ from redux import FinishAction
 
 from ubo_app.load_services import load_services
 from ubo_app.logging import add_file_handler, add_stdout_handler
-from ubo_app.system_services.setup_services import setup_services
+from ubo_app.system_services.bootstrap import bootstrap
 
 
 def main() -> None:
@@ -16,8 +16,8 @@ def main() -> None:
     add_file_handler()
     add_stdout_handler()
 
-    if len(sys.argv) > 1 and sys.argv[1] == 'install_services':
-        setup_services()
+    if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
+        bootstrap()
         sys.exit(0)
 
     os.environ['KIVY_METRICS_DENSITY'] = '1'

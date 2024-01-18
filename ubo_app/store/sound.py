@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from redux import BaseAction, Immutable
+from redux import BaseAction, BaseEvent, Immutable
 
 
 class SoundDevice(StrEnum):
@@ -11,35 +11,43 @@ class SoundDevice(StrEnum):
     OUTPUT = 'Output'
 
 
-class SoundSetVolumeAction(BaseAction):
+class SoundAction(BaseAction):
+    ...
+
+
+class SoundSetVolumeAction(SoundAction):
     volume: float
     device: SoundDevice
 
 
-class SoundChangeVolumeAction(BaseAction):
+class SoundChangeVolumeAction(SoundAction):
     amount: float
     device: SoundDevice
 
 
-class SoundSetMuteStatusAction(BaseAction):
+class SoundSetMuteStatusAction(SoundAction):
     mute: bool
     device: SoundDevice
 
 
-class SoundToggleMuteStatusAction(BaseAction):
+class SoundToggleMuteStatusAction(SoundAction):
     device: SoundDevice
 
 
-SoundAction = (
-    SoundSetVolumeAction
-    | SoundChangeVolumeAction
-    | SoundSetMuteStatusAction
-    | SoundToggleMuteStatusAction
-)
+class SoundPlayChimeAction(SoundAction):
+    name: str
+
+
+class SoundEvent(BaseEvent):
+    ...
+
+
+class SoundPlayChimeEvent(SoundEvent):
+    name: str
 
 
 class SoundState(Immutable):
-    output_volume: float
-    is_output_mute: bool
-    mic_volume: float
-    is_mic_mute: bool
+    playback_volume: float
+    is_playback_mute: bool
+    capture_volume: float
+    is_capture_mute: bool

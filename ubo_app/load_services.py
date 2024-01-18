@@ -132,15 +132,18 @@ class UboServiceThread(threading.Thread):
                 sys.modules[module_name] = self.module
 
         except Exception as exception:  # noqa: BLE001
-            logger.error(f'Error loading "{path}"')
-            logger.exception(exception)
+            logger.error(f'Error loading "{path}"', exc_info=exception)
 
     def run(self: UboServiceThread) -> None:
         from ubo_app import store
 
         asyncio.set_event_loop(self.loop)
         if self.module and self.spec and self.spec.loader:
-            self.spec.loader.exec_module(self.module)
+            try:
+                self.spec.loader.exec_module(self.module)
+            except Exception as exception:  # noqa: BLE001
+                logger.error(f'Error loading "{self.path}"', exc_info=exception)
+                return
 
         store.subscribe_event(FinishEvent, lambda _: self.stop())
         self.loop.run_forever()

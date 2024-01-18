@@ -1,8 +1,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
-from pathlib import Path
-
 from debouncer import DebounceOptions, debounce
 from wifi_manager import (
     get_connections,
@@ -13,14 +11,8 @@ from wifi_manager import (
 
 from ubo_app.store import dispatch, subscribe_event
 from ubo_app.store.app import RegisterSettingAppAction
-from ubo_app.store.wifi import (
-    ConnectionState,
-    WiFiUpdateAction,
-    WiFiUpdateRequestEvent,
-)
+from ubo_app.store.wifi import ConnectionState, WiFiUpdateAction, WiFiUpdateRequestEvent
 from ubo_app.utils.async_ import create_task
-
-IS_RPI = Path('/etc/rpi-issue').exists()
 
 
 @debounce(

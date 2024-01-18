@@ -1,8 +1,12 @@
 # Changelog
 
+## Version 0.7.11
+
+- feat: #16 connect to the audio controller, play chimes for notifications
+
 ## Version 0.7.10
 
-- feat: #15 add `led_ring` service and use it for notifications
+- feat: #15 add `rgb_ring` service and use it for notifications
 
 ## Version 0.7.9
 
