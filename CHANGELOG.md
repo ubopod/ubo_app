@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.12
+
+- fix: #16 use a logarithmic scale for volume
+
 ## Version 0.7.11
 
 - feat: #16 connect to the audio controller, play chimes for notifications

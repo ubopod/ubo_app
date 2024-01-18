@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import importlib.metadata
 from typing import TYPE_CHECKING, Sequence
 
 from kivy.clock import Clock
-from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadlessMenu, SubMenuItem
+from ubo_gui.menu.types import (
+    ActionItem,
+    ApplicationItem,
+    HeadedMenu,
+    HeadlessMenu,
+    SubMenuItem,
+)
 from ubo_gui.notification import NotificationWidget
 
 from ubo_app.logging import logger
@@ -25,6 +32,7 @@ APPS_MENU = HeadlessMenu(
     items=[],
 )
 
+VERSION = importlib.metadata.version('ubo_app')
 MAIN_MENU = HeadlessMenu(
     title='Main',
     items=[
@@ -38,10 +46,21 @@ MAIN_MENU = HeadlessMenu(
             icon='settings',
             sub_menu=SETTINGS_MENU,
         ),
-        ActionItem(
+        SubMenuItem(
             label='About',
-            action=lambda: logger.info('"About" selected!'),
             icon='info',
+            sub_menu=HeadedMenu(
+                title='About',
+                heading=f'Ubo v{VERSION}',
+                sub_heading='A universal dashboard for your Raspberry Pi',
+                items=[
+                    ActionItem(
+                        label='Check for updates',
+                        icon='update',
+                        action=lambda: logger.info('"Check for updates" selected!'),
+                    ),
+                ],
+            ),
         ),
     ],
 )

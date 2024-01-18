@@ -986,13 +986,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.7.6"
+version = "0.7.7"
 description = "GUI sdk for Ubo Pod"
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "ubo_gui-0.7.6-py3-none-any.whl", hash = "sha256:4bb3d5536262ffda782e8347a5b79ed7c733a2987d275809a9917b32b28bac51"},
-    {file = "ubo_gui-0.7.6.tar.gz", hash = "sha256:ba2225036646e5a35a03d466d14a066b4692590b722b3ed4c4f3e797d4489deb"},
+    {file = "ubo_gui-0.7.7-py3-none-any.whl", hash = "sha256:1054ca0d9cbbdb27581e9b20ed4636b38aa9d00ce600d23783574d7c4a39bef5"},
+    {file = "ubo_gui-0.7.7.tar.gz", hash = "sha256:ab3910329d1e125be5fec078f95e02fb130ad087c8ca5e046655bc471961201e"},
 ]
 
 [package.dependencies]
@@ -1027,4 +1027,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "2566524ffe93e230d63f5550e06f8b764f4ce18ba15fe0329269149e60e901e7"
+content-hash = "528a8095a1eb0194d1577f4c7ffc6a1a69e5da64a37ff2b22edd9a7dad735ec3"
