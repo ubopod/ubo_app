@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.7.13
+
+- feat: #16 add volume chime
+- fix: #16 set the default pulseaudio device to "wm8960-soundcard"
+
 ## Version 0.7.12
 
 - fix: #16 use a logarithmic scale for volume

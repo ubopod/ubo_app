@@ -43,17 +43,27 @@ def reducer(  # noqa: C901, PLR0912
 
     if isinstance(action, SoundSetVolumeAction):
         if action.device == SoundDevice.OUTPUT:
-            return replace(state, playback_volume=action.volume)
+            return CompleteReducerResult(
+                state=replace(state, playback_volume=action.volume),
+                events=[
+                    SoundPlayChimeEvent(name='volume'),
+                ],
+            )
         if action.device == SoundDevice.INPUT:
             return replace(state, capture_volume=action.volume)
     elif isinstance(action, SoundChangeVolumeAction):
         if action.device == SoundDevice.OUTPUT:
-            return replace(
-                state,
-                playback_volume=min(
-                    max(state.playback_volume + action.amount, 0),
-                    1,
-                ),
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    SoundSetVolumeAction(
+                        device=SoundDevice.OUTPUT,
+                        volume=min(
+                            max(state.playback_volume + action.amount, 0),
+                            1,
+                        ),
+                    ),
+                ],
             )
         if action.device == SoundDevice.INPUT:
             return replace(

@@ -648,6 +648,17 @@ files = [
 test = ["enum34", "ipaddress", "mock", "pywin32", "wmi"]
 
 [[package]]
+name = "pulsectl"
+version = "23.5.2"
+description = "Python high-level interface and ctypes-based bindings for PulseAudio (libpulse)"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pulsectl-23.5.2-py2.py3-none-any.whl", hash = "sha256:b77295cfbce5cb5b7b80ab5903aa0239b38bcbb84ac18ae1f42d43ed3dac9d86"},
+    {file = "pulsectl-23.5.2.tar.gz", hash = "sha256:e911d398eaf0539cf3c63b4217357b51a3d1b7e4a50607d1591cf2b49f5d2c6a"},
+]
+
+[[package]]
 name = "pyftdi"
 version = "0.55.0"
 description = "FTDI device driver (pure Python)"
@@ -1027,4 +1038,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "528a8095a1eb0194d1577f4c7ffc6a1a69e5da64a37ff2b22edd9a7dad735ec3"
+content-hash = "41bcb2e3efa66816c24371e0fa268147c94648cf27e64624ea5db8cc12370ecc"

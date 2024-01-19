@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from audio_manager import AudioManager
+from audio_manager import AudioManager, set_default_sink
 from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
 
 from ubo_app.store import autorun, dispatch, subscribe_event
@@ -20,6 +20,7 @@ def init_service() -> None:
         ),
     )
 
+    set_default_sink(name='wm8960-soundcard')
     audio_manager = AudioManager()
 
     @autorun(lambda state: state.sound.playback_volume)

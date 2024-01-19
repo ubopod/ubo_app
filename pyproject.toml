@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.7.12"
+version = "0.7.13"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -35,6 +35,7 @@ sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
 python-debouncer = "^0.1.3"
 adafruit-circuitpython-neopixel = "^6.3.11"
+pulsectl = "^23.5.2"
 
 [tool.poetry.group.dev]
 optional = true
