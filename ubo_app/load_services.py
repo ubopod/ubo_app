@@ -48,9 +48,10 @@ class UboServiceLoopLoader(importlib.abc.Loader):
         self.thread = thread
 
     def exec_module(self: UboServiceLoopLoader, module: ModuleType) -> None:
-        cast(Any, module).create_task = (
-            lambda *args: self.thread.loop.call_soon_threadsafe(
-                lambda: self.thread.loop.create_task(*args),
+        cast(Any, module)._create_task = (  # noqa: SLF001
+            lambda task: self.thread.loop.call_soon_threadsafe(
+                self.thread.loop.create_task,
+                task,
             )
         )
 
@@ -62,39 +63,39 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
     def find_spec(
         self: UboServiceFinder,
         fullname: str,
-        path: Sequence[str] | None,
+        _: Sequence[str] | None,
         target: ModuleType | None = None,
     ) -> ModuleSpec | None:
-        if path is None:
-            stack = traceback.extract_stack()
-            matching_path = next(
-                (
-                    registered_path
-                    for stack_path in stack[::-1]
-                    for registered_path in REGISTERED_PATHS
-                    if stack_path.filename.startswith(registered_path.as_posix())
-                ),
-                None,
-            )
-            if matching_path:
-                thread = REGISTERED_PATHS[matching_path]
-                module_name = f'{thread.service_id}:{fullname}'
+        stack = traceback.extract_stack()
+        matching_path = next(
+            (
+                registered_path
+                for stack_path in stack[::-1]
+                for registered_path in REGISTERED_PATHS
+                if stack_path.filename.startswith(registered_path.as_posix())
+            ),
+            None,
+        )
 
-                if fullname == '_loop':
-                    return importlib.util.spec_from_loader(
-                        module_name,
-                        UboServiceLoopLoader(thread),
-                    )
+        if matching_path:
+            thread = REGISTERED_PATHS[matching_path]
+            module_name = f'{thread.service_id}:{fullname}'
 
-                spec = PathFinder.find_spec(
-                    fullname,
-                    [matching_path.as_posix()],
-                    target,
+            if fullname == 'ubo_app.utils.loop':
+                return importlib.util.spec_from_loader(
+                    module_name,
+                    UboServiceLoopLoader(thread),
                 )
-                if spec and spec.origin:
-                    spec.name = module_name
-                    spec.loader = UboServiceModuleLoader(fullname, spec.origin)
-                return spec
+
+            spec = PathFinder.find_spec(
+                fullname,
+                [matching_path.as_posix()],
+                target,
+            )
+            if spec and spec.origin:
+                spec.name = module_name
+                spec.loader = UboServiceModuleLoader(fullname, spec.origin)
+            return spec
         return None
 
 
@@ -111,6 +112,7 @@ class UboServiceThread(threading.Thread):
         self.service_id = service_id
         self.path = path
         self.loop = asyncio.new_event_loop()
+        self.module = None
         if DEBUG_MODE:
             self.loop.set_debug(enabled=True)
         try:
@@ -188,7 +190,7 @@ def load_services() -> None:
                 service_id = uuid.uuid4().hex
                 if not service_path.is_dir():
                     continue
-                current_path = os.curdir
+                current_path = Path().absolute()
                 os.chdir(service_path.as_posix())
 
                 thread = UboServiceThread(

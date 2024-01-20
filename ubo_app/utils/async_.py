@@ -32,8 +32,8 @@ def create_task(awaitable: Awaitable) -> Handle:
                 },
             )
 
-    import _loop
+    import ubo_app.utils.loop
 
-    handle = _loop.create_task(wrapper())
+    handle = ubo_app.utils.loop._create_task(wrapper())  # noqa: SLF001
     background_tasks.add(handle)
     return handle

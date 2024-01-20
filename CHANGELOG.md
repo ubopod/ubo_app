@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.7.14
+
+- refactor: make `create_task` functional for the main application just like its
+  services
+
 ## Version 0.7.13
 
 - feat: #16 add volume chime

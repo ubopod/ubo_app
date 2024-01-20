@@ -1,17 +1,15 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import asyncio
 import pathlib
-import threading
 from functools import cached_property
 from threading import Thread
-from typing import TYPE_CHECKING, Self, Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
 from kivy.app import Builder
 from kivy.clock import Clock
-from redux import EventSubscriptionOptions, FinishEvent
+from redux import EventSubscriptionOptions
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
@@ -38,7 +36,7 @@ if TYPE_CHECKING:
 
 class HomePage(PageWidget):
     def __init__(
-        self: Self,
+        self: HomePage,
         items: Sequence[Item] | None = None,
         *args: object,
         **kwargs: object,
@@ -56,7 +54,7 @@ class HomePage(PageWidget):
             volume_widget.value = selector_result * 100
 
     @cached_property
-    def cpu_gauge(self: Self) -> GaugeWidget:
+    def cpu_gauge(self: HomePage) -> GaugeWidget:
         import psutil
 
         gauge = GaugeWidget(value=0, fill_color='#24D636', label='CPU')
@@ -79,7 +77,7 @@ class HomePage(PageWidget):
         return gauge
 
     @cached_property
-    def ram_gauge(self: Self) -> GaugeWidget:
+    def ram_gauge(self: HomePage) -> GaugeWidget:
         import psutil
 
         gauge = GaugeWidget(
@@ -97,7 +95,7 @@ class HomePage(PageWidget):
 
 
 class MenuWidgetWithHomePage(MenuWidget):
-    def get_current_screen(self: Self) -> Screen | None:
+    def get_current_screen(self: MenuWidgetWithHomePage) -> Screen | None:
         if self.depth == 0:
             return HomePage(
                 self.current_menu_items,
@@ -121,23 +119,6 @@ def set_path(_: MenuWidget, stack: list[tuple[Menu, int] | PageWidget]) -> None:
     )
 
 
-class WorkerThread(threading.Thread):
-    def __init__(self: WorkerThread) -> None:
-        super().__init__()
-        self.loop = asyncio.new_event_loop()
-        if DEBUG_MODE:
-            self.loop.set_debug(enabled=True)
-
-    def run(self: WorkerThread) -> None:
-        asyncio.set_event_loop(self.loop)
-
-        subscribe_event(FinishEvent, lambda _: self.stop())
-        self.loop.run_forever()
-
-    def stop(self: WorkerThread) -> None:
-        self.loop.call_soon_threadsafe(self.loop.stop)
-
-
 class MenuAppCentral(UboApp):
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
@@ -151,13 +132,8 @@ class MenuAppCentral(UboApp):
                 return
             Clock.schedule_once(lambda _: self.menu_widget.set_root_menu(menu))
 
-        thread = WorkerThread()
-        thread.start()
-        sync_current_menu.subscribe(
-            lambda task: thread.loop.call_soon_threadsafe(
-                lambda: thread.loop.create_task(task),
-            ),
-        )
+        create_task(sync_current_menu.value)
+        sync_current_menu.subscribe(lambda task: create_task(task))
 
         def handle_title_change(_: MenuWidget, title: str) -> None:
             self.root.title = title
