@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ubo_app.logging import logger
 from ubo_app.store import dispatch
-from ubo_app.store.rgb_ring import RgbRingSetIsConnectedAction
+from ubo_app.store.services.rgb_ring import RgbRingSetIsConnectedAction
 
 LM_SOCKET_PATH = Path('/run/ubo').joinpath('ledmanagersocket.sock').as_posix()
 

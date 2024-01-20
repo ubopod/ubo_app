@@ -11,20 +11,19 @@ from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
 from ubo_app.store import dispatch
-from ubo_app.store.notifications import (
+from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.wifi import (
+from ubo_app.store.services.wifi import (
     ConnectionState,
     GlobalWiFiState,
     WiFiConnection,
     WiFiType,
 )
 from ubo_app.utils import IS_RPI
-from ubo_app.utils.fake import Fake
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -39,6 +38,8 @@ def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
 
 if not IS_RPI:
     import sys
+
+    from ubo_app.utils.fake import Fake
 
     sys.modules['sdbus'] = Fake()
     sys.modules['sdbus_async'] = Fake()

@@ -1,0 +1,14 @@
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+Description=Ubo Update Service
+
+[Service]
+Type=oneshot
+User=root
+Environment=INSTALLATION_PATH={{INSTALLATION_PATH}}
+Environment=USERNAME={{USERNAME}}
+ExecStartPre=/bin/bash -c '[[ $(ls {{INSTALLATION_PATH}}/_update/update_is_ready) ]]'
+ExecStart={{INSTALLATION_PATH}}/env/lib/python3.11/site-packages/ubo_app/system_services/install.sh --update
+RemainAfterExit=no

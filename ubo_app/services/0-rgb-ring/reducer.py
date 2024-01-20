@@ -10,7 +10,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.rgb_ring import (
+from ubo_app.store.services.rgb_ring import (
     RgbRingAction,
     RgbRingBlankAction,
     RgbRingBlinkAction,

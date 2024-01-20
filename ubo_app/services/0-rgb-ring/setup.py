@@ -1,6 +1,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from ubo_app.store import dispatch, subscribe_event
-from ubo_app.store.rgb_ring import (
+from ubo_app.store.services.rgb_ring import (
     RgbRingCommandEvent,
     RgbRingPulseAction,
     RgbRingSetBrightnessAction,

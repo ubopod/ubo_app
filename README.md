@@ -16,22 +16,37 @@ botting from that image, you can ignore this section.
 
 - Python 3.9 or later.
 - Run `raspi-config` -> Interface Options -> Enable SPI
-- Install these packages:
-
-  ```sh
-  sudo apt install pip virtualenv libmtdev libgl1 libegl1 libcap-dev \
-       python3-libcamera python3-alsaaudio python3-pyaudio libzbar0 \
-       --no-install-recommends
-  ```
 
 ## 📦 Installation
 
+Note that as part of the installation process, these debian packages are installed:
+
+- pip
+- virtualenv
+- libmtdev
+- libgl1
+- libegl1
+- libcap-dev
+- python3-libcamera
+- python3-alsaaudio
+- python3-pyaudio
+- libzbar0
+
+Also be aware that ubo-app only installs in `/opt/ubo` and it is not customizable
+at the moment.
+
+---
+
+⚠️ **Executing scripts directly from the internet with root privileges poses a significant
+security risk. It's generally a good practice to ensure you understand the script's
+content before running it.**
+
+---
+
+To install ubo, run this command in a terminal shell:
+
 ```bash
-virtualenv --system-site-packages ubo-app
-source ubo-app/bin/activate
-pip install ubo-app
-# Run this if you want to run it automatically when RPi boots
-sudo ubo-app/bin/ubo install_services
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system_services/install.sh | sudo bash
 ```
 
 ## 🤝 Contributing

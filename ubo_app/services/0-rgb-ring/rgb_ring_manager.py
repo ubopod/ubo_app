@@ -18,8 +18,10 @@ import neopixel
 from adafruit_blinka.microcontroller.generic_micropython import Pin
 from ubo_gui.menu import warnings
 
+from ubo_app.constants import USERNAME
+
 if TYPE_CHECKING:
-    from ubo_app.store.rgb_ring import Color
+    from ubo_app.store.services.rgb_ring import Color
 
 BRIGHTNESS = 1.0
 NUM_LEDS = 27
@@ -357,7 +359,7 @@ if __name__ == '__main__':
     t.start()
 
     uid = pwd.getpwnam('root').pw_uid
-    gid = grp.getgrnam('pi').gr_gid
+    gid = grp.getgrnam(USERNAME).gr_gid
 
     LM_SOCKET_PATH.unlink(missing_ok=True)
 

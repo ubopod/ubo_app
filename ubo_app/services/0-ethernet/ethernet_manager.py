@@ -6,7 +6,7 @@ import asyncio
 from threading import current_thread
 from typing import TYPE_CHECKING, Any, Coroutine, TypeVar
 
-from ubo_app.store.ethernet import GlobalEthernetState
+from ubo_app.store.services.ethernet import GlobalEthernetState
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.fake import Fake
 

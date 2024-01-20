@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, Literal
 
 from kivy.core.window import Keyboard, Window, WindowBase
 
-from ubo_app.store.keypad import (
+from ubo_app.store.services.keypad import (
     Key,
     KeypadKeyPressAction,
 )
-from ubo_app.store.sound import (
+from ubo_app.store.services.sound import (
     SoundDevice,
     SoundToggleMuteStatusAction,
 )

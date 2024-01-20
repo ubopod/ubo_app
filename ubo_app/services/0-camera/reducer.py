@@ -10,7 +10,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.camera import (
+from ubo_app.store.services.camera import (
     CameraAction,
     CameraEvent,
     CameraStartViewfinderAction,
@@ -19,7 +19,7 @@ from ubo_app.store.camera import (
     CameraStopViewfinderAction,
     CameraStopViewfinderEvent,
 )
-from ubo_app.store.keypad import Key, KeypadAction
+from ubo_app.store.services.keypad import Key, KeypadAction
 
 Action = InitAction | CameraAction
 

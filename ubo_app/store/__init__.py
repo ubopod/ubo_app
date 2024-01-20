@@ -13,13 +13,13 @@ from redux import (
 )
 
 from ubo_app.logging import logger
-from ubo_app.store.camera import CameraAction, CameraEvent
-from ubo_app.store.ip import IpAction, IpEvent, IpState
-from ubo_app.store.keypad import KeypadEvent
 from ubo_app.store.main import MainAction, MainState, main_reducer
-from ubo_app.store.notifications import NotificationsAction, NotificationsState
-from ubo_app.store.sound import SoundAction, SoundState
-from ubo_app.store.wifi import WiFiAction, WiFiEvent, WiFiState
+from ubo_app.store.services.camera import CameraAction, CameraEvent
+from ubo_app.store.services.ip import IpAction, IpEvent, IpState
+from ubo_app.store.services.keypad import KeypadEvent
+from ubo_app.store.services.notifications import NotificationsAction, NotificationsState
+from ubo_app.store.services.sound import SoundAction, SoundState
+from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
 
 from .status_icons import reducer as status_icons_reducer
 

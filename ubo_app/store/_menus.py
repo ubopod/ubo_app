@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.metadata
 from typing import TYPE_CHECKING, Sequence
 
 from kivy.clock import Clock
@@ -15,12 +14,13 @@ from ubo_gui.notification import NotificationWidget
 
 from ubo_app.logging import logger
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.notifications import NotificationsClearAction
+from ubo_app.store.services.notifications import Notification, NotificationsClearAction
+from ubo_app.store.update_manager import CURRENT_VERSION, about_menu_items
+from ubo_app.store.update_manager_types import SetUpdateStatusAction, UpdateStatus
 
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Item
 
-    from ubo_app.store.notifications import Notification
 
 SETTINGS_MENU = HeadlessMenu(
     title='Settings',
@@ -32,7 +32,17 @@ APPS_MENU = HeadlessMenu(
     items=[],
 )
 
-VERSION = importlib.metadata.version('ubo_app')
+
+def open_about() -> HeadedMenu:
+    dispatch(SetUpdateStatusAction(status=UpdateStatus.CHECKING))
+    return HeadedMenu(
+        title='About',
+        heading=f'Ubo v{CURRENT_VERSION}',
+        sub_heading='A universal dashboard for your Raspberry Pi',
+        items=about_menu_items,
+    )
+
+
 MAIN_MENU = HeadlessMenu(
     title='Main',
     items=[
@@ -46,21 +56,10 @@ MAIN_MENU = HeadlessMenu(
             icon='settings',
             sub_menu=SETTINGS_MENU,
         ),
-        SubMenuItem(
+        ActionItem(
             label='About',
             icon='info',
-            sub_menu=HeadedMenu(
-                title='About',
-                heading=f'Ubo v{VERSION}',
-                sub_heading='A universal dashboard for your Raspberry Pi',
-                items=[
-                    ActionItem(
-                        label='Check for updates',
-                        icon='update',
-                        action=lambda: logger.info('"Check for updates" selected!'),
-                    ),
-                ],
-            ),
+            action=open_about,
         ),
     ],
 )

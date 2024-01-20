@@ -13,23 +13,36 @@ class Fake(ModuleType):
 
     def __getattr__(self: Fake, attr: str) -> Fake | str:
         logger.verbose(
-            'Accessing fake attribute of a `Fake` instance',
+            'Accessing fake attribute of a `Fake` insta',
             extra={'attr': attr},
         )
         if attr == '__file__':
             return ''
-        return Fake()
+        return self
+
+    def __getitem__(self: Fake, key: str) -> Fake:
+        logger.verbose(
+            'Accessing fake item of a `Fake` instance',
+            extra={'key': key},
+        )
+        return self
 
     def __call__(self: Fake, *args: object, **kwargs: dict[str, Any]) -> Fake:
         logger.verbose(
             'Calling a `Fake` instance',
             extra={'args_': args, 'kwargs': kwargs},
         )
-        return Fake()
+        return self
 
     def __await__(self: Fake) -> Generator[Fake | None, Any, Any]:
         yield None
-        return Fake()
+        return self
 
     def __iter__(self: Fake) -> Iterator[Fake]:
-        return iter([Fake()])
+        return iter([self])
+
+    def __enter__(self: Fake) -> Fake:  # noqa: PYI034
+        return self
+
+    def __exit__(self: Fake, *_: object) -> None:
+        pass

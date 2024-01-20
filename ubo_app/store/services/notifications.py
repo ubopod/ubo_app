@@ -5,7 +5,7 @@ import sys
 from dataclasses import field
 from datetime import datetime, timezone
 from enum import StrEnum, auto
-from typing import Literal, Sequence
+from typing import Sequence
 
 from redux import BaseAction, BaseEvent, Immutable
 
@@ -62,7 +62,8 @@ def default_color() -> str:
 class Chime(StrEnum):
     ADD = 'add'
     DONE = 'done'
-    FAIL = 'fail'
+    FAILURE = 'failure'
+    VOLUME_CHANGE = 'volume'
 
 
 class Notification(Immutable):

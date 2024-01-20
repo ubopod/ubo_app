@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 0.8.0
+
+- feat: update menu showing current version and a button to update ubo-app
+- feat: add update system service to automatically install an update in boot time
+  if it is already downloaded
+- feat: add install script
+- feat: setup polkit to let `ubo` user `reboot` and `poweroff`
+- refactor: improve `deploy.sh` so that it hasn't a hardcoded username
+- feat: assume the package is installed in `/opt/` instead of `/home/pi/`
+- refactor: move service related files in `store/` to `store/services/`
+- refactor: update to latest versions of `ubo-gui` and `python-redux`
+
 ## Version 0.7.14
 
 - refactor: make `create_task` functional for the main application just like its

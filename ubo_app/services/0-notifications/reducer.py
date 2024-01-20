@@ -12,7 +12,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.notifications import (
+from ubo_app.store.services.notifications import (
     Importance,
     NotificationDisplayType,
     NotificationsAction,
@@ -22,8 +22,8 @@ from ubo_app.store.notifications import (
     NotificationsDisplayEvent,
     NotificationsState,
 )
-from ubo_app.store.rgb_ring import RgbRingBlinkAction
-from ubo_app.store.sound import SoundPlayChimeAction
+from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
+from ubo_app.store.services.sound import SoundPlayChimeAction
 
 Action = InitAction | NotificationsAction
 ResultAction = RgbRingBlinkAction | SoundPlayChimeAction

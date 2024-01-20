@@ -9,10 +9,10 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Literal
 
 import board
-from redux import Immutable
+from immutable import Immutable
 
-from ubo_app.store.keypad import Key, KeypadKeyPressAction
-from ubo_app.store.sound import SoundDevice, SoundSetMuteStatusAction
+from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
+from ubo_app.store.services.sound import SoundDevice, SoundSetMuteStatusAction
 
 INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
 

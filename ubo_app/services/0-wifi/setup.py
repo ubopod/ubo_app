@@ -11,7 +11,11 @@ from wifi_manager import (
 
 from ubo_app.store import dispatch, subscribe_event
 from ubo_app.store.app import RegisterSettingAppAction
-from ubo_app.store.wifi import ConnectionState, WiFiUpdateAction, WiFiUpdateRequestEvent
+from ubo_app.store.services.wifi import (
+    ConnectionState,
+    WiFiUpdateAction,
+    WiFiUpdateRequestEvent,
+)
 from ubo_app.utils.async_ import create_task
 
 
@@ -53,12 +57,6 @@ def init_service() -> None:
     create_task(update_wifi_list())
     create_task(setup_listeners())
 
-    dispatch(
-        [
-            RegisterSettingAppAction(
-                menu_item=main.WiFiMainMenu,
-            ),
-        ],
-    )
+    dispatch(RegisterSettingAppAction(menu_item=main.WiFiMainMenu))
 
     subscribe_event(WiFiUpdateRequestEvent, lambda _: create_task(request_scan()))

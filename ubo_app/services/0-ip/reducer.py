@@ -10,7 +10,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.ip import (
+from ubo_app.store.services.ip import (
     IpState,
     IpUpdateAction,
     IpUpdateRequestAction,

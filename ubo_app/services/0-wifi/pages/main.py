@@ -23,7 +23,11 @@ from wifi_manager import (
 )
 
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.wifi import ConnectionState, WiFiState, WiFiUpdateRequestAction
+from ubo_app.store.services.wifi import (
+    ConnectionState,
+    WiFiState,
+    WiFiUpdateRequestAction,
+)
 from ubo_app.utils.async_ import create_task
 
 from .create_wireless_connection import CreateWirelessConnectionPage

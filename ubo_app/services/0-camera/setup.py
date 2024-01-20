@@ -11,7 +11,7 @@ from kivy.clock import Clock
 
 from ubo_app.logging import logger
 from ubo_app.store import dispatch, subscribe_event
-from ubo_app.store.camera import (
+from ubo_app.store.services.camera import (
     CameraBarcodeAction,
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,

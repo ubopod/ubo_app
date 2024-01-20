@@ -7,7 +7,7 @@ from audio_manager import AudioManager, set_default_sink
 from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
 
 from ubo_app.store import autorun, dispatch, subscribe_event
-from ubo_app.store.sound import SoundPlayChimeEvent
+from ubo_app.store.services.sound import SoundPlayChimeEvent
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 
 
@@ -29,7 +29,7 @@ def init_service() -> None:
 
     @autorun(lambda state: state.sound.capture_volume)
     def sync_capture_volume(volume: float) -> None:
-        audio_manager.set_playback_volume(volume)
+        audio_manager.set_capture_volume(volume)
 
     @autorun(lambda state: state.sound.is_playback_mute)
     def sync_playback_mute(is_mute: bool) -> None:  # noqa: FBT001

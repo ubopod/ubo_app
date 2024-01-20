@@ -12,7 +12,7 @@ from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.store import autorun, dispatch, subscribe_event
 from ubo_app.store.app import RegisterSettingAppAction
-from ubo_app.store.ip import (
+from ubo_app.store.services.ip import (
     IpNetworkInterface,
     IpUpdateAction,
     IpUpdateRequestAction,
@@ -82,25 +82,21 @@ async def check_connection() -> bool:
         await asyncio.sleep(1)
         if is_connected():
             dispatch(
-                [
-                    IpUpdateRequestAction(),
-                    StatusIconsRegisterAction(
-                        icon='public',
-                        priority=INTERNET_STATE_ICON_PRIORITY,
-                        id=INTERNET_STATE_ICON_ID,
-                    ),
-                ],
+                IpUpdateRequestAction(),
+                StatusIconsRegisterAction(
+                    icon='public',
+                    priority=INTERNET_STATE_ICON_PRIORITY,
+                    id=INTERNET_STATE_ICON_ID,
+                ),
             )
         else:
             dispatch(
-                [
-                    IpUpdateRequestAction(),
-                    StatusIconsRegisterAction(
-                        icon='public_off',
-                        priority=INTERNET_STATE_ICON_PRIORITY,
-                        id=INTERNET_STATE_ICON_ID,
-                    ),
-                ],
+                IpUpdateRequestAction(),
+                StatusIconsRegisterAction(
+                    icon='public_off',
+                    priority=INTERNET_STATE_ICON_PRIORITY,
+                    id=INTERNET_STATE_ICON_ID,
+                ),
             )
 
 
@@ -115,13 +111,7 @@ IpMainMenu = SubMenuItem(
 
 
 def init_service() -> None:
-    dispatch(
-        [
-            RegisterSettingAppAction(
-                menu_item=IpMainMenu,
-            ),
-        ],
-    )
+    dispatch(RegisterSettingAppAction(menu_item=IpMainMenu))
     create_task(check_connection())
 
     subscribe_event(

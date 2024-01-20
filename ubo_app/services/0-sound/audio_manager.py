@@ -1,5 +1,5 @@
+# pyright: reportMissingImports=false,reportMissingModuleSource=false
 """Module for managing audio playback and recording."""
-# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import contextlib
@@ -7,11 +7,22 @@ import math
 import time
 import wave
 
+from headless_kivy_pi import IS_RPI
+
+from ubo_app.logging import logger
+
+if not IS_RPI:
+    import sys
+
+    from ubo_app.utils.fake import Fake
+
+    sys.modules['alsaaudio'] = Fake()
+    sys.modules['pulsectl'] = Fake()
+    sys.modules['pyaudio'] = Fake()
+
 import alsaaudio
 import pulsectl
 import pyaudio
-
-from ubo_app.logging import logger
 
 # TODO(@sassanh): It's a dynamic value, so we should probably get it from somewhere
 RESPEAKER_INDEX = 1
@@ -26,7 +37,7 @@ def set_default_sink(*, name: str) -> None:
                 pulse.sink_default_set(sink)
                 logger.info('Set default sink to', extra={'sink': sink})
                 return
-        logger.error('No sink found', extra={'name': name})
+        logger.error('No sink found', extra={'name_': name})
 
 
 def linear_to_logarithmic(volume_linear: float) -> int:
@@ -163,6 +174,4 @@ class AudioManager:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)
         mixer = alsaaudio.Mixer(control='Capture')
-        mixer.setrec(
-            round(volume * 100), alsaaudio.MIXER_CHANNEL_ALL, alsaaudio.PCM_CAPTURE
-        )
+        mixer.setrec(round(volume * 100))

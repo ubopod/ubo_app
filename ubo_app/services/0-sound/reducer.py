@@ -11,7 +11,8 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.sound import (
+from ubo_app.store.services.notifications import Chime
+from ubo_app.store.services.sound import (
     SoundAction,
     SoundChangeVolumeAction,
     SoundDevice,
@@ -46,7 +47,7 @@ def reducer(  # noqa: C901, PLR0912
             return CompleteReducerResult(
                 state=replace(state, playback_volume=action.volume),
                 events=[
-                    SoundPlayChimeEvent(name='volume'),
+                    SoundPlayChimeEvent(name=Chime.VOLUME_CHANGE),
                 ],
             )
         if action.device == SoundDevice.INPUT:

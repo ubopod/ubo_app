@@ -17,14 +17,14 @@ from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
-from ubo_app.constants import DEBUG_MODE
-from ubo_app.store.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.main import SetMenuPathAction
-from ubo_app.store.notifications import (
+from ubo_app.store.services.keypad import Key, KeypadKeyPressEvent
+from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsClearAction,
     NotificationsDisplayEvent,
 )
+from ubo_app.utils.async_ import create_task
 
 from .store import autorun, dispatch, subscribe_event
 
@@ -132,8 +132,7 @@ class MenuAppCentral(UboApp):
                 return
             Clock.schedule_once(lambda _: self.menu_widget.set_root_menu(menu))
 
-        create_task(sync_current_menu.value)
-        sync_current_menu.subscribe(lambda task: create_task(task))
+        sync_current_menu.subscribe(create_task)
 
         def handle_title_change(_: MenuWidget, title: str) -> None:
             self.root.title = title

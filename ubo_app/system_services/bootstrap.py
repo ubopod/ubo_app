@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 from typing import TypedDict
 
+from ubo_app.constants import INSTALLATION_PATH, USERNAME
 from ubo_app.logging import logger
 
 
@@ -18,17 +19,21 @@ class Service(TypedDict):
 
 services: list[Service] = [
     {
-        'name': 'ubo_app',
-        'content': Path(__file__).parent.joinpath('main.service').open().read(),
+        'name': 'ubo-led',
+        'content': Path(__file__).parent.joinpath('led.service').open().read(),
     },
     {
-        'name': 'ubo_led',
-        'content': Path(__file__).parent.joinpath('led.service').open().read(),
+        'name': 'ubo-update',
+        'content': Path(__file__).parent.joinpath('update.service').open().read(),
+    },
+    {
+        'name': 'ubo-app',
+        'content': Path(__file__).parent.joinpath('main.service').open().read(),
     },
 ]
 
 
-def bootstrap(*, enable: bool = True, start: bool = True) -> None:
+def bootstrap() -> None:
     """Create the service files and enable the services."""
     for service in services:
         service_file_path = f'/etc/systemd/system/{service["name"]}.service'
@@ -40,25 +45,30 @@ def bootstrap(*, enable: bool = True, start: bool = True) -> None:
 
         # Write the service content to the file
         with Path(service_file_path).open('w') as file:
-            file.write(service['content'])
-
-        if enable:
-            # Enable the service to start on boot
-            subprocess.run(
-                ['/usr/bin/systemctl', 'enable', service['name']],  # noqa: S603
-                check=True,
+            file.write(
+                service['content']
+                .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
+                .replace('{{USERNAME}}', USERNAME),
             )
 
-        if start:
-            # Start the service immediately
-            subprocess.run(
-                ['/usr/bin/systemctl', 'start', service['name']],  # noqa: S603
-                check=True,
-            )
+        # Enable the service to start on boot
+        subprocess.run(
+            ['/usr/bin/systemctl', 'enable', service['name']],  # noqa: S603
+            check=True,
+        )
 
         logger.info(
-            f"""Service '{service['name']}' has been created and {
-            'enabled' if enable else 'not enabled'}.""",
+            f"Service '{service['name']}' has been created and enabled.",
+        )
+
+    with Path('/etc/polkit-1/rules.d/50-reboot.rules').open('w') as file:
+        file.write(
+            Path(__file__)
+            .parent.joinpath('polkit-reboot.rules')
+            .open()
+            .read()
+            .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
+            .replace('{{USERNAME}}', USERNAME),
         )
 
     subprocess.run(

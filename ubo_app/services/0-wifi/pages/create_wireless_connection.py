@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D101, D102, D103, D104, D107, N999
+# ruff: noqa: D100, D101, D102, D103, D104, D105, D107, N999
 from __future__ import annotations
 
 import pathlib
@@ -14,15 +14,19 @@ from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
 from ubo_app.store import dispatch, subscribe_event
-from ubo_app.store.camera import CameraStartViewfinderAction
-from ubo_app.store.notifications import (
+from ubo_app.store.services.camera import CameraStartViewfinderAction
+from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.sound import SoundPlayChimeAction
-from ubo_app.store.wifi import WiFiCreateEvent, WiFiType, WiFiUpdateRequestAction
+from ubo_app.store.services.sound import SoundPlayChimeAction
+from ubo_app.store.services.wifi import (
+    WiFiCreateEvent,
+    WiFiType,
+    WiFiUpdateRequestAction,
+)
 from ubo_app.utils.async_ import create_task
 
 # Regular expression pattern
@@ -77,26 +81,27 @@ class CreateWirelessConnectionPage(PageWidget):
             )
 
             dispatch(
-                [
-                    WiFiUpdateRequestAction(reset=True),
-                    NotificationsAddAction(
-                        notification=Notification(
-                            title=f'"{ssid}" Added',
-                            content=f"""WiFi connection with ssid "{
+                WiFiUpdateRequestAction(reset=True),
+                NotificationsAddAction(
+                    notification=Notification(
+                        title=f'"{ssid}" Added',
+                        content=f"""WiFi connection with ssid "{
                         ssid}" was added successfully""",
-                            display_type=NotificationDisplayType.FLASH,
-                            color=SUCCESS_COLOR,
-                            icon='wifi_add',
-                            chime=Chime.ADD,
-                        ),
+                        display_type=NotificationDisplayType.FLASH,
+                        color=SUCCESS_COLOR,
+                        icon='wifi_add',
+                        chime=Chime.ADD,
                     ),
-                ],
+                ),
             )
             Clock.schedule_once(lambda _: self.dispatch('on_close'))
 
         self.creating = True
         create_task(act())
+
+    def on_close(self: CreateWirelessConnectionPage) -> None:
         self.unsubscribe()
+        return super().on_close()
 
     def get_item(self: CreateWirelessConnectionPage, index: int) -> ActionItem | None:
         if index == 2:  # noqa: PLR2004
