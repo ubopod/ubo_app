@@ -104,7 +104,7 @@ class MenuWidgetWithHomePage(MenuWidget):
         return super().get_current_screen()
 
 
-def set_path(_: MenuWidget, stack: list[tuple[Menu, int] | PageWidget]) -> None:
+def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) -> None:
     dispatch(
         SetMenuPathAction(
             path=[
@@ -113,8 +113,9 @@ def set_path(_: MenuWidget, stack: list[tuple[Menu, int] | PageWidget]) -> None:
                 else i[0].title()
                 if callable(i[0].title)
                 else i[0].title
-                for i in stack
-            ],
+                for i in menu_widget.stack
+            ]
+            + [menu_widget.title],
         ),
     )
 
@@ -139,8 +140,7 @@ class MenuAppCentral(UboApp):
 
         self.root.title = self.menu_widget.title
         self.menu_widget.bind(title=handle_title_change)
-
-        self.menu_widget.bind(stack=set_path)
+        self.menu_widget.bind(current_screen=set_path)
 
         subscribe_event(
             KeypadKeyPressEvent,

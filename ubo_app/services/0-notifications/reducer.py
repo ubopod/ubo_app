@@ -54,7 +54,14 @@ def reducer(
         return CompleteReducerResult(
             state=replace(
                 state,
-                notifications=[*state.notifications, action.notification],
+                notifications=[
+                    *[
+                        notification
+                        for notification in state.notifications
+                        if notification.id != action.notification.id
+                    ],
+                    action.notification,
+                ],
                 unread_count=state.unread_count + 1,
             ),
             actions=[

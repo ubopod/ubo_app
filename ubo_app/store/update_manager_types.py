@@ -4,15 +4,26 @@ from __future__ import annotations
 from enum import Enum, auto
 
 from immutable import Immutable
-from redux import BaseAction
+from redux import BaseAction, BaseEvent
+
+UPDATE_MANAGER_NOTIFICATION_ID = 'ubo:update_manager'
 
 
 class SetLatestVersionAction(BaseAction):
     latest_version: str
+    current_version: str
 
 
 class SetUpdateStatusAction(BaseAction):
     status: UpdateStatus
+
+
+class CheckVersionEvent(BaseEvent):
+    ...
+
+
+class UpdateVersionEvent(BaseEvent):
+    ...
 
 
 class UpdateStatus(Enum):
@@ -28,5 +39,6 @@ class UpdateStatus(Enum):
 class VersionStatus(Immutable):
     """Version store."""
 
+    current_version: str | None = None
     latest_version: str | None = None
     update_status: UpdateStatus = UpdateStatus.CHECKING

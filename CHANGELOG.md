@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 0.8.3
+
+- feat: introduce notification ids as a means to avoid duplicated notifications
+- fix: don't show expired notifications
+- feat: add a convention for notification ids and status icon ids in `README.me`
+
+## Version 0.8.2
+
+- feat: blank screen when turning off the device, as backlight has a pull up and
+  turns on after devices is turned off
+
 ## Version 0.8.1
 
 - feat: power off button now turns off the screen and actually powers off the device

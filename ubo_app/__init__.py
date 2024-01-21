@@ -2,12 +2,9 @@
 import os
 import sys
 
-from kivy.clock import Clock
 from redux import FinishAction
 
-from ubo_app.load_services import load_services
 from ubo_app.logging import add_file_handler, add_stdout_handler
-from ubo_app.system_services.bootstrap import bootstrap
 
 
 def main() -> None:
@@ -16,6 +13,8 @@ def main() -> None:
     add_stdout_handler()
 
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
+        from ubo_app.system_services.bootstrap import bootstrap
+
         bootstrap()
         sys.exit(0)
 
@@ -26,6 +25,9 @@ def main() -> None:
     os.environ['KIVY_NO_FILELOG'] = '1'
     HeadlessWidget.setup_headless({'automatic_fps': True})
 
+    from kivy.clock import Clock
+
+    from ubo_app.load_services import load_services
     from ubo_app.menu import MenuApp
 
     # Needed since redux is scheduled using Clock scheduler and Clock doesn't run before

@@ -147,7 +147,7 @@ class UboServiceThread(threading.Thread):
                 logger.error(f'Error loading "{self.path}"', exc_info=exception)
                 return
 
-        store.subscribe_event(FinishEvent, lambda _: self.stop())
+        store.subscribe_event(FinishEvent, self.stop)
         self.loop.run_forever()
 
     def stop(self: UboServiceThread) -> None:

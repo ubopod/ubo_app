@@ -24,7 +24,7 @@ class WorkerThread(threading.Thread):
     def run(self: WorkerThread) -> None:
         asyncio.set_event_loop(self.loop)
 
-        subscribe_event(FinishEvent, lambda _: self.stop())
+        subscribe_event(FinishEvent, self.stop)
         self.loop.run_forever()
 
     def run_task(self: WorkerThread, task: Coroutine) -> Handle:

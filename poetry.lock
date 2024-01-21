@@ -1094,13 +1094,13 @@ files = [
 
 [[package]]
 name = "python-redux"
-version = "0.9.13"
+version = "0.9.15"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.13-py3-none-any.whl", hash = "sha256:95885161d826cde5af0889e958d927743cccf7679acb3cd6e461641a6aa83f56"},
-    {file = "python_redux-0.9.13.tar.gz", hash = "sha256:c4cf86b6a33ba39a35561ff54f9b83e5b997a55645bf9a58779947290b64ee6e"},
+    {file = "python_redux-0.9.15-py3-none-any.whl", hash = "sha256:8b836741ae8171c33df780825a22c1f1ee676015577df70f93407dc038e4cd44"},
+    {file = "python_redux-0.9.15.tar.gz", hash = "sha256:af777691d345371c88f001ff4f59ae87c83a4f496491d92dbdea6eb5468bed6c"},
 ]
 
 [package.dependencies]
@@ -1253,6 +1253,17 @@ files = [
 
 [package.dependencies]
 sdbus = ">=0.8rc2"
+
+[[package]]
+name = "semver"
+version = "3.0.2"
+description = "Python helper for Semantic Versioning (https://semver.org)"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "semver-3.0.2-py3-none-any.whl", hash = "sha256:b1ea4686fe70b981f85359eda33199d60c53964284e0cfb4977d243e37cf4bf4"},
+    {file = "semver-3.0.2.tar.gz", hash = "sha256:6253adb39c70f6e51afed2fa7152bcd414c411286088fb4b9effb133885ab4cc"},
+]
 
 [[package]]
 name = "setuptools"
@@ -1439,4 +1450,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "de680570545d0dc343367947b4a81471d4146f416895cdc9fd9f0ec9feb7e667"
+content-hash = "56752d21a03a86a5c46d5a8ade02d4927d878dee992087ca6c936be456f469f8"

@@ -200,7 +200,7 @@ class LEDManager:
         # repetitions is the number of retepting pluses
         if not self.led_ring_present:
             return
-        dim_steps = 5
+        dim_steps = 10
         color = self.adjust_brightness(color)
         for _ in range(repetitions):
             for i in range(dim_steps):

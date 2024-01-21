@@ -6,6 +6,7 @@ from dataclasses import field
 from datetime import datetime, timezone
 from enum import StrEnum, auto
 from typing import Sequence
+from uuid import uuid4
 
 from redux import BaseAction, BaseEvent, Immutable
 
@@ -67,6 +68,7 @@ class Chime(StrEnum):
 
 
 class Notification(Immutable):
+    id: str = field(default_factory=lambda: uuid4().hex)
     title: str
     content: str
     importance: Importance = Importance.LOW

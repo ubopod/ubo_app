@@ -12,6 +12,6 @@ class MenuApp(MenuAppCentral, MenuAppFooter, UboApp):
 
     def on_start(self: MenuApp) -> None:
         """Start the application."""
-        from ubo_app.logic import setup
+        from ubo_app.side_effects import setup
 
-        setup()
+        setup(self)

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import aiohttp
 from kivy import shutil
-from ubo_gui.constants import DANGER_COLOR, SECONDARY_COLOR, SUCCESS_COLOR
+from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, Item
 
 from ubo_app.constants import INSTALLATION_PATH
@@ -16,6 +16,7 @@ from ubo_app.store import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
+    NotificationDisplayType,
     NotificationsAddAction,
 )
 from ubo_app.store.update_manager_types import (
@@ -24,17 +25,12 @@ from ubo_app.store.update_manager_types import (
     UpdateStatus,
     VersionStatus,
 )
-from ubo_app.utils.async_ import create_task
 
 CURRENT_VERSION = importlib.metadata.version('ubo_app')
 
 
-@autorun(lambda store: store.main.version.update_status)
-async def check(status: UpdateStatus) -> None:
+async def check_version() -> None:
     """Check for updates."""
-    if status != UpdateStatus.CHECKING:
-        return
-
     logger.info('Checking for updates...')
 
     # Check PyPI server for the latest version
@@ -51,41 +47,20 @@ async def check(status: UpdateStatus) -> None:
             data = await response.json()
             latest_version = data['info']['version']
 
-            # Compare the latest version with the current version
-            if latest_version == CURRENT_VERSION:
-                dispatch(
-                    SetLatestVersionAction(latest_version=latest_version),
-                    SetUpdateStatusAction(status=UpdateStatus.UP_TO_DATE),
-                )
-            else:
-                dispatch(
-                    SetLatestVersionAction(latest_version=latest_version),
-                    SetUpdateStatusAction(status=UpdateStatus.OUTDATED),
-                    NotificationsAddAction(
-                        notification=Notification(
-                            title='Update available!',
-                            content=f"""Ubo v{latest_version
-                                } is available. Go to the About menu to update.""",
-                            color=SECONDARY_COLOR,
-                            icon='system_update',
-                            chime=Chime.DONE,
-                        ),
-                    ),
-                )
+            dispatch(
+                SetLatestVersionAction(
+                    current_version=CURRENT_VERSION,
+                    latest_version=latest_version,
+                ),
+            )
     except Exception as exception:  # noqa: BLE001
         logger.error('Failed to check for updates', exc_info=exception)
         dispatch(SetUpdateStatusAction(status=UpdateStatus.FAILED_TO_CHECK))
         return
 
 
-check.subscribe(create_task)
-
-
-@autorun(lambda store: store.main.version)
-async def update(version: VersionStatus) -> None:
+async def update() -> None:
     """Update the Ubo app."""
-    if version.update_status != UpdateStatus.UPDATING:
-        return
     logger.info('Updating Ubo app...')
 
     async def download_files() -> None:
@@ -129,6 +104,7 @@ async def update(version: VersionStatus) -> None:
                 notification=Notification(
                     title='Failed to update',
                     content='Failed to update',
+                    display_type=NotificationDisplayType.FLASH,
                     color=DANGER_COLOR,
                     icon='security_update_warning',
                     chime=Chime.FAILURE,
@@ -137,9 +113,6 @@ async def update(version: VersionStatus) -> None:
             SetUpdateStatusAction(status=UpdateStatus.CHECKING),
         )
         return
-
-
-update.subscribe(create_task)
 
 
 @autorun(lambda store: store.main.version)

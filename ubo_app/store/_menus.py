@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Sequence
 
 from kivy.clock import Clock
+from redux import FinishAction
 from ubo_gui.menu.types import (
     ActionItem,
     ApplicationItem,
@@ -21,7 +23,6 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.sound import SoundPlayChimeAction
 from ubo_app.store.update_manager import CURRENT_VERSION, about_menu_items
-from ubo_app.store.update_manager_types import SetUpdateStatusAction, UpdateStatus
 
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Item
@@ -38,16 +39,6 @@ APPS_MENU = HeadlessMenu(
 )
 
 
-def open_about() -> HeadedMenu:
-    dispatch(SetUpdateStatusAction(status=UpdateStatus.CHECKING))
-    return HeadedMenu(
-        title='About',
-        heading=f'Ubo v{CURRENT_VERSION}',
-        sub_heading='A universal dashboard for your Raspberry Pi',
-        items=about_menu_items,
-    )
-
-
 MAIN_MENU = HeadlessMenu(
     title='Main',
     items=[
@@ -61,10 +52,15 @@ MAIN_MENU = HeadlessMenu(
             icon='settings',
             sub_menu=SETTINGS_MENU,
         ),
-        ActionItem(
+        SubMenuItem(
             label='About',
             icon='info',
-            action=open_about,
+            sub_menu=HeadedMenu(
+                title='About',
+                heading=f'Ubo v{CURRENT_VERSION}',
+                sub_heading='A universal dashboard for your Raspberry Pi',
+                items=about_menu_items,
+            ),
         ),
     ],
 )
@@ -113,6 +109,8 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
             application=notification_widget_builder(notification, index),
         )
         for index, notification in enumerate(notifications)
+        if notification.expiry_date is None
+        or notification.expiry_date > datetime.now(tz=timezone.utc)
     ]
 
 
@@ -140,6 +138,7 @@ HOME_MENU = HeadlessMenu(
             action=lambda: dispatch(
                 SoundPlayChimeAction(name=Chime.FAILURE),
                 PowerOffAction(),
+                FinishAction(),
             ),
             icon='power_settings_new',
             is_short=True,
