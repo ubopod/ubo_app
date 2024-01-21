@@ -11,7 +11,7 @@ from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.store import autorun, dispatch, subscribe_event
-from ubo_app.store.app import RegisterSettingAppAction
+from ubo_app.store.main import RegisterSettingAppAction
 from ubo_app.store.services.ip import (
     IpNetworkInterface,
     IpUpdateAction,

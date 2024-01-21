@@ -12,9 +12,14 @@ from ubo_gui.menu.types import (
 )
 from ubo_gui.notification import NotificationWidget
 
-from ubo_app.logging import logger
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.services.notifications import Notification, NotificationsClearAction
+from ubo_app.store.main import PowerOffAction
+from ubo_app.store.services.notifications import (
+    Chime,
+    Notification,
+    NotificationsClearAction,
+)
+from ubo_app.store.services.sound import SoundPlayChimeAction
 from ubo_app.store.update_manager import CURRENT_VERSION, about_menu_items
 from ubo_app.store.update_manager_types import SetUpdateStatusAction, UpdateStatus
 
@@ -132,7 +137,10 @@ HOME_MENU = HeadlessMenu(
         ),
         ActionItem(
             label='Turn off',
-            action=lambda: logger.info('"Turn off" selected!'),
+            action=lambda: dispatch(
+                SoundPlayChimeAction(name=Chime.FAILURE),
+                PowerOffAction(),
+            ),
             icon='power_settings_new',
             is_short=True,
         ),

@@ -16,6 +16,8 @@ background_tasks: set[Handle] = set()
 
 def create_task(awaitable: Awaitable) -> Handle:
     async def wrapper() -> None:
+        if awaitable is None:
+            return
         try:
             await awaitable
         except BaseException as exception:  # noqa: BLE001

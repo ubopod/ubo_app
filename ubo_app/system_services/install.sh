@@ -71,5 +71,10 @@ chmod -R 700 "$INSTALLATION_PATH"
 # Bootstrap the application
 "$INSTALLATION_PATH/env/bin/ubo" bootstrap
 
+if [ "$UPDATE" = true ]; then
+  # Remove the update directory
+  rm -rf "$INSTALLATION_PATH/_update"
+fi
+
 # Start the service
 service ubo-app restart &

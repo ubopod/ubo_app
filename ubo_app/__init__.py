@@ -2,7 +2,6 @@
 import os
 import sys
 
-from headless_kivy_pi import HeadlessWidget
 from kivy.clock import Clock
 from redux import FinishAction
 
@@ -19,6 +18,8 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
         bootstrap()
         sys.exit(0)
+
+    from headless_kivy_pi import HeadlessWidget
 
     os.environ['KIVY_METRICS_DENSITY'] = '1'
     os.environ['KIVY_NO_CONFIG'] = '1'

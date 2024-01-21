@@ -10,7 +10,7 @@ from wifi_manager import (
 )
 
 from ubo_app.store import dispatch, subscribe_event
-from ubo_app.store.app import RegisterSettingAppAction
+from ubo_app.store.main import RegisterSettingAppAction
 from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiUpdateAction,

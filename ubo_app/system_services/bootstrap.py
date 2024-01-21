@@ -53,7 +53,7 @@ def bootstrap() -> None:
 
         # Enable the service to start on boot
         subprocess.run(
-            ['/usr/bin/systemctl', 'enable', service['name']],  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'enable', service['name']],  # noqa: S603
             check=True,
         )
 

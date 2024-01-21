@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.8.1
+
+- feat: power off button now turns off the screen and actually powers off the device
+
 ## Version 0.8.0
 
 - feat: update menu showing current version and a button to update ubo-app

@@ -13,7 +13,7 @@ from redux import (
 )
 
 from ubo_app.logging import logger
-from ubo_app.store.main import MainAction, MainState, main_reducer
+from ubo_app.store.main import MainAction, MainState
 from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
 from ubo_app.store.services.keypad import KeypadEvent
@@ -21,6 +21,7 @@ from ubo_app.store.services.notifications import NotificationsAction, Notificati
 from ubo_app.store.services.sound import SoundAction, SoundState
 from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
 
+from .reducer import reducer
 from .status_icons import reducer as status_icons_reducer
 
 if TYPE_CHECKING:
@@ -51,7 +52,7 @@ root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,
     action_type=ActionType,
     event_type=EventType,
-    main=main_reducer,
+    main=reducer,
     status_icons=status_icons_reducer,
 )
 
