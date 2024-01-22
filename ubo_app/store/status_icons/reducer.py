@@ -2,33 +2,21 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Sequence
 
-from redux import BaseAction, Immutable, InitAction, InitializationActionError
+from redux import InitAction, InitializationActionError
 
-
-class IconState(Immutable):
-    symbol: str
-    color: str
-    priority: int
-    id: str | None
-
-
-class StatusIconsState(Immutable):
-    icons: Sequence[IconState]
+from ubo_app.store.status_icons import (
+    IconState,
+    StatusIconsAction,
+    StatusIconsRegisterAction,
+    StatusIconsState,
+)
 
 
-class StatusIconsRegisterAction(BaseAction):
-    icon: str
-    color: str = 'white'
-    priority: int = 0
-    id: str | None = None
-
-
-IconAction = StatusIconsRegisterAction | InitAction
-
-
-def reducer(state: StatusIconsState | None, action: IconAction) -> StatusIconsState:
+def reducer(
+    state: StatusIconsState | None,
+    action: StatusIconsAction | InitAction,
+) -> StatusIconsState:
     if state is None:
         if isinstance(action, InitAction):
             return StatusIconsState(icons=[])

@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.8.4
+
+- refactor: housekeeping - better organize `/ubo_app/store` in directories
+- feat: automatically run update check whenever about menu is opened with a throttling
+  of 10 seconds
+
 ## Version 0.8.3
 
 - feat: introduce notification ids as a means to avoid duplicated notifications

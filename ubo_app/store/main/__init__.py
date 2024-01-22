@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, Sequence
 from redux import BaseAction, BaseEvent, FinishAction, Immutable, InitAction
 
 from ubo_app.store.services.keypad import KeypadAction
-from ubo_app.store.status_icons import IconAction
-from ubo_app.store.update_manager_types import VersionStatus
+from ubo_app.store.status_icons import StatusIconsAction
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -37,8 +36,7 @@ class PowerOffEvent(BaseEvent):
 
 class MainState(Immutable):
     menu: Menu | None = None
-    path: Sequence[int] = field(default_factory=list)
-    version: VersionStatus = field(default_factory=VersionStatus)
+    path: Sequence[str] = field(default_factory=list)
 
 
 class InitEvent(BaseEvent):
@@ -53,7 +51,7 @@ MainAction: TypeAlias = (
     InitAction
     | FinishAction
     | PowerOffAction
-    | IconAction
+    | StatusIconsAction
     | KeypadAction
     | RegisterAppAction
     | SetMenuPathAction

@@ -1036,13 +1036,13 @@ pywin32 = ">=223"
 
 [[package]]
 name = "pyright"
-version = "1.1.347"
+version = "1.1.348"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.347-py3-none-any.whl", hash = "sha256:14dd31b594aa3ec464894f66b8a2d206ebef1501e52789eb88cf2a79b0907fbe"},
-    {file = "pyright-1.1.347.tar.gz", hash = "sha256:17ea09322f60080f82abc4e622e43d1a5ebaa407ba86963b15b2bc01cca256e0"},
+    {file = "pyright-1.1.348-py3-none-any.whl", hash = "sha256:e7d4df504c4c082b5c3725a8c15fc3fda62da5d09fc77994baa77f359a1b62f2"},
+    {file = "pyright-1.1.348.tar.gz", hash = "sha256:1c6994546f7ab130b9da8c357f8b2a99bef268b6d8ae2eae292bde66923aa7af"},
 ]
 
 [package.dependencies]
@@ -1094,13 +1094,13 @@ files = [
 
 [[package]]
 name = "python-redux"
-version = "0.9.15"
+version = "0.9.16"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.15-py3-none-any.whl", hash = "sha256:8b836741ae8171c33df780825a22c1f1ee676015577df70f93407dc038e4cd44"},
-    {file = "python_redux-0.9.15.tar.gz", hash = "sha256:af777691d345371c88f001ff4f59ae87c83a4f496491d92dbdea6eb5468bed6c"},
+    {file = "python_redux-0.9.16-py3-none-any.whl", hash = "sha256:af71776cb5acc0468ffaf5a90689f4b108478dfc90757292f9a18f451c89f048"},
+    {file = "python_redux-0.9.16.tar.gz", hash = "sha256:6045075ee26ebbc24c2e3c47cc0b3c9ce3e435bcb41165149840bc1daf377de5"},
 ]
 
 [package.dependencies]
@@ -1450,4 +1450,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "56752d21a03a86a5c46d5a8ade02d4927d878dee992087ca6c936be456f469f8"
+content-hash = "643b0eaee6450e2e553f5a6bbbf269bb84cdb41fa861fa7c17420ab00b481345"

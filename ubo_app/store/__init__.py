@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 from kivy.base import Clock
 from redux import (
@@ -14,23 +14,23 @@ from redux import (
 
 from ubo_app.logging import logger
 from ubo_app.store.main import MainAction, MainState
+from ubo_app.store.main.reducer import reducer as main_reducer
 from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
 from ubo_app.store.services.keypad import KeypadEvent
 from ubo_app.store.services.notifications import NotificationsAction, NotificationsState
 from ubo_app.store.services.sound import SoundAction, SoundState
 from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
-
-from .reducer import reducer
-from .status_icons import reducer as status_icons_reducer
-
-if TYPE_CHECKING:
-    from .status_icons import StatusIconsState
+from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
+from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
+from ubo_app.store.update_manager import UpdateManagerAction, UpdateManagerState
+from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 
 
 class RootState(BaseCombineReducerState):
     main: MainState
     status_icons: StatusIconsState
+    update_manager: UpdateManagerState
     sound: SoundState
     wifi: WiFiState
     ip: IpState
@@ -38,8 +38,10 @@ class RootState(BaseCombineReducerState):
 
 
 ActionType = (
-    MainAction
-    | CombineReducerAction
+    CombineReducerAction
+    | StatusIconsAction
+    | UpdateManagerAction
+    | MainAction
     | SoundAction
     | CameraAction
     | WiFiAction
@@ -52,8 +54,9 @@ root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,
     action_type=ActionType,
     event_type=EventType,
-    main=reducer,
+    main=main_reducer,
     status_icons=status_icons_reducer,
+    update_manager=update_manager_reducer,
 )
 
 

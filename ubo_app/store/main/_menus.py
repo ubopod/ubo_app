@@ -22,7 +22,7 @@ from ubo_app.store.services.notifications import (
     NotificationsClearAction,
 )
 from ubo_app.store.services.sound import SoundPlayChimeAction
-from ubo_app.store.update_manager import CURRENT_VERSION, about_menu_items
+from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
 
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Item
@@ -66,12 +66,12 @@ MAIN_MENU = HeadlessMenu(
 )
 
 
-@autorun(lambda store: store.notifications.unread_count)
+@autorun(lambda state: state.notifications.unread_count)
 def notifications_title(unread_count: int) -> str:
     return f'Notifications ({unread_count})'
 
 
-@autorun(lambda store: store.notifications.notifications)
+@autorun(lambda state: state.notifications.notifications)
 def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item]:
     """Return a list of menu items for the notification manager."""
 

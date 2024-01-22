@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
+from typing import Sequence
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -9,20 +10,29 @@ from redux import BaseAction, BaseEvent
 UPDATE_MANAGER_NOTIFICATION_ID = 'ubo:update_manager'
 
 
-class SetLatestVersionAction(BaseAction):
+class UpdateManagerAction(BaseAction):
+    ...
+
+
+class SetLatestVersionAction(UpdateManagerAction):
+    flash_notification: bool
     latest_version: str
     current_version: str
 
 
-class SetUpdateStatusAction(BaseAction):
+class SetUpdateStatusAction(UpdateManagerAction):
     status: UpdateStatus
 
 
-class CheckVersionEvent(BaseEvent):
+class UpdateManagerEvent(BaseEvent):
     ...
 
 
-class UpdateVersionEvent(BaseEvent):
+class CheckVersionEvent(UpdateManagerEvent):
+    ...
+
+
+class UpdateVersionEvent(UpdateManagerEvent):
     ...
 
 
@@ -36,7 +46,7 @@ class UpdateStatus(Enum):
     UPDATING = auto()
 
 
-class VersionStatus(Immutable):
+class UpdateManagerState(Immutable):
     """Version store."""
 
     current_version: str | None = None

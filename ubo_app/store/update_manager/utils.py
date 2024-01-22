@@ -19,12 +19,13 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.update_manager_types import (
+from ubo_app.store.update_manager import (
     SetLatestVersionAction,
     SetUpdateStatusAction,
+    UpdateManagerState,
     UpdateStatus,
-    VersionStatus,
 )
+from ubo_app.store.update_manager.reducer import ABOUT_MENU_PATH
 
 CURRENT_VERSION = importlib.metadata.version('ubo_app')
 
@@ -48,7 +49,9 @@ async def check_version() -> None:
             latest_version = data['info']['version']
 
             dispatch(
-                SetLatestVersionAction(
+                with_state=lambda state: SetLatestVersionAction(
+                    flash_notification=state is None
+                    or state.main.path[:3] != ABOUT_MENU_PATH,
                     current_version=CURRENT_VERSION,
                     latest_version=latest_version,
                 ),
@@ -115,10 +118,10 @@ async def update() -> None:
         return
 
 
-@autorun(lambda store: store.main.version)
-def about_menu_items(version_status: VersionStatus) -> list[Item]:
+@autorun(lambda state: state.update_manager)
+def about_menu_items(state: UpdateManagerState) -> list[Item]:
     """Get the update menu items."""
-    if version_status.update_status is UpdateStatus.CHECKING:
+    if state.update_status is UpdateStatus.CHECKING:
         return [
             ActionItem(
                 label='Checking for updates...',
@@ -127,7 +130,7 @@ def about_menu_items(version_status: VersionStatus) -> list[Item]:
                 background_color='#00000000',
             ),
         ]
-    if version_status.update_status is UpdateStatus.FAILED_TO_CHECK:
+    if state.update_status is UpdateStatus.FAILED_TO_CHECK:
         return [
             ActionItem(
                 label='Failed to check for updates',
@@ -138,27 +141,27 @@ def about_menu_items(version_status: VersionStatus) -> list[Item]:
                 background_color=DANGER_COLOR,
             ),
         ]
-    if version_status.update_status is UpdateStatus.UP_TO_DATE:
+    if state.update_status is UpdateStatus.UP_TO_DATE:
         return [
             ActionItem(
                 label='Already up to date!',
                 action=lambda: None,
                 icon='security_update_good',
                 background_color=SUCCESS_COLOR,
-                color='#ffffff',
+                color='#000000',
             ),
         ]
-    if version_status.update_status is UpdateStatus.OUTDATED:
+    if state.update_status is UpdateStatus.OUTDATED:
         return [
             ActionItem(
-                label=f'Update to v{version_status.latest_version}',
+                label=f'Update to v{state.latest_version}',
                 action=lambda: dispatch(
                     SetUpdateStatusAction(status=UpdateStatus.UPDATING),
                 ),
                 icon='system_update',
             ),
         ]
-    if version_status.update_status is UpdateStatus.UPDATING:
+    if state.update_status is UpdateStatus.UPDATING:
         return [
             ActionItem(
                 label='Updating...',
