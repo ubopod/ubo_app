@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.8.4"
+version = "0.8.5"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -42,6 +42,8 @@ adafruit-circuitpython-neopixel = "^6.3.11"
 pulsectl = "^23.5.2"
 aiohttp = "^3.9.1"
 semver = "^3.0.2"
+adafruit-circuitpython-pct2075 = "^1.1.21"
+adafruit-circuitpython-veml7700 = "^1.1.22"
 
 [tool.poetry.group.dev]
 optional = true

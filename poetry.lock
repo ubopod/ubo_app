@@ -64,6 +64,22 @@ Adafruit-Blinka = "*"
 adafruit-circuitpython-pixelbuf = "*"
 
 [[package]]
+name = "adafruit-circuitpython-pct2075"
+version = "1.1.21"
+description = "CircuitPython library for the NXP PCT2075 Digital Temperature Sensor"
+optional = false
+python-versions = "*"
+files = [
+    {file = "adafruit-circuitpython-pct2075-1.1.21.tar.gz", hash = "sha256:55eb646c2c08d8be3a54262fe48f4586d1bb7b51347d6866ac45954c2f473cc5"},
+    {file = "adafruit_circuitpython_pct2075-1.1.21-py3-none-any.whl", hash = "sha256:78425ec0037a46587a0d08a565e4b13b1f4522812f94e3b58267f3ac4e4fffcd"},
+]
+
+[package.dependencies]
+Adafruit-Blinka = "*"
+adafruit-circuitpython-busdevice = "*"
+adafruit-circuitpython-register = "*"
+
+[[package]]
 name = "adafruit-circuitpython-pixelbuf"
 version = "2.0.4"
 description = "A pure Python implementation of adafruit_pixelbuf for smaller boards."
@@ -81,7 +97,7 @@ Adafruit-Blinka = "*"
 name = "adafruit-circuitpython-register"
 version = "1.9.18"
 description = "CircuitPython data descriptor classes to represent hardware registers on I2C and SPI devices."
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "adafruit-circuitpython-register-1.9.18.tar.gz", hash = "sha256:146fdec0ca787663962e1a894a3028056f1adbd0322a1d187bdeda739e4e228d"},
@@ -139,6 +155,22 @@ Adafruit-Blinka = "*"
 adafruit-circuitpython-busdevice = "*"
 adafruit-circuitpython-requests = "*"
 typing-extensions = ">=4.0,<5.0"
+
+[[package]]
+name = "adafruit-circuitpython-veml7700"
+version = "1.1.22"
+description = "CircuitPython driver for VEML7700 high precision I2C ambient light sensor."
+optional = false
+python-versions = "*"
+files = [
+    {file = "adafruit-circuitpython-veml7700-1.1.22.tar.gz", hash = "sha256:fc89581c8463a5184259e6eeb63f53cd7f75d567e2665b4f8233dbf8bb2ecebc"},
+    {file = "adafruit_circuitpython_veml7700-1.1.22-py3-none-any.whl", hash = "sha256:489bdae13e438854c0c3ec67a3716c51ac1bf07baa438ef839cd566d78b75f1a"},
+]
+
+[package.dependencies]
+Adafruit-Blinka = "*"
+adafruit-circuitpython-busdevice = "*"
+adafruit-circuitpython-register = "*"
 
 [[package]]
 name = "adafruit-platformdetect"
@@ -1094,13 +1126,13 @@ files = [
 
 [[package]]
 name = "python-redux"
-version = "0.9.16"
+version = "0.9.17"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.16-py3-none-any.whl", hash = "sha256:af71776cb5acc0468ffaf5a90689f4b108478dfc90757292f9a18f451c89f048"},
-    {file = "python_redux-0.9.16.tar.gz", hash = "sha256:6045075ee26ebbc24c2e3c47cc0b3c9ce3e435bcb41165149840bc1daf377de5"},
+    {file = "python_redux-0.9.17-py3-none-any.whl", hash = "sha256:16482d561ffe9e2cf4ad443fea4f6f1ecf71c208b170a70059d50cdbc43d0d6d"},
+    {file = "python_redux-0.9.17.tar.gz", hash = "sha256:9605ae30611279913fc5862ed5ffb9a6759817fbda5ab512430016b96fd0a324"},
 ]
 
 [package.dependencies]
@@ -1450,4 +1482,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "643b0eaee6450e2e553f5a6bbbf269bb84cdb41fa861fa7c17420ab00b481345"
+content-hash = "ea8012c9d12c0fae96b0b6a05b0a128b021544f6733d74d69ad7ff9b632ebfe3"

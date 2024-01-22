@@ -21,6 +21,75 @@ if TYPE_CHECKING:
 
 class MenuAppFooter(UboApp):
     @cached_property
+    def temperature_widget(self: MenuAppFooter) -> BoxLayout:
+        layout = BoxLayout(
+            orientation='horizontal',
+            spacing=0,
+            padding=0,
+            size_hint=(None, 1),
+        )
+
+        temperature = Label(font_size=dp(14), size_hint=(None, 1), valign='middle')
+        temperature.bind(
+            texture_size=lambda temperature, texture_size: setattr(
+                temperature,
+                'width',
+                texture_size[0],
+            )
+            or setattr(layout, 'width', temperature.width + dp(12)),
+        )
+
+        @autorun(lambda state: state.sensors.temperature.value)
+        def set_value(value: float | None = None) -> None:
+            if value is None:
+                temperature.text = '-'
+            else:
+                temperature.text = f'{value:0.1f}°C'
+
+        icon = Label(
+            text='device_thermostat',
+            color='#ffffff',
+            font_name='material_symbols',
+            font_size=dp(16),
+            font_features='fill=0',
+            size_hint=(None, 1),
+            width=dp(12),
+        )
+        layout.add_widget(icon)
+        layout.add_widget(temperature)
+
+        return layout
+
+    @cached_property
+    def light_widget(self: MenuAppFooter) -> Label:
+        light = Label(
+            text='light_mode',
+            color='#ffffff',
+            font_name='material_symbols',
+            font_size=dp(16),
+            font_features='fill=0',
+            size_hint=(None, 1),
+            width=dp(16),
+        )
+        light.bind(
+            texture_size=lambda light, texture_size: setattr(
+                light,
+                'width',
+                texture_size[0],
+            ),
+        )
+
+        @autorun(lambda state: state.sensors.light.value)
+        def set_value(value: float | None = None) -> None:
+            if value is None:
+                light.color = (0.5, 0, 0, 1)
+            else:
+                v = min(value, 140) / 140
+                light.color = (1, 1, 1, v)
+
+        return light
+
+    @cached_property
     def clock_widget(self: MenuAppFooter) -> Label:
         clock = Label(font_size=dp(20), size_hint=(None, 1), valign='middle')
         clock.bind(
@@ -70,7 +139,11 @@ class MenuAppFooter(UboApp):
 
         home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
         home_footer_layout.add_widget(self.clock_widget)
-        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(4)))
+        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
+        home_footer_layout.add_widget(self.temperature_widget)
+        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
+        home_footer_layout.add_widget(self.light_widget)
+        home_footer_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
 
         icons_widget = StencilView(size_hint=(1, 1))
         home_footer_layout.add_widget(icons_widget)
@@ -100,7 +173,7 @@ class MenuAppFooter(UboApp):
         def render_icons(selector_result: Sequence[IconState]) -> None:
             icons = selector_result
             icons_layout.clear_widgets()
-            for icon in list(reversed(icons))[:7]:
+            for icon in list(reversed(icons))[:4]:
                 label = Label(
                     text=icon.symbol,
                     color=icon.color,
@@ -115,7 +188,7 @@ class MenuAppFooter(UboApp):
             icons_layout.bind(minimum_width=icons_layout.setter('width'))
 
         @autorun(lambda state: state.main.path)
-        def handle_depth_change(path: Sequence[int]) -> None:
+        def handle_depth_change(path: Sequence[str]) -> None:
             is_fullscreen = (
                 'TODO' in path
             )  # TODO(sassanh): Check if the application is fullscreen

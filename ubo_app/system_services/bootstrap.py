@@ -61,7 +61,7 @@ def bootstrap() -> None:
             f"Service '{service['name']}' has been created and enabled.",
         )
 
-    with Path('/etc/polkit-1/rules.d/50-reboot.rules').open('w') as file:
+    with Path('/etc/polkit-1/rules.d/50-ubo.rules').open('w') as file:
         file.write(
             Path(__file__)
             .parent.joinpath('polkit-reboot.rules')

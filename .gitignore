@@ -102,4 +102,4 @@ ENV/
 # headless-kivy-pi
 headless_kivy_pi_buffer.raw
 
-ubo_app/services/0-sound/sounds
+ubo_app/services/*-sound/sounds

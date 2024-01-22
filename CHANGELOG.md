@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.8.5
+
+- feat: add `sensors` service with temperature and light
+- feat: show temperature and light values in the footer
+- refactor: organize order of loading of services
+
 ## Version 0.8.4
 
 - refactor: housekeeping - better organize `/ubo_app/store` in directories
