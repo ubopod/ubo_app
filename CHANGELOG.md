@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 0.8.6
+
+- fix: enable i2c and spi using `raspi-config` in `install.sh`
+- fix: reboot after installation (needed for audio driver)
+- fix: add user to netdev group in `install.sh`
+- fix: install `python3-picamera2` and `python3-dev` debian packages in `install.sh`
+- fix: blank screen when app is closing due to external signals
+- fix: improve polkit rule to let user do wifi scan
+
 ## Version 0.8.5
 
 - feat: add `sensors` service with temperature and light

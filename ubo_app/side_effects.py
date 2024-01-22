@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import atexit
-import subprocess
 from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
-from headless_kivy_pi.constants import BYTES_PER_PIXEL
 from redux import FinishAction, FinishEvent
 
 from ubo_app.store import autorun, dispatch, subscribe_event
@@ -28,13 +26,6 @@ if TYPE_CHECKING:
 
 def power_off(_: PowerOffEvent) -> None:
     """Power off the device."""
-    from headless_kivy_pi import HeadlessWidget
-
-    display = HeadlessWidget._display  # noqa: SLF001
-    data = [0] * HeadlessWidget.width * HeadlessWidget.height * BYTES_PER_PIXEL
-    display._block(0, 0, HeadlessWidget.width - 1, HeadlessWidget.height - 1, data)  # noqa: SLF001
-    subprocess.run(['/usr/bin/env', 'systemctl', 'poweroff', '-i'], check=True)  # noqa: S603
-
     dispatch(FinishAction())
 
 

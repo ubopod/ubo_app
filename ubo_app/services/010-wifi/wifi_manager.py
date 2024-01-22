@@ -128,9 +128,7 @@ async def get_wifi_device_state() -> GlobalWiFiState:
 async def request_scan() -> None:
     wifi_device = await get_wifi_device()
     if wifi_device:
-        await wait_for(
-            wifi_device.request_scan({}),
-        )
+        await wait_for(wifi_device.request_scan({}))
 
 
 async def get_access_points() -> list[AccessPoint]:

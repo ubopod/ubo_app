@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.8.5"
+version = "0.8.6"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [{ include = "ubo_app" }]
-include = ['ubo_app/services/0-sound/sounds/*']
+include = ['ubo_app/services/*-sound/sounds/*']
 
 
 [[tool.poetry.source]]
@@ -16,7 +16,7 @@ priority = "primary"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-psutil = "^5.9.6"
+psutil = "^5.9.8"
 ubo-gui = [
   { version = "^0.7.9", markers = "extra=='default'", extras = [
     'default',

@@ -2,13 +2,13 @@
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.30.0"
+version = "8.31.0"
 description = "CircuitPython APIs for non-CircuitPython versions of Python such as CPython on Linux and MicroPython."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "Adafruit-Blinka-8.30.0.tar.gz", hash = "sha256:db968c4efa84aac6bec9f4788ae214bfed97748dfd5c3985b72cf80b0162a4fe"},
-    {file = "Adafruit_Blinka-8.30.0-py3-none-any.whl", hash = "sha256:d4cf47ea029f503023925470813643582d28c387033e3ee8fa502abc91208793"},
+    {file = "Adafruit-Blinka-8.31.0.tar.gz", hash = "sha256:720edca821066022e912dffcb364ea04bd3e3f208132b975876a21b2a2daa850"},
+    {file = "Adafruit_Blinka-8.31.0-py3-none-any.whl", hash = "sha256:179f7a4312bfe023525040e0a34f490ac44e8f0bf9fc7ab60aa944cf68db6a7e"},
 ]
 
 [package.dependencies]
@@ -174,13 +174,13 @@ adafruit-circuitpython-register = "*"
 
 [[package]]
 name = "adafruit-platformdetect"
-version = "3.58.0"
+version = "3.59.0"
 description = "Platform detection for use by libraries like Adafruit-Blinka."
 optional = false
 python-versions = "*"
 files = [
-    {file = "Adafruit-PlatformDetect-3.58.0.tar.gz", hash = "sha256:f69b9c763e2b5c22e2b6836abb575d11363d5d49889487c2d21228289e782acf"},
-    {file = "Adafruit_PlatformDetect-3.58.0-py3-none-any.whl", hash = "sha256:1ddbe23c447317d4ba7c25802ec0d189695446324e2534f8b5d68d357d54e999"},
+    {file = "Adafruit-PlatformDetect-3.59.0.tar.gz", hash = "sha256:cf33e82d164f146f0ee39062879e0caba55e018254db973358566d97ce3d4602"},
+    {file = "Adafruit_PlatformDetect-3.59.0-py3-none-any.whl", hash = "sha256:2b27f8a205b43bc0d214cbb3de7eab42b9dcc8d23f224e0e536c6d5195c36e18"},
 ]
 
 [[package]]
@@ -1482,4 +1482,4 @@ dev = ["headless-kivy-pi", "headless-kivy-pi", "ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "ea8012c9d12c0fae96b0b6a05b0a128b021544f6733d74d69ad7ff9b632ebfe3"
+content-hash = "e3904f84b3ab916d9208719becad785a046498c625d7a5bbc0eaa40860d0e794"

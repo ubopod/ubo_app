@@ -30,7 +30,7 @@ fi
 
 # Create the user
 adduser --disabled-password --gecos "" $USERNAME
-usermod -a -G audio,gpio,i2c,kmem,render,spi,video yourusername
+usermod -a -G audio,video,netdev,gpio,i2c,spi,kmem,render $USERNAME
 
 echo "User $USERNAME created successfully."
 
@@ -40,13 +40,19 @@ apt-get -y install \
   libgl1 \
   libegl1 \
   libcap-dev \
+  python3-dev \
   python3-pip \
   python3-libcamera \
   python3-alsaaudio \
+  python3-picamera2 \
   python3-pyaudio \
   python3-virtualenv \
   libzbar0 \
   --no-install-recommends
+
+# Enable I2C and SPI
+sudo raspi-config nonint do_i2c 0
+sudo raspi-config nonint do_spi 0
 
 # Define the installation path
 if [ -z "${INSTALLATION_PATH}" ]; then
@@ -76,5 +82,5 @@ if [ "$UPDATE" = true ]; then
   rm -rf "$INSTALLATION_PATH/_update"
 fi
 
-# Start the service
-service ubo-app restart &
+# The audio driver needs a reboot to work
+reboot
