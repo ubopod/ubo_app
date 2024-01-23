@@ -37,17 +37,18 @@ echo "User $USERNAME created successfully."
 # Install required packages
 apt-get -y update
 apt-get -y install \
-  libgl1 \
-  libegl1 \
   libcap-dev \
+  libegl1 \
+  libgl1 \
+  libmtdev1 \ 
+  libzbar0 \
   python3-dev \
-  python3-pip \
   python3-libcamera \
   python3-alsaaudio \
   python3-picamera2 \
+  python3-pip \
   python3-pyaudio \
   python3-virtualenv \
-  libzbar0 \
   --no-install-recommends
 
 # Enable I2C and SPI

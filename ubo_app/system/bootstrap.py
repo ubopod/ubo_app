@@ -14,21 +14,25 @@ class Service(TypedDict):
     """System service metadata."""
 
     name: str
-    content: str
+    template: str
 
 
 services: list[Service] = [
     {
         'name': 'ubo-led',
-        'content': Path(__file__).parent.joinpath('led.service').open().read(),
+        'template': 'led',
     },
     {
         'name': 'ubo-update',
-        'content': Path(__file__).parent.joinpath('update.service').open().read(),
+        'template': 'update',
     },
     {
         'name': 'ubo-app',
-        'content': Path(__file__).parent.joinpath('main.service').open().read(),
+        'template': 'main',
+    },
+    {
+        'name': 'ubo-pulseaudio',
+        'template': 'pulseaudio',
     },
 ]
 
@@ -43,13 +47,24 @@ def bootstrap() -> None:
             logger.error('This script needs to be run with root privileges.')
             return
 
+        template = (
+            Path(__file__)
+            .parent.joinpath(f'services/{service["template"]}.service')
+            .open()
+            .read()
+        )
+
+        content = template.replace(
+            '{{INSTALLATION_PATH}}',
+            INSTALLATION_PATH,
+        ).replace(
+            '{{USERNAME}}',
+            USERNAME,
+        )
+
         # Write the service content to the file
         with Path(service_file_path).open('w') as file:
-            file.write(
-                service['content']
-                .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
-                .replace('{{USERNAME}}', USERNAME),
-            )
+            file.write(content)
 
         # Enable the service to start on boot
         subprocess.run(

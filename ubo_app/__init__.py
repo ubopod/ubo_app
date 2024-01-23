@@ -13,7 +13,7 @@ def main() -> None:
     add_stdout_handler()
 
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
-        from ubo_app.system_services.bootstrap import bootstrap
+        from ubo_app.system.bootstrap import bootstrap
 
         bootstrap()
         sys.exit(0)

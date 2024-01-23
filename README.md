@@ -23,7 +23,7 @@ Note that as part of the installation process, these debian packages are install
 
 - pip
 - virtualenv
-- libmtdev
+- libmtdev1
 - libgl1
 - libegl1
 - libcap-dev
@@ -46,7 +46,7 @@ content before running it.**
 To install ubo, run this command in a terminal shell:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system_services/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo bash
 ```
 
 ## 🤝 Contributing

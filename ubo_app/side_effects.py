@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import atexit
+import subprocess
 from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 def power_off(_: PowerOffEvent) -> None:
     """Power off the device."""
     dispatch(FinishAction())
+    subprocess.run(['/usr/bin/env', 'systemctl', 'poweroff', '-i'], check=True)  # noqa: S603
 
 
 def setup(app: MenuApp) -> None:

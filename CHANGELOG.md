@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.8.7
+
+- feat: add `ubo-pulseaudio.service` to take care of keeping pulseaudio up
+- refactor: make sound service work with or without pulseaudio installed
+- refactor: organize system related codes and assets
+
 ## Version 0.8.6
 
 - fix: enable i2c and spi using `raspi-config` in `install.sh`

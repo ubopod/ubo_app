@@ -1,0 +1,12 @@
+[Install]
+WantedBy=ubo-app.service
+
+[Unit]
+Description=PulseAudio for Ubo
+After=sound.target dbus.service
+
+[Service]
+Type=simple
+User=ubo
+ExecStart=/usr/bin/pulseaudio --daemonize=no --log-target=syslog
+Restart=always

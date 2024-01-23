@@ -29,18 +29,7 @@ RESPEAKER_INDEX = 1
 CHUNK_SIZE = 1024
 
 
-def set_default_sink(*, name: str) -> None:
-    """Set the default sink to the sink with the given name."""
-    with pulsectl.Pulse('set-default-sink-by-description') as pulse:
-        for sink in pulse.sink_list():
-            if sink.proplist['alsa.long_card_name'] == name:
-                pulse.sink_default_set(sink)
-                logger.info('Set default sink to', extra={'sink': sink})
-                return
-        logger.error('No sink found', extra={'name_': name})
-
-
-def linear_to_logarithmic(volume_linear: float) -> int:
+def _linear_to_logarithmic(volume_linear: float) -> int:
     """Convert a linear volume to a logarithmic volume.
 
     Assuming volume_linear is between 0 and 1
@@ -48,7 +37,7 @@ def linear_to_logarithmic(volume_linear: float) -> int:
     """
     if volume_linear == 0:
         return 0
-    return round(100 * math.log(volume_linear) / math.log(100))
+    return round(100 * math.log(volume_linear * 500) / math.log(500))
 
 
 class AudioManager:
@@ -63,28 +52,22 @@ class AudioManager:
         self.is_playing = False
         self.should_stop = False
 
-        cardindex = None
+        self.cardindex = None
         try:
             cards = alsaaudio.cards()
-            cardindex = cards.index(
+            self.cardindex = cards.index(
                 next(card for card in cards if 'wm8960' in card),
             )
+            try:
+                with pulsectl.Pulse('set-default-sink') as pulse:
+                    for sink in pulse.sink_list():
+                        if sink.proplist['alsa.card'] == self.cardindex:
+                            pulse.sink_default_set(sink)
+                            break
+            except pulsectl.PulseError:
+                logger.error('Not able to connect to pulseaudio')
         except StopIteration:
             logger.error('No audio card found')
-
-        if cardindex is None:
-            return
-
-        mixer = alsaaudio.Mixer(
-            control='Right Output Mixer PCM',
-            cardindex=cardindex,
-        )
-        mixer.setmute(0)
-        mixer = alsaaudio.Mixer(
-            control='Left Output Mixer PCM',
-            cardindex=cardindex,
-        )
-        mixer.setmute(0)
 
     def __del__(self: AudioManager) -> None:
         """Clean up the audio manager."""
@@ -145,8 +128,25 @@ class AudioManager:
         mute : bool
             Mute to set
         """
-        mixer = alsaaudio.Mixer(control='Master')
-        mixer.setmute(1 if mute else 0)
+        try:
+            # Assume pulseaudio is installed
+            mixer = alsaaudio.Mixer(control='Master')
+            mixer.setmute(1 if mute else 0)
+        except alsaaudio.ALSAAudioError:
+            # Seems like pulseaudio is not installed, so we directly use device mixers
+            if self.cardindex is None:
+                return
+
+            mixer = alsaaudio.Mixer(
+                control='Right Output Mixer PCM',
+                cardindex=self.cardindex,
+            )
+            mixer.setmute(0)
+            mixer = alsaaudio.Mixer(
+                control='Left Output Mixer PCM',
+                cardindex=self.cardindex,
+            )
+            mixer.setmute(0)
 
     def set_playback_volume(self: AudioManager, volume: float = 0.8) -> None:
         """Set the playback volume of the audio output.
@@ -159,8 +159,27 @@ class AudioManager:
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)
-        mixer = alsaaudio.Mixer(control='Master')
-        mixer.setvolume(round(volume * 100))
+        try:
+            # Assume pulseaudio is installed
+            mixer = alsaaudio.Mixer(control='Master')
+            mixer.setvolume(round(volume * 100))
+        except alsaaudio.ALSAAudioError:
+            # Seems like pulseaudio is not installed, so we directly use device mixers
+            if self.cardindex is None:
+                return
+
+            mixer = alsaaudio.Mixer(control='Speaker', cardindex=self.cardindex)
+            mixer.setvolume(
+                _linear_to_logarithmic(volume),
+                alsaaudio.MIXER_CHANNEL_ALL,
+                alsaaudio.PCM_PLAYBACK,
+            )
+            mixer = alsaaudio.Mixer(control='Playback', cardindex=self.cardindex)
+            mixer.setvolume(
+                100,
+                alsaaudio.MIXER_CHANNEL_ALL,
+                alsaaudio.PCM_PLAYBACK,
+            )
 
     def set_capture_volume(self: AudioManager, volume: float = 0.8) -> None:
         """Set the capture volume of the audio output.
@@ -173,5 +192,18 @@ class AudioManager:
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)
-        mixer = alsaaudio.Mixer(control='Capture')
-        mixer.setrec(round(volume * 100))
+        try:
+            # Assume pulseaudio is installed
+            mixer = alsaaudio.Mixer(control='Capture')
+            mixer.setrec(round(volume * 100))
+        except alsaaudio.ALSAAudioError:
+            # Seems like pulseaudio is not installed, so we directly use device mixers
+            if self.cardindex is None:
+                return
+
+            mixer = alsaaudio.Mixer(control='Capture', cardindex=self.cardindex)
+            mixer.setvolume(
+                _linear_to_logarithmic(volume),
+                alsaaudio.MIXER_CHANNEL_ALL,
+                alsaaudio.PCM_CAPTURE,
+            )
