@@ -40,7 +40,7 @@ apt-get -y install \
   libcap-dev \
   libegl1 \
   libgl1 \
-  libmtdev1 \ 
+  libmtdev1 \
   libzbar0 \
   python3-dev \
   python3-libcamera \

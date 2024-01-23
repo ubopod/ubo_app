@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.8.8
+
+- hotfix: remove a dangling whitespace in `install.sh`
+
 ## Version 0.8.7
 
 - feat: add `ubo-pulseaudio.service` to take care of keeping pulseaudio up
