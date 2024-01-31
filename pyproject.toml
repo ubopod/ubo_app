@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.8.8"
+version = "0.8.9"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -18,22 +18,14 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.7.9", markers = "extra=='default'", extras = [
+  { version = "^0.8.0", markers = "extra=='default'", extras = [
     'default',
   ] },
-  { version = "^0.7.9", markers = "extra=='dev'", extras = [
+  { version = "^0.8.0", markers = "extra=='dev'", extras = [
     'dev',
   ] },
 ]
-headless-kivy-pi = [
-  { version = "^0.5.12", markers = "extra=='default'", extras = [
-    'default',
-  ] },
-  { version = "^0.5.12", markers = "extra=='dev'", extras = [
-    'dev',
-  ] },
-]
-python-redux = "^0.9.17"
+python-redux = "^0.9.22"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -44,12 +36,13 @@ aiohttp = "^3.9.1"
 semver = "^3.0.2"
 adafruit-circuitpython-pct2075 = "^1.1.21"
 adafruit-circuitpython-veml7700 = "^1.1.22"
+docker = "^7.0.0"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pyright = "^1.1.342"
+pyright = "^1.1.349"
 ruff = "^0.1.9"
 
 [tool.poetry.extras]
@@ -89,6 +82,3 @@ quote-style = 'single'
 
 [tool.isort]
 profile = "black"
-
-[tool.pyright]
-reportUnusedVariable = false

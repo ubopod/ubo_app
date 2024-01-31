@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.8.9
+
+- fix: modules loaded in services now get executed only once, avoiding registration
+  of redundant subscriptions and listeners
+
 ## Version 0.8.8
 
 - hotfix: remove a dangling whitespace in `install.sh`

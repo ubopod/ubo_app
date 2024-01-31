@@ -9,10 +9,9 @@ import os
 import sys
 import threading
 import traceback
-import uuid
-from importlib.machinery import PathFinder, SourceFileLoader
+from importlib.machinery import PathFinder
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Sequence, cast
 
 from redux import CombineReducerRegisterAction, FinishEvent, ReducerType
 
@@ -30,17 +29,33 @@ REGISTERED_PATHS: dict[Path, UboServiceThread] = {}
 # Customized module finder and module loader for ubo services to avoid mistakenly
 # loading conflicting names in different services.
 # This is a temporary hack until each service runs in its own process.
-class UboServiceModuleLoader(SourceFileLoader):
-    def get_filename(self: UboServiceModuleLoader, name: str | None = None) -> str:
-        return super().get_filename(name.split(':')[1] if name else name)
+class UboServiceModuleLoader(importlib.abc.SourceLoader):
+    cache: ClassVar[dict[str, ModuleType]] = {}
+
+    def __init__(self: UboServiceModuleLoader, name: str, path: str) -> None:
+        self.name = name
+        self.path = path
 
     def create_module(
         self: UboServiceModuleLoader,
         spec: ModuleSpec,
     ) -> ModuleType | None:
-        if spec.name in sys.modules:
-            return sys.modules[spec.name]
-        return super().create_module(spec)
+        if self.path in UboServiceModuleLoader.cache:
+            return UboServiceModuleLoader.cache[self.path]
+        return None
+
+    def exec_module(self: UboServiceModuleLoader, module: ModuleType) -> None:
+        if self.path in UboServiceModuleLoader.cache:
+            return
+        super().exec_module(module)
+        UboServiceModuleLoader.cache[self.path] = module
+
+    def get_filename(self: UboServiceModuleLoader, fullname: str) -> str:
+        return fullname
+
+    def get_data(self: UboServiceModuleLoader, path: str) -> bytes:
+        with Path(self.path).open('rb') as file:
+            return file.read()
 
 
 class UboServiceLoopLoader(importlib.abc.Loader):
@@ -115,12 +130,16 @@ class UboServiceThread(threading.Thread):
         self.module = None
         if DEBUG_MODE:
             self.loop.set_debug(enabled=True)
+
+    def run(self: UboServiceThread) -> None:
+        from ubo_app import store
+
         try:
-            if path.exists():
-                module_name = f'{service_id}:ubo_handle'
+            if self.path.exists():
+                module_name = f'{self.service_id}:ubo_handle'
                 self.spec = PathFinder.find_spec(
                     'ubo_handle',
-                    [path.as_posix()],
+                    [self.path.as_posix()],
                     None,
                 )
                 if not self.spec or not self.spec.origin:
@@ -131,13 +150,9 @@ class UboServiceThread(threading.Thread):
                     self.spec.origin,
                 )
                 self.module = importlib.util.module_from_spec(self.spec)
-                sys.modules[module_name] = self.module
 
         except Exception as exception:  # noqa: BLE001
-            logger.error(f'Error loading "{path}"', exc_info=exception)
-
-    def run(self: UboServiceThread) -> None:
-        from ubo_app import store
+            logger.error(f'Error loading "{self.path}"', exc_info=exception)
 
         asyncio.set_event_loop(self.loop)
         if self.module and self.spec and self.spec.loader:
@@ -159,6 +174,16 @@ def register_service(
     label: str,
     reducer: ReducerType | None = None,
 ) -> None:
+    if service_id in os.environ.get('UBO_DISABLED_SERVICES', '').split(','):
+        logger.info(
+            'Skipping disabled ubo service',
+            extra={
+                'service_id': service_id,
+                'label': label,
+                'has_reducer': reducer is not None,
+            },
+        )
+        raise SystemExit(0)
     from ubo_app import store
 
     logger.info(
@@ -187,7 +212,7 @@ def load_services() -> None:
     ]:
         if Path(services_directory_path).is_dir():
             for service_path in Path(services_directory_path).iterdir():
-                service_id = uuid.uuid4().hex
+                service_id = service_path.as_posix()
                 if not service_path.is_dir():
                     continue
                 current_path = Path().absolute()
