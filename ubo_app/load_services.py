@@ -9,7 +9,8 @@ import os
 import sys
 import threading
 import traceback
-from importlib.machinery import PathFinder
+import uuid
+from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Sequence, cast
 
@@ -29,35 +30,30 @@ REGISTERED_PATHS: dict[Path, UboServiceThread] = {}
 # Customized module finder and module loader for ubo services to avoid mistakenly
 # loading conflicting names in different services.
 # This is a temporary hack until each service runs in its own process.
-class UboServiceModuleLoader(importlib.abc.SourceLoader):
+class UboServiceModuleLoader(SourceFileLoader):
     cache: ClassVar[dict[str, ModuleType]] = {}
 
-    def __init__(self: UboServiceModuleLoader, name: str, path: str) -> None:
-        self.name = name
-        self.path = path
+    @property
+    def cache_id(self: UboServiceModuleLoader) -> str:
+        return f'{self.path}:{self.name}'
 
     def create_module(
         self: UboServiceModuleLoader,
         spec: ModuleSpec,
     ) -> ModuleType | None:
         _ = spec
-        if self.path in UboServiceModuleLoader.cache:
-            return UboServiceModuleLoader.cache[self.path]
+        if self.cache_id in UboServiceModuleLoader.cache:
+            return UboServiceModuleLoader.cache[self.cache_id]
         return None
 
     def exec_module(self: UboServiceModuleLoader, module: ModuleType) -> None:
-        if self.path in UboServiceModuleLoader.cache:
+        if self.cache_id in UboServiceModuleLoader.cache:
             return
         super().exec_module(module)
-        UboServiceModuleLoader.cache[self.path] = module
+        UboServiceModuleLoader.cache[self.cache_id] = module
 
-    def get_filename(self: UboServiceModuleLoader, fullname: str) -> str:
-        return fullname
-
-    def get_data(self: UboServiceModuleLoader, path: str) -> bytes:
-        _ = path
-        with Path(self.path).open('rb') as file:
-            return file.read()
+    def get_filename(self: UboServiceModuleLoader, name: str | None = None) -> str:
+        return super().get_filename(name.split(':')[-1] if name else name)
 
 
 class UboServiceLoopLoader(importlib.abc.Loader):
@@ -103,7 +99,7 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
 
         if matching_path:
             thread = REGISTERED_PATHS[matching_path]
-            module_name = f'{thread.service_id}:{fullname}'
+            module_name = f'{thread.service_uid}:{fullname}'
 
             if fullname == 'ubo_app.utils.loop':
                 return importlib.util.spec_from_loader(
@@ -130,10 +126,10 @@ class UboServiceThread(threading.Thread):
     def __init__(
         self: UboServiceThread,
         path: Path,
-        service_id: str,
+        service_uid: str,
     ) -> None:
         super().__init__()
-        self.service_id = service_id
+        self.service_uid = service_uid
         self.path = path
         self.loop = asyncio.new_event_loop()
         self.module = None
@@ -145,7 +141,7 @@ class UboServiceThread(threading.Thread):
 
         try:
             if self.path.exists():
-                module_name = f'{self.service_id}:ubo_handle'
+                module_name = f'{self.service_uid}:ubo_handle'
                 self.spec = PathFinder.find_spec(
                     'ubo_handle',
                     [self.path.as_posix()],
@@ -221,7 +217,7 @@ def load_services() -> None:
     ]:
         if Path(services_directory_path).is_dir():
             for service_path in Path(services_directory_path).iterdir():
-                service_id = service_path.as_posix()
+                service_uid = f'{uuid.uuid4().hex}:{service_path.name}'
                 if not service_path.is_dir():
                     continue
                 current_path = Path().absolute()
@@ -229,7 +225,7 @@ def load_services() -> None:
 
                 thread = UboServiceThread(
                     service_path,
-                    service_id,
+                    service_uid,
                 )
                 REGISTERED_PATHS[service_path] = thread
                 thread.start()

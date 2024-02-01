@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.9.1
+
+- fix: load a module from nested packages into nested packages
+
 ## Version 0.9.0
 
 - feat: add docker service to manage docker images/containers
