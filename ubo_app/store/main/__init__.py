@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     from ubo_gui.menu.types import Item, Menu
 
 
+class InitEvent(BaseEvent):
+    ...
+
+
 class RegisterAppAction(BaseAction):
     menu_item: Item
 
@@ -37,10 +41,6 @@ class PowerOffEvent(BaseEvent):
 class MainState(Immutable):
     menu: Menu | None = None
     path: Sequence[str] = field(default_factory=list)
-
-
-class InitEvent(BaseEvent):
-    ...
 
 
 class SetMenuPathAction(BaseAction):

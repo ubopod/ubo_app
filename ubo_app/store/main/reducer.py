@@ -10,7 +10,7 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
-from ubo_gui.menu.types import Menu, SubMenuItem
+from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
 from ubo_app.store.main import (
     InitEvent,
@@ -74,8 +74,6 @@ def reducer(  # noqa: C901
         )
 
     if isinstance(action, RegisterAppAction):
-        from ubo_gui.menu import Item, menu_items
-
         menu = state.menu
         parent_index = 0 if isinstance(action, RegisterRegularAppAction) else 1
 

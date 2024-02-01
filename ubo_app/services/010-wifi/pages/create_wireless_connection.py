@@ -94,7 +94,7 @@ class CreateWirelessConnectionPage(PageWidget):
                     ),
                 ),
             )
-            Clock.schedule_once(lambda _: self.dispatch('on_close'))
+            self.dispatch('on_close')
 
         self.creating = True
         create_task(act())

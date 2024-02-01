@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+set -e -o errexit
 
 UPDATE=false
 
@@ -10,6 +11,10 @@ do
         --update)
         UPDATE=true
         shift # Remove --update from processing
+        ;;
+        --with-docker)
+        WITH_DOCKER=true
+        shift # Remove --with-docker from processing
         ;;
         *)
         # Unknown option
@@ -29,7 +34,7 @@ if [ -z "${USERNAME}" ]; then
 fi
 
 # Create the user
-adduser --disabled-password --gecos "" $USERNAME
+adduser --disabled-password --gecos "" $USERNAME || true
 usermod -a -G audio,video,netdev,gpio,i2c,spi,kmem,render $USERNAME
 
 echo "User $USERNAME created successfully."
@@ -49,7 +54,7 @@ apt-get -y install \
   python3-pip \
   python3-pyaudio \
   python3-virtualenv \
-  --no-install-recommends
+  --no-install-recommends --no-install-suggests
 
 # Enable I2C and SPI
 sudo raspi-config nonint do_i2c 0
@@ -81,6 +86,11 @@ chmod -R 700 "$INSTALLATION_PATH"
 if [ "$UPDATE" = true ]; then
   # Remove the update directory
   rm -rf "$INSTALLATION_PATH/_update"
+fi
+
+if [ "$WITH_DOCKER" = true ]; then
+  # Install Docker
+  ./install_docker.sh
 fi
 
 # The audio driver needs a reboot to work

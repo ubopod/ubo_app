@@ -20,14 +20,14 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.update_manager import (
     UPDATE_MANAGER_NOTIFICATION_ID,
-    CheckVersionEvent,
-    SetLatestVersionAction,
-    SetUpdateStatusAction,
     UpdateManagerAction,
+    UpdateManagerCheckEvent,
     UpdateManagerEvent,
+    UpdateManagerSetStatusAction,
+    UpdateManagerSetVersionsAction,
     UpdateManagerState,
+    UpdateManagerUpdateEvent,
     UpdateStatus,
-    UpdateVersionEvent,
 )
 
 ABOUT_MENU_PATH = ['Dashboard', 'Main', 'About']
@@ -38,7 +38,7 @@ def reducer(
     action: UpdateManagerAction,
 ) -> ReducerResult[
     UpdateManagerState,
-    SetUpdateStatusAction | NotificationsAddAction,
+    UpdateManagerSetStatusAction | NotificationsAddAction,
     UpdateManagerEvent,
 ]:
     if state is None:
@@ -46,7 +46,7 @@ def reducer(
             return UpdateManagerState()
         raise InitializationActionError(action)
 
-    if isinstance(action, SetLatestVersionAction):
+    if isinstance(action, UpdateManagerSetVersionsAction):
         state = replace(
             state,
             current_version=action.current_version,
@@ -56,7 +56,7 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 actions=[
-                    SetUpdateStatusAction(status=UpdateStatus.OUTDATED),
+                    UpdateManagerSetStatusAction(status=UpdateStatus.OUTDATED),
                     NotificationsAddAction(
                         notification=Notification(
                             id=UPDATE_MANAGER_NOTIFICATION_ID,
@@ -75,15 +75,15 @@ def reducer(
             )
         return CompleteReducerResult(
             state=state,
-            actions=[SetUpdateStatusAction(status=UpdateStatus.UP_TO_DATE)],
+            actions=[UpdateManagerSetStatusAction(status=UpdateStatus.UP_TO_DATE)],
         )
 
-    if isinstance(action, SetUpdateStatusAction):
+    if isinstance(action, UpdateManagerSetStatusAction):
         events = []
         if action.status == UpdateStatus.CHECKING:
-            events.append(CheckVersionEvent())
+            events.append(UpdateManagerCheckEvent())
         elif action.status == UpdateStatus.UPDATING:
-            events.append(UpdateVersionEvent())
+            events.append(UpdateManagerUpdateEvent())
 
         return CompleteReducerResult(
             state=replace(

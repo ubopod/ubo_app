@@ -12,10 +12,12 @@ from redux import (
     create_store,
 )
 
+from ubo_app.constants import DEBUG_MODE
 from ubo_app.logging import logger
 from ubo_app.store.main import MainAction, MainState
 from ubo_app.store.main.reducer import reducer as main_reducer
 from ubo_app.store.services.camera import CameraAction, CameraEvent
+from ubo_app.store.services.docker import DockerEvent, DockerState
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
 from ubo_app.store.services.keypad import KeypadEvent
 from ubo_app.store.services.notifications import NotificationsAction, NotificationsState
@@ -37,6 +39,7 @@ class RootState(BaseCombineReducerState):
     wifi: WiFiState
     ip: IpState
     notifications: NotificationsState
+    docker: DockerState
 
 
 ActionType = (
@@ -50,6 +53,7 @@ ActionType = (
     | WiFiAction
     | IpAction
     | NotificationsAction
+    | DockerEvent
 )
 EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent
 
@@ -87,5 +91,8 @@ autorun = store.autorun
 dispatch = store.dispatch
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
+
+if DEBUG_MODE:
+    subscribe(lambda state: logger.verbose('State updated', extra={'state': state}))
 
 __ALL__ = (autorun, dispatch, subscribe, subscribe_event)

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Sequence
 
 from kivy.clock import Clock
-from redux import FinishAction
+from redux import AutorunOptions, FinishAction
 from ubo_gui.menu.types import (
     ActionItem,
     ApplicationItem,
@@ -66,12 +66,18 @@ MAIN_MENU = HeadlessMenu(
 )
 
 
-@autorun(lambda state: state.notifications.unread_count)
+@autorun(
+    lambda state: state.notifications.unread_count,
+    options=AutorunOptions(default_value='Notifications (not loaded)'),
+)
 def notifications_title(unread_count: int) -> str:
     return f'Notifications ({unread_count})'
 
 
-@autorun(lambda state: state.notifications.notifications)
+@autorun(
+    lambda state: state.notifications.notifications,
+    options=AutorunOptions(default_value=[]),
+)
 def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item]:
     """Return a list of menu items for the notification manager."""
 
@@ -96,7 +102,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
                 dispatch(
                     NotificationsClearAction(notification=notification),
                 )
-                Clock.schedule_once(lambda _: self.dispatch('on_close'), -1)
+                self.dispatch('on_close')
 
         return NotificationWrapper
 

@@ -20,8 +20,8 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.update_manager import (
-    SetLatestVersionAction,
-    SetUpdateStatusAction,
+    UpdateManagerSetStatusAction,
+    UpdateManagerSetVersionsAction,
     UpdateManagerState,
     UpdateStatus,
 )
@@ -49,7 +49,7 @@ async def check_version() -> None:
             latest_version = data['info']['version']
 
             dispatch(
-                with_state=lambda state: SetLatestVersionAction(
+                with_state=lambda state: UpdateManagerSetVersionsAction(
                     flash_notification=state is None
                     or state.main.path[:3] != ABOUT_MENU_PATH,
                     current_version=CURRENT_VERSION,
@@ -58,7 +58,7 @@ async def check_version() -> None:
             )
     except Exception as exception:  # noqa: BLE001
         logger.error('Failed to check for updates', exc_info=exception)
-        dispatch(SetUpdateStatusAction(status=UpdateStatus.FAILED_TO_CHECK))
+        dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.FAILED_TO_CHECK))
         return
 
 
@@ -113,7 +113,7 @@ async def update() -> None:
                     chime=Chime.FAILURE,
                 ),
             ),
-            SetUpdateStatusAction(status=UpdateStatus.CHECKING),
+            UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
         )
         return
 
@@ -135,7 +135,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ActionItem(
                 label='Failed to check for updates',
                 action=lambda: dispatch(
-                    SetUpdateStatusAction(status=UpdateStatus.CHECKING),
+                    UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 ),
                 icon='security_update_warning',
                 background_color=DANGER_COLOR,
@@ -156,7 +156,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ActionItem(
                 label=f'Update to v{state.latest_version}',
                 action=lambda: dispatch(
-                    SetUpdateStatusAction(status=UpdateStatus.UPDATING),
+                    UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
                 ),
                 icon='system_update',
             ),

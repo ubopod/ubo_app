@@ -16,6 +16,7 @@ from ubo_app.store.services.camera import (
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
 )
+from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
     from numpy._typing import NDArray
@@ -38,6 +39,8 @@ def resize_image(
 
 
 def init_service() -> None:
+    if not IS_RPI:
+        return
     from picamera2 import Picamera2  # pyright: ignore [reportMissingImports]
     from pyzbar.pyzbar import decode
 

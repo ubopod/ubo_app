@@ -53,7 +53,7 @@ curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/i
 
 Contributions following Python best practices are welcome.
 
-### ⚠️ Conventions
+### ℹ️️ Conventions
 
 - Use `UBO_` prefix for environment variables.
 - Use `ubo:` prefix for notification ids used in ubo core and `<service_name>:` prefix

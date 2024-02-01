@@ -8,7 +8,7 @@ Before=hardware-test.service
 [Service]
 Type=simple
 User=root
-ExecStart={{INSTALLATION_PATH}}/env/bin/python {{INSTALLATION_PATH}}/env/lib/python3.11/site-packages/ubo_app/services/0-rgb-ring/rgb_ring_manager.py
+ExecStart={{INSTALLATION_PATH}}/env/bin/python {{INSTALLATION_PATH}}/env/lib/python3.11/site-packages/ubo_app/services/000-rgb-ring/rgb_ring_manager.py
 WorkingDirectory={{INSTALLATION_PATH}}
 StandardOutput=inherit
 StandardError=inherit

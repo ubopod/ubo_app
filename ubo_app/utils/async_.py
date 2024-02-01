@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 from threading import current_thread
-from typing import TYPE_CHECKING, Awaitable
+from typing import TYPE_CHECKING, Awaitable, Callable, TypeVarTuple, Unpack
+
+from typing_extensions import TypeVar
 
 from ubo_app.load_services import UboServiceThread
 from ubo_app.logging import logger
 
 if TYPE_CHECKING:
-    from asyncio import Handle
+    from asyncio import Future, Handle
 
 
 background_tasks: set[Handle] = set()
@@ -39,3 +41,17 @@ def create_task(awaitable: Awaitable) -> Handle:
     handle = ubo_app.utils.loop._create_task(wrapper())  # noqa: SLF001
     background_tasks.add(handle)
     return handle
+
+
+T = TypeVar('T', infer_variance=True)
+Ts = TypeVarTuple('Ts')
+
+
+def run_in_executor(
+    executor: object,
+    task: Callable[[Unpack[Ts]], T],
+    *args: Unpack[Ts],
+) -> Future[T]:
+    import ubo_app.utils.loop
+
+    return ubo_app.utils.loop._run_in_executor(executor, task, *args)  # noqa: SLF001

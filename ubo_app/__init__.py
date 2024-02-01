@@ -4,18 +4,40 @@ import sys
 
 from redux import FinishAction
 
-from ubo_app.logging import add_file_handler, add_stdout_handler
+from ubo_app.constants import GUI_LOG_LEVEL, LOG_LEVEL
 
 
 def main() -> None:
     """Instantiate the `MenuApp` and run it."""
-    add_file_handler()
-    add_stdout_handler()
+    if LOG_LEVEL:
+        import logging
+
+        from ubo_app.logging import add_file_handler, add_stdout_handler, logger
+
+        logger.setLevel(getattr(logging, LOG_LEVEL))
+        add_file_handler(getattr(logging, LOG_LEVEL))
+        add_stdout_handler(getattr(logging, LOG_LEVEL))
+    if GUI_LOG_LEVEL:
+        import logging
+
+        from ubo_gui.logger import add_file_handler as gui_add_file_handler
+        from ubo_gui.logger import add_stdout_handler as gui_add_stdout_handler
+        from ubo_gui.logger import logger
+
+        logger.setLevel(getattr(logging, GUI_LOG_LEVEL))
+        gui_add_file_handler(getattr(logging, GUI_LOG_LEVEL))
+        gui_add_stdout_handler(getattr(logging, GUI_LOG_LEVEL))
 
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
         from ubo_app.system.bootstrap import bootstrap
 
         bootstrap()
+        sys.exit(0)
+
+    if len(sys.argv) > 1 and sys.argv[1] == 'install_docker':
+        from ubo_app.system.bootstrap import install_docker
+
+        install_docker()
         sys.exit(0)
 
     from headless_kivy_pi import HeadlessWidget

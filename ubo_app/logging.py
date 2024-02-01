@@ -6,8 +6,6 @@ import logging
 import sys
 from typing import Mapping, cast
 
-from ubo_app.constants import DEBUG_MODE
-
 VERBOSE = 5
 
 
@@ -30,7 +28,7 @@ class UboLogger(logging.getLoggerClass()):
             self._log(
                 VERBOSE,
                 msg,
-                *args,
+                args=args,
                 exc_info=exc_info,
                 stack_info=stack_info,
                 stacklevel=stacklevel,
@@ -41,10 +39,6 @@ class UboLogger(logging.getLoggerClass()):
 logging.setLoggerClass(UboLogger)
 
 logger = cast(UboLogger, logging.getLogger('ubo-app'))
-if DEBUG_MODE:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.INFO)
 logger.propagate = False
 
 
@@ -82,9 +76,9 @@ class ExtraFormatter(logging.Formatter):
         return string
 
 
-def add_stdout_handler() -> None:
+def add_stdout_handler(level: int = logging.DEBUG) -> None:
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(logging.DEBUG)
+    stdout_handler.setLevel(level)
     stdout_handler.setFormatter(
         ExtraFormatter(
             '%(created)f [%(levelname)s] %(message)s',
@@ -96,9 +90,9 @@ def add_stdout_handler() -> None:
     atexit.register(stdout_handler.flush)
 
 
-def add_file_handler() -> None:
+def add_file_handler(level: int = logging.DEBUG) -> None:
     file_handler = logging.FileHandler('ubo-app.log')
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(level)
     file_handler.setFormatter(
         ExtraFormatter(
             '%(created)f [%(levelname)s] %(message)s',

@@ -7,6 +7,8 @@ from distutils.util import strtobool
 USERNAME = 'ubo'
 INSTALLATION_PATH = '/opt/ubo'
 DEBUG_MODE = strtobool(os.environ.get('UBO_DEBUG', 'False')) == 1
+LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else None)
+GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else None)
 SERVICES_PATH = (
     os.environ.get('UBO_SERVICES_PATH', '').split(':')
     if os.environ.get('UBO_SERVICES_PATH')

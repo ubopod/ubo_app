@@ -1158,17 +1158,16 @@ files = [
 
 [[package]]
 name = "python-redux"
-version = "0.9.22"
+version = "0.9.23"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.22-py3-none-any.whl", hash = "sha256:927735dcb90eb76a216655c2bb9083139a96d7b8c7d7a189be3b9eccb007f385"},
-    {file = "python_redux-0.9.22.tar.gz", hash = "sha256:537a24a0abe342c4077c19bc2155b09f1e4cfa4f0f0e883e37044401eb09f97a"},
+    {file = "python_redux-0.9.23-py3-none-any.whl", hash = "sha256:19d54def7ecce881b937fb03fcdab12bf8acf7941dad469e8c724cb3c1f5500c"},
+    {file = "python_redux-0.9.23.tar.gz", hash = "sha256:9c9eaf466f9c30f9276d98d7d5b0f52b18d41ba2a0886201034622733a51e4b3"},
 ]
 
 [package.dependencies]
-pyright = ">=1.1.348,<2.0.0"
 python-immutable = ">=1.0.0,<2.0.0"
 typing-extensions = ">=4.9.0,<5.0.0"
 
@@ -1370,13 +1369,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.8.0"
+version = "0.9.0"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "ubo_gui-0.8.0-py3-none-any.whl", hash = "sha256:574670ad2b6f7ab74c18f6c997b8bfac4abe38710b788e01a05e993df63f1637"},
-    {file = "ubo_gui-0.8.0.tar.gz", hash = "sha256:a42a415a117ea1dd7a310be035fb38ed293042dce775677cb6edc57fe6d673c4"},
+    {file = "ubo_gui-0.9.0-py3-none-any.whl", hash = "sha256:1a6f15ca4ff556e0601a71c376b7d7011bcdaf1cbaa96d452a72346ce62f6c53"},
+    {file = "ubo_gui-0.9.0.tar.gz", hash = "sha256:604d8b3148469ed23eadb0001c3ef45374ffe7afa0002e51b06b31be458c5144"},
 ]
 
 [package.dependencies]
@@ -1517,4 +1516,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "0235d05b6f16c9b51d924f8483bb6e354dfa7297490cff0efd31e84dd6a0c090"
+content-hash = "d2744c8549903ba511262c051a80ca1cbf7938e4a4098d982b9b98664080ecf0"

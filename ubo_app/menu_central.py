@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
 from kivy.app import Builder
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 from redux import EventSubscriptionOptions
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
@@ -61,13 +61,10 @@ class HomePage(PageWidget):
 
         value = 0
 
-        def set_value(_: float) -> None:
-            gauge.value = value
-
         def calculate_value() -> None:
             nonlocal value
             value = psutil.cpu_percent(interval=1, percpu=False)
-            Clock.schedule_once(set_value)
+            gauge.value = value
 
         Clock.schedule_interval(
             lambda _: Thread(target=calculate_value).start(),
@@ -96,10 +93,10 @@ class HomePage(PageWidget):
 
 class MenuWidgetWithHomePage(MenuWidget):
     def get_current_screen(self: MenuWidgetWithHomePage) -> Screen | None:
-        if self.depth == 0:
+        if self.depth == 1:
             return HomePage(
                 self.current_menu_items,
-                name=f'Page {self.get_depth()} 0',
+                name=f'Page {self.depth} 0',
             )
         return super().get_current_screen()
 
@@ -107,15 +104,7 @@ class MenuWidgetWithHomePage(MenuWidget):
 def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) -> None:
     dispatch(
         SetMenuPathAction(
-            path=[
-                i.name
-                if isinstance(i, PageWidget)
-                else i[0].title()
-                if callable(i[0].title)
-                else i[0].title
-                for i in menu_widget.stack
-            ]
-            + [menu_widget.title],
+            path=[i.title for i in menu_widget.stack],
         ),
     )
 
@@ -131,9 +120,9 @@ class MenuAppCentral(UboApp):
         async def sync_current_menu(menu: Menu | None) -> None:
             if not menu:
                 return
-            Clock.schedule_once(lambda _: self.menu_widget.set_root_menu(menu))
+            mainthread(self.menu_widget.set_root_menu)(menu)
 
-        sync_current_menu.subscribe(create_task)
+        sync_current_menu.subscribe(create_task, immediate_run=True)
 
         def handle_title_change(_: MenuWidget, title: str) -> None:
             self.root.title = title
@@ -145,7 +134,7 @@ class MenuAppCentral(UboApp):
         subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
-            EventSubscriptionOptions(run_async=False),
+            options=EventSubscriptionOptions(run_async=False),
         )
 
         subscribe_event(

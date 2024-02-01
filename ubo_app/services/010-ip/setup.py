@@ -104,7 +104,7 @@ IpMainMenu = SubMenuItem(
     label='IP Addresses',
     icon='lan',
     sub_menu=HeadlessMenu(
-        title='WiFi Settings',
+        title='IP Addresses',
         items=get_ip_addresses,
     ),
 )

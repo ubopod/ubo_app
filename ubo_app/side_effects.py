@@ -6,15 +6,16 @@ import subprocess
 from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
+from kivy.clock import Clock
 from redux import FinishAction, FinishEvent
 
 from ubo_app.store import autorun, dispatch, subscribe_event
 from ubo_app.store.main import PowerOffEvent
 from ubo_app.store.update_manager import (
-    CheckVersionEvent,
-    SetUpdateStatusAction,
+    UpdateManagerCheckEvent,
+    UpdateManagerSetStatusAction,
+    UpdateManagerUpdateEvent,
     UpdateStatus,
-    UpdateVersionEvent,
 )
 from ubo_app.store.update_manager.reducer import ABOUT_MENU_PATH
 from ubo_app.store.update_manager.utils import check_version, update
@@ -37,26 +38,25 @@ def setup(app: MenuApp) -> None:
     initialize_board()
 
     subscribe_event(PowerOffEvent, power_off)
-    subscribe_event(FinishEvent, lambda *_: app.stop())
-    subscribe_event(UpdateVersionEvent, lambda: create_task(update()))
-    subscribe_event(CheckVersionEvent, lambda: create_task(check_version()))
+    subscribe_event(FinishEvent, app.stop)
+    subscribe_event(UpdateManagerUpdateEvent, lambda: create_task(update()))
+    subscribe_event(UpdateManagerCheckEvent, lambda: create_task(check_version()))
 
     @debounce(
         wait=10,
         options=DebounceOptions(leading=True, trailing=False, time_window=10),
     )
     async def request_check_version() -> None:
-        dispatch(SetUpdateStatusAction(status=UpdateStatus.CHECKING))
+        dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
 
     @autorun(lambda state: state.main.path)
-    async def check_version_caller(
+    def check_version_caller(
         path: Sequence[str],
         previous_path: Sequence[str],
     ) -> None:
         if path != previous_path and path[:3] == ABOUT_MENU_PATH:
             create_task(request_check_version())
 
-    check_version_caller.subscribe(create_task)
     create_task(request_check_version())
 
     atexit.register(turn_off_screen)

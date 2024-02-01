@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import Sequence
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -14,13 +13,13 @@ class UpdateManagerAction(BaseAction):
     ...
 
 
-class SetLatestVersionAction(UpdateManagerAction):
+class UpdateManagerSetVersionsAction(UpdateManagerAction):
     flash_notification: bool
     latest_version: str
     current_version: str
 
 
-class SetUpdateStatusAction(UpdateManagerAction):
+class UpdateManagerSetStatusAction(UpdateManagerAction):
     status: UpdateStatus
 
 
@@ -28,11 +27,11 @@ class UpdateManagerEvent(BaseEvent):
     ...
 
 
-class CheckVersionEvent(UpdateManagerEvent):
+class UpdateManagerCheckEvent(UpdateManagerEvent):
     ...
 
 
-class UpdateVersionEvent(UpdateManagerEvent):
+class UpdateManagerUpdateEvent(UpdateManagerEvent):
     ...
 
 

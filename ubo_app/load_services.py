@@ -40,6 +40,7 @@ class UboServiceModuleLoader(importlib.abc.SourceLoader):
         self: UboServiceModuleLoader,
         spec: ModuleSpec,
     ) -> ModuleType | None:
+        _ = spec
         if self.path in UboServiceModuleLoader.cache:
             return UboServiceModuleLoader.cache[self.path]
         return None
@@ -54,6 +55,7 @@ class UboServiceModuleLoader(importlib.abc.SourceLoader):
         return fullname
 
     def get_data(self: UboServiceModuleLoader, path: str) -> bytes:
+        _ = path
         with Path(self.path).open('rb') as file:
             return file.read()
 
@@ -67,6 +69,13 @@ class UboServiceLoopLoader(importlib.abc.Loader):
             lambda task: self.thread.loop.call_soon_threadsafe(
                 self.thread.loop.create_task,
                 task,
+            )
+        )
+        cast(Any, module)._run_in_executor = (  # noqa: SLF001
+            lambda executor, task, *args: self.thread.loop.run_in_executor(
+                executor,
+                task,
+                *args,
             )
         )
 

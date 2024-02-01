@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 0.9.0
+
+- feat: add docker service to manage docker images/containers
+- feat: add `UBO_LOGLEVEL` and `UBO_GUI_LOGLEVEL` environment variables
+- feat: add `run_in_executor` to run non-coroutine (non-async) blocking functions
+  without blocking the ui
+
 ## Version 0.8.9
 
 - fix: modules loaded in services now get executed only once, avoiding registration
