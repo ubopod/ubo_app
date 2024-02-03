@@ -1,16 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, PLR2004
 from __future__ import annotations
 
-import grp
 import logging
-import os
-import pwd
-import socket
-import stat
-import sys
 import time
-from pathlib import Path
-from threading import Thread
 from typing import TYPE_CHECKING, Sequence, cast
 
 import board
@@ -18,32 +10,27 @@ import neopixel
 from adafruit_blinka.microcontroller.generic_micropython import Pin
 from ubo_gui.menu import warnings
 
-from ubo_app.constants import USERNAME
+from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 
 if TYPE_CHECKING:
     from ubo_app.store.services.rgb_ring import Color
 
 BRIGHTNESS = 1.0
 NUM_LEDS = 27
-
-LM_SOCKET_PATH = Path(os.getenv('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
-    'ledmanagersocket.sock',
-)
-# The order of the pixel colors - RGB or GRB.
-# Some NeoPixels have red and green reversed!
-# For RGBW NeoPixels, simply change the ORDER to RGBW or GRBW.
 ORDER = neopixel.GRB
-
-logger = logging.getLogger('led-manager')
-logger.setLevel(logging.DEBUG)
-logger.debug('Initialising LED-Manager...')
 
 
 class LEDManager:
     def __init__(self: LEDManager) -> None:
+        self.logger = get_logger('led-manager')
+        add_file_handler(self.logger, logging.DEBUG)
+        add_stdout_handler(self.logger, logging.DEBUG)
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.debug('Initialising LEDManager...')
+
         self.led_ring_present = True
         self.current_color = None
-        self.stop: bool = False
+        self._stop: bool = False
         self.current_bright_one = 1
         self.brightness = BRIGHTNESS
         if self.brightness < 0 or self.brightness > 1:
@@ -63,6 +50,9 @@ class LEDManager:
             auto_write=False,
             pixel_order=ORDER,
         )
+
+    def stop(self: LEDManager) -> None:
+        self._stop = True
 
     def adjust_brightness(
         self: LEDManager,
@@ -100,7 +90,7 @@ class LEDManager:
         if not self.led_ring_present:
             return
         for i in range(int(self.num_leds * percentage)):
-            if self.stop is True:
+            if self._stop is True:
                 self.blank()
                 return
             self.pixels[i] = self.adjust_brightness(color)
@@ -123,7 +113,7 @@ class LEDManager:
         self.pixels.show()
         time.sleep(5 * wait / 1000)
         for i in range(int(self.num_leds * percentage) - 1, -1, -1):
-            if self.stop is True:
+            if self._stop is True:
                 self.blank()
                 return
             self.pixels[i] = (0, 0, 0)
@@ -180,7 +170,7 @@ class LEDManager:
             return
         for _ in range(rounds):
             for j in range(255):
-                if self.stop is True:
+                if self._stop is True:
                     self.blank()
                     return
                 for i in range(self.num_leds):
@@ -204,7 +194,7 @@ class LEDManager:
         color = self.adjust_brightness(color)
         for _ in range(repetitions):
             for i in range(dim_steps):
-                if self.stop is True:
+                if self._stop is True:
                     self.blank()
                     return
                 m = i / dim_steps
@@ -212,7 +202,7 @@ class LEDManager:
                 self.pixels.show()
                 time.sleep(wait / 10000)
             for i in range(1, dim_steps):
-                if self.stop is True:
+                if self._stop is True:
                     self.blank()
                     return
                 j = (dim_steps - i) / dim_steps
@@ -228,7 +218,7 @@ class LEDManager:
             return
         color = self.adjust_brightness(color)
         for _ in range(repetitions):
-            if self.stop is True:
+            if self._stop is True:
                 self.blank()
                 return
             self.pixels.fill((color[0], color[1], color[2]))
@@ -258,7 +248,7 @@ class LEDManager:
             return
         for _ in range(repetitions):
             for i in range(self.num_leds):
-                if self.stop is True:
+                if self._stop is True:
                     self.blank()
                     return
                 shifted = ring[i:] + ring[:i]
@@ -281,18 +271,18 @@ class LEDManager:
         self.pixels.show()
 
     def run_command(self: LEDManager, incoming: Sequence[str]) -> None:  # noqa: C901, PLR0912
-        logger.info('---executing command---')
+        self.logger.info('---executing command---')
         self.incoming = incoming
-        self.stop = False
+        self._stop = False
         if incoming[0] == 'set_enabled' and len(incoming) == 2:
-            lm.set_enabled(enabled=incoming[1] == '1')
+            self.set_enabled(enabled=incoming[1] == '1')
         # set brightness of LEDs
         if incoming[0] == 'set_brightness' and len(incoming) == 2:
             brightness_value = float(incoming[1])
             if 0 < brightness_value <= 1:
                 self.set_brightness(brightness_value)
         if incoming[0] == 'set_all' and len(incoming) == 4:
-            lm.set_all((int(incoming[1]), int(incoming[2]), int(incoming[3])))
+            self.set_all((int(incoming[1]), int(incoming[2]), int(incoming[3])))
         if incoming[0] == 'blank':
             self.blank()
         if incoming[0] == 'rainbow' and len(incoming) == 3:
@@ -344,68 +334,4 @@ class LEDManager:
                 percentage=float(incoming[4]),
                 wait=int(incoming[5]),
             )
-        self.stop = False
-
-
-# LED system needs to be root, so need to
-# create a socket based command system
-# TODO @sassanh: make the socket write permission group based
-# this way, apps can be set to be in LED group for permission to control
-# the LEDs
-if __name__ == '__main__':
-    lm = LEDManager()
-    lm.incoming = 'spinning_wheel 255 255 255 50 6 100'.split()
-    t = Thread(target=lm.run_command, args=(lm.incoming,))
-    t.start()
-
-    uid = pwd.getpwnam('root').pw_uid
-    gid = grp.getgrnam(USERNAME).gr_gid
-
-    LM_SOCKET_PATH.unlink(missing_ok=True)
-
-    logger.info('LED Manager opening socket...')
-    server = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-    server.bind(LM_SOCKET_PATH.as_posix())
-    permission = (
-        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWGRP | stat.S_IWUSR
-    )
-    LM_SOCKET_PATH.chmod(permission)
-    # this is changing the group to pi
-    # it makes sense to make a dedicated rgb-ring group
-    # and add pi as user to that group
-    os.chown(LM_SOCKET_PATH, uid, gid)
-
-    logger.info('LED Manager Listening...')
-    while True:
-        try:
-            datagram = server.recv(1024)
-            if not datagram:
-                break
-            else:
-                incoming_str = datagram.decode('utf-8')
-                logger.debug(incoming_str)
-                incoming = incoming_str.split()
-                # set brightness of LEDs
-                if incoming[0] == 'set_brightness':
-                    if len(incoming) == 2:
-                        brightness_value = float(incoming[1])
-                        if 0 < brightness_value <= 1:
-                            lm.set_brightness(brightness_value)
-                else:
-                    lm.stop = True
-                    while t.is_alive():
-                        time.sleep(0.1)
-                    # save some data before overriding the object
-                    logger.debug('---starting new led thread--')
-                    t = Thread(target=lm.run_command, args=(incoming,))
-                    t.start()
-        except KeyboardInterrupt:
-            logger.debug('Interrupted')
-            server.close()
-            try:
-                sys.exit(0)
-            except SystemExit:
-                os._exit(0)
-    logger.info('Shutting down...')
-    server.close()
-    LM_SOCKET_PATH.unlink()
+        self._stop = False

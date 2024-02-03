@@ -95,7 +95,7 @@ class RgbRingFillDownfromAction(
 
 
 class RgbRingCommandEvent(RgbRingEvent):
-    command: str
+    command: list[str]
 
 
 class RgbRingState(Immutable):

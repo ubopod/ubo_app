@@ -38,7 +38,12 @@ class UboLogger(logging.getLoggerClass()):
 
 logging.setLoggerClass(UboLogger)
 
-logger = cast(UboLogger, logging.getLogger('ubo-app'))
+
+def get_logger(name: str) -> UboLogger:
+    return cast(UboLogger, logging.getLogger(name))
+
+
+logger = get_logger('ubo-app')
 logger.propagate = False
 
 
@@ -76,7 +81,7 @@ class ExtraFormatter(logging.Formatter):
         return string
 
 
-def add_stdout_handler(level: int = logging.DEBUG) -> None:
+def add_stdout_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setLevel(level)
     stdout_handler.setFormatter(
@@ -90,8 +95,8 @@ def add_stdout_handler(level: int = logging.DEBUG) -> None:
     atexit.register(stdout_handler.flush)
 
 
-def add_file_handler(level: int = logging.DEBUG) -> None:
-    file_handler = logging.FileHandler('ubo-app.log')
+def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
+    file_handler = logging.FileHandler(f'{logger.name}.log')
     file_handler.setLevel(level)
     file_handler.setFormatter(
         ExtraFormatter(

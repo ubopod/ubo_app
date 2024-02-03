@@ -15,8 +15,8 @@ def main() -> None:
         from ubo_app.logging import add_file_handler, add_stdout_handler, logger
 
         logger.setLevel(getattr(logging, LOG_LEVEL))
-        add_file_handler(getattr(logging, LOG_LEVEL))
-        add_stdout_handler(getattr(logging, LOG_LEVEL))
+        add_file_handler(logger, getattr(logging, LOG_LEVEL))
+        add_stdout_handler(logger, getattr(logging, LOG_LEVEL))
     if GUI_LOG_LEVEL:
         import logging
 
@@ -32,12 +32,6 @@ def main() -> None:
         from ubo_app.system.bootstrap import bootstrap
 
         bootstrap()
-        sys.exit(0)
-
-    if len(sys.argv) > 1 and sys.argv[1] == 'install_docker':
-        from ubo_app.system.bootstrap import install_docker
-
-        install_docker()
         sys.exit(0)
 
     from headless_kivy_pi import HeadlessWidget

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from distutils.util import strtobool
+from pathlib import Path
 
 USERNAME = 'ubo'
 INSTALLATION_PATH = '/opt/ubo'
@@ -14,3 +15,5 @@ SERVICES_PATH = (
     if os.environ.get('UBO_SERVICES_PATH')
     else []
 )
+SOCKET_PATH = Path('/run/ubo').joinpath('system_manager.sock').as_posix()
+DOCKER_INSTALLATION_LOCK_FILE = Path('/var/run/ubo/docker_installation.lock')

@@ -19,8 +19,8 @@ class Service(TypedDict):
 
 services: list[Service] = [
     {
-        'name': 'ubo-led',
-        'template': 'led',
+        'name': 'ubo-system',
+        'template': 'system',
     },
     {
         'name': 'ubo-update',
@@ -89,13 +89,4 @@ def bootstrap() -> None:
     subprocess.run(
         [Path(__file__).parent.joinpath('install_wm8960.sh').as_posix()],  # noqa: S603
         check=True,
-    )
-
-
-def install_docker() -> None:
-    """Install Docker."""
-    # Run the install_docker.sh script
-    subprocess.run(
-        [Path(__file__).parent.joinpath('install_docker.sh').as_posix()],  # noqa: S603
-        check=False,
     )

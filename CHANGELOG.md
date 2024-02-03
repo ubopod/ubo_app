@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 0.9.2
+
+- refactor: upgrade `ubo-led` service `ubo-system` service as a general service to
+  take care of system tasks needing root access
+- feat: use `ubo-system` to install and run docker service
+- chore: add `--bootstrap` option to `deploy` script, it basically runs `ubo bootstrap`
+
 ## Version 0.9.1
 
 - fix: load a module from nested packages into nested packages

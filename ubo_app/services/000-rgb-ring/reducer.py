@@ -96,7 +96,7 @@ def reducer(  # noqa: C901, PLR0912
 
         return CompleteReducerResult(
             state=state,
-            events=[RgbRingCommandEvent(command=command)],
+            events=[RgbRingCommandEvent(command=command.split())],
         )
 
     return state

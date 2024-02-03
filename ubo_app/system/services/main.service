@@ -3,7 +3,7 @@ WantedBy=multi-user.target
 
 [Unit]
 Description=Ubo App Service
-After=ubo-update.service ubo-led.service ubo-pulseaudio.service network.target
+After=ubo-update.service ubo-system.service ubo-pulseaudio.service network.target
 
 [Service]
 Type=simple
