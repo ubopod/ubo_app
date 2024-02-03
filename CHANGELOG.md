@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.9.3
+
+- hotfix: postpone adding `ubo` to `docker` group for when `docker` is installed
+
 ## Version 0.9.2
 
 - refactor: upgrade `ubo-led` service `ubo-system` service as a general service to

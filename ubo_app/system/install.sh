@@ -35,7 +35,7 @@ fi
 
 # Create the user
 adduser --disabled-password --gecos "" $USERNAME || true
-usermod -a -G audio,video,netdev,gpio,i2c,spi,kmem,render,docker $USERNAME
+usermod -a -G audio,video,netdev,gpio,i2c,spi,kmem,render $USERNAME
 
 echo "User $USERNAME created successfully."
 

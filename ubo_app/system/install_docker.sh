@@ -28,3 +28,5 @@ apt-get -y install \
   docker-buildx-plugin \
   docker-compose-plugin \
   --no-install-recommends --no-install-suggests
+
+usermod -a -G docker $USERNAME
