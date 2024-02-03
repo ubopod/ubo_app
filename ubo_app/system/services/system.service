@@ -8,6 +8,8 @@ Before=hardware-test.service
 [Service]
 Type=simple
 User=root
+Environment=INSTALLATION_PATH={{INSTALLATION_PATH}}
+Environment=USERNAME={{USERNAME}}
 ExecStart={{INSTALLATION_PATH}}/env/bin/python {{INSTALLATION_PATH}}/env/lib/python3.11/site-packages/ubo_app/system/system_manager
 WorkingDirectory={{INSTALLATION_PATH}}
 StandardOutput=inherit

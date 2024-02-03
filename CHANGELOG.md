@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.9.4
+
+- hotfix: provide `$USERNAME` environment variable for `install_docker.sh` script
+
 ## Version 0.9.3
 
 - hotfix: postpone adding `ubo` to `docker` group for when `docker` is installed

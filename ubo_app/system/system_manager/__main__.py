@@ -86,6 +86,7 @@ if __name__ == '__main__':
                                     Path(__file__)  # noqa: S603
                                     .parent.parent.joinpath('install_docker.sh')
                                     .as_posix(),
+                                    env={USERNAME: USERNAME},
                                     check=False,
                                     stdout=subprocess.DEVNULL,
                                     stderr=subprocess.DEVNULL,
@@ -93,6 +94,7 @@ if __name__ == '__main__':
                             elif command == 'start':
                                 subprocess.run(
                                     ['/usr/bin/env', 'systemctl', 'start', 'docker'],  # noqa: S603
+                                    env={USERNAME: USERNAME},
                                     check=False,
                                     stdout=subprocess.DEVNULL,
                                     stderr=subprocess.DEVNULL,
