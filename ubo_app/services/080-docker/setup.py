@@ -282,7 +282,16 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                 try:
                     logger.debug('Fetching image', extra={'image': image.path})
                     docker_client = docker.from_env()
-                    docker_client.images.pull(image.path)
+                    response = docker_client.api.pull(
+                        image.path,
+                        stream=True,
+                        decode=True,
+                    )
+                    for line in response:
+                        logger.verbose(
+                            'Image pull',
+                            extra={'image': image.path, 'line': line},
+                        )
                     logger.debug('Image fetched', extra={'image': image.path})
                     check_image(image.path)
                     docker_client.close()
@@ -322,6 +331,7 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                         image.path,
                         publish_all_ports=True,
                         detach=True,
+                        volumes=IMAGES[image_id].volumes,
                     )
                 check_image(image.path)
                 docker_client.close()

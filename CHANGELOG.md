@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.9.6
+
+- feat: add socket connection (volume bind) for portainer
+
 ## Version 0.9.5
 
 - feat: expose all ports of containers and show the ports in a sub menu

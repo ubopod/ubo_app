@@ -1,7 +1,7 @@
 """Docker reducer."""
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import replace
 
 from immutable import Immutable
 from redux import (
@@ -51,6 +51,7 @@ class ImageEntry(Immutable):
     label: str
     icon: str
     path: str
+    volumes: list[str] | None = None
 
 
 IMAGES = {
@@ -73,6 +74,7 @@ IMAGES = {
             label='Portainer',
             icon='settings_applications',
             path='portainer/portainer-ce:latest',
+            volumes=['/var/run/docker.sock:/var/run/docker.sock'],
         ),
         ImageEntry(
             id='pi_hole',
@@ -92,7 +94,13 @@ def image_reducer(
     """Image reducer."""
     if state is None:
         if isinstance(action, CombineReducerInitAction):
-            return ImageState(**asdict(IMAGES[action.key]))
+            image = IMAGES[action.key]
+            return ImageState(
+                id=image.id,
+                label=image.label,
+                icon=image.icon,
+                path=image.path,
+            )
         raise InitializationActionError(action)
 
     if not isinstance(action, DockerImageAction) or action.image != state.id:
