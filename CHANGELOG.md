@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.9.5
+
+- feat: expose all ports of containers and show the ports in a sub menu
+- feat: option to remove a container without removing its image
+
 ## Version 0.9.4
 
 - hotfix: provide `$USERNAME` environment variable for `install_docker.sh` script

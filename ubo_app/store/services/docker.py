@@ -1,6 +1,7 @@
 """Docker store types."""
 from __future__ import annotations
 
+from dataclasses import field
 from enum import Enum, auto
 
 from redux import BaseAction, BaseCombineReducerState, BaseEvent, Immutable
@@ -23,6 +24,7 @@ class ImageStatus(Enum):
     NOT_AVAILABLE = auto()
     FETCHING = auto()
     AVAILABLE = auto()
+    CREATED = auto()
     RUNNING = auto()
     ERROR = auto()
 
@@ -47,6 +49,7 @@ class DockerImageSetStatusAction(DockerImageAction):
     """Docker image action."""
 
     status: ImageStatus
+    ports: list[str] | None = None
 
 
 class DockerEvent(BaseEvent):
@@ -73,6 +76,7 @@ class ImageState(Immutable):
     icon: str
     path: str
     status: ImageStatus = ImageStatus.NOT_AVAILABLE
+    ports: list[str] = field(default_factory=list)
 
     @property
     def is_fetching(self: ImageState) -> bool:

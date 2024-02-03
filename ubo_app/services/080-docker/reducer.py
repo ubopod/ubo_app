@@ -99,7 +99,11 @@ def image_reducer(
         return state
 
     if isinstance(action, DockerImageSetStatusAction):
-        return replace(state, status=action.status)
+        return replace(
+            state,
+            status=action.status,
+            ports=action.ports if action.ports else state.ports,
+        )
 
     return state
 
