@@ -332,6 +332,11 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                         publish_all_ports=True,
                         detach=True,
                         volumes=IMAGES[image_id].volumes,
+                        **(
+                            {'ports': IMAGES[image_id].ports}
+                            if IMAGES[image_id].ports
+                            else {}
+                        ),
                     )
                 check_image(image.path)
                 docker_client.close()

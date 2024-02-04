@@ -24,8 +24,6 @@ import alsaaudio
 import pulsectl
 import pyaudio
 
-# TODO(@sassanh): It's a dynamic value, so we should probably get it from somewhere
-RESPEAKER_INDEX = 1
 CHUNK_SIZE = 1024
 
 
@@ -61,13 +59,24 @@ class AudioManager:
             try:
                 with pulsectl.Pulse('set-default-sink') as pulse:
                     for sink in pulse.sink_list():
-                        if sink.proplist['alsa.card'] == self.cardindex:
+                        if str(sink.proplist['alsa.card']) == str(self.cardindex):
                             pulse.sink_default_set(sink)
                             break
             except pulsectl.PulseError:
                 logger.error('Not able to connect to pulseaudio')
         except StopIteration:
             logger.error('No audio card found')
+
+    def find_respeaker_index(self: AudioManager) -> int:
+        """Find the index of the ReSpeaker device."""
+        for index in range(self.pyaudio.get_device_count()):
+            info = self.pyaudio.get_device_info_by_index(index)
+            if isinstance(info['name'], str) and 'wm8960' in info['name']:
+                logger.debug(f'ReSpeaker found at index: {index}')
+                logger.debug(f'Device Info: {info}')
+                return index
+        msg = 'ReSpeaker for default device not found'
+        raise ValueError(msg)
 
     def __del__(self: AudioManager) -> None:
         """Clean up the audio manager."""
@@ -92,6 +101,7 @@ class AudioManager:
         ----------
         filename : str
             Path to wav file
+
         """
         # open the file for reading.
         self.close_stream()
@@ -105,7 +115,7 @@ class AudioManager:
                     channels=wf.getnchannels(),
                     rate=wf.getframerate(),
                     output=True,
-                    output_device_index=RESPEAKER_INDEX,
+                    output_device_index=self.find_respeaker_index(),
                 )
                 data = wf.readframes(CHUNK_SIZE)
                 while data and not self.should_stop and stream.is_active():
@@ -127,6 +137,7 @@ class AudioManager:
         ----------
         mute : bool
             Mute to set
+
         """
         try:
             # Assume pulseaudio is installed
@@ -155,6 +166,7 @@ class AudioManager:
         ----------
         volume : float
             Volume to set, a float between 0 and 1
+
         """
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
@@ -188,6 +200,7 @@ class AudioManager:
         ----------
         volume : float
             Volume to set, a float between 0 and 1
+
         """
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'

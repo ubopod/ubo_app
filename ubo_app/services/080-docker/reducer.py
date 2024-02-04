@@ -51,6 +51,7 @@ class ImageEntry(Immutable):
     label: str
     icon: str
     path: str
+    ports: dict[str, str] | None = None
     volumes: list[str] | None = None
 
 
@@ -62,6 +63,7 @@ IMAGES = {
             label='Home Assistant',
             icon='home',
             path='homeassistant/home-assistant:stable',
+            ports={'8123/tcp': '8123'},
         ),
         ImageEntry(
             id='home_bridge',

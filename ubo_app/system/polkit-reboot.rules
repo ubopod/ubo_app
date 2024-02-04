@@ -3,7 +3,7 @@ polkit.addRule(function(action, subject) {
          action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
          action.id == "org.freedesktop.login1.power-off" ||
          action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
-         action.id == "org.freedesktop.NetworkManager.wifi.scan") &&
+         action.id.startsWith("org.freedesktop.NetworkManager.")) &&
         subject.user == "{{USERNAME}}") {
         return polkit.Result.YES;
     }

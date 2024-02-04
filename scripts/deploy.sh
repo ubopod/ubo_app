@@ -13,4 +13,4 @@ test "$deps" == "True" && ssh pi@ubo-development-pod "sudo -u ubo bash -c 'sourc
 ssh pi@ubo-development-pod "sudo -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && pip install --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION[default]'"
 
 test "$bootstrap" == "True" && ssh pi@ubo-development-pod "sudo /opt/ubo/env/bin/ubo bootstrap"
-test "$run" == "True" && ssh pi@ubo-development-pod "sudo service ubo-app restart"
+test "$run" == "True" && ssh pi@ubo-development-pod "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo systemctl --user restart ubo-app.service"

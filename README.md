@@ -21,16 +21,20 @@ botting from that image, you can ignore this section.
 
 Note that as part of the installation process, these debian packages are installed:
 
-- pip
-- virtualenv
-- libmtdev1
-- libgl1
-- libegl1
+- git
+- i2c-tools
 - libcap-dev
+- libegl1
+- libgl1
+- libmtdev1
+- libzbar0
+- python3-dev
 - python3-libcamera
 - python3-alsaaudio
+- python3-picamera2
+- python3-pip
 - python3-pyaudio
-- libzbar0
+- python3-virtualenv
 
 Also be aware that ubo-app only installs in `/opt/ubo` and it is not customizable
 at the moment.
@@ -39,14 +43,35 @@ at the moment.
 
 ⚠️ **Executing scripts directly from the internet with root privileges poses a significant
 security risk. It's generally a good practice to ensure you understand the script's
-content before running it.**
+content before running it. You can check the content of this particular script
+[here](https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh)
+before running it.**
 
 ---
 
 To install ubo, run this command in a terminal shell:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
+  | sudo bash
+```
+
+If you want to install docker service and configure ubo to be able to use it run
+this:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
+  | sudo WITH_DOCKER=true bash
+```
+
+To allow the installer to install the latest alpha version of ubo run this:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
+  | sudo ALPHA=true bash
+# or
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
+  | sudo ALPHA=true WITH_DOCKER=true bash
 ```
 
 ## 🤝 Contributing

@@ -1,13 +1,9 @@
-[Install]
-WantedBy=multi-user.target
-
 [Unit]
 Description=Ubo App Service
-After=ubo-update.service ubo-system.service ubo-pulseaudio.service network.target
+Wants=dbus.service pipewire-pulse.service
 
 [Service]
 Type=simple
-User={{USERNAME}}
 ExecStart={{INSTALLATION_PATH}}/env/bin/ubo
 WorkingDirectory={{INSTALLATION_PATH}}
 StandardOutput=inherit
@@ -15,3 +11,6 @@ StandardError=inherit
 KillMode=control-group
 Restart=always
 RestartPreventExitStatus=255
+
+[Install]
+WantedBy=default.target

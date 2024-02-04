@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 0.9.7
+
+- fix: audio for when pipewire is installed
+- fix: set permission for ubo user to disconnect wifi connections
+- refactor: setup ubo as a lingering user and migrate ubo-app service from a system
+  wide service to ubo userland service still starting after boot
+- feature: ability to customize installation process with environment variables:
+  - UPDATE: used for when ubo is installed and it should be updated to the latest
+    version
+  - ALPHA: installs latest version, even if it's an alpha version
+  - WITH_DOCKER: installs docker service
+
 ## Version 0.9.6
 
 - feat: add socket connection (volume bind) for portainer

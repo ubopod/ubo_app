@@ -79,7 +79,7 @@ def reducer(  # noqa: C901, PLR0912
             return replace(state, is_playback_mute=action.mute)
         if action.device == SoundDevice.INPUT:
             return CompleteReducerResult(
-                state=replace(state, is_mic_mute=action.mute),
+                state=replace(state, is_capture_mute=action.mute),
                 actions=[
                     StatusIconsRegisterAction(
                         icon='mic_off' if action.mute else 'mic',

@@ -21,27 +21,27 @@ cd WM8960-Audio-HAT
 
 
 #set kernel modules
-grep -q "i2c-dev" /etc/modules || \
+grep -q "^i2c-dev$" /etc/modules || \
   echo "i2c-dev" >> /etc/modules  
-grep -q "snd-soc-wm8960" /etc/modules || \
+grep -q "^snd-soc-wm8960$" /etc/modules || \
   echo "snd-soc-wm8960" >> /etc/modules  
-grep -q "snd-soc-wm8960-soundcard" /etc/modules || \
+grep -q "^snd-soc-wm8960-soundcard$" /etc/modules || \
   echo "snd-soc-wm8960-soundcard" >> /etc/modules  
   
 #set dtoverlays
 sed -i -e 's:#dtparam=i2s=on:dtparam=i2s=on:g'  /boot/firmware/config.txt || true
 sed -i -e 's:#dtparam=i2c_arm=on:dtparam=i2c_arm=on:g'  /boot/firmware/config.txt || true
-grep -q "dtoverlay=i2s-mmap" /boot/firmware/config.txt || \
+grep -q "^dtoverlay=i2s-mmap$" /boot/firmware/config.txt || \
   echo "dtoverlay=i2s-mmap" >> /boot/firmware/config.txt
 
-grep -q "dtparam=i2s=on" /boot/firmware/config.txt || \
+grep -q "^dtparam=i2s=on$" /boot/firmware/config.txt || \
   echo "dtparam=i2s=on" >> /boot/firmware/config.txt
 
-grep -q "dtoverlay=wm8960-soundcard" /boot/firmware/config.txt || \
+grep -q "^dtoverlay=wm8960-soundcard$" /boot/firmware/config.txt || \
   echo "dtoverlay=wm8960-soundcard" >> /boot/firmware/config.txt
   
 #install config files
-mkdir /etc/wm8960-soundcard || true
+mkdir -p /etc/wm8960-soundcard
 cp *.conf /etc/wm8960-soundcard
 cp *.state /etc/wm8960-soundcard
 

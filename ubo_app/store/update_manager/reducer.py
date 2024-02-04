@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import contextlib
 from dataclasses import replace
 
 import semver
@@ -52,7 +53,15 @@ def reducer(
             current_version=action.current_version,
             latest_version=action.latest_version,
         )
-        if semver.compare(action.latest_version, action.current_version) == 1:
+        version_comparison = 1
+        with contextlib.suppress(
+            ValueError,
+        ):  # ValueError happens for alpha/beta versions
+            version_comparison = semver.compare(
+                action.latest_version,
+                action.current_version,
+            )
+        if version_comparison == 1:
             return CompleteReducerResult(
                 state=state,
                 actions=[

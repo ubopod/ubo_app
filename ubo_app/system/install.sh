@@ -2,7 +2,11 @@
 
 set -e -o errexit
 
-UPDATE=false
+UPDATE=${UPDATE:-false}
+ALPHA=${ALPHA:-false}
+WITH_DOCKER=${WITH_DOCKER:-false}
+
+
 
 # Parse arguments
 for arg in "$@"
@@ -11,6 +15,10 @@ do
         --update)
         UPDATE=true
         shift # Remove --update from processing
+        ;;
+        --alpha)
+        ALPHA=true
+        shift # Remove --alpha from processing
         ;;
         --with-docker)
         WITH_DOCKER=true
@@ -21,6 +29,13 @@ do
         ;;
     esac
 done
+
+echo "----------------------------------------------"
+echo "Parameters:"
+echo "UPDATE: $UPDATE"
+echo "ALPHA: $ALPHA"
+echo "WITH_DOCKER: $WITH_DOCKER"
+echo "----------------------------------------------"
 
 # Check for root privileges
 if [ "$(id -u)" != "0" ]; then
@@ -42,6 +57,8 @@ echo "User $USERNAME created successfully."
 # Install required packages
 apt-get -y update
 apt-get -y install \
+  git \
+  i2c-tools \
   libcap-dev \
   libegl1 \
   libgl1 \
@@ -71,9 +88,17 @@ virtualenv --system-site-packages "$INSTALLATION_PATH/env"
 
 # Install the latest version of ubo-app
 if [ "$UPDATE" = true ]; then
-  "$INSTALLATION_PATH/env/bin/python" -m pip install --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" ubo-app[default]
+  if [ "$ALPHA" = true ]; then
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" ubo-app[default]
+  else
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" ubo-app[default]
+  fi
 else
-  "$INSTALLATION_PATH/env/bin/python" -m pip install ubo-app[default]
+  if [ "$ALPHA" = true ]; then
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre ubo-app[default]
+  else
+    "$INSTALLATION_PATH/env/bin/python" -m pip install ubo-app[default]
+  fi
 fi
 
 # Set the ownership of the installation path
