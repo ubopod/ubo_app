@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 0.9.8
+
+- hotfix: wait for lingering process to finish and retry usreland `systemctl --user
+daemon-reload` if needed
+- hotfix: the `install_docker.sh` script now runs if an optional flag is set for
+  bootstrap command
+
 ## Version 0.9.7
 
 - fix: audio for when pipewire is installed

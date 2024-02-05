@@ -31,7 +31,9 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
         from ubo_app.system.bootstrap import bootstrap
 
-        bootstrap()
+        bootstrap(
+            with_docker=sys.argv[2] == '--with-docker' if len(sys.argv) > 2 else False,
+        )
         sys.exit(0)
 
     from headless_kivy_pi import HeadlessWidget

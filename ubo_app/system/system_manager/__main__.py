@@ -94,6 +94,11 @@ if __name__ == '__main__':
                                     ['/usr/bin/env', 'systemctl', 'start', 'docker'],  # noqa: S603
                                     check=False,
                                 )
+                            elif command == 'stop':
+                                subprocess.run(
+                                    ['/usr/bin/env', 'systemctl', 'stop', 'docker'],  # noqa: S603
+                                    check=False,
+                                )
                         finally:
                             DOCKER_INSTALLATION_LOCK_FILE.unlink(missing_ok=True)
 

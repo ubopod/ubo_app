@@ -106,16 +106,11 @@ chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
 chmod -R 700 "$INSTALLATION_PATH"
 
 # Bootstrap the application
-"$INSTALLATION_PATH/env/bin/ubo" bootstrap
+UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/ubo" bootstrap${WITH_DOCKER:+ --with-docker}
 
 if [ "$UPDATE" = true ]; then
   # Remove the update directory
   rm -rf "$INSTALLATION_PATH/_update"
-fi
-
-if [ "$WITH_DOCKER" = true ]; then
-  # Install Docker
-  ./install_docker.sh
 fi
 
 # The audio driver needs a reboot to work

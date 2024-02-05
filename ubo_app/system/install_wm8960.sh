@@ -27,6 +27,10 @@ grep -q "^snd-soc-wm8960$" /etc/modules || \
   echo "snd-soc-wm8960" >> /etc/modules  
 grep -q "^snd-soc-wm8960-soundcard$" /etc/modules || \
   echo "snd-soc-wm8960-soundcard" >> /etc/modules  
+
+# set modprobe blacklist
+grep -q "^blacklist snd_bcm2835$" /etc/modprobe.d/raspi-blacklist.conf || \
+  echo "blacklist snd_bcm2835" >> /etc/modprobe.d/raspi-blacklist.conf
   
 #set dtoverlays
 sed -i -e 's:#dtparam=i2s=on:dtparam=i2s=on:g'  /boot/firmware/config.txt || true

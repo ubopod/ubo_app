@@ -5,11 +5,14 @@ import grp
 import os
 import pwd
 import subprocess
+import time
 from pathlib import Path
 from typing import Literal, TypedDict
 
 from ubo_app.constants import INSTALLATION_PATH, USERNAME
 from ubo_app.logging import logger
+
+RETRIES = 5
 
 
 class Service(TypedDict):
@@ -42,7 +45,7 @@ uid = pwd.getpwnam(USERNAME).pw_uid
 gid = grp.getgrnam(USERNAME).gr_gid
 
 
-def bootstrap() -> None:
+def bootstrap(*, with_docker: bool = False) -> None:
     """Create the service files and enable the services."""
     for service in services:
         if service['scope'] == 'user':
@@ -89,19 +92,38 @@ def bootstrap() -> None:
                 os.chown(service_file_path, uid, gid)
 
     subprocess.run(['/usr/bin/env', 'loginctl', 'enable-linger', USERNAME], check=True)  # noqa: S603
-    subprocess.run(
-        [  # noqa: S603
-            '/usr/bin/env',
-            'sudo',
-            f'XDG_RUNTIME_DIR=/run/user/{uid}',
-            '-u',
-            USERNAME,
-            'systemctl',
-            '--user',
-            'daemon-reload',
-        ],
-        check=True,
-    )
+
+    logger.info('Waiting for the user services to come up...')
+    for i in range(RETRIES):
+        time.sleep(1)
+        print('.', end='', flush=True)  # noqa: T201
+        try:
+            subprocess.run(
+                [  # noqa: S603
+                    '/usr/bin/env',
+                    'sudo',
+                    f'XDG_RUNTIME_DIR=/run/user/{uid}',
+                    '-u',
+                    USERNAME,
+                    'systemctl',
+                    '--user',
+                    'daemon-reload',
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError as exception:
+            if i < RETRIES - 1:
+                logger.error(
+                    'Failed to reload user services, retrying...',
+                    exc_info=exception,
+                )
+                continue
+        else:
+            break
+    else:
+        logger.error(f'Failed to reload user services {RETRIES} times, giving up!')
+        return
+    print(flush=True)  # noqa: T201
     subprocess.run(
         ['/usr/bin/env', 'systemctl', 'daemon-reload'],  # noqa: S603
         check=True,
@@ -143,6 +165,31 @@ def bootstrap() -> None:
             .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
             .replace('{{USERNAME}}', USERNAME),
         )
+
+    if with_docker:
+        logger.info('Installing docker...')
+        for i in range(RETRIES):
+            time.sleep(1)
+            print('.', end='', flush=True)  # noqa: T201
+            try:
+                subprocess.run(
+                    [Path(__file__).parent.joinpath('install_docker.sh').as_posix()],  # noqa: S603
+                    env={'USERNAME': USERNAME},
+                    check=True,
+                )
+            except subprocess.CalledProcessError as exception:
+                if i < RETRIES - 1:
+                    logger.error(
+                        'Failed to install docker, retrying...',
+                        exc_info=exception,
+                    )
+                    continue
+            else:
+                break
+        else:
+            logger.error(f'Failed to installed docker {RETRIES} times, giving up!')
+            return
+        print(flush=True)  # noqa: T201
 
     subprocess.run(
         [Path(__file__).parent.joinpath('install_wm8960.sh').as_posix()],  # noqa: S603
