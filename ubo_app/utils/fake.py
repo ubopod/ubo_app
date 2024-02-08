@@ -11,6 +11,9 @@ class Fake(ModuleType):
     def __init__(self: Fake) -> None:
         super().__init__('')
 
+    def __init_subclass__(cls: type[Fake], **kwargs: dict[str, Any]) -> None:
+        logger.verbose('Subclassing `Fake`', extra={'cls': cls, 'kwargs': kwargs})
+
     def __getattr__(self: Fake, attr: str) -> Fake | str:
         logger.verbose(
             'Accessing fake attribute of a `Fake` insta',

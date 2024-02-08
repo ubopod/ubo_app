@@ -103,3 +103,4 @@ ENV/
 headless_kivy_pi_buffer.raw
 
 ubo_app/services/*-sound/sounds
+scripts/toggle_local_dependencies.py

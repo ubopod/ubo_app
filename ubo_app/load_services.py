@@ -119,7 +119,7 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         return None
 
 
-sys.meta_path.insert(0, UboServiceFinder())
+sys.meta_path.append(UboServiceFinder())
 
 
 class UboServiceThread(threading.Thread):

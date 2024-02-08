@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from threading import current_thread
 from typing import TYPE_CHECKING, Any, Coroutine, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
@@ -24,6 +23,7 @@ from ubo_app.store.services.wifi import (
     WiFiType,
 )
 from ubo_app.utils import IS_RPI
+from ubo_app.utils.bus_provider import get_system_bus
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -47,7 +47,6 @@ if not IS_RPI:
     sys.modules['sdbus_async.networkmanager.enums'] = Fake()
 
 
-from sdbus import SdBus, sd_bus_open_system, set_default_bus  # noqa: E402
 from sdbus_async.networkmanager import (  # noqa: E402
     AccessPoint,
     ActiveConnection,
@@ -63,16 +62,6 @@ from sdbus_async.networkmanager.enums import (  # noqa: E402
     ConnectionState as SdBusConnectionState,
 )
 from sdbus_async.networkmanager.enums import DeviceType  # noqa: E402
-
-system_buses = {}
-
-
-def get_system_bus() -> SdBus:
-    thread = current_thread()
-    if thread not in system_buses:
-        system_buses[thread] = sd_bus_open_system()
-    set_default_bus(system_buses[thread])
-    return system_buses[thread]
 
 
 async def get_wifi_device() -> NetworkDeviceWireless | None:

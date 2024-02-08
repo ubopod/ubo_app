@@ -91,12 +91,40 @@ if __name__ == '__main__':
                                 )
                             elif command == 'start':
                                 subprocess.run(
-                                    ['/usr/bin/env', 'systemctl', 'start', 'docker'],  # noqa: S603
+                                    [  # noqa: S603
+                                        '/usr/bin/env',
+                                        'systemctl',
+                                        'start',
+                                        'docker.socket',
+                                    ],
+                                    check=False,
+                                )
+                                subprocess.run(
+                                    [  # noqa: S603
+                                        '/usr/bin/env',
+                                        'systemctl',
+                                        'start',
+                                        'docker.service',
+                                    ],
                                     check=False,
                                 )
                             elif command == 'stop':
                                 subprocess.run(
-                                    ['/usr/bin/env', 'systemctl', 'stop', 'docker'],  # noqa: S603
+                                    [  # noqa: S603
+                                        '/usr/bin/env',
+                                        'systemctl',
+                                        'stop',
+                                        'docker.socket',
+                                    ],
+                                    check=False,
+                                )
+                                subprocess.run(
+                                    [  # noqa: S603
+                                        '/usr/bin/env',
+                                        'systemctl',
+                                        'stop',
+                                        'docker.service',
+                                    ],
                                     check=False,
                                 )
                         finally:

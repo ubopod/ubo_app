@@ -46,10 +46,16 @@ class DockerImageAction(DockerAction):
 
 
 class DockerImageSetStatusAction(DockerImageAction):
-    """Docker image action."""
+    """Docker image set status action."""
 
     status: ImageStatus
     ports: list[str] | None = None
+
+
+class DockerImageSetDockerIdAction(DockerImageAction):
+    """Docker image set docker id action."""
+
+    docker_id: str
 
 
 class DockerEvent(BaseEvent):
@@ -76,6 +82,7 @@ class ImageState(Immutable):
     icon: str
     path: str
     status: ImageStatus = ImageStatus.NOT_AVAILABLE
+    docker_id: str | None = None
     ports: list[str] = field(default_factory=list)
 
     @property

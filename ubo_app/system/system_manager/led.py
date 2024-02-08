@@ -271,7 +271,7 @@ class LEDManager:
         self.pixels.show()
 
     def run_command(self: LEDManager, incoming: Sequence[str]) -> None:  # noqa: C901, PLR0912
-        self.logger.info('---executing command---')
+        self.logger.info('Executing LED command', extra={'incoming': incoming})
         self.incoming = incoming
         self._stop = False
         if incoming[0] == 'set_enabled' and len(incoming) == 2:

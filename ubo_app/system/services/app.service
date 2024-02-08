@@ -8,9 +8,11 @@ ExecStart={{INSTALLATION_PATH}}/env/bin/ubo
 WorkingDirectory={{INSTALLATION_PATH}}
 StandardOutput=inherit
 StandardError=inherit
-KillMode=control-group
 Restart=always
 RestartPreventExitStatus=255
+TimeoutStopSec=60s
+KillMode=mixed
+KillSignal=SIGTERM
 
 [Install]
 WantedBy=default.target

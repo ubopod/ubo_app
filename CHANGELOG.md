@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.9.9
+
+- feat: add `monitor_unit` utility function to monitor status changes of systemd
+  units
+- refactor: make docker service mostly event-driven
+
 ## Version 0.9.8
 
 - hotfix: wait for lingering process to finish and retry usreland `systemctl --user

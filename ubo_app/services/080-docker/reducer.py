@@ -1,7 +1,7 @@
 """Docker reducer."""
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import field, replace
 
 from immutable import Immutable
 from redux import (
@@ -18,6 +18,7 @@ from ubo_app.store.services.docker import (
     DockerAction,
     DockerImageAction,
     DockerImageEvent,
+    DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
     DockerServiceState,
     DockerSetStatusAction,
@@ -51,7 +52,7 @@ class ImageEntry(Immutable):
     label: str
     icon: str
     path: str
-    ports: dict[str, str] | None = None
+    ports: dict[str, str] = field(default_factory=dict)
     volumes: list[str] | None = None
 
 
@@ -84,6 +85,12 @@ IMAGES = {
             icon='dns',
             path='pihole/pihole:latest',
         ),
+        ImageEntry(
+            id='alpine',
+            label='Alpine',
+            icon='code',
+            path='alpine:latest',
+        ),
     ]
 }
 IMAGE_IDS = list(IMAGES.keys())
@@ -114,6 +121,9 @@ def image_reducer(
             status=action.status,
             ports=action.ports if action.ports else state.ports,
         )
+
+    if isinstance(action, DockerImageSetDockerIdAction):
+        return replace(state, docker_id=action.docker_id)
 
     return state
 

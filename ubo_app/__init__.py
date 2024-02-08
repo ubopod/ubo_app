@@ -1,6 +1,9 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 import os
 import sys
+import threading
+import traceback
+from types import TracebackType
 
 from redux import FinishAction
 
@@ -28,6 +31,7 @@ def main() -> None:
         gui_add_file_handler(getattr(logging, GUI_LOG_LEVEL))
         gui_add_stdout_handler(getattr(logging, GUI_LOG_LEVEL))
 
+
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
         from ubo_app.system.bootstrap import bootstrap
 
@@ -35,6 +39,32 @@ def main() -> None:
             with_docker=sys.argv[2] == '--with-docker' if len(sys.argv) > 2 else False,
         )
         sys.exit(0)
+
+    def global_exception_handler(
+        _: type,
+        value: Exception,
+        tb: TracebackType,
+    ) -> None:
+        from ubo_app.logging import logger
+
+        logger.error(f'Uncaught exception: {value}')
+        logger.error(''.join(traceback.format_tb(tb)))
+
+    # Set the global exception handler
+    sys.excepthook = global_exception_handler
+
+    def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
+        import traceback
+
+        from ubo_app.logging import logger
+
+        logger.error(
+            f"""Exception in thread {args.thread.name if args.thread else "-"}: {
+            args.exc_type} {args.exc_value}""",
+        )
+        logger.error(''.join(traceback.format_tb(args.exc_traceback)))
+
+    threading.excepthook = thread_exception_handler
 
     from headless_kivy_pi import HeadlessWidget
 
