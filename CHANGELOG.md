@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.10.1
+
+- chore: GitHub workflow to publish pushes on `main` branch to PyPI
+
 ## Version 0.10.0
 
 - chore: add integration GitHub workflow to check lint, typing and build issues
