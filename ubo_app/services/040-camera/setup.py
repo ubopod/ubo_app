@@ -1,12 +1,12 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import re
 import time
 from typing import TYPE_CHECKING
 
 import numpy as np
 from headless_kivy_pi import HeadlessWidget
-from kivy import re
 from kivy.clock import Clock
 
 from ubo_app.logging import logger
@@ -38,6 +38,32 @@ def resize_image(
     return resized[: new_size[0], : new_size[1]]
 
 
+def check_image(regex: re.Pattern, barcodes: list, last_match: float) -> None:
+    if time.time() - last_match < THROTTL_TIME:
+        return
+    last_match = time.time()
+
+    for barcode in barcodes:
+        code = barcode.data.decode()
+        logger.info(
+            'Read barcode, decoded value',
+            extra={'decoded_value': code},
+        )
+        match = regex.match(code)
+        if match:
+            logger.info(
+                'Pattern match',
+                extra={
+                    'pattern': regex.pattern,
+                    'match': match.groupdict(),
+                    'decoded_value': code,
+                },
+            )
+            dispatch(
+                CameraBarcodeAction(code=code, match=match.groupdict()),
+            )
+
+
 def init_service() -> None:
     if not IS_RPI:
         return
@@ -63,40 +89,13 @@ def init_service() -> None:
 
         display = HeadlessWidget._display  # noqa: SLF001
 
-        def check_image(barcodes: list) -> None:
-            nonlocal last_match
-            if time.time() - last_match < THROTTL_TIME:
-                return
-            if regex is None:
-                return
-            last_match = time.time()
-
-            for barcode in barcodes:
-                code = barcode.data.decode()
-                logger.info(
-                    'Read barcode, decoded value',
-                    extra={'decoded_value': code},
-                )
-                match = regex.match(code)
-                if match:
-                    logger.info(
-                        'Pattern match',
-                        extra={
-                            'pattern': regex_pattern,
-                            'match': match.groupdict(),
-                            'decoded_value': code,
-                        },
-                    )
-                    dispatch(
-                        CameraBarcodeAction(code=code, match=match.groupdict()),
-                    )
-
         def feed_viewfinder(_: object) -> None:
             data = picam2.capture_array('main')
 
             barcodes = decode(data)
-            if len(barcodes) > 0:
-                check_image(barcodes)
+            if len(barcodes) > 0 and regex is not None:
+                nonlocal last_match
+                last_match = check_image(regex, barcodes, last_match)
 
             data = resize_image(data)
             data = np.rot90(data, 2)

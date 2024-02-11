@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.10.0
+
+- chore: add integration GitHub workflow to check lint, typing and build issues
+- refactor: address all lint issues and typing issues
+
 ## Version 0.9.9
 
 - feat: add `monitor_unit` utility function to monitor status changes of systemd

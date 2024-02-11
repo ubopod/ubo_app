@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.9.9"
+version = "0.10.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -43,7 +43,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 pyright = "^1.1.349"
-ruff = "^0.1.9"
+ruff = "^0.2.1"
 toml = "^0.10.2"
 
 [tool.poetry.extras]
@@ -58,7 +58,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
-lint = "sh -c 'pyright -p pyproject.toml .; poetry run ruff . --unsafe-fixes'"
+lint = "ruff . --unsafe-fixes"
+typecheck = "pyright -p pyproject.toml ."
+sanity = ["typecheck", "lint"]
 
 [tool.poe.tasks.deploy_to_device]
 args = [
@@ -69,15 +71,16 @@ args = [
 cmd = 'scripts/deploy.sh'
 
 [tool.ruff]
-select = ['ALL']
-ignore = ['INP001', 'PLR0911']
-fixable = ['ALL']
-unfixable = []
+lint.select = ['ALL']
+lint.ignore = ['INP001', 'PLR0911', 'D203', 'D213']
+lint.fixable = ['ALL']
+lint.unfixable = []
+exclude = ['stubs']
 
-[tool.ruff.flake8-builtins]
+[tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ['type', 'id']
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"
 inline-quotes = "single"
 multiline-quotes = "double"
@@ -87,3 +90,7 @@ quote-style = 'single'
 
 [tool.isort]
 profile = "black"
+
+[tool.pyright]
+stubPath = "ubo_app/stubs"
+exclude = ['ubo_app/stubs']

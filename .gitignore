@@ -102,5 +102,15 @@ ENV/
 # headless-kivy-pi
 headless_kivy_pi_buffer.raw
 
+# stubs
+stubs/
+
+# packer
+*/packer/output-arm-image/
+*/packer/packer_cache/
+
+# assets
 ubo_app/services/*-sound/sounds
+
+# local development
 scripts/toggle_local_dependencies.py

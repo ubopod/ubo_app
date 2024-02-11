@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Sequence
 
-from kivy.clock import Clock
 from redux import AutorunOptions, FinishAction
 from ubo_gui.menu.types import (
     ActionItem,

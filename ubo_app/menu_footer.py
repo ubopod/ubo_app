@@ -188,14 +188,10 @@ class MenuAppFooter(UboApp):
             icons_layout.bind(minimum_width=icons_layout.setter('width'))
 
         @autorun(lambda state: state.main.path)
-        def handle_depth_change(path: Sequence[str]) -> None:
-            is_fullscreen = (
-                'TODO' in path
-            )  # TODO(sassanh): Check if the application is fullscreen
-            if not is_fullscreen:
-                if normal_footer_layout in layout.children:
-                    layout.remove_widget(normal_footer_layout)
-                    layout.add_widget(home_footer_layout)
+        def handle_depth_change(_: Sequence[str]) -> None:
+            if normal_footer_layout in layout.children:
+                layout.remove_widget(normal_footer_layout)
+                layout.add_widget(home_footer_layout)
             elif home_footer_layout in layout.children:
                 layout.remove_widget(home_footer_layout)
                 layout.add_widget(normal_footer_layout)

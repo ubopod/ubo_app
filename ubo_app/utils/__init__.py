@@ -11,7 +11,7 @@ if not IS_RPI:
 
     sys.modules['RPi'] = Fake()
 
-from RPi import GPIO  # pyright: ignore [reportMissingImports]  # noqa: E402
+from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]  # noqa: E402
 
 
 def initialize_board() -> None:

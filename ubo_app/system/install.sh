@@ -5,7 +5,7 @@ set -e -o errexit
 UPDATE=${UPDATE:-false}
 ALPHA=${ALPHA:-false}
 WITH_DOCKER=${WITH_DOCKER:-false}
-
+FOR_PACKER=false
 
 
 # Parse arguments
@@ -23,6 +23,10 @@ do
         --with-docker)
         WITH_DOCKER=true
         shift # Remove --with-docker from processing
+        ;;
+        --for-packer)
+        FOR_PACKER=true
+        shift # Remove --for-packer from processing
         ;;
         *)
         # Unknown option
@@ -106,12 +110,16 @@ chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
 chmod -R 700 "$INSTALLATION_PATH"
 
 # Bootstrap the application
-UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/ubo" bootstrap${WITH_DOCKER:+ --with-docker}
+UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/ubo" bootstrap${WITH_DOCKER:+ --with-docker}${FOR_PACKER:+ --for-packer}
 
 if [ "$UPDATE" = true ]; then
   # Remove the update directory
   rm -rf "$INSTALLATION_PATH/_update"
 fi
 
-# The audio driver needs a reboot to work
-reboot
+if [ "$FOR_PACKER" = true ]; then
+  exit 0
+else
+  # The audio driver needs a reboot to work
+  reboot
+fi

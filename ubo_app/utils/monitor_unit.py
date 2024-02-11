@@ -17,9 +17,9 @@ if not IS_RPI:
 from sdbus import DbusInterfaceCommonAsync, dbus_property_async
 
 
-class SystemdUnitInterface(
+class SystemdUnitInterface(  # pyright: ignore [reportGeneralTypeIssues]
     DbusInterfaceCommonAsync,
-    interface_name='org.freedesktop.systemd1.Unit',
+    interface_name='org.freedesktop.systemd1.Unit',  # pyright: ignore [reportCallIssue]
 ):
     @dbus_property_async(property_signature='s')
     def active_state(self: SystemdUnitInterface) -> str:

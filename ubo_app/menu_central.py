@@ -7,8 +7,8 @@ from threading import Thread
 from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
-from kivy.app import Builder
 from kivy.clock import Clock, mainthread
+from kivy.lang.builder import Builder
 from redux import EventSubscriptionOptions
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget

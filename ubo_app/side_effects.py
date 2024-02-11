@@ -6,7 +6,6 @@ import subprocess
 from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
-from kivy.clock import Clock
 from redux import FinishAction, FinishEvent
 
 from ubo_app.store import autorun, dispatch, subscribe_event

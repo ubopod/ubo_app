@@ -38,253 +38,268 @@ def find_container(client: docker.DockerClient, *, image: str) -> Container | No
     return None
 
 
-def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]]:
-    """Get the menu items for the Docker service."""
-
-    def check_container(path: str) -> Future[None]:
-        def act() -> None:
-            logger.debug('Checking image', extra={'image': image_id, 'path': path})
-            docker_client = docker.from_env()
-            try:
-                image = docker_client.images.get(path)
-                if not isinstance(image, Image):
-                    raise docker.errors.ImageNotFound(path)  # noqa: TRY301
-
-                if image.id:
-                    dispatch(
-                        DockerImageSetDockerIdAction(
-                            image=image_id,
-                            docker_id=image.id,
-                        ),
-                    )
-                logger.debug('Image found', extra={'image': image_id, 'path': path})
-
-                container = find_container(docker_client, image=path)
-                if container:
-                    if container.status == 'running':
-                        logger.debug(
-                            'Container running image found',
-                            extra={'image': image_id, 'path': path},
-                        )
-                        dispatch(
-                            DockerImageSetStatusAction(
-                                image=image_id,
-                                status=ImageStatus.RUNNING,
-                                ports=[
-                                    f'{i["HostIp"]}:{i["HostPort"]}'
-                                    for i in container.ports.values()
-                                    for i in i
-                                ],
-                            ),
-                        )
-                        return
-                    logger.debug(
-                        "Container for the image found, but it's not running",
-                        extra={'image': image_id, 'path': path},
-                    )
+def _monitor_events(
+    image_id: str,
+    get_docker_id: Callable[[], str],
+    docker_client: docker.DockerClient,
+) -> None:
+    path = IMAGES[image_id].path
+    events = docker_client.events(
+        decode=True,
+        filters={'type': ['image', 'container']},
+    )
+    for event in events:
+        logger.verbose('Docker image event', extra={'event': event})
+        if event['Type'] == 'image':
+            if event['status'] == 'pull' and event['id'] == path:
+                try:
+                    image = docker_client.images.get(path)
                     dispatch(
                         DockerImageSetStatusAction(
                             image=image_id,
-                            status=ImageStatus.CREATED,
+                            status=ImageStatus.AVAILABLE,
                         ),
                     )
-                    return
-
-                logger.debug(
-                    'Container running image not found',
-                    extra={'image': image_id, 'path': path},
-                )
-                dispatch(
-                    DockerImageSetStatusAction(
-                        image=image_id,
-                        status=ImageStatus.AVAILABLE,
-                    ),
-                )
-            except docker.errors.ImageNotFound as exception:
-                logger.debug(
-                    'Image not found',
-                    extra={'image': image_id, 'path': path},
-                    exc_info=exception,
-                )
+                    if isinstance(image, Image) and image.id:
+                        dispatch(
+                            DockerImageSetDockerIdAction(
+                                image=image_id,
+                                docker_id=image.id,
+                            ),
+                        )
+                except docker.errors.DockerException:
+                    dispatch(
+                        DockerImageSetStatusAction(
+                            image=image_id,
+                            status=ImageStatus.NOT_AVAILABLE,
+                        ),
+                    )
+            elif event['status'] == 'delete' and event['id'] == get_docker_id():
                 dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
                         status=ImageStatus.NOT_AVAILABLE,
                     ),
                 )
-            except docker.errors.DockerException as exception:
+        elif event['Type'] == 'container':
+            if event['status'] == 'start' and event['from'] == path:
+                dispatch(
+                    DockerImageSetStatusAction(
+                        image=image_id,
+                        status=ImageStatus.RUNNING,
+                    ),
+                )
+            elif event['status'] == 'die' and event['from'] == path:
+                dispatch(
+                    DockerImageSetStatusAction(
+                        image=image_id,
+                        status=ImageStatus.CREATED,
+                    ),
+                )
+
+
+def check_container(image_id: str) -> Future[None]:
+    """Check the container status."""
+    path = IMAGES[image_id].path
+
+    def act() -> None:
+        logger.debug('Checking image', extra={'image': image_id, 'path': path})
+        docker_client = docker.from_env()
+        try:
+            image = docker_client.images.get(path)
+            if not isinstance(image, Image):
+                raise docker.errors.ImageNotFound(path)  # noqa: TRY301
+
+            if image.id:
+                dispatch(
+                    DockerImageSetDockerIdAction(
+                        image=image_id,
+                        docker_id=image.id,
+                    ),
+                )
+            logger.debug('Image found', extra={'image': image_id, 'path': path})
+
+            container = find_container(docker_client, image=path)
+            if container:
+                if container.status == 'running':
+                    logger.debug(
+                        'Container running image found',
+                        extra={'image': image_id, 'path': path},
+                    )
+                    dispatch(
+                        DockerImageSetStatusAction(
+                            image=image_id,
+                            status=ImageStatus.RUNNING,
+                            ports=[
+                                f'{i["HostIp"]}:{i["HostPort"]}'
+                                for i in container.ports.values()
+                                for i in i
+                            ],
+                        ),
+                    )
+                    return
                 logger.debug(
-                    'Image error',
+                    "Container for the image found, but it's not running",
                     extra={'image': image_id, 'path': path},
-                    exc_info=exception,
                 )
                 dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
-                        status=ImageStatus.ERROR,
+                        status=ImageStatus.CREATED,
                     ),
                 )
-            finally:
+                return
 
-                @autorun(lambda state: getattr(state.docker, image_id).docker_id)
-                def get_docker_id(docker_id: str) -> str:
-                    return docker_id
+            logger.debug(
+                'Container running image not found',
+                extra={'image': image_id, 'path': path},
+            )
+            dispatch(
+                DockerImageSetStatusAction(
+                    image=image_id,
+                    status=ImageStatus.AVAILABLE,
+                ),
+            )
+        except docker.errors.ImageNotFound as exception:
+            logger.debug(
+                'Image not found',
+                extra={'image': image_id, 'path': path},
+                exc_info=exception,
+            )
+            dispatch(
+                DockerImageSetStatusAction(
+                    image=image_id,
+                    status=ImageStatus.NOT_AVAILABLE,
+                ),
+            )
+        except docker.errors.DockerException as exception:
+            logger.debug(
+                'Image error',
+                extra={'image': image_id, 'path': path},
+                exc_info=exception,
+            )
+            dispatch(
+                DockerImageSetStatusAction(
+                    image=image_id,
+                    status=ImageStatus.ERROR,
+                ),
+            )
+        finally:
 
-                for event in docker_client.events(
-                    decode=True,
-                    filters={'type': ['image', 'container']},
-                ):
-                    logger.debug('Docker image event', extra={'event': event})
-                    if event['Type'] == 'image':
-                        if event['status'] == 'pull' and event['id'] == path:
-                            try:
-                                image = docker_client.images.get(path)
-                                dispatch(
-                                    DockerImageSetStatusAction(
-                                        image=image_id,
-                                        status=ImageStatus.AVAILABLE,
-                                    ),
-                                )
-                                if isinstance(image, Image) and image.id:
-                                    dispatch(
-                                        DockerImageSetDockerIdAction(
-                                            image=image_id,
-                                            docker_id=image.id,
-                                        ),
-                                    )
-                            except docker.errors.DockerException:
-                                dispatch(
-                                    DockerImageSetStatusAction(
-                                        image=image_id,
-                                        status=ImageStatus.NOT_AVAILABLE,
-                                    ),
-                                )
-                        elif (
-                            event['status'] == 'delete'
-                            and event['id'] == get_docker_id()
-                        ):
-                            dispatch(
-                                DockerImageSetStatusAction(
-                                    image=image_id,
-                                    status=ImageStatus.NOT_AVAILABLE,
-                                ),
-                            )
-                    elif event['Type'] == 'container':
-                        if event['status'] == 'start' and event['from'] == path:
-                            dispatch(
-                                DockerImageSetStatusAction(
-                                    image=image_id,
-                                    status=ImageStatus.RUNNING,
-                                ),
-                            )
-                        elif event['status'] == 'die' and event['from'] == path:
-                            dispatch(
-                                DockerImageSetStatusAction(
-                                    image=image_id,
-                                    status=ImageStatus.CREATED,
-                                ),
-                            )
-                docker_client.close()
+            @autorun(lambda state: getattr(state.docker, image_id).docker_id)
+            def get_docker_id(docker_id: str) -> str:
+                return docker_id
 
-        return run_in_executor(None, act)
+            _monitor_events(image_id, get_docker_id, docker_client)
+            docker_client.close()
+
+    return run_in_executor(None, act)
+
+
+def _fetch_image(image: ImageState) -> None:
+    def act() -> None:
+        dispatch(
+            DockerImageSetStatusAction(
+                image=image.id,
+                status=ImageStatus.FETCHING,
+            ),
+        )
+        try:
+            logger.debug('Fetching image', extra={'image': image.path})
+            docker_client = docker.from_env()
+            response = docker_client.api.pull(
+                image.path,
+                stream=True,
+                decode=True,
+            )
+            for line in response:
+                dispatch(
+                    DockerImageSetStatusAction(
+                        image=image.id,
+                        status=ImageStatus.FETCHING,
+                    ),
+                )
+                logger.verbose(
+                    'Image pull',
+                    extra={'image': image.path, 'line': line},
+                )
+            logger.debug('Image fetched', extra={'image': image.path})
+            docker_client.close()
+        except docker.errors.DockerException as exception:
+            logger.debug(
+                'Image error',
+                extra={'image': image.path},
+                exc_info=exception,
+            )
+            dispatch(
+                DockerImageSetStatusAction(
+                    image=image.id,
+                    status=ImageStatus.ERROR,
+                ),
+            )
+
+    run_in_executor(None, act)
+
+
+def _remove_image(image: ImageState) -> None:
+    def act() -> None:
+        docker_client = docker.from_env()
+        docker_client.images.remove(image.path, force=True)
+        docker_client.close()
+
+    run_in_executor(None, act)
+
+
+def _run_container(image: ImageState) -> None:
+    def act() -> None:
+        docker_client = docker.from_env()
+        container = find_container(docker_client, image=image.path)
+        if container:
+            if container.status != 'running':
+                container.start()
+        else:
+            docker_client.containers.run(
+                image.path,
+                publish_all_ports=True,
+                detach=True,
+                volumes=IMAGES[image.id].volumes,
+                ports=IMAGES[image.id].ports,
+            )
+        docker_client.close()
+
+    run_in_executor(None, act)
+
+
+def _stop_container(image: ImageState) -> None:
+    def act() -> None:
+        docker_client = docker.from_env()
+        container = find_container(docker_client, image=image.path)
+        if container and container.status != 'exited':
+            container.stop()
+        docker_client.close()
+
+    run_in_executor(None, act)
+
+
+def _remove_container(image: ImageState) -> None:
+    def act() -> None:
+        docker_client = docker.from_env()
+        container = find_container(docker_client, image=image.path)
+        if container:
+            container.remove(v=True, force=True)
+        docker_client.close()
+
+    run_in_executor(None, act)
+
+
+def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]]:
+    """Get the menu items for the Docker service."""
 
     @autorun(lambda state: getattr(state.docker, image_id))
     def image_menu(
         image: ImageState,
     ) -> HeadedMenu:
         """Get the menu for the docker image."""
-
-        def fetch_image() -> None:
-            def act() -> None:
-                dispatch(
-                    DockerImageSetStatusAction(
-                        image=image_id,
-                        status=ImageStatus.FETCHING,
-                    ),
-                )
-                try:
-                    logger.debug('Fetching image', extra={'image': image.path})
-                    docker_client = docker.from_env()
-                    response = docker_client.api.pull(
-                        image.path,
-                        stream=True,
-                        decode=True,
-                    )
-                    for line in response:
-                        dispatch(
-                            DockerImageSetStatusAction(
-                                image=image_id,
-                                status=ImageStatus.FETCHING,
-                            ),
-                        )
-                        logger.verbose(
-                            'Image pull',
-                            extra={'image': image.path, 'line': line},
-                        )
-                    logger.debug('Image fetched', extra={'image': image.path})
-                    docker_client.close()
-                except docker.errors.DockerException as exception:
-                    logger.debug(
-                        'Image error',
-                        extra={'image': image.path},
-                        exc_info=exception,
-                    )
-                    dispatch(
-                        DockerImageSetStatusAction(
-                            image=image_id,
-                            status=ImageStatus.ERROR,
-                        ),
-                    )
-
-            run_in_executor(None, act)
-
-        def remove_image() -> None:
-            def act() -> None:
-                docker_client = docker.from_env()
-                docker_client.images.remove(image.path, force=True)
-                docker_client.close()
-
-            run_in_executor(None, act)
-
-        def run_container() -> None:
-            def act() -> None:
-                docker_client = docker.from_env()
-                container = find_container(docker_client, image=image.path)
-                if container:
-                    if container.status != 'running':
-                        container.start()
-                else:
-                    docker_client.containers.run(
-                        image.path,
-                        publish_all_ports=True,
-                        detach=True,
-                        volumes=IMAGES[image_id].volumes,
-                        ports=IMAGES[image_id].ports,
-                    )
-                docker_client.close()
-
-            run_in_executor(None, act)
-
-        def stop_container() -> None:
-            def act() -> None:
-                docker_client = docker.from_env()
-                container = find_container(docker_client, image=image.path)
-                if container and container.status != 'exited':
-                    container.stop()
-                docker_client.close()
-
-            run_in_executor(None, act)
-
-        def remove_container() -> None:
-            def act() -> None:
-                docker_client = docker.from_env()
-                container = find_container(docker_client, image=image.path)
-                if container:
-                    container.remove(v=True, force=True)
-                docker_client.close()
-
-            run_in_executor(None, act)
-
         items: list[Item] = []
 
         if image.status == ImageStatus.NOT_AVAILABLE:
@@ -292,7 +307,7 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                 ActionItem(
                     label='Fetch',
                     icon='download',
-                    action=fetch_image,
+                    action=lambda: _fetch_image(image),
                 ),
             )
         elif image.status == ImageStatus.FETCHING:
@@ -300,7 +315,7 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                 ActionItem(
                     label='Stop',
                     icon='stop',
-                    action=remove_image,
+                    action=lambda: _remove_image(image),
                 ),
             )
         elif image.status == ImageStatus.AVAILABLE:
@@ -309,12 +324,12 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                     ActionItem(
                         label='Start',
                         icon='play_arrow',
-                        action=run_container,
+                        action=lambda: _run_container(image),
                     ),
                     ActionItem(
                         label='Remove image',
                         icon='delete',
-                        action=remove_image,
+                        action=lambda: _remove_image(image),
                     ),
                 ],
             )
@@ -324,12 +339,12 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                     ActionItem(
                         label='Start',
                         icon='play_arrow',
-                        action=run_container,
+                        action=lambda: _run_container(image),
                     ),
                     ActionItem(
                         label='Remove container',
                         icon='delete',
-                        action=remove_container,
+                        action=lambda: _remove_container(image),
                     ),
                 ],
             )
@@ -338,7 +353,7 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
                 ActionItem(
                     label='Stop',
                     icon='stop',
-                    action=stop_container,
+                    action=lambda: _stop_container(image),
                 ),
             )
             items.append(
@@ -368,7 +383,7 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
 
     def image_action() -> Callable[[], HeadedMenu]:
         """Get the menu items for the Docker service."""
-        check_container(IMAGES[image_id].path)
+        check_container(image_id)
 
         return image_menu
 

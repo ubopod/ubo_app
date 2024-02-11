@@ -31,12 +31,12 @@ def main() -> None:
         gui_add_file_handler(getattr(logging, GUI_LOG_LEVEL))
         gui_add_stdout_handler(getattr(logging, GUI_LOG_LEVEL))
 
-
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
         from ubo_app.system.bootstrap import bootstrap
 
         bootstrap(
-            with_docker=sys.argv[2] == '--with-docker' if len(sys.argv) > 2 else False,
+            with_docker='--with-docker' in sys.argv,
+            for_packer='--for-packer' in sys.argv,
         )
         sys.exit(0)
 

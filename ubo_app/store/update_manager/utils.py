@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import asyncio
 import importlib.metadata
+import shutil
 from pathlib import Path
 
 import aiohttp
-from kivy import shutil
 from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, Item
 

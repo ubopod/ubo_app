@@ -4,8 +4,7 @@ from __future__ import annotations
 import pathlib
 from typing import Sequence
 
-from kivy.app import Builder
-from kivy.clock import Clock
+from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
 from ubo_gui.constants import SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, Item

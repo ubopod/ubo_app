@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from kivy.base import Clock
+from kivy.clock import Clock
 from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
@@ -59,8 +59,8 @@ EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent
 
 root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,
-    action_type=ActionType,
-    event_type=EventType,
+    action_type=ActionType,  # pyright: ignore [reportArgumentType]
+    event_type=EventType,  # pyright: ignore [reportArgumentType]
     main=main_reducer,
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
