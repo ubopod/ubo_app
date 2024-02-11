@@ -1,0 +1,315 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  dependencies:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - uses: actions/setup-python@v5
+        name: Setup Python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+
+      - name: Install dependencies
+        run: poetry install --extras=dev --with dev
+
+      - name: Save Cached Poetry
+        id: cached-poetry
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key: poetry-0
+
+  type-check:
+    name: Type Check
+    needs:
+      - dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - uses: actions/setup-python@v5
+        name: Setup Python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+
+      - name: Load Cached Poetry
+        id: cached-poetry
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key: poetry-0
+
+      - name: Create stub files
+        run: poetry run pyright --createstub kivy
+
+      - name: Type Check
+        run: poetry run poe typecheck
+
+  lint:
+    name: Lint
+    needs:
+      - dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - uses: actions/setup-python@v5
+        name: Setup Python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+
+      - name: Load Cached Poetry
+        id: cached-poetry
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key: poetry-0
+
+      - name: Lint
+        run: poetry run poe lint
+
+  build:
+    name: Build
+    needs:
+      - dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      ubo_app_version: ${{ steps.extract_version.outputs.ubo_app_version }}
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@v5
+        name: Setup Python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+
+      - name: Load Cached Poetry
+        id: cached-poetry
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key: poetry-0
+
+      - name: Build
+        run: poetry build
+
+      - name: Extract Version
+        id: extract_version
+        run: |
+          echo "ubo_app_version=$(poetry run python scripts/print_version.py)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
+          if-no-files-found: error
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  pypi-publish:
+    name: Publish to PyPI
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - type-check
+      - lint
+      - build
+    runs-on: ubuntu-latest
+    environment:
+      name: PyPI
+      url: https://pypi.org/p/ubo-app
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: binary
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          verbose: true
+
+  images:
+    name: Create Images
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/solo-io/packer-plugin-arm-image
+      env:
+        PACKER_CACHE_DIR: /build/packer_cache
+      volumes:
+        - /dev:/dev
+      options: --rm --privileged
+    strategy:
+      fail-fast: false
+      matrix:
+        suffix: ['lite', '', 'full']
+    steps:
+      - run: echo Building amd64-${{ matrix.suffix }} image
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: /build/dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: binary
+          path: /build/dist
+
+      - name: Generate Image URL and Checksum
+        id: generate_image_url
+        run: |
+          if [ -n "${{ matrix.suffix }}" ]; then
+            SUFFIX="_${{ matrix.suffix }}"
+          else
+            SUFFIX="${{ matrix.suffix }}"
+          fi
+          DASHED_SUFFIX=$(echo $SUFFIX | sed 's/_/-/g')
+          IMAGE_URL="https://downloads.raspberrypi.com/raspios${SUFFIX}_arm64/images/raspios${SUFFIX}_arm64-2023-12-06/2023-12-05-raspios-bookworm-arm64${DASHED_SUFFIX}.img.xz"
+          IMAGE_CHECKSUM=$(curl -s "${IMAGE_URL}.sha256" | awk '{print $1}')
+          echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
+          echo "dashed_suffix=$DASHED_SUFFIX" >> "$GITHUB_OUTPUT"
+          echo "image_url=$IMAGE_URL" >> "$GITHUB_OUTPUT"
+          echo "image_checksum=$IMAGE_CHECKSUM" >> "$GITHUB_OUTPUT"
+
+      - name: Build Artifact
+        env:
+          PKR_VAR_ubo_app_version: ${{ needs.build.outputs.ubo_app_version }}
+          PKR_VAR_image_url: ${{ steps.generate_image_url.outputs.image_url }}
+          PKR_VAR_image_checksum:
+            ${{ steps.generate_image_url.outputs.image_checksum }}
+          PKR_VAR_target_image_size:
+            ${{ matrix.suffix == 'lite' && '3758096384' || '0' }}
+        run: |
+          /entrypoint.sh validate scripts/packer/image.pkr.hcl
+          /entrypoint.sh build scripts/packer/image.pkr.hcl
+
+      - name: Write Zeroes to Free Space
+        run: |
+          losetup -P /dev/loop3 /build/image.img
+          apt-get -y update
+          apt-get install -y zerofree
+          zerofree /dev/loop3p2
+          losetup -d /dev/loop3
+
+      - name: Compress File with Gzip
+        run: |
+          scripts/consume.sh /build/image.img | gzip -9 > /ubo_app-bookworm${{ steps.generate_image_url.outputs.dashed_suffix }}.img.gz
+
+      - name: Upload Image
+        uses: actions/upload-artifact@v4
+        with:
+          name:
+            ubo_app-bookworm${{
+            steps.generate_image_url.outputs.dashed_suffix}}.img.gz
+          path:
+            /ubo_app-bookworm${{ steps.generate_image_url.outputs.dashed_suffix
+            }}.img.gz
+          if-no-files-found: error
+
+  release:
+    name: Release
+    needs:
+      - type-check
+      - lint
+      - build
+      - pypi-publish
+      - images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Procure Lite Image
+        uses: actions/download-artifact@v4
+        with:
+          name: ubo_app-bookworm-lite.img.gz
+          path: artifacts
+
+      - name: Procure Default Image
+        uses: actions/download-artifact@v4
+        with:
+          name: ubo_app-bookworm.img.gz
+          path: artifacts
+
+      - name: Procure Full Image
+        uses: actions/download-artifact@v4
+        with:
+          name: ubo_app-bookworm-full.img.gz
+          path: artifacts
+
+      - name: Procure Wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: artifacts
+
+      - name: Procure Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary
+          path: artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*
+          tag_name: ${{ needs.build.outputs.ubo_app_version }}
+          body: |
+            Release of version ${{ needs.build.outputs.ubo_app_version }}
+            PyPI package: https://pypi.org/project/ubo-app/${{ needs.build.outputs.ubo_app_version }}
+          prerelease: false
+          draft: false

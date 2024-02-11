@@ -114,3 +114,4 @@ ubo_app/services/*-sound/sounds
 
 # local development
 scripts/toggle_local_dependencies.py
+scripts/packer/output-*

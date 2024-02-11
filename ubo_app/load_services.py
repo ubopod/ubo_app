@@ -90,14 +90,14 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         matching_path = next(
             (
                 registered_path
-                for stack_path in stack[::-1]
-                for registered_path in REGISTERED_PATHS
+                for stack_path in stack[-2::-1]
+                for registered_path in (*REGISTERED_PATHS.keys(), Path('/'))
                 if stack_path.filename.startswith(registered_path.as_posix())
             ),
             None,
         )
 
-        if matching_path:
+        if matching_path in REGISTERED_PATHS:
             thread = REGISTERED_PATHS[matching_path]
             module_name = f'{thread.service_uid}:{fullname}'
 
@@ -119,7 +119,7 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         return None
 
 
-sys.meta_path.append(UboServiceFinder())
+sys.meta_path.insert(0, UboServiceFinder())
 
 
 class UboServiceThread(threading.Thread):
@@ -130,6 +130,8 @@ class UboServiceThread(threading.Thread):
     ) -> None:
         super().__init__()
         self.service_uid = service_uid
+        self.id = self.service_uid.split(':')[1]
+        self.label = '<NOT SET>'
         self.path = path
         self.loop = asyncio.new_event_loop()
         self.module = None
@@ -173,6 +175,9 @@ class UboServiceThread(threading.Thread):
     def stop(self: UboServiceThread) -> None:
         self.loop.call_soon_threadsafe(self.loop.stop)
 
+    def __repr__(self: UboServiceThread) -> str:
+        return f'<UboServiceThread id={self.id} label={self.label}>'
+
 
 def register_service(
     service_id: str,
@@ -199,6 +204,10 @@ def register_service(
             'has_reducer': reducer is not None,
         },
     )
+
+    thread = threading.current_thread()
+    if isinstance(thread, UboServiceThread):
+        thread.label = label
 
     if reducer is not None:
         store.dispatch(

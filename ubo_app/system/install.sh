@@ -6,6 +6,7 @@ UPDATE=${UPDATE:-false}
 ALPHA=${ALPHA:-false}
 WITH_DOCKER=${WITH_DOCKER:-false}
 FOR_PACKER=false
+SOURCE=${SOURCE:-"ubo-app"}
 
 
 # Parse arguments
@@ -28,6 +29,10 @@ do
         FOR_PACKER=true
         shift # Remove --for-packer from processing
         ;;
+        --source=*)
+        SOURCE="${arg#*=}"
+        shift # Remove --source from processing
+        ;;
         *)
         # Unknown option
         ;;
@@ -39,6 +44,7 @@ echo "Parameters:"
 echo "UPDATE: $UPDATE"
 echo "ALPHA: $ALPHA"
 echo "WITH_DOCKER: $WITH_DOCKER"
+echo "SOURCE: $SOURCE"
 echo "----------------------------------------------"
 
 # Check for root privileges
@@ -93,15 +99,15 @@ virtualenv --system-site-packages "$INSTALLATION_PATH/env"
 # Install the latest version of ubo-app
 if [ "$UPDATE" = true ]; then
   if [ "$ALPHA" = true ]; then
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" ubo-app[default]
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" "$SOURCE"[default]
   else
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" ubo-app[default]
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" "$SOURCE"[default]
   fi
 else
   if [ "$ALPHA" = true ]; then
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre ubo-app[default]
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre "$SOURCE"[default]
   else
-    "$INSTALLATION_PATH/env/bin/python" -m pip install ubo-app[default]
+    "$INSTALLATION_PATH/env/bin/python" -m pip install "$SOURCE"[default]
   fi
 fi
 

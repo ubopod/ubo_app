@@ -5,8 +5,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-is_Raspberry=$(cat /proc/device-tree/model | awk  '{print $1}')
-if [ "x${is_Raspberry}" != "xRaspberry" ] ; then
+if [ ! -f /etc/rpi-issue ]; then
   echo "Sorry, this drivers only works on raspberry pi"
   exit 1
 fi

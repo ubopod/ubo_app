@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import Any, Generator, Iterator
+from typing import Any, Generator, Iterator, cast
 
 from ubo_app.logging import logger
 
 
 class Fake(ModuleType):
-    def __init__(self: Fake) -> None:
+    def __init__(self: Fake, *args: object, **kwargs: object) -> None:
+        logger.verbose('Initializing `Fake`', extra={'args_': args, 'kwargs': kwargs})
         super().__init__('')
 
     def __init_subclass__(cls: type[Fake], **kwargs: dict[str, Any]) -> None:
@@ -41,11 +42,27 @@ class Fake(ModuleType):
         yield None
         return self
 
+    def __next__(self: Fake) -> Fake:
+        raise StopIteration
+
+    def __anext__(self: Fake) -> Fake:
+        raise StopAsyncIteration
+
     def __iter__(self: Fake) -> Iterator[Fake]:
-        return iter([self])
+        return self
+
+    def __aiter__(self: Fake) -> Iterator[Fake]:
+        return self
 
     def __enter__(self: Fake) -> Fake:  # noqa: PYI034
         return self
 
     def __exit__(self: Fake, *_: object) -> None:
         pass
+
+    def __mro_entries__(self: Fake, bases: tuple[type[Fake]]) -> tuple[type[Fake]]:
+        logger.verbose(
+            'Getting MRO entries of a `Fake` instance',
+            extra={'bases': bases},
+        )
+        return (cast(type, self),)

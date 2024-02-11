@@ -6,6 +6,7 @@ import os
 import pwd
 import subprocess
 import time
+import warnings
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -119,8 +120,9 @@ def reload_daemon() -> None:
         else:
             break
     else:
-        logger.error(f'Failed to reload user services {RETRIES} times, giving up!')
-        return
+        msg = f'Failed to reload user services after {RETRIES} times, giving up!'
+        logger.error(msg)
+        warnings.warn(msg, stacklevel=2)
     print(flush=True)  # noqa: T201
     subprocess.run(
         ['/usr/bin/env', 'systemctl', 'daemon-reload'],  # noqa: S603
@@ -210,7 +212,10 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
     for service in services:
         create_service_file(service)
 
-    if not for_packer:
+    if for_packer:
+        Path('/var/lib/systemd/linger').mkdir(exist_ok=True, parents=True)
+        Path(f'/var/lib/systemd/linger/{USERNAME}').touch(mode=0o644, exist_ok=True)
+    else:
         subprocess.run(
             ['/usr/bin/env', 'loginctl', 'enable-linger', USERNAME],  # noqa: S603
             check=True,
