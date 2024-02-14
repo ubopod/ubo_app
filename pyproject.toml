@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.10.1"
+version = "0.10.5"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"

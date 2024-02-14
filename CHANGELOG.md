@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 0.10.5
+
+- chore: setup git-lfs for audio files
+
+## Version 0.10.2
+
+- chore: create ubo images for main branch based on lite, default and full versions
+  of raspberry os in GitHub workflow
+- chore: create GitHub release for main branch in GitHub workflows
+
 ## Version 0.10.1
 
 - chore: GitHub workflow to publish pushes on `main` branch to PyPI

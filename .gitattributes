@@ -1,0 +1,5 @@
+ubo_app/services/000-sound/sounds/volume.wav filter=lfs diff=lfs merge=lfs -text
+ubo_app/services/000-sound/sounds/add.wav filter=lfs diff=lfs merge=lfs -text
+ubo_app/services/000-sound/sounds/done.wav filter=lfs diff=lfs merge=lfs -text
+ubo_app/services/000-sound/sounds/failure.wav filter=lfs diff=lfs merge=lfs -text
+ubo_app/services/000-sound/sounds/scan.wav filter=lfs diff=lfs merge=lfs -text
