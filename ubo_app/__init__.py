@@ -41,13 +41,13 @@ def main() -> None:
         sys.exit(0)
 
     def global_exception_handler(
-        _: type,
-        value: Exception,
+        exception_type: type,
+        value: int,
         tb: TracebackType,
     ) -> None:
         from ubo_app.logging import logger
 
-        logger.error(f'Uncaught exception: {value}')
+        logger.error(f'Uncaught exception: {exception_type}: {value}')
         logger.error(''.join(traceback.format_tb(tb)))
 
     # Set the global exception handler

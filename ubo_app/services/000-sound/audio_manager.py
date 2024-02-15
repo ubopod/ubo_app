@@ -71,7 +71,7 @@ class AudioManager:
         """Find the index of the ReSpeaker device."""
         for index in range(self.pyaudio.get_device_count()):
             info = self.pyaudio.get_device_info_by_index(index)
-            if isinstance(info['name'], str) and 'wm8960' in info['name']:
+            if not isinstance(info['name'], (int, float)) and 'wm8960' in info['name']:
                 logger.debug(f'ReSpeaker found at index: {index}')
                 logger.debug(f'Device Info: {info}')
                 return index

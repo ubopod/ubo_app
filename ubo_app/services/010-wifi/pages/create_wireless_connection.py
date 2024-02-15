@@ -4,6 +4,7 @@ from __future__ import annotations
 import pathlib
 from typing import Sequence
 
+from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
 from ubo_gui.constants import SUCCESS_COLOR
@@ -49,6 +50,7 @@ class CreateWirelessConnectionPage(PageWidget):
             self.create_wireless_connection,
         )
         dispatch(SoundPlayChimeAction(name='scan'))
+        self.bind(on_close=lambda *_: self.unsubscribe)
 
     def create_wireless_connection(
         self: CreateWirelessConnectionPage,
@@ -93,14 +95,10 @@ class CreateWirelessConnectionPage(PageWidget):
                     ),
                 ),
             )
-            self.dispatch('on_close')
+            Clock.schedule_once(lambda _: self.dispatch('on_close'), 0)
 
         self.creating = True
         create_task(act())
-
-    def on_close(self: CreateWirelessConnectionPage) -> None:
-        self.unsubscribe()
-        return super().on_close()
 
     def get_item(self: CreateWirelessConnectionPage, index: int) -> ActionItem | None:
         if index == 2:  # noqa: PLR2004

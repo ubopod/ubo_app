@@ -141,13 +141,13 @@ adafruit-circuitpython-busdevice = "*"
 
 [[package]]
 name = "adafruit-circuitpython-typing"
-version = "1.10.0"
+version = "1.10.2"
 description = "Types needed for type annotation that are not in `typing`"
 optional = false
 python-versions = "*"
 files = [
-    {file = "adafruit-circuitpython-typing-1.10.0.tar.gz", hash = "sha256:6246893becc914e5cced3fcc204a70928c957934f28546a1d786713bbbbd42cb"},
-    {file = "adafruit_circuitpython_typing-1.10.0-py3-none-any.whl", hash = "sha256:d110dcfe6a58cdda12cfcc9987a8c244af642d87dec4b7fa305cc157734f0cae"},
+    {file = "adafruit-circuitpython-typing-1.10.2.tar.gz", hash = "sha256:ecfbaae7ac0f41b202aa3ed98cbd0f696b17e83b7e7f3fac6dc6a228cbc1c6c6"},
+    {file = "adafruit_circuitpython_typing-1.10.2-py3-none-any.whl", hash = "sha256:e64bbf2f7d4a4bdf0f9be8e039cfe2ed199aa7d51aa44a090d50be4f0917d24f"},
 ]
 
 [package.dependencies]
@@ -1174,13 +1174,13 @@ files = [
 
 [[package]]
 name = "python-redux"
-version = "0.9.23"
+version = "0.9.24"
 description = "Redux implementation for Python"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "python_redux-0.9.23-py3-none-any.whl", hash = "sha256:19d54def7ecce881b937fb03fcdab12bf8acf7941dad469e8c724cb3c1f5500c"},
-    {file = "python_redux-0.9.23.tar.gz", hash = "sha256:9c9eaf466f9c30f9276d98d7d5b0f52b18d41ba2a0886201034622733a51e4b3"},
+    {file = "python_redux-0.9.24-py3-none-any.whl", hash = "sha256:b5ebc975e5e3921bdc84c2b6998fc17c9fa17f9b879b1e07bf3db5395ba1c633"},
+    {file = "python_redux-0.9.24.tar.gz", hash = "sha256:7eeb64a6d2b53e33203ce61ec5859c3c44f6bf3cf13464c432385e8f058095ef"},
 ]
 
 [package.dependencies]
@@ -1347,18 +1347,18 @@ files = [
 
 [[package]]
 name = "setuptools"
-version = "69.0.3"
+version = "69.1.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "setuptools-69.0.3-py3-none-any.whl", hash = "sha256:385eb4edd9c9d5c17540511303e39a147ce2fc04bc55289c322b9e5904fe2c05"},
-    {file = "setuptools-69.0.3.tar.gz", hash = "sha256:be1af57fc409f93647f2e8e4573a142ed38724b8cdd389706a867bb4efcf1e78"},
+    {file = "setuptools-69.1.0-py3-none-any.whl", hash = "sha256:c054629b81b946d63a9c6e732bc8b2513a7c3ea645f11d0139a2191d735c60c6"},
+    {file = "setuptools-69.1.0.tar.gz", hash = "sha256:850894c4195f09c4ed30dba56213bf7c3f21d86ed6bdaafb5df5972593bfc401"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "rst.linker (>=1.9)", "sphinx (<7.2.5)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier"]
-testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8-2020", "ini2toml[lite] (>=0.9)", "jaraco.develop (>=7.21)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pip (>=19.1)", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy (>=0.9.1)", "pytest-perf", "pytest-ruff", "pytest-timeout", "pytest-xdist", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
+testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8-2020", "ini2toml[lite] (>=0.9)", "jaraco.develop (>=7.21)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pip (>=19.1)", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-home (>=0.5)", "pytest-mypy (>=0.9.1)", "pytest-perf", "pytest-ruff (>=0.2.1)", "pytest-timeout", "pytest-xdist", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
 testing-integration = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "packaging (>=23.1)", "pytest", "pytest-enabler", "pytest-xdist", "tomli", "virtualenv (>=13.0.0)", "wheel"]
 
 [[package]]
@@ -1396,13 +1396,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.9.2"
+version = "0.9.5"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "ubo_gui-0.9.2-py3-none-any.whl", hash = "sha256:bef2999b4f4a54c15a6109961bec02058ea7d201b4d00580ca6e9a6c5a5850bb"},
-    {file = "ubo_gui-0.9.2.tar.gz", hash = "sha256:e179a8fea549e975556d1b2066e14fdbf7e33f61d6f857476cbd7beea3d7dbc2"},
+    {file = "ubo_gui-0.9.5-py3-none-any.whl", hash = "sha256:5394aeb0f30e9b01d357cd1f1488d3ab066ed0bd1a763ecd9ea49b7b4e11339e"},
+    {file = "ubo_gui-0.9.5.tar.gz", hash = "sha256:b454edd7bbdd75e4b363b3155eed4cd26940f76ca89c638f04eb98b53ed698c3"},
 ]
 
 [package.dependencies]
@@ -1543,4 +1543,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "8493f5afa39ef46eb3415d30c4ed573e857eed927e4e33a2f98b193ac67743b4"
+content-hash = "925a49e068a9b3a98a021ce28f97a2c4a5b3d0a130c467cb9a4254dc29465c9e"

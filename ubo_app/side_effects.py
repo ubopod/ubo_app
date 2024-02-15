@@ -6,6 +6,7 @@ import subprocess
 from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
+from kivy.clock import Clock
 from redux import FinishAction, FinishEvent
 
 from ubo_app.store import autorun, dispatch, subscribe_event
@@ -37,7 +38,7 @@ def setup(app: MenuApp) -> None:
     initialize_board()
 
     subscribe_event(PowerOffEvent, power_off)
-    subscribe_event(FinishEvent, app.stop)
+    subscribe_event(FinishEvent, lambda *_: Clock.schedule_once(app.stop))
     subscribe_event(UpdateManagerUpdateEvent, lambda: create_task(update()))
     subscribe_event(UpdateManagerCheckEvent, lambda: create_task(check_version()))
 

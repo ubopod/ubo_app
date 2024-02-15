@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.10.6
+
+- fix: wireless module now has sufficient privileges
+
 ## Version 0.10.5
 
 - chore: setup git-lfs for audio files

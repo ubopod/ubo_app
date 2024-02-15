@@ -3,7 +3,6 @@ from reducer import reducer
 from setup import init_service
 
 from ubo_app.load_services import register_service
-from ubo_app.utils import IS_RPI
 
 register_service(
     service_id='camera',
@@ -11,5 +10,4 @@ register_service(
     reducer=reducer,
 )
 
-if IS_RPI:
-    init_service()
+init_service()

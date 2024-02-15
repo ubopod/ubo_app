@@ -37,7 +37,7 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-0
+          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
 
   type-check:
     name: Type Check
@@ -61,7 +61,7 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-0
+          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
 
       - name: Create stub files
         run: poetry run pyright --createstub kivy
@@ -91,7 +91,7 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-0
+          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
 
       - name: Lint
         run: poetry run poe lint
@@ -122,7 +122,7 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-0
+          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
 
       - name: Build
         run: poetry build
@@ -131,6 +131,7 @@ jobs:
         id: extract_version
         run: |
           echo "ubo_app_version=$(poetry run python scripts/print_version.py)" >> "$GITHUB_OUTPUT"
+          echo "ubo_app_version=$(poetry run python scripts/print_version.py)"
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
@@ -209,6 +210,9 @@ jobs:
           name: binary
           path: /build/dist
 
+      - run: |
+          ls -l /build/dist
+
       - name: Generate Image URL and Checksum
         id: generate_image_url
         run: |
@@ -285,11 +289,14 @@ jobs:
           name: ubo_app-bookworm.img.gz
           path: artifacts
 
-      - name: Procure Full Image
-        uses: actions/download-artifact@v4
-        with:
-          name: ubo_app-bookworm-full.img.gz
-          path: artifacts
+      # TODO
+      # It is larger than 2GB, so it is not possible to upload it to GitHub
+      # Looking for a solution to this problem
+      # - name: Procure Full Image
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ubo_app-bookworm-full.img.gz
+      #     path: artifacts
 
       - name: Procure Wheel
         uses: actions/download-artifact@v4

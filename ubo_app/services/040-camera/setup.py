@@ -38,13 +38,11 @@ def resize_image(
     return resized[: new_size[0], : new_size[1]]
 
 
-def check_image(regex: re.Pattern, barcodes: list, last_match: float) -> None:
+def check_codes(regex: re.Pattern, codes: list[str], last_match: float) -> float:
     if time.time() - last_match < THROTTL_TIME:
-        return
-    last_match = time.time()
+        return last_match
 
-    for barcode in barcodes:
-        code = barcode.data.decode()
+    for code in codes:
         logger.info(
             'Read barcode, decoded value',
             extra={'decoded_value': code},
@@ -59,14 +57,23 @@ def check_image(regex: re.Pattern, barcodes: list, last_match: float) -> None:
                     'decoded_value': code,
                 },
             )
-            dispatch(
-                CameraBarcodeAction(code=code, match=match.groupdict()),
-            )
+            dispatch(CameraBarcodeAction(code=code, match=match.groupdict()))
+
+    return time.time()
 
 
 def init_service() -> None:
     if not IS_RPI:
+        subscribe_event(
+            CameraStartViewfinderEvent,
+            lambda event: check_codes(
+                re.compile(event.barcode_pattern or ''),
+                ['WIFI:S:SSID;T:WPA;P:password;;'],
+                0,
+            ),
+        )
         return
+
     from picamera2 import Picamera2  # pyright: ignore [reportMissingImports]
     from pyzbar.pyzbar import decode
 
@@ -95,7 +102,11 @@ def init_service() -> None:
             barcodes = decode(data)
             if len(barcodes) > 0 and regex is not None:
                 nonlocal last_match
-                last_match = check_image(regex, barcodes, last_match)
+                last_match = check_codes(
+                    regex,
+                    [barcode.data.decode() for barcode in barcodes],
+                    last_match,
+                )
 
             data = resize_image(data)
             data = np.rot90(data, 2)

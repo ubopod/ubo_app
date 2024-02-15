@@ -40,10 +40,7 @@ build {
       "chmod +x /install.sh",
       "/install.sh --for-packer --with-docker --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "rm /install.sh /ubo_app-${var.ubo_app_version}-py3-none-any.whl",
-      "apt clean",
-      "df -h",
-      "echo 'DU GITHUB'",
-      "du -hs /github/*"
+      "apt clean"
     ]
   }
 }

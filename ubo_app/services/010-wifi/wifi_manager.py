@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
 from typing import TYPE_CHECKING, Any, Coroutine, TypeVar, cast
 
@@ -28,6 +29,7 @@ from ubo_app.utils.bus_provider import get_system_bus
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
 
+RETRIES = 3
 
 T = TypeVar('T')
 
@@ -376,41 +378,48 @@ async def forget_wireless_connection(ssid: str) -> None:
 
 
 async def get_connections() -> list[WiFiConnection]:
-    active_connection = await get_active_connection()
-    active_connection_ssid = await get_active_connection_ssid()
-    saved_ssids = await get_saved_ssids()
-    access_point_ssids = {
-        (
-            await wait_for(
-                i.ssid,
-            )
-        ).decode('utf-8'): i
-        for i in await get_access_points()
-    }
+    # It is need as this action is not atomic and the active_connection may not be
+    # available when active_connection.state is queried
+    for i in range(RETRIES):
+        with contextlib.suppress(Exception):
+            active_connection = await get_active_connection()
+            active_connection_ssid = await get_active_connection_ssid()
+            saved_ssids = await get_saved_ssids()
+            access_point_ssids = {
+                (
+                    await wait_for(
+                        i.ssid,
+                    )
+                ).decode('utf-8'): i
+                for i in await get_access_points()
+            }
 
-    active_connection_state = cast(
-        SdBusConnectionState,
-        await active_connection.state if active_connection else None,
-    )
-    state_map = {
-        SdBusConnectionState.ACTIVATED: ConnectionState.CONNECTED,
-        SdBusConnectionState.ACTIVATING: ConnectionState.CONNECTING,
-        SdBusConnectionState.DEACTIVATED: ConnectionState.DISCONNECTED,
-        SdBusConnectionState.DEACTIVATING: ConnectionState.DISCONNECTED,
-        SdBusConnectionState.UNKNOWN: ConnectionState.UNKNOWN,
-    }
-
-    return [
-        WiFiConnection(
-            ssid=ssid,
-            signal_strength=await wait_for(
-                access_point_ssids[ssid].strength,
+            active_connection_state = cast(
+                SdBusConnectionState,
+                await active_connection.state if active_connection else None,
             )
-            if ssid in access_point_ssids
-            else 0,
-            state=state_map[active_connection_state]
-            if active_connection_ssid == ssid
-            else ConnectionState.DISCONNECTED,
-        )
-        for ssid in saved_ssids
-    ]
+
+            state_map = {
+                SdBusConnectionState.ACTIVATED: ConnectionState.CONNECTED,
+                SdBusConnectionState.ACTIVATING: ConnectionState.CONNECTING,
+                SdBusConnectionState.DEACTIVATED: ConnectionState.DISCONNECTED,
+                SdBusConnectionState.DEACTIVATING: ConnectionState.DISCONNECTED,
+                SdBusConnectionState.UNKNOWN: ConnectionState.UNKNOWN,
+            }
+
+            return [
+                WiFiConnection(
+                    ssid=ssid,
+                    signal_strength=await wait_for(
+                        access_point_ssids[ssid].strength,
+                    )
+                    if ssid in access_point_ssids
+                    else 0,
+                    state=state_map[active_connection_state]
+                    if active_connection_ssid == ssid
+                    else ConnectionState.DISCONNECTED,
+                )
+                for ssid in saved_ssids
+            ]
+        await asyncio.sleep(0.5)
+    return []

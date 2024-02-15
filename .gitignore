@@ -1,4 +1,5 @@
-### Python ###
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -21,9 +22,11 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -38,46 +41,24 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
+.nox/
 .coverage
 .coverage.*
 .cache
 nosetests.xml
 coverage.xml
 *.cover
+*.py,cover
 .hypothesis/
+.pytest_cache/
+cover/
 
 # Translations
 *.mo
 *.pot
 
-# Django stuff:
-*.log
-local_settings.py
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
 # pyenv
 .python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-*.sage.py
 
 # Environments
 .env
@@ -85,30 +66,21 @@ celerybeat-schedule
 env/
 venv/
 ENV/
+env.bak/
+venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# pyright
+/typings/
 
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
+# logs
+*.log
 
 # headless-kivy-pi
 headless_kivy_pi_buffer.raw
 
-# stubs
-stubs/
-
 # packer
-*/packer/output-arm-image/
 */packer/packer_cache/
+*/packer/output-*
 
 # local development
 scripts/toggle_local_dependencies.py
-scripts/packer/output-*

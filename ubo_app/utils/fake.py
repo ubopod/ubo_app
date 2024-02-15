@@ -10,6 +10,7 @@ from ubo_app.logging import logger
 class Fake(ModuleType):
     def __init__(self: Fake, *args: object, **kwargs: object) -> None:
         logger.verbose('Initializing `Fake`', extra={'args_': args, 'kwargs': kwargs})
+        self.iterated = False
         super().__init__('')
 
     def __init_subclass__(cls: type[Fake], **kwargs: dict[str, Any]) -> None:
@@ -39,20 +40,26 @@ class Fake(ModuleType):
         return self
 
     def __await__(self: Fake) -> Generator[Fake | None, Any, Any]:
-        yield None
-        return self
+        yield
+        return Fake()
 
     def __next__(self: Fake) -> Fake:
-        raise StopIteration
+        if self.iterated:
+            raise StopIteration
+        self.iterated = True
+        return self
 
     def __anext__(self: Fake) -> Fake:
-        raise StopAsyncIteration
+        if self.iterated:
+            raise StopAsyncIteration
+        self.iterated = True
+        return self
 
     def __iter__(self: Fake) -> Iterator[Fake]:
-        return self
+        return Fake()
 
     def __aiter__(self: Fake) -> Iterator[Fake]:
-        return self
+        return Fake()
 
     def __enter__(self: Fake) -> Fake:  # noqa: PYI034
         return self
@@ -66,3 +73,15 @@ class Fake(ModuleType):
             extra={'bases': bases},
         )
         return (cast(type, self),)
+
+    def __index__(self: Fake) -> int:
+        return 1
+
+    def __contains__(self: Fake, _: object) -> bool:
+        return True
+
+    def __eq__(self: Fake, _: object) -> bool:
+        return True
+
+    def __repr__(self: Fake) -> str:
+        return 'Fake'

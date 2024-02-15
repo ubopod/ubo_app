@@ -165,7 +165,7 @@ def setup_polkit() -> None:
     with Path('/etc/polkit-1/rules.d/50-ubo.rules').open('w') as file:
         file.write(
             Path(__file__)
-            .parent.joinpath('polkit-reboot.rules')
+            .parent.joinpath('polkit.rules')
             .open()
             .read()
             .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
