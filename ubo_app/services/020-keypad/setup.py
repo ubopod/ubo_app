@@ -1,4 +1,4 @@
-# pyright: reportMissingImports=false
+# pyright: reportMissingImports=false, reportMissingModuleSource=false
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Literal
 
 import board
 from immutable import Immutable
-from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
 
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 from ubo_app.store.services.sound import SoundDevice, SoundSetMuteStatusAction
@@ -166,7 +165,11 @@ class Keypad:
         i2c.write_then_readinto(buffer, buffer, out_end=1, in_start=1)
 
     def init_i2c(self: Keypad) -> None:
+        if not IS_RPI:
+            return
         # connect to the I2C bus
+        from RPi import GPIO
+
         GPIO.setmode(GPIO.BCM)
         i2c = board.I2C()
         # Set this to the GPIO of the interrupt:

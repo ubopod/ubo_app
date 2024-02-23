@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.10.6"
+version = "0.10.7"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -25,7 +25,7 @@ ubo-gui = [
     'dev',
   ] },
 ]
-python-redux = "^0.9.24"
+python-redux = "==0.10.4"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -45,6 +45,7 @@ optional = true
 pyright = "^1.1.349"
 ruff = "^0.2.1"
 toml = "^0.10.2"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.extras]
 default = ['ubo-gui', 'headless-kivy-pi']

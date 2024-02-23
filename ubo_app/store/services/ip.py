@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from redux import BaseAction, BaseEvent, Immutable
+from immutable import Immutable
+from redux import BaseAction, BaseEvent
 
 
 class IpAction(BaseAction):

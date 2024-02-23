@@ -8,7 +8,8 @@ from enum import StrEnum, auto
 from typing import Sequence
 from uuid import uuid4
 
-from redux import BaseAction, BaseEvent, Immutable
+from immutable import Immutable
+from redux import BaseAction, BaseEvent
 
 
 class Importance(StrEnum):

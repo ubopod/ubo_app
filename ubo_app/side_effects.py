@@ -19,8 +19,8 @@ from ubo_app.store.update_manager import (
 )
 from ubo_app.store.update_manager.reducer import ABOUT_MENU_PATH
 from ubo_app.store.update_manager.utils import check_version, update
-from ubo_app.utils import initialize_board, turn_off_screen, turn_on_screen
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.hardware import initialize_board, turn_off_screen, turn_on_screen
 
 if TYPE_CHECKING:
     from ubo_app.menu import MenuApp

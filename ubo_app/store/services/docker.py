@@ -4,7 +4,8 @@ from __future__ import annotations
 from dataclasses import field
 from enum import Enum, auto
 
-from redux import BaseAction, BaseCombineReducerState, BaseEvent, Immutable
+from immutable import Immutable
+from redux import BaseAction, BaseCombineReducerState, BaseEvent
 
 
 class DockerStatus(Enum):

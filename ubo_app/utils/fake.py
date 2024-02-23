@@ -22,10 +22,10 @@ class Fake(ModuleType):
             extra={'attr': attr},
         )
         if attr == '__file__':
-            return ''
+            return 'fake'
         return self
 
-    def __getitem__(self: Fake, key: str) -> Fake:
+    def __getitem__(self: Fake, key: object) -> Fake:
         logger.verbose(
             'Accessing fake item of a `Fake` instance',
             extra={'key': key},
@@ -74,6 +74,9 @@ class Fake(ModuleType):
         )
         return (cast(type, self),)
 
+    def __len__(self: Fake) -> int:
+        return 1
+
     def __index__(self: Fake) -> int:
         return 1
 
@@ -82,6 +85,12 @@ class Fake(ModuleType):
 
     def __eq__(self: Fake, _: object) -> bool:
         return True
+
+    def __ne__(self: Fake, _: object) -> bool:
+        return False
+
+    def __str__(self: Fake) -> str:
+        return 'Fake'
 
     def __repr__(self: Fake) -> str:
         return 'Fake'

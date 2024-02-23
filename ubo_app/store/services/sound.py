@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from redux import BaseAction, BaseEvent, Immutable
+from immutable import Immutable
+from redux import BaseAction, BaseEvent
 
 
 class SoundDevice(StrEnum):

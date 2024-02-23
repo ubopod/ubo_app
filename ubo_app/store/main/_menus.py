@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Sequence
 
-from redux import AutorunOptions, FinishAction
+from redux import AutorunOptions
 from ubo_gui.menu.types import (
     ActionItem,
     ApplicationItem,
@@ -15,12 +15,7 @@ from ubo_gui.notification import NotificationWidget
 
 from ubo_app.store import autorun, dispatch
 from ubo_app.store.main import PowerOffAction
-from ubo_app.store.services.notifications import (
-    Chime,
-    Notification,
-    NotificationsClearAction,
-)
-from ubo_app.store.services.sound import SoundPlayChimeAction
+from ubo_app.store.services.notifications import Notification, NotificationsClearAction
 from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
 
 if TYPE_CHECKING:
@@ -140,11 +135,7 @@ HOME_MENU = HeadlessMenu(
         ),
         ActionItem(
             label='Turn off',
-            action=lambda: dispatch(
-                SoundPlayChimeAction(name=Chime.FAILURE),
-                PowerOffAction(),
-                FinishAction(),
-            ),
+            action=lambda: dispatch(PowerOffAction()),
             icon='power_settings_new',
             is_short=True,
         ),

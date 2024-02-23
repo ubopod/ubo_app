@@ -17,7 +17,7 @@ from ubo_app.constants import DOCKER_INSTALLATION_LOCK_FILE, USERNAME
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 from ubo_app.system.system_manager.led import LEDManager
 
-SOCKET_PATH = Path(os.getenv('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
+SOCKET_PATH = Path(os.environ.get('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
     'system_manager.sock',
 )
 # The order of the pixel colors - RGB or GRB.

@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from redux import BaseAction, Immutable
+from immutable import Immutable
+from redux import BaseAction
 
 
 class IconState(Immutable):

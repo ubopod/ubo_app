@@ -54,14 +54,17 @@ def reducer(
             latest_version=action.latest_version,
         )
         version_comparison = 1
-        with contextlib.suppress(
-            ValueError,
-        ):  # ValueError happens for alpha/beta versions
-            version_comparison = semver.compare(
+        with contextlib.suppress(ValueError):
+            latest_version = semver.Version.parse(
                 action.latest_version,
-                action.current_version,
+                optional_minor_and_patch=True,
             )
-        if version_comparison == 1:
+            current_version = semver.Version.parse(
+                action.current_version,
+                optional_minor_and_patch=True,
+            )
+            version_comparison = latest_version.compare(current_version)
+        if version_comparison > 0:
             return CompleteReducerResult(
                 state=state,
                 actions=[

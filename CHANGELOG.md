@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.10.7
+
+- chore: split asset files bigger than 2GB in the release into chunks of 2GB.
+- refactor: general housekeeping
+
 ## Version 0.10.6
 
 - fix: wireless module now has sufficient privileges

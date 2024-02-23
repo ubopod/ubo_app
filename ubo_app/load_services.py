@@ -57,18 +57,18 @@ class UboServiceModuleLoader(SourceFileLoader):
 
 
 class UboServiceLoopLoader(importlib.abc.Loader):
-    def __init__(self: UboServiceLoopLoader, thread: UboServiceThread) -> None:
-        self.thread = thread
+    def __init__(self: UboServiceLoopLoader, service: UboServiceThread) -> None:
+        self.service = service
 
     def exec_module(self: UboServiceLoopLoader, module: ModuleType) -> None:
         cast(Any, module)._create_task = (  # noqa: SLF001
-            lambda task: self.thread.loop.call_soon_threadsafe(
-                self.thread.loop.create_task,
+            lambda task: self.service.loop.call_soon_threadsafe(
+                self.service.loop.create_task,
                 task,
             )
         )
         cast(Any, module)._run_in_executor = (  # noqa: SLF001
-            lambda executor, task, *args: self.thread.loop.run_in_executor(
+            lambda executor, task, *args: self.service.loop.run_in_executor(
                 executor,
                 task,
                 *args,
@@ -76,7 +76,7 @@ class UboServiceLoopLoader(importlib.abc.Loader):
         )
 
     def __repr__(self: UboServiceLoopLoader) -> str:
-        return f'{self.thread.path}'
+        return f'{self.service.path}'
 
 
 class UboServiceFinder(importlib.abc.MetaPathFinder):
@@ -98,13 +98,13 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         )
 
         if matching_path in REGISTERED_PATHS:
-            thread = REGISTERED_PATHS[matching_path]
-            module_name = f'{thread.service_uid}:{fullname}'
+            service = REGISTERED_PATHS[matching_path]
+            module_name = f'{service.service_uid}:{fullname}'
 
             if fullname == 'ubo_app.utils.loop':
                 return importlib.util.spec_from_loader(
                     module_name,
-                    UboServiceLoopLoader(thread),
+                    UboServiceLoopLoader(service),
                 )
 
             spec = PathFinder.find_spec(
@@ -232,11 +232,11 @@ def load_services() -> None:
                 current_path = Path().absolute()
                 os.chdir(service_path.as_posix())
 
-                thread = UboServiceThread(
+                service = UboServiceThread(
                     service_path,
                     service_uid,
                 )
-                REGISTERED_PATHS[service_path] = thread
-                thread.start()
+                REGISTERED_PATHS[service_path] = service
+                service.start()
 
                 os.chdir(current_path)

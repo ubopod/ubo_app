@@ -4,7 +4,8 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Sequence
 
-from redux import BaseAction, BaseEvent, Immutable
+from immutable import Immutable
+from redux import BaseAction, BaseEvent
 
 
 class WiFiType(StrEnum):

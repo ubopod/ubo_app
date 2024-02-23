@@ -380,7 +380,7 @@ async def forget_wireless_connection(ssid: str) -> None:
 async def get_connections() -> list[WiFiConnection]:
     # It is need as this action is not atomic and the active_connection may not be
     # available when active_connection.state is queried
-    for i in range(RETRIES):
+    for _ in range(RETRIES):
         with contextlib.suppress(Exception):
             active_connection = await get_active_connection()
             active_connection_ssid = await get_active_connection_ssid()

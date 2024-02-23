@@ -5,27 +5,22 @@ from typing import TYPE_CHECKING, Literal
 
 from kivy.core.window import Keyboard, Window, WindowBase
 
-from ubo_app.store.services.keypad import (
-    Key,
-    KeypadKeyPressAction,
-)
-from ubo_app.store.services.sound import (
-    SoundDevice,
-    SoundToggleMuteStatusAction,
-)
+from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
+from ubo_app.store.services.sound import SoundDevice, SoundToggleMuteStatusAction
 
 if TYPE_CHECKING:
     Modifier = Literal['ctrl', 'alt', 'meta', 'shift']
 
 
 def on_keyboard(
-    _: WindowBase,
+    window: WindowBase,
     key: int,
-    _scancode: int,
-    _codepoint: str,
+    scancode: int,
+    codepoint: str,
     modifier: list[Modifier],
 ) -> None:
     """Handle keyboard events."""
+    _ = window, scancode, codepoint
     from ubo_app.store import dispatch
 
     if modifier == []:

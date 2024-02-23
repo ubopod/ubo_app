@@ -4,7 +4,8 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Generic, Sequence, TypeVar
 
-from redux import BaseAction, Immutable
+from immutable import Immutable
+from redux import BaseAction
 
 if TYPE_CHECKING:
     from datetime import datetime

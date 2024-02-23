@@ -16,6 +16,15 @@ jobs:
       - uses: actions/checkout@v4
         name: Checkout
 
+      - name: Save Cached Poetry
+        id: cached-poetry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key: poetry-${{ hashFiles('poetry.lock') }}
+
       - uses: actions/setup-python@v5
         name: Setup Python
         with:
@@ -29,15 +38,6 @@ jobs:
 
       - name: Install dependencies
         run: poetry install --extras=dev --with dev
-
-      - name: Save Cached Poetry
-        id: cached-poetry
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache
-            ~/.local
-          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
 
   type-check:
     name: Type Check
@@ -61,7 +61,7 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
+          key: poetry-${{ hashFiles('poetry.lock') }}
 
       - name: Create stub files
         run: poetry run pyright --createstub kivy
@@ -91,7 +91,7 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
+          key: poetry-${{ hashFiles('poetry.lock') }}
 
       - name: Lint
         run: poetry run poe lint
@@ -102,7 +102,8 @@ jobs:
       - dependencies
     runs-on: ubuntu-latest
     outputs:
-      ubo_app_version: ${{ steps.extract_version.outputs.ubo_app_version }}
+      version: ${{ steps.extract_version.outputs.version }}
+      name: ${{ steps.extract_version.outputs.name }}
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -122,7 +123,7 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
+          key: poetry-${{ hashFiles('poetry.lock') }}
 
       - name: Build
         run: poetry build
@@ -130,8 +131,8 @@ jobs:
       - name: Extract Version
         id: extract_version
         run: |
-          echo "ubo_app_version=$(poetry run python scripts/print_version.py)" >> "$GITHUB_OUTPUT"
-          echo "ubo_app_version=$(poetry run python scripts/print_version.py)"
+          echo "version=$(poetry version --short)" >> "$GITHUB_OUTPUT"
+          echo "name=$(poetry version | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
@@ -157,8 +158,8 @@ jobs:
       - build
     runs-on: ubuntu-latest
     environment:
-      name: PyPI
-      url: https://pypi.org/p/ubo-app
+      name: release
+      url: https://pypi.org/p/${{ needs.build.outputs.name }}
     permissions:
       id-token: write
     steps:
@@ -177,6 +178,7 @@ jobs:
         with:
           packages-dir: dist
           verbose: true
+          skip-existing: true
 
   images:
     name: Create Images
@@ -231,7 +233,7 @@ jobs:
 
       - name: Build Artifact
         env:
-          PKR_VAR_ubo_app_version: ${{ needs.build.outputs.ubo_app_version }}
+          PKR_VAR_ubo_app_version: ${{ needs.build.outputs.version }}
           PKR_VAR_image_url: ${{ steps.generate_image_url.outputs.image_url }}
           PKR_VAR_image_checksum:
             ${{ steps.generate_image_url.outputs.image_checksum }}
@@ -257,8 +259,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name:
-            ubo_app-bookworm${{
-            steps.generate_image_url.outputs.dashed_suffix}}.img.gz
+            ubo_app-${{ needs.build.outputs.version }}-bookworm${{
+            steps.generate_image_url.outputs.dashed_suffix}}-arm64.img.gz
           path:
             /ubo_app-bookworm${{ steps.generate_image_url.outputs.dashed_suffix
             }}.img.gz
@@ -273,6 +275,9 @@ jobs:
       - pypi-publish
       - images
     runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://pypi.org/p/${{ needs.build.outputs.name }}
     permissions:
       contents: write
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -280,23 +285,24 @@ jobs:
       - name: Procure Lite Image
         uses: actions/download-artifact@v4
         with:
-          name: ubo_app-bookworm-lite.img.gz
+          name:
+            ubo_app-${{ needs.build.outputs.version
+            }}-bookworm-lite-arm64.img.gz
           path: artifacts
 
       - name: Procure Default Image
         uses: actions/download-artifact@v4
         with:
-          name: ubo_app-bookworm.img.gz
+          name: ubo_app-${{ needs.build.outputs.version }}-bookworm-arm64.img.gz
           path: artifacts
 
-      # TODO
-      # It is larger than 2GB, so it is not possible to upload it to GitHub
-      # Looking for a solution to this problem
-      # - name: Procure Full Image
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: ubo_app-bookworm-full.img.gz
-      #     path: artifacts
+      - name: Procure Full Image
+        uses: actions/download-artifact@v4
+        with:
+          name:
+            ubo_app-${{ needs.build.outputs.version
+            }}-bookworm-full-arm64.img.gz
+          path: artifacts
 
       - name: Procure Wheel
         uses: actions/download-artifact@v4
@@ -310,13 +316,30 @@ jobs:
           name: binary
           path: artifacts
 
+      - name:
+          Split Large Files into 2GB chunks in a for loop only if they are
+          bigger than 2GB
+        run: |
+          for file in artifacts/*; do
+            if [ $(stat -c%s "$file") -gt 2000000000 ]; then
+              split -b 2000000000 "$file" "$file"_
+              rm "$file"
+            fi
+          done
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: artifacts/*
-          tag_name: ${{ needs.build.outputs.ubo_app_version }}
+          tag_name: ${{ needs.build.outputs.version }}
           body: |
-            Release of version ${{ needs.build.outputs.ubo_app_version }}
-            PyPI package: https://pypi.org/project/ubo-app/${{ needs.build.outputs.ubo_app_version }}
+            Release of version ${{ needs.build.outputs.version }}
+            PyPI package: https://pypi.org/project/${{ needs.build.outputs.name }}/${{ needs.build.outputs.version }}
+
+            Note than GitHub doesn't allow assets bigger than 2GB in a release. Due to this, the files bigger than 2GB have been split into 2GB chunks. You can join them using the following command:
+
+            ```bash
+            cat [[filename]]_* > [[filename]]
+            ```
           prerelease: false
           draft: false

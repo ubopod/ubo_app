@@ -4,7 +4,8 @@ from __future__ import annotations
 from dataclasses import field
 from typing import TYPE_CHECKING, Sequence
 
-from redux import BaseAction, BaseEvent, FinishAction, Immutable, InitAction
+from immutable import Immutable
+from redux import BaseAction, BaseEvent, FinishAction, InitAction
 
 from ubo_app.store.services.keypad import KeypadAction
 from ubo_app.store.status_icons import StatusIconsAction

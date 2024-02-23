@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import TypeAlias
 
-from redux import BaseAction, BaseEvent, Immutable
+from immutable import Immutable
+from redux import BaseAction, BaseEvent
 
 Color: TypeAlias = (
     tuple[float | int, float | int, float | int]

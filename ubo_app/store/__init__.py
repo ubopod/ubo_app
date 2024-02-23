@@ -8,8 +8,9 @@ from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
     CreateStoreOptions,
+    InitAction,
+    Store,
     combine_reducers,
-    create_store,
 )
 
 from ubo_app.constants import DEBUG_MODE
@@ -71,10 +72,10 @@ def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
     Clock.create_trigger(lambda _: callback(), 0, interval=interval)()
 
 
-store = create_store(
+store = Store(
     root_reducer,
     CreateStoreOptions(
-        auto_init=True,
+        auto_init=False,
         scheduler=scheduler,
         action_middleware=lambda action: logger.debug(
             'Action dispatched',
@@ -92,7 +93,9 @@ dispatch = store.dispatch
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
 
+dispatch(InitAction())
+
 if DEBUG_MODE:
     subscribe(lambda state: logger.verbose('State updated', extra={'state': state}))
 
-__ALL__ = (autorun, dispatch, subscribe, subscribe_event)
+__all__ = ('autorun', 'dispatch', 'subscribe', 'subscribe_event')

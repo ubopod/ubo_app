@@ -50,7 +50,7 @@ class HomePage(PageWidget):
         self.ids.right_column.add_widget(volume_widget)
 
         @autorun(lambda state: state.sound.playback_volume)
-        def sync_output_volume(selector_result: float) -> None:
+        def _(selector_result: float) -> None:
             volume_widget.value = selector_result * 100
 
     @cached_property
@@ -134,7 +134,7 @@ class MenuAppCentral(UboApp):
         subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
-            options=EventSubscriptionOptions(run_async=False),
+            options=EventSubscriptionOptions(run_async=True),
         )
 
         subscribe_event(

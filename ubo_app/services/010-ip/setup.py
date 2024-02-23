@@ -52,7 +52,7 @@ def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuIt
     ]
 
 
-def load_ip_addresses(_: IpUpdateRequestEvent | None = None) -> None:
+def load_ip_addresses() -> None:
     ip_addresses_by_interface = defaultdict(list)
     for interface_name, ip_addresses in psutil.net_if_addrs().items():
         for address in ip_addresses:

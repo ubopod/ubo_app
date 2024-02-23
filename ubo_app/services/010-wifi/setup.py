@@ -59,4 +59,4 @@ def init_service() -> None:
 
     dispatch(RegisterSettingAppAction(menu_item=main.WiFiMainMenu))
 
-    subscribe_event(WiFiUpdateRequestEvent, lambda _: create_task(request_scan()))
+    subscribe_event(WiFiUpdateRequestEvent, lambda: create_task(request_scan()))

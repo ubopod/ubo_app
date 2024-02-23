@@ -7,9 +7,8 @@ import math
 import time
 import wave
 
-from headless_kivy_pi import IS_RPI
-
 from ubo_app.logging import logger
+from ubo_app.utils import IS_RPI
 
 if not IS_RPI:
     import sys
