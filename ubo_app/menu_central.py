@@ -134,7 +134,7 @@ class MenuAppCentral(UboApp):
         subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
-            options=EventSubscriptionOptions(run_async=False),
+            options=EventSubscriptionOptions(immediate_run=True),
         )
 
         subscribe_event(

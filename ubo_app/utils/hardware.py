@@ -16,22 +16,27 @@ def initialize_board() -> None:
 def turn_off_screen() -> None:
     if not IS_RPI:
         return
-    from headless_kivy_pi import HeadlessWidget
+    import headless_kivy_pi.config
     from headless_kivy_pi.constants import BYTES_PER_PIXEL
     from RPi import GPIO
 
     GPIO.setup(26, GPIO.OUT)
     GPIO.output(26, GPIO.LOW)
 
-    display = HeadlessWidget._display  # noqa: SLF001
+    display = headless_kivy_pi.config._display  # noqa: SLF001
     if not display:
         return
-    data = [0] * HeadlessWidget.width * HeadlessWidget.height * BYTES_PER_PIXEL
+    data = (
+        [0]
+        * headless_kivy_pi.config.width()
+        * headless_kivy_pi.config.height()
+        * BYTES_PER_PIXEL
+    )
     display._block(  # noqa: SLF001
         0,
         0,
-        HeadlessWidget.width - 1,
-        HeadlessWidget.height - 1,
+        headless_kivy_pi.config.width() - 1,
+        headless_kivy_pi.config.height() - 1,
         data,
     )
 

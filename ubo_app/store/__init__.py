@@ -29,6 +29,7 @@ from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.update_manager import UpdateManagerAction, UpdateManagerState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
+from ubo_app.utils.async_ import create_task
 
 
 class RootState(BaseCombineReducerState):
@@ -85,6 +86,7 @@ store = Store(
             'Event dispatched',
             extra={'event': event},
         ),
+        task_creator=create_task,
     ),
 )
 
