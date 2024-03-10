@@ -14,6 +14,7 @@ from redux import (
     combine_reducers,
 )
 
+from ubo_app.constants import DEBUG_MODE_DOCKER, DOCKER_PREFIX
 from ubo_app.store.services.docker import (
     DockerAction,
     DockerImageAction,
@@ -25,6 +26,7 @@ from ubo_app.store.services.docker import (
     DockerState,
     ImageState,
 )
+from ubo_app.store.services.ip import IpUpdateAction
 
 Action = InitAction | DockerAction
 
@@ -53,6 +55,7 @@ class ImageEntry(Immutable):
     icon: str
     path: str
     ports: dict[str, str] = field(default_factory=dict)
+    hosts: dict[str, str] = field(default_factory=dict)
     volumes: list[str] | None = None
 
 
@@ -63,33 +66,54 @@ IMAGES = {
             id='home_assistant',
             label='Home Assistant',
             icon='home',
-            path='homeassistant/home-assistant:stable',
+            path=DOCKER_PREFIX + 'homeassistant/home-assistant:stable',
             ports={'8123/tcp': '8123'},
         ),
         ImageEntry(
             id='home_bridge',
             label='Home Bridge',
             icon='home_work',
-            path='homebridge/homebridge:latest',
+            path=DOCKER_PREFIX + 'homebridge/homebridge:latest',
         ),
         ImageEntry(
             id='portainer',
             label='Portainer',
             icon='settings_applications',
-            path='portainer/portainer-ce:latest',
+            path=DOCKER_PREFIX + 'portainer/portainer-ce:latest',
             volumes=['/var/run/docker.sock:/var/run/docker.sock'],
         ),
         ImageEntry(
             id='pi_hole',
             label='Pi-hole',
             icon='dns',
-            path='pihole/pihole:latest',
+            path=DOCKER_PREFIX + 'pihole/pihole:latest',
         ),
         ImageEntry(
-            id='alpine',
-            label='Alpine',
+            id='ollama',
+            label='Ollama',
+            icon='smart_toy',
+            path=DOCKER_PREFIX + 'ollama/ollama:latest',
+            ports={'11434/tcp': '11434'},
+        ),
+        ImageEntry(
+            id='open_webui',
+            label='Open WebUI',
             icon='code',
-            path='alpine:latest',
+            path=DOCKER_PREFIX + 'ghcr.io/open-webui/open-webui:main',
+            ports={'8080/tcp': '8080'},
+            hosts={'host.docker.internal': 'ollama'},
+        ),
+        *(
+            [
+                ImageEntry(
+                    id='alpine',
+                    label='Alpine',
+                    icon='code',
+                    path=DOCKER_PREFIX + 'alpine:latest',
+                ),
+            ]
+            if DEBUG_MODE_DOCKER
+            else []
         ),
     ]
 }
@@ -98,7 +122,7 @@ IMAGE_IDS = list(IMAGES.keys())
 
 def image_reducer(
     state: ImageState | None,
-    action: DockerImageAction | CombineReducerAction,
+    action: DockerImageAction | CombineReducerAction | IpUpdateAction,
 ) -> ImageState:
     """Image reducer."""
     if state is None:
@@ -112,6 +136,14 @@ def image_reducer(
             )
         raise InitializationActionError(action)
 
+    if isinstance(action, IpUpdateAction):
+        return replace(
+            state,
+            ip_addresses=[
+                ip for interface in action.interfaces for ip in interface.ip_addresses
+            ],
+        )
+
     if not isinstance(action, DockerImageAction) or action.image != state.id:
         return state
 
@@ -120,6 +152,7 @@ def image_reducer(
             state,
             status=action.status,
             ports=action.ports if action.ports else state.ports,
+            container_ip=action.ip,
         )
 
     if isinstance(action, DockerImageSetDockerIdAction):

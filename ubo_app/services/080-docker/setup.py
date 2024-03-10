@@ -10,6 +10,8 @@ from typing import Callable
 
 import docker
 import docker.errors
+from docker.models.containers import Container
+from docker.models.images import Image
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_INSTALLATION_LOCK_FILE, SOCKET_PATH
@@ -63,6 +65,9 @@ def stop_docker() -> None:
 
 async def check_docker() -> None:
     """Check if Docker is installed."""
+    from image import update_container
+    from reducer import IMAGES
+
     process = await asyncio.create_subprocess_exec(
         '/usr/bin/env',
         'which',
@@ -75,6 +80,20 @@ async def check_docker() -> None:
     with contextlib.suppress(Exception):
         docker_client = docker.from_env()
         is_running = docker_client.ping()
+
+        for container in docker_client.containers.list(all=True):
+            if not isinstance(container, Container):
+                continue
+
+            with contextlib.suppress(docker.errors.DockerException):
+                container_image = container.image
+                for image_id, image_description in IMAGES.items():
+                    if (
+                        isinstance(container_image, Image)
+                        and image_description.path in container_image.tags
+                    ):
+                        update_container(image_id, container)
+
         docker_client.close()
 
     if is_running:

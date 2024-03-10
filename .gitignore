@@ -61,8 +61,8 @@ cover/
 .python-version
 
 # Environments
-.env
 .venv
+.dev.env
 env/
 venv/
 ENV/

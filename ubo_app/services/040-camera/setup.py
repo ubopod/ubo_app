@@ -5,8 +5,8 @@ import re
 import time
 from typing import TYPE_CHECKING
 
+import headless_kivy_pi.config
 import numpy as np
-from headless_kivy_pi import HeadlessWidget
 from kivy.clock import Clock
 
 from ubo_app.logging import logger
@@ -26,7 +26,10 @@ THROTTL_TIME = 0.5
 
 def resize_image(
     image: NDArray[np.uint8],
-    new_size: tuple[int, int] = (HeadlessWidget.width, HeadlessWidget.height),
+    new_size: tuple[int, int] = (
+        headless_kivy_pi.config.width(),
+        headless_kivy_pi.config.height(),
+    ),
 ) -> NDArray[np.uint8]:
     scale_x = image.shape[1] / new_size[1]
     scale_y = image.shape[0] / new_size[0]
@@ -81,7 +84,10 @@ def init_service() -> None:
     preview_config = picam2.create_still_configuration(
         {
             'format': 'RGB888',
-            'size': (HeadlessWidget.width * 2, HeadlessWidget.height * 2),
+            'size': (
+                headless_kivy_pi.config.width() * 2,
+                headless_kivy_pi.config.height() * 2,
+            ),
         },
     )
     picam2.configure(preview_config)
@@ -94,9 +100,10 @@ def init_service() -> None:
         regex = re.compile(regex_pattern) if regex_pattern is not None else None
         last_match = 0
 
-        display = HeadlessWidget._display  # noqa: SLF001
-
         def feed_viewfinder(_: object) -> None:
+            display = headless_kivy_pi.config._display  # noqa: SLF001
+            if not display:
+                return
             data = picam2.capture_array('main')
 
             barcodes = decode(data)
@@ -125,17 +132,18 @@ def init_service() -> None:
             display._block(  # noqa: SLF001
                 0,
                 0,
-                HeadlessWidget.width - 1,
-                HeadlessWidget.height - 1,
+                headless_kivy_pi.config.width() - 1,
+                headless_kivy_pi.config.height() - 1,
                 data_bytes,
             )
 
         feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder, 0.03)
-        HeadlessWidget.pause()
+
+        headless_kivy_pi.config.pause()
 
         def handle_stop_viewfinder(_: CameraStopViewfinderEvent) -> None:
             feed_viewfinder_scheduler.cancel()
-            HeadlessWidget.resume()
+            headless_kivy_pi.config.resume()
             cancel_subscription()
 
         cancel_subscription = subscribe_event(

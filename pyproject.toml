@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.10.7"
+version = "0.11.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -18,14 +18,14 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.9.5", markers = "extra=='default'", extras = [
+  { version = "^0.9.7", markers = "extra=='default'", extras = [
     'default',
   ] },
-  { version = "^0.9.5", markers = "extra=='dev'", extras = [
+  { version = "^0.9.7", markers = "extra=='dev'", extras = [
     'dev',
   ] },
 ]
-python-redux = "==0.10.4"
+python-redux = "^0.10.7"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -37,19 +37,19 @@ semver = "^3.0.2"
 adafruit-circuitpython-pct2075 = "^1.1.21"
 adafruit-circuitpython-veml7700 = "^1.1.22"
 docker = "^7.0.0"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 pyright = "^1.1.349"
-ruff = "^0.2.1"
+ruff = "^0.3.2"
 toml = "^0.10.2"
-python-dotenv = "^1.0.1"
 
 [tool.poetry.extras]
-default = ['ubo-gui', 'headless-kivy-pi']
-dev = ['ubo-gui', 'headless-kivy-pi']
+default = ['ubo-gui']
+dev = ['ubo-gui']
 
 [tool.poetry.scripts]
 ubo = "ubo_app:main"
@@ -59,7 +59,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
-lint = "ruff . --unsafe-fixes"
+lint = "ruff check . --unsafe-fixes"
 typecheck = "pyright -p pyproject.toml ."
 sanity = ["typecheck", "lint"]
 

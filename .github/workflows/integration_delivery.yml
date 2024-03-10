@@ -253,7 +253,7 @@ jobs:
 
       - name: Compress File with Gzip
         run: |
-          scripts/consume.sh /build/image.img | gzip -9 > /ubo_app-bookworm${{ steps.generate_image_url.outputs.dashed_suffix }}.img.gz
+          scripts/consume.sh /build/image.img | gzip -9 > /ubo_app-${{ needs.build.outputs.version }}-bookworm${{ steps.generate_image_url.outputs.dashed_suffix }}.img.gz
 
       - name: Upload Image
         uses: actions/upload-artifact@v4
@@ -262,8 +262,8 @@ jobs:
             ubo_app-${{ needs.build.outputs.version }}-bookworm${{
             steps.generate_image_url.outputs.dashed_suffix}}-arm64.img.gz
           path:
-            /ubo_app-bookworm${{ steps.generate_image_url.outputs.dashed_suffix
-            }}.img.gz
+            /ubo_app-${{ needs.build.outputs.version }}-bookworm${{
+            steps.generate_image_url.outputs.dashed_suffix }}.img.gz
           if-no-files-found: error
 
   release:

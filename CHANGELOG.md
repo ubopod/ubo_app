@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 0.11.0
+
+- feat: add ollama and open-webui docker images
+- feat: render a qrcode for each ip x port combination of a container
+- feat: add `UBO_DOCKER_PREFIX` to help pull docker images from local registries
+  during development
+- feat: let images depend on eachother's ip address to let semi composition
+- feat: read the state of all relevant containers during initialization and update
+  the store accordingly
+- feat: add `--restart=always` for all containers, in the future we will make it
+  customizable.
+- chore: add python-dotenv and read `.env` and `.dev.env` files during initialization
+- chore: update to latest version of ubo-gui and headless-kivy-pi
+
 ## Version 0.10.7
 
 - chore: split asset files bigger than 2GB in the release into chunks of 2GB.

@@ -51,6 +51,7 @@ class DockerImageSetStatusAction(DockerImageAction):
 
     status: ImageStatus
     ports: list[str] | None = None
+    ip: str | None = None
 
 
 class DockerImageSetDockerIdAction(DockerImageAction):
@@ -83,8 +84,10 @@ class ImageState(Immutable):
     icon: str
     path: str
     status: ImageStatus = ImageStatus.NOT_AVAILABLE
+    container_ip: str | None = None
     docker_id: str | None = None
     ports: list[str] = field(default_factory=list)
+    ip_addresses: list[str] = field(default_factory=list)
 
     @property
     def is_fetching(self: ImageState) -> bool:

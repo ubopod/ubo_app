@@ -15,21 +15,31 @@ def main() -> None:
     if LOG_LEVEL:
         import logging
 
-        from ubo_app.logging import add_file_handler, add_stdout_handler, logger
+        import ubo_app.logging
 
-        logger.setLevel(getattr(logging, LOG_LEVEL))
-        add_file_handler(logger, getattr(logging, LOG_LEVEL))
-        add_stdout_handler(logger, getattr(logging, LOG_LEVEL))
+        level = getattr(
+            ubo_app.logging,
+            LOG_LEVEL,
+            getattr(logging, LOG_LEVEL, logging.INFO),
+        )
+
+        ubo_app.logging.logger.setLevel(level)
+        ubo_app.logging.add_file_handler(ubo_app.logging.logger, level)
+        ubo_app.logging.add_stdout_handler(ubo_app.logging.logger, level)
     if GUI_LOG_LEVEL:
         import logging
 
-        from ubo_gui.logger import add_file_handler as gui_add_file_handler
-        from ubo_gui.logger import add_stdout_handler as gui_add_stdout_handler
-        from ubo_gui.logger import logger
+        import ubo_gui.logger
 
-        logger.setLevel(getattr(logging, GUI_LOG_LEVEL))
-        gui_add_file_handler(getattr(logging, GUI_LOG_LEVEL))
-        gui_add_stdout_handler(getattr(logging, GUI_LOG_LEVEL))
+        level = getattr(
+            ubo_gui.logger,
+            GUI_LOG_LEVEL,
+            getattr(logging, GUI_LOG_LEVEL, logging.INFO),
+        )
+
+        ubo_gui.logger.logger.setLevel(level)
+        ubo_gui.logger.add_file_handler(level)
+        ubo_gui.logger.add_stdout_handler(level)
 
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
         from ubo_app.system.bootstrap import bootstrap
@@ -66,12 +76,12 @@ def main() -> None:
 
     threading.excepthook = thread_exception_handler
 
-    from headless_kivy_pi import HeadlessWidget
+    import headless_kivy_pi.config
 
     os.environ['KIVY_METRICS_DENSITY'] = '1'
     os.environ['KIVY_NO_CONFIG'] = '1'
     os.environ['KIVY_NO_FILELOG'] = '1'
-    HeadlessWidget.setup_headless({'automatic_fps': True})
+    headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})
 
     from kivy.clock import Clock
 
