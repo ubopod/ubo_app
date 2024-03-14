@@ -126,11 +126,11 @@ class UboServiceThread(threading.Thread):
     def __init__(
         self: UboServiceThread,
         path: Path,
-        service_uid: str,
     ) -> None:
+        name = path.name
         super().__init__()
-        self.service_uid = service_uid
-        self.id = self.service_uid.split(':')[1]
+        self.service_uid = f'{uuid.uuid4().hex}:{name}'
+        self.name = name
         self.label = '<NOT SET>'
         self.path = path
         self.loop = asyncio.new_event_loop()
@@ -176,7 +176,7 @@ class UboServiceThread(threading.Thread):
         self.loop.call_soon_threadsafe(self.loop.stop)
 
     def __repr__(self: UboServiceThread) -> str:
-        return f'<UboServiceThread id={self.id} label={self.label}>'
+        return f'<UboServiceThread id={self.name} label={self.label}>'
 
 
 def register_service(
@@ -226,16 +226,12 @@ def load_services() -> None:
     ]:
         if Path(services_directory_path).is_dir():
             for service_path in Path(services_directory_path).iterdir():
-                service_uid = f'{uuid.uuid4().hex}:{service_path.name}'
                 if not service_path.is_dir():
                     continue
                 current_path = Path().absolute()
                 os.chdir(service_path.as_posix())
 
-                service = UboServiceThread(
-                    service_path,
-                    service_uid,
-                )
+                service = UboServiceThread(service_path)
                 REGISTERED_PATHS[service_path] = service
                 service.start()
 

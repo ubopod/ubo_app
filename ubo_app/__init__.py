@@ -7,11 +7,10 @@ from types import TracebackType
 
 from redux import FinishAction
 
-from ubo_app.constants import GUI_LOG_LEVEL, LOG_LEVEL
 
+def setup_logging() -> None:
+    from ubo_app.constants import GUI_LOG_LEVEL, LOG_LEVEL
 
-def main() -> None:
-    """Instantiate the `MenuApp` and run it."""
     if LOG_LEVEL:
         import logging
 
@@ -40,6 +39,11 @@ def main() -> None:
         ubo_gui.logger.logger.setLevel(level)
         ubo_gui.logger.add_file_handler(level)
         ubo_gui.logger.add_stdout_handler(level)
+
+
+def main() -> None:
+    """Instantiate the `MenuApp` and run it."""
+    setup_logging()
 
     if len(sys.argv) > 1 and sys.argv[1] == 'bootstrap':
         from ubo_app.system.bootstrap import bootstrap
@@ -76,11 +80,11 @@ def main() -> None:
 
     threading.excepthook = thread_exception_handler
 
-    import headless_kivy_pi.config
-
-    os.environ['KIVY_METRICS_DENSITY'] = '1'
     os.environ['KIVY_NO_CONFIG'] = '1'
     os.environ['KIVY_NO_FILELOG'] = '1'
+
+    import headless_kivy_pi.config
+
     headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})
 
     from kivy.clock import Clock
@@ -88,12 +92,7 @@ def main() -> None:
     from ubo_app.load_services import load_services
     from ubo_app.menu import MenuApp
 
-    # Needed since redux is scheduled using Clock scheduler and Clock doesn't run before
-    # app is running
-    Clock.tick()
-
     load_services()
-
     app = MenuApp()
 
     try:

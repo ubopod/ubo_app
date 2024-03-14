@@ -23,15 +23,15 @@ def init_service() -> None:
     audio_manager = AudioManager()
 
     @autorun(lambda state: state.sound.playback_volume)
-    def sync_playback_volume(volume: float) -> None:
+    def _(volume: float) -> None:
         audio_manager.set_playback_volume(volume)
 
     @autorun(lambda state: state.sound.capture_volume)
-    def sync_capture_volume(volume: float) -> None:
+    def _(volume: float) -> None:
         audio_manager.set_capture_volume(volume)
 
     @autorun(lambda state: state.sound.is_playback_mute)
-    def sync_playback_mute(is_mute: bool) -> None:  # noqa: FBT001
+    def _(is_mute: bool) -> None:  # noqa: FBT001
         audio_manager.set_playback_mute(mute=is_mute)
 
     subscribe_event(

@@ -100,6 +100,10 @@ def init_service() -> None:
         regex = re.compile(regex_pattern) if regex_pattern is not None else None
         last_match = 0
 
+        display = headless_kivy_pi.config._display  # noqa: SLF001
+        if not display:
+            return
+
         def feed_viewfinder(_: object) -> None:
             display = headless_kivy_pi.config._display  # noqa: SLF001
             if not display:
@@ -141,7 +145,7 @@ def init_service() -> None:
 
         headless_kivy_pi.config.pause()
 
-        def handle_stop_viewfinder(_: CameraStopViewfinderEvent) -> None:
+        def handle_stop_viewfinder() -> None:
             feed_viewfinder_scheduler.cancel()
             headless_kivy_pi.config.resume()
             cancel_subscription()

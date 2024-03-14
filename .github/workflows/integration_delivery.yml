@@ -96,6 +96,59 @@ jobs:
       - name: Lint
         run: poetry run poe lint
 
+  test:
+    name: Test
+    needs:
+      - dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: System Dependencies
+        run: sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0
+
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - uses: actions/setup-python@v5
+        name: Setup Python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+
+      - name: Load Cached Poetry
+        id: cached-poetry
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key: poetry-${{ hashFiles('poetry.lock') }}
+
+      - name: Test
+        run: poetry run poe test --cov-report=xml --cov-report=html
+
+      - name: Collect Mismatching Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mismatching-screenshots
+          path: tests/**/*.mismatch.png
+
+      - name: Collect HTML Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov
+
+      - name: Upload Coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          file: ./coverage.xml
+          flags: integration
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   build:
     name: Build
     needs:
@@ -155,6 +208,7 @@ jobs:
     needs:
       - type-check
       - lint
+      - test
       - build
     runs-on: ubuntu-latest
     environment:
@@ -183,6 +237,9 @@ jobs:
   images:
     name: Create Images
     needs:
+      - type-check
+      - lint
+      - test
       - build
     runs-on: ubuntu-latest
     container:
@@ -271,6 +328,7 @@ jobs:
     needs:
       - type-check
       - lint
+      - test
       - build
       - pypi-publish
       - images

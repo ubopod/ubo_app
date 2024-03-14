@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.11.1
+
+- chore(test): set up testing framework with initial examples
+- chore(test): set up snapshot test helper to compare screenshots of different stages
+  of tests with previous successful tests using hashes
+
 ## Version 0.11.0
 
 - feat: add ollama and open-webui docker images

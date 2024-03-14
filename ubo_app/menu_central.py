@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 import pathlib
+import weakref
 from functools import cached_property
-from threading import Thread
 from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
 from kivy.lang.builder import Builder
-from redux import EventSubscriptionOptions
+from redux import AutorunOptions, EventSubscriptionOptions
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
@@ -24,7 +24,6 @@ from ubo_app.store.services.notifications import (
     NotificationsClearAction,
     NotificationsDisplayEvent,
 )
-from ubo_app.utils.async_ import create_task
 
 from .store import autorun, dispatch, subscribe_event
 
@@ -46,30 +45,32 @@ class HomePage(PageWidget):
         self.ids.central_column.add_widget(self.cpu_gauge)
         self.ids.central_column.add_widget(self.ram_gauge)
 
-        volume_widget = VolumeWidget()
-        self.ids.right_column.add_widget(volume_widget)
+        self.volume_widget = VolumeWidget()
+        self.ids.right_column.add_widget(self.volume_widget)
 
-        @autorun(lambda state: state.sound.playback_volume)
-        def _(selector_result: float) -> None:
-            volume_widget.value = selector_result * 100
+        self.sync_output_volume = self._sync_output_volume
+        autorun(
+            lambda state: state.sound.playback_volume,
+            options=AutorunOptions(keep_ref=False),
+        )(self.sync_output_volume)
+
+    def _sync_output_volume(self: HomePage, selector_result: float) -> None:
+        self.volume_widget.value = selector_result * 100
 
     @cached_property
     def cpu_gauge(self: HomePage) -> GaugeWidget:
         import psutil
 
-        gauge = GaugeWidget(value=0, fill_color='#24D636', label='CPU')
-
-        value = 0
-
-        def calculate_value() -> None:
-            nonlocal value
-            value = psutil.cpu_percent(interval=1, percpu=False)
-            gauge.value = value
-
-        Clock.schedule_interval(
-            lambda _: Thread(target=calculate_value).start(),
-            1,
+        gauge = GaugeWidget(
+            value=psutil.cpu_percent(percpu=False),
+            fill_color='#24D636',
+            label='CPU',
         )
+
+        def set_value(_: int) -> None:
+            gauge.value = psutil.cpu_percent(percpu=False)
+
+        Clock.schedule_interval(set_value, 1)
 
         return gauge
 
@@ -92,12 +93,13 @@ class HomePage(PageWidget):
 
 
 class MenuWidgetWithHomePage(MenuWidget):
+    @cached_property
+    def home_page(self: MenuWidgetWithHomePage) -> HomePage:
+        return HomePage(self.current_menu_items, name='Page 1 0')
+
     def get_current_screen(self: MenuWidgetWithHomePage) -> Screen | None:
         if self.depth == 1:
-            return HomePage(
-                self.current_menu_items,
-                name=f'Page {self.depth} 0',
-            )
+            return self.home_page
         return super().get_current_screen()
 
 
@@ -110,38 +112,46 @@ def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) ->
 
 
 class MenuAppCentral(UboApp):
+    def __init__(self: MenuAppCentral, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+
+        _self = weakref.ref(self)
+
+        @autorun(lambda state: state.main.menu)
+        @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
+        async def _(menu: Menu | None) -> None:
+            self = _self()
+            if not self or not menu or not self:
+                return
+            mainthread(self.menu_widget.set_root_menu)(menu)
+
+    def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
+        self.root.title = title
+
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
         self.menu_widget = MenuWidgetWithHomePage()
 
-        @autorun(lambda state: state.main.menu)
-        @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
-        async def sync_current_menu(menu: Menu | None) -> None:
-            if not menu:
-                return
-            mainthread(self.menu_widget.set_root_menu)(menu)
-
-        sync_current_menu.subscribe(create_task, immediate_run=True)
-
-        def handle_title_change(_: MenuWidget, title: str) -> None:
-            self.root.title = title
-
         self.root.title = self.menu_widget.title
-        self.menu_widget.bind(title=handle_title_change)
+        self.menu_widget.bind(title=self.handle_title_change)
         self.menu_widget.bind(current_screen=set_path)
 
         subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
-            options=EventSubscriptionOptions(immediate_run=True),
+            options=EventSubscriptionOptions(
+                immediate_run=True,
+                keep_ref=False,
+            ),
         )
 
         subscribe_event(
             NotificationsDisplayEvent,
-            lambda event: Clock.schedule_once(
-                lambda _: self.display_notification(event),
-                -1,
+            self.display_notification,
+            options=EventSubscriptionOptions(
+                immediate_run=True,
+                keep_ref=False,
             ),
         )
 
@@ -164,6 +174,7 @@ class MenuAppCentral(UboApp):
         if key_press_event.key == Key.DOWN:
             self.menu_widget.go_down()
 
+    @mainthread
     def display_notification(
         self: MenuAppCentral,
         event: NotificationsDisplayEvent,

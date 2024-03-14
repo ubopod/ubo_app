@@ -32,6 +32,10 @@ from ubo_app.store.update_manager.reducer import reducer as update_manager_reduc
 from ubo_app.utils.async_ import create_task
 
 
+def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
+    Clock.create_trigger(lambda _: callback(), 0, interval=interval)()
+
+
 class RootState(BaseCombineReducerState):
     main: MainState
     status_icons: StatusIconsState
@@ -67,10 +71,6 @@ root_reducer, root_reducer_id = combine_reducers(
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
 )
-
-
-def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
-    Clock.create_trigger(lambda _: callback(), 0, interval=interval)()
 
 
 store = Store(

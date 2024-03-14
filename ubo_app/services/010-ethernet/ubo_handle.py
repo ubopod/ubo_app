@@ -4,8 +4,8 @@ from setup import init_service
 from ubo_app.load_services import register_service
 
 register_service(
-    service_id='wifi',
-    label='WiFi',
+    service_id='ethernet',
+    label='Ethernet',
 )
 
 init_service()
