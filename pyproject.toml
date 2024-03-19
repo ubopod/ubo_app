@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.11.1"
+version = "0.11.2"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -26,7 +26,7 @@ ubo-gui = [
     'dev',
   ] },
 ]
-python-redux = "^0.11.0"
+python-redux = "^0.12.5"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -45,21 +45,22 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.349"
-ruff = "^0.3.2"
-toml = "^0.10.2"
+pyright = "^1.1.354"
 pytest = "^8.0.0"
-pytest-cov = "^4.1.0"
-pytest-xdist = "^3.5.0"
-tenacity = "^8.2.3"
 pytest-asyncio = "^0.23.5.post1"
+pytest-cov = "^4.1.0"
+pytest-timeout = "^2.3.1"
+pytest-xdist = "^3.5.0"
+ruff = "^0.3.3"
+tenacity = "^8.2.3"
+toml = "^0.10.2"
 
 [tool.poetry.extras]
 default = ['ubo-gui']
 dev = ['ubo-gui']
 
 [tool.poetry.scripts]
-ubo = "ubo_app:main"
+ubo = "ubo_app.main:main"
 
 [build-system]
 requires = ["poetry-core"]
@@ -68,7 +69,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poe.tasks]
 lint = "ruff check . --unsafe-fixes"
 typecheck = "pyright -p pyproject.toml ."
-test = "pytest --cov=ubo_app --cov-report=term-missing"
+test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 
 [tool.poe.tasks.deploy_to_device]
@@ -110,3 +111,7 @@ asyncio_mode = 'auto'
 filterwarnings = "ignore:'imghdr' is deprecated:DeprecationWarning"
 log_cli = 1
 log_cli_level = 'ERROR'
+timeout = 30
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:"]

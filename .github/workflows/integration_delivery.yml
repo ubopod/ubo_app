@@ -124,7 +124,9 @@ jobs:
           key: poetry-${{ hashFiles('poetry.lock') }}
 
       - name: Test
-        run: poetry run poe test --cov-report=xml --cov-report=html
+        run:
+          poetry run poe test --cov-report=xml --cov-report=html
+          --make-screenshots
 
       - name: Collect Mismatching Screenshots
         if: failure()
@@ -133,16 +135,34 @@ jobs:
           name: mismatching-screenshots
           path: tests/**/*.mismatch.png
 
+      - name: Prepare list of JSON files with mismatching pairs
+        if: failure()
+        run: |
+          mkdir -p artifacts
+          for file in $(find tests/ -name "*.mismatch.jsonc"); do
+            base=${file%.mismatch.jsonc}.jsonc
+            if [[ -f "$base" ]]; then
+              echo "$file" >> artifacts/files_to_upload.txt
+              echo "$base" >> artifacts/files_to_upload.txt
+            fi
+          done
+
+      - name: Collect Mismatching Store Snapshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mismatching-snapshots
+          path: |
+            @artifacts/files_to_upload.txt
+
       - name: Collect HTML Coverage Report
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: htmlcov
 
       - name: Upload Coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v4.0.1
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           flags: integration

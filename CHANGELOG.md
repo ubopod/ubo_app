@@ -1,5 +1,21 @@
 # Changelog
 
+## Version 0.11.2
+
+- chore(test): improve snapshot tests to detect extra/less snapshots too
+- chore(test): better organize snapshot results in sub-directories
+- chore(test): collect mismatching snapshots (store and window) in GitHub workflow
+- chore(test): add `--override-window-snapshots` to `pytest` to intentionally override
+  window snapshots when they have changed
+- chore(test): add `--make-screenshots` to `pytest` to create window screenshots
+  to help find the differences visually
+- chore(test): monkeypatchings for dynamic parts of the app to make tests consistent
+- refactor: general improvements in the codebase to address issues found during
+  writing tests
+- chore: add badges to `README.md`
+- chore: add `Dockerfile.dev` for development, it helps to build consistent screenshots
+  in macOS
+
 ## Version 0.11.1
 
 - chore(test): set up testing framework with initial examples

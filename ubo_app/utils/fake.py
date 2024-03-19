@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import Any, Generator, Iterator, cast
+from typing import Any, Generator, Iterator, Self, cast
 
 from ubo_app.logging import logger
 
@@ -16,13 +16,13 @@ class Fake(ModuleType):
     def __init_subclass__(cls: type[Fake], **kwargs: dict[str, Any]) -> None:
         logger.verbose('Subclassing `Fake`', extra={'cls': cls, 'kwargs': kwargs})
 
-    def __getattr__(self: Fake, attr: str) -> Fake | str:
+    def __getattr__(self: Fake, attr: str) -> Fake:
         logger.verbose(
             'Accessing fake attribute of a `Fake` insta',
             extra={'attr': attr},
         )
         if attr == '__file__':
-            return 'fake'
+            return cast(Fake, 'fake')
         return self
 
     def __getitem__(self: Fake, key: object) -> Fake:
@@ -65,6 +65,12 @@ class Fake(ModuleType):
         return self
 
     def __exit__(self: Fake, *_: object) -> None:
+        pass
+
+    async def __aenter__(self: Self) -> Self:
+        return self
+
+    async def __aexit__(self: Fake, *_: object) -> None:
         pass
 
     def __mro_entries__(self: Fake, bases: tuple[type[Fake]]) -> tuple[type[Fake]]:

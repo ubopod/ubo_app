@@ -12,11 +12,16 @@ from ubo_app.logging import logger
 if TYPE_CHECKING:
     from asyncio import Future, Handle
 
+    from redux.basic_types import TaskCreatorCallback
+
 
 background_tasks: set[Handle] = set()
 
 
-def create_task(awaitable: Awaitable) -> Handle:
+def create_task(
+    awaitable: Awaitable,
+    callback: TaskCreatorCallback | None = None,
+) -> Handle:
     async def wrapper() -> None:
         if awaitable is None:
             return
@@ -38,7 +43,7 @@ def create_task(awaitable: Awaitable) -> Handle:
 
     import ubo_app.utils.loop
 
-    handle = ubo_app.utils.loop._create_task(wrapper())  # noqa: SLF001
+    handle = ubo_app.utils.loop._create_task(wrapper(), callback)  # noqa: SLF001
     background_tasks.add(handle)
     return handle
 

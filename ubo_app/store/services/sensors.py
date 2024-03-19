@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from enum import Enum, auto
+from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Generic, Sequence, TypeVar
 
 from immutable import Immutable
@@ -19,7 +19,7 @@ Primitive = int | float | str | bool
 SensorType = TypeVar('SensorType', bound=Primitive | Sequence[Primitive])
 
 
-class Sensor(Enum):
+class Sensor(StrEnum):
     TEMPERATURE = auto()
     LIGHT = auto()
 

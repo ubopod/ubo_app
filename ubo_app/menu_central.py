@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Sequence
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
 from kivy.lang.builder import Builder
-from redux import AutorunOptions, EventSubscriptionOptions
+from redux import EventSubscriptionOptions
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
@@ -28,7 +28,6 @@ from ubo_app.store.services.notifications import (
 from .store import autorun, dispatch, subscribe_event
 
 if TYPE_CHECKING:
-    from kivy.uix.screenmanager import Screen
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Item, Menu
 
@@ -48,11 +47,7 @@ class HomePage(PageWidget):
         self.volume_widget = VolumeWidget()
         self.ids.right_column.add_widget(self.volume_widget)
 
-        self.sync_output_volume = self._sync_output_volume
-        autorun(
-            lambda state: state.sound.playback_volume,
-            options=AutorunOptions(keep_ref=False),
-        )(self.sync_output_volume)
+        autorun(lambda state: state.sound.playback_volume)(self._sync_output_volume)
 
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
         self.volume_widget.value = selector_result * 100
@@ -93,14 +88,11 @@ class HomePage(PageWidget):
 
 
 class MenuWidgetWithHomePage(MenuWidget):
-    @cached_property
-    def home_page(self: MenuWidgetWithHomePage) -> HomePage:
-        return HomePage(self.current_menu_items, name='Page 1 0')
-
-    def get_current_screen(self: MenuWidgetWithHomePage) -> Screen | None:
+    def render_items(self: MenuWidgetWithHomePage, *_: object) -> None:
         if self.depth == 1:
-            return self.home_page
-        return super().get_current_screen()
+            self.current_screen = HomePage(self.current_menu_items, name='Page 1 0')
+        else:
+            super().render_items()
 
 
 def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) -> None:
@@ -114,6 +106,7 @@ def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) ->
 class MenuAppCentral(UboApp):
     def __init__(self: MenuAppCentral, **kwargs: object) -> None:
         super().__init__(**kwargs)
+        self.menu_widget = MenuWidgetWithHomePage()
 
         _self = weakref.ref(self)
 
@@ -121,7 +114,7 @@ class MenuAppCentral(UboApp):
         @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
         async def _(menu: Menu | None) -> None:
             self = _self()
-            if not self or not menu or not self:
+            if not self or not menu:
                 return
             mainthread(self.menu_widget.set_root_menu)(menu)
 
@@ -131,8 +124,6 @@ class MenuAppCentral(UboApp):
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
-        self.menu_widget = MenuWidgetWithHomePage()
-
         self.root.title = self.menu_widget.title
         self.menu_widget.bind(title=self.handle_title_change)
         self.menu_widget.bind(current_screen=set_path)
@@ -140,19 +131,13 @@ class MenuAppCentral(UboApp):
         subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
-            options=EventSubscriptionOptions(
-                immediate_run=True,
-                keep_ref=False,
-            ),
+            options=EventSubscriptionOptions(immediate_run=True),
         )
 
         subscribe_event(
             NotificationsDisplayEvent,
             self.display_notification,
-            options=EventSubscriptionOptions(
-                immediate_run=True,
-                keep_ref=False,
-            ),
+            options=EventSubscriptionOptions(immediate_run=True),
         )
 
         return self.menu_widget

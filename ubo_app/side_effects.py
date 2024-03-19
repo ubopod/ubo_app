@@ -1,4 +1,5 @@
 """Application logic."""
+
 from __future__ import annotations
 
 import atexit
@@ -8,7 +9,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
-from redux import AutorunOptions, EventSubscriptionOptions, FinishAction, FinishEvent
+from redux import AutorunOptions, FinishAction, FinishEvent
 
 from ubo_app.store import autorun, dispatch, subscribe_event
 from ubo_app.store.main import PowerOffEvent
@@ -46,11 +47,7 @@ def setup(app: MenuApp) -> None:
     turn_on_screen()
     initialize_board()
 
-    subscribe_event(
-        PowerOffEvent,
-        power_off,
-        options=EventSubscriptionOptions(keep_ref=False),
-    )
+    subscribe_event(PowerOffEvent, power_off)
 
     app_ref = weakref.ref(app)
 
@@ -60,21 +57,9 @@ def setup(app: MenuApp) -> None:
         if app is not None:
             app.stop()
 
-    subscribe_event(
-        FinishEvent,
-        stop_app,
-        options=EventSubscriptionOptions(keep_ref=True),
-    )
-    subscribe_event(
-        UpdateManagerUpdateEvent,
-        update,
-        options=EventSubscriptionOptions(keep_ref=False),
-    )
-    subscribe_event(
-        UpdateManagerCheckEvent,
-        check_version,
-        options=EventSubscriptionOptions(keep_ref=False),
-    )
+    subscribe_event(FinishEvent, stop_app)
+    subscribe_event(UpdateManagerUpdateEvent, update)
+    subscribe_event(UpdateManagerCheckEvent, check_version)
 
     @debounce(
         wait=10,

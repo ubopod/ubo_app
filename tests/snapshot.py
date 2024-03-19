@@ -1,8 +1,10 @@
 """Let the test check snapshots of the window during execution."""
+
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, Generator, cast
 
 import pytest
 
@@ -11,11 +13,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from _pytest.fixtures import SubRequest
+    from _pytest.nodes import Node
     from numpy._typing import NDArray
-
-
-make_screenshots = os.environ.get('UBO_TEST_MAKE_SCREENSHOTS', '0') == '1'
-override_snapshots = os.environ.get('UBO_TEST_OVERRIDE_SNAPSHOTS', '0') == '1'
+    from redux.test import StoreSnapshotContext
 
 
 def write_image(image_path: Path, array: NDArray) -> None:
@@ -33,24 +33,40 @@ def write_image(image_path: Path, array: NDArray) -> None:
     )
 
 
-class SnapshotContext:
+class WindowSnapshotContext:
     """Context object for tests taking snapshots of the window."""
 
-    def __init__(self: SnapshotContext, id: str, path: Path, logger: Logger) -> None:
-        """Create a new snapshot context."""
-        self.test_counter = 0
-        self.id = id
-        self.results_dir = path.parent / 'results'
+    def __init__(
+        self: WindowSnapshotContext,
+        *,
+        test_node: Node,
+        logger: Logger,
+        override: bool,
+        make_screenshots: bool,
+    ) -> None:
+        """Create a new window snapshot context."""
+        self.closed = False
+        self.override = override
+        self.make_screenshots = make_screenshots
+        self.test_counter: dict[str | None, int] = defaultdict(int)
+        file = test_node.path.with_suffix('').name
+        self.results_dir = (
+            test_node.path.parent
+            / 'results'
+            / file
+            / test_node.nodeid.split('::')[-1][5:]
+        )
+        if self.results_dir.exists():
+            for file in self.results_dir.glob(
+                'window:*' if override else 'window:*.mismatch.*',
+            ):
+                file.unlink()
+        self.results_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logger
-        if make_screenshots:
-            self.logger.info(
-                f'Snapshot will be saved in "{self.results_dir}" for test id {id}',  # noqa: G004
-            )
-            self.results_dir.mkdir(exist_ok=True)
 
     @property
-    def hash(self: SnapshotContext) -> str:
-        """Return the hash of the current window."""
+    def hash(self: WindowSnapshotContext) -> str:
+        """Return the hash of the content of the window."""
         import hashlib
 
         from headless_kivy_pi.config import _display
@@ -61,31 +77,99 @@ class SnapshotContext:
         sha256.update(data)
         return sha256.hexdigest()
 
-    def take(self: SnapshotContext) -> None:
-        """Take a snapshot of the current window."""
-        filename = f'{"_".join(self.id.split(":")[-1:])}-{self.test_counter:03d}'
+    def get_filename(self: WindowSnapshotContext, title: str | None) -> str:
+        """Get the filename for the snapshot."""
+        if title:
+            return f"""window:{title}:{self.test_counter[title]:03d}"""
+        return f"""window:{self.test_counter[title]:03d}"""
+
+    def take(self: WindowSnapshotContext, title: str | None = None) -> None:
+        """Take a snapshot of the content of the window."""
+        if self.closed:
+            msg = (
+                'Snapshot context is closed, make sure `window_snapshot` is before any '
+                'fixture dispatching actions in the fixtures list'
+            )
+            raise RuntimeError(msg)
 
         from headless_kivy_pi.config import _display
 
+        filename = self.get_filename(title)
         path = self.results_dir / filename
         hash_path = path.with_suffix('.hash')
+        image_path = path.with_suffix('.png')
+        hash_mismatch_path = path.with_suffix('.mismatch.hash')
+        image_mismatch_path = path.with_suffix('.mismatch.png')
 
-        hash_ = self.hash
         array = _display.raw_data
-        data = array.tobytes()
-        if hash_path.exists() and not override_snapshots:
-            old_hash = hash_path.read_text()
-            if old_hash != hash_:
-                write_image(path.with_suffix('.mismatch.png'), array)
-            assert old_hash == hash_, f'Hash mismatch: {old_hash} != {hash_}'
-        hash_path.write_text(hash_)
 
-        if data is not None and make_screenshots:
-            write_image(path.with_suffix('.png'), array)
-        self.test_counter += 1
+        new_snapshot = self.hash
+        if self.override:
+            hash_path.write_text(f'// {filename}\n{new_snapshot}\n')
+            if self.make_screenshots:
+                write_image(image_path, array)
+        else:
+            if hash_path.exists():
+                old_snapshot = hash_path.read_text().split('\n', 1)[1][:-1]
+            else:
+                old_snapshot = None
+            if old_snapshot != new_snapshot:
+                hash_mismatch_path.write_text(  # pragma: no cover
+                    f'// MISMATCH: {filename}\n{new_snapshot}\n',
+                )
+                write_image(image_mismatch_path, array)
+            assert new_snapshot == old_snapshot, f'Window snapshot mismatch: {title}'
+
+        self.test_counter[title] += 1
+
+    def close(self: WindowSnapshotContext) -> None:
+        """Close the snapshot context."""
+        for title in self.test_counter:
+            filename = self.get_filename(title)
+            hash_path = (self.results_dir / filename).with_suffix('.hash')
+
+            assert not hash_path.exists(), f'Snapshot {filename} not taken'
+        self.closed = True
 
 
 @pytest.fixture()
-def snapshot(request: SubRequest, logger: Logger) -> SnapshotContext:
-    """Take a snapshot of the current window."""
-    return SnapshotContext(request.node.nodeid, request.node.path, logger)
+def window_snapshot(
+    request: SubRequest,
+    logger: Logger,
+) -> Generator[WindowSnapshotContext, None, None]:
+    """Take a screenshot of the window."""
+    override = (
+        request.config.getoption(
+            '--override-window-snapshots',
+            default=cast(
+                Any,
+                os.environ.get('UBO_TEST_OVERRIDE_SNAPSHOTS', '0') == '1',
+            ),
+        )
+        is True
+    )
+    make_screenshots = (
+        request.config.getoption(
+            '--make-screenshots',
+            default=cast(Any, os.environ.get('UBO_TEST_MAKE_SCREENSHOTS', '0') == '1'),
+        )
+        is True
+    )
+
+    context = WindowSnapshotContext(
+        test_node=request.node,
+        logger=logger,
+        override=override,
+        make_screenshots=make_screenshots,
+    )
+    yield context
+    context.close()
+
+
+@pytest.fixture(name='store_snapshot')
+def ubo_store_snapshot(store_snapshot: StoreSnapshotContext) -> StoreSnapshotContext:
+    """Take a snapshot of the store."""
+    from ubo_app.store import store
+
+    store_snapshot.set_store(store)
+    return store_snapshot

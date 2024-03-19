@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from enum import Enum, auto
+from enum import StrEnum, auto
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -35,7 +35,7 @@ class UpdateManagerUpdateEvent(UpdateManagerEvent):
     ...
 
 
-class UpdateStatus(Enum):
+class UpdateStatus(StrEnum):
     """Update status enum."""
 
     CHECKING = auto()

@@ -1,9 +1,10 @@
 """Docker image menu."""
+
 from __future__ import annotations
 
 import contextlib
 import pathlib
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 import docker
 import docker.errors
@@ -24,10 +25,7 @@ from ubo_app.store.services.docker import (
     ImageState,
     ImageStatus,
 )
-from ubo_app.utils.async_ import run_in_executor
-
-if TYPE_CHECKING:
-    from asyncio import Future
+from ubo_app.utils.async_ import create_task, run_in_executor
 
 
 def find_container(client: docker.DockerClient, *, image: str) -> Container | None:
@@ -141,11 +139,11 @@ def _monitor_events(  # noqa: C901
                 )
 
 
-def check_container(image_id: str) -> Future[None]:
+def check_container(image_id: str) -> None:
     """Check the container status."""
     path = IMAGES[image_id].path
 
-    def act() -> None:
+    async def act() -> None:
         logger.debug('Checking image', extra={'image': image_id, 'path': path})
         docker_client = docker.from_env()
         try:
@@ -210,7 +208,7 @@ def check_container(image_id: str) -> Future[None]:
             _monitor_events(image_id, get_docker_id, docker_client)
             docker_client.close()
 
-    return run_in_executor(None, act)
+    create_task(act())
 
 
 def _fetch_image(image: ImageState) -> None:

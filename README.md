@@ -1,5 +1,11 @@
 # 🚀 Ubo App
 
+[![image](https://img.shields.io/pypi/v/ubo-app.svg)](https://pypi.python.org/pypi/ubo-app)
+[![image](https://img.shields.io/pypi/l/ubo-app.svg)](https://github.com/ubopod/ubo-app/LICENSE)
+[![image](https://img.shields.io/pypi/pyversions/ubo-app.svg)](https://pypi.python.org/pypi/ubo-app)
+[![Actions status](https://github.com/ubopod/ubo-app/workflows/CI/CD/badge.svg)](https://github.com/ubopod/ubo-app/actions)
+[![codecov](https://codecov.io/gh/ubopod/ubo-app/graph/badge.svg?token=KUI1KRDDY0)](https://codecov.io/gh/ubopod/ubo-app)
+
 ## 🌟 Overview
 
 Ubo App is a Python application for managing Raspberry Pi utilities and UBo-specific
@@ -28,6 +34,7 @@ Note that as part of the installation process, these debian packages are install
 - libgl1
 - libmtdev1
 - libzbar0
+- python3
 - python3-dev
 - python3-libcamera
 - python3-alsaaudio

@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from dataclasses import field
-from enum import Enum, auto
+from enum import StrEnum, auto
 
 from immutable import Immutable
 from redux import BaseAction, BaseCombineReducerState, BaseEvent
 
 
-class DockerStatus(Enum):
+class DockerStatus(StrEnum):
     """Docker status."""
 
     UNKNOWN = auto()
@@ -19,7 +19,7 @@ class DockerStatus(Enum):
     ERROR = auto()
 
 
-class ImageStatus(Enum):
+class ImageStatus(StrEnum):
     """Image status."""
 
     NOT_AVAILABLE = auto()

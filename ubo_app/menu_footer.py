@@ -11,7 +11,6 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.stencilview import StencilView
 from kivy.uix.widget import Widget
-from redux import AutorunOptions
 from ubo_gui.app import UboApp
 
 from ubo_app.store import autorun
@@ -46,10 +45,7 @@ class MenuAppFooter(UboApp):
             or setattr(layout, 'width', temperature.width + dp(12)),
         )
 
-        autorun(
-            lambda state: state.sensors.temperature.value,
-            options=AutorunOptions(keep_ref=False),
-        )(
+        autorun(lambda state: state.sensors.temperature.value)(
             self._set_temperature_value,
         )
 
@@ -93,10 +89,7 @@ class MenuAppFooter(UboApp):
             ),
         )
 
-        autorun(
-            lambda state: state.sensors.light.value,
-            options=AutorunOptions(keep_ref=False),
-        )(self._set_light_value)
+        autorun(lambda state: state.sensors.light.value)(self._set_light_value)
 
         return self.light
 
@@ -220,17 +213,9 @@ class MenuAppFooter(UboApp):
             x=self.set_icons_layout_x,
         )
 
-        autorun(
-            lambda state: state.status_icons.icons,
-            options=AutorunOptions(keep_ref=False),
-        )(self._render_icons)
+        autorun(lambda state: state.status_icons.icons)(self._render_icons)
 
-        autorun(
-            lambda state: state.main.path,
-            options=AutorunOptions(keep_ref=False),
-        )(
-            self._handle_depth_change,
-        )
+        autorun(lambda state: state.main.path)(self._handle_depth_change)
 
         self.footer_layout.add_widget(self.home_footer_layout)
 

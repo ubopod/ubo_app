@@ -1,4 +1,5 @@
 """Ubo menu application."""
+
 from __future__ import annotations
 
 from ubo_gui.app import UboApp

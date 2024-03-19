@@ -99,10 +99,13 @@ def reducer(  # noqa: C901
             msg = f'{menu_title} menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
-        new_items = [
-            *cast(Sequence[Item], cast(Menu, desired_menu_item.sub_menu).items),
-            action.menu_item,
-        ]
+        new_items = sorted(
+            [
+                *cast(Sequence[Item], cast(Menu, desired_menu_item.sub_menu).items),
+                action.menu_item,
+            ],
+            key=lambda item: item.label() if callable(item.label) else item.label,
+        )
         desired_menu_item = replace(
             desired_menu_item,
             sub_menu=replace(

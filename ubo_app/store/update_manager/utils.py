@@ -1,4 +1,5 @@
 """Update manager module."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,6 +8,7 @@ import shutil
 from pathlib import Path
 
 import aiohttp
+import requests
 from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, Item
 
@@ -35,8 +37,6 @@ async def check_version() -> None:
     logger.info('Checking for updates...')
 
     # Check PyPI server for the latest version
-    import requests
-
     try:
         async with aiohttp.ClientSession() as session, session.get(
             'https://pypi.org/pypi/ubo-app/json',
@@ -123,9 +123,8 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
     """Get the update menu items."""
     if state.update_status is UpdateStatus.CHECKING:
         return [
-            ActionItem(
+            Item(
                 label='Checking for updates...',
-                action=lambda: None,
                 icon='update',
                 background_color='#00000000',
             ),
@@ -143,9 +142,8 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         ]
     if state.update_status is UpdateStatus.UP_TO_DATE:
         return [
-            ActionItem(
+            Item(
                 label='Already up to date!',
-                action=lambda: None,
                 icon='security_update_good',
                 background_color=SUCCESS_COLOR,
                 color='#000000',
@@ -163,9 +161,8 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         ]
     if state.update_status is UpdateStatus.UPDATING:
         return [
-            ActionItem(
+            Item(
                 label='Updating...',
-                action=lambda: None,
                 icon='update',
                 background_color='#00000000',
             ),

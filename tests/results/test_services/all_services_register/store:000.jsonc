@@ -1,0 +1,383 @@
+// store:000
+{
+  "_id": "e3e70682c2094cac629f6fbed82c07cd",
+  "camera": {
+    "is_viewfinder_active": false
+  },
+  "docker": {
+    "_id": "5a92118719c78df48f4ff31e78de5857",
+    "home_assistant": {
+      "container_ip": null,
+      "docker_id": null,
+      "icon": "home",
+      "id": "home_assistant",
+      "ip_addresses": [
+        "192.168.1.1"
+      ],
+      "label": "Home Assistant",
+      "path": "homeassistant/home-assistant:stable",
+      "ports": [],
+      "status": "not_available"
+    },
+    "home_bridge": {
+      "container_ip": null,
+      "docker_id": null,
+      "icon": "home_work",
+      "id": "home_bridge",
+      "ip_addresses": [
+        "192.168.1.1"
+      ],
+      "label": "Home Bridge",
+      "path": "homebridge/homebridge:latest",
+      "ports": [],
+      "status": "not_available"
+    },
+    "ollama": {
+      "container_ip": null,
+      "docker_id": null,
+      "icon": "smart_toy",
+      "id": "ollama",
+      "ip_addresses": [
+        "192.168.1.1"
+      ],
+      "label": "Ollama",
+      "path": "ollama/ollama:latest",
+      "ports": [],
+      "status": "not_available"
+    },
+    "open_webui": {
+      "container_ip": null,
+      "docker_id": null,
+      "icon": "code",
+      "id": "open_webui",
+      "ip_addresses": [
+        "192.168.1.1"
+      ],
+      "label": "Open WebUI",
+      "path": "ghcr.io/open-webui/open-webui:main",
+      "ports": [],
+      "status": "not_available"
+    },
+    "pi_hole": {
+      "container_ip": null,
+      "docker_id": null,
+      "icon": "dns",
+      "id": "pi_hole",
+      "ip_addresses": [
+        "192.168.1.1"
+      ],
+      "label": "Pi-hole",
+      "path": "pihole/pihole:latest",
+      "ports": [],
+      "status": "not_available"
+    },
+    "portainer": {
+      "container_ip": null,
+      "docker_id": null,
+      "icon": "settings_applications",
+      "id": "portainer",
+      "ip_addresses": [
+        "192.168.1.1"
+      ],
+      "label": "Portainer",
+      "path": "portainer/portainer-ce:latest",
+      "ports": [],
+      "status": "not_available"
+    },
+    "service": {
+      "status": "not_running"
+    }
+  },
+  "ip": {
+    "interfaces": [
+      {
+        "ip_addresses": [
+          "192.168.1.1"
+        ],
+        "name": "eth0"
+      }
+    ]
+  },
+  "main": {
+    "menu": {
+      "_id": null,
+      "items": [
+        {
+          "background_color": "#68B7FF",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "icon": "menu",
+          "is_short": true,
+          "label": "",
+          "sub_menu": {
+            "_id": null,
+            "items": [
+              {
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "apps",
+                "is_short": false,
+                "label": "Apps",
+                "sub_menu": {
+                  "_id": null,
+                  "items": [
+                    {
+                      "action": "",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "D",
+                      "is_short": false,
+                      "label": "Docker"
+                    }
+                  ],
+                  "title": "Apps"
+                }
+              },
+              {
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "settings",
+                "is_short": false,
+                "label": "Settings",
+                "sub_menu": {
+                  "_id": null,
+                  "items": [
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "lan",
+                      "is_short": false,
+                      "label": "IP Addresses",
+                      "sub_menu": {
+                        "_id": null,
+                        "items": [
+                          {
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "cable",
+                            "is_short": false,
+                            "label": "eth0",
+                            "sub_menu": {
+                              "_id": null,
+                              "items": [
+                                {
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "lan",
+                                  "is_short": false,
+                                  "label": "192.168.1.1"
+                                }
+                              ],
+                              "title": "IP Addresses - eth0"
+                            }
+                          }
+                        ],
+                        "title": "IP Addresses"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "wifi",
+                      "is_short": false,
+                      "label": "WiFi",
+                      "sub_menu": {
+                        "_id": null,
+                        "items": [
+                          {
+                            "application": "ubo_app/services/010-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "wifi_add",
+                            "is_short": false,
+                            "label": "Add"
+                          },
+                          {
+                            "action": "",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "list",
+                            "is_short": false,
+                            "label": "Select"
+                          }
+                        ],
+                        "title": "WiFi Settings"
+                      }
+                    }
+                  ],
+                  "title": "Settings"
+                }
+              },
+              {
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "info",
+                "is_short": false,
+                "label": "About",
+                "sub_menu": {
+                  "_id": null,
+                  "heading": "Ubo v0.0.0",
+                  "items": [
+                    {
+                      "background_color": "#03F7AE",
+                      "color": "#000000",
+                      "icon": "security_update_good",
+                      "is_short": false,
+                      "label": "Already up to date!"
+                    }
+                  ],
+                  "sub_heading": "A universal dashboard for your Raspberry Pi",
+                  "title": "About"
+                }
+              }
+            ],
+            "title": "Main"
+          }
+        },
+        {
+          "background_color": "#68B7FF",
+          "color": "yellow",
+          "icon": "info",
+          "is_short": true,
+          "label": "",
+          "sub_menu": {
+            "_id": null,
+            "items": [],
+            "title": "Notifications (0)"
+          }
+        },
+        {
+          "action": "",
+          "background_color": "#68B7FF",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "icon": "power_settings_new",
+          "is_short": true,
+          "label": "Turn off"
+        }
+      ],
+      "title": "Dashboard"
+    },
+    "path": [
+      "Dashboard"
+    ]
+  },
+  "notifications": {
+    "notifications": [],
+    "unread_count": 0
+  },
+  "rgb_ring": {
+    "is_busy": false,
+    "is_connected": false
+  },
+  "sensors": {
+    "light": {
+      "value": 0.0
+    },
+    "temperature": {
+      "value": 0.0
+    }
+  },
+  "sound": {
+    "capture_volume": 0.5,
+    "is_capture_mute": false,
+    "is_playback_mute": false,
+    "playback_volume": 0.5
+  },
+  "status_icons": {
+    "icons": [
+      {
+        "color": "white",
+        "id": "sound:mic-state",
+        "priority": -20,
+        "symbol": "mic_off"
+      },
+      {
+        "color": "white",
+        "id": "ethernet:state",
+        "priority": -13,
+        "symbol": "link_off"
+      },
+      {
+        "color": "white",
+        "id": "wifi:state",
+        "priority": -12,
+        "symbol": "signal_wifi_off"
+      },
+      {
+        "color": "white",
+        "id": "ip:internet-state",
+        "priority": -11,
+        "symbol": "public"
+      }
+    ]
+  },
+  "update_manager": {
+    "current_version": "0.0.0",
+    "latest_version": "0.0.0",
+    "update_status": "up_to_date"
+  },
+  "wifi": {
+    "connections": [],
+    "current_connection": null,
+    "state": "Disconnected"
+  }
+}

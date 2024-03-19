@@ -61,6 +61,7 @@ class UboServiceLoopLoader(importlib.abc.Loader):
         self.service = service
 
     def exec_module(self: UboServiceLoopLoader, module: ModuleType) -> None:
+        cast(Any, module).current_loop = lambda: self.service.loop
         cast(Any, module)._create_task = (  # noqa: SLF001
             lambda task: self.service.loop.call_soon_threadsafe(
                 self.service.loop.create_task,

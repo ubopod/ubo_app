@@ -15,28 +15,23 @@ if TYPE_CHECKING:
     from ubo_gui.menu.types import Item, Menu
 
 
-class InitEvent(BaseEvent):
-    ...
+class InitEvent(BaseEvent): ...
 
 
 class RegisterAppAction(BaseAction):
     menu_item: Item
 
 
-class RegisterRegularAppAction(RegisterAppAction):
-    ...
+class RegisterRegularAppAction(RegisterAppAction): ...
 
 
-class RegisterSettingAppAction(RegisterAppAction):
-    ...
+class RegisterSettingAppAction(RegisterAppAction): ...
 
 
-class PowerOffAction(BaseAction):
-    ...
+class PowerOffAction(BaseAction): ...
 
 
-class PowerOffEvent(BaseEvent):
-    ...
+class PowerOffEvent(BaseEvent): ...
 
 
 class MainState(Immutable):

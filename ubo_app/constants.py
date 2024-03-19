@@ -7,7 +7,6 @@ from pathlib import Path
 
 import dotenv
 
-dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')
 
 USERNAME = os.environ.get('UBO_USERNAME', 'ubo')

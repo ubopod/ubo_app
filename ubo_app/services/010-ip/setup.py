@@ -8,7 +8,7 @@ from typing import Sequence
 
 import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
+from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.store import autorun, dispatch, subscribe_event
 from ubo_app.store.main import RegisterSettingAppAction
@@ -39,10 +39,9 @@ def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuIt
             sub_menu=HeadlessMenu(
                 title=f'IP Addresses - {interface.name}',
                 items=[
-                    ActionItem(
+                    Item(
                         label=ip_address,
                         icon='lan',
-                        action=lambda: None,
                     )
                     for ip_address in interface.ip_addresses
                 ],

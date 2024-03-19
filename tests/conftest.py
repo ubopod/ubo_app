@@ -1,33 +1,49 @@
 """Pytest configuration file for the tests."""
+
 from __future__ import annotations
 
 import asyncio
 import atexit
 import datetime
 import gc
+import random
+import socket
 import sys
 import threading
+import tracemalloc
+import uuid
 import weakref
+from pathlib import Path
 from typing import TYPE_CHECKING, AsyncGenerator, Callable, Generator
 
+import dotenv
 import pytest
-from redux import FinishAction
-from snapshot import snapshot
-from tenacity import retry, stop_after_delay, wait_exponential
 
-from ubo_app.utils.garbage_collection import examine
+pytest.register_assert_rewrite('redux.test')
+
+dotenv.load_dotenv(Path(__file__).parent / '.test.env')
+
+import redux.test  # noqa: E402
+from tenacity import retry, stop_after_delay, wait_exponential  # noqa: E402
+
+from tests.snapshot import ubo_store_snapshot, window_snapshot  # noqa: E402
+from ubo_app.utils.garbage_collection import examine  # noqa: E402
 
 if TYPE_CHECKING:
     from logging import Logger
 
+    from _pytest.fixtures import SubRequest
+
     from ubo_app.menu import MenuApp
 
-__all__ = ('app_context', 'snapshot')
+store_snapshot = redux.test.store_snapshot
+__all__ = ('app_context', 'ubo_store_snapshot', 'window_snapshot')
 
 
-@pytest.fixture(autouse=True, name='monkeypatch_atexit')
-def _(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(atexit, 'register', lambda _: None)
+def pytest_addoption(parser: pytest.Parser) -> None:
+    redux.test.pytest_addoption(parser)
+    parser.addoption('--override-window-snapshots', action='store_true')
+    parser.addoption('--make-screenshots', action='store_true')
 
 
 modules_snapshot = set(sys.modules)
@@ -36,11 +52,40 @@ modules_snapshot = set(sys.modules)
 @pytest.fixture(autouse=True)
 def _(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
-    monkeypatch.setattr('psutil.cpu_percent', lambda **_: 50)
+    random.seed(0)
+    tracemalloc.start()
+
+    monkeypatch.setattr(atexit, 'register', lambda _: None)
+
+    import psutil
+
+    monkeypatch.setattr(psutil, 'cpu_percent', lambda **_: 50)
     monkeypatch.setattr(
-        'psutil.virtual_memory',
+        psutil,
+        'virtual_memory',
         lambda *_: type('', (object,), {'percent': 50}),
     )
+    monkeypatch.setattr(
+        psutil,
+        'net_if_addrs',
+        lambda: {
+            'eth0': [
+                psutil._common.snicaddr(  # noqa: SLF001 # pyright: ignore [reportAttributeAccessIssue]
+                    family=socket.AddressFamily.AF_INET,
+                    address='192.168.1.1',
+                    netmask='255.255.255.0',
+                    broadcast='192.168.1.255',
+                    ptp=None,
+                ),
+            ],
+        },
+    )
+
+    class FakeDockerClient:
+        def ping(self: FakeDockerClient) -> bool:
+            return False
+
+    monkeypatch.setattr('docker.from_env', lambda: FakeDockerClient())
 
     class DateTime(datetime.datetime):
         @classmethod
@@ -49,6 +94,28 @@ def _(monkeypatch: pytest.MonkeyPatch) -> None:
             return DateTime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
     monkeypatch.setattr(datetime, 'datetime', DateTime)
+    monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(int=random.getrandbits(128)))
+
+    monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
+
+    from ubo_app.utils.fake import Fake
+
+    class FakeUpdateResponse(Fake):
+        async def json(self: FakeUpdateResponse) -> dict[str, object]:
+            return {
+                'info': {
+                    'version': '0.0.0',
+                },
+            }
+
+    class FakeAiohttp(Fake):
+        def get(self: FakeAiohttp, url: str, **kwargs: dict[str, object]) -> Fake:
+            if url == 'https://pypi.org/pypi/ubo-app/json':
+                return FakeUpdateResponse()
+            parent = super()
+            return parent.get(url, **kwargs)
+
+    sys.modules['aiohttp'] = FakeAiohttp()
 
 
 @pytest.fixture()
@@ -85,7 +152,10 @@ class AppContext:
 
 
 @pytest.fixture()
-async def app_context(logger: Logger) -> AsyncGenerator[AppContext, None]:
+async def app_context(
+    logger: Logger,
+    request: SubRequest,
+) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
     import os
 
@@ -100,7 +170,7 @@ async def app_context(logger: Logger) -> AsyncGenerator[AppContext, None]:
 
     yield context
 
-    assert context.task is not None, 'App not set for test'
+    assert hasattr(context, 'task'), 'App not set for test'
 
     await context.task
 
@@ -113,7 +183,7 @@ async def app_context(logger: Logger) -> AsyncGenerator[AppContext, None]:
     gc.collect()
     app = app_ref()
 
-    if app is not None:
+    if app is not None and request.session.testsfailed == 0:
         logger.debug(
             'Memory leak: failed to release app for test.',
             extra={
@@ -128,7 +198,7 @@ async def app_context(logger: Logger) -> AsyncGenerator[AppContext, None]:
             if type(cell).__name__ == 'cell':
                 logger.debug('CELL EXAMINATION', extra={'cell': cell})
                 examine(cell, depth_limit=2)
-    assert app is None, 'Memory leak: failed to release app for test'
+        assert app is None, 'Memory leak: failed to release app for test'
 
     from kivy.core.window import Window
 
@@ -143,6 +213,8 @@ async def app_context(logger: Logger) -> AsyncGenerator[AppContext, None]:
 @pytest.fixture()
 def needs_finish() -> Generator:
     yield None
+
+    from redux import FinishAction
 
     from ubo_app.store import dispatch
 

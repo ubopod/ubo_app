@@ -1,9 +1,11 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from typing import Callable
+import sys
+from dataclasses import replace
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable, Coroutine
 
-from kivy.clock import Clock
 from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
@@ -29,10 +31,14 @@ from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.update_manager import UpdateManagerAction, UpdateManagerState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
-from ubo_app.utils.async_ import create_task
+
+if TYPE_CHECKING:
+    from redux.basic_types import SnapshotAtom, TaskCreatorCallback
 
 
 def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
+    from kivy.clock import Clock
+
     Clock.create_trigger(lambda _: callback(), 0, interval=interval)()
 
 
@@ -73,7 +79,34 @@ root_reducer, root_reducer_id = combine_reducers(
 )
 
 
-store = Store(
+class UboStore(Store):
+    @classmethod
+    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
+        from ubo_gui.menu.types import ActionItem
+        from ubo_gui.page import PageWidget
+
+        if isinstance(obj, type) and issubclass(obj, PageWidget):
+            file_path = sys.modules[obj.__module__].__file__
+            if file_path:
+                return f"""{Path(file_path).relative_to(Path().absolute()).as_posix()}:{
+                obj.__name__}"""
+            return f'{obj.__module__}:{obj.__name__}'
+        if isinstance(obj, ActionItem):
+            obj = replace(obj, action='')
+        return super().serialize_value(obj)
+
+
+def create_task(
+    coro: Coroutine,
+    *,
+    callback: TaskCreatorCallback | None = None,
+) -> None:
+    from ubo_app.utils.async_ import create_task
+
+    create_task(coro, callback)
+
+
+store = UboStore(
     root_reducer,
     CreateStoreOptions(
         auto_init=False,

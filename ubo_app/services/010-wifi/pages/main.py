@@ -133,7 +133,7 @@ def wireless_connection_items(wifi_state: WiFiState) -> Sequence[Item]:
             for connection in wifi_state.connections
         ]
         if wifi_state.connections is not None
-        else [ActionItem(label='Loading...', action=lambda: None)]
+        else [Item(label='Loading...')]
     )
 
 

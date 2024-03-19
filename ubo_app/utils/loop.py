@@ -2,17 +2,20 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import threading
 from typing import TYPE_CHECKING, Callable, Coroutine, TypeVarTuple, Unpack
 
-from redux import FinishEvent
+from redux.basic_types import FinishEvent
 from typing_extensions import TypeVar
 
 from ubo_app.constants import DEBUG_MODE
-from ubo_app.store import subscribe_event
 
 if TYPE_CHECKING:
     from asyncio import Future, Handle
+    from asyncio.tasks import Task
+
+    from redux.basic_types import TaskCreatorCallback
 
 
 T = TypeVar('T', infer_variance=True)
@@ -29,11 +32,22 @@ class WorkerThread(threading.Thread):
     def run(self: WorkerThread) -> None:
         asyncio.set_event_loop(self.loop)
 
+        from ubo_app.store import subscribe_event
+
         subscribe_event(FinishEvent, self.stop)
         self.loop.run_forever()
 
-    def run_task(self: WorkerThread, task: Coroutine) -> Handle:
-        return self.loop.call_soon_threadsafe(self.loop.create_task, task)
+    def run_task(
+        self: WorkerThread,
+        task: Coroutine,
+        callback: Callable[[Task], None] | None = None,
+    ) -> Handle:
+        def task_wrapper() -> None:
+            result = self.loop.create_task(task)
+            if callback:
+                callback(result)
+
+        return self.loop.call_soon_threadsafe(task_wrapper)
 
     def run_in_executor(
         self: WorkerThread,
@@ -43,16 +57,33 @@ class WorkerThread(threading.Thread):
     ) -> Future[T]:
         return self.loop.run_in_executor(executor, task, *args)
 
+    async def shutdown(self: WorkerThread) -> None:
+        while True:
+            tasks = [
+                t
+                for t in asyncio.all_tasks(self.loop)
+                if t is not asyncio.current_task(self.loop)
+            ]
+            if not tasks:
+                break
+            for task in tasks:
+                with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
+                    await asyncio.wait_for(task, 0.1)
+        self.loop.stop()
+
     def stop(self: WorkerThread) -> None:
-        self.loop.call_soon_threadsafe(self.loop.stop)
+        self.loop.call_soon_threadsafe(lambda: self.loop.create_task(self.shutdown()))
 
 
 thread = WorkerThread()
 thread.start()
 
 
-def _create_task(task: Coroutine) -> Handle:
-    return thread.run_task(task)
+def _create_task(
+    task: Coroutine,
+    callback: TaskCreatorCallback | None = None,
+) -> Handle:
+    return thread.run_task(task, callback)
 
 
 def _run_in_executor(
