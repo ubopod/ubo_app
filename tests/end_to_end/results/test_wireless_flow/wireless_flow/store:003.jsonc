@@ -1,0 +1,187 @@
+// store:003
+{
+  "_id": "e3e70682c2094cac629f6fbed82c07cd",
+  "main": {
+    "menu": {
+      "_id": null,
+      "items": [
+        {
+          "background_color": "#68B7FF",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "icon": "menu",
+          "is_short": true,
+          "label": "",
+          "sub_menu": {
+            "_id": null,
+            "items": [
+              {
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "apps",
+                "is_short": false,
+                "label": "Apps",
+                "sub_menu": {
+                  "_id": null,
+                  "items": [],
+                  "title": "Apps"
+                }
+              },
+              {
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "settings",
+                "is_short": false,
+                "label": "Settings",
+                "sub_menu": {
+                  "_id": null,
+                  "items": [
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "wifi",
+                      "is_short": false,
+                      "label": "WiFi",
+                      "sub_menu": {
+                        "_id": null,
+                        "items": [
+                          {
+                            "application": "ubo_app/services/010-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "wifi_add",
+                            "is_short": false,
+                            "label": "Add"
+                          },
+                          {
+                            "action": "",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "list",
+                            "is_short": false,
+                            "label": "Select"
+                          }
+                        ],
+                        "title": "WiFi Settings"
+                      }
+                    }
+                  ],
+                  "title": "Settings"
+                }
+              },
+              {
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "info",
+                "is_short": false,
+                "label": "About",
+                "sub_menu": {
+                  "_id": null,
+                  "heading": "Ubo v0.0.0",
+                  "items": [
+                    {
+                      "background_color": "#03F7AE",
+                      "color": "#000000",
+                      "icon": "security_update_good",
+                      "is_short": false,
+                      "label": "Already up to date!"
+                    }
+                  ],
+                  "sub_heading": "A universal dashboard for your Raspberry Pi",
+                  "title": "About"
+                }
+              }
+            ],
+            "title": "Main"
+          }
+        },
+        {
+          "background_color": "#68B7FF",
+          "color": "yellow",
+          "icon": "info",
+          "is_short": true,
+          "label": "",
+          "sub_menu": {
+            "_id": null,
+            "items": [],
+            "title": "Notifications (not loaded)"
+          }
+        },
+        {
+          "action": "",
+          "background_color": "#68B7FF",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "icon": "power_settings_new",
+          "is_short": true,
+          "label": "Turn off"
+        }
+      ],
+      "title": "Dashboard"
+    },
+    "path": [
+      "Dashboard",
+      "Main",
+      "Settings",
+      "WiFi Settings"
+    ]
+  },
+  "status_icons": {
+    "icons": [
+      {
+        "color": "white",
+        "id": "wifi:state",
+        "priority": -12,
+        "symbol": "signal_wifi_off"
+      }
+    ]
+  },
+  "update_manager": {
+    "current_version": "0.0.0",
+    "latest_version": "0.0.0",
+    "update_status": "up_to_date"
+  },
+  "wifi": {
+    "connections": [],
+    "current_connection": null,
+    "state": "Disconnected"
+  }
+}

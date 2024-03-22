@@ -8,6 +8,5 @@ register_service(
     service_id='ip',
     label='IP',
     reducer=reducer,
+    init=init_service,
 )
-
-init_service()

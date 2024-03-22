@@ -2,12 +2,9 @@
 from setup import init_service
 
 from ubo_app.load_services import register_service
-from ubo_app.utils import IS_RPI
 
 register_service(
     service_id='keypad',
     label='Keypad',
+    init=init_service,
 )
-
-if IS_RPI:
-    init_service()

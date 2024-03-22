@@ -12,7 +12,7 @@ import traceback
 import uuid
 from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Coroutine, Sequence, cast
 
 from redux import CombineReducerRegisterAction, FinishEvent, ReducerType
 
@@ -127,13 +127,18 @@ class UboServiceThread(threading.Thread):
     def __init__(
         self: UboServiceThread,
         path: Path,
+        white_list: Sequence[str] | None = None,
     ) -> None:
         name = path.name
         super().__init__()
         self.service_uid = f'{uuid.uuid4().hex}:{name}'
         self.name = name
         self.label = '<NOT SET>'
+        self.service_id = '-not-set-'
+
         self.path = path
+        self.white_list = white_list
+
         self.loop = asyncio.new_event_loop()
         self.module = None
         if DEBUG_MODE:
@@ -184,18 +189,47 @@ def register_service(
     service_id: str,
     label: str,
     reducer: ReducerType | None = None,
+    init: Callable[[], None | Coroutine] | None = None,
 ) -> None:
+    from ubo_app import store
+
+    thread = threading.current_thread()
+    if not isinstance(thread, UboServiceThread):
+        logger.error(
+            'Service registration outside of service thread',
+            extra={
+                'service_id': service_id,
+                'label': label,
+            },
+        )
+        return
+
     if service_id in os.environ.get('UBO_DISABLED_SERVICES', '').split(','):
         logger.info(
             'Skipping disabled ubo service',
             extra={
                 'service_id': service_id,
                 'label': label,
-                'has_reducer': reducer is not None,
+                'disabled_services': os.environ.get('UBO_DISABLED_SERVICES'),
             },
         )
-        raise SystemExit(0)
-    from ubo_app import store
+        thread.stop()
+        return
+
+    if thread.white_list and service_id not in thread.white_list:
+        logger.info(
+            'Service is not in services white list',
+            extra={
+                'service_id': service_id,
+                'label': label,
+                'white_list': thread.white_list,
+            },
+        )
+        thread.stop()
+        return
+
+    thread.label = label
+    thread.service_id = service_id
 
     logger.info(
         'Registering ubo serivce',
@@ -206,10 +240,6 @@ def register_service(
         },
     )
 
-    thread = threading.current_thread()
-    if isinstance(thread, UboServiceThread):
-        thread.label = label
-
     if reducer is not None:
         store.dispatch(
             CombineReducerRegisterAction(
@@ -219,8 +249,13 @@ def register_service(
             ),
         )
 
+    if init is not None:
+        result = init()
+        if asyncio.iscoroutine(result):
+            thread.loop.create_task(result)
 
-def load_services() -> None:
+
+def load_services(service_ids: Sequence[str] | None = None) -> None:
     for services_directory_path in [
         ROOT_PATH.joinpath('services').as_posix(),
         *SERVICES_PATH,
@@ -232,7 +267,7 @@ def load_services() -> None:
                 current_path = Path().absolute()
                 os.chdir(service_path.as_posix())
 
-                service = UboServiceThread(service_path)
+                service = UboServiceThread(service_path, white_list=service_ids)
                 REGISTERED_PATHS[service_path] = service
                 service.start()
 

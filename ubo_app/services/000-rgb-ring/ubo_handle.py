@@ -8,6 +8,5 @@ register_service(
     service_id='rgb_ring',
     label='RGB Ring',
     reducer=reducer,
+    init=init_service,
 )
-
-init_service()

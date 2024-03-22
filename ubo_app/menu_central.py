@@ -131,13 +131,13 @@ class MenuAppCentral(UboApp):
         subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
-            options=EventSubscriptionOptions(immediate_run=True),
+            options=EventSubscriptionOptions(immediate_run=True, keep_ref=False),
         )
 
         subscribe_event(
             NotificationsDisplayEvent,
             self.display_notification,
-            options=EventSubscriptionOptions(immediate_run=True),
+            options=EventSubscriptionOptions(immediate_run=True, keep_ref=False),
         )
 
         return self.menu_widget

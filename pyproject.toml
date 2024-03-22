@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.11.2"
+version = "0.11.3"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -26,7 +26,7 @@ ubo-gui = [
     'dev',
   ] },
 ]
-python-redux = "^0.12.5"
+python-redux = "^0.12.7"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -54,6 +54,7 @@ pytest-xdist = "^3.5.0"
 ruff = "^0.3.3"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
+pytest-mock = "^3.14.0"
 
 [tool.poetry.extras]
 default = ['ubo-gui']
@@ -95,7 +96,7 @@ inline-quotes = "single"
 multiline-quotes = "double"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "PLR0913"]
 
 [tool.ruff.format]
 quote-style = 'single'
@@ -109,8 +110,6 @@ exclude = ['typings']
 [tool.pytest.ini_options]
 asyncio_mode = 'auto'
 filterwarnings = "ignore:'imghdr' is deprecated:DeprecationWarning"
-log_cli = 1
-log_cli_level = 'ERROR'
 timeout = 30
 
 [tool.coverage.report]

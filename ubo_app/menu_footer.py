@@ -11,6 +11,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.stencilview import StencilView
 from kivy.uix.widget import Widget
+from redux import AutorunOptions
 from ubo_gui.app import UboApp
 
 from ubo_app.store import autorun
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class MenuAppFooter(UboApp):
-    def _set_temperature_value(self: MenuAppFooter, value: float | None = None) -> None:
+    def set_temperature_value(self: MenuAppFooter, value: float | None = None) -> None:
         if value is None:
             self.temperature.text = '-'
         else:
@@ -45,9 +46,10 @@ class MenuAppFooter(UboApp):
             or setattr(layout, 'width', temperature.width + dp(12)),
         )
 
-        autorun(lambda state: state.sensors.temperature.value)(
-            self._set_temperature_value,
-        )
+        autorun(
+            lambda state: state.sensors.temperature.value,
+            options=AutorunOptions(keep_ref=False),
+        )(self.set_temperature_value)
 
         icon = Label(
             text='device_thermostat',
@@ -63,7 +65,7 @@ class MenuAppFooter(UboApp):
 
         return layout
 
-    def _set_light_value(self: MenuAppFooter, value: float | None = None) -> None:
+    def set_light_value(self: MenuAppFooter, value: float | None = None) -> None:
         if value is None:
             self.light.color = (0.5, 0, 0, 1)
         else:
@@ -89,7 +91,10 @@ class MenuAppFooter(UboApp):
             ),
         )
 
-        autorun(lambda state: state.sensors.light.value)(self._set_light_value)
+        autorun(
+            lambda state: state.sensors.light.value,
+            options=AutorunOptions(keep_ref=False),
+        )(self.set_light_value)
 
         return self.light
 
@@ -123,7 +128,7 @@ class MenuAppFooter(UboApp):
 
         return clock
 
-    def _render_icons(
+    def render_icons(
         self: MenuAppFooter,
         selector_result: Sequence[IconState],
     ) -> None:
@@ -143,7 +148,7 @@ class MenuAppFooter(UboApp):
         self.icons_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
         self.icons_layout.bind(minimum_width=self.icons_layout.setter('width'))
 
-    def _handle_depth_change(self: MenuAppFooter, _: Sequence[str]) -> None:
+    def handle_depth_change(self: MenuAppFooter, _: Sequence[str]) -> None:
         is_fullscreen = False
         if not is_fullscreen:
             if self.normal_footer_layout in self.footer_layout.children:
@@ -213,9 +218,15 @@ class MenuAppFooter(UboApp):
             x=self.set_icons_layout_x,
         )
 
-        autorun(lambda state: state.status_icons.icons)(self._render_icons)
+        autorun(
+            lambda state: state.status_icons.icons,
+            options=AutorunOptions(keep_ref=False),
+        )(self.render_icons)
 
-        autorun(lambda state: state.main.path)(self._handle_depth_change)
+        autorun(
+            lambda state: state.main.path,
+            options=AutorunOptions(keep_ref=False),
+        )(self.handle_depth_change)
 
         self.footer_layout.add_widget(self.home_footer_layout)
 

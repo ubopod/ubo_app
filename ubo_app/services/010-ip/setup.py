@@ -19,7 +19,6 @@ from ubo_app.store.services.ip import (
     IpUpdateRequestEvent,
 )
 from ubo_app.store.status_icons import StatusIconsRegisterAction
-from ubo_app.utils.async_ import create_task
 
 
 @autorun(lambda state: state.ip.interfaces)
@@ -109,12 +108,12 @@ IpMainMenu = SubMenuItem(
 )
 
 
-def init_service() -> None:
+async def init_service() -> None:
     dispatch(RegisterSettingAppAction(menu_item=IpMainMenu))
-    create_task(check_connection())
 
     subscribe_event(
         IpUpdateRequestEvent,
         load_ip_addresses,
     )
     load_ip_addresses()
+    await check_connection()

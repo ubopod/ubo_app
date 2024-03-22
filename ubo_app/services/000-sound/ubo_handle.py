@@ -8,6 +8,5 @@ register_service(
     service_id='sound',
     label='Sound',
     reducer=reducer,
+    init=init_service,
 )
-
-init_service()

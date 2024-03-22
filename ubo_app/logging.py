@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import atexit
+import json
 import logging
 import sys
 from typing import Mapping, cast
@@ -76,7 +77,12 @@ class ExtraFormatter(logging.Formatter):
         string = super().format(record)
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
         if len(extra) > 0:
-            string += ' - extra: ' + str(extra)
+            string += ' - extra: ' + json.dumps(
+                extra,
+                sort_keys=True,
+                indent=4,
+                default=str,
+            )
 
         return string
 

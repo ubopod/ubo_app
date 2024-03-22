@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Generator, cast
 import pytest
 
 if TYPE_CHECKING:
-    from logging import Logger
     from pathlib import Path
 
     from _pytest.fixtures import SubRequest
@@ -40,7 +39,6 @@ class WindowSnapshotContext:
         self: WindowSnapshotContext,
         *,
         test_node: Node,
-        logger: Logger,
         override: bool,
         make_screenshots: bool,
     ) -> None:
@@ -62,7 +60,6 @@ class WindowSnapshotContext:
             ):
                 file.unlink()
         self.results_dir.mkdir(parents=True, exist_ok=True)
-        self.logger = logger
 
     @property
     def hash(self: WindowSnapshotContext) -> str:
@@ -135,7 +132,6 @@ class WindowSnapshotContext:
 @pytest.fixture()
 def window_snapshot(
     request: SubRequest,
-    logger: Logger,
 ) -> Generator[WindowSnapshotContext, None, None]:
     """Take a screenshot of the window."""
     override = (
@@ -158,7 +154,6 @@ def window_snapshot(
 
     context = WindowSnapshotContext(
         test_node=request.node,
-        logger=logger,
         override=override,
         make_screenshots=make_screenshots,
     )

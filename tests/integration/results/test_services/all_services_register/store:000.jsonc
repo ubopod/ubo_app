@@ -85,7 +85,7 @@
       "status": "not_available"
     },
     "service": {
-      "status": "not_running"
+      "status": "not_installed"
     }
   },
   "ip": {
@@ -366,7 +366,7 @@
         "color": "white",
         "id": "ip:internet-state",
         "priority": -11,
-        "symbol": "public"
+        "symbol": "public_off"
       }
     ]
   },

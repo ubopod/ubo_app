@@ -52,7 +52,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
-tests/results/**/*png
+tests/**/results/**/*png
+tests/**/results/**/*mismatch.jsonc
+tests/**/results/**/*mismatch.hash
 
 # Translations
 *.mo

@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 0.11.3
+
+- test: add wireless flow test, work in progress
+- refactor(services): add `init` parameter to `register_service`
+- chore(test): generate and collect screenshots in GitHub workflow
+- refactor(test): make the return value of `wait_for` reusable
+- feat(test): introduce `load_services` and `stability` fixtures
+
 ## Version 0.11.2
 
 - chore(test): improve snapshot tests to detect extra/less snapshots too

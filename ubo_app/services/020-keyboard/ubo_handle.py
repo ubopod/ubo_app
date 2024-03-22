@@ -6,6 +6,5 @@ from ubo_app.load_services import register_service
 register_service(
     service_id='keyboard',
     label='Keyboard',
+    init=init_service,
 )
-
-init_service()

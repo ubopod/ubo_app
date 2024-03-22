@@ -8,6 +8,5 @@ register_service(
     service_id='sensors',
     label='Sensors',
     reducer=reducer,
+    init=init_service,
 )
-
-init_service()

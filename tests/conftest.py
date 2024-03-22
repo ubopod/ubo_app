@@ -6,35 +6,48 @@ import asyncio
 import atexit
 import datetime
 import gc
+import json
+import logging
 import random
 import socket
 import sys
-import threading
 import tracemalloc
 import uuid
 import weakref
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncGenerator, Callable, Generator
+from typing import (
+    TYPE_CHECKING,
+    AsyncGenerator,
+    Callable,
+    Coroutine,
+    Generator,
+    Sequence,
+    TypeAlias,
+    overload,
+)
 
 import dotenv
 import pytest
+from tenacity import AsyncRetrying, stop_after_delay, wait_exponential
+
+from tests.snapshot import WindowSnapshotContext, ubo_store_snapshot, window_snapshot
+from ubo_app.utils.garbage_collection import examine
+
+if TYPE_CHECKING:
+    from asyncio.tasks import Task
+
+    from _pytest.fixtures import SubRequest
+    from tenacity.stop import StopBaseT
+    from tenacity.wait import WaitBaseT
+
+    from ubo_app.menu import MenuApp
 
 pytest.register_assert_rewrite('redux.test')
 
 dotenv.load_dotenv(Path(__file__).parent / '.test.env')
 
+
 import redux.test  # noqa: E402
-from tenacity import retry, stop_after_delay, wait_exponential  # noqa: E402
-
-from tests.snapshot import ubo_store_snapshot, window_snapshot  # noqa: E402
-from ubo_app.utils.garbage_collection import examine  # noqa: E402
-
-if TYPE_CHECKING:
-    from logging import Logger
-
-    from _pytest.fixtures import SubRequest
-
-    from ubo_app.menu import MenuApp
 
 store_snapshot = redux.test.store_snapshot
 __all__ = ('app_context', 'ubo_store_snapshot', 'window_snapshot')
@@ -50,7 +63,7 @@ modules_snapshot = set(sys.modules)
 
 
 @pytest.fixture(autouse=True)
-def _(monkeypatch: pytest.MonkeyPatch) -> None:
+def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
     random.seed(0)
     tracemalloc.start()
@@ -118,29 +131,6 @@ def _(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules['aiohttp'] = FakeAiohttp()
 
 
-@pytest.fixture()
-def logger() -> Logger:
-    import logging
-
-    import ubo_app.logging
-    from ubo_app.constants import LOG_LEVEL
-
-    level = (
-        getattr(
-            ubo_app.logging,
-            LOG_LEVEL,
-            getattr(logging, LOG_LEVEL, logging.DEBUG),
-        )
-        if LOG_LEVEL
-        else logging.DEBUG
-    )
-
-    logger = ubo_app.logging.get_logger('test')
-    logger.setLevel(level)
-
-    return logger
-
-
 class AppContext:
     """Context object for tests running a menu application."""
 
@@ -152,10 +142,7 @@ class AppContext:
 
 
 @pytest.fixture()
-async def app_context(
-    logger: Logger,
-    request: SubRequest,
-) -> AsyncGenerator[AppContext, None]:
+async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
     import os
 
@@ -184,19 +171,25 @@ async def app_context(
     app = app_ref()
 
     if app is not None and request.session.testsfailed == 0:
-        logger.debug(
-            'Memory leak: failed to release app for test.',
-            extra={
-                'referrers': gc.get_referrers(app),
-                'referents': gc.get_referents(app),
-                'refcount': sys.getrefcount(app),
-                'ref': app,
-            },
+        logging.getLogger().debug(
+            'Memory leak: failed to release app for test.\n'
+            + json.dumps(
+                {
+                    'refcount': sys.getrefcount(app),
+                    'referrers': gc.get_referrers(app),
+                    'ref': app_ref,
+                },
+                sort_keys=True,
+                indent=2,
+                default=str,
+            ),
         )
         gc.collect()
         for cell in gc.get_referrers(app):
             if type(cell).__name__ == 'cell':
-                logger.debug('CELL EXAMINATION', extra={'cell': cell})
+                logging.getLogger().debug(
+                    'CELL EXAMINATION\n' + json.dumps({'cell': cell}),
+                )
                 examine(cell, depth_limit=2)
         assert app is None, 'Memory leak: failed to release app for test'
 
@@ -221,25 +214,140 @@ def needs_finish() -> Generator:
     dispatch(FinishAction())
 
 
-class WaitFor(threading.Thread):
+Waiter: TypeAlias = Callable[[], Coroutine[None, None, None]]
+
+
+class WaitFor:
+    def __init__(self: WaitFor) -> None:
+        self.tasks: set[Task] = set()
+
+    @overload
     def __call__(
         self: WaitFor,
-        satisfaction: Callable[[], None],
         *,
-        timeout: float = 1,
-    ) -> None:
-        self.retry = retry(
-            stop=stop_after_delay(timeout),
-            wait=wait_exponential(multiplier=0.5),
-        )(satisfaction)
-        self.start()
+        stop: StopBaseT | None = None,
+        wait: WaitBaseT | None = None,
+    ) -> Callable[[Callable[[], None]], Waiter]: ...
 
-    def run(self: WaitFor) -> None:
-        self.retry()
+    @overload
+    def __call__(
+        self: WaitFor,
+        check: Callable[[], None],
+        *,
+        stop: StopBaseT | None = None,
+        wait: WaitBaseT | None = None,
+    ) -> Waiter: ...
+
+    @overload
+    def __call__(
+        self: WaitFor,
+        *,
+        timeout: float | None = None,
+        wait: WaitBaseT | None = None,
+    ) -> Callable[[Callable[[], None]], Waiter]: ...
+
+    @overload
+    def __call__(
+        self: WaitFor,
+        check: Callable[[], None],
+        *,
+        timeout: float | None = None,
+        wait: WaitBaseT | None = None,
+    ) -> Waiter: ...
+
+    def __call__(
+        self: WaitFor,
+        check: Callable[[], None] | None = None,
+        *,
+        timeout: float | None = None,
+        stop: StopBaseT | None = None,
+        wait: WaitBaseT | None = None,
+    ) -> Callable[[Callable[[], None]], Waiter] | Waiter:
+        args = {}
+        if timeout is not None:
+            args['stop'] = stop_after_delay(timeout)
+        elif stop:
+            args['stop'] = stop
+
+        args['wait'] = wait or wait_exponential(multiplier=0.5)
+
+        def decorator(check: Callable[[], None]) -> Waiter:
+            async def wrapper() -> None:
+                async for attempt in AsyncRetrying(**args):
+                    with attempt:
+                        check()
+
+            return wrapper
+
+        if check:
+            return decorator(check)
+
+        return decorator
 
 
 @pytest.fixture()
 def wait_for() -> Generator[WaitFor, None, None]:
     context = WaitFor()
     yield context
-    context.join()
+    del context.tasks
+
+
+LoadServices: TypeAlias = Callable[[Sequence[str]], Coroutine[None, None, None]]
+
+
+@pytest.fixture()
+async def load_services(wait_for: WaitFor) -> LoadServices:
+    def load_services_and_wait(
+        service_ids: Sequence[str],
+    ) -> Coroutine[None, None, None]:
+        from ubo_app.load_services import load_services
+
+        load_services(service_ids)
+
+        @wait_for
+        def check() -> None:
+            from ubo_app.load_services import REGISTERED_PATHS
+
+            for service_id in service_ids:
+                assert any(
+                    service.service_id == service_id and service.is_alive()
+                    for service in REGISTERED_PATHS.values()
+                ), f'{service_id} not loaded'
+
+        return check()
+
+    return load_services_and_wait
+
+
+Stability: TypeAlias = Waiter
+
+
+@pytest.fixture()
+async def stability(
+    window_snapshot: WindowSnapshotContext,
+    store_snapshot: redux.test.StoreSnapshotContext,
+    wait_for: WaitFor,
+) -> Waiter:
+    async def wrapper() -> None:
+        latest_window_hash = None
+        latest_store_snapshot = None
+
+        @wait_for
+        def check() -> None:
+            nonlocal latest_window_hash, latest_store_snapshot
+
+            new_hash = window_snapshot.hash
+            new_snapshot = store_snapshot.json_snapshot
+
+            is_window_stable = latest_window_hash == new_hash
+            is_store_stable = latest_store_snapshot == new_snapshot
+
+            latest_window_hash = new_hash
+            latest_store_snapshot = new_snapshot
+
+            assert is_window_stable, 'The content of the screen is not stable yet'
+            assert is_store_stable, 'The content of the store is not stable yet'
+
+        await check()
+
+    return wrapper
