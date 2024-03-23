@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.11.4
+
+- feat(docker): add ngrok service (currently serves port 22 with no auth token)
+
 ## Version 0.11.3
 
 - test: add wireless flow test, work in progress

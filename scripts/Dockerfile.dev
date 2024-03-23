@@ -2,7 +2,7 @@ FROM ubuntu:mantic
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt -y update
-RUN apt -y install curl git libcap-dev libegl1 libgl1 libmtdev1 libzbar0 python3 python3-dev
+RUN apt -y install gcc curl git libcap-dev libegl1 libgl1 libmtdev1 libzbar0 python3 python3-dev
 RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV PATH="${PATH}:/root/.local/bin"
 WORKDIR /ubo-app

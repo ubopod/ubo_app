@@ -55,7 +55,7 @@ class WindowSnapshot:
         )
         if self.results_dir.exists():
             for file in self.results_dir.glob(
-                'window:*' if override else 'window:*.mismatch.*',
+                'window-*' if override else 'window-*.mismatch.*',
             ):
                 file.unlink()
         self.results_dir.mkdir(parents=True, exist_ok=True)
@@ -113,8 +113,16 @@ class WindowSnapshot:
                 hash_mismatch_path.write_text(  # pragma: no cover
                     f'// MISMATCH: {filename}\n{new_snapshot}\n',
                 )
-                write_image(image_mismatch_path, array)
-            assert new_snapshot == old_snapshot, f'Window snapshot mismatch: {title}'
+                if self.make_screenshots:
+                    write_image(image_mismatch_path, array)
+            elif self.make_screenshots:
+                write_image(image_path, array)
+            if title:
+                assert (
+                    new_snapshot == old_snapshot
+                ), f'Window snapshot mismatch for {title}'
+            else:
+                assert new_snapshot == old_snapshot, 'Window snapshot mismatch'
 
         self.test_counter[title] += 1
 

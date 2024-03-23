@@ -1,12 +1,8 @@
 """Setup the service."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
-
-import adafruit_pct2075
-import adafruit_veml7700
-import board
-from kivy.clock import Clock
 
 from ubo_app.store import dispatch
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
@@ -14,6 +10,10 @@ from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
 
 def read_sensors(_: float | None = None) -> None:
     """Read the sensor."""
+    import adafruit_pct2075
+    import adafruit_veml7700
+    import board
+
     i2c = board.I2C()
     temperature_sensor = adafruit_pct2075.PCT2075(i2c, address=0x48)
     temperature = temperature_sensor.temperature
@@ -35,5 +35,7 @@ def read_sensors(_: float | None = None) -> None:
 
 def init_service() -> None:
     """Initialize the service."""
+    from kivy.clock import Clock
+
     Clock.schedule_interval(read_sensors, 1)
     read_sensors()

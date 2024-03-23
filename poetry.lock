@@ -1439,13 +1439,13 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.13.1"
+version = "0.13.2"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.13.1-py3-none-any.whl", hash = "sha256:93bc67c3d9148ba36de5b14ff51a1ef656cb864c9ad27700bf8d84d33cfb2503"},
-    {file = "python_redux-0.13.1.tar.gz", hash = "sha256:1eeb8a196eee902c2a5d074f76cb9284e47f1185c0278e719762100bc5fc50b9"},
+    {file = "python_redux-0.13.2-py3-none-any.whl", hash = "sha256:12ab0ddd9a7f074c59dd80835b92e3db8b4e39417e12c73dc91e4bd62fb99988"},
+    {file = "python_redux-0.13.2.tar.gz", hash = "sha256:08b29652ac50199bad137cb2dc4f68bb2e70f0147ad2990776fad3a22465d43b"},
 ]
 
 [package.dependencies]
@@ -1597,14 +1597,13 @@ pyobjc-framework-Cocoa = {version = "*", markers = "sys_platform == \"darwin\""}
 
 [[package]]
 name = "sdbus"
-version = "0.11.1"
+version = "0.12.0"
 description = "Modern Python D-Bus library. Based on sd-bus from libsystemd."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "sdbus-0.11.1-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:89b9e2d1902d69849a62fce7fd3d65af302e9aa7cc2873e1b77499d713c21c2e"},
-    {file = "sdbus-0.11.1-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b95cfcdb8af934f52cefed26f02ed49e2e873de5bb70f41d974c8b63dae00002"},
-    {file = "sdbus-0.11.1.tar.gz", hash = "sha256:adb97718ce996bb308520682c50b1a13e606d65a6edb1c1967a15d2e570cb3b7"},
+    {file = "sdbus-0.12.0-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d918c8ad14ef00e589d6752ac0f2b6540a20c625e85000c152376945fca14209"},
+    {file = "sdbus-0.12.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d545e65637536a63898e2366b2a74617aa1a2215b1c16b23475f912e3407838c"},
 ]
 
 [[package]]
@@ -1845,4 +1844,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "5af13865d72d40071a5f97bc67ec5f023571704ebc885d7ebe0416fcc1026fc3"
+content-hash = "126bba20d0a49c3d196eea7a05a2f52d2f9f36d3cb07b79d30f6289829cceb10"

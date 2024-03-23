@@ -40,5 +40,5 @@ async def test_all_services_register(
     app_context.set_app(app)
     load_services(ALL_SERVICES_LABELS)
     await stability()
-    window_snapshot.take()
     store_snapshot.take()
+    window_snapshot.take()

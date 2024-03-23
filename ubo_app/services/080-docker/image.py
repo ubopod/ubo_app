@@ -25,6 +25,11 @@ from ubo_app.store.services.docker import (
     ImageState,
     ImageStatus,
 )
+from ubo_app.store.services.notifications import (
+    Importance,
+    Notification,
+    NotificationsAddAction,
+)
 from ubo_app.utils.async_ import create_task, run_in_executor
 
 
@@ -277,14 +282,35 @@ def _run_container_generator(
                 if container.status != 'running':
                     container.start()
             else:
-                hosts = {
-                    key: getattr(docker_state, value).container_ip
-                    if hasattr(docker_state, value)
-                    else value
-                    for key, value in IMAGES[image.id].hosts.items()
-                    if not hasattr(docker_state, value)
-                    or getattr(docker_state, value).container_ip
-                }
+                hosts = {}
+                for key, value in IMAGES[image.id].hosts.items():
+                    if not hasattr(docker_state, value):
+                        dispatch(
+                            NotificationsAddAction(
+                                notification=Notification(
+                                    title='Dependency error',
+                                    content=f'Container "{value}" is not loaded',
+                                    importance=Importance.MEDIUM,
+                                ),
+                            ),
+                        )
+                        return
+                    if not getattr(docker_state, value).container_ip:
+                        dispatch(
+                            NotificationsAddAction(
+                                notification=Notification(
+                                    title='Dependency error',
+                                    content=f'Container "{value}" does not have an IP'
+                                    ' address',
+                                    importance=Importance.MEDIUM,
+                                ),
+                            ),
+                        )
+                        return
+                    if hasattr(docker_state, value):
+                        hosts[key] = getattr(docker_state, value).container_ip
+                    else:
+                        hosts[key] = value
                 docker_client.containers.run(
                     image.path,
                     hostname=image.id,
@@ -292,6 +318,8 @@ def _run_container_generator(
                     detach=True,
                     volumes=IMAGES[image.id].volumes,
                     ports=IMAGES[image.id].ports,
+                    network_mode=IMAGES[image.id].network_mode,
+                    environment=IMAGES[image.id].environment,
                     extra_hosts=hosts,
                     restart_policy='always',
                 )

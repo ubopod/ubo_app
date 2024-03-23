@@ -2,14 +2,30 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Sequence, TypeAlias
+from typing import TYPE_CHECKING, Coroutine, Literal, Protocol, Sequence, cast, overload
 
 import pytest
 
 if TYPE_CHECKING:
     from tests.conftest import WaitFor
 
-LoadServices: TypeAlias = Callable[[Sequence[str]], None]
+
+class LoadServices(Protocol):
+    """Load services and wait for them to be ready."""
+
+    @overload
+    def __call__(
+        self: LoadServices,
+        service_ids: Sequence[str],
+    ) -> None: ...
+
+    @overload
+    def __call__(
+        self: LoadServices,
+        service_ids: Sequence[str],
+        *,
+        run_async: Literal[True],
+    ) -> Coroutine[None, None, None]: ...
 
 
 @pytest.fixture()
@@ -18,12 +34,14 @@ def load_services(wait_for: WaitFor) -> LoadServices:
 
     def load_services_and_wait(
         service_ids: Sequence[str],
-    ) -> None:
+        *,
+        run_async: bool = False,
+    ) -> Coroutine[None, None, None] | None:
         from ubo_app.load_services import load_services
 
         load_services(service_ids)
 
-        @wait_for
+        @wait_for(run_async=cast(Literal[True], run_async))
         def check() -> None:
             from ubo_app.load_services import REGISTERED_PATHS
 
@@ -33,6 +51,6 @@ def load_services(wait_for: WaitFor) -> LoadServices:
                     for service in REGISTERED_PATHS.values()
                 ), f'{service_id} not loaded'
 
-        check()
+        return check()
 
-    return load_services_and_wait
+    return cast(LoadServices, load_services_and_wait)

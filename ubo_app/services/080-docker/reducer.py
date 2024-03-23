@@ -1,4 +1,5 @@
 """Docker reducer."""
+
 from __future__ import annotations
 
 from dataclasses import field, replace
@@ -54,8 +55,12 @@ class ImageEntry(Immutable):
     label: str
     icon: str
     path: str
+    dependencies: list[str] | None = None
     ports: dict[str, str] = field(default_factory=dict)
     hosts: dict[str, str] = field(default_factory=dict)
+    note: str | None = None
+    environment: dict[str, str] | None = None
+    network_mode: str = 'bridge'
     volumes: list[str] | None = None
 
 
@@ -86,6 +91,8 @@ IMAGES = {
             id='pi_hole',
             label='Pi-hole',
             icon='dns',
+            environment={'WEBPASSWORD': 'admin'},
+            note='Password: admin',
             path=DOCKER_PREFIX + 'pihole/pihole:latest',
         ),
         ImageEntry(
@@ -100,8 +107,18 @@ IMAGES = {
             label='Open WebUI',
             icon='code',
             path=DOCKER_PREFIX + 'ghcr.io/open-webui/open-webui:main',
+            dependencies=['ollama'],
+            network_mode='container:ollama',
             ports={'8080/tcp': '8080'},
             hosts={'host.docker.internal': 'ollama'},
+        ),
+        ImageEntry(
+            id='ngrok',
+            label='Ngrok',
+            icon='smart_toy',
+            network_mode='host',
+            path=DOCKER_PREFIX + 'ngrok/ngrok:latest',
+            ports={'22/tcp': '22'},
         ),
         *(
             [

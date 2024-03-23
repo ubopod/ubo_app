@@ -23,7 +23,9 @@ from redux_pytest.fixtures import (
     wait_for,
 )
 
-from tests.fixtures import (
+pytest.register_assert_rewrite('tests.fixtures')
+
+from tests.fixtures import (  # noqa: E402
     AppContext,
     LoadServices,
     Stability,
@@ -130,3 +132,15 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
             return parent.get(url, **kwargs)
 
     sys.modules['aiohttp'] = FakeAiohttp()
+
+    class FakeSensor(Fake):
+        lux = 0.0
+        temperature = 0.0
+
+    class FakeSensorModule(Fake):
+        PCT2075 = FakeSensor
+        VEML7700 = FakeSensor
+
+    sys.modules['adafruit_pct2075'] = FakeSensorModule()
+    sys.modules['adafruit_veml7700'] = FakeSensorModule()
+    sys.modules['i2c'] = Fake()

@@ -384,14 +384,14 @@ jobs:
           bigger than 2GB
         run: |
           for file in artifacts/*; do
-            if [ $(stat -c%s "$file") -gt 2000000000 ]; then
-              split -b 2000000000 "$file" "$file"_
+            if [ $(stat -c%s "$file") -gt 2147000000 ]; then
+              split -b 2147000000 "$file" "$file"_
               rm "$file"
             fi
           done
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
           tag_name: ${{ needs.build.outputs.version }}

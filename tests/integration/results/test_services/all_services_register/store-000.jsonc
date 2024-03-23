@@ -32,6 +32,19 @@
       "ports": [],
       "status": "not_available"
     },
+    "ngrok": {
+      "container_ip": null,
+      "docker_id": null,
+      "icon": "smart_toy",
+      "id": "ngrok",
+      "ip_addresses": [
+        "192.168.1.1"
+      ],
+      "label": "Ngrok",
+      "path": "ngrok/ngrok:latest",
+      "ports": [],
+      "status": "not_available"
+    },
     "ollama": {
       "container_ip": null,
       "docker_id": null,
