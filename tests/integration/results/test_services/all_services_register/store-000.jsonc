@@ -1,4 +1,4 @@
-// store:000
+// store-000
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "camera": {
@@ -85,7 +85,7 @@
       "status": "not_available"
     },
     "service": {
-      "status": "not_installed"
+      "status": "not_running"
     }
   },
   "ip": {
@@ -273,11 +273,16 @@
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
-                      "background_color": "#03F7AE",
-                      "color": "#000000",
-                      "icon": "security_update_good",
+                      "background_color": "#00000000",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "update",
                       "is_short": false,
-                      "label": "Already up to date!"
+                      "label": "Checking for updates..."
                     }
                   ],
                   "sub_heading": "A universal dashboard for your Raspberry Pi",
@@ -366,14 +371,14 @@
         "color": "white",
         "id": "ip:internet-state",
         "priority": -11,
-        "symbol": "public_off"
+        "symbol": "public"
       }
     ]
   },
   "update_manager": {
-    "current_version": "0.0.0",
-    "latest_version": "0.0.0",
-    "update_status": "up_to_date"
+    "current_version": null,
+    "latest_version": null,
+    "update_status": "checking"
   },
   "wifi": {
     "connections": [],

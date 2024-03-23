@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from _pytest.fixtures import SubRequest
     from _pytest.nodes import Node
     from numpy._typing import NDArray
-    from redux.test import StoreSnapshotContext
 
 
 def write_image(image_path: Path, array: NDArray) -> None:
@@ -32,11 +31,11 @@ def write_image(image_path: Path, array: NDArray) -> None:
     )
 
 
-class WindowSnapshotContext:
+class WindowSnapshot:
     """Context object for tests taking snapshots of the window."""
 
     def __init__(
-        self: WindowSnapshotContext,
+        self: WindowSnapshot,
         *,
         test_node: Node,
         override: bool,
@@ -62,7 +61,7 @@ class WindowSnapshotContext:
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
     @property
-    def hash(self: WindowSnapshotContext) -> str:
+    def hash(self: WindowSnapshot) -> str:
         """Return the hash of the content of the window."""
         import hashlib
 
@@ -74,13 +73,13 @@ class WindowSnapshotContext:
         sha256.update(data)
         return sha256.hexdigest()
 
-    def get_filename(self: WindowSnapshotContext, title: str | None) -> str:
+    def get_filename(self: WindowSnapshot, title: str | None) -> str:
         """Get the filename for the snapshot."""
         if title:
-            return f"""window:{title}:{self.test_counter[title]:03d}"""
-        return f"""window:{self.test_counter[title]:03d}"""
+            return f"""window-{title}-{self.test_counter[title]:03d}"""
+        return f"""window-{self.test_counter[title]:03d}"""
 
-    def take(self: WindowSnapshotContext, title: str | None = None) -> None:
+    def take(self: WindowSnapshot, title: str | None = None) -> None:
         """Take a snapshot of the content of the window."""
         if self.closed:
             msg = (
@@ -119,7 +118,7 @@ class WindowSnapshotContext:
 
         self.test_counter[title] += 1
 
-    def close(self: WindowSnapshotContext) -> None:
+    def close(self: WindowSnapshot) -> None:
         """Close the snapshot context."""
         for title in self.test_counter:
             filename = self.get_filename(title)
@@ -132,7 +131,7 @@ class WindowSnapshotContext:
 @pytest.fixture()
 def window_snapshot(
     request: SubRequest,
-) -> Generator[WindowSnapshotContext, None, None]:
+) -> Generator[WindowSnapshot, None, None]:
     """Take a screenshot of the window."""
     override = (
         request.config.getoption(
@@ -152,19 +151,10 @@ def window_snapshot(
         is True
     )
 
-    context = WindowSnapshotContext(
+    context = WindowSnapshot(
         test_node=request.node,
         override=override,
         make_screenshots=make_screenshots,
     )
     yield context
     context.close()
-
-
-@pytest.fixture(name='store_snapshot')
-def ubo_store_snapshot(store_snapshot: StoreSnapshotContext) -> StoreSnapshotContext:
-    """Take a snapshot of the store."""
-    from ubo_app.store import store
-
-    store_snapshot.set_store(store)
-    return store_snapshot

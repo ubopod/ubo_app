@@ -60,9 +60,9 @@ class WorkerThread(threading.Thread):
     async def shutdown(self: WorkerThread) -> None:
         while True:
             tasks = [
-                t
-                for t in asyncio.all_tasks(self.loop)
-                if t is not asyncio.current_task(self.loop)
+                task
+                for task in asyncio.all_tasks(self.loop)
+                if task is not asyncio.current_task(self.loop)
             ]
             if not tasks:
                 break

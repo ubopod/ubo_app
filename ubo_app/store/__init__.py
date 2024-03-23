@@ -111,14 +111,20 @@ store = UboStore(
     CreateStoreOptions(
         auto_init=False,
         scheduler=scheduler,
-        action_middleware=lambda action: logger.debug(
-            'Action dispatched',
-            extra={'action': action},
-        ),
-        event_middleware=lambda event: logger.debug(
-            'Event dispatched',
-            extra={'event': event},
-        ),
+        action_middlewares=[
+            lambda action: logger.debug(
+                'Action dispatched',
+                extra={'action': action},
+            )
+            or action,
+        ],
+        event_middlewares=[
+            lambda event: logger.debug(
+                'Event dispatched',
+                extra={'event': event},
+            )
+            or event,
+        ],
         task_creator=create_task,
     ),
 )

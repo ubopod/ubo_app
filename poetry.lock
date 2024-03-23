@@ -1439,18 +1439,17 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.12.7"
+version = "0.13.1"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.12.7-py3-none-any.whl", hash = "sha256:a1a8f156786925bf53a436bde1f4c28cbdf39f4946428d253b20505161dc11f2"},
-    {file = "python_redux-0.12.7.tar.gz", hash = "sha256:b38d853d91f01e4fc3118aebce1515fe20dd021c22264c8c2747e39e1717572e"},
+    {file = "python_redux-0.13.1-py3-none-any.whl", hash = "sha256:93bc67c3d9148ba36de5b14ff51a1ef656cb864c9ad27700bf8d84d33cfb2503"},
+    {file = "python_redux-0.13.1.tar.gz", hash = "sha256:1eeb8a196eee902c2a5d074f76cb9284e47f1185c0278e719762100bc5fc50b9"},
 ]
 
 [package.dependencies]
 python-immutable = ">=1.0.5,<2.0.0"
-typing-extensions = ">=4.9.0,<5.0.0"
 
 [[package]]
 name = "pyusb"
@@ -1846,4 +1845,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "5f9b42f23fb72468a5c15ea4f12ca66a85930ffe3f9f54f777944cd920b52396"
+content-hash = "5af13865d72d40071a5f97bc67ec5f023571704ebc885d7ebe0416fcc1026fc3"

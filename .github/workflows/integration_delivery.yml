@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: '3.11'
 
 jobs:
   dependencies:
@@ -123,72 +123,22 @@ jobs:
             ~/.local
           key: poetry-${{ hashFiles('poetry.lock') }}
 
-      - name: Test
+      - name: Run Tests
         run: |
           poetry run poe test --make-screenshots --cov-report=xml --cov-report=html -n auto
 
       - name: Collect Screenshots
-        run: |
-          shopt -s globstar
-          tar -czf screenshots.tar.gz ./tests/**/results/**/*.png
-
-      - name: Upload Screenshots
         uses: actions/upload-artifact@v4
         with:
           name: screenshots
-          path: screenshots.tar.gz
+          path: tests/**/results/**/*.png
+        continue-on-error: true
 
-      - name: Collect Snapshots
-        run: |
-          shopt -s globstar
-          tar -czf snapshots.tar.gz ./tests/**/results/*.jsonc
-
-      - name: Upload Snapshots
+      - name: Collect Store Snapshots
         uses: actions/upload-artifact@v4
         with:
           name: snapshots
-          path: snapshots.tar.gz
-
-      - name: Collect Mismatching Screenshots
-        if: failure()
-        run: |
-          shopt -s globstar
-          ls tests/**/results/**
-          tar -czf mismatching-screenshots.tar.gz ./tests/**/*.mismatch.png
-
-      - name: Upload Mismatching Screenshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mismatching-screenshots
-          path: mismatching-screenshots.tar.gz
-
-      - name: Prepare list of JSON files with mismatching pairs
-        id: prepare_mismatching_snapshots
-        if: failure()
-        run: |
-          mkdir -p artifacts
-          for file in $(find tests/ -name "*.mismatch.jsonc"); do
-            base=${file%.mismatch.jsonc}.jsonc
-            if [[ -f "$base" ]]; then
-              echo "$file" >> artifacts/files_to_upload.txt
-              echo "$base" >> artifacts/files_to_upload.txt
-            fi
-          done
-
-      - name: Collect Mismatching Snapshots
-        if: failure()
-        run: |
-          if [ -f artifacts/files_to_upload.txt ]; then
-            tar -czf mismatching-snapshots.tar.gz -T artifacts/files_to_upload.txt
-          fi
-
-      - name: Upload Mismatching Snapshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mismatching-snapshots
-          path: mismatching-snapshots.tar.gz
+          path: tests/**/results/**/*.jsonc
 
       - name: Collect HTML Coverage Report
         uses: actions/upload-artifact@v4
@@ -307,7 +257,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suffix: ["lite", "", "full"]
+        suffix: ['lite', '', 'full']
     steps:
       - run: echo Building amd64-${{ matrix.suffix }} image
 
@@ -347,8 +297,10 @@ jobs:
         env:
           PKR_VAR_ubo_app_version: ${{ needs.build.outputs.version }}
           PKR_VAR_image_url: ${{ steps.generate_image_url.outputs.image_url }}
-          PKR_VAR_image_checksum: ${{ steps.generate_image_url.outputs.image_checksum }}
-          PKR_VAR_target_image_size: ${{ matrix.suffix == 'lite' && '3758096384' || '0' }}
+          PKR_VAR_image_checksum:
+            ${{ steps.generate_image_url.outputs.image_checksum }}
+          PKR_VAR_target_image_size:
+            ${{ matrix.suffix == 'lite' && '3758096384' || '0' }}
         run: |
           /entrypoint.sh validate scripts/packer/image.pkr.hcl
           /entrypoint.sh build scripts/packer/image.pkr.hcl
@@ -368,9 +320,11 @@ jobs:
       - name: Upload Image
         uses: actions/upload-artifact@v4
         with:
-          name: ubo_app-${{ needs.build.outputs.version }}-bookworm${{
+          name:
+            ubo_app-${{ needs.build.outputs.version }}-bookworm${{
             steps.generate_image_url.outputs.dashed_suffix}}-arm64.img.gz
-          path: /ubo_app-${{ needs.build.outputs.version }}-bookworm${{
+          path:
+            /ubo_app-${{ needs.build.outputs.version }}-bookworm${{
             steps.generate_image_url.outputs.dashed_suffix }}.img.gz
           if-no-files-found: error
 
@@ -394,7 +348,8 @@ jobs:
       - name: Procure Lite Image
         uses: actions/download-artifact@v4
         with:
-          name: ubo_app-${{ needs.build.outputs.version
+          name:
+            ubo_app-${{ needs.build.outputs.version
             }}-bookworm-lite-arm64.img.gz
           path: artifacts
 
@@ -407,7 +362,8 @@ jobs:
       - name: Procure Full Image
         uses: actions/download-artifact@v4
         with:
-          name: ubo_app-${{ needs.build.outputs.version
+          name:
+            ubo_app-${{ needs.build.outputs.version
             }}-bookworm-full-arm64.img.gz
           path: artifacts
 
@@ -423,7 +379,8 @@ jobs:
           name: binary
           path: artifacts
 
-      - name: Split Large Files into 2GB chunks in a for loop only if they are
+      - name:
+          Split Large Files into 2GB chunks in a for loop only if they are
           bigger than 2GB
         run: |
           for file in artifacts/*; do

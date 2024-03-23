@@ -6,6 +6,7 @@
 - refactor(services): add `init` parameter to `register_service`
 - chore(test): generate and collect screenshots in GitHub workflow
 - refactor(test): make the return value of `wait_for` reusable
+- refactor(test): organize fixtures in different files
 - feat(test): introduce `load_services` and `stability` fixtures
 
 ## Version 0.11.2

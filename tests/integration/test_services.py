@@ -5,10 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from redux.test import StoreSnapshotContext
+    from redux_pytest.fixtures import StoreSnapshot
 
-    from tests.conftest import AppContext, LoadServices, Stability
-    from tests.snapshot import WindowSnapshotContext
+    from tests.fixtures import AppContext, LoadServices, Stability, WindowSnapshot
 
 ALL_SERVICES_LABELS = [
     'rgb_ring',
@@ -27,8 +26,8 @@ ALL_SERVICES_LABELS = [
 
 async def test_all_services_register(
     app_context: AppContext,
-    window_snapshot: WindowSnapshotContext,
-    store_snapshot: StoreSnapshotContext,
+    window_snapshot: WindowSnapshot,
+    store_snapshot: StoreSnapshot,
     needs_finish: None,
     load_services: LoadServices,
     stability: Stability,
@@ -39,7 +38,7 @@ async def test_all_services_register(
 
     app = MenuApp()
     app_context.set_app(app)
-    await load_services(ALL_SERVICES_LABELS)
+    load_services(ALL_SERVICES_LABELS)
     await stability()
     window_snapshot.take()
     store_snapshot.take()

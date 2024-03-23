@@ -1,4 +1,4 @@
-// store:002
+// store-004
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "main": {
@@ -114,11 +114,16 @@
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
-                      "background_color": "#03F7AE",
-                      "color": "#000000",
-                      "icon": "security_update_good",
+                      "background_color": "#00000000",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "update",
                       "is_short": false,
-                      "label": "Already up to date!"
+                      "label": "Checking for updates..."
                     }
                   ],
                   "sub_heading": "A universal dashboard for your Raspberry Pi",
@@ -160,7 +165,9 @@
     "path": [
       "Dashboard",
       "Main",
-      "Settings"
+      "Settings",
+      "WiFi Settings",
+      "a3f2c9bf9c6316b950f244556f25e2a2"
     ]
   },
   "status_icons": {
@@ -174,9 +181,9 @@
     ]
   },
   "update_manager": {
-    "current_version": "0.0.0",
-    "latest_version": "0.0.0",
-    "update_status": "up_to_date"
+    "current_version": null,
+    "latest_version": null,
+    "update_status": "checking"
   },
   "wifi": {
     "connections": [],

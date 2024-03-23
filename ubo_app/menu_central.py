@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Sequence
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
 from kivy.lang.builder import Builder
-from redux import EventSubscriptionOptions
 from ubo_gui.app import UboApp
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu import MenuWidget
@@ -131,17 +130,18 @@ class MenuAppCentral(UboApp):
         subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
-            options=EventSubscriptionOptions(immediate_run=True, keep_ref=False),
+            keep_ref=False,
         )
 
         subscribe_event(
             NotificationsDisplayEvent,
             self.display_notification,
-            options=EventSubscriptionOptions(immediate_run=True, keep_ref=False),
+            keep_ref=False,
         )
 
         return self.menu_widget
 
+    @mainthread
     def handle_key_press_event(
         self: MenuAppCentral,
         key_press_event: KeypadKeyPressEvent,

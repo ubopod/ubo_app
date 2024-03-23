@@ -15,7 +15,6 @@ priority = "primary"
 
 
 [tool.poetry.dependencies]
-
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
@@ -26,7 +25,7 @@ ubo-gui = [
     'dev',
   ] },
 ]
-python-redux = "^0.12.7"
+python-redux = "^0.13.1"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }

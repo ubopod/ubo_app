@@ -2,26 +2,23 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
-    from redux.test import StoreSnapshotContext
+    from redux_pytest.fixtures import StoreMonitor, StoreSnapshot, WaitFor
 
-    from tests.conftest import AppContext, LoadServices, Stability, WaitFor
-    from tests.snapshot import WindowSnapshotContext
+    from tests.fixtures import AppContext, LoadServices, Stability, WindowSnapshot
 
 
 async def test_wireless_flow(
     app_context: AppContext,
-    window_snapshot: WindowSnapshotContext,
-    store_snapshot: StoreSnapshotContext,
+    window_snapshot: WindowSnapshot,
+    store_snapshot: StoreSnapshot,
+    store_monitor: StoreMonitor,
     load_services: LoadServices,
-    needs_finish: None,
     stability: Stability,
-    mocker: MockerFixture,
     wait_for: WaitFor,
+    needs_finish: None,
 ) -> None:
     """Test the wireless flow."""
     _ = needs_finish
@@ -32,7 +29,7 @@ async def test_wireless_flow(
 
     app = MenuApp()
     app_context.set_app(app)
-    await load_services(['wifi'])
+    load_services(['wifi'])
 
     @wait_for
     def check_icon() -> None:
@@ -46,7 +43,7 @@ async def test_wireless_flow(
             for icon in state.status_icons.icons
         ), 'wifi icon not registered'
 
-    await check_icon()
+    check_icon()
     await stability()
     window_snapshot.take()
     store_snapshot.take()
@@ -71,18 +68,20 @@ async def test_wireless_flow(
     window_snapshot.take()
     store_snapshot.take()
 
-    monitor = mocker.stub()
-    store.store_options = replace(store.store_options, action_middleware=monitor)
     dispatch(KeypadKeyPressAction(key=Key.L3))
     await stability()
     window_snapshot.take()
     store_snapshot.take()
 
-    monitor.assert_called_with(
-        CameraStartViewfinderAction(
-            barcode_pattern=(
-                r'WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
-                r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?'
+    @wait_for
+    def camera_started() -> None:
+        store_monitor.dispatched_actions.assert_called_with(
+            CameraStartViewfinderAction(
+                barcode_pattern=(
+                    r'^WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
+                    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?$'
+                ),
             ),
-        ),
-    )
+        )
+
+    camera_started()
