@@ -14,7 +14,7 @@ from ubo_app.store.status_icons import StatusIconsRegisterAction
 def init_service() -> None:
     dispatch(
         StatusIconsRegisterAction(
-            icon='mic_off',
+            icon='󰍭',
             priority=SOUND_MIC_STATE_ICON_PRIORITY,
             id=SOUND_MIC_STATE_ICON_ID,
         ),

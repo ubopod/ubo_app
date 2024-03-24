@@ -13,7 +13,7 @@
             1,
             1
           ],
-          "icon": "menu",
+          "icon": "\udb80\udf5c",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -27,7 +27,7 @@
                   1,
                   1
                 ],
-                "icon": "apps",
+                "icon": "\udb80\udc3b",
                 "is_short": false,
                 "label": "Apps",
                 "sub_menu": {
@@ -44,7 +44,7 @@
                   1,
                   1
                 ],
-                "icon": "settings",
+                "icon": "\ue690",
                 "is_short": false,
                 "label": "Settings",
                 "sub_menu": {
@@ -61,7 +61,7 @@
                   1,
                   1
                 ],
-                "icon": "info",
+                "icon": "\uf129",
                 "is_short": false,
                 "label": "About",
                 "sub_menu": {
@@ -76,7 +76,7 @@
                         1,
                         1
                       ],
-                      "icon": "update",
+                      "icon": "\udb82\udf2c",
                       "is_short": false,
                       "label": "Checking for updates..."
                     }
@@ -91,8 +91,8 @@
         },
         {
           "background_color": "#68B7FF",
-          "color": "yellow",
-          "icon": "info",
+          "color": "white",
+          "icon": "\ueaa2",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -110,7 +110,7 @@
             1,
             1
           ],
-          "icon": "power_settings_new",
+          "icon": "\udb81\udc25",
           "is_short": true,
           "label": "Turn off"
         }

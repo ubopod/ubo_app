@@ -82,7 +82,7 @@ def reducer(  # noqa: C901, PLR0912
                 state=replace(state, is_capture_mute=action.mute),
                 actions=[
                     StatusIconsRegisterAction(
-                        icon='mic_off' if action.mute else 'mic',
+                        icon='󰍭' if action.mute else '󰍬',
                         priority=SOUND_MIC_STATE_ICON_PRIORITY,
                         id=SOUND_MIC_STATE_ICON_ID,
                     ),

@@ -3,6 +3,13 @@
 ## Version 0.11.4
 
 - feat(docker): add ngrok service (currently serves port 22 with no auth token)
+- refactor(style): update `ubo-gui` to the latest version and change all icons to
+  use nerd font icons
+- refactor(serviceS): change the loading order of the services
+- feat(ssh): add ssh service to create and remove temporary ssh target users
+- fix(server): it would miss commands coming together in a single packet, now it
+  waits for the next packet if the current packet is not a complete command and it
+  doesn't miss extra commands in the packet if it has multiple commands.
 
 ## Version 0.11.3
 

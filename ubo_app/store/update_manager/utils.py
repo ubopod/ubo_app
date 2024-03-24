@@ -109,7 +109,7 @@ async def update() -> None:
                     content='Failed to update',
                     display_type=NotificationDisplayType.FLASH,
                     color=DANGER_COLOR,
-                    icon='security_update_warning',
+                    icon='󰜺',
                     chime=Chime.FAILURE,
                 ),
             ),
@@ -125,7 +125,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         return [
             Item(
                 label='Checking for updates...',
-                icon='update',
+                icon='󰬬',
                 background_color='#00000000',
             ),
         ]
@@ -136,7 +136,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
                 action=lambda: dispatch(
                     UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 ),
-                icon='security_update_warning',
+                icon='󰜺',
                 background_color=DANGER_COLOR,
             ),
         ]
@@ -144,7 +144,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         return [
             Item(
                 label='Already up to date!',
-                icon='security_update_good',
+                icon='󰄬',
                 background_color=SUCCESS_COLOR,
                 color='#000000',
             ),
@@ -156,14 +156,14 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
                 action=lambda: dispatch(
                     UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
                 ),
-                icon='system_update',
+                icon='󰬬',
             ),
         ]
     if state.update_status is UpdateStatus.UPDATING:
         return [
             Item(
                 label='Updating...',
-                icon='update',
+                icon='󰇚',
                 background_color='#00000000',
             ),
         ]

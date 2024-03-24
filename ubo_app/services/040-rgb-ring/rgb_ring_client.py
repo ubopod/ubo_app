@@ -1,14 +1,12 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D105, D107
 from __future__ import annotations
 
-import socket
-from pathlib import Path
 from typing import Sequence
 
-from ubo_app.constants import SOCKET_PATH
 from ubo_app.logging import logger
 from ubo_app.store import dispatch
 from ubo_app.store.services.rgb_ring import RgbRingSetIsConnectedAction
+from ubo_app.utils.server import send_command
 
 
 class RgbRingClient:
@@ -26,24 +24,12 @@ class RgbRingClient:
     manner.
     """
 
-    def __init__(self: RgbRingClient) -> None:
-        self.server_socket: socket.SocketType | None = None
-        if Path(SOCKET_PATH).exists():
-            self.server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-            try:
-                self.server_socket.connect(SOCKET_PATH)
-            except Exception as exception:  # noqa: BLE001
-                dispatch(RgbRingSetIsConnectedAction(is_connected=False))
-                logger.error('Unable to connect to the socket', exc_info=exception)
-                return
-            else:
-                dispatch(RgbRingSetIsConnectedAction(is_connected=True))
-
-    def __del__(self: RgbRingClient) -> None:
-        if self.server_socket is not None:
-            self.server_socket.close()
-
     def send(self: RgbRingClient, cmd: Sequence[str]) -> None:
-        if not self.server_socket:
+        try:
+            send_command(' '.join(['led', *cmd]))
+        except Exception as exception:  # noqa: BLE001
+            dispatch(RgbRingSetIsConnectedAction(is_connected=False))
+            logger.error('Unable to connect to the socket', exc_info=exception)
             return
-        self.server_socket.send(' '.join(['led', *cmd]).encode('utf-8'))
+        else:
+            dispatch(RgbRingSetIsConnectedAction(is_connected=True))

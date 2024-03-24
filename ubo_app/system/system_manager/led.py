@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
+from threading import Thread
 from typing import TYPE_CHECKING, Sequence, cast
 
 import board
@@ -23,6 +24,7 @@ ORDER = neopixel.GRB
 class LEDManager:
     def __init__(self: LEDManager) -> None:
         self.logger = get_logger('led-manager')
+        self._last_thread = None
         add_file_handler(self.logger, logging.DEBUG)
         add_stdout_handler(self.logger, logging.DEBUG)
         self.logger.setLevel(logging.DEBUG)
@@ -269,6 +271,15 @@ class LEDManager:
         )
         self.pixels[:] = ring
         self.pixels.show()
+
+    def run_command_thread_safe(self: LEDManager, incoming: Sequence[str]) -> None:
+        if self._last_thread:
+            self.stop()
+            self._last_thread.join()
+
+        self.logger.debug('---starting led new thread--', extra={'incoming': incoming})
+        self._last_thread = Thread(target=self.run_command, args=(incoming,))
+        self._last_thread.start()
 
     def run_command(self: LEDManager, incoming: Sequence[str]) -> None:  # noqa: C901, PLR0912
         self.logger.info('Executing LED command', extra={'incoming': incoming})

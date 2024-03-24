@@ -386,7 +386,7 @@ def image_menu(
         items.append(
             ActionItem(
                 label='Fetch',
-                icon='download',
+                icon='󰇚',
                 action=lambda: _fetch_image(image),
             ),
         )
@@ -394,7 +394,7 @@ def image_menu(
         items.append(
             ActionItem(
                 label='Stop',
-                icon='stop',
+                icon='󰓛',
                 action=lambda: _remove_image(image),
             ),
         )
@@ -403,12 +403,12 @@ def image_menu(
             [
                 ActionItem(
                     label='Start',
-                    icon='play_arrow',
+                    icon='󰐊',
                     action=lambda: _run_container_generator()(image),
                 ),
                 ActionItem(
                     label='Remove image',
-                    icon='delete',
+                    icon='󰆴',
                     action=lambda: _remove_image(image),
                 ),
             ],
@@ -418,12 +418,12 @@ def image_menu(
             [
                 ActionItem(
                     label='Start',
-                    icon='play_arrow',
+                    icon='󰐊',
                     action=lambda: _run_container_generator()(image),
                 ),
                 ActionItem(
                     label='Remove container',
-                    icon='delete',
+                    icon='󰆴',
                     action=lambda: _remove_container(image),
                 ),
             ],
@@ -432,24 +432,24 @@ def image_menu(
         items.append(
             ActionItem(
                 label='Stop',
-                icon='stop',
+                icon='󰓛',
                 action=lambda: _stop_container(image),
             ),
         )
         items.append(
             SubMenuItem(
                 label='Ports',
-                icon='category',
+                icon='󰙜',
                 sub_menu=HeadlessMenu(
                     title='Ports',
                     items=[
                         ActionItem(
                             label=port,
-                            icon='category',
+                            icon='󰙜',
                             action=open_qrcode(port.split(':')[-1]),
                         )
                         if port.startswith('0.0.0.0')  # noqa: S104
-                        else Item(label=port, icon='category')
+                        else Item(label=port, icon='󰙜')
                         for port in image.ports
                     ],
                 ),

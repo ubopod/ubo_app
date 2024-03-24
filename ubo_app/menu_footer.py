@@ -25,7 +25,7 @@ class MenuAppFooter(UboApp):
         if value is None:
             self.temperature.text = '-'
         else:
-            self.temperature.text = f'{value:0.1f}°C'
+            self.temperature.text = f'{value:0.1f}󰔄'
 
     @cached_property
     def temperature_widget(self: MenuAppFooter) -> BoxLayout:
@@ -52,9 +52,8 @@ class MenuAppFooter(UboApp):
         )(self.set_temperature_value)
 
         icon = Label(
-            text='device_thermostat',
+            text='',
             color='#ffffff',
-            font_name='material_symbols',
             font_size=dp(16),
             font_features='fill=0',
             size_hint=(None, 1),
@@ -75,9 +74,8 @@ class MenuAppFooter(UboApp):
     @cached_property
     def light_widget(self: MenuAppFooter) -> Label:
         self.light = Label(
-            text='light_mode',
+            text='󱩎',
             color='#ffffff',
-            font_name='material_symbols',
             font_size=dp(16),
             font_features='fill=0',
             size_hint=(None, 1),
@@ -138,7 +136,6 @@ class MenuAppFooter(UboApp):
             label = Label(
                 text=icon.symbol,
                 color=icon.color,
-                font_name='material_symbols',
                 font_size=dp(20),
                 font_features='fill=0',
                 size_hint=(None, 1),
@@ -174,10 +171,8 @@ class MenuAppFooter(UboApp):
         )
         self.normal_footer_layout.add_widget(
             Label(
-                text='reply',
-                font_name='material_symbols',
+                text='',
                 font_size=dp(20),
-                font_features='fill=1',
                 size_hint=(None, 1),
             ),
         )

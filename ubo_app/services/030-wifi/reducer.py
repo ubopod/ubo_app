@@ -94,12 +94,10 @@ def reducer(
                             if action.current_connection
                             else 0,
                         ),
-                        GlobalWiFiState.DISCONNECTED: 'signal_wifi_off',
-                        GlobalWiFiState.PENDING: 'wifi_find',
-                        GlobalWiFiState.NEEDS_ATTENTION: (
-                            'signal_wifi_statusbar_not_connected'
-                        ),
-                        GlobalWiFiState.UNKNOWN: 'perm_scan_wifi',
+                        GlobalWiFiState.DISCONNECTED: '󰖪',
+                        GlobalWiFiState.PENDING: '󱛇',
+                        GlobalWiFiState.NEEDS_ATTENTION: '󱚵',
+                        GlobalWiFiState.UNKNOWN: '󰈅',
                     }[action.state],
                     priority=WIFI_STATE_ICON_PRIORITY,
                     id=WIFI_STATE_ICON_ID,

@@ -23,7 +23,7 @@ async def test_wireless_flow(
     """Test the wireless flow."""
     _ = needs_finish
     from ubo_app.menu import MenuApp
-    from ubo_app.store import RootState, dispatch, store
+    from ubo_app.store import dispatch, store
     from ubo_app.store.services.camera import CameraStartViewfinderAction
     from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 
@@ -31,19 +31,18 @@ async def test_wireless_flow(
     app_context.set_app(app)
     load_services(['wifi'])
 
-    @wait_for
+    @wait_for(timeout=5.0, run_async=True)
     def check_icon() -> None:
         state = store._state  # noqa: SLF001
 
-        if not isinstance(state, RootState):
-            return
+        assert state is not None
 
-        assert not any(
-            icon.id == 'wifi:state' and icon.symbol == 'signal_wifi_off'
+        assert any(
+            icon.id == 'wifi:state' and icon.symbol == '󰖪'
             for icon in state.status_icons.icons
         ), 'wifi icon not registered'
 
-    check_icon()
+    await check_icon()
     await stability()
     window_snapshot.take()
     store_snapshot.take()
@@ -79,7 +78,7 @@ async def test_wireless_flow(
             CameraStartViewfinderAction(
                 barcode_pattern=(
                     r'^WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
-                    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?$'
+                    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$'
                 ),
             ),
         )

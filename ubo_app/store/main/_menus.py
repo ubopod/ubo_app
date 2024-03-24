@@ -38,17 +38,17 @@ MAIN_MENU = HeadlessMenu(
     items=[
         SubMenuItem(
             label='Apps',
-            icon='apps',
+            icon='󰀻',
             sub_menu=APPS_MENU,
         ),
         SubMenuItem(
             label='Settings',
-            icon='settings',
+            icon='',
             sub_menu=SETTINGS_MENU,
         ),
         SubMenuItem(
             label='About',
-            icon='info',
+            icon='',
             sub_menu=HeadedMenu(
                 title='About',
                 heading=f'Ubo v{CURRENT_VERSION}',
@@ -114,13 +114,21 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
     ]
 
 
+@autorun(
+    lambda state: len(state.notifications.notifications),
+    options=AutorunOptions(default_value='white'),
+)
+def notifications_color(unread_count: int) -> str:
+    return 'yellow' if unread_count > 0 else 'white'
+
+
 HOME_MENU = HeadlessMenu(
     title='Dashboard',
     items=[
         SubMenuItem(
             label='',
             sub_menu=MAIN_MENU,
-            icon='menu',
+            icon='󰍜',
             is_short=True,
         ),
         SubMenuItem(
@@ -129,14 +137,14 @@ HOME_MENU = HeadlessMenu(
                 title=notifications_title,
                 items=notifications_menu_items,
             ),
-            color='yellow',
-            icon='info',
+            color=notifications_color,
+            icon='',
             is_short=True,
         ),
         ActionItem(
             label='Turn off',
             action=lambda: dispatch(PowerOffAction()),
-            icon='power_settings_new',
+            icon='󰐥',
             is_short=True,
         ),
     ],

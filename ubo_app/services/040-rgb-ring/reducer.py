@@ -41,7 +41,7 @@ def reducer(  # noqa: C901, PLR0912
 ) -> ReducerResult[RgbRingState, Action, RgbRingCommandEvent]:
     if state is None:
         if isinstance(action, InitAction):
-            return RgbRingState(is_connected=False, is_busy=False)
+            return RgbRingState(is_connected=True, is_busy=False)
         raise InitializationActionError(action)
 
     if isinstance(action, RgbRingSetIsConnectedAction):
@@ -57,9 +57,6 @@ def reducer(  # noqa: C901, PLR0912
         )
 
     if isinstance(action, RgbRingCommandAction):
-        if not state.is_connected:
-            return state
-
         command = None
 
         if isinstance(action, RgbRingColorfulCommandAction):

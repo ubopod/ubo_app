@@ -39,7 +39,7 @@ from tests.fixtures import (  # noqa: E402
 
 dotenv.load_dotenv(Path(__file__).parent / '.test.env')
 
-_fixtures = (
+fixtures = (
     AppContext,
     LoadServices,
     Stability,
@@ -144,3 +144,6 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules['adafruit_pct2075'] = FakeSensorModule()
     sys.modules['adafruit_veml7700'] = FakeSensorModule()
     sys.modules['i2c'] = Fake()
+
+
+_ = fixtures, _monkeypatch

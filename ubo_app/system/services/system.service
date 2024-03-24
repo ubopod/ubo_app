@@ -10,7 +10,7 @@ Type=simple
 User=root
 Environment=INSTALLATION_PATH={{INSTALLATION_PATH}}
 Environment=USERNAME={{USERNAME}}
-ExecStart={{INSTALLATION_PATH}}/env/bin/python {{INSTALLATION_PATH}}/env/lib/python3.11/site-packages/ubo_app/system/system_manager
+ExecStart={{INSTALLATION_PATH}}/env/bin/ubo-system
 WorkingDirectory={{INSTALLATION_PATH}}
 StandardOutput=inherit
 StandardError=inherit

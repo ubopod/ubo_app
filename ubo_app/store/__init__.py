@@ -20,10 +20,11 @@ from ubo_app.logging import logger
 from ubo_app.store.main import MainAction, MainState
 from ubo_app.store.main.reducer import reducer as main_reducer
 from ubo_app.store.services.camera import CameraAction, CameraEvent
-from ubo_app.store.services.docker import DockerEvent, DockerState
+from ubo_app.store.services.docker import DockerAction, DockerState
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
 from ubo_app.store.services.keypad import KeypadEvent
 from ubo_app.store.services.notifications import NotificationsAction, NotificationsState
+from ubo_app.store.services.rgb_ring import RgbRingAction
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
 from ubo_app.store.services.sound import SoundAction, SoundState
 from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
@@ -65,7 +66,8 @@ ActionType = (
     | WiFiAction
     | IpAction
     | NotificationsAction
-    | DockerEvent
+    | DockerAction
+    | RgbRingAction
 )
 EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent
 
@@ -79,7 +81,7 @@ root_reducer, root_reducer_id = combine_reducers(
 )
 
 
-class UboStore(Store):
+class UboStore(Store[RootState, ActionType, EventType]):
     @classmethod
     def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
         from ubo_gui.menu.types import ActionItem

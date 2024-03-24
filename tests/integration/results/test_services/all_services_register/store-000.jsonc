@@ -5,11 +5,11 @@
     "is_viewfinder_active": false
   },
   "docker": {
-    "_id": "5a92118719c78df48f4ff31e78de5857",
+    "_id": "a3f2c9bf9c6316b950f244556f25e2a2",
     "home_assistant": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "home",
+      "icon": "\udb81\udfd0",
       "id": "home_assistant",
       "ip_addresses": [
         "192.168.1.1"
@@ -22,7 +22,7 @@
     "home_bridge": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "home_work",
+      "icon": "\udb81\ude18",
       "id": "home_bridge",
       "ip_addresses": [
         "192.168.1.1"
@@ -35,7 +35,7 @@
     "ngrok": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "smart_toy",
+      "icon": "\udb81\udef6",
       "id": "ngrok",
       "ip_addresses": [
         "192.168.1.1"
@@ -48,7 +48,7 @@
     "ollama": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "smart_toy",
+      "icon": "\udb83\udcc6",
       "id": "ollama",
       "ip_addresses": [
         "192.168.1.1"
@@ -61,7 +61,7 @@
     "open_webui": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "code",
+      "icon": "\udb83\udf94",
       "id": "open_webui",
       "ip_addresses": [
         "192.168.1.1"
@@ -74,7 +74,7 @@
     "pi_hole": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "dns",
+      "icon": "\udb80\uddd6",
       "id": "pi_hole",
       "ip_addresses": [
         "192.168.1.1"
@@ -87,7 +87,7 @@
     "portainer": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "settings_applications",
+      "icon": "\ue7b0",
       "id": "portainer",
       "ip_addresses": [
         "192.168.1.1"
@@ -123,7 +123,7 @@
             1,
             1
           ],
-          "icon": "menu",
+          "icon": "\udb80\udf5c",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -137,7 +137,7 @@
                   1,
                   1
                 ],
-                "icon": "apps",
+                "icon": "\udb80\udc3b",
                 "is_short": false,
                 "label": "Apps",
                 "sub_menu": {
@@ -152,7 +152,7 @@
                         1,
                         1
                       ],
-                      "icon": "D",
+                      "icon": "\udb82\udc68",
                       "is_short": false,
                       "label": "Docker"
                     }
@@ -168,7 +168,7 @@
                   1,
                   1
                 ],
-                "icon": "settings",
+                "icon": "\ue690",
                 "is_short": false,
                 "label": "Settings",
                 "sub_menu": {
@@ -182,7 +182,7 @@
                         1,
                         1
                       ],
-                      "icon": "lan",
+                      "icon": "\udb82\ude5f",
                       "is_short": false,
                       "label": "IP Addresses",
                       "sub_menu": {
@@ -196,7 +196,7 @@
                               1,
                               1
                             ],
-                            "icon": "cable",
+                            "icon": "\udb80\ude00",
                             "is_short": false,
                             "label": "eth0",
                             "sub_menu": {
@@ -210,7 +210,7 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "lan",
+                                  "icon": "\udb82\ude60",
                                   "is_short": false,
                                   "label": "192.168.1.1"
                                 }
@@ -230,14 +230,14 @@
                         1,
                         1
                       ],
-                      "icon": "wifi",
+                      "icon": "\udb81\udda9",
                       "is_short": false,
                       "label": "WiFi",
                       "sub_menu": {
                         "_id": null,
                         "items": [
                           {
-                            "application": "ubo_app/services/010-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                            "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -245,7 +245,7 @@
                               1,
                               1
                             ],
-                            "icon": "wifi_add",
+                            "icon": "\udb85\udec3",
                             "is_short": false,
                             "label": "Add"
                           },
@@ -258,7 +258,7 @@
                               1,
                               1
                             ],
-                            "icon": "list",
+                            "icon": "\udb85\uddab",
                             "is_short": false,
                             "label": "Select"
                           }
@@ -278,7 +278,7 @@
                   1,
                   1
                 ],
-                "icon": "info",
+                "icon": "\uf129",
                 "is_short": false,
                 "label": "About",
                 "sub_menu": {
@@ -293,7 +293,7 @@
                         1,
                         1
                       ],
-                      "icon": "update",
+                      "icon": "\udb82\udf2c",
                       "is_short": false,
                       "label": "Checking for updates..."
                     }
@@ -308,8 +308,8 @@
         },
         {
           "background_color": "#68B7FF",
-          "color": "yellow",
-          "icon": "info",
+          "color": "white",
+          "icon": "\ueaa2",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -327,7 +327,7 @@
             1,
             1
           ],
-          "icon": "power_settings_new",
+          "icon": "\udb81\udc25",
           "is_short": true,
           "label": "Turn off"
         }
@@ -344,7 +344,7 @@
   },
   "rgb_ring": {
     "is_busy": false,
-    "is_connected": false
+    "is_connected": true
   },
   "sensors": {
     "light": {
@@ -366,25 +366,25 @@
         "color": "white",
         "id": "sound:mic-state",
         "priority": -20,
-        "symbol": "mic_off"
+        "symbol": "\udb80\udf6d"
       },
       {
         "color": "white",
         "id": "ethernet:state",
         "priority": -13,
-        "symbol": "link_off"
+        "symbol": "\udb80\udf19"
       },
       {
         "color": "white",
         "id": "wifi:state",
         "priority": -12,
-        "symbol": "signal_wifi_off"
+        "symbol": "\udb81\uddaa"
       },
       {
         "color": "white",
         "id": "ip:internet-state",
         "priority": -11,
-        "symbol": "public"
+        "symbol": "\udb81\udd9f"
       }
     ]
   },

@@ -370,7 +370,7 @@ async def forget_wireless_connection(ssid: str) -> None:
                         ssid}" was deleted successfully""",
                         display_type=NotificationDisplayType.FLASH,
                         color=DANGER_COLOR,
-                        icon='signal_wifi_bad',
+                        icon='󱛅',
                         chime=Chime.DONE,
                     ),
                 ),

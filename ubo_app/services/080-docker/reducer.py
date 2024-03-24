@@ -70,27 +70,27 @@ IMAGES = {
         ImageEntry(
             id='home_assistant',
             label='Home Assistant',
-            icon='home',
+            icon='󰟐',
             path=DOCKER_PREFIX + 'homeassistant/home-assistant:stable',
             ports={'8123/tcp': '8123'},
         ),
         ImageEntry(
             id='home_bridge',
             label='Home Bridge',
-            icon='home_work',
+            icon='󰘘',
             path=DOCKER_PREFIX + 'homebridge/homebridge:latest',
         ),
         ImageEntry(
             id='portainer',
             label='Portainer',
-            icon='settings_applications',
+            icon='',
             path=DOCKER_PREFIX + 'portainer/portainer-ce:latest',
             volumes=['/var/run/docker.sock:/var/run/docker.sock'],
         ),
         ImageEntry(
             id='pi_hole',
             label='Pi-hole',
-            icon='dns',
+            icon='󰇖',
             environment={'WEBPASSWORD': 'admin'},
             note='Password: admin',
             path=DOCKER_PREFIX + 'pihole/pihole:latest',
@@ -98,14 +98,14 @@ IMAGES = {
         ImageEntry(
             id='ollama',
             label='Ollama',
-            icon='smart_toy',
+            icon='󰳆',
             path=DOCKER_PREFIX + 'ollama/ollama:latest',
             ports={'11434/tcp': '11434'},
         ),
         ImageEntry(
             id='open_webui',
             label='Open WebUI',
-            icon='code',
+            icon='󰾔',
             path=DOCKER_PREFIX + 'ghcr.io/open-webui/open-webui:main',
             dependencies=['ollama'],
             network_mode='container:ollama',
@@ -115,7 +115,7 @@ IMAGES = {
         ImageEntry(
             id='ngrok',
             label='Ngrok',
-            icon='smart_toy',
+            icon='󰛶',
             network_mode='host',
             path=DOCKER_PREFIX + 'ngrok/ngrok:latest',
             ports={'22/tcp': '22'},
@@ -125,7 +125,7 @@ IMAGES = {
                 ImageEntry(
                     id='alpine',
                     label='Alpine',
-                    icon='code',
+                    icon='',
                     path=DOCKER_PREFIX + 'alpine:latest',
                 ),
             ]

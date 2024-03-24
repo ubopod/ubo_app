@@ -2,21 +2,22 @@
   BoxLayout:
     orientation: 'vertical'
     padding: dp(50)
-    spacing: dp(30)
+    spacing: dp(20)
 
     BoxLayout:
       orientation: 'horizontal'
+      size_hint: 1, 1
       Label:
-        font_name: 'material_symbols'
-        text: 'wifi' if root.creating else 'photo_camera'
+        text: '󱛃' if root.creating else '󰄀'
         size_hint: 1, None
         font_size: dp(60)
+        height: self.texture_size[1]
 
       Label:
-        font_name: 'material_symbols'
-        text: 'hourglass_top' if root.creating else 'qr_code'
+        text: '' if root.creating else '󰐲'
         size_hint: 1, None
         font_size: dp(60)
+        height: self.texture_size[1]
 
     Label:
       text: 'Creating Scanned WiFi Connection' if root.creating else 'Scan WiFi QR-Code With Front Camera'
@@ -24,6 +25,7 @@
       font_size: dp(19)
       halign: 'center'
       valign: 'middle'
+      height: self.texture_size[1]
       size_hint: 1, 1
 
   ItemWidget:

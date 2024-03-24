@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import socket
 from dataclasses import fields
 from pathlib import Path
 from typing import Callable
@@ -16,7 +15,6 @@ from docker.models.images import Image
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_INSTALLATION_LOCK_FILE, SOCKET_PATH
-from ubo_app.logging import logger
 from ubo_app.store import autorun, dispatch
 from ubo_app.store.main import RegisterRegularAppAction
 from ubo_app.store.services.docker import (
@@ -26,20 +24,7 @@ from ubo_app.store.services.docker import (
 )
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import monitor_unit
-
-
-def send_command(command: bytes) -> None:
-    """Send a command to the system manager socket."""
-    server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-    try:
-        server_socket.connect(SOCKET_PATH)
-    except Exception as exception:  # noqa: BLE001
-        logger.error('Unable to connect to the socket', exc_info=exception)
-        return
-    else:
-        server_socket.send(command)
-    finally:
-        server_socket.close()
+from ubo_app.utils.server import send_command
 
 
 def install_docker() -> None:
@@ -47,19 +32,19 @@ def install_docker() -> None:
     dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
 
     if Path(SOCKET_PATH).exists():
-        send_command(b'docker install')
+        send_command('docker install')
 
 
 def run_docker() -> None:
     """Install Docker."""
-    send_command(b'docker start')
+    send_command('docker start')
 
     dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
 
 
 def stop_docker() -> None:
     """Install Docker."""
-    send_command(b'docker stop')
+    send_command('docker stop')
 
     dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
 
@@ -126,7 +111,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             items=[
                 ActionItem(
                     label='Install Docker',
-                    icon='system_update',
+                    icon='󰶮',
                     action=install_docker,
                 ),
             ],
@@ -146,7 +131,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             items=[
                 ActionItem(
                     label='Start Docker',
-                    icon='play_arrow',
+                    icon='󰐊',
                     action=run_docker,
                 ),
             ],
@@ -159,7 +144,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             items=[
                 ActionItem(
                     label='Stop Docker',
-                    icon='stop',
+                    icon='󰓛',
                     action=stop_docker,
                 ),
             ],
@@ -189,7 +174,7 @@ def docker_menu_items(state: DockerState) -> list[Item]:
     items: list[Item] = [
         ActionItem(
             label='Setup Docker',
-            icon='manufacturing',
+            icon='',
             action=setup_menu_action,
         ),
     ]
@@ -200,7 +185,7 @@ def docker_menu_items(state: DockerState) -> list[Item]:
         items.append(
             SubMenuItem(
                 label='Docker Containers',
-                icon='category',
+                icon='󱣘',
                 sub_menu=HeadlessMenu(
                     title='Docker Containers',
                     items=[
@@ -229,7 +214,7 @@ def docker_menu_item_action() -> HeadlessMenu:
 
 docker_main_menu = ActionItem(
     label='Docker',
-    icon='D',
+    icon='󰡨',
     action=docker_menu_item_action,
 )
 

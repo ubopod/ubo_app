@@ -13,7 +13,7 @@
             1,
             1
           ],
-          "icon": "menu",
+          "icon": "\udb80\udf5c",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -27,7 +27,7 @@
                   1,
                   1
                 ],
-                "icon": "apps",
+                "icon": "\udb80\udc3b",
                 "is_short": false,
                 "label": "Apps",
                 "sub_menu": {
@@ -44,7 +44,7 @@
                   1,
                   1
                 ],
-                "icon": "settings",
+                "icon": "\ue690",
                 "is_short": false,
                 "label": "Settings",
                 "sub_menu": {
@@ -58,14 +58,14 @@
                         1,
                         1
                       ],
-                      "icon": "wifi",
+                      "icon": "\udb81\udda9",
                       "is_short": false,
                       "label": "WiFi",
                       "sub_menu": {
                         "_id": null,
                         "items": [
                           {
-                            "application": "ubo_app/services/010-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                            "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -73,7 +73,7 @@
                               1,
                               1
                             ],
-                            "icon": "wifi_add",
+                            "icon": "\udb85\udec3",
                             "is_short": false,
                             "label": "Add"
                           },
@@ -86,7 +86,7 @@
                               1,
                               1
                             ],
-                            "icon": "list",
+                            "icon": "\udb85\uddab",
                             "is_short": false,
                             "label": "Select"
                           }
@@ -106,7 +106,7 @@
                   1,
                   1
                 ],
-                "icon": "info",
+                "icon": "\uf129",
                 "is_short": false,
                 "label": "About",
                 "sub_menu": {
@@ -121,7 +121,7 @@
                         1,
                         1
                       ],
-                      "icon": "update",
+                      "icon": "\udb82\udf2c",
                       "is_short": false,
                       "label": "Checking for updates..."
                     }
@@ -136,8 +136,8 @@
         },
         {
           "background_color": "#68B7FF",
-          "color": "yellow",
-          "icon": "info",
+          "color": "white",
+          "icon": "\ueaa2",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -155,7 +155,7 @@
             1,
             1
           ],
-          "icon": "power_settings_new",
+          "icon": "\udb81\udc25",
           "is_short": true,
           "label": "Turn off"
         }
@@ -174,7 +174,7 @@
         "color": "white",
         "id": "wifi:state",
         "priority": -12,
-        "symbol": "signal_wifi_off"
+        "symbol": "\udb81\uddaa"
       }
     ]
   },

@@ -33,7 +33,7 @@ from ubo_app.utils.async_ import create_task
 # WIFI:S:<SSID>;T:<WEP|WPA|blank>;P:<PASSWORD>;H:<true|false|blank>;;
 barcode_pattern = (
     r'^WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
-    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?$'
+    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$'
 )
 
 
@@ -92,7 +92,7 @@ class CreateWirelessConnectionPage(PageWidget):
                         ssid}" was added successfully""",
                         display_type=NotificationDisplayType.FLASH,
                         color=SUCCESS_COLOR,
-                        icon='wifi_add',
+                        icon='󱛃',
                         chime=Chime.ADD,
                     ),
                 ),
@@ -107,7 +107,7 @@ class CreateWirelessConnectionPage(PageWidget):
             return ActionItem(
                 label='start',
                 is_short=True,
-                icon='camera',
+                icon='󰄀',
                 action=lambda: dispatch(
                     CameraStartViewfinderAction(barcode_pattern=barcode_pattern),
                 ),

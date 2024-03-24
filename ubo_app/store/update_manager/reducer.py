@@ -79,7 +79,7 @@ def reducer(
                             if action.flash_notification
                             else NotificationDisplayType.BACKGROUND,
                             color=SECONDARY_COLOR,
-                            icon='system_update',
+                            icon='󰬬',
                             chime=Chime.DONE,
                         ),
                     ),

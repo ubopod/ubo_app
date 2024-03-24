@@ -723,13 +723,13 @@ files = [
 
 [[package]]
 name = "headless-kivy-pi"
-version = "0.7.1"
+version = "0.7.2"
 description = "Headless renderer for Kivy framework on Raspberry Pi"
 optional = true
-python-versions = ">=3.11,<4.0"
+python-versions = "<4.0,>=3.11"
 files = [
-    {file = "headless_kivy_pi-0.7.1-py3-none-any.whl", hash = "sha256:89e3d90f20ce01139c79b673b666da8f48a6c36f47b414a7416300082a5feedc"},
-    {file = "headless_kivy_pi-0.7.1.tar.gz", hash = "sha256:fa564536100225498b921847b180ddc92aefdccfc38d211cfd72ee513efccdb4"},
+    {file = "headless_kivy_pi-0.7.2-py3-none-any.whl", hash = "sha256:75616d3eeb5242129d107ad50de6de153ca509ab894cc942400c8885f0a761a9"},
+    {file = "headless_kivy_pi-0.7.2.tar.gz", hash = "sha256:73e22b71c6cad7044d4b2495d208ab7ef120eea79a93d021ae843657ac2e85dc"},
 ]
 
 [package.dependencies]
@@ -1696,26 +1696,26 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.9.9"
+version = "0.10.2"
 description = "GUI sdk for Ubo Pod"
 optional = true
-python-versions = ">=3.11,<4.0"
+python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.9.9-py3-none-any.whl", hash = "sha256:904ea29dee17014687a3915242c6cbe8a342d57809654622bb679cfd258d4f85"},
-    {file = "ubo_gui-0.9.9.tar.gz", hash = "sha256:cdf4e855fc61fc91c4151940bd663079beee5f612cba879e2145fb5b576a0f0e"},
+    {file = "ubo_gui-0.10.2-py3-none-any.whl", hash = "sha256:aa98f5818c19dd06e3171da559146b86f69c3fde589e6e7542338c360fe40e88"},
+    {file = "ubo_gui-0.10.2.tar.gz", hash = "sha256:55dd0c1d1eaa7a35f50d307858b2560846f530737ef7c1e148e95db97ed74769"},
 ]
 
 [package.dependencies]
 headless-kivy-pi = [
-    {version = ">=0.7.1,<0.8.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
-    {version = ">=0.7.1,<0.8.0", extras = ["default"], optional = true, markers = "extra == \"default\""},
+    {version = ">=0.7.2,<0.8.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
+    {version = ">=0.7.2,<0.8.0", extras = ["default"], optional = true, markers = "extra == \"default\""},
 ]
 python-immutable = ">=1.0.2,<2.0.0"
 qrcode = ">=7.4.2,<8.0.0"
 
 [package.extras]
-default = ["headless-kivy-pi[default] (>=0.7.1,<0.8.0)"]
-dev = ["headless-kivy-pi[dev] (>=0.7.1,<0.8.0)"]
+default = ["headless-kivy-pi[default] (>=0.7.2,<0.8.0)"]
+dev = ["headless-kivy-pi[dev] (>=0.7.2,<0.8.0)"]
 
 [[package]]
 name = "urllib3"
@@ -1844,4 +1844,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "126bba20d0a49c3d196eea7a05a2f52d2f9f36d3cb07b79d30f6289829cceb10"
+content-hash = "d3e37a87fdae9a43e9f17a613fe0c27a2e41454af5956d0dbdc630cc727fa9b5"

@@ -20,11 +20,11 @@ async def update_ethernet_icon() -> None:
     dispatch(
         StatusIconsRegisterAction(
             icon={
-                GlobalEthernetState.CONNECTED: 'link',
-                GlobalEthernetState.DISCONNECTED: 'link_off',
-                GlobalEthernetState.PENDING: 'settings_ethernet',
-                GlobalEthernetState.NEEDS_ATTENTION: ('settings_ethernet'),
-                GlobalEthernetState.UNKNOWN: 'indeterminate_question_box',
+                GlobalEthernetState.CONNECTED: '󱊪',
+                GlobalEthernetState.DISCONNECTED: '󰌙',
+                GlobalEthernetState.PENDING: '󰌘',
+                GlobalEthernetState.NEEDS_ATTENTION: '󰌚',
+                GlobalEthernetState.UNKNOWN: '󰈅',
             }[state],
             priority=ETHERNET_STATE_ICON_PRIORITY,
             id=ETHERNET_STATE_ICON_ID,

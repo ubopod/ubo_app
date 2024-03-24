@@ -3,13 +3,7 @@ import math
 
 WIFI_STATE_ICON_ID = 'wifi:state'
 WIFI_STATE_ICON_PRIORITY = -12
-SIGNAL_ICONS = [
-    'signal_wifi_0_bar',
-    'network_wifi_1_bar',
-    'network_wifi_2_bar',
-    'network_wifi_3_bar',
-    'signal_wifi_4_bar',
-]
+SIGNAL_ICONS = ['󰤯', '󰤟', '󰤢', '󰤥', '󰤨']
 
 
 def get_signal_icon(strength: float) -> str:

@@ -28,19 +28,19 @@ def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuIt
     return [
         SubMenuItem(
             label=interface.name,
-            icon='cable'
+            icon='󰈀'
             if interface.name.startswith('eth')
-            else 'wifi'
+            else ''
             if interface.name.startswith('wlan')
-            else 'computer'
+            else '󰕇'
             if interface.name.startswith('lo')
-            else 'network_node',
+            else '󰛳',
             sub_menu=HeadlessMenu(
                 title=f'IP Addresses - {interface.name}',
                 items=[
                     Item(
                         label=ip_address,
-                        icon='lan',
+                        icon='󰩠',
                     )
                     for ip_address in interface.ip_addresses
                 ],
@@ -82,7 +82,7 @@ async def check_connection() -> bool:
             dispatch(
                 IpUpdateRequestAction(),
                 StatusIconsRegisterAction(
-                    icon='public',
+                    icon='󰖟',
                     priority=INTERNET_STATE_ICON_PRIORITY,
                     id=INTERNET_STATE_ICON_ID,
                 ),
@@ -91,7 +91,7 @@ async def check_connection() -> bool:
             dispatch(
                 IpUpdateRequestAction(),
                 StatusIconsRegisterAction(
-                    icon='public_off',
+                    icon='󰪎',
                     priority=INTERNET_STATE_ICON_PRIORITY,
                     id=INTERNET_STATE_ICON_ID,
                 ),
@@ -100,7 +100,7 @@ async def check_connection() -> bool:
 
 IpMainMenu = SubMenuItem(
     label='IP Addresses',
-    icon='lan',
+    icon='󰩟',
     sub_menu=HeadlessMenu(
         title='IP Addresses',
         items=get_ip_addresses,

@@ -61,22 +61,22 @@ class WiFiConnectionPage(PromptWidget):
         )
         if self.is_active:
             self.first_option_label = 'Disconnect'
-            self.first_option_icon = 'link_off'
-            self.icon = 'wifi'
+            self.first_option_icon = '󰖪'
+            self.icon = '󰖩'
         else:
             self.first_option_label = 'Connect'
-            self.first_option_icon = 'link'
-            self.icon = 'wifi_off'
+            self.first_option_icon = '󰖩'
+            self.icon = '󰖪'
 
     def __init__(self: WiFiConnectionPage, **kwargs: object) -> None:
         super().__init__(**kwargs, items=None)
         self.prompt = f'SSID: {self.ssid}'
-        self.icon = 'hourglass_top'
+        self.icon = ''
         self.first_option_background_color = 'black'
         self.first_option_label = ''
         self.first_option_is_short = False
         self.second_option_label = 'Delete'
-        self.second_option_icon = 'delete'
+        self.second_option_icon = '󰆴'
         self.second_option_is_short = False
 
         self.bind(is_active=self.update)
@@ -147,18 +147,18 @@ def list_connections() -> HeadlessMenu:
 
 WiFiMainMenu = SubMenuItem(
     label='WiFi',
-    icon='wifi',
+    icon='󰖩',
     sub_menu=HeadlessMenu(
         title='WiFi Settings',
         items=[
             ApplicationItem(
                 label='Add',
-                icon='wifi_add',
+                icon='󱛃',
                 application=CreateWirelessConnectionPage,
             ),
             ActionItem(
                 label='Select',
-                icon='list',
+                icon='󱖫',
                 action=list_connections,
             ),
         ],

@@ -20,10 +20,10 @@ class Importance(StrEnum):
 
 
 IMPORTANCE_ICONS = {
-    Importance.CRITICAL: 'dangerous',
-    Importance.HIGH: 'warning',
-    Importance.MEDIUM: 'info',
-    Importance.LOW: 'priority',
+    Importance.CRITICAL: '󰀦',
+    Importance.HIGH: '⚠',
+    Importance.MEDIUM: '󰋼',
+    Importance.LOW: '󰎚',
 }
 
 IMPORTANCE_COLORS = {
@@ -84,8 +84,7 @@ class Notification(Immutable):
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
 
 
-class NotificationsAction(BaseAction):
-    ...
+class NotificationsAction(BaseAction): ...
 
 
 class NotificationsAddAction(NotificationsAction):
@@ -96,12 +95,10 @@ class NotificationsClearAction(NotificationsAction):
     notification: Notification
 
 
-class NotificationsClearAllAction(NotificationsAction):
-    ...
+class NotificationsClearAllAction(NotificationsAction): ...
 
 
-class NotificationsEvent(BaseEvent):
-    ...
+class NotificationsEvent(BaseEvent): ...
 
 
 class NotificationsDisplayEvent(NotificationsEvent):
