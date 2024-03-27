@@ -97,6 +97,12 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
         },
     )
 
+    monkeypatch.setattr(
+        socket,
+        'create_connection',
+        lambda *args, **kwargs: Fake(args, kwargs),
+    )
+
     class FakeDockerClient:
         def ping(self: FakeDockerClient) -> bool:
             return False

@@ -3,7 +3,6 @@
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "main": {
     "menu": {
-      "_id": null,
       "items": [
         {
           "background_color": "#68B7FF",
@@ -17,7 +16,6 @@
           "is_short": true,
           "label": "",
           "sub_menu": {
-            "_id": null,
             "items": [
               {
                 "background_color": "#68B7FF",
@@ -31,8 +29,8 @@
                 "is_short": false,
                 "label": "Apps",
                 "sub_menu": {
-                  "_id": null,
                   "items": [],
+                  "placeholder": "No apps",
                   "title": "Apps"
                 }
               },
@@ -48,8 +46,8 @@
                 "is_short": false,
                 "label": "Settings",
                 "sub_menu": {
-                  "_id": null,
                   "items": [],
+                  "placeholder": "No settings",
                   "title": "Settings"
                 }
               },
@@ -65,7 +63,6 @@
                 "is_short": false,
                 "label": "About",
                 "sub_menu": {
-                  "_id": null,
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
@@ -81,11 +78,13 @@
                       "label": "Checking for updates..."
                     }
                   ],
+                  "placeholder": null,
                   "sub_heading": "A universal dashboard for your Raspberry Pi",
                   "title": "About"
                 }
               }
             ],
+            "placeholder": null,
             "title": "Main"
           }
         },
@@ -96,8 +95,8 @@
           "is_short": true,
           "label": "",
           "sub_menu": {
-            "_id": null,
             "items": [],
+            "placeholder": "No notifications",
             "title": "Notifications (not loaded)"
           }
         },
@@ -115,6 +114,7 @@
           "label": "Turn off"
         }
       ],
+      "placeholder": null,
       "title": "Dashboard"
     },
     "path": [

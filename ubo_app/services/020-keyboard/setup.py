@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 from kivy.core.window import Keyboard, Window, WindowBase
+from redux import FinishAction
 
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 from ubo_app.store.services.sound import SoundDevice, SoundToggleMuteStatusAction
@@ -34,8 +35,10 @@ def on_keyboard(
             dispatch(KeypadKeyPressAction(key=Key.L2))
         elif key == Keyboard.keycodes['3']:
             dispatch(KeypadKeyPressAction(key=Key.L3))
-        elif key == Keyboard.keycodes['esc']:
+        elif key == Keyboard.keycodes['escape']:
             dispatch(KeypadKeyPressAction(key=Key.BACK))
+        elif key == Keyboard.keycodes['q']:
+            dispatch(FinishAction())
         elif key == Keyboard.keycodes['m']:
             from ubo_app.store import dispatch
 

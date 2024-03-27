@@ -113,7 +113,6 @@
   },
   "main": {
     "menu": {
-      "_id": null,
       "items": [
         {
           "background_color": "#68B7FF",
@@ -127,7 +126,6 @@
           "is_short": true,
           "label": "",
           "sub_menu": {
-            "_id": null,
             "items": [
               {
                 "background_color": "#68B7FF",
@@ -141,7 +139,6 @@
                 "is_short": false,
                 "label": "Apps",
                 "sub_menu": {
-                  "_id": null,
                   "items": [
                     {
                       "action": "",
@@ -157,6 +154,7 @@
                       "label": "Docker"
                     }
                   ],
+                  "placeholder": "No apps",
                   "title": "Apps"
                 }
               },
@@ -172,7 +170,6 @@
                 "is_short": false,
                 "label": "Settings",
                 "sub_menu": {
-                  "_id": null,
                   "items": [
                     {
                       "background_color": "#68B7FF",
@@ -186,7 +183,6 @@
                       "is_short": false,
                       "label": "IP Addresses",
                       "sub_menu": {
-                        "_id": null,
                         "items": [
                           {
                             "background_color": "#68B7FF",
@@ -200,7 +196,6 @@
                             "is_short": false,
                             "label": "eth0",
                             "sub_menu": {
-                              "_id": null,
                               "items": [
                                 {
                                   "background_color": "#68B7FF",
@@ -215,10 +210,12 @@
                                   "label": "192.168.1.1"
                                 }
                               ],
+                              "placeholder": "No IP addresses",
                               "title": "IP Addresses - eth0"
                             }
                           }
                         ],
+                        "placeholder": "No IP addresses",
                         "title": "IP Addresses"
                       }
                     },
@@ -234,7 +231,6 @@
                       "is_short": false,
                       "label": "WiFi",
                       "sub_menu": {
-                        "_id": null,
                         "items": [
                           {
                             "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
@@ -263,10 +259,12 @@
                             "label": "Select"
                           }
                         ],
+                        "placeholder": null,
                         "title": "WiFi Settings"
                       }
                     }
                   ],
+                  "placeholder": "No settings",
                   "title": "Settings"
                 }
               },
@@ -282,7 +280,6 @@
                 "is_short": false,
                 "label": "About",
                 "sub_menu": {
-                  "_id": null,
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
@@ -298,11 +295,13 @@
                       "label": "Checking for updates..."
                     }
                   ],
+                  "placeholder": null,
                   "sub_heading": "A universal dashboard for your Raspberry Pi",
                   "title": "About"
                 }
               }
             ],
+            "placeholder": null,
             "title": "Main"
           }
         },
@@ -313,8 +312,8 @@
           "is_short": true,
           "label": "",
           "sub_menu": {
-            "_id": null,
             "items": [],
+            "placeholder": "No notifications",
             "title": "Notifications (0)"
           }
         },
@@ -332,6 +331,7 @@
           "label": "Turn off"
         }
       ],
+      "placeholder": null,
       "title": "Dashboard"
     },
     "path": [

@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.11.7
+
+- refactor(style): update `ubo-gui` to the latest version and set placeholder
+  for all menus
+
 ## Version 0.11.6
 
 - chore(debug): setup sentry for error tracking

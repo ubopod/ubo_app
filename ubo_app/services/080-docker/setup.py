@@ -102,6 +102,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Checking',
             sub_heading='Checking Docker service status',
             items=[],
+            placeholder='',
         )
     if status == DockerStatus.NOT_INSTALLED:
         return HeadedMenu(
@@ -122,6 +123,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Installing...',
             sub_heading='Docker is being installed',
             items=[],
+            placeholder='',
         )
     if status == DockerStatus.NOT_RUNNING:
         return HeadedMenu(
@@ -155,6 +157,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Docker Error',
             sub_heading='Please check the logs for more information',
             items=[],
+            placeholder='',
         )
 
     msg = f'Unknown status: {status}'
@@ -197,6 +200,7 @@ def docker_menu_items(state: DockerState) -> list[Item]:
                         for image_id in (field.name for field in fields(state))
                         if image_id not in (field.name for field in fields(DockerState))
                     ],
+                    placeholder='No Docker containers',
                 ),
             ),
         )

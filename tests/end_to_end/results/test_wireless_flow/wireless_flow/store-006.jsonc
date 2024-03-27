@@ -1,4 +1,4 @@
-// store-003
+// store-006
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "main": {
@@ -166,7 +166,8 @@
       "Dashboard",
       "Main",
       "Settings",
-      "WiFi Settings"
+      "WiFi Settings",
+      "8d723104f77383c13458a748e9bb17bc"
     ]
   },
   "status_icons": {

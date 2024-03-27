@@ -44,6 +44,7 @@ def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuIt
                     )
                     for ip_address in interface.ip_addresses
                 ],
+                placeholder='No IP addresses',
             ),
         )
         for interface in interfaces
@@ -104,6 +105,7 @@ IpMainMenu = SubMenuItem(
     sub_menu=HeadlessMenu(
         title='IP Addresses',
         items=get_ip_addresses,
+        placeholder='No IP addresses',
     ),
 )
 

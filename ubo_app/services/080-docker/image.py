@@ -450,6 +450,7 @@ def image_menu(
                         else Item(label=port, icon='󰙜')
                         for port in image.ports
                     ],
+                    placeholder='No ports',
                 ),
             ),
         )

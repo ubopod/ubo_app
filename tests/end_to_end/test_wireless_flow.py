@@ -47,26 +47,43 @@ async def test_wireless_flow(
     window_snapshot.take()
     store_snapshot.take()
 
+    # Press the L1 key to open the main menu
     dispatch(KeypadKeyPressAction(key=Key.L1))
     await stability()
     window_snapshot.take()
     store_snapshot.take()
 
+    # Press the L2 key to open the settings menu
     dispatch(KeypadKeyPressAction(key=Key.L2))
     await stability()
     window_snapshot.take()
     store_snapshot.take()
 
+    # Press the L1 key to open the wireless menu
     dispatch(KeypadKeyPressAction(key=Key.L1))
     await stability()
     window_snapshot.take()
     store_snapshot.take()
 
+    # Check list of current connections
+    dispatch(KeypadKeyPressAction(key=Key.L2))
+    await stability()
+    window_snapshot.take()
+    store_snapshot.take()
+
+    # Back
+    dispatch(KeypadKeyPressAction(key=Key.BACK))
+    await stability()
+    window_snapshot.take()
+    store_snapshot.take()
+
+    # Add new connection
     dispatch(KeypadKeyPressAction(key=Key.L1))
     await stability()
     window_snapshot.take()
     store_snapshot.take()
 
+    # Open camera to scan QR code
     dispatch(KeypadKeyPressAction(key=Key.L3))
     await stability()
     window_snapshot.take()

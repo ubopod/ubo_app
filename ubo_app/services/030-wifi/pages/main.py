@@ -140,8 +140,9 @@ def wireless_connection_items(wifi_state: WiFiState) -> Sequence[Item]:
 def list_connections() -> HeadlessMenu:
     dispatch(WiFiUpdateRequestAction())
     return HeadlessMenu(
-        title='Wi-Fi Connections',
+        title='Wi-Fi',
         items=wireless_connection_items,
+        placeholder='No Wi-Fi connections found',
     )
 
 

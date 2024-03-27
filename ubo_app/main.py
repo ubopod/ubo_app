@@ -88,6 +88,9 @@ def global_exception_handler(
     )
     threads_info = get_all_thread_stacks()
 
+    logger.error(
+        f'Uncaught exception: {exception_type}: {exception_value}\n{error_message}',
+    )
     logger.debug(
         f'Uncaught exception: {exception_type}: {exception_value}\n{error_message}',
         extra={'threads': threads_info},

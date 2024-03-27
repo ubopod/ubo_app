@@ -22,14 +22,16 @@ if TYPE_CHECKING:
     from ubo_gui.menu.types import Item
 
 
-SETTINGS_MENU = HeadlessMenu(
-    title='Settings',
-    items=[],
-)
-
 APPS_MENU = HeadlessMenu(
     title='Apps',
     items=[],
+    placeholder='No apps',
+)
+
+SETTINGS_MENU = HeadlessMenu(
+    title='Settings',
+    items=[],
+    placeholder='No settings',
 )
 
 
@@ -136,6 +138,7 @@ HOME_MENU = HeadlessMenu(
             sub_menu=HeadlessMenu(
                 title=notifications_title,
                 items=notifications_menu_items,
+                placeholder='No notifications',
             ),
             color=notifications_color,
             icon='',

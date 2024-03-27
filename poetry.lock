@@ -1743,13 +1743,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.10.2"
+version = "0.10.3"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.10.2-py3-none-any.whl", hash = "sha256:aa98f5818c19dd06e3171da559146b86f69c3fde589e6e7542338c360fe40e88"},
-    {file = "ubo_gui-0.10.2.tar.gz", hash = "sha256:55dd0c1d1eaa7a35f50d307858b2560846f530737ef7c1e148e95db97ed74769"},
+    {file = "ubo_gui-0.10.3-py3-none-any.whl", hash = "sha256:09380ef065a93864882d3299d02ac926409a5a1c953680fc43fe7b597756be81"},
+    {file = "ubo_gui-0.10.3.tar.gz", hash = "sha256:54f1bb5c89503b76a12d70f31374dec4dfc3b214ff1502eaf69c9f47d1d8e766"},
 ]
 
 [package.dependencies]
@@ -1891,4 +1891,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "ea71a101a6a4b8da55b428a70a0ab5f35242b3b14c4bf7f85f2bd5c6ea99531c"
+content-hash = "1bcf5e7d78323c08ff64e08b59d015fc4ddefd7b74f0538f1b2164a0efa5a274"
