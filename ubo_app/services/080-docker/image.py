@@ -271,9 +271,7 @@ def _remove_image(image: ImageState) -> None:
 
 
 @autorun(lambda state: state.docker)
-def _run_container_generator(
-    docker_state: DockerState,
-) -> Callable[[ImageState], None]:
+def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState], None]:
     def run_container(image: ImageState) -> None:
         def act() -> None:
             docker_client = docker.from_env()

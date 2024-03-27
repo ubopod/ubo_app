@@ -34,7 +34,7 @@ def on_keyboard(
             dispatch(KeypadKeyPressAction(key=Key.L2))
         elif key == Keyboard.keycodes['3']:
             dispatch(KeypadKeyPressAction(key=Key.L3))
-        elif key == Keyboard.keycodes['left']:
+        elif key == Keyboard.keycodes['esc']:
             dispatch(KeypadKeyPressAction(key=Key.BACK))
         elif key == Keyboard.keycodes['m']:
             from ubo_app.store import dispatch

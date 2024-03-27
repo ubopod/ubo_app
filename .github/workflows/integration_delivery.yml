@@ -127,15 +127,16 @@ jobs:
         run: |
           poetry run poe test --make-screenshots --cov-report=xml --cov-report=html -n auto
 
-      - name: Collect Screenshots
+      - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: screenshots
           path: tests/**/results/**/*.png
-        continue-on-error: true
 
       - name: Collect Store Snapshots
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: snapshots
           path: tests/**/results/**/*.jsonc
@@ -160,8 +161,8 @@ jobs:
       - dependencies
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.extract_version.outputs.version }}
-      name: ${{ steps.extract_version.outputs.name }}
+      version: ${{ steps.extract_version.outputs.VERSION }}
+      name: ${{ steps.extract_version.outputs.NAME }}
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -183,14 +184,45 @@ jobs:
             ~/.local
           key: poetry-${{ hashFiles('poetry.lock') }}
 
+      - name: Add SENTRY_DSN to .env
+        run: |
+          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> .env
+
       - name: Build
         run: poetry build
 
       - name: Extract Version
         id: extract_version
         run: |
-          echo "version=$(poetry version --short)" >> "$GITHUB_OUTPUT"
-          echo "name=$(poetry version | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$(poetry version --short)" >> "$GITHUB_OUTPUT"
+          echo "NAME=$(poetry version | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$(poetry version --short)"
+          echo "NAME=$(poetry version | cut -d' ' -f1)"
+
+      - name: Extract Version from CHANGELOG.md
+        id: extract_changelog_version
+        run: |
+          VERSION_CHANGELOG=$(sed -n '3 s/## Version //p' CHANGELOG.md) 
+          echo "VERSION_CHANGELOG=$VERSION_CHANGELOG"
+          if [ "${{ steps.extract_version.outputs.VERSION }}" != "$VERSION_CHANGELOG" ]; then
+            echo "Error: Version extracted from CHANGELOG.md does not match the version in pyproject.toml"
+            exit 1 
+          else
+            echo "Versions are consistent."
+          fi
+
+      - name: Extract Version from Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: extract_tag_version
+        run: |
+          VERSION_TAG=$(sed 's/^v//' <<< ${{ github.ref_name }})
+          echo "VERSION_TAG=$VERSION_TAG"
+          if [ "${{ steps.extract_version.outputs.VERSION }}" != "$VERSION_TAG" ]; then
+            echo "Error: Version extracted from tag does not match the version in pyproject.toml"
+            exit 1 
+          else
+            echo "Versions are consistent."
+          fi
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
@@ -329,6 +361,7 @@ jobs:
           if-no-files-found: error
 
   release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     name: Release
     needs:
       - type-check
@@ -343,7 +376,6 @@ jobs:
       url: https://pypi.org/p/${{ needs.build.outputs.name }}
     permissions:
       contents: write
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Procure Lite Image
         uses: actions/download-artifact@v4

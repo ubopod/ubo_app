@@ -11,6 +11,11 @@
 Ubo App is a Python application for managing Raspberry Pi utilities and UBo-specific
 features.
 
+## 🚧 Disclaimer
+
+Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will
+limit this to beta versions only.
+
 ## ⚙️ Features
 
 [To be written]

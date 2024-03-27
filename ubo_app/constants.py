@@ -24,3 +24,5 @@ SOCKET_PATH = Path('/run/ubo').joinpath('system_manager.sock').as_posix()
 DEBUG_MODE_DOCKER = strtobool(os.environ.get('UBO_DEBUG_DOCKER', 'False')) == 1
 DOCKER_PREFIX = os.environ.get('UBO_DOCKER_PREFIX', '')
 DOCKER_INSTALLATION_LOCK_FILE = Path('/var/run/ubo/docker_installation.lock')
+
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
