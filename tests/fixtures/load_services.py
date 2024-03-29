@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Coroutine, Literal, Protocol, Sequence, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Coroutine,
+    Generator,
+    Literal,
+    Protocol,
+    Sequence,
+    cast,
+    overload,
+)
 
 import pytest
 
@@ -29,8 +38,9 @@ class LoadServices(Protocol):
 
 
 @pytest.fixture()
-def load_services(wait_for: WaitFor) -> LoadServices:
+def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
     """Load services and wait for them to be ready."""
+    from ubo_app.load_services import REGISTERED_PATHS
 
     def load_services_and_wait(
         service_ids: Sequence[str],
@@ -43,8 +53,6 @@ def load_services(wait_for: WaitFor) -> LoadServices:
 
         @wait_for(run_async=cast(Literal[True], run_async))
         def check() -> None:
-            from ubo_app.load_services import REGISTERED_PATHS
-
             for service_id in service_ids:
                 assert any(
                     service.service_id == service_id and service.is_alive()
@@ -53,4 +61,6 @@ def load_services(wait_for: WaitFor) -> LoadServices:
 
         return check()
 
-    return cast(LoadServices, load_services_and_wait)
+    yield cast(LoadServices, load_services_and_wait)
+
+    REGISTERED_PATHS.clear()

@@ -5,34 +5,41 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 
-class CameraAction(BaseAction):
-    ...
+class CameraAction(BaseAction): ...
 
 
 class CameraStartViewfinderAction(CameraAction):
-    barcode_pattern: str | None
+    id: str
+    pattern: str | None
 
 
-class CameraStopViewfinderAction(CameraAction):
-    ...
-
-
-class CameraBarcodeAction(CameraAction):
-    code: str
-    match: dict[str, str | None]
-
-
-class CameraEvent(BaseEvent):
-    ...
+class CameraEvent(BaseEvent): ...
 
 
 class CameraStartViewfinderEvent(CameraEvent):
-    barcode_pattern: str | None
+    pattern: str | None
 
 
 class CameraStopViewfinderEvent(CameraEvent):
-    ...
+    id: str | None
+
+
+class CameraReportBarcodeAction(CameraAction):
+    codes: list[str]
+
+
+class CameraBarcodeEvent(CameraEvent):
+    id: str | None
+    code: str
+    group_dict: dict[str, str | None] | None
+
+
+class InputDescription(Immutable):
+    id: str
+    pattern: str | None
 
 
 class CameraState(Immutable):
+    current: InputDescription | None = None
     is_viewfinder_active: bool
+    queue: list[InputDescription]

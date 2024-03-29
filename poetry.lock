@@ -2,18 +2,18 @@
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.37.0"
+version = "8.38.0"
 description = "CircuitPython APIs for non-CircuitPython versions of Python such as CPython on Linux and MicroPython."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "Adafruit-Blinka-8.37.0.tar.gz", hash = "sha256:e8ab9e03fe131305be4ea20b145dc6461fa9c6afefe0e617f99e5a1b8ab92d66"},
-    {file = "Adafruit_Blinka-8.37.0-py3-none-any.whl", hash = "sha256:0fe2ec27a0cba86fc1b12760277af192fb3792fd190226db8b3ea1cbd90c4c77"},
+    {file = "Adafruit-Blinka-8.38.0.tar.gz", hash = "sha256:bb104a598a213053bf5624ed305579ef021efee633dfe91fd1d74c6ff2abdbe3"},
+    {file = "Adafruit_Blinka-8.38.0-py3-none-any.whl", hash = "sha256:6e131b3c2379d67eb185543c4a3d7dfff7ddf3db093f7ad094b1a1423813e6be"},
 ]
 
 [package.dependencies]
 adafruit-circuitpython-typing = "*"
-Adafruit-PlatformDetect = ">=3.53.0"
+Adafruit-PlatformDetect = ">=3.62.0"
 Adafruit-PureIO = ">=1.1.7"
 pyftdi = ">=0.40.0"
 
@@ -1257,13 +1257,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.355"
+version = "1.1.356"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.355-py3-none-any.whl", hash = "sha256:bf30b6728fd68ae7d09c98292b67152858dd89738569836896df786e52b5fe48"},
-    {file = "pyright-1.1.355.tar.gz", hash = "sha256:dca4104cd53d6484e6b1b50b7a239ad2d16d2ffd20030bcf3111b56f44c263bf"},
+    {file = "pyright-1.1.356-py3-none-any.whl", hash = "sha256:a101b0f375f93d7082f9046cfaa7ba15b7cf8e1939ace45e984c351f6e8feb99"},
+    {file = "pyright-1.1.356.tar.gz", hash = "sha256:f05b8b29d06b96ed4a0885dad5a31d9dff691ca12b2f658249f583d5f2754021"},
 ]
 
 [package.dependencies]
@@ -1439,13 +1439,13 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.13.2"
+version = "0.14.0"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.13.2-py3-none-any.whl", hash = "sha256:12ab0ddd9a7f074c59dd80835b92e3db8b4e39417e12c73dc91e4bd62fb99988"},
-    {file = "python_redux-0.13.2.tar.gz", hash = "sha256:08b29652ac50199bad137cb2dc4f68bb2e70f0147ad2990776fad3a22465d43b"},
+    {file = "python_redux-0.14.0-py3-none-any.whl", hash = "sha256:ffdc591ba20295a88598eb135a968058b2799ea91faf2d614cf8ab56b38e7c7e"},
+    {file = "python_redux-0.14.0.tar.gz", hash = "sha256:a7004ada07eafe491428c14006da89ec38d24dc01fec911d03573a2901104cd9"},
 ]
 
 [package.dependencies]
@@ -1633,13 +1633,13 @@ files = [
 
 [[package]]
 name = "sentry-sdk"
-version = "1.43.0"
+version = "1.44.0"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = "*"
 files = [
-    {file = "sentry-sdk-1.43.0.tar.gz", hash = "sha256:41df73af89d22921d8733714fb0fc5586c3461907e06688e6537d01a27e0e0f6"},
-    {file = "sentry_sdk-1.43.0-py2.py3-none-any.whl", hash = "sha256:8d768724839ca18d7b4c7463ef7528c40b7aa2bfbf7fe554d5f9a7c044acfd36"},
+    {file = "sentry-sdk-1.44.0.tar.gz", hash = "sha256:f7125a9235795811962d52ff796dc032cd1d0dd98b59beaced8380371cd9c13c"},
+    {file = "sentry_sdk-1.44.0-py2.py3-none-any.whl", hash = "sha256:eb65289da013ca92fad2694851ad2f086aa3825e808dc285bd7dcaf63602bb18"},
 ]
 
 [package.dependencies]
@@ -1743,13 +1743,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.10.3"
+version = "0.10.4"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.10.3-py3-none-any.whl", hash = "sha256:09380ef065a93864882d3299d02ac926409a5a1c953680fc43fe7b597756be81"},
-    {file = "ubo_gui-0.10.3.tar.gz", hash = "sha256:54f1bb5c89503b76a12d70f31374dec4dfc3b214ff1502eaf69c9f47d1d8e766"},
+    {file = "ubo_gui-0.10.4-py3-none-any.whl", hash = "sha256:736ae38e1c73641723116e88426b0affb42c758f26df09db0aee062e98e0b307"},
+    {file = "ubo_gui-0.10.4.tar.gz", hash = "sha256:569872c839e905ac1808d5aaf62a003b6b4c31aeebc842fe56addced86e2a624"},
 ]
 
 [package.dependencies]
@@ -1891,4 +1891,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "1bcf5e7d78323c08ff64e08b59d015fc4ddefd7b74f0538f1b2164a0efa5a274"
+content-hash = "1321f5e5471a41d7667c11e7781b8213389d896a6758ecb5a6d51b7c69beb235"

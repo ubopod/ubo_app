@@ -25,9 +25,9 @@ def on_keyboard(
     from ubo_app.store import dispatch
 
     if modifier == []:
-        if key == Keyboard.keycodes['up']:
+        if key in (Keyboard.keycodes['up'], Keyboard.keycodes['k']):
             dispatch(KeypadKeyPressAction(key=Key.UP))
-        elif key == Keyboard.keycodes['down']:
+        elif key in (Keyboard.keycodes['down'], Keyboard.keycodes['j']):
             dispatch(KeypadKeyPressAction(key=Key.DOWN))
         elif key == Keyboard.keycodes['1']:
             dispatch(KeypadKeyPressAction(key=Key.L1))
@@ -35,7 +35,11 @@ def on_keyboard(
             dispatch(KeypadKeyPressAction(key=Key.L2))
         elif key == Keyboard.keycodes['3']:
             dispatch(KeypadKeyPressAction(key=Key.L3))
-        elif key == Keyboard.keycodes['escape']:
+        elif key in (
+            Keyboard.keycodes['left'],
+            Keyboard.keycodes['escape'],
+            Keyboard.keycodes['h'],
+        ):
             dispatch(KeypadKeyPressAction(key=Key.BACK))
         elif key == Keyboard.keycodes['q']:
             dispatch(FinishAction())

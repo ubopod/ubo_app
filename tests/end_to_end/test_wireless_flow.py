@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from unittest.mock import ANY
+
+from tenacity import stop_after_delay
 
 if TYPE_CHECKING:
     from redux_pytest.fixtures import StoreMonitor, StoreSnapshot, WaitFor
@@ -89,11 +92,12 @@ async def test_wireless_flow(
     window_snapshot.take()
     store_snapshot.take()
 
-    @wait_for
+    @wait_for(stop=stop_after_delay(3))
     def camera_started() -> None:
         store_monitor.dispatched_actions.assert_called_with(
             CameraStartViewfinderAction(
-                barcode_pattern=(
+                id=ANY,
+                pattern=(
                     r'^WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
                     r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$'
                 ),

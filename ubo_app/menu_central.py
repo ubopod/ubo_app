@@ -185,7 +185,10 @@ class MenuAppCentral(UboApp):
         self.menu_widget.open_application(application)
 
         if notification.display_type is NotificationDisplayType.FLASH:
-            Clock.schedule_once(lambda _: application.dispatch('on_close'), 4)
+            Clock.schedule_once(
+                lambda _: application.dispatch('on_dismiss'),
+                notification.flash_time,
+            )
 
 
 Builder.load_file(

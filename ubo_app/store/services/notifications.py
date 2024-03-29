@@ -20,10 +20,10 @@ class Importance(StrEnum):
 
 
 IMPORTANCE_ICONS = {
-    Importance.CRITICAL: '󰀦',
-    Importance.HIGH: '⚠',
-    Importance.MEDIUM: '󰋼',
-    Importance.LOW: '󰎚',
+    Importance.CRITICAL: '󰅚',
+    Importance.HIGH: '󰀪',
+    Importance.MEDIUM: '',
+    Importance.LOW: '󰌶',
 }
 
 IMPORTANCE_COLORS = {
@@ -82,6 +82,7 @@ class Notification(Immutable):
     color: str = field(default_factory=default_color)
     expiry_date: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
+    flash_time: float = 4
 
 
 class NotificationsAction(BaseAction): ...
@@ -99,6 +100,10 @@ class NotificationsClearAllAction(NotificationsAction): ...
 
 
 class NotificationsEvent(BaseEvent): ...
+
+
+class NotificationsClearEvent(NotificationsEvent):
+    notification: Notification
 
 
 class NotificationsDisplayEvent(NotificationsEvent):

@@ -37,10 +37,14 @@ build {
 
   provisioner "shell" {
     inline = [
+      "echo 'ls -l /boot'; ls -l /boot",
+      "echo DF; df -h",
       "chmod +x /install.sh",
       "/install.sh --for-packer --with-docker --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "rm /install.sh /ubo_app-${var.ubo_app_version}-py3-none-any.whl",
-      "apt clean"
+      "echo DF; df -h",
+      "apt clean",
+      "echo DF; df -h"
     ]
   }
 }

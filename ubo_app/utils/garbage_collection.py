@@ -1,9 +1,11 @@
-# ruff: noqa: BLE001, S112, T100, T201
+# ruff: noqa: BLE001, S112
 """Garbage collection investigation tools."""
+
 from __future__ import annotations
 
 import contextlib
 import gc
+from sys import stdout
 from typing import TYPE_CHECKING, Callable
 
 from redux.main import inspect
@@ -16,17 +18,19 @@ SHORT_PRINT_LENGTH = 60
 
 def short_print(obj: object) -> None:
     """Print the object."""
-    print(type(obj), end=' ')
+    stdout.write(str(type(obj)))
     try:
-        print(
+        stdout.write(
             str(obj)[:SHORT_PRINT_LENGTH] + '...'
             if len(str(obj)) > SHORT_PRINT_LENGTH
             else str(obj),
         )
+        stdout.write('\n')
     except Exception as exception:
         if isinstance(exception, KeyboardInterrupt):
             raise
-        print('Failed to print object')
+        stdout.write('Failed to print object\n')
+    stdout.flush()
 
 
 def examine(
@@ -49,7 +53,8 @@ def examine(
             path.append(obj)
         with contextlib.suppress(Exception):
             if looking_for and looking_for in str(type(obj)):
-                print('Found')
+                stdout.write('Found\n')
+                stdout.flush()
                 for i in path:
                     short_print(i)
                 break
@@ -83,11 +88,15 @@ def search_stack_for_instance(ref: weakref.ReferenceType) -> None:
             local_vars = frame.frame.f_locals
             for var_name, var_value in local_vars.items():
                 if var_value is ref():
-                    print(
-                        'Found instance',
-                        {
-                            'var_name': var_name,
-                            'var_value': var_value,
-                            'frame': frame,
-                        },
+                    stdout.write(
+                        'Found instance'
+                        + str(
+                            {
+                                'var_name': var_name,
+                                'var_value': var_value,
+                                'frame': frame,
+                            },
+                        )
+                        + '\n',
                     )
+                    stdout.flush()

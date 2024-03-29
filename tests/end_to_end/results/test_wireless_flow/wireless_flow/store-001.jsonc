@@ -12,7 +12,7 @@
             1,
             1
           ],
-          "icon": "\udb80\udf5c",
+          "icon": "󰍜",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -25,7 +25,7 @@
                   1,
                   1
                 ],
-                "icon": "\udb80\udc3b",
+                "icon": "󰀻",
                 "is_short": false,
                 "label": "Apps",
                 "sub_menu": {
@@ -42,7 +42,7 @@
                   1,
                   1
                 ],
-                "icon": "\ue690",
+                "icon": "",
                 "is_short": false,
                 "label": "Settings",
                 "sub_menu": {
@@ -55,7 +55,7 @@
                         1,
                         1
                       ],
-                      "icon": "\udb81\udda9",
+                      "icon": "󰖩",
                       "is_short": false,
                       "label": "WiFi",
                       "sub_menu": {
@@ -69,7 +69,7 @@
                               1,
                               1
                             ],
-                            "icon": "\udb85\udec3",
+                            "icon": "󱛃",
                             "is_short": false,
                             "label": "Add"
                           },
@@ -82,7 +82,7 @@
                               1,
                               1
                             ],
-                            "icon": "\udb85\uddab",
+                            "icon": "󱖫",
                             "is_short": false,
                             "label": "Select"
                           }
@@ -104,23 +104,18 @@
                   1,
                   1
                 ],
-                "icon": "\uf129",
+                "icon": "",
                 "is_short": false,
                 "label": "About",
                 "sub_menu": {
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
-                      "background_color": "#00000000",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "\udb82\udf2c",
+                      "background_color": "#03F7AE",
+                      "color": "#000000",
+                      "icon": "󰄬",
                       "is_short": false,
-                      "label": "Checking for updates..."
+                      "label": "Already up to date!"
                     }
                   ],
                   "placeholder": null,
@@ -136,7 +131,7 @@
         {
           "background_color": "#68B7FF",
           "color": "white",
-          "icon": "\ueaa2",
+          "icon": "",
           "is_short": true,
           "label": "",
           "sub_menu": {
@@ -154,7 +149,7 @@
             1,
             1
           ],
-          "icon": "\udb81\udc25",
+          "icon": "󰐥",
           "is_short": true,
           "label": "Turn off"
         }
@@ -173,14 +168,14 @@
         "color": "white",
         "id": "wifi:state",
         "priority": -12,
-        "symbol": "\udb81\uddaa"
+        "symbol": "󰖪"
       }
     ]
   },
   "update_manager": {
-    "current_version": null,
-    "latest_version": null,
-    "update_status": "checking"
+    "current_version": "0.0.0",
+    "latest_version": "0.0.0",
+    "update_status": "up_to_date"
   },
   "wifi": {
     "connections": [],

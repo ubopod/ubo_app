@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e -o errexit
+set -e -o xtrace -o errexit
 
 UPDATE=${UPDATE:-false}
 ALPHA=${ALPHA:-false}
@@ -8,6 +8,7 @@ WITH_DOCKER=${WITH_DOCKER:-false}
 FOR_PACKER=false
 SOURCE=${SOURCE:-"ubo-app"}
 
+export DEBIAN_FRONTEND=noninteractive
 
 # Parse arguments
 for arg in "$@"
@@ -82,6 +83,9 @@ apt-get -y install \
   python3-pyaudio \
   python3-virtualenv \
   --no-install-recommends --no-install-suggests
+apt-get -y remove orca || true
+apt-get -y autoremove
+apt-get -y clean
 
 # Enable I2C and SPI
 sudo raspi-config nonint do_i2c 0
@@ -116,7 +120,8 @@ chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
 chmod -R 700 "$INSTALLATION_PATH"
 
 # Bootstrap the application
-UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/ubo" bootstrap${WITH_DOCKER:+ --with-docker}${FOR_PACKER:+ --for-packer}
+UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/bootstrap"${WITH_DOCKER:+ --with-docker}${FOR_PACKER:+ --for-packer}
+echo "Bootstrapping completed"
 
 if [ "$UPDATE" = true ]; then
   # Remove the update directory

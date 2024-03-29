@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
-from typing import Callable
+from asyncio import iscoroutine
+from typing import Any, Callable, Coroutine, Mapping, cast, overload
 
 import docker
 import docker.errors
@@ -64,6 +65,7 @@ def update_container(image_id: str, container: Container) -> None:
                 ],
                 ip=container.attrs['NetworkSettings']['Networks']['bridge']['IPAddress']
                 if container.attrs
+                and 'bridge' in container.attrs['NetworkSettings']['Networks']
                 else None,
             ),
         )
@@ -148,7 +150,7 @@ def check_container(image_id: str) -> None:
     """Check the container status."""
     path = IMAGES[image_id].path
 
-    async def act() -> None:
+    def act() -> None:
         logger.debug('Checking image', extra={'image': image_id, 'path': path})
         docker_client = docker.from_env()
         try:
@@ -213,7 +215,7 @@ def check_container(image_id: str) -> None:
             _monitor_events(image_id, get_docker_id, docker_client)
             docker_client.close()
 
-    create_task(act())
+    run_in_executor(None, act)
 
 
 def _fetch_image(image: ImageState) -> None:
@@ -270,10 +272,50 @@ def _remove_image(image: ImageState) -> None:
     run_in_executor(None, act)
 
 
+@overload
+async def _process_str(
+    value: str
+    | Callable[[], str | Coroutine[Any, Any, str]]
+    | Coroutine[Any, Any, str],
+) -> str: ...
+
+
+@overload
+async def _process_str(
+    value: str
+    | Callable[[], str | Coroutine[Any, Any, str | None] | None]
+    | Coroutine[Any, Any, str | None]
+    | None,
+) -> str | None: ...
+
+
+async def _process_str(
+    value: str
+    | Callable[[], str | Coroutine[Any, Any, str | None] | None]
+    | Coroutine[Any, Any, str | None]
+    | None,
+) -> str | None:
+    if callable(value):
+        value = value()
+    if iscoroutine(value):
+        value = cast(str, await value)
+    return cast(str | None, value)
+
+
+async def _process_environment_variables(image_id: str) -> Mapping[str, str]:
+    environment_variables = IMAGES[image_id].environment_vairables or {}
+    result: dict[str, str] = {}
+
+    for key in environment_variables:
+        result[key] = await _process_str(environment_variables[key])
+
+    return result
+
+
 @autorun(lambda state: state.docker)
 def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState], None]:
     def run_container(image: ImageState) -> None:
-        def act() -> None:
+        async def act() -> None:
             docker_client = docker.from_env()
             container = find_container(docker_client, image=image.path)
             if container:
@@ -309,6 +351,7 @@ def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState]
                         hosts[key] = getattr(docker_state, value).container_ip
                     else:
                         hosts[key] = value
+
                 docker_client.containers.run(
                     image.path,
                     hostname=image.id,
@@ -317,13 +360,14 @@ def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState]
                     volumes=IMAGES[image.id].volumes,
                     ports=IMAGES[image.id].ports,
                     network_mode=IMAGES[image.id].network_mode,
-                    environment=IMAGES[image.id].environment,
+                    environment=await _process_environment_variables(image.id),
                     extra_hosts=hosts,
-                    restart_policy='always',
+                    restart_policy={'Name': 'always'},
+                    command=await _process_str(IMAGES[image.id].command),
                 )
             docker_client.close()
 
-        run_in_executor(None, act)
+        create_task(act())
 
     return run_container
 
@@ -463,7 +507,7 @@ def image_menu(
             ImageStatus.FETCHING: 'Image is being fetched',
             ImageStatus.AVAILABLE: 'Image is ready but container is not running',
             ImageStatus.CREATED: 'Container is created but not running',
-            ImageStatus.RUNNING: 'Container is running',
+            ImageStatus.RUNNING: IMAGES[image.id].note or 'Container is running',
             ImageStatus.ERROR: 'Image has an error, please check the logs',
         }[image.status],
         items=items,

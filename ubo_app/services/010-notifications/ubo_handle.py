@@ -1,10 +1,20 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
-from reducer import reducer
+from __future__ import annotations
 
-from ubo_app.load_services import register_service
+from typing import TYPE_CHECKING
 
-register_service(
+if TYPE_CHECKING:
+    from ubo_app.services import Service, register
+
+
+def setup(service: Service) -> None:
+    from reducer import reducer
+
+    service.register_reducer(reducer)
+
+
+register(
     service_id='notifications',
     label='Notifications',
-    reducer=reducer,
+    setup=setup,
 )

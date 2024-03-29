@@ -39,8 +39,7 @@ class WiFiConnection(Immutable):
     hidden: bool = False
 
 
-class WiFiAction(BaseAction):
-    ...
+class WiFiAction(BaseAction): ...
 
 
 class WiFiUpdateAction(WiFiAction):
@@ -53,16 +52,10 @@ class WiFiUpdateRequestAction(WiFiAction):
     reset: bool = False
 
 
-class WiFiEvent(BaseEvent):
-    ...
+class WiFiEvent(BaseEvent): ...
 
 
-class WiFiCreateEvent(WiFiEvent):
-    connection: WiFiConnection
-
-
-class WiFiUpdateRequestEvent(WiFiEvent):
-    ...
+class WiFiUpdateRequestEvent(WiFiEvent): ...
 
 
 class WiFiState(Immutable):

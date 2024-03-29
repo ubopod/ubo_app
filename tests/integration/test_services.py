@@ -4,15 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ubo_app.utils.fake import Fake
-
 if TYPE_CHECKING:
     import pytest
     from redux_pytest.fixtures import StoreSnapshot
 
     from tests.fixtures import AppContext, LoadServices, Stability, WindowSnapshot
 
-ALL_SERVICES_LABELS = [
+ALL_SERVICES_IDS = [
     'rgb_ring',
     'sound',
     'ethernet',
@@ -24,6 +22,7 @@ ALL_SERVICES_LABELS = [
     'camera',
     'sensors',
     'docker',
+    'ssh',
 ]
 
 
@@ -38,6 +37,7 @@ async def test_all_services_register(
 ) -> None:
     """Test all services load."""
     _ = needs_finish
+    from ubo_app.utils.fake import Fake
 
     class FakeProcess(Fake):
         returncode = 0
@@ -50,7 +50,7 @@ async def test_all_services_register(
 
     app = MenuApp()
     app_context.set_app(app)
-    load_services(ALL_SERVICES_LABELS)
+    load_services(ALL_SERVICES_IDS)
     await stability()
     store_snapshot.take()
     window_snapshot.take()

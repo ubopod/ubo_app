@@ -1,22 +1,24 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import re
-import time
+import asyncio
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import headless_kivy_pi.config
 import numpy as np
+from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock
+from pyzbar.pyzbar import decode
 
-from ubo_app.logging import logger
 from ubo_app.store import dispatch, subscribe_event
 from ubo_app.store.services.camera import (
-    CameraBarcodeAction,
+    CameraReportBarcodeAction,
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
 )
 from ubo_app.utils import IS_RPI
+from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from numpy._typing import NDArray
@@ -41,44 +43,50 @@ def resize_image(
     return resized[: new_size[0], : new_size[1]]
 
 
-def check_codes(regex: re.Pattern, codes: list[str], last_match: float) -> float:
-    if time.time() - last_match < THROTTL_TIME:
-        return last_match
+@debounce(
+    wait=THROTTL_TIME,
+    options=DebounceOptions(leading=True, trailing=False, time_window=THROTTL_TIME),
+)
+async def check_codes(codes: list[str]) -> None:
+    dispatch(CameraReportBarcodeAction(codes=codes))
 
-    for code in codes:
-        logger.info(
-            'Read barcode, decoded value',
-            extra={'decoded_value': code},
-        )
-        match = regex.match(code)
-        if match:
-            logger.info(
-                'Pattern match',
-                extra={
-                    'pattern': regex.pattern,
-                    'match': match.groupdict(),
-                    'decoded_value': code,
-                },
+
+def run_fake_camera() -> None:  # pragma: no cover
+    async def provide() -> None:
+        while True:
+            await asyncio.sleep(0.1)
+            path = Path('/tmp/qrcode_input.txt')  # noqa: S108
+            if not path.exists():
+                continue
+            data = path.read_text().strip()
+            path.unlink(missing_ok=True)
+            await check_codes([data])
+
+    def run_provider() -> None:
+        def set_task(task: asyncio.Task) -> None:
+            def stop() -> None:
+                task.cancel()
+                cancel_subscription()
+
+            cancel_subscription = subscribe_event(
+                CameraStopViewfinderEvent,
+                stop,
             )
-            dispatch(CameraBarcodeAction(code=code, match=match.groupdict()))
 
-    return time.time()
+        create_task(provide(), set_task)
+
+    subscribe_event(
+        CameraStartViewfinderEvent,
+        run_provider,
+    )
 
 
 def init_service() -> None:
     if not IS_RPI:
-        subscribe_event(
-            CameraStartViewfinderEvent,
-            lambda event: check_codes(
-                re.compile(event.barcode_pattern or ''),
-                ['WIFI:S:SSID;T:WPA;P:password;;'],
-                0,
-            ),
-        )
+        run_fake_camera()
         return
 
     from picamera2 import Picamera2  # pyright: ignore [reportMissingImports]
-    from pyzbar.pyzbar import decode
 
     picam2 = Picamera2()
     preview_config = picam2.create_still_configuration(
@@ -95,11 +103,7 @@ def init_service() -> None:
 
     picam2.start()
 
-    def start_camera_viewfinder(start_event: CameraStartViewfinderEvent) -> None:
-        regex_pattern = start_event.barcode_pattern
-        regex = re.compile(regex_pattern) if regex_pattern is not None else None
-        last_match = 0
-
+    def start_camera_viewfinder() -> None:
         display = headless_kivy_pi.config._display  # noqa: SLF001
         if not display:
             return
@@ -111,12 +115,11 @@ def init_service() -> None:
             data = picam2.capture_array('main')
 
             barcodes = decode(data)
-            if len(barcodes) > 0 and regex is not None:
-                nonlocal last_match
-                last_match = check_codes(
-                    regex,
-                    [barcode.data.decode() for barcode in barcodes],
-                    last_match,
+            if len(barcodes) > 0:
+                create_task(
+                    check_codes(
+                        codes=[barcode.data.decode() for barcode in barcodes],
+                    ),
                 )
 
             data = resize_image(data)

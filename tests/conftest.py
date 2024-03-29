@@ -5,26 +5,19 @@ from __future__ import annotations
 import atexit
 import datetime
 import random
-import socket
 import sys
 import tracemalloc
-import uuid
 from pathlib import Path
+from typing import cast
 
 import dotenv
 import pytest
-from redux_pytest.fixtures import (
-    StoreMonitor,
-    Waiter,
-    WaitFor,
-    needs_finish,
-    store_monitor,
-    store_snapshot,
-    wait_for,
-)
+
+dotenv.load_dotenv(Path(__file__).parent / '.env')
 
 pytest.register_assert_rewrite('tests.fixtures')
 
+# isort: off
 from tests.fixtures import (  # noqa: E402
     AppContext,
     LoadServices,
@@ -37,7 +30,17 @@ from tests.fixtures import (  # noqa: E402
     window_snapshot,
 )
 
-dotenv.load_dotenv(Path(__file__).parent / '.test.env')
+from redux_pytest.fixtures import (  # noqa: E402
+    StoreMonitor,
+    Waiter,
+    WaitFor,
+    needs_finish,
+    store_monitor,
+    store_snapshot,
+    wait_for,
+)
+# isort: on
+
 
 fixtures = (
     AppContext,
@@ -66,12 +69,28 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _logger() -> None:
+    import logging
+
+    from ubo_app.logging import ExtraFormatter
+
+    extra_formatter = ExtraFormatter()
+
+    for handler in logging.getLogger().handlers:
+        if handler.formatter:
+            handler.formatter.format = extra_formatter.format
+            cast(ExtraFormatter, handler.formatter).def_keys = extra_formatter.def_keys
+
+
+@pytest.fixture(autouse=True)
 def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
     random.seed(0)
     tracemalloc.start()
 
     monkeypatch.setattr(atexit, 'register', lambda _: None)
+
+    import socket
 
     import psutil
 
@@ -102,6 +121,16 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
         'create_connection',
         lambda *args, **kwargs: Fake(args, kwargs),
     )
+    original_socket_socket = socket.socket
+    from ubo_app.constants import SERVER_SOCKET_PATH
+
+    monkeypatch.setattr(
+        socket,
+        'socket',
+        lambda *args, **kwargs: Fake(args, kwargs)
+        if args[0] == SERVER_SOCKET_PATH
+        else original_socket_socket(*args, **kwargs),
+    )
 
     class FakeDockerClient:
         def ping(self: FakeDockerClient) -> bool:
@@ -116,11 +145,43 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
             return DateTime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
     monkeypatch.setattr(datetime, 'datetime', DateTime)
-    monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(int=random.getrandbits(128)))
-
-    monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
 
     from ubo_app.utils.fake import Fake
+
+    counter = 0
+
+    def debug_uuid4() -> Fake:
+        nonlocal counter
+        counter += 1
+        import logging
+        import traceback
+
+        logging.debug(
+            '`uuid.uuid4` is being called',
+            extra={
+                'traceback': '\n'.join(traceback.format_stack()[:-1]),
+                'counter': counter,
+            },
+        )
+
+        result = Fake()
+        result.hex = f'{counter}'
+        return result
+
+    from ubo_app.constants import DEBUG_MODE_TEST_UUID
+
+    if DEBUG_MODE_TEST_UUID:
+        monkeypatch.setattr('uuid.uuid4', debug_uuid4)
+    else:
+        import uuid
+
+        monkeypatch.setattr(
+            uuid,
+            'uuid4',
+            lambda: uuid.UUID(int=random.getrandbits(128)),
+        )
+
+    monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
 
     class FakeUpdateResponse(Fake):
         async def json(self: FakeUpdateResponse) -> dict[str, object]:
@@ -152,4 +213,4 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules['i2c'] = Fake()
 
 
-_ = fixtures, _monkeypatch
+_ = fixtures, _logger, _monkeypatch

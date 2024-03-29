@@ -19,7 +19,12 @@ SERVICES_PATH = (
     if os.environ.get('UBO_SERVICES_PATH')
     else []
 )
-SOCKET_PATH = Path('/run/ubo').joinpath('system_manager.sock').as_posix()
+SERVER_SOCKET_PATH = Path('/run/ubo').joinpath('system_manager.sock').as_posix()
+DISABLED_SERVICES = os.environ.get('UBO_DISABLED_SERVICES', '').split(',')
+
+# Enable it to replace UUIDs with numerical counters in tests and log the traceback
+# each time a UUID is generated.
+DEBUG_MODE_TEST_UUID = strtobool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False')) == 1
 
 DEBUG_MODE_DOCKER = strtobool(os.environ.get('UBO_DEBUG_DOCKER', 'False')) == 1
 DOCKER_PREFIX = os.environ.get('UBO_DOCKER_PREFIX', '')

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import socket
 import threading
 from typing import Literal, overload
 
-from ubo_app.constants import SOCKET_PATH
+from ubo_app.constants import SERVER_SOCKET_PATH
 from ubo_app.logging import logger
 
 thread_lock = threading.Lock()
@@ -22,9 +21,11 @@ def send_command(command: str, *, has_output: Literal[True]) -> str: ...
 
 def send_command(command: str, *, has_output: bool = False) -> str | None:
     """Send a command to the system manager socket."""
+    import socket
+
     client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
-        client.connect(SOCKET_PATH)
+        client.connect(SERVER_SOCKET_PATH)
     except Exception as exception:  # noqa: BLE001
         logger.error('Unable to connect to the socket', exc_info=exception)
         if has_output:

@@ -82,7 +82,7 @@ class ExtraFormatter(logging.Formatter):
                 sort_keys=True,
                 indent=4,
                 default=str,
-            )
+            ).replace('\\n', '\n')
 
         return string
 

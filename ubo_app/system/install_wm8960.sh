@@ -32,16 +32,16 @@ grep -q "^blacklist snd_bcm2835$" /etc/modprobe.d/raspi-blacklist.conf || \
   echo "blacklist snd_bcm2835" >> /etc/modprobe.d/raspi-blacklist.conf
   
 #set dtoverlays
-sed -i -e 's:#dtparam=i2s=on:dtparam=i2s=on:g'  /boot/firmware/config.txt || true
-sed -i -e 's:#dtparam=i2c_arm=on:dtparam=i2c_arm=on:g'  /boot/firmware/config.txt || true
-grep -q "^dtoverlay=i2s-mmap$" /boot/firmware/config.txt || \
-  echo "dtoverlay=i2s-mmap" >> /boot/firmware/config.txt
+sed -i -e 's:#dtparam=i2s=on:dtparam=i2s=on:g'  /boot/config.txt || true
+sed -i -e 's:#dtparam=i2c_arm=on:dtparam=i2c_arm=on:g'  /boot/config.txt || true
+grep -q "^dtoverlay=i2s-mmap$" /boot/config.txt || \
+  echo "dtoverlay=i2s-mmap" >> /boot/config.txt
 
-grep -q "^dtparam=i2s=on$" /boot/firmware/config.txt || \
-  echo "dtparam=i2s=on" >> /boot/firmware/config.txt
+grep -q "^dtparam=i2s=on$" /boot/config.txt || \
+  echo "dtparam=i2s=on" >> /boot/config.txt
 
-grep -q "^dtoverlay=wm8960-soundcard$" /boot/firmware/config.txt || \
-  echo "dtoverlay=wm8960-soundcard" >> /boot/firmware/config.txt
+grep -q "^dtoverlay=wm8960-soundcard$" /boot/config.txt || \
+  echo "dtoverlay=wm8960-soundcard" >> /boot/config.txt
   
 #install config files
 mkdir -p /etc/wm8960-soundcard
@@ -50,9 +50,12 @@ cp *.state /etc/wm8960-soundcard
 
 #set service 
 cp wm8960-soundcard /usr/bin/
+chmod -x wm8960-soundcard.service
 cp wm8960-soundcard.service /lib/systemd/system/
 systemctl enable  wm8960-soundcard.service 
-#systemctl start wm8960-soundcard                                
+
+cd ..
+rm -rf WM8960-Audio-HAT
 
 echo "------------------------------------------------------"
 echo "Please reboot your raspberry pi to apply all settings"

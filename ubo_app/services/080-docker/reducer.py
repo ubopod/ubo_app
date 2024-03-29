@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import field, replace
+from typing import Any, Callable, Coroutine
 
 from immutable import Immutable
 from redux import (
@@ -28,6 +29,7 @@ from ubo_app.store.services.docker import (
     ImageState,
 )
 from ubo_app.store.services.ip import IpUpdateAction
+from ubo_app.utils.qrcode import qrcode_input
 
 Action = InitAction | DockerAction
 
@@ -59,9 +61,23 @@ class ImageEntry(Immutable):
     ports: dict[str, str] = field(default_factory=dict)
     hosts: dict[str, str] = field(default_factory=dict)
     note: str | None = None
-    environment: dict[str, str] | None = None
+    environment_vairables: (
+        dict[
+            str,
+            str
+            | Coroutine[Any, Any, str]
+            | Callable[[], str | Coroutine[Any, Any, str]],
+        ]
+        | None
+    ) = None
     network_mode: str = 'bridge'
     volumes: list[str] | None = None
+    command: (
+        str
+        | Coroutine[Any, Any, str]
+        | Callable[[], str | Coroutine[Any, Any, str]]
+        | None
+    ) = None
 
 
 IMAGES = {
@@ -91,7 +107,7 @@ IMAGES = {
             id='pi_hole',
             label='Pi-hole',
             icon='󰇖',
-            environment={'WEBPASSWORD': 'admin'},
+            environment_vairables={'WEBPASSWORD': 'admin'},
             note='Password: admin',
             path=DOCKER_PREFIX + 'pihole/pihole:latest',
         ),
@@ -118,7 +134,18 @@ IMAGES = {
             icon='󰛶',
             network_mode='host',
             path=DOCKER_PREFIX + 'ngrok/ngrok:latest',
-            ports={'22/tcp': '22'},
+            environment_vairables={
+                'NGROK_AUTHTOKEN': lambda: qrcode_input(
+                    r'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
+                    resolver=lambda code, _: code,
+                    prompt='Enter the Ngrok Auth Token',
+                ),
+            },
+            command=lambda: qrcode_input(
+                '',
+                resolver=lambda code, _: code,
+                prompt='Enter the command, for example: `http 80` or `tcp 22`',
+            ),
         ),
         *(
             [

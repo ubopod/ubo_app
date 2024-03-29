@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from distutils.util import strtobool
-from typing import cast
 
 from constants import WIFI_STATE_ICON_ID, WIFI_STATE_ICON_PRIORITY, get_signal_icon
 from redux import (
@@ -14,18 +12,11 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.services.camera import (
-    CameraBarcodeAction,
-    CameraStopViewfinderAction,
-)
 from ubo_app.store.services.wifi import (
     GlobalWiFiState,
     WiFiAction,
-    WiFiConnection,
-    WiFiCreateEvent,
     WiFiEvent,
     WiFiState,
-    WiFiType,
     WiFiUpdateAction,
     WiFiUpdateRequestAction,
     WiFiUpdateRequestEvent,
@@ -35,7 +26,7 @@ from ubo_app.store.status_icons import StatusIconsRegisterAction
 
 def reducer(
     state: WiFiState | None,
-    action: CameraBarcodeAction | WiFiAction,
+    action: WiFiAction,
 ) -> ReducerResult[WiFiState, BaseAction, WiFiEvent]:
     if state is None:
         if isinstance(action, InitAction):
@@ -48,29 +39,6 @@ def reducer(
                 actions=[WiFiUpdateRequestAction()],
             )
         raise InitializationActionError(action)
-
-    if isinstance(action, CameraBarcodeAction):
-        ssid = action.match.get('SSID')
-        if ssid is None:
-            return state
-
-        return CompleteReducerResult(
-            state=state,
-            actions=[CameraStopViewfinderAction()],
-            events=[
-                WiFiCreateEvent(
-                    connection=WiFiConnection(
-                        ssid=ssid,
-                        password=action.match.get('Password'),
-                        type=cast(WiFiType, action.match.get('Type')),
-                        hidden=strtobool(
-                            action.match.get('Hidden') or 'false',
-                        )
-                        == 1,
-                    ),
-                ),
-            ],
-        )
 
     if isinstance(action, WiFiUpdateRequestAction):
         return CompleteReducerResult(

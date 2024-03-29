@@ -25,6 +25,13 @@ class Fake(ModuleType):
             return cast(Fake, 'fake')
         return self
 
+    def __setattr__(self: Fake, attr: str, value: object) -> None:
+        logger.verbose(
+            'Accessing fake attribute of a `Fake` insta',
+            extra={'attr': attr},
+        )
+        super().__setattr__(attr, value)
+
     def __getitem__(self: Fake, key: object) -> Fake:
         logger.verbose(
             'Accessing fake item of a `Fake` instance',

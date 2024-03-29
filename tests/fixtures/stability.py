@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, TypeAlias
 
 import pytest
 from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
+from tenacity import stop_after_delay, wait_fixed
 
 if TYPE_CHECKING:
     from redux_pytest.fixtures import StoreSnapshot
@@ -27,7 +28,7 @@ async def stability(
         latest_window_hash = None
         latest_store_snapshot = None
 
-        @wait_for(run_async=True)
+        @wait_for(run_async=True, wait=wait_fixed(1), stop=stop_after_delay(4))
         def check() -> None:
             nonlocal latest_window_hash, latest_store_snapshot
 

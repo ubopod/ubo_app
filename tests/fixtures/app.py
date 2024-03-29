@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING, AsyncGenerator
 
 import pytest
 
-from ubo_app.utils.garbage_collection import examine
-
 if TYPE_CHECKING:
     from _pytest.fixtures import SubRequest
 
@@ -27,6 +25,9 @@ class AppContext:
 
     def set_app(self: AppContext, app: MenuApp) -> None:
         """Set the application."""
+        from ubo_app.utils.loop import setup_event_loop
+
+        setup_event_loop()
         self.app = app
         loop = asyncio.get_event_loop()
         self.task = loop.create_task(self.app.async_run(async_lib='asyncio'))
@@ -78,6 +79,8 @@ async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
         gc.collect()
         for cell in gc.get_referrers(app):
             if type(cell).__name__ == 'cell':
+                from ubo_app.utils.garbage_collection import examine
+
                 logging.getLogger().debug(
                     'CELL EXAMINATION\n' + json.dumps({'cell': cell}),
                 )

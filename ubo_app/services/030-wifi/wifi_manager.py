@@ -279,8 +279,8 @@ async def add_wireless_connection(
     await wait_for(
         network_manager.add_and_activate_connection(
             properties,
-            wifi_device._remote_object_path,  # noqa: SLF001
-            access_point._remote_object_path,  # noqa: SLF001
+            wifi_device._dbus.object_path,  # noqa: SLF001
+            access_point._dbus.object_path,  # noqa: SLF001
         ),
     )
 
@@ -303,7 +303,7 @@ async def connect_wireless_connection(ssid: str) -> None:
             await wait_for(
                 connection.get_settings(),
             ),
-            connection._remote_object_path,  # noqa: SLF001
+            connection._dbus.object_path,  # noqa: SLF001
         )
         for connection in connections
     ]
@@ -324,7 +324,7 @@ async def connect_wireless_connection(ssid: str) -> None:
     await wait_for(
         network_manager.activate_connection(
             desired_connection,
-            wifi_device._remote_object_path,  # noqa: SLF001
+            wifi_device._dbus.object_path,  # noqa: SLF001
         ),
     )
 

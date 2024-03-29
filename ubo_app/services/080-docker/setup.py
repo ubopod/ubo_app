@@ -14,7 +14,7 @@ from docker.models.containers import Container
 from docker.models.images import Image
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.constants import DOCKER_INSTALLATION_LOCK_FILE, SOCKET_PATH
+from ubo_app.constants import DOCKER_INSTALLATION_LOCK_FILE, SERVER_SOCKET_PATH
 from ubo_app.store import autorun, dispatch
 from ubo_app.store.main import RegisterRegularAppAction
 from ubo_app.store.services.docker import (
@@ -31,7 +31,7 @@ def install_docker() -> None:
     """Install Docker."""
     dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
 
-    if Path(SOCKET_PATH).exists():
+    if Path(SERVER_SOCKET_PATH).exists():
         send_command('docker install')
 
 

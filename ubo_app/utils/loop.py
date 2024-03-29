@@ -6,10 +6,7 @@ import contextlib
 import threading
 from typing import TYPE_CHECKING, Callable, Coroutine, TypeVarTuple, Unpack
 
-from redux.basic_types import FinishEvent
 from typing_extensions import TypeVar
-
-from ubo_app.constants import DEBUG_MODE
 
 if TYPE_CHECKING:
     from asyncio import Future, Handle
@@ -25,17 +22,19 @@ Ts = TypeVarTuple('Ts')
 class WorkerThread(threading.Thread):
     def __init__(self: WorkerThread) -> None:
         super().__init__()
-        self.loop = asyncio.new_event_loop()
+        try:
+            self.loop = asyncio.get_event_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        from ubo_app.constants import DEBUG_MODE
+
         if DEBUG_MODE:
             self.loop.set_debug(enabled=True)
 
     def run(self: WorkerThread) -> None:
-        asyncio.set_event_loop(self.loop)
-
-        from ubo_app.store import subscribe_event
-
-        subscribe_event(FinishEvent, self.stop)
-        self.loop.run_forever()
+        if not self.loop.is_running():
+            self.loop.run_forever()
 
     def run_task(
         self: WorkerThread,
@@ -58,6 +57,10 @@ class WorkerThread(threading.Thread):
         return self.loop.run_in_executor(executor, task, *args)
 
     async def shutdown(self: WorkerThread) -> None:
+        from ubo_app.logging import logger
+
+        logger.info('Shutting down worker thread')
+
         while True:
             tasks = [
                 task
@@ -72,11 +75,25 @@ class WorkerThread(threading.Thread):
         self.loop.stop()
 
     def stop(self: WorkerThread) -> None:
-        self.loop.call_soon_threadsafe(lambda: self.loop.create_task(self.shutdown()))
+        self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
+
+    def subscribe_finish_event(self: WorkerThread) -> None:
+        from redux.basic_types import FinishEvent
+
+        from ubo_app.store import subscribe_event
+
+        subscribe_event(FinishEvent, self.stop)
 
 
-thread = WorkerThread()
-thread.start()
+def setup_event_loop() -> WorkerThread:
+    thread = WorkerThread()
+    thread.start()
+    thread.subscribe_finish_event()
+    return thread
+
+
+thread = setup_event_loop()
+current_loop = thread.loop
 
 
 def _create_task(

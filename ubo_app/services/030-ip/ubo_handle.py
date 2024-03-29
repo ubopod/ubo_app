@@ -1,12 +1,23 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
-from reducer import reducer
-from setup import init_service
+from __future__ import annotations
 
-from ubo_app.load_services import register_service
+from typing import TYPE_CHECKING
 
-register_service(
+if TYPE_CHECKING:
+    from ubo_app.services import Service, register
+
+
+async def setup(service: Service) -> None:
+    from reducer import reducer
+    from setup import init_service
+
+    service.register_reducer(reducer)
+
+    await init_service()
+
+
+register(
     service_id='ip',
     label='IP',
-    reducer=reducer,
-    init=init_service,
+    setup=setup,
 )

@@ -1,4 +1,5 @@
 """Implement `setup_service` function to set up and enable systemd service."""
+
 from __future__ import annotations
 
 import grp
@@ -8,6 +9,7 @@ import subprocess
 import time
 import warnings
 from pathlib import Path
+from sys import stdout
 from typing import Literal, TypedDict
 
 from ubo_app.constants import INSTALLATION_PATH, USERNAME
@@ -95,7 +97,8 @@ def reload_daemon() -> None:
     logger.info('Waiting for the user services to come up...')
     for i in range(RETRIES):
         time.sleep(1)
-        print('.', end='', flush=True)  # noqa: T201
+        stdout.write('.')
+        stdout.flush()
         try:
             subprocess.run(
                 [  # noqa: S603
@@ -123,7 +126,7 @@ def reload_daemon() -> None:
         msg = f'Failed to reload user services after {RETRIES} times, giving up!'
         logger.error(msg)
         warnings.warn(msg, stacklevel=2)
-    print(flush=True)  # noqa: T201
+    stdout.flush()
     subprocess.run(
         ['/usr/bin/env', 'systemctl', 'daemon-reload'],  # noqa: S603
         check=True,
@@ -178,7 +181,8 @@ def install_docker() -> None:
     logger.info('Installing docker...')
     for i in range(RETRIES):
         time.sleep(1)
-        print('.', end='', flush=True)  # noqa: T201
+        stdout.write('.')
+        stdout.flush()
         try:
             subprocess.run(
                 [Path(__file__).parent.joinpath('install_docker.sh').as_posix()],  # noqa: S603
@@ -195,9 +199,9 @@ def install_docker() -> None:
         else:
             break
     else:
-        logger.error(f'Failed to installed docker {RETRIES} times, giving up!')
+        logger.error(f'Failed to install docker {RETRIES} times, giving up!')
         return
-    print(flush=True)  # noqa: T201
+    stdout.flush()
 
 
 def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
@@ -227,9 +231,17 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
     setup_polkit()
 
     if with_docker:
+        stdout.write('Installing docker...\n')
+        stdout.flush()
         install_docker()
+        stdout.write('Done installing docker\n')
+        stdout.flush()
 
+    stdout.write('Installing wm8960...\n')
+    stdout.flush()
     subprocess.run(
         [Path(__file__).parent.joinpath('install_wm8960.sh').as_posix()],  # noqa: S603
         check=True,
     )
+    stdout.write('Done installing wm8960\n')
+    stdout.flush()

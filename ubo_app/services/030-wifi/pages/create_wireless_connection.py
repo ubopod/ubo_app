@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import pathlib
-from typing import Sequence
+from distutils.util import strtobool
+from typing import Sequence, cast
 
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
@@ -13,8 +14,7 @@ from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
-from ubo_app.store import dispatch, subscribe_event
-from ubo_app.store.services.camera import CameraStartViewfinderAction
+from ubo_app.store import dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -22,16 +22,13 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.sound import SoundPlayChimeAction
-from ubo_app.store.services.wifi import (
-    WiFiCreateEvent,
-    WiFiType,
-    WiFiUpdateRequestAction,
-)
+from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.qrcode import qrcode_input
 
 # Regular expression pattern
 # WIFI:S:<SSID>;T:<WEP|WPA|blank>;P:<PASSWORD>;H:<true|false|blank>;;
-barcode_pattern = (
+BARCODE_PATTERN = (
     r'^WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
     r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$'
 )
@@ -47,60 +44,60 @@ class CreateWirelessConnectionPage(PageWidget):
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=items)
-        self.unsubscribe = subscribe_event(
-            WiFiCreateEvent,
-            self.create_wireless_connection,
-        )
         dispatch(SoundPlayChimeAction(name='scan'))
-        self.bind(on_close=lambda *_: self.unsubscribe())
 
-    def create_wireless_connection(
-        self: CreateWirelessConnectionPage,
-        event: WiFiCreateEvent,
-    ) -> None:
-        connection = event.connection
-        ssid = connection.ssid
-        password = connection.password
+    async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
+        _, match = await qrcode_input(BARCODE_PATTERN)
+        if not match:
+            return
+        ssid = match.get('SSID')
+        if ssid is None:
+            return
+
+        password = match.get('Password')
+        type = cast(WiFiType, match.get('Type'))
+        hidden = strtobool(match.get('Hidden') or 'false') == 1
 
         if not password:
             logger.warn('Password is required')
             return
 
-        async def act() -> None:
-            await add_wireless_connection(
-                ssid=ssid,
-                password=password,
-                type=connection.type or WiFiType.nopass,
-                hidden=connection.hidden,
-            )
-
-            logger.info(
-                'Wireless connection created',
-                extra={
-                    'ssid': ssid,
-                    'type': connection.type,
-                    'hidden': connection.hidden,
-                },
-            )
-
-            dispatch(
-                WiFiUpdateRequestAction(reset=True),
-                NotificationsAddAction(
-                    notification=Notification(
-                        title=f'"{ssid}" Added',
-                        content=f"""WiFi connection with ssid "{
-                        ssid}" was added successfully""",
-                        display_type=NotificationDisplayType.FLASH,
-                        color=SUCCESS_COLOR,
-                        icon='󱛃',
-                        chime=Chime.ADD,
-                    ),
-                ),
-            )
-            mainthread(self.dispatch)('on_close')
-
         self.creating = True
-        create_task(act())
+
+        await add_wireless_connection(
+            ssid=ssid,
+            password=password,
+            type=type or WiFiType.nopass,
+            hidden=hidden,
+        )
+
+        logger.info(
+            'Wireless connection created',
+            extra={
+                'ssid': ssid,
+                'type': type,
+                'hidden': hidden,
+            },
+        )
+
+        dispatch(
+            WiFiUpdateRequestAction(reset=True),
+            NotificationsAddAction(
+                notification=Notification(
+                    title=f'"{ssid}" Added',
+                    content=f"""WiFi connection with ssid "{
+                    ssid}" was added successfully""",
+                    display_type=NotificationDisplayType.FLASH,
+                    color=SUCCESS_COLOR,
+                    icon='󱛃',
+                    chime=Chime.ADD,
+                ),
+            ),
+        )
+        mainthread(self.dispatch)('on_close')
+
+    def input_connection_information(self: CreateWirelessConnectionPage) -> None:
+        create_task(self.create_wireless_connection())
 
     def get_item(self: CreateWirelessConnectionPage, index: int) -> ActionItem | None:
         if index == 2:  # noqa: PLR2004
@@ -108,9 +105,7 @@ class CreateWirelessConnectionPage(PageWidget):
                 label='start',
                 is_short=True,
                 icon='󰄀',
-                action=lambda: dispatch(
-                    CameraStartViewfinderAction(barcode_pattern=barcode_pattern),
-                ),
+                action=self.input_connection_information,
             )
         return super().get_item(index)
 

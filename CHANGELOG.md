@@ -1,5 +1,24 @@
 # Changelog
 
+## Version 0.12.0
+
+- feat(core): add `qrcode_input` utility function to let developers easily take input
+  using qrcode through camera, wireless flow now also uses this function, in dev
+  environment it reads the text from `/tmp/qrcode_input.txt` instead
+- feat(docker): add `environment_variables` and `command` to image description,
+  both allowing functions as their values, these functions get evaluated when the
+  image is being created
+- refactor(core): improve `load_services` so that `ubo_handle.py` files are enforced
+  to be pure and can't import anything, services can start importing once their
+  thread is started.
+- fix(image): add `apt remove orca` to image creation scripts #48
+- fix(image): resolve the issue of audio driver installation #53
+- refactor(test): stability fixture now stops after 4 seconds
+- feat(test): introduce `UBO_DEBUG_TEST_UUID` environment variable for tracking
+  the sequence of uuid generations in the tests, it prints the traceback for each
+  call to `uuid.uuid4` if it is set
+- fix(wifi): change `_remote_object_path` to `_dbus.object_path` for sdbus objects #57
+
 ## Version 0.11.7
 
 - refactor(style): update `ubo-gui` to the latest version and set placeholder

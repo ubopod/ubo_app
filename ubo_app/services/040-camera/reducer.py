@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 
 from redux import (
@@ -12,53 +13,97 @@ from redux import (
 
 from ubo_app.store.services.camera import (
     CameraAction,
+    CameraBarcodeEvent,
     CameraEvent,
+    CameraReportBarcodeAction,
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
-    CameraStopViewfinderAction,
     CameraStopViewfinderEvent,
+    InputDescription,
 )
 from ubo_app.store.services.keypad import Key, KeypadAction
 
 Action = InitAction | CameraAction
 
 
-def reducer(
+def pop_queue(state: CameraState) -> CameraState:
+    if len(state.queue) > 0:
+        input_description, *queue = state.queue
+        return replace(state, current=input_description, queue=queue)
+    return replace(
+        state,
+        is_viewfinder_active=False,
+        current=None,
+    )
+
+
+def reducer(  # noqa: C901
     state: CameraState | None,
     action: Action,
 ) -> ReducerResult[CameraState, Action, CameraEvent]:
     if state is None:
         if isinstance(action, InitAction):
-            return CameraState(
-                is_viewfinder_active=False,
-            )
+            return CameraState(is_viewfinder_active=False, queue=[])
         raise InitializationActionError(action)
 
     if isinstance(action, CameraStartViewfinderAction):
+        if state.is_viewfinder_active:
+            return replace(
+                state,
+                queue=[
+                    *state.queue,
+                    InputDescription(id=action.id, pattern=action.pattern),
+                ],
+            )
         return CompleteReducerResult(
-            state=replace(state, is_viewfinder_active=True),
-            events=[
-                CameraStartViewfinderEvent(
-                    barcode_pattern=action.barcode_pattern,
-                ),
-            ],
+            state=replace(
+                state,
+                is_viewfinder_active=True,
+                current=InputDescription(id=action.id, pattern=action.pattern),
+            ),
+            events=[CameraStartViewfinderEvent(pattern=action.pattern)],
         )
 
-    if isinstance(action, CameraStopViewfinderAction):
-        return CompleteReducerResult(
-            state=replace(state, is_viewfinder_active=False),
-            events=[
-                CameraStopViewfinderEvent(),
-            ],
-        )
+    if isinstance(action, CameraReportBarcodeAction) and state.current:
+        for code in action.codes:
+            if state.current.pattern:
+                match = re.match(state.current.pattern, code)
+                if match:
+                    return CompleteReducerResult(
+                        state=pop_queue(state),
+                        events=[
+                            CameraBarcodeEvent(
+                                id=state.current.id,
+                                code=code,
+                                group_dict=match.groupdict(),
+                            ),
+                            CameraStopViewfinderEvent(id=None),
+                        ],
+                    )
+            else:
+                return CompleteReducerResult(
+                    state=pop_queue(state),
+                    events=[
+                        CameraBarcodeEvent(
+                            id=state.current.id,
+                            code=code,
+                            group_dict=None,
+                        ),
+                        CameraStopViewfinderEvent(id=None),
+                    ],
+                )
+
+            return state
 
     if isinstance(action, KeypadAction):  # noqa: SIM102
         if action.key == Key.BACK:
             return CompleteReducerResult(
-                state=replace(state),
-                actions=[
-                    CameraStopViewfinderAction(),
+                state=state,
+                events=[
+                    CameraStopViewfinderEvent(
+                        id=state.current.id if state.current else None,
+                    ),
                 ],
             )
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 import sys
 from dataclasses import replace
 from pathlib import Path
+from threading import current_thread, main_thread
 from typing import TYPE_CHECKING, Callable, Coroutine
 
 from redux import (
@@ -35,6 +36,8 @@ from ubo_app.store.update_manager.reducer import reducer as update_manager_reduc
 
 if TYPE_CHECKING:
     from redux.basic_types import SnapshotAtom, TaskCreatorCallback
+
+assert current_thread() is main_thread(), 'Store should be created in the main thread'  # noqa: S101
 
 
 def scheduler(callback: Callable[[], None], *, interval: bool) -> None:

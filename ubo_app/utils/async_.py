@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Awaitable, Callable, TypeVarTuple, Unpack
 
 from typing_extensions import TypeVar
 
-from ubo_app.load_services import UboServiceThread
 from ubo_app.logging import logger
 
 if TYPE_CHECKING:
@@ -23,9 +22,22 @@ def create_task(
     callback: TaskCreatorCallback | None = None,
 ) -> Handle:
     async def wrapper() -> None:
+        from ubo_app.load_services import UboServiceThread
+
         if awaitable is None:
             return
         try:
+            logger.verbose(
+                'Starting task',
+                extra={
+                    'awaitable': awaitable,
+                    **(
+                        {'ubo_service': current_thread().name}
+                        if isinstance(current_thread(), UboServiceThread)
+                        else {}
+                    ),
+                },
+            )
             await awaitable
         except BaseException as exception:  # noqa: BLE001
             thread = current_thread()
