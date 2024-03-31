@@ -7,8 +7,6 @@ from threading import current_thread
 from typing import TYPE_CHECKING, Any, Coroutine, TypeVar
 
 from ubo_app.store.services.ethernet import GlobalEthernetState
-from ubo_app.utils import IS_RPI
-from ubo_app.utils.fake import Fake
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -19,15 +17,6 @@ T = TypeVar('T')
 
 def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
     return asyncio.wait_for(task, timeout=10.0)
-
-
-if not IS_RPI:
-    import sys
-
-    sys.modules['sdbus'] = Fake()
-    sys.modules['sdbus_async'] = Fake()
-    sys.modules['sdbus_async.networkmanager'] = Fake()
-    sys.modules['sdbus_async.networkmanager.enums'] = Fake()
 
 
 from sdbus import SdBus, sd_bus_open_system, set_default_bus  # noqa: E402

@@ -32,12 +32,14 @@ botting from that image, you can ignore this section.
 
 Note that as part of the installation process, these debian packages are installed:
 
+- build-essential
 - git
 - i2c-tools
 - libcap-dev
 - libegl1
 - libgl1
 - libmtdev1
+- libsystemd-dev
 - libzbar0
 - python3
 - python3-dev

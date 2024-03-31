@@ -7,6 +7,7 @@ from pathlib import Path
 import dotenv
 
 from ubo_app.error_handlers import setup_error_handling
+from ubo_app.setup import setup
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 
@@ -51,6 +52,7 @@ def main() -> None:
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
     os.environ['KCFG_KIVY_EXIT_ON_ESCAPE'] = '0'
 
+    setup()
     setup_error_handling()
     setup_logging()
 

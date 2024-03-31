@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-set -e -o errexit
+set -o xtrace
+set -o errexit
+set -o pipefail
+set -o nounset
 
 # Source: https://docs.docker.com/engine/install/debian/#install-using-the-repository
 # Add Docker's official GPG key:
@@ -29,4 +32,4 @@ apt-get -y install \
   docker-compose-plugin \
   --no-install-recommends --no-install-suggests
 
-usermod -a -G docker $USERNAME
+usermod -aG docker $USERNAME

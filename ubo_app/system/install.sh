@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
-set -e -o xtrace -o errexit
+set -o xtrace
+set -o errexit
+set -o pipefail
+set -o nounset
 
+USERNAME=${USERNAME:-"ubo"}
 UPDATE=${UPDATE:-false}
 ALPHA=${ALPHA:-false}
 WITH_DOCKER=${WITH_DOCKER:-false}
@@ -61,19 +65,23 @@ fi
 
 # Create the user
 adduser --disabled-password --gecos "" $USERNAME || true
-usermod -a -G audio,video,gpio,i2c,spi,kmem,render $USERNAME
+usermod -aG adm,audio,video,gpio,i2c,spi,kmem,render $USERNAME
 
 echo "User $USERNAME created successfully."
 
 # Install required packages
 apt-get -y update
+apt-get -y upgrade
+apt-get -y remove orca || true
 apt-get -y install \
+  build-essential \
   git \
   i2c-tools \
   libcap-dev \
   libegl1 \
   libgl1 \
   libmtdev1 \
+  libsystemd-dev \
   libzbar0 \
   python3-dev \
   python3-libcamera \
@@ -83,18 +91,16 @@ apt-get -y install \
   python3-pyaudio \
   python3-virtualenv \
   --no-install-recommends --no-install-suggests
-apt-get -y remove orca || true
-apt-get -y autoremove
 apt-get -y clean
 
 # Enable I2C and SPI
+set +o errexit
 sudo raspi-config nonint do_i2c 0
 sudo raspi-config nonint do_spi 0
+set -o errexit
 
 # Define the installation path
-if [ -z "${INSTALLATION_PATH}" ]; then
-  INSTALLATION_PATH="/opt/ubo"
-fi
+INSTALLATION_PATH=${INSTALLATION_PATH:-"/opt/ubo"}
 
 # Create the installation path
 rm -rf "$INSTALLATION_PATH/env"

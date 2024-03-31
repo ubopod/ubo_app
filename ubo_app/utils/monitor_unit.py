@@ -4,17 +4,9 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ubo_app.utils import IS_RPI
-from ubo_app.utils.bus_provider import get_system_bus
-
-if not IS_RPI:
-    import sys
-
-    from ubo_app.utils.fake import Fake
-
-    sys.modules['sdbus'] = Fake()
-
 from sdbus import DbusInterfaceCommonAsync, dbus_property_async
+
+from ubo_app.utils.bus_provider import get_system_bus
 
 
 class SystemdUnitInterface(  # pyright: ignore [reportGeneralTypeIssues]

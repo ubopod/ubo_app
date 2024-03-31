@@ -116,10 +116,10 @@ def wireless_connection_items(wifi_state: WiFiState) -> Sequence[Item]:
         return WiFiNetworkPageWithSSID
 
     icons = {
-        ConnectionState.CONNECTED: 'link',
-        ConnectionState.DISCONNECTED: 'link-off',
-        ConnectionState.CONNECTING: 'pending',
-        ConnectionState.UNKNOWN: 'question',
+        ConnectionState.CONNECTED: '󱚽',
+        ConnectionState.DISCONNECTED: '󱛅',
+        ConnectionState.CONNECTING: '󱛇',
+        ConnectionState.UNKNOWN: '󱚵',
     }
     return (
         [

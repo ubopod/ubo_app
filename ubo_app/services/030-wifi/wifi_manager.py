@@ -23,7 +23,6 @@ from ubo_app.store.services.wifi import (
     WiFiConnection,
     WiFiType,
 )
-from ubo_app.utils import IS_RPI
 from ubo_app.utils.bus_provider import get_system_bus
 
 if TYPE_CHECKING:
@@ -36,17 +35,6 @@ T = TypeVar('T')
 
 def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
     return asyncio.wait_for(task, timeout=10.0)
-
-
-if not IS_RPI:
-    import sys
-
-    from ubo_app.utils.fake import Fake
-
-    sys.modules['sdbus'] = Fake()
-    sys.modules['sdbus_async'] = Fake()
-    sys.modules['sdbus_async.networkmanager'] = Fake()
-    sys.modules['sdbus_async.networkmanager.enums'] = Fake()
 
 
 from sdbus_async.networkmanager import (  # noqa: E402

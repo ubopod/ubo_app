@@ -1,5 +1,6 @@
 # pyright: reportMissingImports=false,reportMissingModuleSource=false
 """Module for managing audio playback and recording."""
+
 from __future__ import annotations
 
 import contextlib
@@ -7,21 +8,11 @@ import math
 import time
 import wave
 
-from ubo_app.logging import logger
-from ubo_app.utils import IS_RPI
-
-if not IS_RPI:
-    import sys
-
-    from ubo_app.utils.fake import Fake
-
-    sys.modules['alsaaudio'] = Fake()
-    sys.modules['pulsectl'] = Fake()
-    sys.modules['pyaudio'] = Fake()
-
 import alsaaudio
 import pulsectl
 import pyaudio
+
+from ubo_app.logging import logger
 
 CHUNK_SIZE = 1024
 

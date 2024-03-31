@@ -332,7 +332,8 @@ jobs:
           PKR_VAR_image_checksum:
             ${{ steps.generate_image_url.outputs.image_checksum }}
           PKR_VAR_target_image_size:
-            ${{ matrix.suffix == 'lite' && '3758096384' || '0' }}
+            ${{ matrix.suffix == 'lite' && '4026531840' || matrix.suffix == ''
+            && '6174015488'  || '0' }}
         run: |
           /entrypoint.sh validate scripts/packer/image.pkr.hcl
           /entrypoint.sh build scripts/packer/image.pkr.hcl

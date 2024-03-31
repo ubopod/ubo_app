@@ -8,8 +8,16 @@ from ubo_app.logging import logger
 
 
 class Fake(ModuleType):
-    def __init__(self: Fake, *args: object, **kwargs: object) -> None:
+    def __init__(
+        self: Fake,
+        *args: object,
+        __props: dict[str, object] | None = None,
+        **kwargs: object,
+    ) -> None:
         logger.verbose('Initializing `Fake`', extra={'args_': args, 'kwargs': kwargs})
+        if __props is not None:
+            for key, value in __props.items():
+                super().__setattr__(key, value)
         self.iterated = False
         super().__init__('')
 

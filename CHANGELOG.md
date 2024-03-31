@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 0.12.1
+
+- feat(system_manager): commands for starting/stopping/enabling/disabling services
+- feat(ssh): menu items for starting/stopping/enabling/disabling ssh service
+- feat(ssh): monitor ssh service and update menus accordingly
+- refactor: move all system-dependent preparations to `setup.py` to be reused in
+  runtime, tests, etc (currently mostly mocking modules for macOS)
+- refactor(bootstrap): move bootstrap from `ubo bootstrap` to its own binary `bootstrap`
+  to keep its runtime isolated and avoid unintended side effects
+- fix(ci-cd): expand the size of the filesystem for the default image as it was
+  running out of space during the build process and add `apt-get upgrade`
+
 ## Version 0.12.0
 
 - feat(core): add `qrcode_input` utility function to let developers easily take input

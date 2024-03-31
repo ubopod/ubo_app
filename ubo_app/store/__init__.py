@@ -28,6 +28,7 @@ from ubo_app.store.services.notifications import NotificationsAction, Notificati
 from ubo_app.store.services.rgb_ring import RgbRingAction
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
 from ubo_app.store.services.sound import SoundAction, SoundState
+from ubo_app.store.services.ssh import SSHAction, SSHState
 from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
 from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
@@ -51,6 +52,7 @@ class RootState(BaseCombineReducerState):
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
     sensors: SensorsState
+    ssh: SSHState
     sound: SoundState
     wifi: WiFiState
     ip: IpState
@@ -64,6 +66,7 @@ ActionType = (
     | UpdateManagerAction
     | MainAction
     | SensorsAction
+    | SSHAction
     | SoundAction
     | CameraAction
     | WiFiAction

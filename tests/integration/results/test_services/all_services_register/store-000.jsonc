@@ -1,4 +1,4 @@
-// store-000
+// MISMATCH: store-000
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "camera": {
@@ -244,7 +244,7 @@
                             ],
                             "icon": "",
                             "is_short": false,
-                            "label": "Setup",
+                            "label": "Create account",
                             "sub_menu": {
                               "heading": "Create an SSH account",
                               "items": [
@@ -279,10 +279,36 @@
                             "icon": "󱈊",
                             "is_short": false,
                             "label": "Remove all users"
+                          },
+                          {
+                            "action": "",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰓛",
+                            "is_short": false,
+                            "label": "Stop"
+                          },
+                          {
+                            "action": "",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "[color=#008000]󰯄[/color]",
+                            "is_short": false,
+                            "label": "Disable"
                           }
                         ],
                         "placeholder": null,
-                        "title": "SSH"
+                        "title": "SSH [color=#008000]󰧞[/color]"
                       }
                     },
                     {
@@ -420,6 +446,10 @@
     "is_capture_mute": false,
     "is_playback_mute": false,
     "playback_volume": 0.5
+  },
+  "ssh": {
+    "is_active": true,
+    "is_enabled": true
   },
   "status_icons": {
     "icons": [

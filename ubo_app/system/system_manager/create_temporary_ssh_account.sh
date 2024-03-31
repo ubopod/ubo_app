@@ -35,4 +35,4 @@ echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME}
 
 # Allow password authentication
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-service ssh restart
+systemctl restart sshd

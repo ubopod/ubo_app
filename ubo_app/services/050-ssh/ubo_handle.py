@@ -4,11 +4,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ubo_app.services import register
+    from ubo_app.services import Service, register
 
 
-def setup() -> None:
+def setup(service: Service) -> None:
+    from reducer import reducer
     from setup import init_service
+
+    service.register_reducer(reducer)
 
     init_service()
 

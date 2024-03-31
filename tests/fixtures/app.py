@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, AsyncGenerator
 
 import pytest
 
+from ubo_app.setup import setup
+
 if TYPE_CHECKING:
     from _pytest.fixtures import SubRequest
 
@@ -40,6 +42,8 @@ async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
 
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
+
+    setup()
 
     import headless_kivy_pi.config
 

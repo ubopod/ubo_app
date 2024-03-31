@@ -1,17 +1,9 @@
-"""Provides the system bus for the application."""
 # pyright: reportMissingImports=false
+"""Provides the system bus for the application."""
+
 from __future__ import annotations
 
 from threading import current_thread
-
-from ubo_app.utils import IS_RPI
-
-if not IS_RPI:
-    import sys
-
-    from ubo_app.utils.fake import Fake
-
-    sys.modules['sdbus'] = Fake()
 
 from sdbus import SdBus, sd_bus_open_system, set_default_bus
 

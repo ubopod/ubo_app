@@ -11,8 +11,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 
-class SensorsAction(BaseAction):
-    ...
+class SensorsAction(BaseAction): ...
 
 
 Primitive = int | float | str | bool
