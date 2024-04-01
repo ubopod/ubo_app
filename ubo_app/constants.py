@@ -29,5 +29,3 @@ DEBUG_MODE_TEST_UUID = strtobool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False'))
 DEBUG_MODE_DOCKER = strtobool(os.environ.get('UBO_DEBUG_DOCKER', 'False')) == 1
 DOCKER_PREFIX = os.environ.get('UBO_DOCKER_PREFIX', '')
 DOCKER_INSTALLATION_LOCK_FILE = Path('/var/run/ubo/docker_installation.lock')
-
-SENTRY_DSN = os.environ.get('SENTRY_DSN', '')

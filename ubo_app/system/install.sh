@@ -72,16 +72,13 @@ echo "User $USERNAME created successfully."
 # Install required packages
 apt-get -y update
 apt-get -y upgrade
-apt-get -y remove orca || true
 apt-get -y install \
-  build-essential \
   git \
   i2c-tools \
   libcap-dev \
   libegl1 \
   libgl1 \
   libmtdev1 \
-  libsystemd-dev \
   libzbar0 \
   python3-dev \
   python3-libcamera \

@@ -8,8 +8,8 @@ def init_service() -> None:
 
     rgb_ring_client = RgbRingClient()
 
-    def handle_rgb_ring_command(event: RgbRingCommandEvent) -> None:
-        rgb_ring_client.send(event.command)
+    async def handle_rgb_ring_command(event: RgbRingCommandEvent) -> None:
+        await rgb_ring_client.send(event.command)
 
     subscribe_event(RgbRingCommandEvent, handle_rgb_ring_command)
 

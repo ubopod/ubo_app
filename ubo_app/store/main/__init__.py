@@ -22,6 +22,11 @@ class RegisterAppAction(BaseAction):
     menu_item: Item
 
 
+class UpdateLightDMState(BaseAction):
+    is_active: bool
+    is_enable: bool
+
+
 class RegisterRegularAppAction(RegisterAppAction): ...
 
 

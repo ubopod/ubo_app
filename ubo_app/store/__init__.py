@@ -24,6 +24,7 @@ from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.docker import DockerAction, DockerState
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
 from ubo_app.store.services.keypad import KeypadEvent
+from ubo_app.store.services.lightdm import LightDMAction, LightDMState
 from ubo_app.store.services.notifications import NotificationsAction, NotificationsState
 from ubo_app.store.services.rgb_ring import RgbRingAction
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
@@ -49,6 +50,7 @@ def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
 
 class RootState(BaseCombineReducerState):
     main: MainState
+    lightdm: LightDMState
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
     sensors: SensorsState
@@ -65,6 +67,7 @@ ActionType = (
     | StatusIconsAction
     | UpdateManagerAction
     | MainAction
+    | LightDMAction
     | SensorsAction
     | SSHAction
     | SoundAction

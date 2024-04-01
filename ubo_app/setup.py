@@ -17,5 +17,3 @@ def setup() -> None:
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()
         sys.modules['sdbus_async.networkmanager.enums'] = Fake()
-        sys.modules['cysystemd.async_reader'] = Fake()
-        sys.modules['cysystemd.reader'] = Fake()

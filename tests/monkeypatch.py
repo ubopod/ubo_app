@@ -7,6 +7,7 @@ import datetime
 import random
 import sys
 import tracemalloc
+from typing import cast
 
 import pytest
 
@@ -144,7 +145,7 @@ def _monkeypatch_aiohttp() -> None:
             }
 
     class FakeAiohttp(Fake):
-        def get(self: FakeAiohttp, url: str, **kwargs: dict[str, object]) -> Fake:
+        def get(self: FakeAiohttp, url: str, **kwargs: dict[str, object]) -> object:
             if url == 'https://pypi.org/pypi/ubo-app/json':
                 return FakeUpdateResponse()
             parent = super()
@@ -164,17 +165,53 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
         **kwargs: object,
     ) -> Fake:
         _ = args, kwargs
-        if command in (
-            ['/usr/bin/env', 'systemctl', 'is-enabled', 'ssh'],
-            ['/usr/bin/env', 'systemctl', 'is-active', 'ssh'],
-        ):
-            return Fake(stdout='enabled')
         if command == ['/usr/bin/env', 'systemctl', 'poweroff', '-i']:
             return Fake()
         msg = f'Unexpected `subprocess.run` command in test environment: {command}'
         raise ValueError(msg)
 
     monkeypatch.setattr(subprocess, 'run', fake_subprocess_run)
+
+
+def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    from ubo_app.utils.fake import Fake
+
+    class FakeAsyncProcess(Fake):
+        async def communicate(self: FakeAsyncProcess) -> tuple[bytes, bytes]:
+            return cast(bytes, self.output), b''
+
+    async def fake_create_subprocess_exec(
+        command: str,
+        *args: list[str],
+        **kwargs: object,
+    ) -> FakeAsyncProcess:
+        _ = kwargs
+        if command == '/usr/bin/env' and args == ('systemctl', 'is-enabled', 'sshd'):
+            return FakeAsyncProcess(output=b'enabled')
+        if command == '/usr/bin/env' and args == ('systemctl', 'is-active', 'sshd'):
+            return FakeAsyncProcess(output=b'active')
+        if command == '/usr/bin/env' and args == ('systemctl', 'is-enabled', 'lightdm'):
+            return FakeAsyncProcess(output=b'enabled')
+        if command == '/usr/bin/env' and args == ('systemctl', 'is-active', 'lightdm'):
+            return FakeAsyncProcess(output=b'active')
+        if command == '/usr/bin/env' and args == ('which', 'docker'):
+            return FakeAsyncProcess(output=b'/bin/docker')
+        if command == '/usr/bin/env' and args[0] == 'pulseaudio':
+            return FakeAsyncProcess()
+        msg = (
+            'Unexpected `asyncio.create_subprocess_exec` command in test '
+            f'environment: {command} - {args}'
+        )
+        raise ValueError(msg)
+
+    monkeypatch.setattr(asyncio, 'create_subprocess_exec', fake_create_subprocess_exec)
+    monkeypatch.setattr(
+        asyncio,
+        'open_unix_connection',
+        Fake(_Fake__return_value=Fake(_Fake__await_value=(Fake(), Fake()))),
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -195,6 +232,7 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_aiohttp()
     _monkeypatch_rpi_modules()
     _monkeypatch_subprocess(monkeypatch)
+    _monkeypatch_asyncio_subprocess(monkeypatch)
 
 
 _ = _monkeypatch

@@ -523,16 +523,6 @@ files = [
 toml = ["tomli"]
 
 [[package]]
-name = "cysystemd"
-version = "1.6.0"
-description = "systemd wrapper in Cython"
-optional = false
-python-versions = ">3.6, <4"
-files = [
-    {file = "cysystemd-1.6.0.tar.gz", hash = "sha256:5224dd8fee146de08528bbf685edb177568246c7728bbb548b2257c9a44a2454"},
-]
-
-[[package]]
 name = "cython"
 version = "3.0.10"
 description = "The Cython compiler for writing C extensions in the Python language."
@@ -1901,4 +1891,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "b5338d3eb3dbc0dc68bb7b79f73be5af4e739827039a048e3065480b8c040b01"
+content-hash = "556143de7c94c63e9cc8c06f18aa3bfda7e6f91df9fe7af27fd6768d1d7ab11f"

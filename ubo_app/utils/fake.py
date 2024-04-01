@@ -11,13 +11,26 @@ class Fake(ModuleType):
     def __init__(
         self: Fake,
         *args: object,
+        __return_value: object | None = None,
+        __await_value: object | None = None,
         __props: dict[str, object] | None = None,
         **kwargs: object,
     ) -> None:
-        logger.verbose('Initializing `Fake`', extra={'args_': args, 'kwargs': kwargs})
+        logger.verbose(
+            'Initializing `Fake`',
+            extra={
+                'args_': args,
+                'kwargs': kwargs,
+                '__return_value': __return_value,
+                '__await_value': __await_value,
+                '__props': __props,
+            },
+        )
         if __props is not None:
             for key, value in __props.items():
                 super().__setattr__(key, value)
+        self.__return_value = __return_value
+        self.__await_value = __await_value
         self.iterated = False
         super().__init__('')
 
@@ -47,16 +60,20 @@ class Fake(ModuleType):
         )
         return self
 
-    def __call__(self: Fake, *args: object, **kwargs: dict[str, Any]) -> Fake:
+    def __call__(self: Fake, *args: object, **kwargs: dict[str, Any]) -> object:
         logger.verbose(
             'Calling a `Fake` instance',
-            extra={'args_': args, 'kwargs': kwargs},
+            extra={
+                'args_': args,
+                'kwargs': kwargs,
+                '__return_value': self.__return_value,
+            },
         )
-        return self
+        return self.__return_value or self
 
-    def __await__(self: Fake) -> Generator[Fake | None, Any, Any]:
+    def __await__(self: Fake) -> Generator[Any, Any, object]:
         yield
-        return Fake()
+        return self.__await_value or Fake()
 
     def __next__(self: Fake) -> Fake:
         if self.iterated:

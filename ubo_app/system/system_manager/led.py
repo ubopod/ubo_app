@@ -23,7 +23,7 @@ ORDER = neopixel.GRB
 
 class LEDManager:
     def __init__(self: LEDManager) -> None:
-        self.logger = get_logger('led-manager')
+        self.logger = get_logger('system-manager')
         self._last_thread = None
         add_file_handler(self.logger, logging.DEBUG)
         add_stdout_handler(self.logger, logging.DEBUG)

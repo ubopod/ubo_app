@@ -26,7 +26,7 @@ class Service(TypedDict):
     scope: Literal['system', 'user']
 
 
-services: list[Service] = [
+SERVICES: list[Service] = [
     {
         'name': 'ubo-system',
         'template': 'system',
@@ -135,7 +135,7 @@ def reload_daemon() -> None:
 
 def enable_services() -> None:
     """Enable the services to start on boot."""
-    for service in services:
+    for service in SERVICES:
         # Enable the service to start on boot
         if service['scope'] == 'user':
             subprocess.run(
@@ -213,7 +213,7 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
 
     create_user_service_directory()
 
-    for service in services:
+    for service in SERVICES:
         create_service_file(service)
 
     if for_packer:

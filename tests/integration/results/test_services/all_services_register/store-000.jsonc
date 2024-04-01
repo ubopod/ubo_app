@@ -1,4 +1,4 @@
-// MISMATCH: store-000
+// store-000
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "camera": {
@@ -7,7 +7,7 @@
     "queue": []
   },
   "docker": {
-    "_id": "a3f2c9bf9c6316b950f244556f25e2a2",
+    "_id": "8d723104f77383c13458a748e9bb17bc",
     "home_assistant": {
       "container_ip": null,
       "docker_id": null,
@@ -112,6 +112,10 @@
         "name": "eth0"
       }
     ]
+  },
+  "lightdm": {
+    "is_active": true,
+    "is_enabled": true
   },
   "main": {
     "menu": {
@@ -222,6 +226,7 @@
                       }
                     },
                     {
+                      "action": "",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -229,87 +234,22 @@
                         1,
                         1
                       ],
-                      "icon": "󰣀",
+                      "icon": "[color=#008000]󰪥[/color]",
                       "is_short": false,
-                      "label": "SSH",
-                      "sub_menu": {
-                        "items": [
-                          {
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "",
-                            "is_short": false,
-                            "label": "Create account",
-                            "sub_menu": {
-                              "heading": "Create an SSH account",
-                              "items": [
-                                {
-                                  "action": "",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰗹",
-                                  "is_short": false,
-                                  "label": "Create"
-                                }
-                              ],
-                              "placeholder": null,
-                              "sub_heading": "This will create a temporary SSH account, you should delete it after use.",
-                              "title": "SSH Setup"
-                            }
-                          },
-                          {
-                            "application": "ubo_app/services/050-ssh/setup.py:ClearTemporaryUsersPrompt",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󱈊",
-                            "is_short": false,
-                            "label": "Remove all users"
-                          },
-                          {
-                            "action": "",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󰓛",
-                            "is_short": false,
-                            "label": "Stop"
-                          },
-                          {
-                            "action": "",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "[color=#008000]󰯄[/color]",
-                            "is_short": false,
-                            "label": "Disable"
-                          }
-                        ],
-                        "placeholder": null,
-                        "title": "SSH [color=#008000]󰧞[/color]"
-                      }
+                      "label": "LightDM"
+                    },
+                    {
+                      "action": "",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "[color=#008000]󰪥[/color]",
+                      "is_short": false,
+                      "label": "SSH"
                     },
                     {
                       "background_color": "#68B7FF",

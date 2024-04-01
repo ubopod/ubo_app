@@ -29,24 +29,33 @@ from ubo_app.utils.server import send_command
 
 def install_docker() -> None:
     """Install Docker."""
-    dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
-
     if Path(SERVER_SOCKET_PATH).exists():
-        send_command('docker install')
+
+        async def act() -> None:
+            await send_command('docker install')
+            dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
+
+        create_task(act())
 
 
 def run_docker() -> None:
     """Install Docker."""
-    send_command('docker start')
 
-    dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
+    async def act() -> None:
+        await send_command('docker start')
+        dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
+
+    create_task(act())
 
 
 def stop_docker() -> None:
     """Install Docker."""
-    send_command('docker stop')
 
-    dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
+    async def act() -> None:
+        await send_command('docker stop')
+        dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
+
+    create_task(act())
 
 
 async def check_docker() -> None:

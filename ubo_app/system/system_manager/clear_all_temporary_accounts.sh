@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -e -o errexit
+set -o errexit
+set -o pipefail
+set -o nounset
 
 # Check for root privileges
 if [ "$(id -u)" != "0" ]; then
@@ -16,3 +18,7 @@ for user in $(awk -F: '($3 >= 1000) && ($3 != 65534) {print $1}' /etc/passwd); d
     rm -f /etc/sudoers.d/$user
   fi
 done
+
+# Disable password authentication
+sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
+systemctl restart sshd

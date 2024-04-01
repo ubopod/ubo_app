@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import threading
 from typing import Literal, overload
 
@@ -12,40 +13,31 @@ thread_lock = threading.Lock()
 
 
 @overload
-def send_command(command: str) -> None: ...
+async def send_command(command: str) -> None: ...
 
 
 @overload
-def send_command(command: str, *, has_output: Literal[True]) -> str: ...
+async def send_command(command: str, *, has_output: Literal[True]) -> str: ...
 
 
-def send_command(command: str, *, has_output: bool = False) -> str | None:
+async def send_command(command: str, *, has_output: bool = False) -> str | None:
     """Send a command to the system manager socket."""
-    import socket
+    reader, writer = await asyncio.open_unix_connection(SERVER_SOCKET_PATH)
 
-    client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    try:
-        client.connect(SERVER_SOCKET_PATH)
-    except Exception as exception:  # noqa: BLE001
-        logger.error('Unable to connect to the socket', exc_info=exception)
-        if has_output:
-            return ''
-        return None
+    logger.debug('Sending command:', extra={'command': command})
 
-    output = None
+    response = None
     with thread_lock:
-        client.sendall(f'{command}'.encode() + b'\0')
-        remaining = b''
+        writer.write(f'{command}'.encode() + b'\0')
         while has_output:
-            datagram = remaining + client.recv(1024)
+            datagram = (await reader.readuntil(b'\0'))[:-1]
             if not datagram:
                 break
-            if b'\0' not in datagram:
-                remaining = datagram
-                continue
-            response, remaining = datagram.split(b'\0', 1)
-            output = response.decode('utf-8')
+            response = datagram.decode('utf-8')
             logger.debug('Server response:', extra={'response': response})
-        client.close()
+        writer.close()
+        await writer.wait_closed()
 
-    return output
+    logger.debug('Received response:', extra={'response': response})
+
+    return response

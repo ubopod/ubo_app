@@ -185,15 +185,6 @@ jobs:
             ~/.local
           key: poetry-${{ hashFiles('poetry.lock') }}
 
-      - name: Add SENTRY_DSN to .env
-        run: |
-          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> ubo_app/.env
-          pwd
-          cat ubo_app/.env
-
-      - name: Build
-        run: poetry build
-
       - name: Extract Version
         id: extract_version
         run: |
@@ -227,6 +218,20 @@ jobs:
             echo "Versions are consistent."
           fi
 
+      - name: Configure Sentry
+        run: |
+          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> ubo_app/.env
+          # conditionally set it based on whether it's a tag or not using github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+          if [ "${{ github.event_name }}" == "push" ] && [ "$(echo ${{ github.ref }} | grep -c 'refs/tags/v')" -eq 1 ]; then
+            echo "SENTRY_RELEASE=ubo-app@${{ steps.extract_version.outputs.VERSION }}" >> ubo_app/.env
+          else
+            echo "SENTRY_RELEASE=ubo-app@${{ github.sha }}" >> ubo_app/.env
+          fi
+          cat ubo_app/.env
+
+      - name: Build
+        run: poetry build
+
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
@@ -240,39 +245,6 @@ jobs:
           name: binary
           path: dist/*.tar.gz
           if-no-files-found: error
-
-  pypi-publish:
-    name: Publish to PyPI
-    if: >-
-      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs:
-      - type-check
-      - lint
-      - test
-      - build
-    runs-on: ubuntu-latest
-    environment:
-      name: release
-      url: https://pypi.org/p/${{ needs.build.outputs.name }}
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: wheel
-          path: dist
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: binary
-          path: dist
-
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist
-          verbose: true
-          skip-existing: true
 
   images:
     name: Create Images
@@ -361,6 +333,40 @@ jobs:
             steps.generate_image_url.outputs.dashed_suffix }}.img.gz
           if-no-files-found: error
 
+  pypi-publish:
+    name: Publish to PyPI
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - type-check
+      - lint
+      - test
+      - build
+      - images
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://pypi.org/p/${{ needs.build.outputs.name }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: binary
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          verbose: true
+          skip-existing: true
+
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     name: Release
@@ -427,7 +433,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
-          tag_name: ${{ needs.build.outputs.version }}
+          tag_name: v${{ needs.build.outputs.version }}
           body: |
             Release of version ${{ needs.build.outputs.version }}
             PyPI package: https://pypi.org/project/${{ needs.build.outputs.name }}/${{ needs.build.outputs.version }}

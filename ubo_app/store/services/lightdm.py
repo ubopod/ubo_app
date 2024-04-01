@@ -5,17 +5,17 @@ from immutable import Immutable
 from redux import BaseAction
 
 
-class SSHAction(BaseAction): ...
+class LightDMAction(BaseAction): ...
 
 
-class SSHUpdateStateAction(SSHAction):
+class LightDMUpdateStateAction(LightDMAction):
     is_active: bool | None = None
     is_enabled: bool | None = None
 
 
-class SSHClearEnabledStateAction(SSHAction): ...
+class LightDMClearEnabledStateAction(LightDMAction): ...
 
 
-class SSHState(Immutable):
+class LightDMState(Immutable):
     is_active: bool = False
     is_enabled: bool | None = None

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -e -o errexit
+set -o errexit
+set -o pipefail
+set -o nounset
 
 # Check for root privileges
 if [ "$(id -u)" != "0" ]; then
@@ -23,7 +25,7 @@ done
 useradd -m -s /bin/bash $USERNAME
 
 # Set the password
-PASSWORD=$(openssl rand -base64 8)
+PASSWORD=$(openssl rand -base64 6)
 echo "${USERNAME}:${PASSWORD}" | chpasswd
 printf "${USERNAME}:${PASSWORD}"
 

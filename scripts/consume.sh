@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -e -o errexit
+set -o errexit
+set -o pipefail
+set -o nounset
 
 FILE=$1
 CHUNK_SIZE=$((1024*1024*1024))

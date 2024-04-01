@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import subprocess
+import asyncio
 from typing import TYPE_CHECKING, Sequence
 
 from ubo_gui.menu.types import (
@@ -11,6 +11,7 @@ from ubo_gui.menu.types import (
     HeadedMenu,
     HeadlessMenu,
     Item,
+    Menu,
     SubMenuItem,
 )
 from ubo_gui.prompt import PromptWidget
@@ -23,8 +24,9 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.ssh import SSHUpdateStateAction
+from ubo_app.store.services.ssh import SSHClearEnabledStateAction, SSHUpdateStateAction
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.monitor_unit import is_unit_active, is_unit_enabled, monitor_unit
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -40,19 +42,23 @@ class ClearTemporaryUsersPrompt(PromptWidget):
 
     def second_option_callback(self: ClearTemporaryUsersPrompt) -> None:
         """Close the prompt."""
-        send_command('ssh clear_all_temporary_accounts')
-        self.dispatch('on_close')
-        dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    title='All SSH Accounts Removed',
-                    content='All SSH accounts have been removed.',
-                    importance=Importance.MEDIUM,
-                    icon='󰣀',
-                    display_type=NotificationDisplayType.FLASH,
+
+        async def act() -> None:
+            await send_command('service ssh clear_all_temporary_accounts')
+            self.dispatch('on_close')
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='All SSH Accounts Removed',
+                        content='All SSH accounts have been removed.',
+                        importance=Importance.MEDIUM,
+                        icon='󰣀',
+                        display_type=NotificationDisplayType.FLASH,
+                    ),
                 ),
-            ),
-        )
+            )
+
+        create_task(act())
 
     def __init__(self: ClearTemporaryUsersPrompt, **kwargs: object) -> None:
         """Initialize the prompt."""
@@ -69,43 +75,73 @@ class ClearTemporaryUsersPrompt(PromptWidget):
 
 def create_ssh_account() -> None:
     """Create a temporary SSH account."""
-    result = send_command('ssh create_temporary_ssh_account', has_output=True)
-    username, password = result.split(':')
-    dispatch(
-        NotificationsAddAction(
-            notification=Notification(
-                title='Temporary SSH Account Created',
-                content=f"""Username: {username}
+
+    async def act() -> None:
+        result = await send_command(
+            'service ssh create_temporary_ssh_account',
+            has_output=True,
+        )
+        username, password = result.split(':')
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Temporary SSH Account Created',
+                    content=f"""Username: {username}
 Password: {password}
 Make sure to delete it after use. Note that in order to make things work for you, we \
 had to make sure password authentication for ssh server is enabled, you may want to \
-disable it later.""",
-                importance=Importance.MEDIUM,
-                icon='󰣀',
-                display_type=NotificationDisplayType.STICKY,
+disable it later. Clearing all temporary users will disable password authentication \
+too.""",
+                    importance=Importance.MEDIUM,
+                    icon='󰣀',
+                    display_type=NotificationDisplayType.STICKY,
+                ),
             ),
-        ),
-    )
+        )
+
+    create_task(act())
 
 
 def start_ssh_service() -> None:
     """Start the SSH service."""
-    send_command('ssh start')
+
+    async def act() -> None:
+        await send_command('service ssh start')
+
+    create_task(act())
 
 
 def stop_ssh_service() -> None:
     """Stop the SSH service."""
-    send_command('ssh stop')
+
+    async def act() -> None:
+        await send_command('service ssh stop')
+
+    create_task(act())
 
 
 def enable_ssh_service() -> None:
     """Enable the SSH service."""
-    send_command('ssh enable')
+
+    async def act() -> None:
+        dispatch(SSHClearEnabledStateAction())
+        await send_command('service ssh enable')
+        await asyncio.sleep(5)
+        await check_is_ssh_enabled()
+
+    create_task(act())
 
 
 def disable_ssh_service() -> None:
     """Disable the SSH service."""
-    send_command('ssh disable')
+
+    async def act() -> None:
+        dispatch(SSHClearEnabledStateAction())
+        await send_command('service ssh disable')
+        await asyncio.sleep(5)
+        await check_is_ssh_enabled()
+
+    create_task(act())
 
 
 @autorun(lambda state: state.ssh)
@@ -139,102 +175,91 @@ def ssh_items(state: SSHState) -> Sequence[Item]:
             icon='󰓛' if state.is_active else '󰐊',
             action=stop_ssh_service if state.is_active else start_ssh_service,
         ),
-        ActionItem(
-            label='Disable' if state.is_enabled else 'Enable',
-            icon='[color=#008000]󰯄[/color]'
-            if state.is_enabled
-            else '[color=#ffff00]󰯅[/color]',
-            action=disable_ssh_service if state.is_enabled else enable_ssh_service,
+        Item(
+            label='...',
+            icon='',
+        )
+        if state.is_enabled is None
+        else ActionItem(
+            label='Disable',
+            icon='[color=#008000]󰯄[/color]',
+            action=disable_ssh_service,
+        )
+        if state.is_enabled
+        else ActionItem(
+            label='Enable',
+            icon='[color=#ffff00]󰯅[/color]',
+            action=enable_ssh_service,
         ),
     ]
 
 
 @autorun(lambda state: state.ssh)
-def ssh_title(state: SSHState) -> str:
+def ssh_icon(state: SSHState) -> str:
+    """Get the SSH icon."""
+    return '[color=#008000]󰪥[/color]' if state.is_active else '[color=#ffff00]󰝦[/color]'
+
+
+@autorun(lambda state: state.ssh)
+def ssh_title(_: SSHState) -> str:
     """Get the SSH title."""
-    return (
-        'SSH [color=#008000]󰧞[/color]'
-        if state.is_active
-        else 'SSH [color=#ffff00]󱃓[/color]'
-    )
+    return ssh_icon() + ' SSH'
 
 
-def check_is_ssh_active() -> None:
+async def check_is_ssh_active() -> None:
     """Check if the SSH service is active."""
-    result = subprocess.run(
-        ['/usr/bin/env', 'systemctl', 'is-active', 'ssh'],  # noqa: S603
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.stdout.strip() == 'active':
-        dispatch(SSHUpdateStateAction(is_active=True))
-    else:
-        dispatch(SSHUpdateStateAction(is_active=False))
-
-
-def check_is_ssh_enabled() -> None:
-    """Check if the SSH service is enabled."""
-    result = subprocess.run(
-        ['/usr/bin/env', 'systemctl', 'is-enabled', 'ssh'],  # noqa: S603
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.stdout.strip() == 'enabled':
+    if await is_unit_active('sshd'):
         dispatch(SSHUpdateStateAction(is_enabled=True))
     else:
         dispatch(SSHUpdateStateAction(is_enabled=False))
 
 
-async def monitor_ssh_service() -> None:
-    """Monitor the SSH service."""
-    from cysystemd.async_reader import (  # pyright: ignore[reportMissingImports]
-        AsyncJournalReader,
+async def check_is_ssh_enabled() -> None:
+    """Check if the SSH service is enabled."""
+    if await is_unit_enabled('sshd'):
+        dispatch(SSHUpdateStateAction(is_enabled=True))
+    else:
+        dispatch(SSHUpdateStateAction(is_enabled=False))
+
+
+def open_ssh_menu() -> Menu:
+    """Open the SSH menu."""
+    create_task(
+        asyncio.gather(
+            check_is_ssh_active(),
+            check_is_ssh_enabled(),
+        ),
     )
-    from cysystemd.reader import (  # pyright: ignore[reportMissingImports]
-        JournalOpenMode,
-        Rule,
+
+    return HeadlessMenu(
+        title=ssh_title,
+        items=ssh_items,
     )
-
-    reader = AsyncJournalReader()
-    await reader.open(JournalOpenMode.SYSTEM)
-    await reader.add_filter(Rule('_SYSTEMD_UNIT', 'init.scope'))
-    await reader.seek_tail()
-
-    check_is_ssh_enabled()
-    check_is_ssh_active()
-
-    while await reader.wait():
-        async for record in reader:
-            if 'MESSAGE' in record.data:
-                if 'UNIT' in record.data and record.data['UNIT'] == 'ssh.service':
-                    if (
-                        'Started ssh.service - OpenBSD Secure Shell server'
-                        in record.data['MESSAGE']
-                    ):
-                        dispatch(SSHUpdateStateAction(is_active=True))
-                    elif (
-                        'Stopped ssh.service - OpenBSD Secure Shell server'
-                        in record.data['MESSAGE']
-                    ):
-                        dispatch(SSHUpdateStateAction(is_active=False))
-                elif record.data['MESSAGE'] == 'Reloading.':
-                    check_is_ssh_enabled()
 
 
 def init_service() -> None:
     """Initialize the SSH service."""
     dispatch(
         RegisterSettingAppAction(
-            menu_item=SubMenuItem(
+            menu_item=ActionItem(
                 label='SSH',
-                icon='󰣀',
-                sub_menu=HeadlessMenu(
-                    title=ssh_title,
-                    items=ssh_items,
+                icon=ssh_icon,
+                action=open_ssh_menu,
+            ),
+        ),
+    )
+
+    create_task(
+        asyncio.gather(
+            check_is_ssh_active(),
+            check_is_ssh_enabled(),
+            monitor_unit(
+                'ssh.service',
+                lambda status: dispatch(
+                    SSHUpdateStateAction(
+                        is_active=status in ('active', 'activating', 'reloading'),
+                    ),
                 ),
             ),
         ),
     )
-    create_task(monitor_ssh_service())

@@ -1,10 +1,15 @@
 #!/usr/bin/env sh
 
-set -e -o errexit
+set -o errexit
+set -o pipefail
+set -o nounset
 
 poetry build
 
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
+deps=${deps:-"False"}
+bootstrap=${bootstrap:-"False"}
+run=${run:-"False"}
 
 scp dist/$LATEST_VERSION pi@ubo-development-pod:/tmp/
 

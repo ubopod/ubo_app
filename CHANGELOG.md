@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 0.12.2
+
+- feat(lightdm): add lightdm service
+- build(packer): disable lightdm service by default
+- fix(sound): try restarting `pulseaudio` every 5 seconds when it is not ready
+  (it may be not available in the first boot of desktop image at least)
+- refactor(ssh): use our own `monitor_unit` utility function and drop `cysystemd`
+- ci: set `SENTRY_RELEASE`
+- feat(system): setup sentry for `system_manager`
+- refactor(core): `send_command` is now an async function utilizing `asyncio` streams
+
 ## Version 0.12.1
 
 - feat(system_manager): commands for starting/stopping/enabling/disabling services
@@ -29,7 +40,8 @@
 - feat(test): introduce `UBO_DEBUG_TEST_UUID` environment variable for tracking
   the sequence of uuid generations in the tests, it prints the traceback for each
   call to `uuid.uuid4` if it is set
-- fix(wifi): change `_remote_object_path` to `_dbus.object_path` for sdbus objects #57
+- fix(wifi): change `_remote_object_path` to `_dbus.object_path` for sdbus objects
+  #57
 
 ## Version 0.11.7
 

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import math
 import time
@@ -12,8 +13,10 @@ import alsaaudio
 import pulsectl
 import pyaudio
 
-from ubo_app.logging import logger
+from ubo_app.logging import get_logger
+from ubo_app.utils.async_ import create_task
 
+logger = get_logger('ubo-app')
 CHUNK_SIZE = 1024
 
 
@@ -41,29 +44,50 @@ class AudioManager:
         self.should_stop = False
 
         self.cardindex = None
-        try:
-            cards = alsaaudio.cards()
-            self.cardindex = cards.index(
-                next(card for card in cards if 'wm8960' in card),
-            )
-            try:
-                with pulsectl.Pulse('set-default-sink') as pulse:
-                    for sink in pulse.sink_list():
-                        if str(sink.proplist['alsa.card']) == str(self.cardindex):
-                            pulse.sink_default_set(sink)
-                            break
-            except pulsectl.PulseError:
-                logger.error('Not able to connect to pulseaudio')
-        except StopIteration:
-            logger.error('No audio card found')
+
+        async def initialize_audio() -> None:
+            while True:
+                try:
+                    cards = alsaaudio.cards()
+                    self.cardindex = cards.index(
+                        next(card for card in cards if 'wm8960' in card),
+                    )
+                    try:
+                        with pulsectl.Pulse('set-default-sink') as pulse:
+                            for sink in pulse.sink_list():
+                                if 'alsa.card' in sink.proplist and str(
+                                    sink.proplist['alsa.card'],
+                                ) == str(self.cardindex):
+                                    pulse.sink_default_set(sink)
+                                    break
+                    except pulsectl.PulseError:
+                        logger.exception('Not able to connect to pulseaudio')
+                except StopIteration:
+                    logger.exception('No audio card found')
+                process = await asyncio.create_subprocess_exec(
+                    '/usr/bin/env',
+                    'pulseaudio',
+                    '--kill',
+                )
+                await process.wait()
+                process = await asyncio.create_subprocess_exec(
+                    '/usr/bin/env',
+                    'pulseaudio',
+                    '--start',
+                )
+                await process.wait()
+
+                await asyncio.sleep(5)
+
+        create_task(initialize_audio())
 
     def find_respeaker_index(self: AudioManager) -> int:
         """Find the index of the ReSpeaker device."""
         for index in range(self.pyaudio.get_device_count()):
             info = self.pyaudio.get_device_info_by_index(index)
             if not isinstance(info['name'], (int, float)) and 'wm8960' in info['name']:
-                logger.debug(f'ReSpeaker found at index: {index}')
-                logger.debug(f'Device Info: {info}')
+                logger.debug('ReSpeaker found at index', extra={'index': index})
+                logger.debug('Device Info', extra={'info': info})
                 return index
         msg = 'ReSpeaker for default device not found'
         raise ValueError(msg)
@@ -111,11 +135,8 @@ class AudioManager:
                 while data and not self.should_stop and stream.is_active():
                     stream.write(data)
                     data = wf.readframes(CHUNK_SIZE)
-        except Exception as exception:  # noqa: BLE001
-            logger.error(
-                'Something went wrong while playing an audio file',
-                exc_info=exception,
-            )
+        except Exception:
+            logger.exception('Something went wrong while playing an audio file')
         finally:
             self.is_playing = False
             self.close_stream()

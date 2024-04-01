@@ -6,20 +6,21 @@ import threading
 import traceback
 from typing import TYPE_CHECKING
 
-import sentry_sdk
-
 if TYPE_CHECKING:
     from types import TracebackType
 
 
 def setup_sentry() -> None:  # pragma: no cover
-    from ubo_app.constants import SENTRY_DSN
+    import os
+    from asyncio import CancelledError
 
-    if SENTRY_DSN:
+    import sentry_sdk
+
+    if 'SENTRY_DSN' in os.environ:
         sentry_sdk.init(
-            dsn=SENTRY_DSN,
             traces_sample_rate=1.0,
             profiles_sample_rate=1.0,
+            ignore_errors=[KeyboardInterrupt, CancelledError],
         )
 
 
