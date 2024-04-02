@@ -4,7 +4,7 @@ from __future__ import annotations
 import pathlib
 import weakref
 from functools import cached_property
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
@@ -27,6 +27,8 @@ from ubo_app.store.services.notifications import (
 from .store import autorun, dispatch, subscribe_event
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Item, Menu
 

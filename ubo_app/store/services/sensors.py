@@ -1,8 +1,9 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Generic, Sequence, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from immutable import Immutable
 from redux import BaseAction

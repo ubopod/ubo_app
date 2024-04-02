@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pathlib
 from distutils.util import strtobool
-from typing import Sequence, cast
+from typing import TYPE_CHECKING, cast
 
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
@@ -25,6 +25,9 @@ from ubo_app.store.services.sound import SoundPlayChimeAction
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.qrcode import qrcode_input
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # Regular expression pattern
 # WIFI:S:<SSID>;T:<WEP|WPA|blank>;P:<PASSWORD>;H:<true|false|blank>;;

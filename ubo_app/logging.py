@@ -5,7 +5,10 @@ import atexit
 import json
 import logging
 import sys
-from typing import Mapping, cast
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 VERBOSE = 5
 

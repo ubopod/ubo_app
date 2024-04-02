@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from kivy.clock import Clock
 from kivy.metrics import dp
@@ -17,6 +17,8 @@ from ubo_gui.app import UboApp
 from ubo_app.store import autorun
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.store.status_icons import IconState
 
 
@@ -106,7 +108,7 @@ class MenuAppFooter(UboApp):
                 texture_size[0],
             ),
         )
-        local_timzone = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+        local_timzone = datetime.datetime.now(datetime.UTC).astimezone().tzinfo
 
         def now() -> datetime.datetime:
             return datetime.datetime.now(local_timzone)

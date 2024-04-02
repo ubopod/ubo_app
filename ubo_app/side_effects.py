@@ -5,7 +5,7 @@ from __future__ import annotations
 import atexit
 import subprocess
 import weakref
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
@@ -32,6 +32,8 @@ from ubo_app.utils.hardware import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.menu import MenuApp
 
 

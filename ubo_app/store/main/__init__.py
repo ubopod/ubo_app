@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent, FinishAction, InitAction
@@ -11,7 +11,9 @@ from ubo_app.store.services.keypad import KeypadAction
 from ubo_app.store.status_icons import StatusIconsAction
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from collections.abc import Sequence
+    from typing import TypeAlias
+
     from ubo_gui.menu.types import Item, Menu
 
 

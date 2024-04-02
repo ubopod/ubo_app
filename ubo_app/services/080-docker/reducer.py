@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import field, replace
-from typing import Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
 from immutable import Immutable
 from redux import (
@@ -30,6 +30,9 @@ from ubo_app.store.services.docker import (
 )
 from ubo_app.store.services.ip import IpUpdateAction
 from ubo_app.utils.qrcode import qrcode_input
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
 
 Action = InitAction | DockerAction
 

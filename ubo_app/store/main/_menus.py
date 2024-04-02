@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Sequence
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
 from ubo_gui.menu.types import (
@@ -19,6 +19,8 @@ from ubo_app.store.services.notifications import Notification, NotificationsClea
 from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_gui.menu.types import Item
 
 
@@ -112,7 +114,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
         )
         for index, notification in enumerate(notifications)
         if notification.expiry_date is None
-        or notification.expiry_date > datetime.now(tz=timezone.utc)
+        or notification.expiry_date > datetime.now(tz=UTC)
     ]
 
 

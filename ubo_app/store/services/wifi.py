@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class WiFiType(StrEnum):

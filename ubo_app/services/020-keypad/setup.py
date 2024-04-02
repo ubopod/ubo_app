@@ -25,8 +25,7 @@ INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
 ButtonStatus = Literal['pressed', 'released']
 
 
-class KeypadError(Exception):
-    ...
+class KeypadError(Exception): ...
 
 
 class ButtonName(StrEnum):

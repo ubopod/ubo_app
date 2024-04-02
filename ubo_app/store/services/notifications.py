@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import sys
 from dataclasses import field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum, auto
-from typing import Sequence
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class Importance(StrEnum):
@@ -74,7 +77,7 @@ class Notification(Immutable):
     content: str
     importance: Importance = Importance.LOW
     chime: Chime = Chime.DONE
-    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     is_read: bool = False
     sender: str | None = None
     actions: list[BaseAction | BaseEvent] = field(default_factory=list)

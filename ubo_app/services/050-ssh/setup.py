@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import (
     ActionItem,
@@ -30,6 +30,8 @@ from ubo_app.utils.monitor_unit import is_unit_active, is_unit_enabled, monitor_
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.store.services.ssh import SSHState
 
 
@@ -208,7 +210,7 @@ def ssh_title(_: SSHState) -> str:
 
 async def check_is_ssh_active() -> None:
     """Check if the SSH service is active."""
-    if await is_unit_active('sshd'):
+    if await is_unit_active('ssh'):
         dispatch(SSHUpdateStateAction(is_enabled=True))
     else:
         dispatch(SSHUpdateStateAction(is_enabled=False))
@@ -216,7 +218,7 @@ async def check_is_ssh_active() -> None:
 
 async def check_is_ssh_enabled() -> None:
     """Check if the SSH service is enabled."""
-    if await is_unit_enabled('sshd'):
+    if await is_unit_enabled('ssh'):
         dispatch(SSHUpdateStateAction(is_enabled=True))
     else:
         dispatch(SSHUpdateStateAction(is_enabled=False))

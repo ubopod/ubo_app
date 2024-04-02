@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import uuid
-from typing import TYPE_CHECKING, Any, Coroutine, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
@@ -27,6 +27,7 @@ from ubo_app.utils.bus_provider import get_system_bus
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
+    from collections.abc import Coroutine
 
 RETRIES = 3
 

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Generator, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from pathlib import Path
 
     from _pytest.fixtures import SubRequest

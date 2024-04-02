@@ -1,12 +1,14 @@
 """A module to track imports of other modules."""
+
 from __future__ import annotations
 
 import importlib.abc
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Sequence
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
     from types import ModuleType
 
 

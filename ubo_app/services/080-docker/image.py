@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import pathlib
 from asyncio import iscoroutine
-from typing import Any, Callable, Coroutine, Mapping, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import docker
 import docker.errors
@@ -32,6 +32,9 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.utils.async_ import create_task, run_in_executor
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine, Mapping
 
 
 def find_container(client: docker.DockerClient, *, image: str) -> Container | None:

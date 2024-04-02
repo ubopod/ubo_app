@@ -75,7 +75,7 @@ def _monkeypatch_datetime(monkeypatch: pytest.MonkeyPatch) -> None:
         @classmethod
         def now(cls: type[DateTime], tz: datetime.tzinfo | None = None) -> DateTime:
             _ = tz
-            return DateTime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+            return DateTime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
 
     monkeypatch.setattr(datetime, 'datetime', DateTime)
 
@@ -188,9 +188,9 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
         **kwargs: object,
     ) -> FakeAsyncProcess:
         _ = kwargs
-        if command == '/usr/bin/env' and args == ('systemctl', 'is-enabled', 'sshd'):
+        if command == '/usr/bin/env' and args == ('systemctl', 'is-enabled', 'ssh'):
             return FakeAsyncProcess(output=b'enabled')
-        if command == '/usr/bin/env' and args == ('systemctl', 'is-active', 'sshd'):
+        if command == '/usr/bin/env' and args == ('systemctl', 'is-active', 'ssh'):
             return FakeAsyncProcess(output=b'active')
         if command == '/usr/bin/env' and args == ('systemctl', 'is-enabled', 'lightdm'):
             return FakeAsyncProcess(output=b'enabled')

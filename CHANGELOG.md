@@ -2,7 +2,9 @@
 
 ## Version 0.12.3
 
+- build: use latest images of RPi as base images
 - fix(keypad): make keypad compatible with kernel 6.6 by using gpiozero
+- ci: use latest versions of ruff and pyright
 
 ## Version 0.12.2
 

@@ -59,25 +59,31 @@ class AudioManager:
                                     sink.proplist['alsa.card'],
                                 ) == str(self.cardindex):
                                     pulse.sink_default_set(sink)
-                                    break
+                                    return
+                            logger.error('No audio card found')
                     except pulsectl.PulseError:
                         logger.exception('Not able to connect to pulseaudio')
                 except StopIteration:
                     logger.exception('No audio card found')
-                process = await asyncio.create_subprocess_exec(
-                    '/usr/bin/env',
-                    'pulseaudio',
-                    '--kill',
-                )
-                await process.wait()
-                process = await asyncio.create_subprocess_exec(
-                    '/usr/bin/env',
-                    'pulseaudio',
-                    '--start',
-                )
-                await process.wait()
+                except OSError:
+                    logger.exception('Error while setting default sink')
+                    logger.info('Restarting pulseaudio')
+                    process = await asyncio.create_subprocess_exec(
+                        '/usr/bin/env',
+                        'pulseaudio',
+                        '--kill',
+                    )
+                    await process.wait()
+                    process = await asyncio.create_subprocess_exec(
+                        '/usr/bin/env',
+                        'pulseaudio',
+                        '--start',
+                    )
+                    await process.wait()
 
-                await asyncio.sleep(5)
+                    await asyncio.sleep(5)
+                else:
+                    break
 
         create_task(initialize_audio())
 
@@ -85,7 +91,7 @@ class AudioManager:
         """Find the index of the ReSpeaker device."""
         for index in range(self.pyaudio.get_device_count()):
             info = self.pyaudio.get_device_info_by_index(index)
-            if not isinstance(info['name'], (int, float)) and 'wm8960' in info['name']:
+            if not isinstance(info['name'], int | float) and 'wm8960' in info['name']:
                 logger.debug('ReSpeaker found at index', extra={'index': index})
                 logger.debug('Device Info', extra={'info': info})
                 return index

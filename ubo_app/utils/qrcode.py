@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import uuid
 from asyncio import Future
-from datetime import datetime, timezone
-from typing import Callable, TypeAlias, overload
+from typing import TYPE_CHECKING, TypeAlias, overload
 
 from typing_extensions import TypeVar
 
@@ -23,6 +23,9 @@ from ubo_app.store.services.notifications import (
     NotificationsClearEvent,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 QrCodeGroupDict: TypeAlias = dict[str, str | None] | None
 
@@ -66,7 +69,7 @@ async def qrcode_input(
             content=prompt,
             display_type=NotificationDisplayType.STICKY,
             is_read=True,
-            expiry_date=datetime.now(tz=timezone.utc),
+            expiry_date=datetime.datetime.now(tz=datetime.UTC),
         )
 
         def clear_notification(event: NotificationsClearEvent) -> None:

@@ -6,12 +6,13 @@ from __future__ import annotations
 import contextlib
 import gc
 from sys import stdout
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from redux.main import inspect
 
 if TYPE_CHECKING:
     import weakref
+    from collections.abc import Callable
 
 SHORT_PRINT_LENGTH = 60
 

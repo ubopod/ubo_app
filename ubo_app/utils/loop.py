@@ -4,13 +4,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import threading
-from typing import TYPE_CHECKING, Callable, Coroutine, TypeVarTuple, Unpack
+from typing import TYPE_CHECKING, TypeVarTuple, Unpack
 
 from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
     from asyncio import Future, Handle
     from asyncio.tasks import Task
+    from collections.abc import Callable, Coroutine
 
     from redux.basic_types import TaskCreatorCallback
 

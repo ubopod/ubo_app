@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import Any, Generator, Iterator, Self, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from ubo_app.logging import logger
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterator
 
 
 class Fake(ModuleType):

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
@@ -18,6 +18,8 @@ from ubo_app.utils.monitor_unit import is_unit_active, is_unit_enabled, monitor_
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.store.services.lightdm import LightDMState
 
 

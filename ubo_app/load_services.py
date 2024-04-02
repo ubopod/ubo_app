@@ -11,9 +11,10 @@ import sys
 import threading
 import traceback
 import uuid
+from collections.abc import Callable, Sequence
 from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Sequence, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from redux import CombineReducerRegisterAction, ReducerType
 

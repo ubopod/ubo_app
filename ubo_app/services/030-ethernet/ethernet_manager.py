@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 from threading import current_thread
-from typing import TYPE_CHECKING, Any, Coroutine, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from ubo_app.store.services.ethernet import GlobalEthernetState
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
+    from collections.abc import Coroutine
 
 
 T = TypeVar('T')

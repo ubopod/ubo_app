@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Coroutine, Protocol, TypeAlias
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Protocol, TypeAlias
 
 if TYPE_CHECKING:
     from redux import ReducerType

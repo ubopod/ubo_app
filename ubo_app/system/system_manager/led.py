@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import time
 from threading import Thread
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, cast
 
 import board
 import neopixel
@@ -14,6 +14,8 @@ from ubo_gui.menu import warnings
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.store.services.rgb_ring import Color
 
 BRIGHTNESS = 1.0

@@ -5,7 +5,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 from threading import current_thread, main_thread
-from typing import TYPE_CHECKING, Callable, Coroutine
+from typing import TYPE_CHECKING
 
 from redux import (
     BaseCombineReducerState,
@@ -37,6 +37,8 @@ from ubo_app.store.update_manager import UpdateManagerAction, UpdateManagerState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
     from redux.basic_types import SnapshotAtom, TaskCreatorCallback
 
 assert current_thread() is main_thread(), 'Store should be created in the main thread'  # noqa: S101

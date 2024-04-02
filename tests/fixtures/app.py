@@ -8,13 +8,15 @@ import json
 import logging
 import sys
 import weakref
-from typing import TYPE_CHECKING, AsyncGenerator
+from typing import TYPE_CHECKING
 
 import pytest
 
 from ubo_app.setup import setup
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from _pytest.fixtures import SubRequest
 
     from ubo_app.menu import MenuApp

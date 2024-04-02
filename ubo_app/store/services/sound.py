@@ -12,8 +12,7 @@ class SoundDevice(StrEnum):
     OUTPUT = 'Output'
 
 
-class SoundAction(BaseAction):
-    ...
+class SoundAction(BaseAction): ...
 
 
 class SoundSetVolumeAction(SoundAction):
@@ -39,8 +38,7 @@ class SoundPlayChimeAction(SoundAction):
     name: str
 
 
-class SoundEvent(BaseEvent):
-    ...
+class SoundEvent(BaseEvent): ...
 
 
 class SoundPlayChimeEvent(SoundEvent):

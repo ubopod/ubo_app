@@ -12,12 +12,10 @@ Color: TypeAlias = (
 )
 
 
-class RgbRingAction(BaseAction):
-    ...
+class RgbRingAction(BaseAction): ...
 
 
-class RgbRingEvent(BaseEvent):
-    ...
+class RgbRingEvent(BaseEvent): ...
 
 
 class RgbRingSetIsConnectedAction(RgbRingAction):
@@ -28,8 +26,7 @@ class RgbRingSetIsBusyAction(RgbRingAction):
     is_busy: bool | None = None
 
 
-class RgbRingCommandAction(RgbRingAction):
-    ...
+class RgbRingCommandAction(RgbRingAction): ...
 
 
 class RgbRingWaitableCommandAction(RgbRingCommandAction):
@@ -44,24 +41,21 @@ class RgbRingSetEnabledAction(RgbRingCommandAction):
     enabled: bool = True
 
 
-class RgbRingSetAllAction(RgbRingColorfulCommandAction):
-    ...
+class RgbRingSetAllAction(RgbRingColorfulCommandAction): ...
 
 
 class RgbRingSetBrightnessAction(RgbRingCommandAction):
     brightness: float = 0.5
 
 
-class RgbRingBlankAction(RgbRingCommandAction):
-    ...
+class RgbRingBlankAction(RgbRingCommandAction): ...
 
 
 class RgbRingRainbowAction(RgbRingWaitableCommandAction):
     rounds: int
 
 
-class RgbRingProgressWheelStepAction(RgbRingColorfulCommandAction):
-    ...
+class RgbRingProgressWheelStepAction(RgbRingColorfulCommandAction): ...
 
 
 class RgbRingPulseAction(RgbRingWaitableCommandAction, RgbRingColorfulCommandAction):

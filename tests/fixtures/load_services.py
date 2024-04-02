@@ -4,11 +4,8 @@ from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
-    Coroutine,
-    Generator,
     Literal,
     Protocol,
-    Sequence,
     cast,
     overload,
 )
@@ -16,6 +13,8 @@ from typing import (
 import pytest
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine, Generator, Sequence
+
     from tests.conftest import WaitFor
 
 

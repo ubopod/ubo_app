@@ -9,8 +9,7 @@ from redux import BaseAction, BaseEvent
 UPDATE_MANAGER_NOTIFICATION_ID = 'ubo:update_manager'
 
 
-class UpdateManagerAction(BaseAction):
-    ...
+class UpdateManagerAction(BaseAction): ...
 
 
 class UpdateManagerSetVersionsAction(UpdateManagerAction):
@@ -23,16 +22,13 @@ class UpdateManagerSetStatusAction(UpdateManagerAction):
     status: UpdateStatus
 
 
-class UpdateManagerEvent(BaseEvent):
-    ...
+class UpdateManagerEvent(BaseEvent): ...
 
 
-class UpdateManagerCheckEvent(UpdateManagerEvent):
-    ...
+class UpdateManagerCheckEvent(UpdateManagerEvent): ...
 
 
-class UpdateManagerUpdateEvent(UpdateManagerEvent):
-    ...
+class UpdateManagerUpdateEvent(UpdateManagerEvent): ...
 
 
 class UpdateStatus(StrEnum):

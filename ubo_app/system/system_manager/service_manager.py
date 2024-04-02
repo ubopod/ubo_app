@@ -26,22 +26,22 @@ def ssh_handler(command: str) -> str | None:
         )
     if command == 'start':
         subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'start', 'sshd'],  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'start', 'ssh'],  # noqa: S603
             check=True,
         )
     if command == 'stop':
         subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'stop', 'sshd'],  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'stop', 'ssh'],  # noqa: S603
             check=True,
         )
     if command == 'enable':
         subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'enable', 'sshd'],  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'enable', 'ssh'],  # noqa: S603
             check=True,
         )
     if command == 'disable':
         subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'disable', 'sshd'],  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'disable', 'ssh'],  # noqa: S603
             check=True,
         )
     msg = f'Invalid ssh command "{command}"'

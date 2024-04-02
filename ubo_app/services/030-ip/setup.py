@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from collections import defaultdict
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
@@ -19,6 +19,9 @@ from ubo_app.store.services.ip import (
     IpUpdateRequestEvent,
 )
 from ubo_app.store.status_icons import StatusIconsRegisterAction
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 @autorun(lambda state: state.ip.interfaces)

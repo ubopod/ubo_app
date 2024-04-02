@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D105, D107, N999
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from constants import get_signal_icon
 from debouncer import DebounceOptions, debounce
@@ -31,6 +31,9 @@ from ubo_app.store.services.wifi import (
 from ubo_app.utils.async_ import create_task
 
 from .create_wireless_connection import CreateWirelessConnectionPage
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class WiFiConnectionPage(PromptWidget):

@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 from dataclasses import fields
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import docker
 import docker.errors
@@ -25,6 +25,9 @@ from ubo_app.store.services.docker import (
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import monitor_unit
 from ubo_app.utils.server import send_command
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def install_docker() -> None:

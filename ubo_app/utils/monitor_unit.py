@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import subprocess
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from sdbus import DbusInterfaceCommonAsync, dbus_property_async
 
 from ubo_app.utils.bus_provider import get_system_bus
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class SystemdUnitInterface(  # pyright: ignore [reportGeneralTypeIssues]

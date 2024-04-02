@@ -38,10 +38,13 @@ async def check_version() -> None:
 
     # Check PyPI server for the latest version
     try:
-        async with aiohttp.ClientSession() as session, session.get(
-            'https://pypi.org/pypi/ubo-app/json',
-            timeout=5,
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                'https://pypi.org/pypi/ubo-app/json',
+                timeout=5,
+            ) as response,
+        ):
             if response.status != requests.codes.ok:
                 logger.error('Failed to check for updates')
                 return

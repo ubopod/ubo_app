@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ubo_app.store import dispatch
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
@@ -23,12 +23,12 @@ def read_sensors(_: float | None = None) -> None:
         SensorsReportReadingAction(
             sensor=Sensor.TEMPERATURE,
             reading=temperature,
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
         ),
         SensorsReportReadingAction(
             sensor=Sensor.LIGHT,
             reading=light,
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
         ),
     )
 
