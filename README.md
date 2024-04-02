@@ -39,10 +39,10 @@ Note that as part of the installation process, these debian packages are install
 - libgl1
 - libmtdev1
 - libzbar0
-- python3
-- python3-dev
-- python3-libcamera
 - python3-alsaaudio
+- python3-dev
+- python3-gpiozero
+- python3-libcamera
 - python3-picamera2
 - python3-pip
 - python3-pyaudio

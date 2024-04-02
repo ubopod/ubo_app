@@ -167,13 +167,12 @@ class Keypad:
     def init_i2c(self: Keypad) -> None:
         if not IS_RPI:
             return
-        # connect to the I2C bus
-        from RPi import GPIO
+        # Use GPIO to receive interrupt from the GPIO expander
+        from gpiozero import Button
 
-        GPIO.setmode(GPIO.BCM)
         i2c = board.I2C()
         # Set this to the GPIO of the interrupt:
-        GPIO.setup(INT_EXPANDER, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        btn = Button(INT_EXPANDER)
         try:
             import adafruit_aw9523
 
@@ -207,13 +206,8 @@ class Keypad:
         self.event_queue = [Event(inputs=self.inputs, timestamp=time.time())]
         time.sleep(0.5)
 
-        # Enable interrupt on the GPIO expander
-        GPIO.add_event_detect(
-            INT_EXPANDER,
-            GPIO.FALLING,
-            callback=self.key_press_cb,
-            bouncetime=1,
-        )
+        # Interrupt callback when any button is pressed
+        btn.when_pressed=self.key_press_cb
 
     def key_press_cb(self: Keypad, _: object) -> None:
         """Handle key press dispatched by GPIO interrupt.
