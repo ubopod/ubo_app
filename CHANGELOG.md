@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.12.3
+
+- fix(keypad): make keypad compatible with kernel 6.6 by using gpiozero
+
 ## Version 0.12.2
 
 - feat(lightdm): add lightdm service
