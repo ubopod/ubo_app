@@ -144,14 +144,18 @@ def _monkeypatch_aiohttp() -> None:
                 },
             }
 
-    class FakeAiohttp(Fake):
-        def get(self: FakeAiohttp, url: str, **kwargs: dict[str, object]) -> object:
+    class FakeClientSession(Fake):
+        def get(
+            self: FakeClientSession,
+            url: str,
+            **kwargs: dict[str, object],
+        ) -> object:
             if url == 'https://pypi.org/pypi/ubo-app/json':
                 return FakeUpdateResponse()
             parent = super()
             return parent.get(url, **kwargs)
 
-    sys.modules['aiohttp'] = FakeAiohttp()
+    sys.modules['aiohttp'] = Fake(_Fake__props={'ClientSession': FakeClientSession})
 
 
 def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -223,6 +227,7 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(atexit, 'register', lambda _: None)
 
     monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
+    monkeypatch.setattr('ubo_app.constants.STORE_GRACE_TIME', 0.1)
 
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)

@@ -1,13 +1,14 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import asyncio
 from threading import current_thread
-from typing import TYPE_CHECKING, TypeVarTuple, Unpack
+from typing import TYPE_CHECKING, ParamSpec
 
 from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
-    from asyncio import Future, Handle
+    from asyncio import Handle
     from collections.abc import Awaitable, Callable
 
     from redux.basic_types import TaskCreatorCallback
@@ -63,14 +64,14 @@ def create_task(
 
 
 T = TypeVar('T', infer_variance=True)
-Ts = TypeVarTuple('Ts')
+T_params = ParamSpec('T_params')
 
 
-def run_in_executor(
-    executor: object,
-    task: Callable[[Unpack[Ts]], T],
-    *args: Unpack[Ts],
-) -> Future[T]:
+def to_thread(
+    task: Callable[T_params, T],
+    *args: T_params.args,
+    **kwargs: T_params.kwargs,
+) -> Handle:
     import ubo_app.utils.loop
 
-    return ubo_app.utils.loop._run_in_executor(executor, task, *args)  # noqa: SLF001
+    return ubo_app.utils.loop._create_task(asyncio.to_thread(task, *args, **kwargs))  # noqa: SLF001

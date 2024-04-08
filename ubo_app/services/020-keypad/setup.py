@@ -110,8 +110,8 @@ class Keypad:
     """Class to handle keypad events."""
 
     event_queue: list[Event]
-    aw: AW9523 | None
-    inputs: UnaryStruct | None
+    aw: AW9523
+    inputs: UnaryStruct
 
     def __init__(self: Keypad) -> None:
         """Initialize a Keypad.
@@ -206,7 +206,7 @@ class Keypad:
         time.sleep(0.5)
 
         # Interrupt callback when any button is pressed
-        btn.when_pressed=self.key_press_cb
+        btn.when_pressed = self.key_press_cb
 
     def key_press_cb(self: Keypad, _: object) -> None:
         """Handle key press dispatched by GPIO interrupt.

@@ -51,13 +51,13 @@ def global_exception_handler(
     threads_info = get_all_thread_stacks()
 
     logger.error(
-        f"""Uncaught exception: {exception_type}: {exception_value}
-{error_message}""",
-    )
-    logger.debug(
-        f"""Uncaught exception: {exception_type}: {exception_value}
-{error_message}""",
-        extra={'threads': threads_info},
+        'Uncaught exception',
+        extra={
+            'threads': threads_info,
+            'exception_type': exception_type,
+            'exception_value': exception_value,
+            'error_message': error_message,
+        },
     )
 
 
@@ -72,13 +72,14 @@ def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
     exception_type, exception_value, _, thread = args
 
     logger.error(
-        f"""Uncaught exception in thread {thread}: {exception_type}: {exception_value}
-{error_message}""",
-    )
-    logger.debug(
-        f"""Uncaught exception in thread {thread}: {exception_type}: {exception_value}
-{error_message}""",
-        extra={'threads': threads_info, 'thread': thread},
+        'Uncaught exception',
+        extra={
+            'thread_': thread,
+            'threads': threads_info,
+            'exception_type': exception_type,
+            'exception_value': exception_value,
+            'error_message': error_message,
+        },
     )
 
 

@@ -24,28 +24,57 @@ def ssh_handler(command: str) -> str | None:
             Path(__file__).parent.joinpath('clear_all_temporary_accounts.sh'),  # noqa: S603
             check=False,
         )
-    if command == 'start':
+    elif command == 'start':
         subprocess.run(
             ['/usr/bin/env', 'systemctl', 'start', 'ssh'],  # noqa: S603
             check=True,
         )
-    if command == 'stop':
+    elif command == 'stop':
         subprocess.run(
             ['/usr/bin/env', 'systemctl', 'stop', 'ssh'],  # noqa: S603
             check=True,
         )
-    if command == 'enable':
+    elif command == 'enable':
         subprocess.run(
             ['/usr/bin/env', 'systemctl', 'enable', 'ssh'],  # noqa: S603
             check=True,
         )
-    if command == 'disable':
+    elif command == 'disable':
         subprocess.run(
             ['/usr/bin/env', 'systemctl', 'disable', 'ssh'],  # noqa: S603
             check=True,
         )
-    msg = f'Invalid ssh command "{command}"'
-    raise ValueError(msg)
+    else:
+        msg = f'Invalid ssh command "{command}"'
+        raise ValueError(msg)
+    return None
+
+
+def lightdm_handler(command: str) -> None:
+    """Handle LightDM commands."""
+    if command == 'start':
+        subprocess.run(
+            ['/usr/bin/env', 'systemctl', 'start', 'lightdm'],  # noqa: S603
+            check=True,
+        )
+    elif command == 'stop':
+        subprocess.run(
+            ['/usr/bin/env', 'systemctl', 'stop', 'lightdm'],  # noqa: S603
+            check=True,
+        )
+    elif command == 'enable':
+        subprocess.run(
+            ['/usr/bin/env', 'systemctl', 'enable', 'lightdm'],  # noqa: S603
+            check=True,
+        )
+    elif command == 'disable':
+        subprocess.run(
+            ['/usr/bin/env', 'systemctl', 'disable', 'lightdm'],  # noqa: S603
+            check=True,
+        )
+    else:
+        msg = f'Invalid ssh command "{command}"'
+        raise ValueError(msg)
 
 
 def system_handler(service: str, command: str) -> str | None:
@@ -55,26 +84,7 @@ def system_handler(service: str, command: str) -> str | None:
         if service == 'ssh':
             return ssh_handler(command)
         if service == 'lightdm':
-            if command == 'start':
-                subprocess.run(
-                    ['/usr/bin/env', 'systemctl', 'start', 'lightdm'],  # noqa: S603
-                    check=True,
-                )
-            elif command == 'stop':
-                subprocess.run(
-                    ['/usr/bin/env', 'systemctl', 'stop', 'lightdm'],  # noqa: S603
-                    check=True,
-                )
-            elif command == 'enable':
-                subprocess.run(
-                    ['/usr/bin/env', 'systemctl', 'enable', 'lightdm'],  # noqa: S603
-                    check=True,
-                )
-            elif command == 'disable':
-                subprocess.run(
-                    ['/usr/bin/env', 'systemctl', 'disable', 'lightdm'],  # noqa: S603
-                    check=True,
-                )
+            return lightdm_handler(command)
     except Exception:
         logger.exception('Failed to handle SSH command.')
     return None

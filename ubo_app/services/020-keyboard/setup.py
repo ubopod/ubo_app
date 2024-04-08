@@ -4,8 +4,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 from kivy.core.window import Keyboard, Window, WindowBase
-from redux import FinishAction
+from redux import FinishAction, FinishEvent
 
+from ubo_app.store import ScreenshotEvent, subscribe_event
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 from ubo_app.store.services.sound import SoundDevice, SoundToggleMuteStatusAction
 
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     Modifier = Literal['ctrl', 'alt', 'meta', 'shift']
 
 
-def on_keyboard(
+def on_keyboard(  # noqa: C901
     window: WindowBase,
     key: int,
     scancode: int,
@@ -41,8 +42,6 @@ def on_keyboard(
             Keyboard.keycodes['h'],
         ):
             dispatch(KeypadKeyPressAction(key=Key.BACK))
-        elif key == Keyboard.keycodes['q']:
-            dispatch(FinishAction())
         elif key == Keyboard.keycodes['m']:
             from ubo_app.store import dispatch
 
@@ -51,7 +50,13 @@ def on_keyboard(
                     device=SoundDevice.INPUT,
                 ),
             )
+        elif key == Keyboard.keycodes['p']:
+            dispatch(ScreenshotEvent())
+        elif key == Keyboard.keycodes['q']:
+            dispatch(FinishAction())
 
 
 def init_service() -> None:
     Window.bind(on_keyboard=on_keyboard)
+
+    subscribe_event(FinishEvent, lambda: Window.unbind(on_keyboard=on_keyboard))

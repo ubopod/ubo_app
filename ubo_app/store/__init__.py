@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from redux import (
     BaseCombineReducerState,
+    BaseEvent,
     CombineReducerAction,
     CreateStoreOptions,
     InitAction,
@@ -16,7 +17,7 @@ from redux import (
     combine_reducers,
 )
 
-from ubo_app.constants import DEBUG_MODE
+from ubo_app.constants import DEBUG_MODE, STORE_GRACE_TIME
 from ubo_app.logging import logger
 from ubo_app.store.main import MainAction, MainState
 from ubo_app.store.main.reducer import reducer as main_reducer
@@ -41,13 +42,19 @@ if TYPE_CHECKING:
 
     from redux.basic_types import SnapshotAtom, TaskCreatorCallback
 
-assert current_thread() is main_thread(), 'Store should be created in the main thread'  # noqa: S101
+if current_thread() is not main_thread():
+    msg = 'Store should be created in the main thread'
+    raise RuntimeError(msg)
+
+triggers = []
 
 
 def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
     from kivy.clock import Clock
 
-    Clock.create_trigger(lambda _: callback(), 0, interval=interval)()
+    trigger = Clock.create_trigger(lambda _: callback(), 0, interval=interval)
+    trigger()
+    triggers.append(trigger)
 
 
 class RootState(BaseCombineReducerState):
@@ -62,6 +69,9 @@ class RootState(BaseCombineReducerState):
     ip: IpState
     notifications: NotificationsState
     docker: DockerState
+
+
+class ScreenshotEvent(BaseEvent): ...
 
 
 ActionType = (
@@ -80,7 +90,7 @@ ActionType = (
     | DockerAction
     | RgbRingAction
 )
-EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent
+EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent | ScreenshotEvent
 
 root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,
@@ -119,6 +129,17 @@ def create_task(
     create_task(coro, callback)
 
 
+def stop_app() -> None:
+    from kivy.app import App
+    from kivy.clock import mainthread
+
+    for trigger in triggers:
+        trigger.cancel()
+
+    if App.get_running_app():
+        mainthread(App.get_running_app().stop)()
+
+
 store = UboStore(
     root_reducer,
     CreateStoreOptions(
@@ -139,6 +160,8 @@ store = UboStore(
             or event,
         ],
         task_creator=create_task,
+        on_finish=stop_app,
+        grace_time_in_seconds=STORE_GRACE_TIME,
     ),
 )
 

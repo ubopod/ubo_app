@@ -14,11 +14,12 @@ from docker.models.images import Image
 from kivy.lang.builder import Builder
 from kivy.properties import ListProperty, NumericProperty, StringProperty
 from reducer import IMAGE_IDS, IMAGES
+from redux import FinishEvent
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 from ubo_gui.page import PageWidget
 
 from ubo_app.logging import logger
-from ubo_app.store import autorun, dispatch
+from ubo_app.store import autorun, dispatch, subscribe_event
 from ubo_app.store.services.docker import (
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
@@ -31,7 +32,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationsAddAction,
 )
-from ubo_app.utils.async_ import create_task, run_in_executor
+from ubo_app.utils.async_ import create_task, to_thread
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Mapping
@@ -85,16 +86,14 @@ def update_container(image_id: str, container: Container) -> None:
     )
 
 
-def _monitor_events(  # noqa: C901
-    image_id: str,
-    get_docker_id: Callable[[], str],
-    docker_client: docker.DockerClient,
-) -> None:
+def _monitor_events(image_id: str, get_docker_id: Callable[[], str]) -> None:  # noqa: C901
     path = IMAGES[image_id].path
+    docker_client = docker.from_env()
     events = docker_client.events(
         decode=True,
         filters={'type': ['image', 'container']},
     )
+    subscribe_event(FinishEvent, events.close)
     for event in events:
         logger.verbose('Docker image event', extra={'event': event})
         if event['Type'] == 'image':
@@ -185,11 +184,10 @@ def check_container(image_id: str) -> None:
                     status=ImageStatus.AVAILABLE,
                 ),
             )
-        except docker.errors.ImageNotFound as exception:
-            logger.debug(
+        except docker.errors.ImageNotFound:
+            logger.exception(
                 'Image not found',
                 extra={'image': image_id, 'path': path},
-                exc_info=exception,
             )
             dispatch(
                 DockerImageSetStatusAction(
@@ -197,11 +195,10 @@ def check_container(image_id: str) -> None:
                     status=ImageStatus.NOT_AVAILABLE,
                 ),
             )
-        except docker.errors.DockerException as exception:
-            logger.debug(
+        except docker.errors.DockerException:
+            logger.exception(
                 'Image error',
                 extra={'image': image_id, 'path': path},
-                exc_info=exception,
             )
             dispatch(
                 DockerImageSetStatusAction(
@@ -210,15 +207,15 @@ def check_container(image_id: str) -> None:
                 ),
             )
         finally:
+            docker_client.close()
 
             @autorun(lambda state: getattr(state.docker, image_id).docker_id)
             def get_docker_id(docker_id: str) -> str:
                 return docker_id
 
-            _monitor_events(image_id, get_docker_id, docker_client)
-            docker_client.close()
+            _monitor_events(image_id, get_docker_id)
 
-    run_in_executor(None, act)
+    to_thread(act)
 
 
 def _fetch_image(image: ImageState) -> None:
@@ -232,29 +229,12 @@ def _fetch_image(image: ImageState) -> None:
         try:
             logger.debug('Fetching image', extra={'image': image.path})
             docker_client = docker.from_env()
-            response = docker_client.api.pull(
-                image.path,
-                stream=True,
-                decode=True,
-            )
-            for line in response:
-                dispatch(
-                    DockerImageSetStatusAction(
-                        image=image.id,
-                        status=ImageStatus.FETCHING,
-                    ),
-                )
-                logger.verbose(
-                    'Image pull',
-                    extra={'image': image.path, 'line': line},
-                )
-            logger.debug('Image fetched', extra={'image': image.path})
+            docker_client.pull(image.path)
             docker_client.close()
-        except docker.errors.DockerException as exception:
-            logger.debug(
+        except docker.errors.DockerException:
+            logger.exception(
                 'Image error',
                 extra={'image': image.path},
-                exc_info=exception,
             )
             dispatch(
                 DockerImageSetStatusAction(
@@ -263,7 +243,7 @@ def _fetch_image(image: ImageState) -> None:
                 ),
             )
 
-    run_in_executor(None, act)
+    to_thread(act)
 
 
 def _remove_image(image: ImageState) -> None:
@@ -272,7 +252,7 @@ def _remove_image(image: ImageState) -> None:
         docker_client.images.remove(image.path, force=True)
         docker_client.close()
 
-    run_in_executor(None, act)
+    to_thread(act)
 
 
 @overload
@@ -383,7 +363,7 @@ def _stop_container(image: ImageState) -> None:
             container.stop()
         docker_client.close()
 
-    run_in_executor(None, act)
+    to_thread(act)
 
 
 def _remove_container(image: ImageState) -> None:
@@ -394,7 +374,7 @@ def _remove_container(image: ImageState) -> None:
             container.remove(v=True, force=True)
         docker_client.close()
 
-    run_in_executor(None, act)
+    to_thread(act)
 
 
 class DockerQRCode(PageWidget):
@@ -436,13 +416,7 @@ def image_menu(
             ),
         )
     elif image.status == ImageStatus.FETCHING:
-        items.append(
-            ActionItem(
-                label='Stop',
-                icon='󰓛',
-                action=lambda: _remove_image(image),
-            ),
-        )
+        pass
     elif image.status == ImageStatus.AVAILABLE:
         items.extend(
             [
@@ -514,6 +488,7 @@ def image_menu(
             ImageStatus.ERROR: 'Image has an error, please check the logs',
         }[image.status],
         items=items,
+        placeholder='Waiting...',
     )
 
 
@@ -521,16 +496,15 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
     """Get the menu items for the Docker service."""
     _image_menu = autorun(lambda state: getattr(state.docker, image_id))(image_menu)
 
-    def image_action() -> Callable[[], HeadedMenu]:
-        """Get the menu items for the Docker service."""
+    def open_image_menu() -> Callable[[], HeadedMenu]:
         check_container(image_id)
 
         return _image_menu
 
-    return image_action
+    return open_image_menu
 
 
-image_menus = {image_id: image_menu_generator(image_id) for image_id in IMAGE_IDS}
+IMAGE_MENUS = {image_id: image_menu_generator(image_id) for image_id in IMAGE_IDS}
 Builder.load_file(
     pathlib.Path(__file__).parent.joinpath('docker_qrcode.kv').resolve().as_posix(),
 )

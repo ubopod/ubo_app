@@ -38,7 +38,7 @@ def pop_queue(state: CameraState) -> CameraState:
     )
 
 
-def reducer(  # noqa: C901
+def reducer(
     state: CameraState | None,
     action: Action,
 ) -> ReducerResult[CameraState, Action, CameraEvent]:

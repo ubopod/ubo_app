@@ -35,7 +35,7 @@ from ubo_app.store.services.rgb_ring import (
 Action = InitAction | RgbRingAction
 
 
-def reducer(  # noqa: C901, PLR0912
+def reducer(
     state: RgbRingState | None,
     action: Action,
 ) -> ReducerResult[RgbRingState, Action, RgbRingCommandEvent]:

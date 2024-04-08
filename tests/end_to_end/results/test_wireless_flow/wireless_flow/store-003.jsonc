@@ -177,6 +177,7 @@
   "update_manager": {
     "current_version": "0.0.0",
     "latest_version": "0.0.0",
+    "serial_number": "<not-available>",
     "update_status": "up_to_date"
   },
   "wifi": {

@@ -62,7 +62,7 @@ class CreateWirelessConnectionPage(PageWidget):
         hidden = strtobool(match.get('Hidden') or 'false') == 1
 
         if not password:
-            logger.warn('Password is required')
+            logger.warning('Password is required')
             return
 
         self.creating = True

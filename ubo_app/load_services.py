@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import importlib
 import importlib.abc
 import importlib.util
@@ -71,13 +72,6 @@ class UboServiceLoopLoader(importlib.abc.Loader):
             lambda task: self.service.loop.call_soon_threadsafe(
                 self.service.loop.create_task,
                 task,
-            )
-        )
-        cast(Any, module)._run_in_executor = (  # noqa: SLF001
-            lambda executor, task, *args: self.service.loop.run_in_executor(
-                executor,
-                task,
-                *args,
             )
         )
 
@@ -231,16 +225,16 @@ class UboServiceThread(threading.Thread):
                 )
                 self.module = importlib.util.module_from_spec(self.spec)
 
-        except Exception as exception:  # noqa: BLE001
-            logger.error(f'Error loading "{self.path}"', exc_info=exception)
+        except Exception:
+            logger.exception('Error loading service', extra={'path': self.path})
             return
 
         if self.module and self.spec and self.spec.loader:
             try:
                 cast(UboServiceThread, self.module).register = self.register
                 self.spec.loader.exec_module(self.module)
-            except Exception as exception:  # noqa: BLE001
-                logger.error(f'Error loading "{self.path}"', exc_info=exception)
+            except Exception:
+                logger.exception('Error loading service', extra={'path': self.path})
 
     def run(self: UboServiceThread) -> None:
         self.loop = asyncio.new_event_loop()
@@ -271,8 +265,34 @@ class UboServiceThread(threading.Thread):
             f'{self.service_id} label={self.label} name={self.name}>'
         )
 
+    async def shutdown(self: UboServiceThread) -> None:
+        from ubo_app.logging import logger
+
+        logger.info('Shutting down worker thread')
+
+        while True:
+            tasks = [
+                task
+                for task in asyncio.all_tasks(self.loop)
+                if task is not asyncio.current_task(self.loop)
+            ]
+            logger.debug(
+                'Waiting for tasks to finish',
+                extra={
+                    'tasks': tasks,
+                    'thread_': self,
+                },
+            )
+            if not tasks:
+                break
+            for task in tasks:
+                with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
+                    await asyncio.wait_for(task, 0.1)
+        logger.debug('Stopping event loop', extra={'thread_': self})
+        self.loop.stop()
+
     def stop(self: UboServiceThread) -> None:
-        self.loop.call_soon_threadsafe(self.loop.stop)
+        self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
 
 def load_services(service_ids: Sequence[str] | None = None) -> None:
@@ -297,4 +317,4 @@ def load_services(service_ids: Sequence[str] | None = None) -> None:
 
     for service in services:
         service.initiate()
-        time.sleep(0.05)
+        time.sleep(0.02)

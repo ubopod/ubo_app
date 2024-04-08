@@ -4,12 +4,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import threading
-from typing import TYPE_CHECKING, TypeVarTuple, Unpack
+from typing import TYPE_CHECKING, TypeVarTuple
 
 from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
-    from asyncio import Future, Handle
+    from asyncio import Handle
     from asyncio.tasks import Task
     from collections.abc import Callable, Coroutine
 
@@ -22,13 +22,20 @@ Ts = TypeVarTuple('Ts')
 
 class WorkerThread(threading.Thread):
     def __init__(self: WorkerThread) -> None:
+        from redux.basic_types import FinishEvent
+
+        from ubo_app.store import subscribe_event
+
         super().__init__()
         try:
             self.loop = asyncio.get_event_loop()
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
+
         from ubo_app.constants import DEBUG_MODE
+
+        subscribe_event(FinishEvent, self.stop)
 
         if DEBUG_MODE:
             self.loop.set_debug(enabled=True)
@@ -49,14 +56,6 @@ class WorkerThread(threading.Thread):
 
         return self.loop.call_soon_threadsafe(task_wrapper)
 
-    def run_in_executor(
-        self: WorkerThread,
-        executor: object,
-        task: Callable[[Unpack[Ts]], T],
-        *args: Unpack[Ts],
-    ) -> Future[T]:
-        return self.loop.run_in_executor(executor, task, *args)
-
     async def shutdown(self: WorkerThread) -> None:
         from ubo_app.logging import logger
 
@@ -68,33 +67,30 @@ class WorkerThread(threading.Thread):
                 for task in asyncio.all_tasks(self.loop)
                 if task is not asyncio.current_task(self.loop)
             ]
+            logger.debug(
+                'Waiting for tasks to finish',
+                extra={
+                    'tasks': tasks,
+                    'thread_': self,
+                },
+            )
             if not tasks:
                 break
             for task in tasks:
                 with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
-                    await asyncio.wait_for(task, 0.1)
+                    await asyncio.wait_for(task, 1)
+        logger.debug('Stopping event loop', extra={'thread_': self})
         self.loop.stop()
 
     def stop(self: WorkerThread) -> None:
         self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
-    def subscribe_finish_event(self: WorkerThread) -> None:
-        from redux.basic_types import FinishEvent
 
-        from ubo_app.store import subscribe_event
-
-        subscribe_event(FinishEvent, self.stop)
+thread = WorkerThread()
 
 
-def setup_event_loop() -> WorkerThread:
-    thread = WorkerThread()
+def setup_event_loop() -> None:
     thread.start()
-    thread.subscribe_finish_event()
-    return thread
-
-
-thread = setup_event_loop()
-current_loop = thread.loop
 
 
 def _create_task(
@@ -104,12 +100,4 @@ def _create_task(
     return thread.run_task(task, callback)
 
 
-def _run_in_executor(
-    executer: object,
-    task: Callable[[Unpack[Ts]], T],
-    *args: Unpack[Ts],
-) -> Future[T]:
-    return thread.run_in_executor(executer, task, *args)
-
-
-_ = _create_task, _run_in_executor
+_ = _create_task

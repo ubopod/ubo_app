@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from ubo_app.store import dispatch
+from redux import FinishEvent
+
+from ubo_app.store import dispatch, subscribe_event
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
 
 
@@ -37,5 +39,6 @@ def init_service() -> None:
     """Initialize the service."""
     from kivy.clock import Clock
 
-    Clock.schedule_interval(read_sensors, 1)
+    clock_event = Clock.schedule_interval(read_sensors, 1)
+    subscribe_event(FinishEvent, clock_event.cancel)
     read_sensors()

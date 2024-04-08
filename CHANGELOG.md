@@ -2,8 +2,14 @@
 
 ## Version 0.12.3
 
-- build: use latest images of RPi as base images
+- build: use latest images - 2024-03-15 - of RPi as base images
+- feat(core): read serial number from eeprom and add it to sentry reports
+- feat(core): add screenshot action (triggered with `p` key)
 - fix(keypad): make keypad compatible with kernel 6.6 by using gpiozero
+- refactor(core): add `shutdown` method for service threads and worker threads to
+  gracefully cancel async jobs instead of immediately terminating event loops
+- refactor(core): remove `_run_in_executer` from async utilities
+- refactor: use `logger.exception` in exception handlers
 - ci: use latest versions of ruff and pyright
 
 ## Version 0.12.2

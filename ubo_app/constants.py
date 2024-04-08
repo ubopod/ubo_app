@@ -22,6 +22,8 @@ SERVICES_PATH = (
 SERVER_SOCKET_PATH = Path('/run/ubo').joinpath('system_manager.sock').as_posix()
 DISABLED_SERVICES = os.environ.get('UBO_DISABLED_SERVICES', '').split(',')
 
+STORE_GRACE_TIME = int(os.environ.get('UBO_STORE_GRACE_TIME', 1))
+
 # Enable it to replace UUIDs with numerical counters in tests and log the traceback
 # each time a UUID is generated.
 DEBUG_MODE_TEST_UUID = strtobool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False')) == 1

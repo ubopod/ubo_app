@@ -87,3 +87,5 @@ headless_kivy_pi_buffer.raw
 
 # local development
 scripts/toggle_local_dependencies.py
+
+screenshots

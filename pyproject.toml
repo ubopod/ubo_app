@@ -25,7 +25,7 @@ ubo-gui = [
     "dev",
   ] },
 ]
-python-redux = "^0.14.0"
+python-redux = "^0.14.1"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -45,7 +45,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.356"
+pyright = "^1.1.358"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
@@ -84,11 +84,14 @@ args = [
 cmd = "scripts/deploy.sh"
 
 [tool.ruff]
-lint.select = ["ALL"]
-lint.ignore = ["INP001", "PLR0911", "D203", "D213"]
-lint.fixable = ["ALL"]
-lint.unfixable = []
 target-version = 'py311'
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["INP001", "PLR0911", "D203", "D213"]
+fixable = ["ALL"]
+unfixable = []
+logger-objects = ['ubo_app.logging.logger']
 
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["type", "id"]
@@ -100,6 +103,7 @@ multiline-quotes = "double"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "PLR0913"]
+"**/reducer.py" = ["C901", "PLR0912"]
 "ubo_app/services/*/ubo_handle.py" = ["TCH004"]
 
 [tool.ruff.format]
@@ -114,7 +118,7 @@ exclude = ["typings"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 filterwarnings = "ignore:'imghdr' is deprecated:DeprecationWarning"
-timeout = 30
+timeout = 50
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:"]

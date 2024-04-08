@@ -32,7 +32,7 @@ from ubo_app.store.services.keypad import (
 from ubo_app.store.services.sound import SoundChangeVolumeAction, SoundDevice
 
 
-def reducer(  # noqa: C901
+def reducer(
     state: MainState | None,
     action: MainAction,
 ) -> ReducerResult[

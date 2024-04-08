@@ -8,6 +8,7 @@ from typing import Literal, overload
 
 from ubo_app.constants import SERVER_SOCKET_PATH
 from ubo_app.logging import logger
+from ubo_app.utils import IS_RPI
 
 thread_lock = threading.Lock()
 
@@ -22,6 +23,8 @@ async def send_command(command: str, *, has_output: Literal[True]) -> str: ...
 
 async def send_command(command: str, *, has_output: bool = False) -> str | None:
     """Send a command to the system manager socket."""
+    if not IS_RPI:
+        return None
     reader, writer = await asyncio.open_unix_connection(SERVER_SOCKET_PATH)
 
     logger.debug('Sending command:', extra={'command': command})

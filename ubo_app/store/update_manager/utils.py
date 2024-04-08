@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.metadata
+import json
 import shutil
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from ubo_app.store.update_manager import (
     UpdateStatus,
 )
 from ubo_app.store.update_manager.reducer import ABOUT_MENU_PATH
+from ubo_app.utils import IS_RPI
 
 CURRENT_VERSION = importlib.metadata.version('ubo_app')
 
@@ -51,16 +53,31 @@ async def check_version() -> None:
             data = await response.json()
             latest_version = data['info']['version']
 
+            serial_number = '<not-available>'
+            if IS_RPI:
+                try:
+                    eeprom_json_data = Path(
+                        '/proc/device-tree/hat/custom_0',
+                    ).read_text()
+                    eeprom_data = json.loads(eeprom_json_data)
+                    serial_number = eeprom_data['serial_number']
+                except Exception:
+                    logger.exception('Failed to read serial number')
+
+                from sentry_sdk import set_user
+
+                set_user({'id': serial_number})
             dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
                     flash_notification=state is None
                     or state.main.path[:3] != ABOUT_MENU_PATH,
                     current_version=CURRENT_VERSION,
                     latest_version=latest_version,
+                    serial_number=serial_number,
                 ),
             )
-    except Exception as exception:  # noqa: BLE001
-        logger.error('Failed to check for updates', exc_info=exception)
+    except Exception:
+        logger.exception('Failed to check for updates')
         dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.FAILED_TO_CHECK))
         return
 
@@ -103,8 +120,8 @@ async def update() -> None:
             '-i',
         )
         await process.wait()
-    except Exception as exception:  # noqa: BLE001
-        logger.error('Failed to update', exc_info=exception)
+    except Exception:
+        logger.exception('Failed to update')
         dispatch(
             NotificationsAddAction(
                 notification=Notification(

@@ -195,7 +195,7 @@ def docker_menu_items(state: DockerState) -> list[Item]:
     ]
 
     if state.service.status == DockerStatus.RUNNING:
-        from image import image_menus
+        from image import IMAGE_MENUS
 
         items.append(
             SubMenuItem(
@@ -207,7 +207,7 @@ def docker_menu_items(state: DockerState) -> list[Item]:
                         ActionItem(
                             label=getattr(state, image_id).label,
                             icon=getattr(state, image_id).icon,
-                            action=image_menus[image_id],
+                            action=IMAGE_MENUS[image_id],
                         )
                         for image_id in (field.name for field in fields(state))
                         if image_id not in (field.name for field in fields(DockerState))

@@ -13,10 +13,9 @@ import alsaaudio
 import pulsectl
 import pyaudio
 
-from ubo_app.logging import get_logger
+from ubo_app.logging import logger
 from ubo_app.utils.async_ import create_task
 
-logger = get_logger('ubo-app')
 CHUNK_SIZE = 1024
 
 
@@ -68,24 +67,29 @@ class AudioManager:
                 except OSError:
                     logger.exception('Error while setting default sink')
                     logger.info('Restarting pulseaudio')
-                    process = await asyncio.create_subprocess_exec(
-                        '/usr/bin/env',
-                        'pulseaudio',
-                        '--kill',
-                    )
-                    await process.wait()
-                    process = await asyncio.create_subprocess_exec(
-                        '/usr/bin/env',
-                        'pulseaudio',
-                        '--start',
-                    )
-                    await process.wait()
+
+                    await self.restart_pulse_audio()
 
                     await asyncio.sleep(5)
                 else:
                     break
 
         create_task(initialize_audio())
+
+    async def restart_pulse_audio(self: AudioManager) -> None:
+        """Restart pulseaudio."""
+        process = await asyncio.create_subprocess_exec(
+            '/usr/bin/env',
+            'pulseaudio',
+            '--kill',
+        )
+        await process.wait()
+        process = await asyncio.create_subprocess_exec(
+            '/usr/bin/env',
+            'pulseaudio',
+            '--start',
+        )
+        await process.wait()
 
     def find_respeaker_index(self: AudioManager) -> int:
         """Find the index of the ReSpeaker device."""
@@ -142,6 +146,7 @@ class AudioManager:
                     stream.write(data)
                     data = wf.readframes(CHUNK_SIZE)
         except Exception:
+            create_task(self.restart_pulse_audio())
             logger.exception('Something went wrong while playing an audio file')
         finally:
             self.is_playing = False

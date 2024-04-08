@@ -64,8 +64,6 @@ def main() -> None:
 
     headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})
 
-    from kivy.clock import Clock
-
     from ubo_app.load_services import load_services
     from ubo_app.menu import MenuApp
 
@@ -74,16 +72,15 @@ def main() -> None:
 
     try:
         app.run()
-    finally:
+    except Exception:
+        from ubo_app.logging import logger
+
+        logger.exception('An error occurred while running the app.')
         from redux import FinishAction
 
         from ubo_app.store import dispatch
 
         dispatch(FinishAction())
-
-        # Needed since redux is scheduled using Clock scheduler and Clock doesn't run
-        # after app is stopped.
-        Clock.tick()
 
 
 if __name__ == '__main__':

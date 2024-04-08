@@ -31,6 +31,6 @@ class RgbRingClient:
         try:
             await send_command(' '.join(['led', *cmd]))
             dispatch(RgbRingSetIsConnectedAction(is_connected=True))
-        except Exception as exception:  # noqa: BLE001
+        except Exception:
             dispatch(RgbRingSetIsConnectedAction(is_connected=False))
-            logger.error('Unable to connect to the socket', exc_info=exception)
+            logger.exception('Unable to connect to the socket')

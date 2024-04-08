@@ -17,8 +17,6 @@ Example screenshots:
 
 <img width="200" alt="Ubo ai pod photo" src="https://github.com/ubopod/ubo-app/assets/94014876/899d32e4-ef8e-4849-a967-1e21ad12297a">
 
-
-
 ## 🚧 Disclaimer
 
 Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will
@@ -26,29 +24,30 @@ limit this to beta versions only.
 
 ## ⚙️ Notable Features
 
-- Headless WiFi on-boarding with QR Code
+- Headless WiFi on-boarding with QR code
 - Easy headless remote access with SSH and VS Code tunnel
 - Install and run Docker apps headlessly
 - Access and control basic RPi utilities and settings
 
 ## 📋 Requirements
 
-Ubo app is developed to run on Raspberry Pi 4 and 5. The experience is optimized around Ubo Pod which offers 
+Ubo app is developed to run on Raspberry Pi 4 and 5. The experience is optimized around Ubo Pod which offers
 
 - a minimal LCD display and GUI with a keypad
 - stereo microphone and speakers,
 - camera
 - LED ring
 - sensors
-  
-The app functions even if some of these hardware elements are not provided, however some of the features that relay on these hardware component may not function. For example, WiFi onboarding with QRcode requires a camera onboard. 
+
+The app functions even if some of these hardware elements are not provided, however some of the features that rely on these hardware components may not function. For example, WiFi onboarding with QR code requires a camera onboard.
 
 ## 📦 Installation
 
 ### Pre-packaged image
-Ubo Pod ships with a pre-flashed MicroSD card that has the app installed on it by default. 
 
-If you don't have it, or you just want to set up a fresh device, then: 
+Ubo Pod ships with a pre-flashed MicroSD card that has the app installed on it by default.
+
+If you don't have it, or you just want to set up a fresh device, then:
 
 1. download one of the images from the release section
 2. Use Raspberry Pi Images and choose `custom image` to provide the download image file.
@@ -95,6 +94,7 @@ curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/i
 curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
   | sudo ALPHA=true WITH_DOCKER=true bash
 ```
+
 Note that as part of the installation process, these debian packages are installed:
 
 - git
@@ -127,6 +127,19 @@ Contributions following Python best practices are welcome.
   for notification ids used in services.
 - Use `ubo:` prefix for icon ids used in ubo core and `<service_name>:` prefix for
   icon ids used in services.
+
+### Development
+
+#### QR code
+
+In development environment, the camera is probably not working as it is relying,
+on `picamera2`, so it may become challenging to test the flows relying on QR code
+input.
+
+To address this, the `qrcode_input` method, in not-RPi environments, will try to
+get its input from `/tmp/qrcode_input.txt`. So, whenever you encounter a QR code
+input, you can write the content of the QR code in that file and the application
+will read it from there and continue the flow.
 
 ## 🔒 License
 

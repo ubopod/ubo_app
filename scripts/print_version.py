@@ -1,5 +1,6 @@
 """Prints the version of the ubo_app package."""
 
 import importlib.metadata
+from sys import stdout
 
-print(importlib.metadata.version('ubo_app'), sep='', end='')  # noqa: T201
+stdout.write(importlib.metadata.version('ubo_app'))

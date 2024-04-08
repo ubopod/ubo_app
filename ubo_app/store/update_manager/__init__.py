@@ -16,6 +16,7 @@ class UpdateManagerSetVersionsAction(UpdateManagerAction):
     flash_notification: bool
     latest_version: str
     current_version: str
+    serial_number: str
 
 
 class UpdateManagerSetStatusAction(UpdateManagerAction):
@@ -44,6 +45,7 @@ class UpdateStatus(StrEnum):
 class UpdateManagerState(Immutable):
     """Version store."""
 
+    serial_number: str | None = None
     current_version: str | None = None
     latest_version: str | None = None
     update_status: UpdateStatus = UpdateStatus.CHECKING

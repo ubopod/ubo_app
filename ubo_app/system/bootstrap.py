@@ -113,12 +113,9 @@ def reload_daemon() -> None:
                 ],
                 check=True,
             )
-        except subprocess.CalledProcessError as exception:
+        except subprocess.CalledProcessError:
             if i < RETRIES - 1:
-                logger.error(
-                    'Failed to reload user services, retrying...',
-                    exc_info=exception,
-                )
+                logger.exception('Failed to reload user services, retrying...')
                 continue
         else:
             break
@@ -159,7 +156,8 @@ def enable_services() -> None:
             )
 
         logger.info(
-            f"Service '{service['name']}' has been created and enabled.",
+            'Service has been created and enabled.',
+            extra={'service': service['name']},
         )
 
 
@@ -189,17 +187,17 @@ def install_docker() -> None:
                 env={'USERNAME': USERNAME},
                 check=True,
             )
-        except subprocess.CalledProcessError as exception:
+        except subprocess.CalledProcessError:
             if i < RETRIES - 1:
-                logger.error(
-                    'Failed to install docker, retrying...',
-                    exc_info=exception,
-                )
+                logger.exception('Failed to install docker, retrying...')
                 continue
         else:
             break
     else:
-        logger.error(f'Failed to install docker {RETRIES} times, giving up!')
+        logger.error(
+            'Failed to install docker, giving up!',
+            extra={'times tried': RETRIES},
+        )
         return
     stdout.flush()
 

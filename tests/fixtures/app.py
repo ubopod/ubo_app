@@ -27,6 +27,10 @@ modules_snapshot = set(sys.modules)
 class AppContext:
     """Context object for tests running a menu application."""
 
+    def __init__(self: AppContext, request: SubRequest) -> None:
+        """Initialize the context."""
+        self.request = request
+
     def set_app(self: AppContext, app: MenuApp) -> None:
         """Set the application."""
         from ubo_app.utils.loop import setup_event_loop
@@ -35,6 +39,57 @@ class AppContext:
         self.app = app
         loop = asyncio.get_event_loop()
         self.task = loop.create_task(self.app.async_run(async_lib='asyncio'))
+
+    async def clean_up(self: AppContext) -> None:
+        """Clean up the application."""
+        assert hasattr(self, 'task'), 'App not set for test'
+
+        self.app.stop()
+        await self.task
+
+        app_ref = weakref.ref(self.app)
+        self.app.root.clear_widgets()
+
+        await asyncio.sleep(0.5)
+        del self.app
+        del self.task
+
+        gc.collect()
+        app = app_ref()
+
+        if app is not None and self.request.session.testsfailed == 0:
+            logging.getLogger().debug(
+                'Memory leak: failed to release app for test.\n'
+                + json.dumps(
+                    {
+                        'refcount': sys.getrefcount(app),
+                        'referrers': gc.get_referrers(app),
+                        'ref': app_ref,
+                    },
+                    sort_keys=True,
+                    indent=2,
+                    default=str,
+                ),
+            )
+            gc.collect()
+            for cell in gc.get_referrers(app):
+                if type(cell).__name__ == 'cell':
+                    from ubo_app.utils.garbage_collection import examine
+
+                    logging.getLogger().debug(
+                        'CELL EXAMINATION\n' + json.dumps({'cell': cell}),
+                    )
+                    examine(cell, depth_limit=2)
+            assert app is None, 'Memory leak: failed to release app for test'
+
+        from kivy.core.window import Window
+
+        Window.close()
+
+        for module in set(sys.modules) - modules_snapshot:
+            if module != 'objc' and 'numpy' not in module and 'cache' not in module:
+                del sys.modules[module]
+        gc.collect()
 
 
 @pytest.fixture()
@@ -51,53 +106,10 @@ async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
 
     headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})
 
-    context = AppContext()
+    context = AppContext(request)
 
     yield context
 
-    assert hasattr(context, 'task'), 'App not set for test'
+    await context.clean_up()
 
-    await context.task
-
-    app_ref = weakref.ref(context.app)
-    context.app.root.clear_widgets()
-
-    del context.app
-    del context.task
-
-    gc.collect()
-    app = app_ref()
-
-    if app is not None and request.session.testsfailed == 0:
-        logging.getLogger().debug(
-            'Memory leak: failed to release app for test.\n'
-            + json.dumps(
-                {
-                    'refcount': sys.getrefcount(app),
-                    'referrers': gc.get_referrers(app),
-                    'ref': app_ref,
-                },
-                sort_keys=True,
-                indent=2,
-                default=str,
-            ),
-        )
-        gc.collect()
-        for cell in gc.get_referrers(app):
-            if type(cell).__name__ == 'cell':
-                from ubo_app.utils.garbage_collection import examine
-
-                logging.getLogger().debug(
-                    'CELL EXAMINATION\n' + json.dumps({'cell': cell}),
-                )
-                examine(cell, depth_limit=2)
-        assert app is None, 'Memory leak: failed to release app for test'
-
-    from kivy.core.window import Window
-
-    Window.close()
-
-    for module in set(sys.modules) - modules_snapshot:
-        if module != 'objc' and 'numpy' not in module and 'cache' not in module:
-            del sys.modules[module]
-    gc.collect()
+    assert not hasattr(context, 'app'), 'App not cleaned up'
