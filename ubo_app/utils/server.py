@@ -31,13 +31,12 @@ async def send_command(command: str, *, has_output: bool = False) -> str | None:
 
     response = None
     with thread_lock:
-        writer.write(f'{command}'.encode() + b'\0')
-        while has_output:
+        writer.write(command.encode() + b'\0')
+        if has_output:
             datagram = (await reader.readuntil(b'\0'))[:-1]
-            if not datagram:
-                break
-            response = datagram.decode('utf-8')
-            logger.debug('Server response:', extra={'response': response})
+            if datagram:
+                response = datagram.decode('utf-8')
+                logger.debug('Server response:', extra={'response': response})
         writer.close()
         await writer.wait_closed()
 

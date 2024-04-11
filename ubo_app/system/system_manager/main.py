@@ -16,7 +16,7 @@ from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.led import LEDManager
-from ubo_app.system.system_manager.service_manager import system_handler
+from ubo_app.system.system_manager.service_manager import service_handler
 
 SOCKET_PATH = Path(os.environ.get('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
     'system_manager.sock',
@@ -38,7 +38,7 @@ def handle_command(command: str) -> str | None:
         thread = Thread(target=docker_handler, args=(incoming[0],))
         thread.start()
     elif header == 'service':
-        return system_handler(incoming[0], incoming[1])
+        return service_handler(incoming[0], incoming[1])
     return None
 
 
@@ -86,7 +86,6 @@ def main() -> None:
             result = handle_command(command.decode('utf-8'))
             if result is not None:
                 connection.sendall(result.encode() + b'\0')
-                connection.close()
 
         except KeyboardInterrupt:
             logger.debug('Interrupted')

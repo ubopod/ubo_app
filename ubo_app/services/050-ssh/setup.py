@@ -87,13 +87,11 @@ def create_ssh_account() -> None:
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    title='Temporary SSH Account Created',
-                    content=f"""Username: {username}
-Password: {password}
-Make sure to delete it after use. Note that in order to make things work for you, we \
-had to make sure password authentication for ssh server is enabled, you may want to \
-disable it later. Clearing all temporary users will disable password authentication \
-too.""",
+                    title=f'Username: {username}\nPassword: {password}',
+                    content="""Make sure to delete it after use. Note that in order \
+to make things work for you, we had to make sure password authentication for ssh \
+server is enabled, you may want to disable it later. Clearing all temporary users will \
+disable password authentication too.""",
                     importance=Importance.MEDIUM,
                     icon='󰣀',
                     display_type=NotificationDisplayType.STICKY,

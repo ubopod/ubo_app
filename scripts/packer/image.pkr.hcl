@@ -41,6 +41,7 @@ build {
       "chmod +x /install.sh",
       "/install.sh --for-packer --with-docker --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "rm /install.sh /ubo_app-${var.ubo_app_version}-py3-none-any.whl",
+      "/usr/bin/env systemctl disable userconfig || true",
       "/usr/bin/env systemctl disable lightdm || true",
       "apt clean",
       "echo DF; df -h"

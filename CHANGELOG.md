@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 0.12.4
+
+- build(packer): disable userconfig service
+- feat(ssh): move username and password to the header of notification so that they
+  render bigger
+- fix(system): don't close socket connection after writing the response, client
+  already takes care of closing the connection
+
 ## Version 0.12.3
 
 - build: use latest images - 2024-03-15 - of RPi as base images
