@@ -223,6 +223,11 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
             check=True,
         )
 
+    subprocess.run(
+        ['/usr/bin/env', 'systemctl', 'disable', 'userconfig'],  # noqa: S603
+        check=True,
+    )
+
     reload_daemon()
     enable_services()
 

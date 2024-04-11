@@ -80,11 +80,14 @@ def lightdm_handler(command: str) -> None:
 def system_handler(service: str, command: str) -> str | None:
     """Interact with system services."""
     logger = get_logger('system-manager')
-    try:
-        if service == 'ssh':
+    if service == 'ssh':
+        try:
             return ssh_handler(command)
-        if service == 'lightdm':
+        except Exception:
+            logger.exception('Failed to handle SSH command.')
+    if service == 'lightdm':
+        try:
             return lightdm_handler(command)
-    except Exception:
-        logger.exception('Failed to handle SSH command.')
+        except Exception:
+            logger.exception('Failed to handle LightDM command.')
     return None
