@@ -235,16 +235,18 @@ class Keypad:
         self.event_queue.append(event)
         self.logger.info(self.event_queue)
         self.logger.debug('Current Inputs', extra={'inputs': f'{self.inputs:016b}'})
-        previos_event = self.event_queue.pop(0)
+        previous_event = self.event_queue.pop(0)
         self.logger.debug(
             'Previous Inputs',
-            extra={'inputs': f'{previos_event.inputs:016b}'},
+            extra={'inputs': f'{previous_event.inputs:016b}'},
         )
         # XOR the last recorded input values with the current input values
         # to see which bits have changed. Technically there can only be one
         # bit change in every callback
-        change_mask = previos_event.inputs ^ self.inputs
+        change_mask = previous_event.inputs ^ self.inputs
         self.logger.debug('Change', extra={'change_mask': f'{change_mask:016b}'})
+        if change_mask == 0:
+            return
         # use the change mask to see if the button was the change was
         # falling (1->0) indicating a pressed action
         # or risign (0->1) indicating a release action
@@ -252,7 +254,7 @@ class Keypad:
         self.logger.info('button index', extra={'button_index': self.index})
         # Check for rising edge or falling edge action (press or release)
         self.button_label = self.buttons.get_label(self.index)
-        if (previos_event.inputs & change_mask) == 0:
+        if (previous_event.inputs & change_mask) == 0:
             self.logger.info(
                 'Button pressed',
                 extra={'button': str(self.index), 'label': self.button_label},

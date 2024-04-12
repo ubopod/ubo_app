@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 0.12.5
+
+- fix(notification): avoid passing color components bigger than 255
+- feat(ssh): show an error message if anything goes wrong during creating temporary
+  account instead of crashing
+- fix(keypad): return from `key_press_cb` if no input is changed
+- fix(docker): pulling images is now done with `client.images.pull` #63
+
 ## Version 0.12.4
 
 - build(packer): disable userconfig service

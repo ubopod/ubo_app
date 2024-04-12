@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.12.4"
+version = "0.12.5"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -51,7 +51,7 @@ pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.5.0"
-ruff = "^0.3.5"
+ruff = "^0.3.7"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"

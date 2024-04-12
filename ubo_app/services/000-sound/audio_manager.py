@@ -134,7 +134,7 @@ class AudioManager:
         try:
             with wave.open(filename, 'rb') as wf:
                 self.is_playing = True
-                stream = self.stream = self.pyaudio.open(
+                self.stream = self.pyaudio.open(
                     format=self.pyaudio.get_format_from_width(wf.getsampwidth()),
                     channels=wf.getnchannels(),
                     rate=wf.getframerate(),
@@ -142,8 +142,8 @@ class AudioManager:
                     output_device_index=self.find_respeaker_index(),
                 )
                 data = wf.readframes(CHUNK_SIZE)
-                while data and not self.should_stop and stream.is_active():
-                    stream.write(data)
+                while data and not self.should_stop and self.stream.is_active():
+                    self.stream.write(data)
                     data = wf.readframes(CHUNK_SIZE)
         except Exception:
             create_task(self.restart_pulse_audio())

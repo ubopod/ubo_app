@@ -93,9 +93,9 @@ async def qrcode_input(
             dispatch(
                 RgbRingBlinkAction(
                     color=(
-                        round(kivy_color[0] * 256),
-                        round(kivy_color[1] * 256),
-                        round(kivy_color[2] * 256),
+                        round(kivy_color[0] * 255),
+                        round(kivy_color[1] * 255),
+                        round(kivy_color[2] * 255),
                     ),
                     repetitions=1,
                     wait=200,

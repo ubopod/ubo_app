@@ -229,7 +229,7 @@ def _fetch_image(image: ImageState) -> None:
         try:
             logger.debug('Fetching image', extra={'image': image.path})
             docker_client = docker.from_env()
-            docker_client.pull(image.path)
+            docker_client.images.pull(image.path)
             docker_client.close()
         except docker.errors.DockerException:
             logger.exception(

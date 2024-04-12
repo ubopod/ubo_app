@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import (
     ActionItem,
     ApplicationItem,
@@ -83,6 +84,22 @@ def create_ssh_account() -> None:
             'service ssh create_temporary_ssh_account',
             has_output=True,
         )
+        if not result:
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Failed to create temporary SSH account',
+                        content='An error occurred while creating the temporary SSH '
+                        'account.',
+                        importance=Importance.MEDIUM,
+                        icon='󰣀',
+                        display_type=NotificationDisplayType.STICKY,
+                        color=DANGER_COLOR,
+                    ),
+                ),
+            )
+
+            return
         username, password = result.split(':')
         dispatch(
             NotificationsAddAction(
@@ -95,6 +112,7 @@ disable password authentication too.""",
                     importance=Importance.MEDIUM,
                     icon='󰣀',
                     display_type=NotificationDisplayType.STICKY,
+                    color=SUCCESS_COLOR,
                 ),
             ),
         )
