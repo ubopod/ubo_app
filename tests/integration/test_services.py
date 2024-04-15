@@ -36,7 +36,7 @@ async def test_all_services_register(
 ) -> None:
     """Test all services load."""
     _ = needs_finish
-    from ubo_app.menu import MenuApp
+    from ubo_app.menu_app.menu import MenuApp
 
     app = MenuApp()
     app_context.set_app(app)

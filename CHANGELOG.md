@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.12.6
+
+- feat(core): notifications now can have an optional `extra_information` field which
+  will cause the notification widget to render an info icon which opens a separate
+  screen to render the extra information
+
 ## Version 0.12.5
 
 - fix(notification): avoid passing color components bigger than 255

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from _pytest.fixtures import SubRequest
 
-    from ubo_app.menu import MenuApp
+    from ubo_app.menu_app.menu import MenuApp
 
 modules_snapshot = set(sys.modules)
 
@@ -99,6 +99,7 @@ async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
 
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
+    os.environ['KIVY_METRICS_DENSITY'] = '1'
 
     setup()
 

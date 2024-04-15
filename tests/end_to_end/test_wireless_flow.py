@@ -25,7 +25,7 @@ async def test_wireless_flow(
 ) -> None:
     """Test the wireless flow."""
     _ = needs_finish
-    from ubo_app.menu import MenuApp
+    from ubo_app.menu_app.menu import MenuApp
     from ubo_app.store import dispatch, store
     from ubo_app.store.services.camera import CameraStartViewfinderAction
     from ubo_app.store.services.keypad import Key, KeypadKeyPressAction

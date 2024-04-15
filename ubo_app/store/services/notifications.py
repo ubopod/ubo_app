@@ -75,6 +75,7 @@ class Notification(Immutable):
     id: str = field(default_factory=lambda: uuid4().hex)
     title: str
     content: str
+    extra_information: str | None = None
     importance: Importance = Importance.LOW
     chime: Chime = Chime.DONE
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
