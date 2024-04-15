@@ -127,7 +127,6 @@ IMAGES = {
             icon='󰾔',
             path=DOCKER_PREFIX + 'ghcr.io/open-webui/open-webui:main',
             dependencies=['ollama'],
-            network_mode='container:ollama',
             ports={'8080/tcp': '8080'},
             hosts={'host.docker.internal': 'ollama'},
         ),

@@ -5,6 +5,8 @@
 - feat(core): notifications now can have an optional `extra_information` field which
   will cause the notification widget to render an info icon which opens a separate
   screen to render the extra information
+- fix(docker): open_webui now runs in its own network as `hostname` and `network_mode`
+  can't be used together #63
 
 ## Version 0.12.5
 
