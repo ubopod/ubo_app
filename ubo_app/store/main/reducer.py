@@ -28,6 +28,8 @@ from ubo_app.store.services.keypad import (
     KeypadEvent,
     KeypadKeyPressAction,
     KeypadKeyPressEvent,
+    KeypadKeyReleaseAction,
+    KeypadKeyReleaseEvent,
 )
 from ubo_app.store.services.sound import SoundChangeVolumeAction, SoundDevice
 
@@ -52,26 +54,28 @@ def reducer(
 
     if isinstance(action, KeypadKeyPressAction):
         actions: list[SoundChangeVolumeAction] = []
+        events: list[KeypadKeyPressEvent] = []
         if action.key == Key.UP and len(state.path) == 1:
-            actions.append(
+            actions = [
                 SoundChangeVolumeAction(
                     amount=0.05,
                     device=SoundDevice.OUTPUT,
                 ),
-            )
-        if action.key == Key.DOWN and len(state.path) == 1:
-            actions.append(
+            ]
+        elif action.key == Key.DOWN and len(state.path) == 1:
+            actions = [
                 SoundChangeVolumeAction(
                     amount=-0.05,
                     device=SoundDevice.OUTPUT,
                 ),
-            )
+            ]
+        else:
+            events = [KeypadKeyPressEvent(key=action.key)]
+        return CompleteReducerResult(state=state, actions=actions, events=events)
+    if isinstance(action, KeypadKeyReleaseAction):
         return CompleteReducerResult(
             state=state,
-            actions=actions,
-            events=[
-                KeypadKeyPressEvent(key=action.key),
-            ],
+            events=[KeypadKeyReleaseEvent(key=action.key)],
         )
 
     if isinstance(action, RegisterAppAction):

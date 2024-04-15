@@ -7,6 +7,9 @@
   screen to render the extra information
 - fix(docker): open_webui now runs in its own network as `hostname` and `network_mode`
   can't be used together #63
+- refactor(keypad): reduce complexities
+- feat(keypad): dispatch release actions `KeypadKeyReleaseAction` #39
+- fix(keypad): dispatch the state of mic key when keypad service initializes #1
 
 ## Version 0.12.5
 
