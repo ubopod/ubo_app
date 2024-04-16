@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.12.7
+
+- feat(notification): make the extra information screen scrollable
+
 ## Version 0.12.6
 
 - feat(core): notifications now can have an optional `extra_information` field which

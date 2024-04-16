@@ -85,7 +85,4 @@ headless_kivy_pi_buffer.raw
 */packer/packer_cache/
 */packer/output-*
 
-# local development
-scripts/toggle_local_dependencies.py
-
 screenshots

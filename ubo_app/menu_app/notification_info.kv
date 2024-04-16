@@ -5,9 +5,41 @@
     orientation: 'horizontal'
     padding: dp(5)
 
-    Label:
-      text: root.text
-      text_size: self.size
-      halign: 'left'
-      valign: 'top'
+    Widget:
+      id: container
       size_hint: 1, 1
+
+      BoxLayout:
+        pos: container.pos
+        orientation: 'vertical'
+        height: self.minimum_height
+        width: container.width
+        id: scrollable_widget
+
+        Label:
+          text: root.text
+          height: self.texture_size[1]
+          text_size: self.size[0], None
+          font_size: dp(18)
+          halign: 'left'
+          valign: 'top'
+          size_hint: 1, None
+
+    BoxLayout:
+      size_hint: None, 1
+      orientation: 'vertical'
+      width: dp(UBO_GUI_SHORT_WIDTH)
+      padding: 0, dp(16), 0, dp(16)
+
+      AnimatedSlider:
+        id: slider
+        min: 0
+        max: max(scrollable_widget.height - container.height, 0)
+        animated_value: self.max
+        orientation: 'vertical'
+        size_hint: (1, 1) if scrollable_widget.height - container.height > 0 else (None, None)
+        height: root.height
+        opacity: 1 if scrollable_widget.height - container.height > 0 else 0
+        disabled: scrollable_widget.height - container.height <= 0
+
+        on_value: scrollable_widget.y = container.y - slider.value

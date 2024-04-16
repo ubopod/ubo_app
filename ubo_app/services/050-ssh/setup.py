@@ -55,7 +55,7 @@ class ClearTemporaryUsersPrompt(PromptWidget):
                         title='All SSH Accounts Removed',
                         content='All SSH accounts have been removed.',
                         importance=Importance.MEDIUM,
-                        icon='󰣀',
+                        icon='',
                         display_type=NotificationDisplayType.FLASH,
                     ),
                 ),
@@ -92,7 +92,7 @@ def create_ssh_account() -> None:
                         content='An error occurred while creating the temporary SSH '
                         'account.',
                         importance=Importance.MEDIUM,
-                        icon='󰣀',
+                        icon='',
                         display_type=NotificationDisplayType.STICKY,
                         color=DANGER_COLOR,
                     ),
@@ -105,13 +105,14 @@ def create_ssh_account() -> None:
             NotificationsAddAction(
                 notification=Notification(
                     title=f'Username: {username}\nPassword: {password}',
-                    content="""Make sure to delete it after use. Note that in order \
-to make things work for you, we had to make sure password authentication for ssh \
-server is enabled, you may want to disable it later. Clearing all temporary users will \
-disable password authentication too.""",
+                    content='Make sure to delete it after use.',
                     importance=Importance.MEDIUM,
-                    icon='󰣀',
+                    icon='',
                     display_type=NotificationDisplayType.STICKY,
+                    extra_information='Note that in order to make things work for you, \
+we had to make sure password authentication for ssh server is enabled, you may want to \
+disable it later. Clearing all temporary users will disable password authentication too\
+.',
                     color=SUCCESS_COLOR,
                 ),
             ),
@@ -172,8 +173,8 @@ def ssh_items(state: SSHState) -> Sequence[Item]:
             sub_menu=HeadedMenu(
                 title='SSH Setup',
                 heading='Create an SSH account',
-                sub_heading='This will create a temporary SSH account,'
-                ' you should delete it after use.',
+                sub_heading='This will create a temporary SSH account,\n'
+                'you should delete it after use.',
                 items=[
                     ActionItem(
                         label='Create',
