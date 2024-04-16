@@ -6,25 +6,55 @@ variable "image_url" {
   type = string
 }
 
-variable "image_checksum" {
+variable "image_checksum_url" {
   type = string
 }
 
 variable "target_image_size" {
-  type = number
-  default = 0
+  type = string
 }
 
-source "arm-image" "raspberry_pi_os" {
-  iso_url           = var.image_url
-  iso_checksum      = var.image_checksum
-  output_filename   = "/build/image.img"
-  target_image_size = var.target_image_size
-  image_mounts      = ["/boot/firmware", "/"]
+packer {
+  required_plugins {
+    git = {
+      version = ">=v0.3.2"
+      source  = "github.com/ethanmdavidson/git"
+    }
+  }
+}
+
+source "arm" "raspios" {
+  file_urls             = [var.image_url]
+  file_checksum_url     = var.image_checksum_url
+  file_checksum_type    = "sha256"
+  file_target_extension = "xz"
+  file_unarchive_cmd    = ["xz", "--decompress", "$ARCHIVE_PATH"]
+  image_build_method    = "resize"
+  image_size            = var.target_image_size
+  image_type            = "dos"
+  image_partitions {
+    name         = "boot"
+    type         = "c"
+    start_sector = "8192"
+    filesystem   = "fat"
+    size         = "512MB"
+    mountpoint   = "/boot/firmware"
+  }
+  image_partitions {
+    name         = "root"
+    type         = "83"
+    start_sector = "1056768"
+    filesystem   = "ext4"
+    size         = "0"
+    mountpoint   = "/"
+  }
+  image_chroot_env             = ["PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"]
+  qemu_binary_source_path      = "/usr/bin/qemu-aarch64-static"
+  qemu_binary_destination_path = "/usr/bin/qemu-aarch64-static"
 }
 
 build {
-  sources = ["source.arm-image.raspberry_pi_os"]
+  sources = ["source.arm.raspios"]
 
   provisioner "file" {
     source      = "ubo_app/system/install.sh"
@@ -38,13 +68,12 @@ build {
 
   provisioner "shell" {
     inline = [
-      "echo 'ls -l /boot'; ls -l /boot",
       "chmod +x /install.sh",
-      "/install.sh --for-packer --with-docker --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
+      "/install.sh --in-packer --with-docker --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "rm /install.sh /ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "/usr/bin/env systemctl disable userconfig || true",
       "/usr/bin/env systemctl disable lightdm || true",
-      "apt clean",
+      "apt-get clean -y",
       "echo DF; df -h"
     ]
   }

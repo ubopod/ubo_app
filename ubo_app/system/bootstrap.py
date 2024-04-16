@@ -208,28 +208,22 @@ def install_docker() -> None:
     stdout.flush()
 
 
-def install_audio_driver(*, for_packer: bool) -> None:
+def install_audio_driver(*, in_packer: bool) -> None:
     """Install the audio driver."""
-    if for_packer:
-        # Convincing the installer that we are on a Raspberry Pi as /proc is not created
-        # in packer build
-        Path('/proc/device-tree').mkdir(parents=True, exist_ok=True)
-        Path('/proc/device-tree/model').write_text('Raspberry Pi')
     stdout.write('Installing wm8960...\n')
     stdout.flush()
     subprocess.run(
-        [Path(__file__).parent.joinpath('install_wm8960.sh').as_posix()],  # noqa: S603
+        [  # noqa: S603
+            Path(__file__).parent.joinpath('install_wm8960.sh').as_posix(),
+        ]
+        + (['--in-packer'] if in_packer else []),
         check=True,
     )
     stdout.write('Done installing wm8960\n')
     stdout.flush()
-    if for_packer:
-        Path('/proc/device-tree/model').unlink()
-        Path('/proc/device-tree').rmdir()
-        Path('/proc').rmdir()
 
 
-def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
+def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
     """Create the service files and enable the services."""
     # Ensure we have the required permissions
     if os.geteuid() != 0:
@@ -241,7 +235,7 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
     for service in SERVICES:
         create_service_file(service)
 
-    if for_packer:
+    if in_packer:
         Path('/var/lib/systemd/linger').mkdir(exist_ok=True, parents=True)
         Path(f'/var/lib/systemd/linger/{USERNAME}').touch(mode=0o644, exist_ok=True)
     else:
@@ -264,4 +258,4 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
         stdout.write('Done installing docker\n')
         stdout.flush()
 
-    install_audio_driver(for_packer=for_packer)
+    install_audio_driver(in_packer=in_packer)

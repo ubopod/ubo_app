@@ -18,7 +18,7 @@ build {
   provisioner "shell" {
     inline = [
       "chmod +x /install.sh",
-      "/install.sh --for-packer --source /build/wheel/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
+      "/install.sh --in-packer --source /build/wheel/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "rm /install.sh"
     ]
   }

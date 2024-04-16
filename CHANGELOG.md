@@ -9,6 +9,7 @@
   the audio work #53
 - build(packer): mount the first partition of the image in `/boot/firmware` instead
   of `/boot` to be compatible with the new linux kernel
+- ci(github): download and cache images as it is the slowest part of the build
 
 ## Version 0.12.6
 

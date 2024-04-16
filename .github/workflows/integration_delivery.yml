@@ -167,8 +167,8 @@ jobs:
       - dependencies
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.extract_version.outputs.VERSION }}
-      name: ${{ steps.extract_version.outputs.NAME }}
+      version: ${{ steps.extract-version.outputs.VERSION }}
+      name: ${{ steps.extract-version.outputs.NAME }}
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -191,7 +191,7 @@ jobs:
           key: poetry-${{ hashFiles('poetry.lock') }}-${{ env.PYTHON_VERSION}}
 
       - name: Extract Version
-        id: extract_version
+        id: extract-version
         run: |
           echo "VERSION=$(poetry version --short)" >> "$GITHUB_OUTPUT"
           echo "NAME=$(poetry version | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
@@ -199,11 +199,10 @@ jobs:
           echo "NAME=$(poetry version | cut -d' ' -f1)"
 
       - name: Extract Version from CHANGELOG.md
-        id: extract_changelog_version
         run: |
           VERSION_CHANGELOG=$(sed -n '3 s/## Version //p' CHANGELOG.md) 
           echo "VERSION_CHANGELOG=$VERSION_CHANGELOG"
-          if [ "${{ steps.extract_version.outputs.VERSION }}" != "$VERSION_CHANGELOG" ]; then
+          if [ "${{ steps.extract-version.outputs.VERSION }}" != "$VERSION_CHANGELOG" ]; then
             echo "Error: Version extracted from CHANGELOG.md does not match the version in pyproject.toml"
             exit 1 
           else
@@ -212,11 +211,10 @@ jobs:
 
       - name: Extract Version from Tag
         if: startsWith(github.ref, 'refs/tags/v')
-        id: extract_tag_version
         run: |
           VERSION_TAG=$(sed 's/^v//' <<< ${{ github.ref_name }})
           echo "VERSION_TAG=$VERSION_TAG"
-          if [ "${{ steps.extract_version.outputs.VERSION }}" != "$VERSION_TAG" ]; then
+          if [ "${{ steps.extract-version.outputs.VERSION }}" != "$VERSION_TAG" ]; then
             echo "Error: Version extracted from tag does not match the version in pyproject.toml"
             exit 1 
           else
@@ -228,7 +226,7 @@ jobs:
           echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> ubo_app/.env
           # conditionally set it based on whether it's a tag or not using github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
           if [ "${{ github.event_name }}" == "push" ] && [ "$(echo ${{ github.ref }} | grep -c 'refs/tags/v')" -eq 1 ]; then
-            echo "SENTRY_RELEASE=ubo-app@${{ steps.extract_version.outputs.VERSION }}" >> ubo_app/.env
+            echo "SENTRY_RELEASE=ubo-app@${{ steps.extract-version.outputs.VERSION }}" >> ubo_app/.env
           else
             echo "SENTRY_RELEASE=ubo-app@${{ github.sha }}" >> ubo_app/.env
           fi
@@ -260,9 +258,7 @@ jobs:
       - build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/solo-io/packer-plugin-arm-image
-      env:
-        PACKER_CACHE_DIR: /build/packer_cache
+      image: mkaczanowski/packer-builder-arm
       volumes:
         - /dev:/dev
       options: --rm --privileged
@@ -287,7 +283,7 @@ jobs:
           path: /build/dist
 
       - name: Generate Image URL and Checksum
-        id: generate_image_url
+        id: generate-image-url
         run: |
           if [ -n "${{ matrix.suffix }}" ]; then
             SUFFIX="_${{ matrix.suffix }}"
@@ -296,46 +292,52 @@ jobs:
           fi
           DASHED_SUFFIX=$(echo $SUFFIX | sed 's/_/-/g')
           IMAGE_URL="https://downloads.raspberrypi.com/raspios${SUFFIX}_arm64/images/raspios${SUFFIX}_arm64-2024-03-15/2024-03-15-raspios-bookworm-arm64${DASHED_SUFFIX}.img.xz"
-          IMAGE_CHECKSUM=$(curl -s "${IMAGE_URL}.sha256" | awk '{print $1}')
+          CHECKSUM_URL="${IMAGE_URL}.sha256"
           echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
           echo "dashed_suffix=$DASHED_SUFFIX" >> "$GITHUB_OUTPUT"
           echo "image_url=$IMAGE_URL" >> "$GITHUB_OUTPUT"
-          echo "image_checksum=$IMAGE_CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "image_checksum_url=$CHECKSUM_URL" >> "$GITHUB_OUTPUT"
+          IMAGE_SIZE_GB=${{ matrix.suffix == 'lite' && '3.75' || matrix.suffix == '' && '5.75' || '13' }}
+          IMAGE_SIZE=$(awk -v IMAGE_SIZE_GB=$IMAGE_SIZE_GB 'BEGIN {printf "%.0f", IMAGE_SIZE_GB * 1024 ^ 3}')
+          echo "image_size=$IMAGE_SIZE" >> "$GITHUB_OUTPUT"
 
       - name: Build Artifact
         env:
           PKR_VAR_ubo_app_version: ${{ needs.build.outputs.version }}
-          PKR_VAR_image_url: ${{ steps.generate_image_url.outputs.image_url }}
-          PKR_VAR_image_checksum:
-            ${{ steps.generate_image_url.outputs.image_checksum }}
+          PKR_VAR_image_url: ${{ steps.generate-image-url.outputs.image_url }}
+          PKR_VAR_image_checksum_url:
+            ${{ steps.generate-image-url.outputs.image_checksum_url }}
           PKR_VAR_target_image_size:
-            ${{ matrix.suffix == 'lite' && '4026531840' || matrix.suffix == ''
-            && '6174015488'  || '0' }}
+            ${{ steps.generate-image-url.outputs.image_size}}
         run: |
-          /entrypoint.sh validate scripts/packer/image.pkr.hcl
-          /entrypoint.sh build scripts/packer/image.pkr.hcl
+          /entrypoint.sh init scripts/packer/image.pkr.hcl
+          SETUP_QEMU=false /entrypoint.sh build scripts/packer/image.pkr.hcl
+          ls -lh
+          mv image.img /build
+          ls -lh /build
 
-      - name: Write Zeroes to Free Space
+      - name: Fill Free Space with Zeros
         run: |
-          losetup -P /dev/loop3 /build/image.img
-          apt-get -y update
+          apt-get update
           apt-get install -y zerofree
-          zerofree /dev/loop3p2
-          losetup -d /dev/loop3
+          LOOP_DEV=$(losetup -f)
+          losetup -P $LOOP_DEV /build/image.img
+          zerofree -v "${LOOP_DEV}p2"
+          losetup -d $LOOP_DEV
 
       - name: Compress File with Gzip
         run: |
-          scripts/consume.sh /build/image.img | gzip -9 > /ubo_app-${{ needs.build.outputs.version }}-bookworm${{ steps.generate_image_url.outputs.dashed_suffix }}.img.gz
+          scripts/consume.sh /build/image.img | gzip -9 > /ubo_app-${{ needs.build.outputs.version }}-bookworm${{ steps.generate-image-url.outputs.dashed_suffix }}.img.gz
 
       - name: Upload Image
         uses: actions/upload-artifact@v4
         with:
           name:
             ubo_app-${{ needs.build.outputs.version }}-bookworm${{
-            steps.generate_image_url.outputs.dashed_suffix}}-arm64.img.gz
+            steps.generate-image-url.outputs.dashed_suffix}}-arm64.img.gz
           path:
             /ubo_app-${{ needs.build.outputs.version }}-bookworm${{
-            steps.generate_image_url.outputs.dashed_suffix }}.img.gz
+            steps.generate-image-url.outputs.dashed_suffix }}.img.gz
           if-no-files-found: error
 
   pypi-publish:
