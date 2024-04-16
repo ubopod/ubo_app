@@ -9,7 +9,7 @@ USERNAME=${USERNAME:-"ubo"}
 UPDATE=${UPDATE:-false}
 ALPHA=${ALPHA:-false}
 WITH_DOCKER=${WITH_DOCKER:-false}
-FOR_PACKER=false
+IN_PACKER=false
 SOURCE=${SOURCE:-"ubo-app"}
 
 export DEBIAN_FRONTEND=noninteractive
@@ -30,9 +30,9 @@ do
         WITH_DOCKER=true
         shift # Remove --with-docker from processing
         ;;
-        --for-packer)
-        FOR_PACKER=true
-        shift # Remove --for-packer from processing
+        --in-packer)
+        IN_PACKER=true
+        shift # Remove --in-packer from processing
         ;;
         --source=*)
         SOURCE="${arg#*=}"
@@ -124,7 +124,10 @@ chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
 chmod -R 700 "$INSTALLATION_PATH"
 
 # Bootstrap the application
-UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/bootstrap"${WITH_DOCKER:+ --with-docker}${FOR_PACKER:+ --for-packer}
+ls -l /
+ls -l /proc
+mount
+UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/bootstrap"${WITH_DOCKER:+ --with-docker}${IN_PACKER:+ --in-packer}
 echo "Bootstrapping completed"
 
 if [ "$UPDATE" = true ]; then
@@ -132,7 +135,7 @@ if [ "$UPDATE" = true ]; then
   rm -rf "$INSTALLATION_PATH/_update"
 fi
 
-if [ "$FOR_PACKER" = true ]; then
+if [ "$IN_PACKER" = true ]; then
   exit 0
 else
   # The audio driver needs a reboot to work
