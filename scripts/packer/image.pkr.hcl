@@ -20,6 +20,7 @@ source "arm-image" "raspberry_pi_os" {
   iso_checksum      = var.image_checksum
   output_filename   = "/build/image.img"
   target_image_size = var.target_image_size
+  image_mounts      = ["/boot/firmware", "/"]
 }
 
 build {

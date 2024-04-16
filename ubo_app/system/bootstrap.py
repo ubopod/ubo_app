@@ -163,7 +163,7 @@ def enable_services() -> None:
 
 def configure_fan() -> None:
     """Configure the behavior of the fan."""
-    with Path('/boot/config.txt').open('a') as config_file:
+    with Path('/boot/firmware/config.txt').open('a') as config_file:
         config_file.write('dtoverlay=gpio-fan,gpiopin=22,temp=60000\n')
 
 
@@ -208,6 +208,27 @@ def install_docker() -> None:
     stdout.flush()
 
 
+def install_audio_driver(*, for_packer: bool) -> None:
+    """Install the audio driver."""
+    if for_packer:
+        # Convincing the installer that we are on a Raspberry Pi as /proc is not created
+        # in packer build
+        Path('/proc/device-tree').mkdir(parents=True, exist_ok=True)
+        Path('/proc/device-tree/model').write_text('Raspberry Pi')
+    stdout.write('Installing wm8960...\n')
+    stdout.flush()
+    subprocess.run(
+        [Path(__file__).parent.joinpath('install_wm8960.sh').as_posix()],  # noqa: S603
+        check=True,
+    )
+    stdout.write('Done installing wm8960\n')
+    stdout.flush()
+    if for_packer:
+        Path('/proc/device-tree/model').unlink()
+        Path('/proc/device-tree').rmdir()
+        Path('/proc').rmdir()
+
+
 def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
     """Create the service files and enable the services."""
     # Ensure we have the required permissions
@@ -243,11 +264,4 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
         stdout.write('Done installing docker\n')
         stdout.flush()
 
-    stdout.write('Installing wm8960...\n')
-    stdout.flush()
-    subprocess.run(
-        [Path(__file__).parent.joinpath('install_wm8960.sh').as_posix()],  # noqa: S603
-        check=True,
-    )
-    stdout.write('Done installing wm8960\n')
-    stdout.flush()
+    install_audio_driver(for_packer=for_packer)

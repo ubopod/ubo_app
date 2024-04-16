@@ -158,7 +158,7 @@ jobs:
         with:
           file: ./coverage.xml
           flags: integration
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
