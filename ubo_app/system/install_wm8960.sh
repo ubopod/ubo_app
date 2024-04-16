@@ -58,6 +58,7 @@ cp wm8960-soundcard /usr/bin/
 chmod -x wm8960-soundcard.service
 cp wm8960-soundcard.service /lib/systemd/system/
 systemctl enable  wm8960-soundcard.service 
+#systemctl start wm8960-soundcard                                
 
 cd ..
 rm -rf WM8960-Audio-HAT

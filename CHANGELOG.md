@@ -3,6 +3,8 @@
 ## Version 0.12.7
 
 - feat(notification): make the extra information screen scrollable
+- build(bootstrap): add `dtoverlay=gpio-fan,gpiopin=22,temp=60000` to `/boot/config.txt`
+  to make the fan run if CPU temperature passes 60℃ #64
 
 ## Version 0.12.6
 

@@ -161,6 +161,12 @@ def enable_services() -> None:
         )
 
 
+def configure_fan() -> None:
+    """Configure the behavior of the fan."""
+    with Path('/boot/config.txt').open('a') as config_file:
+        config_file.write('dtoverlay=gpio-fan,gpiopin=22,temp=60000\n')
+
+
 def setup_polkit() -> None:
     """Create the polkit rules file."""
     with Path('/etc/polkit-1/rules.d/50-ubo.rules').open('w') as file:
@@ -222,6 +228,8 @@ def bootstrap(*, with_docker: bool = False, for_packer: bool = False) -> None:
             ['/usr/bin/env', 'loginctl', 'enable-linger', USERNAME],  # noqa: S603
             check=True,
         )
+
+    configure_fan()
 
     reload_daemon()
     enable_services()
