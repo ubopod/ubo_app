@@ -6,15 +6,21 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import math
+import struct
 import time
 import wave
+from typing import TYPE_CHECKING
 
 import alsaaudio
 import pulsectl
 import pyaudio
 
 from ubo_app.logging import logger
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 CHUNK_SIZE = 1024
 
@@ -78,6 +84,8 @@ class AudioManager:
 
     async def restart_pulse_audio(self: AudioManager) -> None:
         """Restart pulseaudio."""
+        if not IS_RPI:
+            return
         process = await asyncio.create_subprocess_exec(
             '/usr/bin/env',
             'pulseaudio',
@@ -95,7 +103,13 @@ class AudioManager:
         """Find the index of the ReSpeaker device."""
         for index in range(self.pyaudio.get_device_count()):
             info = self.pyaudio.get_device_info_by_index(index)
-            if not isinstance(info['name'], int | float) and 'wm8960' in info['name']:
+            if (
+                not isinstance(info['name'], int | float)
+                and 'wm8960' in info['name']
+                or not IS_RPI
+                and isinstance(info['maxOutputChannels'], int)
+                and info['maxOutputChannels'] > 0
+            ):
                 logger.debug('ReSpeaker found at index', extra={'index': index})
                 logger.debug('Device Info', extra={'info': info})
                 return index
@@ -118,7 +132,39 @@ class AudioManager:
                 self.stream.close()
             self.stream = None
 
-    def play(self: AudioManager, filename: str) -> None:
+    def initialize_playback(
+        self: AudioManager,
+        *,
+        channels: int,
+        rate: int,
+        width: int,
+    ) -> pyaudio.PyAudio.Stream:
+        """Initialize the playback stream.
+
+        Parameters
+        ----------
+        channels : int
+            Number of channels
+
+        rate : int
+            Frame rate of the audio
+
+        width : int
+            Sample width of the audio
+
+        """
+        self.close_stream()
+        self.is_playing = True
+        self.stream = self.pyaudio.open(
+            format=self.pyaudio.get_format_from_width(width),
+            channels=channels,
+            rate=rate,
+            output=True,
+            output_device_index=self.find_respeaker_index(),
+        )
+        return self.stream
+
+    def play_file(self: AudioManager, filename: str) -> None:
         """Play a waveform audio file.
 
         Parameters
@@ -128,23 +174,61 @@ class AudioManager:
 
         """
         # open the file for reading.
-        self.close_stream()
-
         logger.info('Opening audio file for playback', extra={'filename_': filename})
         try:
             with wave.open(filename, 'rb') as wf:
-                self.is_playing = True
-                self.stream = self.pyaudio.open(
-                    format=self.pyaudio.get_format_from_width(wf.getsampwidth()),
+                stream = self.initialize_playback(
                     channels=wf.getnchannels(),
                     rate=wf.getframerate(),
-                    output=True,
-                    output_device_index=self.find_respeaker_index(),
+                    width=wf.getsampwidth(),
                 )
                 data = wf.readframes(CHUNK_SIZE)
-                while data and not self.should_stop and self.stream.is_active():
-                    self.stream.write(data)
+                while data and not self.should_stop and stream.is_active():
+                    stream.write(data)
                     data = wf.readframes(CHUNK_SIZE)
+                stream.stop_stream()
+        except Exception:
+            create_task(self.restart_pulse_audio())
+            logger.exception('Something went wrong while playing an audio file')
+        finally:
+            self.is_playing = False
+            self.close_stream()
+
+    def play_sequence(
+        self: AudioManager,
+        sequence: Sequence[int],
+        *,
+        channels: int,
+        rate: int,
+        width: int,
+    ) -> None:
+        """Play a sequence of audio.
+
+        Parameters
+        ----------
+        sequence : Sequence[int]
+            Audio as a sequence of 16-bit linearly-encoded integers.
+
+        channels : int
+            Number of channels
+
+        rate : int
+            Frame rate of the audio
+
+        width : int
+            Sample width of the audio
+
+        """
+        try:
+            stream = self.initialize_playback(
+                channels=channels,
+                rate=rate,
+                width=width,
+            )
+            data = b''.join(struct.pack('h', sample) for sample in sequence)
+
+            stream.write(data)
+
         except Exception:
             create_task(self.restart_pulse_audio())
             logger.exception('Something went wrong while playing an audio file')

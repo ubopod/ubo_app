@@ -221,6 +221,8 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
+    from ubo_app.utils.fake import Fake
+
     random.seed(0)
     tracemalloc.start()
 
@@ -228,6 +230,8 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
     monkeypatch.setattr('ubo_app.constants.STORE_GRACE_TIME', 0.1)
+
+    sys.modules['pyaudio'] = Fake()
 
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)

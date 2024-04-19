@@ -25,6 +25,8 @@ class LoadServices(Protocol):
     def __call__(
         self: LoadServices,
         service_ids: Sequence[str],
+        *,
+        timeout: float | None = None,
     ) -> None: ...
 
     @overload
@@ -33,6 +35,7 @@ class LoadServices(Protocol):
         service_ids: Sequence[str],
         *,
         run_async: Literal[True],
+        timeout: float | None = None,
     ) -> Coroutine[None, None, None]: ...
 
 
@@ -45,12 +48,13 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
         service_ids: Sequence[str],
         *,
         run_async: bool = False,
+        timeout: float | None = None,
     ) -> Coroutine[None, None, None] | None:
         from ubo_app.load_services import load_services
 
         load_services(service_ids)
 
-        @wait_for(run_async=cast(Literal[True], run_async))
+        @wait_for(run_async=cast(Literal[True], run_async), timeout=timeout)
         def check() -> None:
             for service_id in service_ids:
                 assert any(

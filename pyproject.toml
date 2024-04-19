@@ -18,10 +18,10 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.10.6", markers = "extra=='default'", extras = [
+  { version = "^0.10.7", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.10.6", markers = "extra=='dev'", extras = [
+  { version = "^0.10.7", markers = "extra=='dev'", extras = [
     "dev",
   ] },
 ]
@@ -39,22 +39,24 @@ adafruit-circuitpython-veml7700 = "^1.1.22"
 docker = "^7.0.0"
 python-dotenv = "^1.0.1"
 sentry-sdk = "^1.43.0"
+pvorca = "^0.1.4"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.358"
+pyright = "^1.1.359"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.5.0"
-ruff = "^0.3.7"
+ruff = "^0.4.1"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"
+pyaudio = { version = "^0.2.14", markers = "platform_machine!='aarch64'" }
 
 [tool.poetry.extras]
 default = ["ubo-gui"]
@@ -80,6 +82,7 @@ args = [
   { name = "deps", type = "boolean" },
   { name = "run", type = "boolean" },
   { name = "bootstrap", type = "boolean" },
+  { name = "env", type = "boolean" },
 ]
 cmd = "scripts/deploy.sh"
 

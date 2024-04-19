@@ -28,6 +28,8 @@ STORE_GRACE_TIME = int(os.environ.get('UBO_STORE_GRACE_TIME', 1))
 # each time a UUID is generated.
 DEBUG_MODE_TEST_UUID = strtobool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False')) == 1
 
+PICOVOICE_API_KEY = os.environ.get('PICOVOICE_API_KEY', None)
+
 DEBUG_MODE_DOCKER = strtobool(os.environ.get('UBO_DEBUG_DOCKER', 'False')) == 1
 DOCKER_PREFIX = os.environ.get('UBO_DOCKER_PREFIX', '')
 DOCKER_INSTALLATION_LOCK_FILE = Path('/var/run/ubo/docker_installation.lock')

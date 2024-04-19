@@ -10,6 +10,12 @@
 - build(packer): mount the first partition of the image in `/boot/firmware` instead
   of `/boot` to be compatible with the new linux kernel
 - ci(github): download and cache images as it is the slowest part of the build
+- feat(sound): `SoundPlayAudioEvent` action for playing an audio sample with type
+  of `Sequence[int]`
+- feat(voice): add new service voice with `VoiceReadTextAction`, it uses orca service
+  from picovocie to read text with human voice
+- feat(notification): read the extra information of the notification when opened
+- feat(ssh): force password change after first login for temporarily created accounts
 
 ## Version 0.12.6
 

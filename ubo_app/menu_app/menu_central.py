@@ -22,6 +22,7 @@ from ubo_app.store.services.notifications import (
     NotificationsClearAction,
     NotificationsDisplayEvent,
 )
+from ubo_app.store.services.voice import VoiceReadTextAction
 
 from .home_page import HomePage
 
@@ -130,7 +131,12 @@ class MenuAppCentral(UboApp):
         )
 
         application.bind(
-            on_info=lambda _: self.menu_widget.open_application(info_application),
+            on_info=lambda _: (
+                dispatch(
+                    VoiceReadTextAction(text=notification.extra_information or ''),
+                ),
+                self.menu_widget.open_application(info_application),
+            ),
         )
 
         self.menu_widget.open_application(application)

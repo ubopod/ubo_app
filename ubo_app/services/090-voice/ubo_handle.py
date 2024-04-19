@@ -7,16 +7,16 @@ if TYPE_CHECKING:
     from ubo_app.services import Service, register
 
 
-async def setup(service: Service) -> None:
+def setup(service: Service) -> None:
     from reducer import reducer
     from setup import init_service
 
     service.register_reducer(reducer)
-    await init_service()
+    init_service()
 
 
 register(
-    service_id='ip',
-    label='IP',
+    service_id='voice',
+    label='Voice',
     setup=setup,
 )

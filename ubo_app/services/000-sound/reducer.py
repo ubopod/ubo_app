@@ -16,6 +16,9 @@ from ubo_app.store.services.sound import (
     SoundAction,
     SoundChangeVolumeAction,
     SoundDevice,
+    SoundEvent,
+    SoundPlayAudioAction,
+    SoundPlayAudioEvent,
     SoundPlayChimeAction,
     SoundPlayChimeEvent,
     SoundSetMuteStatusAction,
@@ -31,7 +34,7 @@ Action = InitAction | SoundAction | StatusIconsRegisterAction
 def reducer(
     state: SoundState | None,
     action: Action,
-) -> ReducerResult[SoundState, Action, SoundPlayChimeEvent]:
+) -> ReducerResult[SoundState, Action, SoundEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return SoundState(
@@ -105,6 +108,18 @@ def reducer(
             state=state,
             events=[
                 SoundPlayChimeEvent(name=action.name),
+            ],
+        )
+    elif isinstance(action, SoundPlayAudioAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[
+                SoundPlayAudioEvent(
+                    sample=action.sample,
+                    channels=action.channels,
+                    rate=action.rate,
+                    width=action.width,
+                ),
             ],
         )
     return state

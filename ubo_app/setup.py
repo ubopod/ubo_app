@@ -12,7 +12,6 @@ def setup() -> None:
 
         sys.modules['alsaaudio'] = Fake()
         sys.modules['pulsectl'] = Fake()
-        sys.modules['pyaudio'] = Fake()
         sys.modules['sdbus'] = Fake()
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()

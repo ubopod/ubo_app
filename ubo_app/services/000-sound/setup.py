@@ -7,11 +7,13 @@ from audio_manager import AudioManager
 from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
 
 from ubo_app.store import autorun, dispatch, subscribe_event
-from ubo_app.store.services.sound import SoundPlayChimeEvent
+from ubo_app.store.services.sound import SoundPlayAudioEvent, SoundPlayChimeEvent
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 
 
 def init_service() -> None:
+    audio_manager = AudioManager()
+
     dispatch(
         StatusIconsRegisterAction(
             icon='󰍭',
@@ -19,8 +21,6 @@ def init_service() -> None:
             id=SOUND_MIC_STATE_ICON_ID,
         ),
     )
-
-    audio_manager = AudioManager()
 
     @autorun(lambda state: state.sound.playback_volume)
     def _(volume: float) -> None:
@@ -36,7 +36,17 @@ def init_service() -> None:
 
     subscribe_event(
         SoundPlayChimeEvent,
-        lambda event: audio_manager.play(
+        lambda event: audio_manager.play_file(
             Path(__file__).parent.joinpath(f'sounds/{event.name}.wav').as_posix(),
+        ),
+    )
+
+    subscribe_event(
+        SoundPlayAudioEvent,
+        lambda event: audio_manager.play_sequence(
+            event.sample,
+            channels=event.channels,
+            rate=event.rate,
+            width=event.width,
         ),
     )

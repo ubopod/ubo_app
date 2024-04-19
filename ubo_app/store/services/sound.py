@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class SoundDevice(StrEnum):
@@ -38,11 +42,25 @@ class SoundPlayChimeAction(SoundAction):
     name: str
 
 
+class SoundPlayAudioAction(SoundAction):
+    sample: Sequence[int]
+    channels: int
+    rate: int
+    width: int
+
+
 class SoundEvent(BaseEvent): ...
 
 
 class SoundPlayChimeEvent(SoundEvent):
     name: str
+
+
+class SoundPlayAudioEvent(SoundEvent):
+    sample: Sequence[int]
+    channels: int
+    rate: int
+    width: int
 
 
 class SoundState(Immutable):

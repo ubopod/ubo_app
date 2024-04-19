@@ -27,6 +27,7 @@ useradd -m -s /bin/bash $USERNAME
 # Set the password
 PASSWORD=$(openssl rand -base64 6)
 echo "${USERNAME}:${PASSWORD}" | chpasswd
+passwd --expire $USERNAME > /dev/null
 printf "${USERNAME}:${PASSWORD}"
 
 # Add the user to the sudo group

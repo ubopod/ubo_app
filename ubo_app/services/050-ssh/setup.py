@@ -95,6 +95,9 @@ def create_ssh_account() -> None:
                         icon='',
                         display_type=NotificationDisplayType.STICKY,
                         color=DANGER_COLOR,
+                        extra_information='Note that in order to make ssh work, we had \
+to make sure password authentication for ssh server is enabled, you may want to \
+disable it later.',
                     ),
                 ),
             )
@@ -111,8 +114,7 @@ def create_ssh_account() -> None:
                     display_type=NotificationDisplayType.STICKY,
                     extra_information='Note that in order to make things work for you, \
 we had to make sure password authentication for ssh server is enabled, you may want to \
-disable it later. Clearing all temporary users will disable password authentication too\
-.',
+disable it later.',
                     color=SUCCESS_COLOR,
                 ),
             ),

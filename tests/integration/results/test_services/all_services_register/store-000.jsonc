@@ -7,7 +7,7 @@
     "queue": []
   },
   "docker": {
-    "_id": "8d723104f77383c13458a748e9bb17bc",
+    "_id": "85776e9add84f39e71545a137a1d5006",
     "home_assistant": {
       "container_ip": null,
       "docker_id": null,
@@ -259,6 +259,39 @@
                         1,
                         1
                       ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "Voice",
+                      "sub_menu": {
+                        "heading": "󰔊",
+                        "items": [
+                          {
+                            "action": "",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰐲",
+                            "is_short": false,
+                            "label": "Access Token"
+                          }
+                        ],
+                        "placeholder": null,
+                        "sub_heading": "Set the access token for picovoice service",
+                        "title": "Voice Settings"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
                       "icon": "󰖩",
                       "is_short": false,
                       "label": "WiFi",
@@ -425,6 +458,7 @@
     "serial_number": "<not-available>",
     "update_status": "up_to_date"
   },
+  "voice": {},
   "wifi": {
     "connections": [],
     "current_connection": null,

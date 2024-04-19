@@ -23,6 +23,7 @@ ALL_SERVICES_IDS = [
     'sensors',
     'docker',
     'ssh',
+    'voice',
 ]
 
 
@@ -40,7 +41,7 @@ async def test_all_services_register(
 
     app = MenuApp()
     app_context.set_app(app)
-    load_services(ALL_SERVICES_IDS)
+    load_services(ALL_SERVICES_IDS, timeout=10)
     await stability()
     store_snapshot.take()
     window_snapshot.take()
