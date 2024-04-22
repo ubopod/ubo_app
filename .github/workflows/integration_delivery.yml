@@ -11,7 +11,7 @@ env:
 jobs:
   dependencies:
     name: Install Dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -23,14 +23,14 @@ jobs:
 
       - name: Load Cached Poetry
         id: cached-poetry
-        uses: actions/cache@v4
+        uses: useblacksmith/cache@v5
         with:
           path: |
             ~/.cache
             ~/.local
           key: poetry-${{ hashFiles('poetry.lock') }}-${{ env.PYTHON_VERSION}}
 
-      - uses: actions/setup-python@v5
+      - uses: useblacksmith/setup-python@v6
         name: Setup Python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -48,12 +48,12 @@ jobs:
     name: Type Check
     needs:
       - dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
         name: Checkout
 
-      - uses: actions/setup-python@v5
+      - uses: useblacksmith/setup-python@v6
         name: Setup Python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -61,7 +61,7 @@ jobs:
 
       - name: Load Cached Poetry
         id: cached-poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         with:
           path: |
             ~/.cache
@@ -78,20 +78,20 @@ jobs:
     name: Lint
     needs:
       - dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
         name: Checkout
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: useblacksmith/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
       - name: Load Cached Poetry
         id: cached-poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         with:
           path: |
             ~/.cache
@@ -105,7 +105,7 @@ jobs:
     name: Test
     needs:
       - dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     environment:
       name: test
       url: https://app.codecov.io/gh/${{ github.repository }}/
@@ -119,13 +119,13 @@ jobs:
         name: Checkout
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: useblacksmith/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
       - name: Load Cached Poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         id: cached-poetry
         with:
           path: |
@@ -170,7 +170,7 @@ jobs:
     name: Build
     needs:
       - dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     outputs:
       version: ${{ steps.extract-version.outputs.VERSION }}
       name: ${{ steps.extract-version.outputs.NAME }}
@@ -180,7 +180,7 @@ jobs:
         with:
           lfs: true
 
-      - uses: actions/setup-python@v5
+      - uses: useblacksmith/setup-python@v6
         name: Setup Python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -188,7 +188,7 @@ jobs:
 
       - name: Load Cached Poetry
         id: cached-poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         with:
           path: |
             ~/.cache
@@ -261,7 +261,7 @@ jobs:
       - lint
       - test
       - build
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     container:
       image: mkaczanowski/packer-builder-arm
       volumes:
@@ -270,7 +270,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suffix: ['lite', '']
+        suffix: ['lite', '', 'full']
     steps:
       - run: echo Building amd64-${{ matrix.suffix }} image
 
@@ -355,7 +355,7 @@ jobs:
       - test
       - build
       - images
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     environment:
       name: release
       url: https://pypi.org/p/${{ needs.build.outputs.name }}
@@ -388,7 +388,7 @@ jobs:
       - build
       - pypi-publish
       - images
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2204
     environment:
       name: release
       url: https://pypi.org/p/${{ needs.build.outputs.name }}
