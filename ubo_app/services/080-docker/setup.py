@@ -12,22 +12,42 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
+from reducer import IMAGES
+from redux.combine_reducers import functools
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.constants import DOCKER_INSTALLATION_LOCK_FILE, SERVER_SOCKET_PATH
+from ubo_app.constants import (
+    DOCKER_CREDENTIALS_TEMPLATE,
+    DOCKER_INSTALLATION_LOCK_FILE,
+    SERVER_SOCKET_PATH,
+)
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import RegisterRegularAppAction
+from ubo_app.store.main import (
+    RegisterRegularAppAction,
+    RegisterSettingAppAction,
+    SettingsCategory,
+)
 from ubo_app.store.services.docker import (
+    DockerRemoveUsernameAction,
     DockerSetStatusAction,
     DockerState,
     DockerStatus,
+    DockerStoreUsernameAction,
 )
+from ubo_app.store.services.notifications import (
+    Importance,
+    Notification,
+    NotificationsAddAction,
+)
+from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import monitor_unit
+from ubo_app.utils.persistent_store import register_persistent_store
+from ubo_app.utils.qrcode import qrcode_input
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
 
 def install_docker() -> None:
@@ -64,7 +84,6 @@ def stop_docker() -> None:
 async def check_docker() -> None:
     """Check if Docker is installed."""
     from image import update_container
-    from reducer import IMAGES
 
     process = await asyncio.create_subprocess_exec(
         '/usr/bin/env',
@@ -205,8 +224,8 @@ def docker_menu_items(state: DockerState) -> list[Item]:
                     title='Docker Containers',
                     items=[
                         ActionItem(
-                            label=getattr(state, image_id).label,
-                            icon=getattr(state, image_id).icon,
+                            label=IMAGES[image_id].label,
+                            icon=IMAGES[image_id].icon,
                             action=IMAGE_MENUS[image_id],
                         )
                         for image_id in (field.name for field in fields(state))
@@ -235,9 +254,108 @@ docker_main_menu = ActionItem(
 )
 
 
+def input_credentials() -> None:
+    """Input the Docker credentials."""
+
+    async def act() -> None:
+        try:
+            credentials = (
+                await qrcode_input(
+                    r'^[^|]*\|[^|]*\|[^|]*$|^[^|]*|[^|]*$',
+                    prompt='Write the credentials in this format: '
+                    '[i]SERVICE|USERNAME|PASSWORD[/i]\n'
+                    'Convert it to QR code and scan it.\n'
+                    'Example: [i]`docker.io|johndoe|secret`[/i]',
+                )
+            )[0]
+            if credentials.count('|') == 1:
+                username, password = credentials.split('|')
+                registry = 'docker.io'
+            else:
+                registry, username, password = credentials.split('|')
+            docker_client = docker.from_env()
+            docker_client.login(
+                username=username,
+                password=password,
+                registry=registry,
+            )
+            secrets.write_secret(
+                key=DOCKER_CREDENTIALS_TEMPLATE.format(registry),
+                value=password,
+            )
+            dispatch(
+                DockerStoreUsernameAction(registry=registry, username=username),
+            )
+        except asyncio.CancelledError:
+            pass
+        except docker.errors.APIError as exception:
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Docker Credentials Error',
+                        content='Invalid credentials',
+                        extra_information=exception.explanation
+                        or (
+                            exception.response.content.decode('utf8')
+                            if exception.response
+                            else ''
+                        ),
+                        importance=Importance.HIGH,
+                    ),
+                ),
+            )
+
+    create_task(act())
+
+
+def clear_credentials(registry: str) -> None:
+    """Clear an entry in docker credentials."""
+    secrets.clear_secret(DOCKER_CREDENTIALS_TEMPLATE.format(registry))
+    dispatch(DockerRemoveUsernameAction(registry=registry))
+
+
+@autorun(lambda state: state.docker.service.usernames)
+def settings_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
+    """Get the settings menu items for the Docker service."""
+    return [
+        ActionItem(
+            label='Set Access Key',
+            icon='󰐲',
+            action=input_credentials,
+        ),
+        *[
+            ActionItem(
+                label=registry,
+                icon='󰌊',
+                action=functools.partial(clear_credentials, registry),
+            )
+            for registry in usernames
+        ],
+    ]
+
+
 def init_service() -> None:
     """Initialize the service."""
+    register_persistent_store(
+        'docker_usernames',
+        lambda state: state.docker.service.usernames,
+    )
     dispatch(RegisterRegularAppAction(menu_item=docker_main_menu))
+    dispatch(
+        RegisterSettingAppAction(
+            category=SettingsCategory.APPS,
+            menu_item=SubMenuItem(
+                label='Docker',
+                icon='󰡨',
+                sub_menu=HeadedMenu(
+                    title='Docker Settings',
+                    heading='󰡨 Docker',
+                    sub_heading='Login a registry:',
+                    items=settings_menu_items,
+                ),
+            ),
+        ),
+    )
     create_task(
         monitor_unit(
             'docker.socket',

@@ -1,11 +1,15 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import functools
+from dataclasses import field
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+
+from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -64,7 +68,35 @@ class SoundPlayAudioEvent(SoundEvent):
 
 
 class SoundState(Immutable):
-    playback_volume: float
-    is_playback_mute: bool
-    capture_volume: float
-    is_capture_mute: bool
+    playback_volume: float = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            key='sound_playback_volume',
+            object_type=float,
+            default=0.5,
+        ),
+    )
+    is_playback_mute: bool = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            key='sound_is_playback_mute',
+            object_type=bool,
+            default=False,
+        ),
+    )
+    capture_volume: float = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            key='sound_capture_volume',
+            object_type=float,
+            default=0.5,
+        ),
+    )
+    is_capture_mute: bool = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            key='sound_is_capture_mute',
+            object_type=bool,
+            default=False,
+        ),
+    )

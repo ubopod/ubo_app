@@ -62,6 +62,12 @@ async def test_wireless_flow(
     window_snapshot.take()
     store_snapshot.take()
 
+    # Go to connectivity category
+    dispatch(KeypadKeyPressAction(key=Key.L1))
+    await stability()
+    window_snapshot.take()
+    store_snapshot.take()
+
     # Press the L1 key to open the wireless menu
     dispatch(KeypadKeyPressAction(key=Key.L1))
     await stability()

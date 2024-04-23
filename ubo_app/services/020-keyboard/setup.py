@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 from kivy.core.window import Keyboard, Window, WindowBase
 from redux import FinishAction, FinishEvent
 
-from ubo_app.store import ScreenshotEvent, subscribe_event
+from ubo_app.store import ScreenshotEvent, SnapshotEvent, subscribe_event
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 from ubo_app.store.services.sound import SoundDevice, SoundToggleMuteStatusAction
 
@@ -52,6 +52,8 @@ def on_keyboard(  # noqa: C901
             )
         elif key == Keyboard.keycodes['p']:
             dispatch(ScreenshotEvent())
+        elif key == Keyboard.keycodes['s']:
+            dispatch(SnapshotEvent())
         elif key == Keyboard.keycodes['q']:
             dispatch(FinishAction())
 

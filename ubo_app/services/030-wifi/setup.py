@@ -10,7 +10,7 @@ from wifi_manager import (
 )
 
 from ubo_app.store import dispatch, subscribe_event
-from ubo_app.store.main import RegisterSettingAppAction
+from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiUpdateAction,
@@ -57,6 +57,12 @@ def init_service() -> None:
     create_task(update_wifi_list())
     create_task(setup_listeners())
 
-    dispatch(RegisterSettingAppAction(menu_item=main.WiFiMainMenu))
+    dispatch(
+        RegisterSettingAppAction(
+            priority=2,
+            category=SettingsCategory.CONNECTIVITY,
+            menu_item=main.WiFiMainMenu,
+        ),
+    )
 
     subscribe_event(WiFiUpdateRequestEvent, lambda: create_task(request_scan()))

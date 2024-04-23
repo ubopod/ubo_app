@@ -46,8 +46,77 @@
                 "is_short": false,
                 "label": "Settings",
                 "sub_menu": {
-                  "items": [],
-                  "placeholder": "No settings",
+                  "items": [
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "Connectivity",
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "Connectivity"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "Interface",
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "Interface"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "System",
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "System"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "Apps",
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "Apps"
+                      }
+                    }
+                  ],
+                  "placeholder": null,
                   "title": "Settings"
                 }
               },
@@ -114,7 +183,8 @@
     },
     "path": [
       "Dashboard"
-    ]
+    ],
+    "settings_items_priorities": {}
   },
   "status_icons": {
     "icons": []

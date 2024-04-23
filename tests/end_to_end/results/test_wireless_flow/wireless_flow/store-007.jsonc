@@ -55,13 +55,12 @@
                         1,
                         1
                       ],
-                      "icon": "󰖩",
+                      "icon": null,
                       "is_short": false,
-                      "label": "WiFi",
+                      "label": "Connectivity",
                       "sub_menu": {
                         "items": [
                           {
-                            "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -69,30 +68,100 @@
                               1,
                               1
                             ],
-                            "icon": "󱛃",
+                            "icon": "󰖩",
                             "is_short": false,
-                            "label": "Add"
-                          },
-                          {
-                            "action": "",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󱖫",
-                            "is_short": false,
-                            "label": "Select"
+                            "label": "WiFi",
+                            "sub_menu": {
+                              "items": [
+                                {
+                                  "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󱛃",
+                                  "is_short": false,
+                                  "label": "Add"
+                                },
+                                {
+                                  "action": "",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󱖫",
+                                  "is_short": false,
+                                  "label": "Select"
+                                }
+                              ],
+                              "placeholder": null,
+                              "title": "WiFi Settings"
+                            }
                           }
                         ],
-                        "placeholder": null,
-                        "title": "WiFi Settings"
+                        "placeholder": "No settings in this category",
+                        "title": "Connectivity"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "Interface",
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "Interface"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "System",
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "System"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "Apps",
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "Apps"
                       }
                     }
                   ],
-                  "placeholder": "No settings",
+                  "placeholder": null,
                   "title": "Settings"
                 }
               },
@@ -161,9 +230,13 @@
       "Dashboard",
       "Main",
       "Settings",
+      "Connectivity",
       "WiFi Settings",
       "85776e9add84f39e71545a137a1d5006"
-    ]
+    ],
+    "settings_items_priorities": {
+      "WiFi": 2
+    }
   },
   "status_icons": {
     "icons": [

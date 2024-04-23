@@ -103,6 +103,28 @@ async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
 
     setup()
 
+    from kivy.lang.builder import Builder
+
+    Builder.load_string("""
+<-Slider>:
+    canvas:
+        Color:
+            rgb: 0.6, 0.1, 0.1
+        Rectangle:
+            pos: (self.x, self.center_y - self.background_width/6) if self.orientation \
+== 'horizontal' else (self.center_x - self.background_width/6, self.y)
+            size: (self.width, self.background_width/3) if self.orientation == 'horizon\
+tal' else (self.background_width/3, self.height)
+        Color:
+            rgb: 0.8, 0.3, 0.3
+        RoundedRectangle:
+            pos: (root.value_pos[0] - root.cursor_width*0.4, root.center_y - root.curso\
+r_height*0.4) if root.orientation == 'horizontal' else (root.center_x - root.cursor_wid\
+th*0.4, root.value_pos[1] - root.cursor_height*0.4)
+            size: root.cursor_size[0] * 0.8, root.cursor_size[1] * 0.8
+            radius: root.cursor_size[0] * 0.4, root.cursor_size[1] * 0.4
+    """)
+
     import headless_kivy_pi.config
 
     headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})

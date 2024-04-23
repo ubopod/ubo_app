@@ -124,9 +124,6 @@ chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
 chmod -R 700 "$INSTALLATION_PATH"
 
 # Bootstrap the application
-ls -l /
-ls -l /proc
-mount
 UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/bootstrap"${WITH_DOCKER:+ --with-docker}${IN_PACKER:+ --in-packer}
 echo "Bootstrapping completed"
 

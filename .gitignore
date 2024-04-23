@@ -85,4 +85,6 @@ headless_kivy_pi_buffer.raw
 */packer/packer_cache/
 */packer/output-*
 
-screenshots
+/screenshots
+/snapshot.json
+/snapshot.bin

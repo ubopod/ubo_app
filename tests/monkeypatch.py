@@ -7,7 +7,7 @@ import datetime
 import random
 import sys
 import tracemalloc
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -163,6 +163,8 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
 
     from ubo_app.utils.fake import Fake
 
+    original_subprocess_run = subprocess.run
+
     def fake_subprocess_run(
         command: list[str],
         *args: object,
@@ -171,6 +173,8 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
         _ = args, kwargs
         if command == ['/usr/bin/env', 'systemctl', 'poweroff', '-i']:
             return Fake()
+        if command[0] in ('cat', 'file'):
+            return original_subprocess_run(command, *cast(Any, args), **kwargs)
         msg = f'Unexpected `subprocess.run` command in test environment: {command}'
         raise ValueError(msg)
 
@@ -230,7 +234,19 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
     monkeypatch.setattr('ubo_app.constants.STORE_GRACE_TIME', 0.1)
+    monkeypatch.setattr('ubo_app.utils.serializer.add_type_field', lambda _, y: y)
 
+    sys.modules['ubo_app.utils.persistent_store'] = Fake(
+        _Fake__props={
+            'read_from_persistent_store': lambda key=None,
+            default=None,
+            object_type=None: (
+                key,
+                default or (object_type() if object_type else None),
+            )[-1],
+        },
+    )
+    sys.modules['ubo_app.utils.secrets'] = Fake()
     sys.modules['pyaudio'] = Fake()
 
     _monkeypatch_socket(monkeypatch)

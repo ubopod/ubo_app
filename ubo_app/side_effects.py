@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import json
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -10,7 +11,13 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from redux import FinishAction
 
-from ubo_app.store import ScreenshotEvent, dispatch, subscribe_event
+from ubo_app.store import (
+    ScreenshotEvent,
+    SnapshotEvent,
+    dispatch,
+    store,
+    subscribe_event,
+)
 from ubo_app.store.main import PowerOffEvent
 from ubo_app.store.services.notifications import Chime
 from ubo_app.store.services.sound import SoundPlayChimeAction
@@ -72,6 +79,12 @@ def take_screenshot() -> None:
     write_image(path, headless_kivy_pi.config._display.raw_data)  # noqa: SLF001
 
 
+def take_snapshot() -> None:
+    """Take a snapshot of the store."""
+    path = Path('snapshot.json')
+    path.write_text(json.dumps(store.snapshot, indent=2))
+
+
 def setup_side_effects() -> None:
     """Set up the application."""
     turn_on_screen()
@@ -81,6 +94,7 @@ def setup_side_effects() -> None:
     subscribe_event(UpdateManagerUpdateEvent, update)
     subscribe_event(UpdateManagerCheckEvent, check_version)
     subscribe_event(ScreenshotEvent, take_screenshot)
+    subscribe_event(SnapshotEvent, take_snapshot)
 
     @debounce(
         wait=10,

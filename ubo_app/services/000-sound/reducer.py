@@ -37,12 +37,7 @@ def reducer(
 ) -> ReducerResult[SoundState, Action, SoundEvent]:
     if state is None:
         if isinstance(action, InitAction):
-            return SoundState(
-                playback_volume=0.5,
-                is_playback_mute=False,
-                capture_volume=0.5,
-                is_capture_mute=False,
-            )
+            return SoundState()
         raise InitializationActionError(action)
 
     if isinstance(action, SoundSetVolumeAction):

@@ -18,7 +18,7 @@ from ubo_gui.menu.types import (
 from ubo_gui.prompt import PromptWidget
 
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import RegisterSettingAppAction
+from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -95,9 +95,6 @@ def create_ssh_account() -> None:
                         icon='',
                         display_type=NotificationDisplayType.STICKY,
                         color=DANGER_COLOR,
-                        extra_information='Note that in order to make ssh work, we had \
-to make sure password authentication for ssh server is enabled, you may want to \
-disable it later.',
                     ),
                 ),
             )
@@ -113,8 +110,8 @@ disable it later.',
                     icon='',
                     display_type=NotificationDisplayType.STICKY,
                     extra_information='Note that in order to make things work for you, \
-we had to make sure password authentication for ssh server is enabled, you may want to \
-disable it later.',
+we had to make sure password authentication for {ssh|EH S EH S EY CH} server is \
+enabled, you may want to disable it later.',
                     color=SUCCESS_COLOR,
                 ),
             ),
@@ -262,6 +259,8 @@ def init_service() -> None:
     """Initialize the SSH service."""
     dispatch(
         RegisterSettingAppAction(
+            priority=1,
+            category=SettingsCategory.CONNECTIVITY,
             menu_item=ActionItem(
                 label='SSH',
                 icon=ssh_icon,
