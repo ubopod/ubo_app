@@ -11,7 +11,6 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
-from ubo_gui.constants import SECONDARY_COLOR
 
 from ubo_app.store.services.notifications import (
     Chime,
@@ -42,6 +41,8 @@ def reducer(
     UpdateManagerSetStatusAction | NotificationsAddAction,
     UpdateManagerEvent,
 ]:
+    from ubo_gui.constants import SECONDARY_COLOR
+
     if state is None:
         if isinstance(action, InitAction):
             return UpdateManagerState()

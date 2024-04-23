@@ -43,6 +43,7 @@ class WindowSnapshot:
         make_screenshots: bool,
     ) -> None:
         """Create a new window snapshot context."""
+        self.failed = False
         self.closed = False
         self.override = override
         self.make_screenshots = make_screenshots
@@ -111,6 +112,7 @@ class WindowSnapshot:
             else:
                 old_snapshot = None
             if old_snapshot != new_snapshot:
+                self.failed = True
                 hash_mismatch_path.write_text(  # pragma: no cover
                     f'// MISMATCH: {filename}\n{new_snapshot}\n',
                 )
@@ -129,12 +131,14 @@ class WindowSnapshot:
 
     def close(self: WindowSnapshot) -> None:
         """Close the snapshot context."""
+        self.closed = True
+        if self.failed:
+            return
         for title in self.test_counter:
             filename = self.get_filename(title)
             hash_path = (self.results_dir / filename).with_suffix('.hash')
 
             assert not hash_path.exists(), f'Snapshot {filename} not taken'
-        self.closed = True
 
 
 @pytest.fixture()

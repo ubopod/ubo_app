@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import RegisterSettingAppAction
+from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.services.lightdm import (
     LightDMClearEnabledStateAction,
     LightDMUpdateStateAction,
@@ -140,6 +140,8 @@ def init_service() -> None:
     """Initialize the LightDM service."""
     dispatch(
         RegisterSettingAppAction(
+            priority=0,
+            category=SettingsCategory.SYSTEM,
             menu_item=ActionItem(
                 label='LightDM',
                 icon=lightdm_icon,

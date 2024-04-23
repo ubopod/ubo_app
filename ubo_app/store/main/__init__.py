@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import field
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
@@ -9,6 +10,14 @@ from redux import BaseAction, BaseEvent, FinishAction, InitAction
 
 from ubo_app.store.services.keypad import KeypadAction
 from ubo_app.store.status_icons import StatusIconsAction
+
+
+class SettingsCategory(StrEnum):
+    CONNECTIVITY = 'Connectivity'
+    INTERFACE = 'Interface'
+    SYSTEM = 'System'
+    APPS = 'Apps'
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -32,7 +41,9 @@ class UpdateLightDMState(BaseAction):
 class RegisterRegularAppAction(RegisterAppAction): ...
 
 
-class RegisterSettingAppAction(RegisterAppAction): ...
+class RegisterSettingAppAction(RegisterAppAction):
+    category: SettingsCategory
+    priority: int | None = None
 
 
 class PowerOffAction(BaseAction): ...
@@ -44,6 +55,7 @@ class PowerOffEvent(BaseEvent): ...
 class MainState(Immutable):
     menu: Menu | None = None
     path: Sequence[str] = field(default_factory=list)
+    settings_items_priorities: dict[str, int] = field(default_factory=dict)
 
 
 class SetMenuPathAction(BaseAction):

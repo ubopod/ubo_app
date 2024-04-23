@@ -63,10 +63,15 @@ def run_fake_camera() -> None:  # pragma: no cover
             await check_codes([data])
 
     def run_provider() -> None:
+        from kivy.core.window import Window
+
+        Window.opacity = 0.2
+
         def set_task(task: asyncio.Task) -> None:
             def stop() -> None:
                 task.cancel()
                 cancel_subscription()
+                Window.opacity = 1
 
             cancel_subscription = subscribe_event(
                 CameraStopViewfinderEvent,

@@ -14,8 +14,7 @@ dotenv.load_dotenv(Path(__file__).parent / '.env')
 
 pytest.register_assert_rewrite('tests.fixtures')
 
-# isort: off
-from tests.fixtures import (  # noqa: E402
+from tests.fixtures import (  # noqa: E402, I001
     AppContext,
     LoadServices,
     Stability,
@@ -36,7 +35,6 @@ from redux_pytest.fixtures import (  # noqa: E402
     store_snapshot,
     wait_for,
 )
-# isort: on
 
 
 fixtures = (

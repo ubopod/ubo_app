@@ -1,5 +1,25 @@
 # Changelog
 
+## Version 0.13.0
+
+- feat(core): organize settings in four different categories of connectivity,
+  interface, system and apps
+- feat(core): parse pronunciation hints in notification's extra info and render them
+  as normal text while passing them to picovoice (used for pronunciation of ssh
+  for example)
+- feat (core): add shortcut `s` to write a json dump of the store into `snapshot.json`
+- feat(core): add dill package and use it for pickling complex datatypes
+- feat(core): add secrets module to abstract storing, recalling and removing secrets
+- feat(core): add persistent_store module to abstract storing and recalling store
+  elements
+- feat(voice): use the new secrets module to save and load picovoice access key
+- feat(docker): use the new secrets module to save and load passwords of different
+  registries
+- feat(docker): use the new persistent_store module to save and load docker registry
+  to username mapping
+- feat(sound): use the new persistent_store module to save and load playback volume,
+  capture volume, and their mute state
+
 ## Version 0.12.7
 
 - feat(notification): make the extra information screen scrollable

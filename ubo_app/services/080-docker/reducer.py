@@ -23,9 +23,11 @@ from ubo_app.store.services.docker import (
     DockerImageEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
+    DockerRemoveUsernameAction,
     DockerServiceState,
     DockerSetStatusAction,
     DockerState,
+    DockerStoreUsernameAction,
     ImageState,
 )
 from ubo_app.store.services.ip import IpUpdateAction
@@ -50,6 +52,22 @@ def service_reducer(
     if isinstance(action, DockerSetStatusAction):
         return replace(state, status=action.status)
 
+    if isinstance(action, DockerStoreUsernameAction):
+        return replace(
+            state,
+            usernames={**state.usernames, action.registry: action.username},
+        )
+
+    if isinstance(action, DockerRemoveUsernameAction):
+        return replace(
+            state,
+            usernames={
+                registry: username
+                for registry, username in state.usernames.items()
+                if registry != action.registry
+            },
+        )
+
     return state
 
 
@@ -60,6 +78,7 @@ class ImageEntry(Immutable):
     label: str
     icon: str
     path: str
+    registry: str
     dependencies: list[str] | None = None
     ports: dict[str, str] = field(default_factory=dict)
     hosts: dict[str, str] = field(default_factory=dict)
@@ -91,6 +110,7 @@ IMAGES = {
             label='Home Assistant',
             icon='󰟐',
             path=DOCKER_PREFIX + 'homeassistant/home-assistant:stable',
+            registry='docker.io',
             ports={'8123/tcp': '8123'},
         ),
         ImageEntry(
@@ -98,12 +118,14 @@ IMAGES = {
             label='Home Bridge',
             icon='󰘘',
             path=DOCKER_PREFIX + 'homebridge/homebridge:latest',
+            registry='docker.io',
         ),
         ImageEntry(
             id='portainer',
             label='Portainer',
             icon='',
             path=DOCKER_PREFIX + 'portainer/portainer-ce:latest',
+            registry='docker.io',
             volumes=['/var/run/docker.sock:/var/run/docker.sock'],
         ),
         ImageEntry(
@@ -113,19 +135,22 @@ IMAGES = {
             environment_vairables={'WEBPASSWORD': 'admin'},
             note='Password: admin',
             path=DOCKER_PREFIX + 'pihole/pihole:latest',
+            registry='docker.io',
         ),
         ImageEntry(
             id='ollama',
             label='Ollama',
             icon='󰳆',
             path=DOCKER_PREFIX + 'ollama/ollama:latest',
+            registry='docker.io',
             ports={'11434/tcp': '11434'},
         ),
         ImageEntry(
             id='open_webui',
             label='Open WebUI',
             icon='󰾔',
-            path=DOCKER_PREFIX + 'ghcr.io/open-webui/open-webui:main',
+            path=DOCKER_PREFIX + 'open-webui/open-webui:main',
+            registry='ghcr.io',
             dependencies=['ollama'],
             ports={'8080/tcp': '8080'},
             hosts={'host.docker.internal': 'ollama'},
@@ -136,6 +161,7 @@ IMAGES = {
             icon='󰛶',
             network_mode='host',
             path=DOCKER_PREFIX + 'ngrok/ngrok:latest',
+            registry='docker.io',
             environment_vairables={
                 'NGROK_AUTHTOKEN': lambda: qrcode_input(
                     r'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
@@ -156,6 +182,7 @@ IMAGES = {
                     label='Alpine',
                     icon='',
                     path=DOCKER_PREFIX + 'alpine:latest',
+                    registry='docker.io',
                 ),
             ]
             if DEBUG_MODE_DOCKER
@@ -174,12 +201,7 @@ def image_reducer(
     if state is None:
         if isinstance(action, CombineReducerInitAction):
             image = IMAGES[action.key]
-            return ImageState(
-                id=image.id,
-                label=image.label,
-                icon=image.icon,
-                path=image.path,
-            )
+            return ImageState(id=image.id)
         raise InitializationActionError(action)
 
     if isinstance(action, IpUpdateAction):

@@ -1,4 +1,4 @@
-// store-004
+// store-008
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "main": {
@@ -231,7 +231,8 @@
       "Main",
       "Settings",
       "Connectivity",
-      "WiFi Settings"
+      "WiFi Settings",
+      "85776e9add84f39e71545a137a1d5006"
     ],
     "settings_items_priorities": {
       "WiFi": 2

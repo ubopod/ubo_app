@@ -11,7 +11,6 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
-from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
 from ubo_app.store.main import (
     InitEvent,
@@ -19,8 +18,8 @@ from ubo_app.store.main import (
     MainState,
     PowerOffAction,
     PowerOffEvent,
-    RegisterAppAction,
     RegisterRegularAppAction,
+    RegisterSettingAppAction,
     SetMenuPathAction,
 )
 from ubo_app.store.services.keypad import (
@@ -42,6 +41,8 @@ def reducer(
     SoundChangeVolumeAction,
     KeypadEvent | InitEvent | PowerOffEvent,
 ]:
+    from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
+
     if state is None:
         if isinstance(action, InitAction):
             from ._menus import HOME_MENU
@@ -78,52 +79,130 @@ def reducer(
             events=[KeypadKeyReleaseEvent(key=action.key)],
         )
 
-    if isinstance(action, RegisterAppAction):
+    if isinstance(action, RegisterSettingAppAction):
+        parent_index = 1
         menu = state.menu
-        parent_index = 0 if isinstance(action, RegisterRegularAppAction) else 1
-
         if not menu:
             return state
-
         root_menu_items = menu_items(menu)
+        main_menu_item = cast(SubMenuItem, root_menu_items[0])
+        main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
 
+        settings_menu_item = cast(SubMenuItem, main_menu_items[parent_index])
+        settings_menu_items = menu_items(cast(Menu, settings_menu_item.sub_menu))
+
+        category_menu_item = cast(
+            SubMenuItem,
+            next(item for item in settings_menu_items if item.label == action.category),
+        )
+
+        label = (
+            action.menu_item.label()
+            if callable(action.menu_item.label)
+            else action.menu_item.label
+        )
+
+        priorities = {
+            **state.settings_items_priorities,
+            label: action.priority,
+        }
+
+        def sort_key(item: Item) -> tuple[int, str]:
+            label = item.label() if callable(item.label) else item.label
+            return (-(priorities.get(label, 0) or 0), label)
+
+        new_items = sorted(
+            [
+                *cast(Sequence[Item], cast(Menu, category_menu_item.sub_menu).items),
+                action.menu_item,
+            ],
+            key=sort_key,
+        )
+
+        new_category_menu_item = replace(
+            category_menu_item,
+            sub_menu=replace(
+                cast(Menu, category_menu_item.sub_menu),
+                items=new_items,
+            ),
+        )
+
+        new_settings_menu_item = replace(
+            settings_menu_item,
+            sub_menu=replace(
+                cast(Menu, settings_menu_item.sub_menu),
+                items=[
+                    new_category_menu_item if item == category_menu_item else item
+                    for item in settings_menu_items
+                ],
+            ),
+        )
+
+        new_main_menu_item = replace(
+            main_menu_item,
+            sub_menu=replace(
+                cast(Menu, main_menu_item.sub_menu),
+                items=[
+                    new_settings_menu_item if item == settings_menu_item else item
+                    for item in main_menu_items
+                ],
+            ),
+        )
+
+        return replace(
+            state,
+            settings_items_priorities=priorities,
+            menu=replace(
+                menu,
+                items=[
+                    new_main_menu_item if item == main_menu_item else item
+                    for item in root_menu_items
+                ],
+            ),
+        )
+
+    if isinstance(action, RegisterRegularAppAction):
+        parent_index = 0
+        menu = state.menu
+        if not menu:
+            return state
+        root_menu_items = menu_items(menu)
         main_menu_item: Item = root_menu_items[0]
+
         if not isinstance(main_menu_item, SubMenuItem):
             msg = 'Main menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
         main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
 
-        desired_menu_item = main_menu_items[parent_index]
-        if not isinstance(desired_menu_item, SubMenuItem):
-            menu_title = (
-                'Applications'
-                if isinstance(action, RegisterRegularAppAction)
-                else 'Settings'
-            )
-            msg = f'{menu_title} menu item is not a `SubMenuItem`'
+        apps_menu_item = main_menu_items[parent_index]
+
+        if not isinstance(apps_menu_item, SubMenuItem):
+            msg = 'Applications menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
         new_items = sorted(
             [
-                *cast(Sequence[Item], cast(Menu, desired_menu_item.sub_menu).items),
+                *cast(Sequence[Item], cast(Menu, apps_menu_item.sub_menu).items),
                 action.menu_item,
             ],
             key=lambda item: item.label() if callable(item.label) else item.label,
         )
-        desired_menu_item = replace(
-            desired_menu_item,
+
+        apps_menu_item = replace(
+            apps_menu_item,
             sub_menu=replace(
-                cast(Menu, desired_menu_item.sub_menu),
+                cast(Menu, apps_menu_item.sub_menu),
                 items=new_items,
             ),
         )
+
         main_menu_item = replace(
             main_menu_item,
             sub_menu=replace(
                 cast(Menu, main_menu_item.sub_menu),
                 items=[
-                    desired_menu_item if index == parent_index else item
+                    apps_menu_item if index == parent_index else item
                     for index, item in enumerate(main_menu_items)
                 ],
             ),

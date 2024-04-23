@@ -11,96 +11,76 @@
     "home_assistant": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "󰟐",
       "id": "home_assistant",
       "ip_addresses": [
         "192.168.1.1"
       ],
-      "label": "Home Assistant",
-      "path": "homeassistant/home-assistant:stable",
       "ports": [],
       "status": "not_available"
     },
     "home_bridge": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "󰘘",
       "id": "home_bridge",
       "ip_addresses": [
         "192.168.1.1"
       ],
-      "label": "Home Bridge",
-      "path": "homebridge/homebridge:latest",
       "ports": [],
       "status": "not_available"
     },
     "ngrok": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "󰛶",
       "id": "ngrok",
       "ip_addresses": [
         "192.168.1.1"
       ],
-      "label": "Ngrok",
-      "path": "ngrok/ngrok:latest",
       "ports": [],
       "status": "not_available"
     },
     "ollama": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "󰳆",
       "id": "ollama",
       "ip_addresses": [
         "192.168.1.1"
       ],
-      "label": "Ollama",
-      "path": "ollama/ollama:latest",
       "ports": [],
       "status": "not_available"
     },
     "open_webui": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "󰾔",
       "id": "open_webui",
       "ip_addresses": [
         "192.168.1.1"
       ],
-      "label": "Open WebUI",
-      "path": "ghcr.io/open-webui/open-webui:main",
       "ports": [],
       "status": "not_available"
     },
     "pi_hole": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "󰇖",
       "id": "pi_hole",
       "ip_addresses": [
         "192.168.1.1"
       ],
-      "label": "Pi-hole",
-      "path": "pihole/pihole:latest",
       "ports": [],
       "status": "not_available"
     },
     "portainer": {
       "container_ip": null,
       "docker_id": null,
-      "icon": "",
       "id": "portainer",
       "ip_addresses": [
         "192.168.1.1"
       ],
-      "label": "Portainer",
-      "path": "portainer/portainer-ce:latest",
       "ports": [],
       "status": "not_available"
     },
     "service": {
-      "status": "not_running"
+      "status": "not_running",
+      "usernames": {}
     }
   },
   "ip": {
@@ -185,9 +165,9 @@
                         1,
                         1
                       ],
-                      "icon": "󰩟",
+                      "icon": null,
                       "is_short": false,
-                      "label": "IP Addresses",
+                      "label": "Connectivity",
                       "sub_menu": {
                         "items": [
                           {
@@ -198,9 +178,66 @@
                               1,
                               1
                             ],
-                            "icon": "󰈀",
+                            "icon": "󰖩",
                             "is_short": false,
-                            "label": "eth0",
+                            "label": "WiFi",
+                            "sub_menu": {
+                              "items": [
+                                {
+                                  "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󱛃",
+                                  "is_short": false,
+                                  "label": "Add"
+                                },
+                                {
+                                  "action": "",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󱖫",
+                                  "is_short": false,
+                                  "label": "Select"
+                                }
+                              ],
+                              "placeholder": null,
+                              "title": "WiFi Settings"
+                            }
+                          },
+                          {
+                            "action": "",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "[color=#008000]󰪥[/color]",
+                            "is_short": false,
+                            "label": "SSH"
+                          },
+                          {
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰩟",
+                            "is_short": false,
+                            "label": "IP Addresses",
                             "sub_menu": {
                               "items": [
                                 {
@@ -211,45 +248,37 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "󰩠",
+                                  "icon": "󰈀",
                                   "is_short": false,
-                                  "label": "192.168.1.1"
+                                  "label": "eth0",
+                                  "sub_menu": {
+                                    "items": [
+                                      {
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰩠",
+                                        "is_short": false,
+                                        "label": "192.168.1.1"
+                                      }
+                                    ],
+                                    "placeholder": "No IP addresses",
+                                    "title": "IP Addresses - eth0"
+                                  }
                                 }
                               ],
                               "placeholder": "No IP addresses",
-                              "title": "IP Addresses - eth0"
+                              "title": "IP Addresses"
                             }
                           }
                         ],
-                        "placeholder": "No IP addresses",
-                        "title": "IP Addresses"
+                        "placeholder": "No settings in this category",
+                        "title": "Connectivity"
                       }
-                    },
-                    {
-                      "action": "",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "[color=#008000]󰪥[/color]",
-                      "is_short": false,
-                      "label": "LightDM"
-                    },
-                    {
-                      "action": "",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "[color=#008000]󰪥[/color]",
-                      "is_short": false,
-                      "label": "SSH"
                     },
                     {
                       "background_color": "#68B7FF",
@@ -261,12 +290,10 @@
                       ],
                       "icon": null,
                       "is_short": false,
-                      "label": "Voice",
+                      "label": "Interface",
                       "sub_menu": {
-                        "heading": "󰔊",
                         "items": [
                           {
-                            "action": "",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -274,14 +301,47 @@
                               1,
                               1
                             ],
-                            "icon": "󰐲",
+                            "icon": "󰔊",
                             "is_short": false,
-                            "label": "Access Token"
+                            "label": "Voice",
+                            "sub_menu": {
+                              "heading": "󰔊 Picovoice",
+                              "items": [
+                                {
+                                  "action": "",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰐲",
+                                  "is_short": false,
+                                  "label": "Set Access Key"
+                                },
+                                {
+                                  "action": "",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰌊",
+                                  "is_short": false,
+                                  "label": "Clear Access Key"
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Set the access key\n Current value: Fake",
+                              "title": "Voice Settings"
+                            }
                           }
                         ],
-                        "placeholder": null,
-                        "sub_heading": "Set the access token for picovoice service",
-                        "title": "Voice Settings"
+                        "placeholder": "No settings in this category",
+                        "title": "Interface"
                       }
                     },
                     {
@@ -292,24 +352,11 @@
                         1,
                         1
                       ],
-                      "icon": "󰖩",
+                      "icon": null,
                       "is_short": false,
-                      "label": "WiFi",
+                      "label": "System",
                       "sub_menu": {
                         "items": [
-                          {
-                            "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󱛃",
-                            "is_short": false,
-                            "label": "Add"
-                          },
                           {
                             "action": "",
                             "background_color": "#68B7FF",
@@ -319,17 +366,68 @@
                               1,
                               1
                             ],
-                            "icon": "󱖫",
+                            "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
-                            "label": "Select"
+                            "label": "LightDM"
                           }
                         ],
-                        "placeholder": null,
-                        "title": "WiFi Settings"
+                        "placeholder": "No settings in this category",
+                        "title": "System"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": null,
+                      "is_short": false,
+                      "label": "Apps",
+                      "sub_menu": {
+                        "items": [
+                          {
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰡨",
+                            "is_short": false,
+                            "label": "Docker",
+                            "sub_menu": {
+                              "heading": "󰡨 Docker",
+                              "items": [
+                                {
+                                  "action": "",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰐲",
+                                  "is_short": false,
+                                  "label": "Set Access Key"
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Login a registry:",
+                              "title": "Docker Settings"
+                            }
+                          }
+                        ],
+                        "placeholder": "No settings in this category",
+                        "title": "Apps"
                       }
                     }
                   ],
-                  "placeholder": "No settings",
+                  "placeholder": null,
                   "title": "Settings"
                 }
               },
@@ -396,7 +494,15 @@
     },
     "path": [
       "Dashboard"
-    ]
+    ],
+    "settings_items_priorities": {
+      "Docker": null,
+      "IP Addresses": 0,
+      "LightDM": 0,
+      "SSH": 1,
+      "Voice": 0,
+      "WiFi": 2
+    }
   },
   "notifications": {
     "notifications": [],

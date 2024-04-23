@@ -14,7 +14,7 @@ from ubo_gui.menu.types import (
 from ubo_gui.notification import NotificationWidget
 
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import PowerOffAction
+from ubo_app.store.main import PowerOffAction, SettingsCategory
 from ubo_app.store.services.notifications import Notification, NotificationsClearAction
 from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
 
@@ -32,8 +32,17 @@ APPS_MENU = HeadlessMenu(
 
 SETTINGS_MENU = HeadlessMenu(
     title='Settings',
-    items=[],
-    placeholder='No settings',
+    items=[
+        SubMenuItem(
+            label=category,
+            sub_menu=HeadlessMenu(
+                title=category,
+                items=[],
+                placeholder='No settings in this category',
+            ),
+        )
+        for category in SettingsCategory
+    ],
 )
 
 

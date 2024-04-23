@@ -147,7 +147,7 @@ class UboServiceThread(threading.Thread):
     def register_reducer(self: UboServiceThread, reducer: ReducerType) -> None:
         from ubo_app import store
 
-        logger.info(
+        logger.debug(
             'Registering ubo service reducer',
             extra={
                 'service_id': self.service_id,
@@ -197,7 +197,7 @@ class UboServiceThread(threading.Thread):
         self.service_id = service_id
         self.setup = setup
 
-        logger.info(
+        logger.debug(
             'Ubo service registered!',
             extra={
                 'service_id': self.service_id,

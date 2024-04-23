@@ -18,6 +18,7 @@ from redux import FinishEvent
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 from ubo_gui.page import PageWidget
 
+from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.logging import logger
 from ubo_app.store import autorun, dispatch, subscribe_event
 from ubo_app.store.services.docker import (
@@ -32,6 +33,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationsAddAction,
 )
+from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
 
 if TYPE_CHECKING:
@@ -218,38 +220,51 @@ def check_container(image_id: str) -> None:
     to_thread(act)
 
 
-def _fetch_image(image: ImageState) -> None:
-    def act() -> None:
-        dispatch(
-            DockerImageSetStatusAction(
-                image=image.id,
-                status=ImageStatus.FETCHING,
-            ),
-        )
-        try:
-            logger.debug('Fetching image', extra={'image': image.path})
-            docker_client = docker.from_env()
-            docker_client.images.pull(image.path)
-            docker_client.close()
-        except docker.errors.DockerException:
-            logger.exception(
-                'Image error',
-                extra={'image': image.path},
-            )
+@autorun(lambda state: state.docker.service.usernames)
+def _reactive_fetch_image(usernames: dict[str, str]) -> Callable[[ImageState], None]:
+    def fetch_image(image: ImageState) -> None:
+        def act() -> None:
             dispatch(
                 DockerImageSetStatusAction(
                     image=image.id,
-                    status=ImageStatus.ERROR,
+                    status=ImageStatus.FETCHING,
                 ),
             )
+            try:
+                logger.debug('Fetching image', extra={'image': IMAGES[image.id].path})
+                docker_client = docker.from_env()
+                for registry, username in usernames.items():
+                    if IMAGES[image.id].registry == registry:
+                        docker_client.login(
+                            username=username,
+                            password=secrets.read_secret(
+                                DOCKER_CREDENTIALS_TEMPLATE.format(registry),
+                            ),
+                            registry=registry,
+                        )
+                docker_client.images.pull(IMAGES[image.id].path)
+                docker_client.close()
+            except docker.errors.DockerException:
+                logger.exception(
+                    'Image error',
+                    extra={'image': IMAGES[image.id].path},
+                )
+                dispatch(
+                    DockerImageSetStatusAction(
+                        image=image.id,
+                        status=ImageStatus.ERROR,
+                    ),
+                )
 
-    to_thread(act)
+        to_thread(act)
+
+    return fetch_image
 
 
 def _remove_image(image: ImageState) -> None:
     def act() -> None:
         docker_client = docker.from_env()
-        docker_client.images.remove(image.path, force=True)
+        docker_client.images.remove(IMAGES[image.id].path, force=True)
         docker_client.close()
 
     to_thread(act)
@@ -300,7 +315,7 @@ def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState]
     def run_container(image: ImageState) -> None:
         async def act() -> None:
             docker_client = docker.from_env()
-            container = find_container(docker_client, image=image.path)
+            container = find_container(docker_client, image=IMAGES[image.id].path)
             if container:
                 if container.status != 'running':
                     container.start()
@@ -336,7 +351,7 @@ def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState]
                         hosts[key] = value
 
                 docker_client.containers.run(
-                    image.path,
+                    IMAGES[image.id].path,
                     hostname=image.id,
                     publish_all_ports=True,
                     detach=True,
@@ -358,7 +373,7 @@ def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState]
 def _stop_container(image: ImageState) -> None:
     def act() -> None:
         docker_client = docker.from_env()
-        container = find_container(docker_client, image=image.path)
+        container = find_container(docker_client, image=IMAGES[image.id].path)
         if container and container.status != 'exited':
             container.stop()
         docker_client.close()
@@ -369,7 +384,7 @@ def _stop_container(image: ImageState) -> None:
 def _remove_container(image: ImageState) -> None:
     def act() -> None:
         docker_client = docker.from_env()
-        container = find_container(docker_client, image=image.path)
+        container = find_container(docker_client, image=IMAGES[image.id].path)
         if container:
             container.remove(v=True, force=True)
         docker_client.close()
@@ -412,7 +427,7 @@ def image_menu(
             ActionItem(
                 label='Fetch',
                 icon='󰇚',
-                action=lambda: _fetch_image(image),
+                action=lambda: _reactive_fetch_image()(image),
             ),
         )
     elif image.status == ImageStatus.FETCHING:
@@ -477,8 +492,8 @@ def image_menu(
         )
 
     return HeadedMenu(
-        title=f'Docker - {image.label}',
-        heading=image.label,
+        title=f'Docker - {IMAGES[image.id].label}',
+        heading=IMAGES[image.id].label,
         sub_heading={
             ImageStatus.NOT_AVAILABLE: 'Image needs to be fetched',
             ImageStatus.FETCHING: 'Image is being fetched',

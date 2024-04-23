@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.12.7"
+version = "0.13.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -25,7 +25,7 @@ ubo-gui = [
     "dev",
   ] },
 ]
-python-redux = "^0.14.1"
+python-redux = "^0.14.3"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -40,13 +40,15 @@ docker = "^7.0.0"
 python-dotenv = "^1.0.1"
 sentry-sdk = "^1.43.0"
 pvorca = "^0.1.4"
+platformdirs = "^4.2.0"
+dill = "^0.3.8"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.359"
+pyright = "^1.1.360"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
@@ -57,6 +59,7 @@ tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"
 pyaudio = { version = "^0.2.14", markers = "platform_machine!='aarch64'" }
+ipython = "^8.23.0"
 
 [tool.poetry.extras]
 default = ["ubo-gui"]
@@ -105,8 +108,8 @@ inline-quotes = "single"
 multiline-quotes = "double"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "PLR0913"]
-"**/reducer.py" = ["C901", "PLR0912"]
+"tests/*" = ["S101", "PLR0913", "PLR0915"]
+"**/reducer.py" = ["C901", "PLR0912", "PLR0915"]
 "ubo_app/services/*/ubo_handle.py" = ["TCH004"]
 
 [tool.ruff.format]

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import functools
 from dataclasses import field
 from enum import StrEnum, auto
 
 from immutable import Immutable
 from redux import BaseAction, BaseCombineReducerState, BaseEvent
+
+from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
 class DockerStatus(StrEnum):
@@ -36,9 +39,22 @@ class DockerAction(BaseAction):
 
 
 class DockerSetStatusAction(DockerAction):
-    """Docker set status action."""
+    """Set status of docker service."""
 
     status: DockerStatus
+
+
+class DockerStoreUsernameAction(DockerAction):
+    """Store username for a registry."""
+
+    registry: str
+    username: str
+
+
+class DockerRemoveUsernameAction(DockerAction):
+    """Remove a registry for stored usernames."""
+
+    registry: str
 
 
 class DockerImageAction(DockerAction):
@@ -69,6 +85,13 @@ class DockerServiceState(Immutable):
     """Docker service state."""
 
     status: DockerStatus = DockerStatus.UNKNOWN
+    usernames: dict[str, str] = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_usernames',
+            object_type=dict[str, str],
+        ),
+    )
 
 
 class DockerImageEvent(DockerEvent):
@@ -81,9 +104,6 @@ class ImageState(Immutable):
     """Image state."""
 
     id: str
-    label: str
-    icon: str
-    path: str
     status: ImageStatus = ImageStatus.NOT_AVAILABLE
     container_ip: str | None = None
     docker_id: str | None = None

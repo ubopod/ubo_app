@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import weakref
 from functools import cached_property
 from typing import TYPE_CHECKING
@@ -119,7 +120,13 @@ class MenuAppCentral(UboApp):
             color=notification.color,
             has_extra_information=notification.extra_information is not None,
         )
-        info_application = NotificationInfo(text=notification.extra_information or '')
+        info_application = NotificationInfo(
+            text=re.sub(
+                r'\{[^{}|]*\|[^{}|]*\}',
+                lambda x: x.group()[1:].split('|')[0],
+                notification.extra_information or '',
+            ),
+        )
 
         application.bind(
             on_dismiss=lambda _: (

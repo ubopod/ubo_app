@@ -11,7 +11,7 @@ from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.store import autorun, dispatch, subscribe_event
-from ubo_app.store.main import RegisterSettingAppAction
+from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.services.ip import (
     IpNetworkInterface,
     IpUpdateAction,
@@ -114,7 +114,13 @@ IpMainMenu = SubMenuItem(
 
 
 async def init_service() -> None:
-    dispatch(RegisterSettingAppAction(menu_item=IpMainMenu))
+    dispatch(
+        RegisterSettingAppAction(
+            priority=0,
+            category=SettingsCategory.CONNECTIVITY,
+            menu_item=IpMainMenu,
+        ),
+    )
 
     subscribe_event(
         IpUpdateRequestEvent,

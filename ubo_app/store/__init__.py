@@ -1,12 +1,16 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import base64
 import sys
 from dataclasses import replace
 from pathlib import Path
 from threading import current_thread, main_thread
-from typing import TYPE_CHECKING
+from types import GenericAlias
+from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin, overload
 
+import dill
+from immutable import Immutable
 from redux import (
     BaseCombineReducerState,
     BaseEvent,
@@ -21,13 +25,13 @@ from ubo_app.constants import DEBUG_MODE, STORE_GRACE_TIME
 from ubo_app.logging import logger
 from ubo_app.store.main import MainAction, MainState
 from ubo_app.store.main.reducer import reducer as main_reducer
-from ubo_app.store.services.camera import CameraAction, CameraEvent
+from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
 from ubo_app.store.services.docker import DockerAction, DockerState
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
 from ubo_app.store.services.keypad import KeypadEvent
 from ubo_app.store.services.lightdm import LightDMAction, LightDMState
 from ubo_app.store.services.notifications import NotificationsAction, NotificationsState
-from ubo_app.store.services.rgb_ring import RgbRingAction
+from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
 from ubo_app.store.services.sound import SoundAction, SoundState
 from ubo_app.store.services.ssh import SSHAction, SSHState
@@ -37,6 +41,8 @@ from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.update_manager import UpdateManagerAction, UpdateManagerState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
+from ubo_app.utils.fake import Fake
+from ubo_app.utils.serializer import add_type_field
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -60,6 +66,8 @@ def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
 
 class RootState(BaseCombineReducerState):
     main: MainState
+    camera: CameraState
+    rgb_ring: RgbRingState
     lightdm: LightDMState
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
@@ -74,6 +82,9 @@ class RootState(BaseCombineReducerState):
 
 
 class ScreenshotEvent(BaseEvent): ...
+
+
+class SnapshotEvent(BaseEvent): ...
 
 
 ActionType = (
@@ -93,7 +104,9 @@ ActionType = (
     | RgbRingAction
     | VoiceAction
 )
-EventType = KeypadEvent | CameraEvent | WiFiEvent | IpEvent | ScreenshotEvent
+EventType = (
+    KeypadEvent | CameraEvent | WiFiEvent | IpEvent | ScreenshotEvent | SnapshotEvent
+)
 
 root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,
@@ -103,6 +116,9 @@ root_reducer, root_reducer_id = combine_reducers(
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
 )
+
+T = TypeVar('T')
+LoadedObject = int | float | str | bool | None | Immutable | list['LoadedObject']
 
 
 class UboStore(Store[RootState, ActionType, EventType]):
@@ -119,7 +135,62 @@ class UboStore(Store[RootState, ActionType, EventType]):
             return f'{obj.__module__}:{obj.__name__}'
         if isinstance(obj, ActionItem):
             obj = replace(obj, action='')
+        if isinstance(obj, dict):
+            return {k: cls.serialize_value(v) for k, v in obj.items()}
+        if isinstance(obj, Fake):
+            return 'FAKE'
         return super().serialize_value(obj)
+
+    @classmethod
+    def _serialize_dataclass_to_dict(
+        cls: type[UboStore],
+        obj: Immutable,
+    ) -> dict[str, Any]:
+        result = super()._serialize_dataclass_to_dict(obj)
+        return add_type_field(obj, result)
+
+    @overload
+    def load_object(
+        self: UboStore,
+        data: SnapshotAtom,
+    ) -> int | float | str | bool | None | Immutable: ...
+    @overload
+    def load_object(
+        self: UboStore,
+        data: SnapshotAtom,
+        *,
+        object_type: type[T],
+    ) -> T: ...
+
+    def load_object(
+        self: UboStore,
+        data: Any,
+        *,
+        object_type: type[T] | None = None,
+    ) -> LoadedObject | T:
+        if isinstance(data, int | float | str | bool | None):
+            return data
+        if isinstance(data, list):
+            return [self.load_object(i) for i in data]
+        if (
+            isinstance(data, dict)
+            and '_type' in data
+            and isinstance(type_ := data.pop('_type'), str)
+        ):
+            class_ = dill.loads(base64.b64decode(type_.encode('utf-8')))  # noqa: S301
+            parameters = {key: self.load_object(value) for key, value in data.items()}
+
+            return class_(**parameters)
+        if not object_type or isinstance(
+            data,
+            get_origin(object_type)  # pyright: ignore [reportArgumentType]
+            if isinstance(object_type, GenericAlias)
+            else object_type,
+        ):
+            return cast(T, data)
+
+        msg = f'Invalid data type {type(data)}'
+        raise TypeError(msg)
 
 
 def create_task(
@@ -143,25 +214,29 @@ def stop_app() -> None:
         mainthread(App.get_running_app().stop)()
 
 
+def action_middleware(action: ActionType) -> ActionType:
+    logger.debug(
+        'Action dispatched',
+        extra={'action': action},
+    )
+    return action
+
+
+def event_middleware(event: EventType) -> EventType:
+    logger.debug(
+        'Event dispatched',
+        extra={'event': event},
+    )
+    return event
+
+
 store = UboStore(
     root_reducer,
     CreateStoreOptions(
         auto_init=False,
         scheduler=scheduler,
-        action_middlewares=[
-            lambda action: logger.debug(
-                'Action dispatched',
-                extra={'action': action},
-            )
-            or action,
-        ],
-        event_middlewares=[
-            lambda event: logger.debug(
-                'Event dispatched',
-                extra={'event': event},
-            )
-            or event,
-        ],
+        action_middlewares=[action_middleware],
+        event_middlewares=[event_middleware],
         task_creator=create_task,
         on_finish=stop_app,
         grace_time_in_seconds=STORE_GRACE_TIME,
@@ -176,6 +251,8 @@ subscribe_event = store.subscribe_event
 dispatch(InitAction())
 
 if DEBUG_MODE:
-    subscribe(lambda state: logger.verbose('State updated', extra={'state': state}))
+    subscribe(
+        lambda state: logger.verbose('State updated', extra={'state': state}),
+    )
 
 __all__ = ('autorun', 'dispatch', 'subscribe', 'subscribe_event')
