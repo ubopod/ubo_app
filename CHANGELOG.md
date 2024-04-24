@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.13.1
+
+- feat(wifi): use voice action to read the scan hint (instead of mehrdad's voice)
+
 ## Version 0.13.0
 
 - feat(core): organize settings in four different categories of connectivity,

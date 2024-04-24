@@ -21,7 +21,7 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.sound import SoundPlayChimeAction
+from ubo_app.store.services.voice import VoiceReadTextAction
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.qrcode import qrcode_input
@@ -47,7 +47,13 @@ class CreateWirelessConnectionPage(PageWidget):
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=items)
-        dispatch(SoundPlayChimeAction(name='scan'))
+
+        dispatch(
+            VoiceReadTextAction(
+                text='Go to your phone settings, choose {QR|K Y UW AA R} code and hold '
+                'it in front of the camera to scan it',
+            ),
+        )
 
     async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
         _, match = await qrcode_input(BARCODE_PATTERN)
