@@ -3,6 +3,7 @@
 ## Version 0.13.1
 
 - feat(wifi): use voice action to read the scan hint (instead of mehrdad's voice)
+- feat(camera): render a box in viewfinder for the QR code to be scanned #23
 
 ## Version 0.13.0
 

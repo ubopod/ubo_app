@@ -28,10 +28,8 @@ THROTTL_TIME = 0.5
 
 def resize_image(
     image: NDArray[np.uint8],
-    new_size: tuple[int, int] = (
-        headless_kivy_pi.config.width(),
-        headless_kivy_pi.config.height(),
-    ),
+    *,
+    new_size: tuple[int, int],
 ) -> NDArray[np.uint8]:
     scale_x = image.shape[1] / new_size[1]
     scale_y = image.shape[0] / new_size[0]
@@ -115,6 +113,8 @@ def init_service() -> None:
 
         def feed_viewfinder(_: object) -> None:
             display = headless_kivy_pi.config._display  # noqa: SLF001
+            width = headless_kivy_pi.config.width()
+            height = headless_kivy_pi.config.height()
             if not display:
                 return
             data = picam2.capture_array('main')
@@ -127,27 +127,47 @@ def init_service() -> None:
                     ),
                 )
 
-            data = resize_image(data)
+            data = resize_image(data, new_size=(width, height))
             data = np.rot90(data, 2)
 
             # Mirror the image
             data = data[:, ::-1, :3].astype(np.uint16)
+
+            # Render an empty rounded rectangle
+            margin = 15
+            thickness = 7
+
+            lines = [
+                ((margin, width - margin), (margin, margin + thickness)),
+                (
+                    (margin, width - margin),
+                    (height - margin - thickness, height - margin),
+                ),
+                (
+                    (margin, margin + thickness),
+                    (margin + thickness, height - margin - thickness),
+                ),
+                (
+                    (width - margin - thickness, width - margin),
+                    (margin + thickness, height - margin - thickness),
+                ),
+            ]
+            for line in lines:
+                data[line[0][0] : line[0][1], line[1][0] : line[1][1]] = (
+                    0xFF - data[line[0][0] : line[0][1], line[1][0] : line[1][1]]
+                ) // 2
+
             color = (
-                ((data[:, :, 0] & 0xF8) << 8)
-                | ((data[:, :, 1] & 0xFC) << 3)
-                | (data[:, :, 2] >> 3)
+                (data[:, :, 2] & 0xF8) << 8
+                | (data[:, :, 1] & 0xFC) << 3
+                | data[:, :, 0] >> 3
             )
+
             data_bytes = bytes(
                 np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
             )
 
-            display._block(  # noqa: SLF001
-                0,
-                0,
-                headless_kivy_pi.config.width() - 1,
-                headless_kivy_pi.config.height() - 1,
-                data_bytes,
-            )
+            display._block(0, 0, width - 1, height - 1, data_bytes)  # noqa: SLF001
 
         feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder, 0.03)
 
