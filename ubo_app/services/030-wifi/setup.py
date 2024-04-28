@@ -60,7 +60,7 @@ def init_service() -> None:
     dispatch(
         RegisterSettingAppAction(
             priority=2,
-            category=SettingsCategory.CONNECTIVITY,
+            category=SettingsCategory.NETWORK,
             menu_item=main.WiFiMainMenu,
         ),
     )

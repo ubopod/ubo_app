@@ -50,13 +50,13 @@ adafruit-circuitpython-typing = "*"
 
 [[package]]
 name = "adafruit-circuitpython-connectionmanager"
-version = "1.1.0"
+version = "1.2.0"
 description = "A urllib3.poolmanager/urllib3.connectionpool-like library for managing sockets and connections"
 optional = false
 python-versions = "*"
 files = [
-    {file = "adafruit_circuitpython_connectionmanager-1.1.0-py3-none-any.whl", hash = "sha256:c52c74e3a356898c6d54c34626b73a09734f9c864d72997e696a5dfab909966d"},
-    {file = "adafruit_circuitpython_connectionmanager-1.1.0.tar.gz", hash = "sha256:04904e921baa5496d1bfa4fe2374872f8e37fbf81ffa857e10e6221e2007b6ff"},
+    {file = "adafruit_circuitpython_connectionmanager-1.2.0-py3-none-any.whl", hash = "sha256:818c513d97cd1e64b12305f26a16b397e6e9a8564b59b9253314e0b8bad888d2"},
+    {file = "adafruit_circuitpython_connectionmanager-1.2.0.tar.gz", hash = "sha256:0f399f0682ca56424bc14678851655abc2f1fd0783afef00bf99c8b4f051a7e8"},
 ]
 
 [package.dependencies]
@@ -126,13 +126,13 @@ typing-extensions = ">=4.0,<5.0"
 
 [[package]]
 name = "adafruit-circuitpython-requests"
-version = "3.2.6"
+version = "3.2.8"
 description = "A requests-like library for web interfacing"
 optional = false
 python-versions = "*"
 files = [
-    {file = "adafruit_circuitpython_requests-3.2.6-py3-none-any.whl", hash = "sha256:13f133bb0876db3ff91d10b67b27ffb4d8f5aa546dcf82edb1c8a88e39713409"},
-    {file = "adafruit_circuitpython_requests-3.2.6.tar.gz", hash = "sha256:d4054b20cd109e7cb273c20d1644697e30e5b57d085f0122c4c74c210078bbeb"},
+    {file = "adafruit_circuitpython_requests-3.2.8-py3-none-any.whl", hash = "sha256:aca829e7a84bda37b8a70a867e28ae8c8aa27cbf596ea16f52805b0d2051be13"},
+    {file = "adafruit_circuitpython_requests-3.2.8.tar.gz", hash = "sha256:50e46e4a1ee9a4f2e832308468191b855424ebc468a0bc8c911c68df33918863"},
 ]
 
 [package.dependencies]
@@ -1622,18 +1622,18 @@ pytest = ">=7.0.0"
 
 [[package]]
 name = "pytest-xdist"
-version = "3.5.0"
+version = "3.6.1"
 description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "pytest-xdist-3.5.0.tar.gz", hash = "sha256:cbb36f3d67e0c478baa57fa4edc8843887e0f6cfc42d677530a36d7472b32d8a"},
-    {file = "pytest_xdist-3.5.0-py3-none-any.whl", hash = "sha256:d075629c7e00b611df89f490a5063944bee7a4362a5ff11c7cc7824a03dfce24"},
+    {file = "pytest_xdist-3.6.1-py3-none-any.whl", hash = "sha256:9ed4adfb68a016610848639bb7e02c9352d5d9f03d04809919e2dafc3be4cca7"},
+    {file = "pytest_xdist-3.6.1.tar.gz", hash = "sha256:ead156a4db231eec769737f57668ef58a2084a34b2e55c4a8fa20d861107300d"},
 ]
 
 [package.dependencies]
-execnet = ">=1.1"
-pytest = ">=6.2.0"
+execnet = ">=2.1"
+pytest = ">=7.0.0"
 
 [package.extras]
 psutil = ["psutil (>=3.0)"]

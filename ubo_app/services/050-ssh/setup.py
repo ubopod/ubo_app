@@ -268,7 +268,7 @@ def init_service() -> None:
     dispatch(
         RegisterSettingAppAction(
             priority=1,
-            category=SettingsCategory.CONNECTIVITY,
+            category=SettingsCategory.NETWORK,
             menu_item=ActionItem(
                 label='SSH',
                 icon=ssh_icon,

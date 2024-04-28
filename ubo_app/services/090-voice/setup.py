@@ -85,7 +85,7 @@ def init_service() -> None:
 
     dispatch(
         RegisterSettingAppAction(
-            category=SettingsCategory.INTERFACE,
+            category=SettingsCategory.ACCESSIBILITY,
             priority=0,
             menu_item=SubMenuItem(
                 label='Voice',

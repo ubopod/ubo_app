@@ -242,7 +242,7 @@ def docker_menu_items(state: DockerState) -> list[Item]:
 def docker_menu_item_action() -> HeadlessMenu:
     """Get the menu items for the Docker service."""
     return HeadlessMenu(
-        title='Docker',
+        title='󰡨Docker',
         items=docker_menu_items,
     )
 
@@ -348,7 +348,7 @@ def init_service() -> None:
                 label='Docker',
                 icon='󰡨',
                 sub_menu=HeadedMenu(
-                    title='Docker Settings',
+                    title='󰡨Docker Settings',
                     heading='󰡨 Docker',
                     sub_heading='Login a registry:',
                     items=settings_menu_items,

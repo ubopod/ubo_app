@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.13.3
+
+- refactor(core): reorganize settings menu #69
+- refactor(style): add icons to menu titles
+
 ## Version 0.13.2
 
 - build(bootstrap): generate a semi-unique id for the device and use it as its

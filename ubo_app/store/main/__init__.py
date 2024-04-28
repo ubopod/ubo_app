@@ -13,10 +13,18 @@ from ubo_app.store.status_icons import StatusIconsAction
 
 
 class SettingsCategory(StrEnum):
-    CONNECTIVITY = 'Connectivity'
-    INTERFACE = 'Interface'
-    SYSTEM = 'System'
+    NETWORK = 'Network'
+    ACCESSIBILITY = 'Accessibility'
+    UTILITIES = 'Utilities'
     APPS = 'Apps'
+
+
+SETTINGS_ICONS = {
+    SettingsCategory.NETWORK: '󰛳',
+    SettingsCategory.ACCESSIBILITY: '󰖤',
+    SettingsCategory.UTILITIES: '󰟻',
+    SettingsCategory.APPS: '󰀻',
+}
 
 
 if TYPE_CHECKING:

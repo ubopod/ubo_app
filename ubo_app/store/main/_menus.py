@@ -14,7 +14,7 @@ from ubo_gui.menu.types import (
 from ubo_gui.notification import NotificationWidget
 
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import PowerOffAction, SettingsCategory
+from ubo_app.store.main import SETTINGS_ICONS, PowerOffAction, SettingsCategory
 from ubo_app.store.services.notifications import Notification, NotificationsClearAction
 from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
 
@@ -25,18 +25,19 @@ if TYPE_CHECKING:
 
 
 APPS_MENU = HeadlessMenu(
-    title='Apps',
+    title='󰀻Apps',
     items=[],
     placeholder='No apps',
 )
 
 SETTINGS_MENU = HeadlessMenu(
-    title='Settings',
+    title='Settings',
     items=[
         SubMenuItem(
             label=category,
+            icon=SETTINGS_ICONS[category],
             sub_menu=HeadlessMenu(
-                title=category,
+                title=SETTINGS_ICONS[category] + category,
                 items=[],
                 placeholder='No settings in this category',
             ),
@@ -47,7 +48,7 @@ SETTINGS_MENU = HeadlessMenu(
 
 
 MAIN_MENU = HeadlessMenu(
-    title='Main',
+    title='󰍜Main',
     items=[
         SubMenuItem(
             label='Apps',
@@ -63,7 +64,7 @@ MAIN_MENU = HeadlessMenu(
             label='About',
             icon='',
             sub_menu=HeadedMenu(
-                title='About',
+                title='About',
                 heading=f'Ubo v{CURRENT_VERSION}',
                 sub_heading='A universal dashboard for your Raspberry Pi',
                 items=about_menu_items,
@@ -78,7 +79,7 @@ MAIN_MENU = HeadlessMenu(
     options=AutorunOptions(default_value='Notifications (not loaded)'),
 )
 def notifications_title(unread_count: int) -> str:
-    return f'Notifications ({unread_count})'
+    return f'Notifications ({unread_count})'
 
 
 @autorun(

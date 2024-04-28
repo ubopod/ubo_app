@@ -117,7 +117,7 @@ async def init_service() -> None:
     dispatch(
         RegisterSettingAppAction(
             priority=0,
-            category=SettingsCategory.CONNECTIVITY,
+            category=SettingsCategory.NETWORK,
             menu_item=IpMainMenu,
         ),
     )
