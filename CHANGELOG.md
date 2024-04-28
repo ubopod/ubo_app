@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 0.13.2
+
+- build(bootstrap): generate a semi-unique id for the device and use it as its
+  hostname, this is to reduce the risk of collision in the network #70
+- refactor(ssh): show hostname in the notification of the successful account creation
+  #70
+- refactor(ssh): avoid letters I, i, l and O in the generated password #70
+
 ## Version 0.13.1
 
 - feat(wifi): use voice action to read the scan hint (instead of mehrdad's voice)

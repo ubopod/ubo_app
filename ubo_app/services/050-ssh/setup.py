@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import socket
 from typing import TYPE_CHECKING
 
 from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR
@@ -26,6 +27,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.ssh import SSHClearEnabledStateAction, SSHUpdateStateAction
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import is_unit_active, is_unit_enabled, monitor_unit
 from ubo_app.utils.server import send_command
@@ -80,10 +82,13 @@ def create_ssh_account() -> None:
     """Create a temporary SSH account."""
 
     async def act() -> None:
-        result = await send_command(
-            'service ssh create_temporary_ssh_account',
-            has_output=True,
-        )
+        if IS_RPI:
+            result = await send_command(
+                'service ssh create_temporary_ssh_account',
+                has_output=True,
+            )
+        else:
+            result = 'username:password'
         if not result:
             dispatch(
                 NotificationsAddAction(
@@ -101,17 +106,20 @@ def create_ssh_account() -> None:
 
             return
         username, password = result.split(':')
+        hostname = socket.gethostname()
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    title=f'Username: {username}\nPassword: {password}',
-                    content='Make sure to delete it after use.',
+                    title=f'[size=20dp][b]HOST:[/b] {hostname}\n'
+                    f'[b]USER:[/b] {username}\n[b]PASS:[/b] {password}[/size]',
+                    content='',
                     importance=Importance.MEDIUM,
                     icon='',
                     display_type=NotificationDisplayType.STICKY,
-                    extra_information='Note that in order to make things work for you, \
-we had to make sure password authentication for {ssh|EH S EH S EY CH} server is \
-enabled, you may want to disable it later.',
+                    extra_information='Make sure to delete it after use.\n'
+                    'Note that in order to make things work for you, we had to make '
+                    'sure password authentication for {ssh|EH S EH S EY CH} server is '
+                    'enabled, you may want to disable it later.',
                     color=SUCCESS_COLOR,
                 ),
             ),

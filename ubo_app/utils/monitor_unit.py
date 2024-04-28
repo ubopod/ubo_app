@@ -30,7 +30,7 @@ def to_dbus_string(string: str) -> str:
         if char.isalnum() or char == '_':
             result.append(char)
         else:
-            result.append('_%02x' % ord(char))
+            result.append(f'_{ord(char):02x}')
     return ''.join(result)
 
 

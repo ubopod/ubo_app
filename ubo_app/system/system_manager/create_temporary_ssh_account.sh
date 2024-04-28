@@ -25,7 +25,13 @@ done
 useradd -m -s /bin/bash $USERNAME
 
 # Set the password
-PASSWORD=$(openssl rand -base64 6)
+while true; do
+  PASSWORD=$(openssl rand -base64 6)
+  if [[ $PASSWORD =~ [IilO] ]]; then
+    continue
+  fi
+  break
+done
 echo "${USERNAME}:${PASSWORD}" | chpasswd
 passwd --expire $USERNAME > /dev/null
 printf "${USERNAME}:${PASSWORD}"

@@ -17,6 +17,7 @@ fi
 
 
 #download the archive
+rm -rf WM8960-Audio-HAT
 git clone https://github.com/waveshare/WM8960-Audio-HAT
 cd WM8960-Audio-HAT
 

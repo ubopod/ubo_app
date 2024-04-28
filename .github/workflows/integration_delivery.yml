@@ -199,8 +199,8 @@ jobs:
         id: extract-version
         run: |
           echo "VERSION=$(poetry version --short)" >> "$GITHUB_OUTPUT"
-          echo "NAME=$(poetry version | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "VERSION=$(poetry version --short)"
+          echo "NAME=$(poetry version | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "NAME=$(poetry version | cut -d' ' -f1)"
 
       - name: Extract Version from CHANGELOG.md
@@ -377,6 +377,7 @@ jobs:
         with:
           packages-dir: dist
           verbose: true
+          skip-existing: true
 
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -432,16 +433,33 @@ jobs:
             fi
           done
 
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - name: Extract Changelog
+        id: changelog
+        run: |
+          perl -0777 -ne 'while (/## Version ${{ needs.build.outputs.version }}\n(\s*\n)*(.*?)(\s*\n)*## Version \d+\.\d+\.\d+\n/sg) {print "$2\n"}' CHANGELOG.md > CURRENT_CHANGELOG.md
+          {
+            echo "CONTENT<<EOF"
+            cat CURRENT_CHANGELOG.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
           tag_name: v${{ needs.build.outputs.version }}
           body: |
-            Release of version ${{ needs.build.outputs.version }}
             PyPI package: https://pypi.org/project/${{ needs.build.outputs.name }}/${{ needs.build.outputs.version }}
 
-            Note than GitHub doesn't allow assets bigger than 2GB in a release. Due to this, the files bigger than 2GB have been split into 2GB chunks. You can join them using the following command:
+            # Changes:
+            ${{ steps.changelog.outputs.CONTENT }}
+
+            ---
+
+            *Note than GitHub doesn't allow assets bigger than 2GB in a release. Due to this, the files bigger than 2GB have been split into 2GB chunks. You can join them using the following command:*
 
             ```bash
             cat [[filename]]_* > [[filename]]

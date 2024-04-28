@@ -120,12 +120,9 @@ class WindowSnapshot:
                     write_image(image_mismatch_path, array)
             elif self.make_screenshots:
                 write_image(image_path, array)
-            if title:
-                assert (
-                    new_snapshot == old_snapshot
-                ), f'Window snapshot mismatch for {title}'
-            else:
-                assert new_snapshot == old_snapshot, 'Window snapshot mismatch'
+            assert (
+                new_snapshot == old_snapshot
+            ), f'Window snapshot mismatch - {filename}'
 
         self.test_counter[title] += 1
 

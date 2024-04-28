@@ -95,7 +95,7 @@
   },
   "lightdm": {
     "is_active": true,
-    "is_enabled": true
+    "is_enabled": false
   },
   "main": {
     "menu": {
@@ -528,7 +528,7 @@
   },
   "ssh": {
     "is_active": true,
-    "is_enabled": true
+    "is_enabled": false
   },
   "status_icons": {
     "icons": [

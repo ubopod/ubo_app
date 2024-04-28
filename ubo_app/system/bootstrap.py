@@ -5,6 +5,8 @@ from __future__ import annotations
 import grp
 import os
 import pwd
+import random
+import string
 import subprocess
 import time
 import warnings
@@ -55,6 +57,24 @@ def create_user_service_directory() -> None:
     while path != Path(f'/home/{USERNAME}'):
         os.chown(path, uid, gid)
         path = path.parent
+
+
+def setup_hostname() -> None:
+    """Set the hostname to 'ubo'."""
+    available_letters = list(
+        set(string.ascii_lowercase + string.digits + '-') - set('IilO'),
+    )
+
+    id_path = Path(INSTALLATION_PATH) / 'id'
+    if not id_path.exists():
+        # Generate 2 letters random id
+        id = f'ubo-{" ".join(random.sample(available_letters, 2))}'
+        id_path.write_text(id)
+
+    id = id_path.read_text().strip()
+
+    # Set hostname of the system
+    Path('/etc/hostname').write_text(id)
 
 
 def create_service_file(service: Service) -> None:
@@ -236,6 +256,7 @@ def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
         return
 
     create_user_service_directory()
+    setup_hostname()
 
     for service in SERVICES:
         create_service_file(service)
