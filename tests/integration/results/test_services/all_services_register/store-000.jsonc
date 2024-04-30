@@ -111,6 +111,7 @@
           "icon": "󰍜",
           "is_short": true,
           "label": "",
+          "opacity": null,
           "sub_menu": {
             "items": [
               {
@@ -124,6 +125,7 @@
                 "icon": "󰀻",
                 "is_short": false,
                 "label": "Apps",
+                "opacity": null,
                 "sub_menu": {
                   "items": [
                     {
@@ -137,11 +139,12 @@
                       ],
                       "icon": "󰡨",
                       "is_short": false,
-                      "label": "Docker"
+                      "label": "Docker",
+                      "opacity": null
                     }
                   ],
                   "placeholder": "No apps",
-                  "title": "Apps"
+                  "title": "󰀻Apps"
                 }
               },
               {
@@ -155,6 +158,7 @@
                 "icon": "",
                 "is_short": false,
                 "label": "Settings",
+                "opacity": null,
                 "sub_menu": {
                   "items": [
                     {
@@ -165,9 +169,10 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰛳",
                       "is_short": false,
-                      "label": "Connectivity",
+                      "label": "Network",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [
                           {
@@ -181,6 +186,7 @@
                             "icon": "󰖩",
                             "is_short": false,
                             "label": "WiFi",
+                            "opacity": null,
                             "sub_menu": {
                               "items": [
                                 {
@@ -194,7 +200,8 @@
                                   ],
                                   "icon": "󱛃",
                                   "is_short": false,
-                                  "label": "Add"
+                                  "label": "Add",
+                                  "opacity": null
                                 },
                                 {
                                   "action": "",
@@ -207,7 +214,8 @@
                                   ],
                                   "icon": "󱖫",
                                   "is_short": false,
-                                  "label": "Select"
+                                  "label": "Select",
+                                  "opacity": null
                                 }
                               ],
                               "placeholder": null,
@@ -225,7 +233,8 @@
                             ],
                             "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
-                            "label": "SSH"
+                            "label": "SSH",
+                            "opacity": null
                           },
                           {
                             "background_color": "#68B7FF",
@@ -238,6 +247,7 @@
                             "icon": "󰩟",
                             "is_short": false,
                             "label": "IP Addresses",
+                            "opacity": null,
                             "sub_menu": {
                               "items": [
                                 {
@@ -251,6 +261,7 @@
                                   "icon": "󰈀",
                                   "is_short": false,
                                   "label": "eth0",
+                                  "opacity": null,
                                   "sub_menu": {
                                     "items": [
                                       {
@@ -263,7 +274,8 @@
                                         ],
                                         "icon": "󰩠",
                                         "is_short": false,
-                                        "label": "192.168.1.1"
+                                        "label": "192.168.1.1",
+                                        "opacity": null
                                       }
                                     ],
                                     "placeholder": "No IP addresses",
@@ -277,7 +289,7 @@
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "Connectivity"
+                        "title": "󰛳Network"
                       }
                     },
                     {
@@ -288,9 +300,10 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰖤",
                       "is_short": false,
-                      "label": "Interface",
+                      "label": "Accessibility",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [
                           {
@@ -304,6 +317,7 @@
                             "icon": "󰔊",
                             "is_short": false,
                             "label": "Voice",
+                            "opacity": null,
                             "sub_menu": {
                               "heading": "󰔊 Picovoice",
                               "items": [
@@ -318,7 +332,8 @@
                                   ],
                                   "icon": "󰐲",
                                   "is_short": false,
-                                  "label": "Set Access Key"
+                                  "label": "Set Access Key",
+                                  "opacity": null
                                 },
                                 {
                                   "action": "",
@@ -331,7 +346,8 @@
                                   ],
                                   "icon": "󰌊",
                                   "is_short": false,
-                                  "label": "Clear Access Key"
+                                  "label": "Clear Access Key",
+                                  "opacity": null
                                 }
                               ],
                               "placeholder": null,
@@ -341,7 +357,7 @@
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "Interface"
+                        "title": "󰖤Accessibility"
                       }
                     },
                     {
@@ -352,9 +368,10 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰟻",
                       "is_short": false,
-                      "label": "System",
+                      "label": "Utilities",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [
                           {
@@ -368,11 +385,12 @@
                             ],
                             "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
-                            "label": "LightDM"
+                            "label": "LightDM",
+                            "opacity": null
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "System"
+                        "title": "󰟻Utilities"
                       }
                     },
                     {
@@ -383,9 +401,10 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰀻",
                       "is_short": false,
                       "label": "Apps",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [
                           {
@@ -399,6 +418,7 @@
                             "icon": "󰡨",
                             "is_short": false,
                             "label": "Docker",
+                            "opacity": null,
                             "sub_menu": {
                               "heading": "󰡨 Docker",
                               "items": [
@@ -413,22 +433,23 @@
                                   ],
                                   "icon": "󰐲",
                                   "is_short": false,
-                                  "label": "Set Access Key"
+                                  "label": "Set Access Key",
+                                  "opacity": null
                                 }
                               ],
                               "placeholder": null,
                               "sub_heading": "Login a registry:",
-                              "title": "Docker Settings"
+                              "title": "󰡨Docker Settings"
                             }
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "Apps"
+                        "title": "󰀻Apps"
                       }
                     }
                   ],
                   "placeholder": null,
-                  "title": "Settings"
+                  "title": "Settings"
                 }
               },
               {
@@ -442,6 +463,7 @@
                 "icon": "",
                 "is_short": false,
                 "label": "About",
+                "opacity": null,
                 "sub_menu": {
                   "heading": "Ubo v0.0.0",
                   "items": [
@@ -450,17 +472,18 @@
                       "color": "#000000",
                       "icon": "󰄬",
                       "is_short": false,
-                      "label": "Already up to date!"
+                      "label": "Already up to date!",
+                      "opacity": null
                     }
                   ],
                   "placeholder": null,
                   "sub_heading": "A universal dashboard for your Raspberry Pi",
-                  "title": "About"
+                  "title": "About"
                 }
               }
             ],
             "placeholder": null,
-            "title": "Main"
+            "title": "󰍜Main"
           }
         },
         {
@@ -469,10 +492,11 @@
           "icon": "",
           "is_short": true,
           "label": "",
+          "opacity": null,
           "sub_menu": {
             "items": [],
             "placeholder": "No notifications",
-            "title": "Notifications (0)"
+            "title": "Notifications (0)"
           }
         },
         {
@@ -486,7 +510,8 @@
           ],
           "icon": "󰐥",
           "is_short": true,
-          "label": "Turn off"
+          "label": "Turn off",
+          "opacity": null
         }
       ],
       "placeholder": null,

@@ -377,7 +377,6 @@ jobs:
         with:
           packages-dir: dist
           verbose: true
-          skip-existing: true
 
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')

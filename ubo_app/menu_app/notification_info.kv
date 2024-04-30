@@ -1,11 +1,11 @@
-#:kivy 2.2.1
+#:kivy 2.3.0
 
 <NotificationInfo>:
   BoxLayout:
     orientation: 'horizontal'
-    padding: dp(5)
+    padding: dp(5), dp(5), dp(5), root.padding_bottom
 
-    Widget:
+    StencilView:
       id: container
       size_hint: 1, 1
 
@@ -29,7 +29,6 @@
       size_hint: None, 1
       orientation: 'vertical'
       width: dp(UBO_GUI_SHORT_WIDTH)
-      padding: 0, dp(16), 0, dp(16)
 
       AnimatedSlider:
         id: slider

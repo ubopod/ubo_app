@@ -1,34 +1,42 @@
-<CreateWirelessConnectionPage>
-  BoxLayout:
-    orientation: 'vertical'
-    padding: dp(50)
-    spacing: dp(20)
+#:kivy 2.3.0
+
+<CreateWirelessConnectionPage>:
+  AnchorLayout:
+    padding: 0, root.padding_top, 0, root.padding_bottom
 
     BoxLayout:
-      orientation: 'horizontal'
-      size_hint: 1, 1
-      Label:
-        text: '󱛃' if root.creating else '󰄀'
-        size_hint: 1, None
-        font_size: dp(60)
-        height: self.texture_size[1]
+      anchor: 'center', 'top'
+      orientation: 'vertical'
+      padding: dp(50)
+      spacing: dp(10)
+
+      BoxLayout:
+        orientation: 'horizontal'
+        size_hint: 1, 1
+        Label:
+          text: '󱛃' if root.creating else '󰄀'
+          size_hint: 1, None
+          font_size: dp(60)
+          height: self.texture_size[1]
+
+        Label:
+          text: '' if root.creating else '󰐲'
+          size_hint: 1, None
+          font_size: dp(60)
+          height: self.texture_size[1]
 
       Label:
-        text: '' if root.creating else '󰐲'
-        size_hint: 1, None
-        font_size: dp(60)
+        text: 'Creating Scanned WiFi Connection' if root.creating else 'Scan WiFi QR-Code With Front Camera'
+        text_size: self.width, None
+        font_size: dp(19)
+        halign: 'center'
+        valign: 'middle'
         height: self.texture_size[1]
+        size_hint: 1, 1
 
-    Label:
-      text: 'Creating Scanned WiFi Connection' if root.creating else 'Scan WiFi QR-Code With Front Camera'
-      text_size: self.width, None
-      font_size: dp(19)
-      halign: 'center'
-      valign: 'middle'
-      height: self.texture_size[1]
-      size_hint: 1, 1
-
-  ItemWidget:
-    item: root.get_item(2)
-    is_set: not root.creating
-    size_hint: 1, None
+    BoxLayout:
+      anchor: 'left', 'bottom'
+      ItemWidget:
+        item: root.get_item(2)
+        is_set: not root.creating
+        size_hint: 1, None

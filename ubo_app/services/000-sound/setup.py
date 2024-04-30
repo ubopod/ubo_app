@@ -16,8 +16,8 @@ def init_service() -> None:
     audio_manager = AudioManager()
 
     register_persistent_store(
-        'sound_playback_volume',
-        lambda state: state.sound.playback_volume,
+        'sound_state',
+        lambda state: state.sound,
     )
 
     dispatch(

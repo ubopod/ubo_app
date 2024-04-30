@@ -37,9 +37,9 @@ def register_persistent_store(
                 current_state = json.loads(Path(PERSISTENT_STORE_PATH).read_text())
             except FileNotFoundError:
                 current_state = {}
-            serialized_value = json.dumps(store.serialize_value(value), indent=2)
+            serialized_value = store.serialize_value(value)
             current_state[key] = serialized_value
-            Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state))
+            Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
 
     subscribe_event(FinishEvent, write.unsubscribe)
 
@@ -77,13 +77,14 @@ def read_from_persistent_store(
     from ubo_app.store import store
 
     try:
-        current_state = json.loads(Path(PERSISTENT_STORE_PATH).read_text())
+        file_content = Path(PERSISTENT_STORE_PATH).read_text()
+        current_state = json.loads(file_content)
     except FileNotFoundError:
         return default or (None if object_type is None else object_type())
-    serialized_value = current_state.get(key)
-    if serialized_value is None:
+    value = current_state.get(key)
+    if value is None:
         return default or (None if object_type is None else object_type())
     return store.load_object(
-        json.loads(serialized_value),
+        value,
         object_type=cast(type[T], object_type),
     )

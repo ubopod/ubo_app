@@ -38,6 +38,7 @@ async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
+    title: str | None = None,
 ) -> tuple[str, QrCodeGroupDict]: ...
 
 
@@ -46,6 +47,7 @@ async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
+    title: str | None = None,
     resolver: Callable[[str, QrCodeGroupDict], ReturnType],
 ) -> ReturnType: ...
 
@@ -54,6 +56,7 @@ async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
+    title: str | None = None,
     resolver: Callable[[str, QrCodeGroupDict], ReturnType] | None = None,
 ) -> tuple[str, QrCodeGroupDict] | ReturnType:
     """Use the camera to scan a QR code."""
@@ -65,7 +68,8 @@ async def qrcode_input(
         notification_future = Future()
         notification = Notification(
             id='qrcode',
-            title='QR Code',
+            icon='󰐲',
+            title='QR Code' if title is None else title,
             content=prompt,
             display_type=NotificationDisplayType.STICKY,
             is_read=True,

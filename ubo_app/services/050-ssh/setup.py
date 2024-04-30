@@ -68,7 +68,7 @@ class ClearTemporaryUsersPrompt(PromptWidget):
     def __init__(self: ClearTemporaryUsersPrompt, **kwargs: object) -> None:
         """Initialize the prompt."""
         super().__init__(**kwargs, items=None)
-        self.prompt = 'Clear temporary ssh users?'
+        self.prompt = 'Remove all temporary SSH accounts?'
         self.icon = '󱈋'
         self.first_option_label = ''
         self.first_option_background_color = 'black'
@@ -110,9 +110,9 @@ def create_ssh_account() -> None:
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    title=f'[size=20dp][b]HOST:[/b] {hostname}\n'
-                    f'[b]USER:[/b] {username}\n[b]PASS:[/b] {password}[/size]',
-                    content='',
+                    title='Account Info',
+                    content=f'[size=18dp][b]host:[/b] {hostname}\n'
+                    f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
                     importance=Importance.MEDIUM,
                     icon='',
                     display_type=NotificationDisplayType.STICKY,

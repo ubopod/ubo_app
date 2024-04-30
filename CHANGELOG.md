@@ -4,6 +4,10 @@
 
 - refactor(core): reorganize settings menu #69
 - refactor(style): add icons to menu titles
+- refactor(core): make pagination more obvious #69
+- refactor(core): render the next and previous menu items in place of footer/header
+  when there is such item #76
+- fix(notifications): scrollbar doesn't wrap around when scrolling up anymore
 
 ## Version 0.13.2
 

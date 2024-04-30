@@ -50,13 +50,13 @@ adafruit-circuitpython-typing = "*"
 
 [[package]]
 name = "adafruit-circuitpython-connectionmanager"
-version = "1.2.0"
+version = "2.0.0"
 description = "A urllib3.poolmanager/urllib3.connectionpool-like library for managing sockets and connections"
 optional = false
 python-versions = "*"
 files = [
-    {file = "adafruit_circuitpython_connectionmanager-1.2.0-py3-none-any.whl", hash = "sha256:818c513d97cd1e64b12305f26a16b397e6e9a8564b59b9253314e0b8bad888d2"},
-    {file = "adafruit_circuitpython_connectionmanager-1.2.0.tar.gz", hash = "sha256:0f399f0682ca56424bc14678851655abc2f1fd0783afef00bf99c8b4f051a7e8"},
+    {file = "adafruit_circuitpython_connectionmanager-2.0.0-py3-none-any.whl", hash = "sha256:a7164831e02c02792c65123d2931dfeb6e998456aa0da48a0effaaddc8af7691"},
+    {file = "adafruit_circuitpython_connectionmanager-2.0.0.tar.gz", hash = "sha256:32b0a2e38f703bf6e22d93e6929a301fe4e18fff6f68ad251521b8d250ef6436"},
 ]
 
 [package.dependencies]
@@ -2034,13 +2034,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.10.8"
+version = "0.11.2"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.10.8-py3-none-any.whl", hash = "sha256:b50205275de64deebc0d35dbfcb7605a04fde240978b4a5ddceb4edd61ab81b1"},
-    {file = "ubo_gui-0.10.8.tar.gz", hash = "sha256:1b1c452ee1ce6bb75414f09291305b235a8799f78f399607dc24cff2c32e2036"},
+    {file = "ubo_gui-0.11.2-py3-none-any.whl", hash = "sha256:3383fe2fed4e4f30fa2efa385eb8031190204173071c87c4ee1cfc5ae7a75ac4"},
+    {file = "ubo_gui-0.11.2.tar.gz", hash = "sha256:54bc388e359cb3f91957a667ff70557f2bcb79bb4f3be4c3c0df25c91cbf52f4"},
 ]
 
 [package.dependencies]
@@ -2193,4 +2193,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "fd3912a433df0eef7c6d5edbb9096a9bfbea223acf823db8ed686c550285a501"
+content-hash = "147f3825b5838c2010886045c1d6b94d2788a8c892fedfef27b39016ce15b185"

@@ -18,7 +18,12 @@ def setup() -> None:
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()
         sys.modules['sdbus_async.networkmanager.enums'] = Fake()
-        subprocess.run = Fake()
+        original_run = subprocess.run
+        subprocess.run = (
+            lambda command, *args, **kwargs: Fake()
+            if any(i in command[0] for i in ('reboot', 'poweroff'))
+            else original_run(command, *args, **kwargs)
+        )
         asyncio.create_subprocess_exec = Fake(
             _Fake__return_value=Fake(
                 _Fake__await_value=Fake(

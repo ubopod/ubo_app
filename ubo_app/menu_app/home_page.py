@@ -1,11 +1,14 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import pathlib
 from functools import cached_property
 from typing import TYPE_CHECKING
 
 from kivy.clock import Clock
+from kivy.lang.builder import Builder
 from ubo_gui.gauge import GaugeWidget
+from ubo_gui.menu.constants import PAGE_SIZE
 from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
@@ -20,11 +23,18 @@ if TYPE_CHECKING:
 class HomePage(PageWidget):
     def __init__(
         self: HomePage,
-        items: Sequence[Item] | None = None,
+        items: Sequence[Item | None] = [],
         *args: object,
         **kwargs: object,
     ) -> None:
-        super().__init__(items, *args, **kwargs)
+        super().__init__(
+            [None, *items, None],
+            *args,
+            count=PAGE_SIZE + 2,
+            offset=1,
+            render_surroundings=True,
+            **kwargs,
+        )
 
         self.ids.central_column.add_widget(self.cpu_gauge)
         self.ids.central_column.add_widget(self.ram_gauge)
@@ -70,3 +80,8 @@ class HomePage(PageWidget):
         Clock.schedule_interval(set_value, 1)
 
         return gauge
+
+
+Builder.load_file(
+    pathlib.Path(__file__).parent.joinpath('home_page.kv').resolve().as_posix(),
+)

@@ -1,7 +1,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import pathlib
 import re
 import weakref
 from functools import cached_property
@@ -9,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
-from kivy.lang.builder import Builder
 from ubo_gui.app import UboApp
 from ubo_gui.menu import MenuWidget
 from ubo_gui.notification import NotificationWidget
@@ -35,8 +33,13 @@ if TYPE_CHECKING:
 
 class MenuWidgetWithHomePage(MenuWidget):
     def render_items(self: MenuWidgetWithHomePage, *_: object) -> None:
-        if self.depth == 1:
-            self.current_screen = HomePage(self.current_menu_items, name='Page 1 0')
+        if self.depth <= 1:
+            self.current_screen = HomePage(
+                self.current_menu_items,
+                name='Page 1 0',
+                padding_bottom=self.padding_bottom,
+                padding_top=self.padding_top,
+            )
         else:
             super().render_items()
 
@@ -64,12 +67,33 @@ class MenuAppCentral(UboApp):
                 return
             mainthread(self.menu_widget.set_root_menu)(menu)
 
+        self.menu_widget.bind(page_index=self.handle_page_index_change)
+        self.menu_widget.bind(current_menu=self.handle_page_index_change)
+
+    def build(self: UboApp) -> Widget | None:
+        root = super().build()
+        self.menu_widget.padding_top = root.ids.header_layout.height
+        self.menu_widget.padding_bottom = root.ids.footer_layout.height
+        return root
+
+    def handle_page_index_change(
+        self: MenuAppCentral,
+        *_: object,
+    ) -> None:
+        self.root.ids.header_layout.opacity = (
+            1 if self.menu_widget.page_index == 0 else 0
+        )
+        self.root.ids.footer_layout.opacity = (
+            1 if self.menu_widget.page_index >= self.menu_widget.pages - 1 else 0
+        )
+
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
         self.root.title = title
 
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
+        self.root.is_fullscreen = True
         self.root.title = self.menu_widget.title
         self.menu_widget.bind(title=self.handle_title_change)
         self.menu_widget.bind(current_screen=set_path)
@@ -113,7 +137,6 @@ class MenuAppCentral(UboApp):
     ) -> None:
         notification = event.notification
         application = NotificationWidget(
-            title='Notification',
             notification_title=notification.title,
             content=notification.content,
             icon=notification.icon,
@@ -140,7 +163,10 @@ class MenuAppCentral(UboApp):
         application.bind(
             on_info=lambda _: (
                 dispatch(
-                    VoiceReadTextAction(text=notification.extra_information or ''),
+                    VoiceReadTextAction(
+                        text=(notification.extra_information or '').replace('\n', '')
+                        or '',
+                    ),
                 ),
                 self.menu_widget.open_application(info_application),
             ),
@@ -153,8 +179,3 @@ class MenuAppCentral(UboApp):
                 lambda _: application.dispatch('on_dismiss'),
                 notification.flash_time,
             )
-
-
-Builder.load_file(
-    pathlib.Path(__file__).parent.joinpath('home_page.kv').resolve().as_posix(),
-)

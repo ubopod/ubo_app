@@ -15,6 +15,7 @@
           "icon": "󰍜",
           "is_short": true,
           "label": "",
+          "opacity": null,
           "sub_menu": {
             "items": [
               {
@@ -28,10 +29,11 @@
                 "icon": "󰀻",
                 "is_short": false,
                 "label": "Apps",
+                "opacity": null,
                 "sub_menu": {
                   "items": [],
                   "placeholder": "No apps",
-                  "title": "Apps"
+                  "title": "󰀻Apps"
                 }
               },
               {
@@ -45,6 +47,7 @@
                 "icon": "",
                 "is_short": false,
                 "label": "Settings",
+                "opacity": null,
                 "sub_menu": {
                   "items": [
                     {
@@ -55,9 +58,10 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰛳",
                       "is_short": false,
-                      "label": "Connectivity",
+                      "label": "Network",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [
                           {
@@ -71,6 +75,7 @@
                             "icon": "󰖩",
                             "is_short": false,
                             "label": "WiFi",
+                            "opacity": null,
                             "sub_menu": {
                               "items": [
                                 {
@@ -84,7 +89,8 @@
                                   ],
                                   "icon": "󱛃",
                                   "is_short": false,
-                                  "label": "Add"
+                                  "label": "Add",
+                                  "opacity": null
                                 },
                                 {
                                   "action": "",
@@ -97,7 +103,8 @@
                                   ],
                                   "icon": "󱖫",
                                   "is_short": false,
-                                  "label": "Select"
+                                  "label": "Select",
+                                  "opacity": null
                                 }
                               ],
                               "placeholder": null,
@@ -106,7 +113,7 @@
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "Connectivity"
+                        "title": "󰛳Network"
                       }
                     },
                     {
@@ -117,13 +124,14 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰖤",
                       "is_short": false,
-                      "label": "Interface",
+                      "label": "Accessibility",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
-                        "title": "Interface"
+                        "title": "󰖤Accessibility"
                       }
                     },
                     {
@@ -134,13 +142,14 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰟻",
                       "is_short": false,
-                      "label": "System",
+                      "label": "Utilities",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
-                        "title": "System"
+                        "title": "󰟻Utilities"
                       }
                     },
                     {
@@ -151,18 +160,19 @@
                         1,
                         1
                       ],
-                      "icon": null,
+                      "icon": "󰀻",
                       "is_short": false,
                       "label": "Apps",
+                      "opacity": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
-                        "title": "Apps"
+                        "title": "󰀻Apps"
                       }
                     }
                   ],
                   "placeholder": null,
-                  "title": "Settings"
+                  "title": "Settings"
                 }
               },
               {
@@ -176,6 +186,7 @@
                 "icon": "",
                 "is_short": false,
                 "label": "About",
+                "opacity": null,
                 "sub_menu": {
                   "heading": "Ubo v0.0.0",
                   "items": [
@@ -184,17 +195,18 @@
                       "color": "#000000",
                       "icon": "󰄬",
                       "is_short": false,
-                      "label": "Already up to date!"
+                      "label": "Already up to date!",
+                      "opacity": null
                     }
                   ],
                   "placeholder": null,
                   "sub_heading": "A universal dashboard for your Raspberry Pi",
-                  "title": "About"
+                  "title": "About"
                 }
               }
             ],
             "placeholder": null,
-            "title": "Main"
+            "title": "󰍜Main"
           }
         },
         {
@@ -203,6 +215,7 @@
           "icon": "",
           "is_short": true,
           "label": "",
+          "opacity": null,
           "sub_menu": {
             "items": [],
             "placeholder": "No notifications",
@@ -220,7 +233,8 @@
           ],
           "icon": "󰐥",
           "is_short": true,
-          "label": "Turn off"
+          "label": "Turn off",
+          "opacity": null
         }
       ],
       "placeholder": null,
@@ -228,9 +242,9 @@
     },
     "path": [
       "Dashboard",
-      "Main",
-      "Settings",
-      "Connectivity",
+      "󰍜Main",
+      "Settings",
+      "󰛳Network",
       "WiFi Settings",
       "Wi-Fi"
     ],

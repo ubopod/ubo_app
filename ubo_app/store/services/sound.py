@@ -1,7 +1,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
-import functools
 from dataclasses import field
 from enum import StrEnum
 from typing import TYPE_CHECKING
@@ -69,34 +68,38 @@ class SoundPlayAudioEvent(SoundEvent):
 
 class SoundState(Immutable):
     playback_volume: float = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            key='sound_playback_volume',
-            object_type=float,
-            default=0.5,
-        ),
+        default_factory=lambda: read_from_persistent_store(
+            key='sound_state',
+            object_type=SoundState,
+            default=default_sound_state,
+        ).playback_volume,
     )
     is_playback_mute: bool = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            key='sound_is_playback_mute',
-            object_type=bool,
-            default=False,
-        ),
+        default_factory=lambda: read_from_persistent_store(
+            key='sound_state',
+            object_type=SoundState,
+            default=default_sound_state,
+        ).is_playback_mute,
     )
     capture_volume: float = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            key='sound_capture_volume',
-            object_type=float,
-            default=0.5,
-        ),
+        default_factory=lambda: read_from_persistent_store(
+            key='sound_state',
+            object_type=SoundState,
+            default=default_sound_state,
+        ).capture_volume,
     )
     is_capture_mute: bool = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            key='sound_is_capture_mute',
-            object_type=bool,
-            default=False,
-        ),
+        default_factory=lambda: read_from_persistent_store(
+            key='sound_state',
+            object_type=SoundState,
+            default=default_sound_state,
+        ).is_capture_mute,
     )
+
+
+default_sound_state = SoundState(
+    playback_volume=0.5,
+    is_playback_mute=False,
+    capture_volume=0.5,
+    is_capture_mute=False,
+)
