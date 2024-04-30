@@ -77,8 +77,7 @@ curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/i
   | sudo bash
 ```
 
-If you want to install docker service and configure ubo to be able to use it run
-this:
+If you want to install docker service and configure ubo to be able to use it run this:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
@@ -130,18 +129,63 @@ Contributions following Python best practices are welcome.
 
 ### Development
 
+#### Setting up the development environment
+
+To set up the development environment, you need to have Python 3.11+ and [`poetry`](https://python-poetry.org) installed.
+
+First, clone the repository, then install the dependencies:
+
+````bash
+poetry install --with dev --extras=dev
+```
+
+Now you can run the app with:
+
+```bash
+poetry run ubo
+```
+
+#### Running tests
+
+Easiest way to run tests is to use the provided `Dockerfile`s. To run the tests
+in a container, you first need to create the development images by running:
+
+```bash
+poetry run poe build-docker-images
+````
+
+Then you can run the tests with:
+
+```bash
+docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-pypoetry-cache:/root/.cache/pypoetry ubo-app-test
+```
+
+You can add arguments to the `pytest` command to run specific tests like this:
+
+```bash
+docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-pypoetry-cache:/root/.cache/pypoetry ubo-app-test -- <pytest-args>
+```
+
+For example, to run only the tests in the `tests/test_app.py` file, you can run:
+
+```bash
+docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-pypoetry-cache:/root/.cache/pypoetry ubo-app-test -- -n3 tests/test_some_test.py
+```
+
+You can also run the tests in your local environment by running:
+
+```bash
+poetry run poe test
+```
+
+⚠️**Note:** When running the tests in your local environment, the window snapshots produced by tests may mismatch the expected snapshots. This is because the snapshots are taken with a certain DPI and some environments may have different DPI settings. For example, we are aware that the snapshots taken in macOS have different DPI settings. If you encounter this issue, you should run the tests in a Docker container as described above.
+
 #### QR code
 
-In development environment, the camera is probably not working as it is relying,
-on `picamera2`, so it may become challenging to test the flows relying on QR code
-input.
+In development environment, the camera is probably not working as it is relying, on `picamera2`, so it may become challenging to test the flows relying on QR code input.
 
-To address this, the `qrcode_input` method, in not-RPi environments, will try to
-get its input from `/tmp/qrcode_input.txt`. So, whenever you encounter a QR code
-input, you can write the content of the QR code in that file and the application
-will read it from there and continue the flow.
+To address this, the `qrcode_input` method, in not-RPi environments, will try to get its input from `/tmp/qrcode_input.txt`. So, whenever you encounter a QR code input, you can write the content of the QR code in that file and the application will read it from there and continue the flow.
 
 ## 🔒 License
 
-This project is released under the Apache-2.0 License. See the [LICENSE](./LICENSE)
-file for more details.
+This project is released under the Apache-2.0 License. See the [LICENSE](./LICENSE) file for more details.

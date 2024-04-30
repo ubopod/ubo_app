@@ -6,4 +6,4 @@ RUN apt -y install gcc curl git libcap-dev libegl1 libgl1 libmtdev1 libzbar0 pyt
 RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV PATH="${PATH}:/root/.local/bin"
 WORKDIR /ubo-app
-CMD tail -f /dev/null
+ENTRYPOINT ["/bin/bash", "-c", "poetry install --with dev --extras=dev --verbose && exec bash"]

@@ -1,0 +1,3 @@
+FROM ubo-app-dev
+
+ENTRYPOINT ["/bin/bash", "-c", "poetry install --with dev --extras=dev --verbose && poetry run poe test $@"]

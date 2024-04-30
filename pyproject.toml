@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.13.3"
+version = "0.13.4"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -79,6 +79,7 @@ lint = "ruff check . --unsafe-fixes"
 typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
+build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
 
 [tool.poe.tasks.deploy_to_device]
 args = [

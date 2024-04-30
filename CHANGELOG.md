@@ -1,4 +1,10 @@
-# Changelog
+# ChangeLog
+
+## Version 0.13.4
+
+- build(development): add `Dockerfile`s for development and testing
+- docs(development): instructions on setting up development environment and running
+  tests
 
 ## Version 0.13.3
 
