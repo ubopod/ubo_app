@@ -10,6 +10,7 @@ LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
 deps=${deps:-"False"}
 bootstrap=${bootstrap:-"False"}
 run=${run:-"False"}
+restart=${restart:-"False"}
 env=${env:-"False"}
 
 function run_on_pod() {
@@ -45,3 +46,6 @@ test "$env" == "True" &&
 
 test "$run" == "True" &&
   run_on_pod "systemctl --user restart ubo-app.service"
+
+test "$restart" == "True" &&
+  run_on_pod "killall -9 ubo"

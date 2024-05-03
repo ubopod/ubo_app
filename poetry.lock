@@ -1503,13 +1503,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.360"
+version = "1.1.361"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.360-py3-none-any.whl", hash = "sha256:7637f75451ac968b7cf1f8c51cfefb6d60ac7d086eb845364bc8ac03a026efd7"},
-    {file = "pyright-1.1.360.tar.gz", hash = "sha256:784ddcda9745e9f5610483d7b963e9aa8d4f50d7755a9dffb28ccbeb27adce32"},
+    {file = "pyright-1.1.361-py3-none-any.whl", hash = "sha256:c50fc94ce92b5c958cfccbbe34142e7411d474da43d6c14a958667e35b9df7ea"},
+    {file = "pyright-1.1.361.tar.gz", hash = "sha256:1d67933315666b05d230c85ea8fb97aaa2056e4092a13df87b7765bb9e8f1a8d"},
 ]
 
 [package.dependencies]
@@ -1685,13 +1685,13 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.14.3"
+version = "0.14.4"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.14.3-py3-none-any.whl", hash = "sha256:94ab341d5ac6d3c90c18d48eaaf173e81f8bb57f0df7a6f2c75a05431b0aecd6"},
-    {file = "python_redux-0.14.3.tar.gz", hash = "sha256:f010ecda2af7f45b306b116a0d54edfc2bf60367a48e72fa9dcdfa144ea8a4a1"},
+    {file = "python_redux-0.14.4-py3-none-any.whl", hash = "sha256:063c8a69812afe73bce2b792c512ba3877412364723d82f930b5482c991735a0"},
+    {file = "python_redux-0.14.4.tar.gz", hash = "sha256:c244f05138d28d726ef10879c78ead7b20abe956e036ff028fdee2c4e1c57ef0"},
 ]
 
 [package.dependencies]
@@ -2034,13 +2034,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.11.2"
+version = "0.11.3"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.11.2-py3-none-any.whl", hash = "sha256:3383fe2fed4e4f30fa2efa385eb8031190204173071c87c4ee1cfc5ae7a75ac4"},
-    {file = "ubo_gui-0.11.2.tar.gz", hash = "sha256:54bc388e359cb3f91957a667ff70557f2bcb79bb4f3be4c3c0df25c91cbf52f4"},
+    {file = "ubo_gui-0.11.3-py3-none-any.whl", hash = "sha256:e048b92a35f462e8bfa9a80b165d03d37411e2c66a6f54a086f7fd6bafdf7e61"},
+    {file = "ubo_gui-0.11.3.tar.gz", hash = "sha256:4fdc146f35517b8360bb64b793cde109b64de2ec1105eb0a177c232ff4df8979"},
 ]
 
 [package.dependencies]
@@ -2193,4 +2193,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "147f3825b5838c2010886045c1d6b94d2788a8c892fedfef27b39016ce15b185"
+content-hash = "e2358687b4200ba2c19557edb4b6472ddce86dae41461749dbe9439d3d799d7f"

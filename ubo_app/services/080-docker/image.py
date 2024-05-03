@@ -392,19 +392,19 @@ def _remove_container(image: ImageState) -> None:
     to_thread(act)
 
 
-class DockerQRCode(PageWidget):
+class DockerQRCodePage(PageWidget):
     """QR code for the container's url (ip and port)."""
 
     ips: list[str] = ListProperty()
     port: str = StringProperty()
     index: int = NumericProperty(0)
 
-    def go_down(self: DockerQRCode) -> None:
+    def go_down(self: DockerQRCodePage) -> None:
         """Go down."""
         self.index = (self.index + 1) % len(self.ips)
         self.ids.slider.animated_value = len(self.ips) - 1 - self.index
 
-    def go_up(self: DockerQRCode) -> None:
+    def go_up(self: DockerQRCodePage) -> None:
         """Go up."""
         self.index = (self.index - 1) % len(self.ips)
         self.ids.slider.animated_value = len(self.ips) - 1 - self.index
@@ -418,7 +418,7 @@ def image_menu(
 
     def open_qrcode(port: str) -> Callable[[], PageWidget]:
         def action() -> PageWidget:
-            return DockerQRCode(ips=image.ip_addresses, port=port)
+            return DockerQRCodePage(ips=image.ip_addresses, port=port)
 
         return action
 
@@ -521,5 +521,8 @@ def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]
 
 IMAGE_MENUS = {image_id: image_menu_generator(image_id) for image_id in IMAGE_IDS}
 Builder.load_file(
-    pathlib.Path(__file__).parent.joinpath('docker_qrcode.kv').resolve().as_posix(),
+    pathlib.Path(__file__)
+    .parent.joinpath('docker_qrcode_page.kv')
+    .resolve()
+    .as_posix(),
 )

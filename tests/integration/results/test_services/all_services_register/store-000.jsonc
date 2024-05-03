@@ -7,7 +7,7 @@
     "queue": []
   },
   "docker": {
-    "_id": "85776e9add84f39e71545a137a1d5006",
+    "_id": "eb2083e6ce164dba0ff18e0242af9fc3",
     "home_assistant": {
       "container_ip": null,
       "docker_id": null,
@@ -223,20 +223,6 @@
                             }
                           },
                           {
-                            "action": "",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "[color=#008000]󰪥[/color]",
-                            "is_short": false,
-                            "label": "SSH",
-                            "opacity": null
-                          },
-                          {
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -391,6 +377,39 @@
                         ],
                         "placeholder": "No settings in this category",
                         "title": "󰟻Utilities"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰑔",
+                      "is_short": false,
+                      "label": "Remote",
+                      "opacity": null,
+                      "sub_menu": {
+                        "items": [
+                          {
+                            "action": "",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "[color=#008000]󰪥[/color]",
+                            "is_short": false,
+                            "label": "SSH",
+                            "opacity": null
+                          }
+                        ],
+                        "placeholder": "No settings in this category",
+                        "title": "󰑔Remote"
                       }
                     },
                     {

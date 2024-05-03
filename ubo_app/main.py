@@ -65,7 +65,10 @@ def main() -> None:
     headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})
 
     from ubo_app.load_services import load_services
+    from ubo_app.logging import logger
     from ubo_app.menu_app.menu import MenuApp
+
+    logger.info('----------------------Starting the app----------------------')
 
     load_services()
     app = MenuApp()
@@ -73,8 +76,6 @@ def main() -> None:
     try:
         app.run()
     except Exception:
-        from ubo_app.logging import logger
-
         logger.exception('An error occurred while running the app.')
         from redux import FinishAction
 

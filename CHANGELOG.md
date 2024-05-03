@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 0.13.5
+
+- feat(vscode): add vscode tunnel support: users can download the cli binary, login,
+  install the service and see the tunnel url as qr code
+
 ## Version 0.13.4
 
 - build(development): add `Dockerfile`s for development and testing

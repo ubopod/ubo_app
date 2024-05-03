@@ -135,7 +135,7 @@ To set up the development environment, you need to have Python 3.11+ and [`poetr
 
 First, clone the repository, then install the dependencies:
 
-````bash
+```bash
 poetry install --with dev --extras=dev
 ```
 
@@ -152,7 +152,7 @@ in a container, you first need to create the development images by running:
 
 ```bash
 poetry run poe build-docker-images
-````
+```
 
 Then you can run the tests with:
 

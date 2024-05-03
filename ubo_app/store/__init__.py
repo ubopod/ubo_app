@@ -36,6 +36,7 @@ from ubo_app.store.services.sensors import SensorsAction, SensorsState
 from ubo_app.store.services.sound import SoundAction, SoundState
 from ubo_app.store.services.ssh import SSHAction, SSHState
 from ubo_app.store.services.voice import VoiceAction, VoiceState
+from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
 from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
 from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
@@ -79,6 +80,7 @@ class RootState(BaseCombineReducerState):
     notifications: NotificationsState
     docker: DockerState
     voice: VoiceState
+    vscode: VSCodeState
 
 
 class ScreenshotEvent(BaseEvent): ...
@@ -103,6 +105,7 @@ ActionType = (
     | DockerAction
     | RgbRingAction
     | VoiceAction
+    | VSCodeAction
 )
 EventType = (
     KeypadEvent | CameraEvent | WiFiEvent | IpEvent | ScreenshotEvent | SnapshotEvent
