@@ -5,7 +5,6 @@ import pathlib
 from distutils.util import strtobool
 from typing import TYPE_CHECKING, cast
 
-from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
 from ubo_gui.constants import SUCCESS_COLOR
@@ -103,7 +102,7 @@ class CreateWirelessConnectionPage(PageWidget):
                 ),
             ),
         )
-        mainthread(self.dispatch)('on_close')
+        self.dispatch('on_close')
 
     def input_connection_information(self: CreateWirelessConnectionPage) -> None:
         create_task(self.create_wireless_connection())

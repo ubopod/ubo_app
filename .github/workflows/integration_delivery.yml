@@ -357,7 +357,7 @@ jobs:
       - images
     runs-on: ubuntu-latest
     environment:
-      name: release
+      name: pypi
       url: https://pypi.org/p/${{ needs.build.outputs.name }}
     permissions:
       id-token: write
@@ -391,7 +391,9 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: release
-      url: https://pypi.org/p/${{ needs.build.outputs.name }}
+      url:
+        https://github.com/${{ github.repository }}/releases/tag/v${{
+        needs.build.outputs.version }}
     permissions:
       contents: write
     steps:

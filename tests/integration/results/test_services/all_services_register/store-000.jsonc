@@ -12,9 +12,6 @@
       "container_ip": null,
       "docker_id": null,
       "id": "home_assistant",
-      "ip_addresses": [
-        "192.168.1.1"
-      ],
       "ports": [],
       "status": "not_available"
     },
@@ -22,9 +19,6 @@
       "container_ip": null,
       "docker_id": null,
       "id": "home_bridge",
-      "ip_addresses": [
-        "192.168.1.1"
-      ],
       "ports": [],
       "status": "not_available"
     },
@@ -32,9 +26,6 @@
       "container_ip": null,
       "docker_id": null,
       "id": "ngrok",
-      "ip_addresses": [
-        "192.168.1.1"
-      ],
       "ports": [],
       "status": "not_available"
     },
@@ -42,9 +33,6 @@
       "container_ip": null,
       "docker_id": null,
       "id": "ollama",
-      "ip_addresses": [
-        "192.168.1.1"
-      ],
       "ports": [],
       "status": "not_available"
     },
@@ -52,9 +40,6 @@
       "container_ip": null,
       "docker_id": null,
       "id": "open_webui",
-      "ip_addresses": [
-        "192.168.1.1"
-      ],
       "ports": [],
       "status": "not_available"
     },
@@ -62,9 +47,6 @@
       "container_ip": null,
       "docker_id": null,
       "id": "pi_hole",
-      "ip_addresses": [
-        "192.168.1.1"
-      ],
       "ports": [],
       "status": "not_available"
     },
@@ -72,9 +54,6 @@
       "container_ip": null,
       "docker_id": null,
       "id": "portainer",
-      "ip_addresses": [
-        "192.168.1.1"
-      ],
       "ports": [],
       "status": "not_available"
     },
@@ -91,7 +70,8 @@
         ],
         "name": "eth0"
       }
-    ]
+    ],
+    "is_connected": true
   },
   "lightdm": {
     "is_active": true,
@@ -612,6 +592,7 @@
   "wifi": {
     "connections": [],
     "current_connection": null,
+    "has_visited_onboarding": true,
     "state": "Disconnected"
   }
 }

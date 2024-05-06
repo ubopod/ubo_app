@@ -16,15 +16,12 @@ class IpAction(BaseAction): ...
 class IpEvent(BaseEvent): ...
 
 
-class IpUpdateRequestAction(IpAction):
-    reset: bool = False
-
-
-class IpUpdateAction(IpAction):
+class IpUpdateInterfacesAction(IpAction):
     interfaces: Sequence[IpNetworkInterface]
 
 
-class IpUpdateRequestEvent(IpEvent): ...
+class IpSetIsConnectedAction(IpAction):
+    is_connected: bool
 
 
 class IpNetworkInterface(Immutable):
@@ -34,3 +31,4 @@ class IpNetworkInterface(Immutable):
 
 class IpState(Immutable):
     interfaces: Sequence[IpNetworkInterface]
+    is_connected: bool | None = None

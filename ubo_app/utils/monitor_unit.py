@@ -56,6 +56,7 @@ async def is_unit_active(unit: str) -> bool:
         'is-active',
         unit,
         stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
     )
     stdout, _ = await process.communicate()
     return stdout.strip() == b'active'
@@ -69,6 +70,7 @@ async def is_unit_enabled(unit: str) -> bool:
         'is-enabled',
         unit,
         stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
     )
     stdout, _ = await process.communicate()
     return stdout.strip() == b'enabled'

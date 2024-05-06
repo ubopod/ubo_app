@@ -5,10 +5,9 @@ from __future__ import annotations
 
 import contextlib
 import gc
+import inspect
 from sys import stdout
 from typing import TYPE_CHECKING
-
-from redux.main import inspect
 
 if TYPE_CHECKING:
     import weakref

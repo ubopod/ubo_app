@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from redux import CombineReducerRegisterAction, ReducerType
 
 from ubo_app.constants import DEBUG_MODE, DISABLED_SERVICES, SERVICES_PATH
+from ubo_app.error_handlers import loop_exception_handler
 from ubo_app.logging import logger
 
 if TYPE_CHECKING:
@@ -67,7 +68,6 @@ class UboServiceLoopLoader(importlib.abc.Loader):
         self.service = service
 
     def exec_module(self: UboServiceLoopLoader, module: ModuleType) -> None:
-        cast(Any, module).current_loop = lambda: self.service.loop
         cast(Any, module)._create_task = (  # noqa: SLF001
             lambda task: self.service.loop.call_soon_threadsafe(
                 self.service.loop.create_task,
@@ -238,6 +238,7 @@ class UboServiceThread(threading.Thread):
 
     def run(self: UboServiceThread) -> None:
         self.loop = asyncio.new_event_loop()
+        self.loop.set_exception_handler(loop_exception_handler)
         asyncio.set_event_loop(self.loop)
         if DEBUG_MODE:
             self.loop.set_debug(enabled=True)
@@ -250,7 +251,7 @@ class UboServiceThread(threading.Thread):
             result = cast(Callable[[UboServiceThread], None], self.setup)(self)
 
         if asyncio.iscoroutine(result):
-            self.loop.create_task(result)
+            self.loop.create_task(result, name=f'Setup task for {self.label}')
 
         from redux import FinishEvent
 

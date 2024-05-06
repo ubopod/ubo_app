@@ -16,6 +16,7 @@ from ubo_app.store.services.wifi import (
     GlobalWiFiState,
     WiFiAction,
     WiFiEvent,
+    WiFiSetHasVisitedOnboardingAction,
     WiFiState,
     WiFiUpdateAction,
     WiFiUpdateRequestAction,
@@ -39,6 +40,12 @@ def reducer(
                 actions=[WiFiUpdateRequestAction()],
             )
         raise InitializationActionError(action)
+
+    if isinstance(action, WiFiSetHasVisitedOnboardingAction):
+        return CompleteReducerResult(
+            state=replace(state, has_visited_onboarding=action.has_visited_onboarding),
+            events=[WiFiUpdateRequestEvent()],
+        )
 
     if isinstance(action, WiFiUpdateRequestAction):
         return CompleteReducerResult(

@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+from ubo_gui.menu.types import ActionItem
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -71,6 +72,10 @@ class Chime(StrEnum):
     VOLUME_CHANGE = 'volume'
 
 
+class NotificationActionItem(ActionItem):
+    dismiss_notification: bool = False
+
+
 class Notification(Immutable):
     id: str = field(default_factory=lambda: uuid4().hex)
     title: str
@@ -81,12 +86,13 @@ class Notification(Immutable):
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     is_read: bool = False
     sender: str | None = None
-    actions: list[BaseAction | BaseEvent] = field(default_factory=list)
+    actions: list[NotificationActionItem] = field(default_factory=list)
     icon: str = field(default_factory=default_icon)
     color: str = field(default_factory=default_color)
     expiry_date: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = 4
+    dismissable: bool = True
 
 
 class NotificationsAction(BaseAction): ...
@@ -112,6 +118,8 @@ class NotificationsClearEvent(NotificationsEvent):
 
 class NotificationsDisplayEvent(NotificationsEvent):
     notification: Notification
+    index: int | None = None
+    count: int | None = None
 
 
 class NotificationsState(Immutable):

@@ -10,13 +10,12 @@ import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.store import autorun, dispatch, subscribe_event
+from ubo_app.store import autorun, dispatch
 from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.services.ip import (
     IpNetworkInterface,
-    IpUpdateAction,
-    IpUpdateRequestAction,
-    IpUpdateRequestEvent,
+    IpSetIsConnectedAction,
+    IpUpdateInterfacesAction,
 )
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 
@@ -62,7 +61,7 @@ def load_ip_addresses() -> None:
                 ip_addresses_by_interface[interface_name].append(address.address)
 
     dispatch(
-        IpUpdateAction(
+        IpUpdateInterfacesAction(
             interfaces=[
                 IpNetworkInterface(name=interface_name, ip_addresses=ip_addresses)
                 for interface_name, ip_addresses in ip_addresses_by_interface.items()
@@ -71,35 +70,37 @@ def load_ip_addresses() -> None:
     )
 
 
-def is_connected() -> bool:
-    try:
-        with socket.create_connection(('1.1.1.1', 53), timeout=2):
-            return True
-    except OSError:
-        return False
+async def is_connected() -> bool:
+    results = await asyncio.gather(
+        asyncio.wait_for(asyncio.open_connection('1.1.1.1', 53), timeout=1),
+        asyncio.wait_for(asyncio.open_connection('8.8.8.8', 53), timeout=1),
+        return_exceptions=True,
+    )
+    return any(not isinstance(result, Exception) for result in results)
 
 
 async def check_connection() -> bool:
     while True:
-        await asyncio.sleep(1)
-        if is_connected():
+        load_ip_addresses()
+        if await is_connected():
             dispatch(
-                IpUpdateRequestAction(),
                 StatusIconsRegisterAction(
                     icon='󰖟',
                     priority=INTERNET_STATE_ICON_PRIORITY,
                     id=INTERNET_STATE_ICON_ID,
                 ),
+                IpSetIsConnectedAction(is_connected=True),
             )
         else:
             dispatch(
-                IpUpdateRequestAction(),
                 StatusIconsRegisterAction(
                     icon='󰪎',
                     priority=INTERNET_STATE_ICON_PRIORITY,
                     id=INTERNET_STATE_ICON_ID,
                 ),
+                IpSetIsConnectedAction(is_connected=False),
             )
+        await asyncio.sleep(1)
 
 
 IpMainMenu = SubMenuItem(
@@ -122,9 +123,4 @@ async def init_service() -> None:
         ),
     )
 
-    subscribe_event(
-        IpUpdateRequestEvent,
-        load_ip_addresses,
-    )
-    load_ip_addresses()
     await check_connection()

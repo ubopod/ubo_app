@@ -1,4 +1,4 @@
-// store-005
+// store-003
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "main": {
@@ -262,9 +262,7 @@
       "Dashboard",
       "󰍜Main",
       "Settings",
-      "󰛳Network",
-      "WiFi Settings",
-      "Wi-Fi"
+      "󰛳Network"
     ],
     "settings_items_priorities": {
       "WiFi": 2
@@ -289,6 +287,7 @@
   "wifi": {
     "connections": [],
     "current_connection": null,
+    "has_visited_onboarding": true,
     "state": "Disconnected"
   }
 }

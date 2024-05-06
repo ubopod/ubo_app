@@ -6,6 +6,7 @@ import asyncio
 import importlib.metadata
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 import aiohttp
@@ -100,6 +101,8 @@ async def update() -> None:
             'ubo-app[default]',
             'setuptools',
             'wheel',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         await process.wait()
         if process.returncode != 0:
@@ -118,6 +121,8 @@ async def update() -> None:
             'systemctl',
             'reboot',
             '-i',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         await process.wait()
     except Exception:

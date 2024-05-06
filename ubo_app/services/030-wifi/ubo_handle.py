@@ -7,13 +7,13 @@ if TYPE_CHECKING:
     from ubo_app.services import Service, register
 
 
-def setup(service: Service) -> None:
+async def setup(service: Service) -> None:
     from reducer import reducer
     from setup import init_service
 
     service.register_reducer(reducer)
 
-    init_service()
+    await init_service()
 
 
 register(

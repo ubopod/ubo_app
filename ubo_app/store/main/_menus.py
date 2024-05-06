@@ -1,21 +1,23 @@
 from __future__ import annotations
 
+import functools
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
 from ubo_gui.menu.types import (
     ActionItem,
-    ApplicationItem,
     HeadedMenu,
     HeadlessMenu,
     SubMenuItem,
 )
-from ubo_gui.notification import NotificationWidget
 
 from ubo_app.store import autorun, dispatch
 from ubo_app.store.main import SETTINGS_ICONS, PowerOffAction, SettingsCategory
-from ubo_app.store.services.notifications import Notification, NotificationsClearAction
+from ubo_app.store.services.notifications import (
+    Notification,
+    NotificationsDisplayEvent,
+)
 from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
 
 if TYPE_CHECKING:
@@ -88,39 +90,20 @@ def notifications_title(unread_count: int) -> str:
 )
 def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item]:
     """Return a list of menu items for the notification manager."""
-
-    def notification_widget_builder(
-        notification: Notification,
-        index: int,
-    ) -> type[NotificationWidget]:
-        """Return a notification widget for the given notification."""
-
-        class NotificationWrapper(NotificationWidget):
-            def __init__(self: NotificationWrapper, **kwargs: object) -> None:
-                super().__init__(
-                    **kwargs,
-                    title=f'Notification ({index+1}/{len(notifications)})',
-                    notification_title=notification.title,
-                    content=notification.content,
-                    color=notification.color,
-                    icon=notification.icon,
-                )
-
-            def on_dismiss(self: NotificationWrapper) -> None:
-                dispatch(
-                    NotificationsClearAction(notification=notification),
-                )
-                self.dispatch('on_close')
-
-        return NotificationWrapper
-
     return [
-        ApplicationItem(
+        ActionItem(
             label=notification.title,
             icon=notification.icon,
             color='black',
             background_color=notification.color,
-            application=notification_widget_builder(notification, index),
+            action=functools.partial(
+                dispatch,
+                NotificationsDisplayEvent(
+                    notification=notification,
+                    index=index,
+                    count=len(notifications),
+                ),
+            ),
         )
         for index, notification in enumerate(notifications)
         if notification.expiry_date is None

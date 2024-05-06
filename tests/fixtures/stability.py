@@ -2,18 +2,29 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Protocol
 
 import pytest
-from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
-from tenacity import stop_after_delay, wait_fixed
+from tenacity import RetryError, stop_after_delay, wait_fixed
+
+from tests.fixtures.snapshot import write_image
 
 if TYPE_CHECKING:
     from redux_pytest.fixtures import StoreSnapshot
+    from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
 
     from .snapshot import WindowSnapshot
 
-Stability: TypeAlias = AsyncWaiter
+
+class Stability(Protocol):
+    """Fixture for waiting for the screen and store to stabilize."""
+
+    async def __call__(
+        self: Stability,
+        timeout: float | None = None,
+    ) -> AsyncWaiter:
+        """Wait for the screen and store to stabilize."""
+        ...
 
 
 @pytest.fixture()
@@ -24,11 +35,19 @@ async def stability(
 ) -> AsyncWaiter:
     """Wait for the screen and store to stabilize."""
 
-    async def wrapper() -> None:
+    async def wrapper(
+        timeout: float | None = None,
+    ) -> None:
         latest_window_hash = None
         latest_store_snapshot = None
 
-        @wait_for(run_async=True, wait=wait_fixed(1), stop=stop_after_delay(4))
+        snapshots = []
+
+        @wait_for(
+            run_async=True,
+            wait=wait_fixed(1),
+            stop=stop_after_delay(timeout or 4),
+        )
         def check() -> None:
             nonlocal latest_window_hash, latest_store_snapshot
 
@@ -41,9 +60,23 @@ async def stability(
             latest_window_hash = new_hash
             latest_store_snapshot = new_snapshot
 
+            if not is_window_stable:
+                from headless_kivy_pi.config import _display
+
+                snapshots.append(_display.raw_data.copy())
+
             assert is_window_stable, 'The content of the screen is not stable yet'
             assert is_store_stable, 'The content of the store is not stable yet'
 
-        await check()
+        try:
+            await check()
+        except RetryError:
+            for i, snapshot in enumerate(snapshots):
+                write_image(
+                    window_snapshot.results_dir
+                    / f'window-unstability_snapshot_{i}.mismatch.png',
+                    snapshot,
+                )
+            raise
 
     return wrapper

@@ -6,10 +6,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
-from redux import BaseAction, BaseEvent, FinishAction, InitAction
-
-from ubo_app.store.services.keypad import KeypadAction
-from ubo_app.store.status_icons import StatusIconsAction
+from redux import BaseAction, BaseEvent
 
 
 class SettingsCategory(StrEnum):
@@ -31,19 +28,19 @@ SETTINGS_ICONS = {
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import TypeAlias
 
     from ubo_gui.menu.types import Item, Menu
+    from ubo_gui.page import PageWidget
 
 
-class InitEvent(BaseEvent): ...
+class MainAction(BaseAction): ...
 
 
-class RegisterAppAction(BaseAction):
+class RegisterAppAction(MainAction):
     menu_item: Item
 
 
-class UpdateLightDMState(BaseAction):
+class UpdateLightDMState(MainAction):
     is_active: bool
     is_enable: bool
 
@@ -56,28 +53,27 @@ class RegisterSettingAppAction(RegisterAppAction):
     priority: int | None = None
 
 
-class PowerOffAction(BaseAction): ...
+class PowerOffAction(MainAction): ...
 
 
-class PowerOffEvent(BaseEvent): ...
+class SetMenuPathAction(MainAction):
+    path: Sequence[str]
+
+
+class MainEvent(BaseEvent): ...
+
+
+class InitEvent(MainEvent): ...
+
+
+class OpenApplicationEvent(MainEvent):
+    application: PageWidget
+
+
+class PowerOffEvent(MainEvent): ...
 
 
 class MainState(Immutable):
     menu: Menu | None = None
     path: Sequence[str] = field(default_factory=list)
     settings_items_priorities: dict[str, int] = field(default_factory=dict)
-
-
-class SetMenuPathAction(BaseAction):
-    path: Sequence[str]
-
-
-MainAction: TypeAlias = (
-    InitAction
-    | FinishAction
-    | PowerOffAction
-    | StatusIconsAction
-    | KeypadAction
-    | RegisterAppAction
-    | SetMenuPathAction
-)

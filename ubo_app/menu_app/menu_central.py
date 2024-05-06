@@ -1,24 +1,29 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import functools
 import re
 import weakref
-from functools import cached_property
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
 from ubo_gui.app import UboApp
+from ubo_gui.constants import DANGER_COLOR, INFO_COLOR
 from ubo_gui.menu import MenuWidget
 from ubo_gui.notification import NotificationWidget
+from ubo_gui.page import PAGE_MAX_ITEMS
 
 from ubo_app.menu_app.notification_info import NotificationInfo
 from ubo_app.store import autorun, dispatch, subscribe_event
-from ubo_app.store.main import SetMenuPathAction
+from ubo_app.store.main import OpenApplicationEvent, SetMenuPathAction
 from ubo_app.store.services.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.services.notifications import (
+    NotificationActionItem,
     NotificationDisplayType,
     NotificationsClearAction,
+    NotificationsClearEvent,
     NotificationsDisplayEvent,
 )
 from ubo_app.store.services.voice import VoiceReadTextAction
@@ -90,7 +95,7 @@ class MenuAppCentral(UboApp):
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
         self.root.title = title
 
-    @cached_property
+    @functools.cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
         self.root.is_fullscreen = True
@@ -107,6 +112,12 @@ class MenuAppCentral(UboApp):
         subscribe_event(
             NotificationsDisplayEvent,
             self.display_notification,
+            keep_ref=False,
+        )
+
+        subscribe_event(
+            OpenApplicationEvent,
+            self.open_application,
             keep_ref=False,
         )
 
@@ -136,46 +147,107 @@ class MenuAppCentral(UboApp):
         event: NotificationsDisplayEvent,
     ) -> None:
         notification = event.notification
-        application = NotificationWidget(
+
+        @mainthread
+        def dismiss() -> None:
+            notification_application.dispatch('on_close')
+            dispatch(
+                NotificationsClearAction(notification=notification),
+            )
+
+        @mainthread
+        def run_notification_action(
+            action: NotificationActionItem,
+        ) -> None:
+            if action.dismiss_notification:
+                dismiss()
+            self.menu_widget.select_action_item(action)
+
+        items = [
+            replace(
+                action,
+                is_short=True,
+                action=functools.partial(run_notification_action, action),
+            )
+            for action in notification.actions
+        ]
+
+        if notification.extra_information:
+
+            def open_info() -> None:
+                processed_visual_text = re.sub(
+                    r'\{[^{}|]*\|[^{}|]*\}',
+                    lambda x: x.group()[1:].split('|')[0],
+                    notification.extra_information or '',
+                )
+                info_application = NotificationInfo(text=processed_visual_text)
+
+                processed_audible_text = re.sub(
+                    r'[^\x00-\xff]|\n',
+                    '',
+                    notification.extra_information or '',
+                )
+                dispatch(
+                    VoiceReadTextAction(text=processed_audible_text),
+                )
+                self.menu_widget.open_application(info_application)
+
+            items.append(
+                NotificationActionItem(
+                    icon='󰋼',
+                    action=open_info,
+                    label='',
+                    is_short=True,
+                    background_color=INFO_COLOR,
+                ),
+            )
+
+        if notification.dismissable:
+            items.append(
+                NotificationActionItem(
+                    icon='󰆴',
+                    action=dismiss,
+                    label='',
+                    is_short=True,
+                    background_color=DANGER_COLOR,
+                ),
+            )
+
+        items = [None] * (PAGE_MAX_ITEMS - len(items)) + items
+
+        notification_application = NotificationWidget(
             notification_title=notification.title,
             content=notification.content,
             icon=notification.icon,
             color=notification.color,
-            has_extra_information=notification.extra_information is not None,
-        )
-        info_application = NotificationInfo(
-            text=re.sub(
-                r'\{[^{}|]*\|[^{}|]*\}',
-                lambda x: x.group()[1:].split('|')[0],
-                notification.extra_information or '',
-            ),
+            items=items,
+            title=f'Notification ({event.index+1}/{event.count})'
+            if event.index is not None
+            else ' ',
         )
 
-        application.bind(
-            on_dismiss=lambda _: (
-                application.dispatch('on_close'),
-                dispatch(
-                    NotificationsClearAction(notification=notification),
-                ),
-            ),
-        )
-
-        application.bind(
-            on_info=lambda _: (
-                dispatch(
-                    VoiceReadTextAction(
-                        text=(notification.extra_information or '').replace('\n', '')
-                        or '',
-                    ),
-                ),
-                self.menu_widget.open_application(info_application),
-            ),
-        )
-
-        self.menu_widget.open_application(application)
+        self.menu_widget.open_application(notification_application)
 
         if notification.display_type is NotificationDisplayType.FLASH:
             Clock.schedule_once(
-                lambda _: application.dispatch('on_dismiss'),
+                lambda _: notification_application.dispatch('on_close'),
                 notification.flash_time,
             )
+
+        @mainthread
+        def clear_notification(event: NotificationsClearEvent) -> None:
+            if event.notification == notification:
+                notification_application.dispatch('on_close')
+                unsubscribe()
+
+        unsubscribe = subscribe_event(
+            NotificationsClearEvent,
+            clear_notification,
+        )
+
+    @mainthread
+    def open_application(
+        self: MenuAppCentral,
+        event: OpenApplicationEvent,
+    ) -> None:
+        self.menu_widget.open_application(event.application)

@@ -76,11 +76,19 @@ def read_from_persistent_store(
     """Read a part of the store from the filesystem."""
     from ubo_app.store import store
 
-    try:
-        file_content = Path(PERSISTENT_STORE_PATH).read_text()
-        current_state = json.loads(file_content)
-    except FileNotFoundError:
-        return default or (None if object_type is None else object_type())
+    for _ in range(5):
+        try:
+            file_content = Path(PERSISTENT_STORE_PATH).read_text()
+            current_state = json.loads(file_content)
+        except FileNotFoundError:
+            return default or (None if object_type is None else object_type())
+        except json.JSONDecodeError:
+            continue
+        else:
+            break
+    else:
+        msg = 'Failed to read from the persistent store'
+        raise RuntimeError(msg)
     value = current_state.get(key)
     if value is None:
         return default or (None if object_type is None else object_type())

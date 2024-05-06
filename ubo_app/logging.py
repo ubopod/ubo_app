@@ -83,7 +83,7 @@ class ExtraFormatter(logging.Formatter):
             string += ' - extra: ' + json.dumps(
                 extra,
                 sort_keys=True,
-                indent=4,
+                indent=2,
                 default=str,
             ).replace('\\n', '\n')
 

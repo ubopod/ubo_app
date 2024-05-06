@@ -222,6 +222,14 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    from ubo_app.utils.fake import Fake
+
+    monkeypatch.setattr(asyncio, 'open_connection', Fake())
+
+
 @pytest.fixture(autouse=True)
 def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
@@ -236,17 +244,28 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('ubo_app.constants.STORE_GRACE_TIME', 0.1)
     monkeypatch.setattr('ubo_app.utils.serializer.add_type_field', lambda _, y: y)
 
+    def fake_read_from_persistent_store(
+        key: str,
+        *,
+        object_type: type[object] | None = None,
+        default: object | None = None,
+    ) -> object:
+        if key == 'wifi_has_visited_onboarding':
+            return True
+        if default is not None:
+            return default
+        if object_type is not None:
+            return object_type()
+        return None
+
     sys.modules['ubo_app.utils.persistent_store'] = Fake(
         _Fake__props={
-            'read_from_persistent_store': lambda key=None,
-            default=None,
-            object_type=None: (
-                key,
-                default or (object_type() if object_type else None),
-            )[-1],
+            'read_from_persistent_store': fake_read_from_persistent_store,
         },
     )
-    sys.modules['ubo_app.utils.secrets'] = Fake()
+    sys.modules['ubo_app.utils.secrets'] = Fake(
+        _Fake__props={'read_secret': lambda _: None},
+    )
     sys.modules['pyaudio'] = Fake()
 
     _monkeypatch_socket(monkeypatch)
@@ -258,6 +277,7 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_rpi_modules()
     _monkeypatch_subprocess(monkeypatch)
     _monkeypatch_asyncio_subprocess(monkeypatch)
+    _monkeypatch_asyncio_socket(monkeypatch)
 
 
 _ = _monkeypatch

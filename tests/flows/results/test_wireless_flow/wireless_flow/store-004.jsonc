@@ -1,4 +1,4 @@
-// store-006
+// store-004
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "main": {
@@ -288,6 +288,7 @@
   "wifi": {
     "connections": [],
     "current_connection": null,
+    "has_visited_onboarding": true,
     "state": "Disconnected"
   }
 }

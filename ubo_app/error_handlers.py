@@ -4,9 +4,10 @@ from __future__ import annotations
 import sys
 import threading
 import traceback
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    import asyncio
     from types import TracebackType
 
 
@@ -39,48 +40,88 @@ def global_exception_handler(
     exception_value: BaseException,
     exception_traceback: TracebackType,
 ) -> None:
+    _ = exception_type, exception_traceback
     from ubo_app.logging import logger
 
-    error_message = ''.join(
-        traceback.format_exception(
-            exception_type,
-            exception_value,
-            exception_traceback,
-        ),
-    )
     threads_info = get_all_thread_stacks()
 
     logger.error(
-        'Uncaught exception',
+        'Global exception',
+        exc_info=exception_value,
+    )
+
+    logger.verbose(
+        'Global exception',
         extra={
             'threads': threads_info,
-            'exception_type': exception_type,
-            'exception_value': exception_value,
-            'error_message': error_message,
         },
+        exc_info=exception_value,
     )
 
 
 def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
     from ubo_app.logging import logger
 
-    error_message = ''.join(
-        traceback.format_exception(*args[:3]),
-    )
     threads_info = get_all_thread_stacks()
 
-    exception_type, exception_value, _, thread = args
+    _, exception_value, _, thread = args
 
     logger.error(
-        'Uncaught exception',
+        'Thread exception',
         extra={
-            'thread_': thread,
-            'threads': threads_info,
-            'exception_type': exception_type,
-            'exception_value': exception_value,
-            'error_message': error_message,
+            'exception_thread': thread,
         },
+        exc_info=exception_value,
     )
+
+    logger.verbose(
+        'Thread exception',
+        extra={
+            'exception_thread': thread,
+            'threads': threads_info,
+        },
+        exc_info=exception_value,
+    )
+
+
+def loop_exception_handler(
+    loop: asyncio.AbstractEventLoop,
+    context: dict[str, object],
+) -> None:
+    from ubo_app.logging import logger
+
+    threads_info = get_all_thread_stacks()
+
+    exception = context.get('exception')
+
+    if exception:
+        logger.error(
+            'Event loop exception',
+            extra={
+                'loop': loop,
+                'error_message': context.get('message'),
+                'future': context.get('future'),
+            },
+            exc_info=cast(Exception, exception),
+        )
+        logger.verbose(
+            'Event loop exception',
+            extra={
+                'loop': loop,
+                'error_message': context.get('message'),
+                'future': context.get('future'),
+                'threads': threads_info,
+            },
+            exc_info=cast(Exception, exception),
+        )
+    else:
+        logger.error(
+            'Event loop exception handler called without an exception in the context',
+            extra={
+                'loop': loop,
+                'context': context,
+            },
+        )
 
 
 def setup_error_handling() -> None:

@@ -48,6 +48,7 @@ class LoginPage(PageWidget):
                 '--provider',
                 'github',
                 stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
             )
             if self.process.stdout is None:
                 return

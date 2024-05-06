@@ -7,6 +7,7 @@ import asyncio
 import contextlib
 import math
 import struct
+import subprocess
 import time
 import wave
 from typing import TYPE_CHECKING
@@ -90,12 +91,16 @@ class AudioManager:
             '/usr/bin/env',
             'pulseaudio',
             '--kill',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         await process.wait()
         process = await asyncio.create_subprocess_exec(
             '/usr/bin/env',
             'pulseaudio',
             '--start',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         await process.wait()
 

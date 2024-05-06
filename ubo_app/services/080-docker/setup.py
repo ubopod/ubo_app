@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 from dataclasses import fields
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,7 +14,6 @@ import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
 from reducer import IMAGES
-from redux.combine_reducers import functools
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.constants import (
@@ -89,6 +89,8 @@ async def check_docker() -> None:
         '/usr/bin/env',
         'which',
         'docker',
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
     )
     await process.wait()
     is_installed = process.returncode == 0

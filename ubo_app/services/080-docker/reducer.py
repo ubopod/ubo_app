@@ -30,11 +30,12 @@ from ubo_app.store.services.docker import (
     DockerStoreUsernameAction,
     ImageState,
 )
-from ubo_app.store.services.ip import IpUpdateAction
 from ubo_app.utils.qrcode import qrcode_input
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+
+    from ubo_app.store.services.ip import IpUpdateInterfacesAction
 
 Action = InitAction | DockerAction
 
@@ -195,7 +196,7 @@ IMAGE_IDS = list(IMAGES.keys())
 
 def image_reducer(
     state: ImageState | None,
-    action: DockerImageAction | CombineReducerAction | IpUpdateAction,
+    action: DockerImageAction | CombineReducerAction | IpUpdateInterfacesAction,
 ) -> ImageState:
     """Image reducer."""
     if state is None:
@@ -203,14 +204,6 @@ def image_reducer(
             image = IMAGES[action.key]
             return ImageState(id=image.id)
         raise InitializationActionError(action)
-
-    if isinstance(action, IpUpdateAction):
-        return replace(
-            state,
-            ip_addresses=[
-                ip for interface in action.interfaces for ip in interface.ip_addresses
-            ],
-        )
 
     if not isinstance(action, DockerImageAction) or action.image != state.id:
         return state

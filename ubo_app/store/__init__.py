@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import sys
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 from threading import current_thread, main_thread
 from types import GenericAlias
@@ -16,6 +17,7 @@ from redux import (
     BaseEvent,
     CombineReducerAction,
     CreateStoreOptions,
+    FinishAction,
     InitAction,
     Store,
     combine_reducers,
@@ -23,14 +25,18 @@ from redux import (
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_TIME
 from ubo_app.logging import logger
-from ubo_app.store.main import MainAction, MainState
+from ubo_app.store.main import MainAction, MainEvent, MainState
 from ubo_app.store.main.reducer import reducer as main_reducer
 from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
 from ubo_app.store.services.docker import DockerAction, DockerState
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
-from ubo_app.store.services.keypad import KeypadEvent
+from ubo_app.store.services.keypad import KeypadAction, KeypadEvent
 from ubo_app.store.services.lightdm import LightDMAction, LightDMState
-from ubo_app.store.services.notifications import NotificationsAction, NotificationsState
+from ubo_app.store.services.notifications import (
+    NotificationsAction,
+    NotificationsEvent,
+    NotificationsState,
+)
 from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
 from ubo_app.store.services.sound import SoundAction, SoundState
@@ -94,6 +100,11 @@ ActionType = (
     | StatusIconsAction
     | UpdateManagerAction
     | MainAction
+    | InitAction
+    | FinishAction
+    | StatusIconsAction
+    | KeypadAction
+    | MainAction
     | LightDMAction
     | SensorsAction
     | SSHAction
@@ -108,7 +119,14 @@ ActionType = (
     | VSCodeAction
 )
 EventType = (
-    KeypadEvent | CameraEvent | WiFiEvent | IpEvent | ScreenshotEvent | SnapshotEvent
+    MainEvent
+    | KeypadEvent
+    | CameraEvent
+    | WiFiEvent
+    | IpEvent
+    | ScreenshotEvent
+    | SnapshotEvent
+    | NotificationsEvent
 )
 
 root_reducer, root_reducer_id = combine_reducers(
@@ -136,10 +154,14 @@ class UboStore(Store[RootState, ActionType, EventType]):
                 return f"""{Path(file_path).relative_to(Path().absolute()).as_posix()}:{
                 obj.__name__}"""
             return f'{obj.__module__}:{obj.__name__}'
+        if isinstance(obj, PageWidget):
+            return 'INSTANCE OF APPLICATION'
         if isinstance(obj, ActionItem):
             obj = replace(obj, action='')
         if isinstance(obj, dict):
             return {k: cls.serialize_value(v) for k, v in obj.items()}
+        if isinstance(obj, datetime):
+            return obj.isoformat()
         if isinstance(obj, Fake):
             return 'FAKE'
         return super().serialize_value(obj)
@@ -250,6 +272,7 @@ autorun = store.autorun
 dispatch = store.dispatch
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
+view = store.view
 
 dispatch(InitAction())
 

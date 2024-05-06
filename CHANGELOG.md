@@ -1,5 +1,19 @@
 # ChangeLog
 
+## Version 0.14.0
+
+- feat(wifi): the wireless onboarding suggestion notification is shown when the
+  device is not connected to any network and it hasn't been shown earlier #71
+- feat(notifications): `actions` of `Notification` object are respected and are
+  actually shown in the notification, their type is inheriting the original `ActionItem`
+  and adds `dismiss_notification` boolean to it
+- feat(tests): stability fixture saves all the snapshots and writes them to the filesystem
+  if it ever fails
+- feat(core): setup error handler for event loops, previously errors happening in
+  event loops were silence
+- refactor: all `asyncio.create_subprocess_exec` calls now redirect their `STDOUT`
+  and `STDERR` to `DEVNULL` or `PIPE` to avoid noise in output
+
 ## Version 0.13.5
 
 - feat(vscode): add vscode tunnel support: users can download the cli binary, login,

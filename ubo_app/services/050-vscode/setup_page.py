@@ -101,6 +101,8 @@ class SetupPage(PageWidget):
                 '--accept-server-license-terms',
                 'rename',
                 hostname,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             await self.process.wait()
         except subprocess.CalledProcessError:
@@ -128,6 +130,8 @@ class SetupPage(PageWidget):
                 '--accept-server-license-terms',
                 'service',
                 'install',
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             await self.process.wait()
         except subprocess.CalledProcessError:
@@ -155,6 +159,8 @@ class SetupPage(PageWidget):
                 '--accept-server-license-terms',
                 'service',
                 'uninstall',
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             await self.process.wait()
         except subprocess.CalledProcessError:

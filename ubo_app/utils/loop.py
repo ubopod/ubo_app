@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, TypeVarTuple
 
 from typing_extensions import TypeVar
 
+from ubo_app.error_handlers import loop_exception_handler
+
 if TYPE_CHECKING:
     from asyncio import Handle
     from asyncio.tasks import Task
@@ -31,6 +33,7 @@ class WorkerThread(threading.Thread):
             self.loop = asyncio.get_event_loop()
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
+        self.loop.set_exception_handler(loop_exception_handler)
         asyncio.set_event_loop(self.loop)
 
         from ubo_app.constants import DEBUG_MODE

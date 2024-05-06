@@ -4,38 +4,32 @@ from __future__ import annotations
 from dataclasses import replace
 
 from redux import (
-    CompleteReducerResult,
     InitAction,
     InitializationActionError,
-    ReducerResult,
 )
 
 from ubo_app.store.services.ip import (
+    IpSetIsConnectedAction,
     IpState,
-    IpUpdateAction,
-    IpUpdateRequestAction,
-    IpUpdateRequestEvent,
+    IpUpdateInterfacesAction,
 )
 
-Action = InitAction | IpUpdateAction | IpUpdateRequestAction
-ResultEvent = IpUpdateRequestEvent
+Action = InitAction | IpUpdateInterfacesAction
 
 
 def reducer(
     state: IpState | None,
     action: Action,
-) -> ReducerResult[IpState, Action, ResultEvent]:
+) -> IpState:
     if state is None:
         if isinstance(action, InitAction):
             return IpState(interfaces=[])
         raise InitializationActionError(action)
 
-    if isinstance(action, IpUpdateAction):
+    if isinstance(action, IpUpdateInterfacesAction):
         return replace(state, interfaces=action.interfaces)
 
-    if isinstance(action, IpUpdateRequestAction):
-        return CompleteReducerResult(
-            state=replace(state, status=None) if action.reset else state,
-            events=[IpUpdateRequestEvent()],
-        )
+    if isinstance(action, IpSetIsConnectedAction):
+        return replace(state, is_connected=action.is_connected)
+
     return state

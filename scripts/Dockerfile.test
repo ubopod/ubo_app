@@ -1,3 +1,5 @@
 FROM ubo-app-dev
 
-ENTRYPOINT ["/bin/bash", "-c", "poetry install --with dev --extras=dev --verbose && poetry run poe test $@"]
+RUN mkdir -p /root/.kivy/mods
+
+ENTRYPOINT ["/bin/bash", "-c", "reset; poetry install --with dev --extras=dev --verbose && poetry run poe test $@"]

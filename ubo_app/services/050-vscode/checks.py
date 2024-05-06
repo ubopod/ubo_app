@@ -52,6 +52,7 @@ async def check_status() -> None:
                 '--accept-server-license-terms',
                 'status',
                 stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
             )
             await process.wait()
             if process.stdout and process.returncode == 0:
@@ -79,6 +80,8 @@ async def check_status() -> None:
                     '--accept-server-license-terms',
                     'user',
                     'show',
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                 )
                 await process.wait()
                 is_logged_in = process.returncode == 0

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import gc
-import json
 import logging
 import sys
 import weakref
@@ -59,17 +58,12 @@ class AppContext:
 
         if app is not None and self.request.session.testsfailed == 0:
             logging.getLogger().debug(
-                'Memory leak: failed to release app for test.\n'
-                + json.dumps(
-                    {
-                        'refcount': sys.getrefcount(app),
-                        'referrers': gc.get_referrers(app),
-                        'ref': app_ref,
-                    },
-                    sort_keys=True,
-                    indent=2,
-                    default=str,
-                ),
+                'Memory leak: failed to release app for test.',
+                extra={
+                    'refcount': sys.getrefcount(app),
+                    'referrers': gc.get_referrers(app),
+                    'ref': app_ref,
+                },
             )
             gc.collect()
             for cell in gc.get_referrers(app):
@@ -77,7 +71,8 @@ class AppContext:
                     from ubo_app.utils.garbage_collection import examine
 
                     logging.getLogger().debug(
-                        'CELL EXAMINATION\n' + json.dumps({'cell': cell}),
+                        'CELL EXAMINATION',
+                        extra={'cell': cell},
                     )
                     examine(cell, depth_limit=2)
             assert app is None, 'Memory leak: failed to release app for test'
@@ -93,7 +88,9 @@ class AppContext:
 
 
 @pytest.fixture()
-async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
+async def app_context(
+    request: SubRequest,
+) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
     import os
 

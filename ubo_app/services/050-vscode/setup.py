@@ -46,6 +46,8 @@ def download_code() -> None:
                 CODE_BINARY_URL,
                 '--output',
                 DOWNLOAD_PATH,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             await process.wait()
             process = await asyncio.create_subprocess_exec(
@@ -55,6 +57,8 @@ def download_code() -> None:
                 DOWNLOAD_PATH,
                 '-C',
                 INSTALLATION_PATH,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             await process.wait()
         except subprocess.CalledProcessError:
@@ -88,6 +92,7 @@ def logout() -> None:
                 'user',
                 'logout',
                 stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
             )
             await process.wait()
             await check_status()

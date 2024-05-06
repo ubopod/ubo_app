@@ -108,7 +108,6 @@ class ImageState(Immutable):
     container_ip: str | None = None
     docker_id: str | None = None
     ports: list[str] = field(default_factory=list)
-    ip_addresses: list[str] = field(default_factory=list)
 
     @property
     def is_fetching(self: ImageState) -> bool:

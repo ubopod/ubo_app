@@ -20,7 +20,7 @@ from ubo_gui.page import PageWidget
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.logging import logger
-from ubo_app.store import autorun, dispatch, subscribe_event
+from ubo_app.store import autorun, dispatch, subscribe_event, view
 from ubo_app.store.services.docker import (
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
@@ -37,7 +37,9 @@ from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine, Mapping
+    from collections.abc import Callable, Coroutine, Mapping, Sequence
+
+    from ubo_app.store.services.ip import IpNetworkInterface
 
 
 def find_container(client: docker.DockerClient, *, image: str) -> Container | None:
@@ -410,15 +412,18 @@ class DockerQRCodePage(PageWidget):
         self.ids.slider.animated_value = len(self.ips) - 1 - self.index
 
 
+@view(lambda state: state.ip.interfaces)
 def image_menu(
+    interfaces: Sequence[IpNetworkInterface],
     image: ImageState,
 ) -> HeadedMenu:
     """Get the menu for the docker image."""
+    ip_addresses = ([ip for interface in interfaces for ip in interface.ip_addresses],)
     items: list[Item] = []
 
     def open_qrcode(port: str) -> Callable[[], PageWidget]:
         def action() -> PageWidget:
-            return DockerQRCodePage(ips=image.ip_addresses, port=port)
+            return DockerQRCodePage(ips=ip_addresses, port=port)
 
         return action
 

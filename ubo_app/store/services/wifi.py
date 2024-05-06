@@ -1,11 +1,14 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+from dataclasses import field
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+
+from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -45,6 +48,10 @@ class WiFiConnection(Immutable):
 class WiFiAction(BaseAction): ...
 
 
+class WiFiSetHasVisitedOnboardingAction(WiFiAction):
+    has_visited_onboarding: bool
+
+
 class WiFiUpdateAction(WiFiAction):
     connections: Sequence[WiFiConnection]
     state: GlobalWiFiState
@@ -65,3 +72,9 @@ class WiFiState(Immutable):
     connections: Sequence[WiFiConnection] | None
     state: GlobalWiFiState
     current_connection: WiFiConnection | None
+    has_visited_onboarding: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            key='wifi_has_visited_onboarding',
+            default=False,
+        ),
+    )
