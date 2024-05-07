@@ -99,7 +99,7 @@ def reducer(
     if isinstance(action, KeypadAction):  # noqa: SIM102
         if action.key == Key.BACK:
             return CompleteReducerResult(
-                state=state,
+                state=pop_queue(state),
                 events=[
                     CameraStopViewfinderEvent(
                         id=state.current.id if state.current else None,

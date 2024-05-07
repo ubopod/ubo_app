@@ -13,6 +13,7 @@
   event loops were silence
 - refactor: all `asyncio.create_subprocess_exec` calls now redirect their `STDOUT`
   and `STDERR` to `DEVNULL` or `PIPE` to avoid noise in output
+- fix(qrcode): qr code sets its state correctly after back button is pressed on it
 
 ## Version 0.13.5
 
