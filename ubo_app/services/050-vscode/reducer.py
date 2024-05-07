@@ -32,7 +32,6 @@ def reducer(state: VSCodeState | None, action: VSCodeAction) -> VSCodeState:
             is_binary_installed=action.is_binary_installed,
             is_logged_in=action.is_logged_in,
             status=action.status,
-            last_update_timestamp=action.timestamp,
         )
 
     return state

@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
-import time
 from typing import Literal, TypedDict
 
 from constants import CODE_BINARY_PATH
@@ -108,7 +107,6 @@ async def check_status() -> None:
     )
     dispatch(
         VSCodeSetStatusAction(
-            timestamp=time.time(),
             is_binary_installed=is_binary_installed,
             is_logged_in=is_logged_in,
             status=None

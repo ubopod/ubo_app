@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import subprocess
-import time
 from typing import TYPE_CHECKING
 
 from checks import check_status
@@ -122,15 +121,6 @@ def logout() -> None:
     ),
 )
 def vscode_menu(state: VSCodeState) -> HeadedMenu:
-    if state.last_update_timestamp < time.time() - 10:
-        create_task(check_status())
-        return HeadedMenu(
-            title='󰨞VSCode',
-            heading='󰔟Checking...',
-            sub_heading='',
-            items=[],
-        )
-
     actions = []
     if not state.is_downloading:
         if state.is_binary_installed:

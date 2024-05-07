@@ -29,11 +29,12 @@
   from the text to be read so that those characters can still be visible in the text
 - build(installation): set `XDG_RUNTIME_DIR` in `bashrc` to make interacting with
   user `systemd` services easier
+- fix(vscode): remove timestamp from state #79
 
 ## Version 0.13.5
 
 - feat(vscode): add vscode tunnel support: users can download the cli binary, login,
-  install the service and see the tunnel url as qr code
+  install the service and see the tunnel url as qr code #17
 
 ## Version 0.13.4
 

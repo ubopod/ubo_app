@@ -21,16 +21,12 @@ class VSCodeStatus(Immutable):
 
 
 class VSCodeSetStatusAction(VSCodeAction):
-    timestamp: float
-
     is_binary_installed: bool
     is_logged_in: bool
     status: VSCodeStatus | None
 
 
 class VSCodeState(Immutable):
-    last_update_timestamp: float = 0
-
     is_downloading: bool = False
     is_binary_installed: bool = False
     is_logged_in: bool = False
