@@ -264,10 +264,13 @@ def input_credentials() -> None:
             credentials = (
                 await qrcode_input(
                     r'^[^|]*\|[^|]*\|[^|]*$|^[^|]*|[^|]*$',
-                    prompt='Write the credentials in this format: '
-                    '[i]SERVICE|USERNAME|PASSWORD[/i]\n'
-                    'Convert it to QR code and scan it.\n'
-                    'Example: [i]`docker.io|johndoe|secret`[/i]',
+                    prompt='Format: [i]SERVICE|USERNAME|PASSWORD[/i]',
+                    extra_information="""To generate your {QR|K Y UW AA R} code for \
+login, format your details by separating your service, username, and password with the \
+pipe symbol. For example, format it as "docker  {.|D AA T}io |{ |P AY P}johndoe \
+|{ |P AY P}password" and then convert this text into a {QR|K Y UW AA R} code. If you \
+omit the service name, "docker  {.|D AA T}io" will automatically be used as the \
+default.""",
                 )
             )[0]
             if credentials.count('|') == 1:
@@ -275,6 +278,9 @@ def input_credentials() -> None:
                 registry = 'docker.io'
             else:
                 registry, username, password = credentials.split('|')
+            registry = registry.strip()
+            username = username.strip()
+            password = password.strip()
             docker_client = docker.from_env()
             docker_client.login(
                 username=username,

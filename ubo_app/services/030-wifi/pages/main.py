@@ -23,6 +23,7 @@ from wifi_manager import (
 )
 
 from ubo_app.store import autorun, dispatch
+from ubo_app.store.main import CloseApplicationEvent
 from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiState,
@@ -53,8 +54,8 @@ class WiFiConnectionPage(PromptWidget):
 
     def second_option_callback(self: WiFiConnectionPage) -> None:
         create_task(forget_wireless_connection(self.ssid))
-        self.dispatch('on_close')
         dispatch(
+            CloseApplicationEvent(application=self),
             WiFiUpdateRequestAction(reset=True),
         )
 

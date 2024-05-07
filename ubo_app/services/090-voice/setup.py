@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from asyncio import CancelledError
 
 import pvorca
@@ -66,8 +67,28 @@ def synthesize(event: VoiceSynthesizeTextEvent) -> None:
     if not _context.orca_instance:
         return
     rate = _context.orca_instance.sample_rate
+
+    valid_characters = re.sub(
+        r'[\^\$\-\\]',
+        lambda match: f'\\{match.group()}',
+        ''.join(
+            sorted(
+                {i for i in _context.orca_instance.valid_characters if i not in '{|}'},
+            ),
+        ),
+    )
+
+    def remove_disallowed_characters(text: str) -> str:
+        return re.sub(rf'[^{valid_characters}]', '', text)
+
+    components = re.split(r'(\{[^{|}]*\|[^{|}]*\})', event.text)
+    processed_components = [
+        remove_disallowed_characters(component) if index % 2 == 0 else component
+        for index, component in enumerate(components)
+    ]
+    processed_text = ''.join(processed_components)
     audio_sequence = _context.orca_instance.synthesize(
-        text=event.text,
+        text=processed_text,
         speech_rate=event.speech_rate,
     )
 

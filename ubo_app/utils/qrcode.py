@@ -18,9 +18,9 @@ from ubo_app.store.services.camera import (
 )
 from ubo_app.store.services.notifications import (
     Notification,
+    NotificationActionItem,
     NotificationDisplayType,
     NotificationsAddAction,
-    NotificationsClearEvent,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
 
@@ -38,24 +38,23 @@ async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
+    extra_information: str | None = None,
     title: str | None = None,
 ) -> tuple[str, QrCodeGroupDict]: ...
-
-
 @overload
 async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
+    extra_information: str | None = None,
     title: str | None = None,
     resolver: Callable[[str, QrCodeGroupDict], ReturnType],
 ) -> ReturnType: ...
-
-
 async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
+    extra_information: str | None = None,
     title: str | None = None,
     resolver: Callable[[str, QrCodeGroupDict], ReturnType] | None = None,
 ) -> tuple[str, QrCodeGroupDict] | ReturnType:
@@ -65,26 +64,37 @@ async def qrcode_input(
     loop = asyncio.get_running_loop()
 
     if prompt:
-        notification_future = Future()
-        notification = Notification(
-            id='qrcode',
-            icon='󰐲',
-            title='QR Code' if title is None else title,
-            content=prompt,
-            display_type=NotificationDisplayType.STICKY,
-            is_read=True,
-            expiry_date=datetime.datetime.now(tz=datetime.UTC),
+        notification_future = Future[None]()
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='qrcode',
+                    icon='󰄀󰐲',
+                    title='QR Code' if title is None else title,
+                    content=f'[size=18dp]{prompt}[/size]',
+                    display_type=NotificationDisplayType.STICKY,
+                    is_read=True,
+                    extra_information=extra_information,
+                    expiry_date=datetime.datetime.now(tz=datetime.UTC),
+                    color='#ffffff',
+                    actions=[
+                        NotificationActionItem(
+                            action=lambda: loop.call_soon_threadsafe(
+                                notification_future.set_result,
+                                None,
+                            )
+                            and None,
+                            icon='󰄀',
+                            dismiss_notification=True,
+                        ),
+                    ],
+                    dismissable=False,
+                    on_close=lambda: loop.call_soon_threadsafe(
+                        notification_future.cancel,
+                    ),
+                ),
+            ),
         )
-
-        def clear_notification(event: NotificationsClearEvent) -> None:
-            if event.notification == notification:
-                loop.call_soon_threadsafe(notification_future.set_result, None)
-
-        subscribe_event(
-            NotificationsClearEvent,
-            clear_notification,
-        )
-        dispatch(NotificationsAddAction(notification=notification))
 
         await notification_future
 

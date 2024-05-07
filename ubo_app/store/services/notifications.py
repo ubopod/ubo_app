@@ -5,15 +5,18 @@ import sys
 from dataclasses import field
 from datetime import UTC, datetime
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+from ubo_gui.constants import SECONDARY_COLOR_LIGHT
 from ubo_gui.menu.types import ActionItem
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+
+    from kivy.graphics.context_instructions import Color
 
 
 class Importance(StrEnum):
@@ -73,6 +76,7 @@ class Chime(StrEnum):
 
 
 class NotificationActionItem(ActionItem):
+    background_color: Color | Callable[[], Color] = SECONDARY_COLOR_LIGHT
     dismiss_notification: bool = False
 
 
@@ -93,6 +97,7 @@ class Notification(Immutable):
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = 4
     dismissable: bool = True
+    on_close: Callable[[], Any] | None = None
 
 
 class NotificationsAction(BaseAction): ...

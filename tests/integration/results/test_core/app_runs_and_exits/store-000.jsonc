@@ -193,7 +193,7 @@
           }
         },
         {
-          "action": "",
+          "action": "<function:<lambda>>",
           "background_color": "#68B7FF",
           "color": [
             1,

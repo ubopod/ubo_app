@@ -32,7 +32,7 @@ async def test_wireless_flow(
 
     app = MenuApp()
     app_context.set_app(app)
-    load_services(['wifi'])
+    load_services(['wifi', 'notifications'])
 
     @wait_for(timeout=5.0, run_async=True)
     def check_icon() -> None:
@@ -92,6 +92,8 @@ async def test_wireless_flow(
     window_snapshot.take()
     store_snapshot.take()
 
+    store_monitor.dispatched_actions.reset_mock()
+
     # Open camera to scan QR code
     dispatch(KeypadKeyPressAction(key=Key.L3))
     await stability()
@@ -100,7 +102,7 @@ async def test_wireless_flow(
 
     @wait_for(stop=stop_after_delay(3))
     def camera_started() -> None:
-        store_monitor.dispatched_actions.assert_called_with(
+        store_monitor.dispatched_actions.assert_any_call(
             CameraStartViewfinderAction(
                 id=ANY,
                 pattern=(

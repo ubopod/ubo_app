@@ -70,6 +70,10 @@ class OpenApplicationEvent(MainEvent):
     application: PageWidget
 
 
+class CloseApplicationEvent(MainEvent):
+    application: PageWidget
+
+
 class PowerOffEvent(MainEvent): ...
 
 

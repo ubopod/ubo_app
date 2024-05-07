@@ -93,7 +93,7 @@
                                   "opacity": null
                                 },
                                 {
-                                  "action": "",
+                                  "action": "<function:list_connections>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -237,11 +237,11 @@
           "sub_menu": {
             "items": [],
             "placeholder": "No notifications",
-            "title": "Notifications (not loaded)"
+            "title": "Notifications (0)"
           }
         },
         {
-          "action": "",
+          "action": "<function:<lambda>>",
           "background_color": "#68B7FF",
           "color": [
             1,
@@ -268,6 +268,10 @@
     "settings_items_priorities": {
       "WiFi": 2
     }
+  },
+  "notifications": {
+    "notifications": [],
+    "unread_count": 0
   },
   "status_icons": {
     "icons": [

@@ -168,6 +168,9 @@ IMAGES = {
                     r'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
                     resolver=lambda code, _: code,
                     prompt='Enter the Ngrok Auth Token',
+                    extra_information="""Get the token from {ngrok|EH N G EH R AA K} \
+dashboard {"https://dashboard.ngrok.com/auth/your-authtoken"|""}, \
+convert it to {QR|K Y UW AA R} code and scan it here.""",
                 ),
             },
             command=lambda: qrcode_input(

@@ -41,7 +41,8 @@ async def stability(
         latest_window_hash = None
         latest_store_snapshot = None
 
-        snapshots = []
+        store_snapshots = []
+        window_snapshots = []
 
         @wait_for(
             run_async=True,
@@ -63,7 +64,10 @@ async def stability(
             if not is_window_stable:
                 from headless_kivy_pi.config import _display
 
-                snapshots.append(_display.raw_data.copy())
+                window_snapshots.append(_display.raw_data.copy())
+
+            if not is_store_stable:
+                store_snapshots.append(store_snapshot.json_snapshot)
 
             assert is_window_stable, 'The content of the screen is not stable yet'
             assert is_store_stable, 'The content of the store is not stable yet'
@@ -71,7 +75,12 @@ async def stability(
         try:
             await check()
         except RetryError:
-            for i, snapshot in enumerate(snapshots):
+            for i, snapshot in enumerate(store_snapshots):
+                (
+                    store_snapshot.results_dir
+                    / f'store-unstability_snapshot_{i}.mismatch.jsonc'
+                ).write_text(snapshot)
+            for i, snapshot in enumerate(window_snapshots):
                 write_image(
                     window_snapshot.results_dir
                     / f'window-unstability_snapshot_{i}.mismatch.png',

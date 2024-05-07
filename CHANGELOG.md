@@ -16,6 +16,17 @@
 - fix(qrcode): qr code sets its state correctly after back button is pressed on it
 - fix(docker): qr code output for exposed ports doesn't bundle ip addresses of the
   device in a single entity, instead a separate qr code is generated for each ip
+- refactor: notifications and qr-code prompts now show short messages in their front
+  page and long messages in their extra information section #80
+- refactor(wifi): reuse `qrcode_input` instead of the old manual way of taking input
+  from qr code
+- feat(qrcode): `qrcode_input` accepts an `extra_information` parameter and passes
+  it to the prompt notification
+- feat(notification): add an `on_close` callback to the `Notification` object, called
+  when the notification is closed
+- feat: add `OpenApplicationEvent` and `CloseApplicationEvent` events
+- feat(voice): automatically remove invalid characters not readable by picovoice
+  from the text to be read so that those characters can still be visible in the text
 
 ## Version 0.13.5
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import base64
 import sys
-from dataclasses import replace
+from asyncio import Handle
 from datetime import datetime
 from pathlib import Path
 from threading import current_thread, main_thread
@@ -145,25 +145,29 @@ LoadedObject = int | float | str | bool | None | Immutable | list['LoadedObject'
 class UboStore(Store[RootState, ActionType, EventType]):
     @classmethod
     def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
-        from ubo_gui.menu.types import ActionItem
+        from redux.autorun import Autorun
         from ubo_gui.page import PageWidget
 
+        if isinstance(obj, Autorun):
+            obj = obj()
         if isinstance(obj, type) and issubclass(obj, PageWidget):
             file_path = sys.modules[obj.__module__].__file__
             if file_path:
                 return f"""{Path(file_path).relative_to(Path().absolute()).as_posix()}:{
                 obj.__name__}"""
             return f'{obj.__module__}:{obj.__name__}'
+        if callable(obj):
+            return f'<function:{obj.__name__}>'
         if isinstance(obj, PageWidget):
-            return 'INSTANCE OF APPLICATION'
-        if isinstance(obj, ActionItem):
-            obj = replace(obj, action='')
+            return '<application_instance>'
         if isinstance(obj, dict):
             return {k: cls.serialize_value(v) for k, v in obj.items()}
         if isinstance(obj, datetime):
             return obj.isoformat()
+        if isinstance(obj, Handle):
+            return '<handle>'
         if isinstance(obj, Fake):
-            return 'FAKE'
+            return '<fake>'
         return super().serialize_value(obj)
 
     @classmethod

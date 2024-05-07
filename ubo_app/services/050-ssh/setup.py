@@ -19,7 +19,11 @@ from ubo_gui.menu.types import (
 from ubo_gui.prompt import PromptWidget
 
 from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.main import (
+    CloseApplicationEvent,
+    RegisterSettingAppAction,
+    SettingsCategory,
+)
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -43,15 +47,15 @@ class ClearTemporaryUsersPrompt(PromptWidget):
 
     def first_option_callback(self: ClearTemporaryUsersPrompt) -> None:
         """Clear all temporary users."""
-        self.dispatch('on_close')
+        dispatch(CloseApplicationEvent(application=self))
 
     def second_option_callback(self: ClearTemporaryUsersPrompt) -> None:
         """Close the prompt."""
 
         async def act() -> None:
             await send_command('service ssh clear_all_temporary_accounts')
-            self.dispatch('on_close')
             dispatch(
+                CloseApplicationEvent(application=self),
                 NotificationsAddAction(
                     notification=Notification(
                         title='All SSH Accounts Removed',

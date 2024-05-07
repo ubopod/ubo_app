@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
+
+from tenacity import RetryError
 
 if TYPE_CHECKING:
     from redux_pytest.fixtures import StoreSnapshot
@@ -44,10 +47,15 @@ async def test_all_services_register(
     load_services(ALL_SERVICES_IDS, timeout=10)
     for _ in range(3):
         try:
+            await asyncio.sleep(3)
             await stability(timeout=3)
             store_snapshot.take()
             window_snapshot.take()
             break
+        except RetryError as exception:
+            if isinstance(exception.last_attempt.exception(), AssertionError):
+                continue
+            raise
         except AssertionError:
             continue
     else:

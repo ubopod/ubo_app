@@ -45,11 +45,10 @@ def global_exception_handler(
 
     threads_info = get_all_thread_stacks()
 
-    logger.error(
+    logger.exception(
         'Global exception',
         exc_info=exception_value,
     )
-
     logger.verbose(
         'Global exception',
         extra={
@@ -66,14 +65,13 @@ def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
 
     _, exception_value, _, thread = args
 
-    logger.error(
+    logger.exception(
         'Thread exception',
         extra={
             'exception_thread': thread,
         },
         exc_info=exception_value,
     )
-
     logger.verbose(
         'Thread exception',
         extra={
@@ -95,7 +93,7 @@ def loop_exception_handler(
     exception = context.get('exception')
 
     if exception:
-        logger.error(
+        logger.exception(
             'Event loop exception',
             extra={
                 'loop': loop,

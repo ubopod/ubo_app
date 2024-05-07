@@ -1971,17 +1971,18 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
 name = "tenacity"
-version = "8.2.3"
+version = "8.3.0"
 description = "Retry code until it succeeds"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.2.3-py3-none-any.whl", hash = "sha256:ce510e327a630c9e1beaf17d42e6ffacc88185044ad85cf74c0a8887c6a0f88c"},
-    {file = "tenacity-8.2.3.tar.gz", hash = "sha256:5398ef0d78e63f40007c1fb4c0bff96e1911394d2fa8d194f77619c05ff6cc8a"},
+    {file = "tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185"},
+    {file = "tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2"},
 ]
 
 [package.extras]
-doc = ["reno", "sphinx", "tornado (>=4.5)"]
+doc = ["reno", "sphinx"]
+test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
 name = "toml"
@@ -2033,13 +2034,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.11.5"
+version = "0.11.6"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.11.5-py3-none-any.whl", hash = "sha256:7322eb4e6bcef7122fbd9ecf2da38cd2844cd71c89e16c5fc09d2c7771e6a990"},
-    {file = "ubo_gui-0.11.5.tar.gz", hash = "sha256:dea9696896ef851b96a08b7f5cf4f8037e317cc830f813dcff76314b4295234b"},
+    {file = "ubo_gui-0.11.6-py3-none-any.whl", hash = "sha256:88de2fe96727f3d8ad85e7ef73070b073fe68d4c1a826b6e3979617dee9ff58b"},
+    {file = "ubo_gui-0.11.6.tar.gz", hash = "sha256:672a938125854561475062caf9d26d8e9ee8f57d09a0a9aac3078a83f63f7bac"},
 ]
 
 [package.dependencies]
@@ -2192,4 +2193,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "69b3dbf3453a7bfd0a92fe3c8c3b8ffae83ebf72810c8642dc8e5dcb669adec8"
+content-hash = "764087e09e017fd0e50a0854f4101558aee4fb59937e6835d8ffbcc9e8f31abe"

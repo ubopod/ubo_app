@@ -93,7 +93,7 @@
                                   "opacity": null
                                 },
                                 {
-                                  "action": "",
+                                  "action": "<function:list_connections>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -229,7 +229,7 @@
         },
         {
           "background_color": "#68B7FF",
-          "color": "white",
+          "color": "yellow",
           "icon": "",
           "is_short": true,
           "label": "",
@@ -237,11 +237,11 @@
           "sub_menu": {
             "items": [],
             "placeholder": "No notifications",
-            "title": "Notifications (not loaded)"
+            "title": "Notifications (1)"
           }
         },
         {
-          "action": "",
+          "action": "<function:<lambda>>",
           "background_color": "#68B7FF",
           "color": [
             1,
@@ -264,11 +264,52 @@
       "Settings",
       "󰛳Network",
       "WiFi Settings",
-      "eb2083e6ce164dba0ff18e0242af9fc3"
+      "eb2083e6ce164dba0ff18e0242af9fc3",
+      "b5d32b1666194cb1d71037d1b83e90ec"
     ],
     "settings_items_priorities": {
       "WiFi": 2
     }
+  },
+  "notifications": {
+    "notifications": [
+      {
+        "actions": [
+          {
+            "action": "<function:<lambda>>",
+            "background_color": "#ABA7A7",
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "dismiss_notification": true,
+            "icon": "󰄀",
+            "is_short": false,
+            "label": "",
+            "opacity": null
+          }
+        ],
+        "chime": "done",
+        "color": "#ffffff",
+        "content": "[size=18dp]Scan WiFi QR-Code With Front Camera[/size]",
+        "dismissable": false,
+        "display_type": "sticky",
+        "expiry_date": "2023-01-01T00:00:00+00:00",
+        "extra_information": "Go to your phone settings, choose {QR|K Y UW AA R} code and hold it in front of the camera to scan it",
+        "flash_time": 4,
+        "icon": "󰄀󰐲",
+        "id": "qrcode",
+        "importance": "low",
+        "is_read": true,
+        "on_close": "<function:<lambda>>",
+        "sender": null,
+        "timestamp": "2023-01-01T00:00:00+00:00",
+        "title": "QR Code"
+      }
+    ],
+    "unread_count": 1
   },
   "status_icons": {
     "icons": [

@@ -109,7 +109,7 @@
                 "sub_menu": {
                   "items": [
                     {
-                      "action": "",
+                      "action": "<function:docker_menu_item_action>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -184,7 +184,7 @@
                                   "opacity": null
                                 },
                                 {
-                                  "action": "",
+                                  "action": "<function:list_connections>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -288,7 +288,7 @@
                               "heading": "󰔊 Picovoice",
                               "items": [
                                 {
-                                  "action": "",
+                                  "action": "<function:input_access_key>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -302,7 +302,7 @@
                                   "opacity": null
                                 },
                                 {
-                                  "action": "",
+                                  "action": "<function:clear_access_key>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -341,7 +341,7 @@
                       "sub_menu": {
                         "items": [
                           {
-                            "action": "",
+                            "action": "<function:open_lightdm_menu>",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -374,7 +374,7 @@
                       "sub_menu": {
                         "items": [
                           {
-                            "action": "",
+                            "action": "<function:open_ssh_menu>",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -422,7 +422,7 @@
                               "heading": "󰡨 Docker",
                               "items": [
                                 {
-                                  "action": "",
+                                  "action": "<function:input_credentials>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -499,7 +499,7 @@
           }
         },
         {
-          "action": "",
+          "action": "<function:<lambda>>",
           "background_color": "#68B7FF",
           "color": [
             1,
