@@ -27,6 +27,8 @@
 - feat: add `OpenApplicationEvent` and `CloseApplicationEvent` events
 - feat(voice): automatically remove invalid characters not readable by picovoice
   from the text to be read so that those characters can still be visible in the text
+- build(installation): set `XDG_RUNTIME_DIR` in `bashrc` to make interacting with
+  user `systemd` services easier
 
 ## Version 0.13.5
 

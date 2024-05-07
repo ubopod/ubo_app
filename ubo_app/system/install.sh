@@ -69,6 +69,8 @@ usermod -aG adm,audio,video,gpio,i2c,spi,kmem,render $USERNAME
 
 echo "User $USERNAME created successfully."
 
+echo "export XDG_RUNTIME_DIR=/run/user/$(id -u $USERNAME)" >> /home/$USERNAME/.bashrc
+
 # Install required packages
 apt-get -y update
 apt-get -y upgrade
