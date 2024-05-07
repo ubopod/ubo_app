@@ -14,6 +14,8 @@
 - refactor: all `asyncio.create_subprocess_exec` calls now redirect their `STDOUT`
   and `STDERR` to `DEVNULL` or `PIPE` to avoid noise in output
 - fix(qrcode): qr code sets its state correctly after back button is pressed on it
+- fix(docker): qr code output for exposed ports doesn't bundle ip addresses of the
+  device in a single entity, instead a separate qr code is generated for each ip
 
 ## Version 0.13.5
 

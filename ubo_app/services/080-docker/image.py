@@ -418,7 +418,7 @@ def image_menu(
     image: ImageState,
 ) -> HeadedMenu:
     """Get the menu for the docker image."""
-    ip_addresses = ([ip for interface in interfaces for ip in interface.ip_addresses],)
+    ip_addresses = [ip for interface in interfaces for ip in interface.ip_addresses]
     items: list[Item] = []
 
     def open_qrcode(port: str) -> Callable[[], PageWidget]:
