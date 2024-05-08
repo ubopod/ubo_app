@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 0.14.1
+
+- fix(docker): handle the case when ip interfaces are not initialized yet
+
 ## Version 0.14.0
 
 - feat(wifi): the wireless onboarding suggestion notification is shown when the
