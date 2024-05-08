@@ -37,12 +37,12 @@ class MenuWidgetWithHomePage(MenuWidget):
             padding_top=self.padding_top,
         )
 
-    def render_items(self: MenuWidgetWithHomePage, *_: object) -> None:
+    def _render_items(self: MenuWidgetWithHomePage, *_: object) -> None:
         if self.depth <= 1:
             self.home_page.set_items(self.current_menu_items)
             self.current_screen = self.home_page
         else:
-            super().render_items()
+            super()._render_items()
 
 
 def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) -> None:
@@ -60,6 +60,9 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         _self = weakref.ref(self)
 
+        self.menu_widget.bind(page_index=self.handle_page_index_change)
+        self.menu_widget.bind(current_menu=self.handle_page_index_change)
+
         @autorun(lambda state: state.main.menu)
         @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
         async def _(menu: Menu | None) -> None:
@@ -67,9 +70,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             if not self or not menu:
                 return
             mainthread(self.menu_widget.set_root_menu)(menu)
-
-        self.menu_widget.bind(page_index=self.handle_page_index_change)
-        self.menu_widget.bind(current_menu=self.handle_page_index_change)
 
     def build(self: UboApp) -> Widget | None:
         root = super().build()
@@ -127,12 +127,14 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             self.menu_widget.select(1)
         if key_press_event.key == Key.L3:
             self.menu_widget.select(2)
-        if key_press_event.key == Key.BACK:
-            self.menu_widget.go_back()
         if key_press_event.key == Key.UP:
             self.menu_widget.go_up()
         if key_press_event.key == Key.DOWN:
             self.menu_widget.go_down()
+        if key_press_event.key == Key.BACK:
+            self.menu_widget.go_back()
+        if key_press_event.key == Key.HOME:
+            self.menu_widget.go_home()
 
     @mainthread
     def open_application(self: MenuAppCentral, event: OpenApplicationEvent) -> None:

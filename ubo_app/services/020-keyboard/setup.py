@@ -42,6 +42,8 @@ def on_keyboard(  # noqa: C901
             Keyboard.keycodes['h'],
         ):
             dispatch(KeypadKeyPressAction(key=Key.BACK))
+        elif key == Keyboard.keycodes['backspace']:
+            dispatch(KeypadKeyPressAction(key=Key.HOME))
         elif key == Keyboard.keycodes['m']:
             from ubo_app.store import dispatch
 

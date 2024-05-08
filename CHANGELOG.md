@@ -5,6 +5,7 @@
 - fix(docker): handle the case when ip interfaces are not initialized yet
 - fix(vscode): show an indicator when it is pending url generation
 - fix(core): avoid multiple initial overlaying frames #91
+- feat(core): pressing the home button navigates the user to the home page #84
 
 ## Version 0.14.0
 

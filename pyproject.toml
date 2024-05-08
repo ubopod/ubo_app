@@ -18,10 +18,10 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.11.6", markers = "extra=='default'", extras = [
+  { version = "^0.11.7", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.11.6", markers = "extra=='dev'", extras = [
+  { version = "^0.11.7", markers = "extra=='dev'", extras = [
     "dev",
   ] },
 ]

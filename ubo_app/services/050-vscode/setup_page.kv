@@ -34,7 +34,6 @@
 
       ItemWidget:
         item: root.items[2] if root.url else root.pending_url_item if root.is_installed else None
-        opacity: 1 if self.is_set or root.is_installed else 0
         icon: '󰐲'
         size_hint: 1, None
 
