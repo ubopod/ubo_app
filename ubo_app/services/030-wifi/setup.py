@@ -81,28 +81,27 @@ def should_show_onboarding(state: tuple[bool | None, bool]) -> bool | None:
 
 
 def show_onboarding_notification() -> None:
-    actions = [
-        NotificationActionItem(
-            action=lambda: create_wireless_connection.CreateWirelessConnectionPage,
-            icon='󱚾',
-            background_color=INFO_COLOR,
-            dismiss_notification=True,
-        ),
-    ]
     dispatch(
         NotificationsAddAction(
             notification=Notification(
                 title='No internet connection',
-                content='Go to settings to connect to a network.',
+                content='Press middle button "󱚾" to add WiFi network',
                 importance=Importance.MEDIUM,
                 icon='󱚵',
                 display_type=NotificationDisplayType.STICKY,
-                actions=actions,
-                extra_information='You are currently not connected to the '
-                'internet.\n'
-                'To connect, press the back button and choose the WiFi setup icon '
-                '"󱚾" using the left buttons.\n'
-                'Follow the on-screen instructions to complete the setup.',
+                actions=[
+                    NotificationActionItem(
+                        action=lambda: (
+                            create_wireless_connection.CreateWirelessConnectionPage
+                        ),
+                        icon='󱚾',
+                        background_color=INFO_COLOR,
+                        dismiss_notification=True,
+                    ),
+                ],
+                extra_information="""Press middle button to add WiFi network with \
+{QR|K Y UW AA R} code.\nIf you dismiss this, you can always add WiFi network through \
+Settings → Network → WiFi""",
                 color=INFO_COLOR,
             ),
         ),

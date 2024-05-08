@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from asyncio import CancelledError
+from threading import Lock
 
 import pvorca
 from redux import FinishEvent
@@ -21,16 +22,19 @@ from ubo_app.utils.qrcode import qrcode_input
 
 class _Context:
     orca_instance: pvorca.Orca | None = None
+    lock: Lock = Lock()
 
     def cleanup(self: _Context) -> None:
-        if self.orca_instance:
-            self.orca_instance.delete()
-            self.orca_instance = None
+        with self.lock:
+            if self.orca_instance:
+                self.orca_instance.delete()
+                self.orca_instance = None
 
     def set_access_key(self: _Context, access_key: str | None) -> None:
         self.cleanup()
-        if access_key:
-            self.orca_instance = pvorca.create(access_key)
+        with self.lock:
+            if access_key:
+                self.orca_instance = pvorca.create(access_key)
 
 
 _context = _Context()
@@ -64,37 +68,42 @@ def clear_access_key() -> None:
 
 def synthesize(event: VoiceSynthesizeTextEvent) -> None:
     """Synthesize the text."""
-    if not _context.orca_instance:
-        return
-    rate = _context.orca_instance.sample_rate
+    with _context.lock:
+        if not _context.orca_instance:
+            return
+        rate = _context.orca_instance.sample_rate
 
-    valid_characters = re.sub(
-        r'[\^\$\-\\]',
-        lambda match: f'\\{match.group()}',
-        ''.join(
-            sorted(
-                {i for i in _context.orca_instance.valid_characters if i not in '{|}'},
+        valid_characters = re.sub(
+            r'[\^\$\-\\]',
+            lambda match: f'\\{match.group()}',
+            ''.join(
+                sorted(
+                    {
+                        i
+                        for i in _context.orca_instance.valid_characters
+                        if i not in '{|}'
+                    },
+                ),
             ),
-        ),
-    )
+        )
 
-    def remove_disallowed_characters(text: str) -> str:
-        return re.sub(rf'[^{valid_characters}]', '', text)
+        def remove_disallowed_characters(text: str) -> str:
+            return re.sub(rf'[^{valid_characters}]', '', text)
 
-    components = re.split(r'(\{[^{|}]*\|[^{|}]*\})', event.text)
-    processed_components = [
-        remove_disallowed_characters(component) if index % 2 == 0 else component
-        for index, component in enumerate(components)
-    ]
-    processed_text = ''.join(processed_components)
-    audio_sequence = _context.orca_instance.synthesize(
-        text=processed_text,
-        speech_rate=event.speech_rate,
-    )
+        components = re.split(r'(\{[^{|}]*\|[^{|}]*\})', event.text)
+        processed_components = [
+            remove_disallowed_characters(component) if index % 2 == 0 else component
+            for index, component in enumerate(components)
+        ]
+        processed_text = ''.join(processed_components)
+        audio_sequence = _context.orca_instance.synthesize(
+            text=processed_text,
+            speech_rate=event.speech_rate,
+        )
 
-    dispatch(
-        SoundPlayAudioAction(sample=audio_sequence, channels=1, rate=rate, width=2),
-    )
+        dispatch(
+            SoundPlayAudioAction(sample=audio_sequence, channels=1, rate=rate, width=2),
+        )
 
 
 def init_service() -> None:

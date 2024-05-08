@@ -30,7 +30,6 @@ class MenuNotificationHandler(UboApp):
         self: MenuNotificationHandler,
         event: NotificationsDisplayEvent,
     ) -> None:
-        @mainthread
         def run_notification_action(action: NotificationActionItem) -> None:
             if action.dismiss_notification:
                 dismiss()
@@ -54,9 +53,7 @@ class MenuNotificationHandler(UboApp):
                 lambda match: match.groups()[0],
                 notification.extra_information or '',
             )
-            dispatch(
-                VoiceReadTextAction(text=processed_voice_text),
-            )
+            dispatch(VoiceReadTextAction(text=processed_voice_text))
 
             def open_info() -> None:
                 previous_iteration = notification.extra_information or ''

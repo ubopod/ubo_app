@@ -6,6 +6,8 @@
 - fix(vscode): show an indicator when it is pending url generation
 - fix(core): avoid multiple initial overlaying frames #91
 - feat(core): pressing the home button navigates the user to the home page #84
+- refactor(wifi): change the onboarding notification messages and make voice service
+  load before wifi service by changing its priority #88
 
 ## Version 0.14.0
 
