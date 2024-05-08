@@ -44,6 +44,9 @@ class HomePage(PageWidget):
 
         autorun(lambda state: state.sound.playback_volume)(self._sync_output_volume)
 
+    def set_items(self: HomePage, items: Sequence[Item | None] = []) -> None:
+        self.items = [None, *items, None]
+
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
         self.volume_widget.value = selector_result * 100
 

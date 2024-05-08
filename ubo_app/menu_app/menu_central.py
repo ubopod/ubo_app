@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
-from ubo_gui.app import UboApp
+from ubo_gui.app import UboApp, cached_property
 from ubo_gui.menu import MenuWidget
 
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
@@ -29,14 +29,18 @@ if TYPE_CHECKING:
 
 
 class MenuWidgetWithHomePage(MenuWidget):
+    @cached_property
+    def home_page(self: MenuWidgetWithHomePage) -> HomePage:
+        return HomePage(
+            name='Page 1 0',
+            padding_bottom=self.padding_bottom,
+            padding_top=self.padding_top,
+        )
+
     def render_items(self: MenuWidgetWithHomePage, *_: object) -> None:
         if self.depth <= 1:
-            self.current_screen = HomePage(
-                self.current_menu_items,
-                name='Page 1 0',
-                padding_bottom=self.padding_bottom,
-                padding_top=self.padding_top,
-            )
+            self.home_page.set_items(self.current_menu_items)
+            self.current_screen = self.home_page
         else:
             super().render_items()
 
