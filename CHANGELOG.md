@@ -12,6 +12,7 @@
   before the first frame is ready to be rendered #86
 - build(bootstrap): set `UBO_SERVICES_PATH` to `/home/{{USERNAME}}/ubo_services/`
   in the service file so that user can easily add their custom services
+- fix(voice): remove "clear access key" item when access key is not set #97
 
 ## Version 0.14.0
 

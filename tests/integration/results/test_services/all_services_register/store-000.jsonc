@@ -300,20 +300,6 @@
                                   "is_short": false,
                                   "label": "Set Access Key",
                                   "opacity": null
-                                },
-                                {
-                                  "action": "<function:clear_access_key>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰌊",
-                                  "is_short": false,
-                                  "label": "Clear Access Key",
-                                  "opacity": null
                                 }
                               ],
                               "placeholder": null,
@@ -588,7 +574,9 @@
     "serial_number": "<not-available>",
     "update_status": "up_to_date"
   },
-  "voice": {},
+  "voice": {
+    "is_access_key_set": false
+  },
   "wifi": {
     "connections": [],
     "current_connection": null,

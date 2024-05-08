@@ -11,6 +11,10 @@ class VoiceAction(BaseAction): ...
 class VoiceEvent(BaseEvent): ...
 
 
+class VoiceUpdateAccessKeyStatus(VoiceAction):
+    is_access_key_set: bool
+
+
 class VoiceReadTextAction(VoiceAction):
     text: str
     speech_rate: float | None = None
@@ -21,4 +25,5 @@ class VoiceSynthesizeTextEvent(VoiceEvent):
     speech_rate: float | None = None
 
 
-class VoiceState(Immutable): ...
+class VoiceState(Immutable):
+    is_access_key_set: bool | None = None
