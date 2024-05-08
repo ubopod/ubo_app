@@ -10,6 +10,8 @@
   load before wifi service by changing its priority #88
 - fix(core): use latest version of headless-kivy-pi to avoid the static noise shown
   before the first frame is ready to be rendered #86
+- build(bootstrap): set `UBO_SERVICES_PATH` to `/home/{{USERNAME}}/ubo_services/`
+  in the service file so that user can easily add their custom services
 
 ## Version 0.14.0
 

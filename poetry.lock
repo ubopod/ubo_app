@@ -781,13 +781,13 @@ files = [
 
 [[package]]
 name = "headless-kivy-pi"
-version = "0.7.3"
+version = "0.7.4"
 description = "Headless renderer for Kivy framework on Raspberry Pi"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "headless_kivy_pi-0.7.3-py3-none-any.whl", hash = "sha256:032366d7c05f416101ff679677a17b923af4159486fe1520fc08c166b2348a0f"},
-    {file = "headless_kivy_pi-0.7.3.tar.gz", hash = "sha256:f508acd227049028eecce2dc611be7be1e6f1c631ac4a9c48c47477ac92cb82a"},
+    {file = "headless_kivy_pi-0.7.4-py3-none-any.whl", hash = "sha256:f04b08dc43e61a78b74246adfe9ef60775e097f7ecb3d5f72e66daa341e1dced"},
+    {file = "headless_kivy_pi-0.7.4.tar.gz", hash = "sha256:9a50e83fd812ee6a590ebf1c85d52dfa4d469c36183b52e1de59a6af51258437"},
 ]
 
 [package.dependencies]
@@ -2193,4 +2193,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "8ef2753457e3d426d934c2032c180049d8b36052bcf52c604954a692bc5ac031"
+content-hash = "d26ee0cbb604ef821d6e3acd692836718945588a17198091d30f1aa0e6ba2213"

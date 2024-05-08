@@ -4,6 +4,7 @@ Wants=dbus.service pipewire-pulse.service
 
 [Service]
 Type=simple
+Environment="UBO_SERVICES_PATH=/home/{{USERNAME}}/ubo_services/"
 ExecStart={{INSTALLATION_PATH}}/env/bin/ubo
 WorkingDirectory={{INSTALLATION_PATH}}
 StandardOutput=inherit
