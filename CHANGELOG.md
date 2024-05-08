@@ -8,6 +8,8 @@
 - feat(core): pressing the home button navigates the user to the home page #84
 - refactor(wifi): change the onboarding notification messages and make voice service
   load before wifi service by changing its priority #88
+- fix(core): use latest version of headless-kivy-pi to avoid the static noise shown
+  before the first frame is ready to be rendered #86
 
 ## Version 0.14.0
 

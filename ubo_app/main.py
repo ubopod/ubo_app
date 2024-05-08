@@ -62,7 +62,9 @@ def main() -> None:
 
     import headless_kivy_pi.config
 
-    headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})
+    headless_kivy_pi.config.setup_headless_kivy(
+        {'automatic_fps': True, 'flip_vertical': True},
+    )
 
     from ubo_app.load_services import load_services
     from ubo_app.logging import logger

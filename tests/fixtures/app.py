@@ -102,7 +102,9 @@ async def app_context(
 
     import headless_kivy_pi.config
 
-    headless_kivy_pi.config.setup_headless_kivy({'automatic_fps': True})
+    headless_kivy_pi.config.setup_headless_kivy(
+        {'automatic_fps': True, 'flip_vertical': True},
+    )
 
     context = AppContext(request)
 
