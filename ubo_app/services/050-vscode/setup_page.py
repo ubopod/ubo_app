@@ -13,7 +13,7 @@ from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from ubo_gui.constants import DANGER_COLOR
-from ubo_gui.menu.types import ActionItem
+from ubo_gui.menu.types import ActionItem, Item
 from ubo_gui.page import PageWidget
 
 from ubo_app.store import autorun, dispatch
@@ -36,6 +36,11 @@ class SetupPage(PageWidget):
     is_installed = BooleanProperty()
     url: str = StringProperty()
 
+    pending_url_item = Item(
+        label='Waiting for URL',
+        icon='󰔟',
+    )
+
     def go_back(self: SetupPage) -> bool:
         if self.stage > 1:
             self.stage = 1
@@ -47,6 +52,7 @@ class SetupPage(PageWidget):
         *args: object,
         **kwargs: object,
     ) -> None:
+        self.process = None
         items = [
             ActionItem(
                 label='Set name',
@@ -68,11 +74,19 @@ class SetupPage(PageWidget):
         ]
         super().__init__(*args, **kwargs, items=items)
 
-        autorun(lambda state: state.vscode)(self.sync)
+        self.unsubscribe = autorun(lambda state: state.vscode)(self.sync)
 
     @mainthread
     def reset(self: SetupPage) -> None:
         self.stage = 0
+
+    def clean_process(self: SetupPage) -> None:
+        if self.process and self.process.returncode is None:
+            self.process.kill()
+
+    def on_close(self: SetupPage) -> None:
+        self.clean_process()
+        self.unsubscribe()
 
     @mainthread
     def sync(self: SetupPage, state: VSCodeState) -> None:
@@ -83,6 +97,8 @@ class SetupPage(PageWidget):
             self.is_installed = state.status.is_service_installed
             if state.status.name:
                 self.url = f'{CODE_TUNNEL_URL_PREFIX}{state.status.name}'
+            else:
+                self.url = ''
             if self.stage == 0:
                 self.stage = 1
 
@@ -92,11 +108,12 @@ class SetupPage(PageWidget):
             self.stage = 2
 
     async def set_name(self: SetupPage) -> None:
+        self.clean_process()
         self.reset()
         try:
             hostname = socket.gethostname()
             self.process = await asyncio.create_subprocess_exec(
-                CODE_BINARY_PATH.as_posix(),
+                CODE_BINARY_PATH,
                 'tunnel',
                 '--accept-server-license-terms',
                 'rename',
@@ -122,10 +139,11 @@ class SetupPage(PageWidget):
             await check_status()
 
     async def install_service(self: SetupPage) -> None:
+        self.clean_process()
         self.reset()
         try:
             self.process = await asyncio.create_subprocess_exec(
-                CODE_BINARY_PATH.as_posix(),
+                CODE_BINARY_PATH,
                 'tunnel',
                 '--accept-server-license-terms',
                 'service',
@@ -151,10 +169,11 @@ class SetupPage(PageWidget):
             await check_status()
 
     async def uninstall_service(self: SetupPage) -> None:
+        self.clean_process()
         self.reset()
         try:
             self.process = await asyncio.create_subprocess_exec(
-                CODE_BINARY_PATH.as_posix(),
+                CODE_BINARY_PATH,
                 'tunnel',
                 '--accept-server-license-terms',
                 'service',
@@ -178,9 +197,6 @@ class SetupPage(PageWidget):
             )
         finally:
             await check_status()
-
-    def on_close(self: SetupPage) -> None:
-        self.process.kill() if self.process.returncode is None else None
 
 
 Builder.load_file(

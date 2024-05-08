@@ -3,6 +3,7 @@
 ## Version 0.14.1
 
 - fix(docker): handle the case when ip interfaces are not initialized yet
+- fix(vscode): show an indicator when it is pending url generation
 
 ## Version 0.14.0
 
