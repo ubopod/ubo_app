@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import asyncio
+import pathlib
 import subprocess
 from typing import TYPE_CHECKING
 
-from checks import check_status
+from commands import check_status, install_service, uninstall_service
 from constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
+from kivy.lang.builder import Builder
 from login_page import LoginPage
-from setup_page import SetupPage
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
+from ubo_gui.page import PageWidget
 
 from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store import autorun, dispatch
@@ -25,8 +27,11 @@ from ubo_app.store.services.vscode import (
     VSCodeDoneDownloadingAction,
     VSCodeStartDownloadingAction,
     VSCodeState,
+    VSCodeStatus,
 )
 from ubo_app.utils.async_ import create_task
+
+CODE_TUNNEL_URL_PREFIX = 'https://vscode.dev/tunnel/'
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -112,41 +117,60 @@ def logout() -> None:
     create_task(act())
 
 
-@autorun(
-    lambda state: state.vscode,
-    comparator=lambda state: (
-        state.vscode.is_binary_installed,
-        state.vscode.is_logged_in,
-        state.vscode.is_downloading,
-    ),
-)
-def vscode_menu(state: VSCodeState) -> HeadedMenu:
+def status_based_actions(status: VSCodeStatus) -> list[ActionItem | ApplicationItem]:
+    actions = []
+
+    class VSCodeQRCodePage(PageWidget):
+        url = f'{CODE_TUNNEL_URL_PREFIX}{status.name}'
+
+    if status.is_running:
+        actions.append(
+            ApplicationItem(label='Show URL', icon='󰐲', application=VSCodeQRCodePage),
+        )
+    actions.append(
+        ActionItem(
+            label='Uninstall Service'
+            if status.is_service_installed
+            else 'Install Service',
+            icon='󰫜' if status.is_service_installed else '󰫚',
+            action=(lambda: create_task(uninstall_service()) and None)
+            if status.is_service_installed
+            else (lambda: create_task(install_service()) and None),
+        ),
+    )
+    return actions
+
+
+def login_actions(*, is_logged_in: bool) -> list[ActionItem | ApplicationItem]:
+    actions = []
+    if is_logged_in:
+        actions.extend(
+            [
+                ActionItem(
+                    label='Logout',
+                    icon='󰍃',
+                    action=logout,
+                ),
+            ],
+        )
+    else:
+        actions.append(
+            ApplicationItem(
+                label='Login',
+                icon='󰍂',
+                application=LoginPage,
+            ),
+        )
+    return actions
+
+
+def generate_actions(state: VSCodeState) -> list[ActionItem | ApplicationItem]:
     actions = []
     if not state.is_downloading:
         if state.is_binary_installed:
-            if state.is_logged_in:
-                actions.extend(
-                    [
-                        ApplicationItem(
-                            label='Setup Tunnel',
-                            icon='󰒔',
-                            application=SetupPage,
-                        ),
-                        ActionItem(
-                            label='Logout',
-                            icon='󰍃',
-                            action=logout,
-                        ),
-                    ],
-                )
-            else:
-                actions.append(
-                    ApplicationItem(
-                        label='Login',
-                        icon='󰍂',
-                        application=LoginPage,
-                    ),
-                )
+            if state.is_logged_in and state.status:
+                actions.extend(status_based_actions(state.status))
+            actions.extend(login_actions(is_logged_in=state.is_logged_in))
 
         actions.append(
             ActionItem(
@@ -157,11 +181,42 @@ def vscode_menu(state: VSCodeState) -> HeadedMenu:
                 action=download_code,
             ),
         )
+    return actions
+
+
+@autorun(lambda state: state.vscode)
+def vscode_menu(state: VSCodeState) -> HeadedMenu:
+    if state.is_pending:
+        return HeadedMenu(
+            title='󰨞VSCode',
+            heading='VSCode Remote Tunnel',
+            sub_heading='[size=48dp]󰔟[/size]',
+            items=[],
+        )
+
+    actions = generate_actions(state)
+
+    status = ''
+    if state.status:
+        if state.status.is_running:
+            status = 'Service is running'
+        elif not state.status.is_service_installed:
+            status = 'Service not installed'
+        else:
+            status = 'Service installed but not running'
+    elif state.is_downloading:
+        status = 'Downloading...'
+    elif not state.is_binary_installed:
+        status = 'Code CLI not installed'
+    elif not state.is_logged_in:
+        status = 'Needs authentication'
+    else:
+        status = 'Unknown status'
 
     return HeadedMenu(
         title='󰨞VSCode',
-        heading='Setup VSCode Tunnel',
-        sub_heading='Downloading...' if state.is_downloading else '',
+        heading='VSCode Remote Tunnel',
+        sub_heading=status,
         items=actions,
     )
 
@@ -181,3 +236,11 @@ async def init_service() -> None:
     while True:
         await asyncio.sleep(3)
         await check_status()
+
+
+Builder.load_file(
+    pathlib.Path(__file__)
+    .parent.joinpath('vscode_qrcode_page.kv')
+    .resolve()
+    .as_posix(),
+)

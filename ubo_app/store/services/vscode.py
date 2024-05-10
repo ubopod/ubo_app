@@ -14,6 +14,9 @@ class VSCodeStartDownloadingAction(VSCodeAction): ...
 class VSCodeDoneDownloadingAction(VSCodeAction): ...
 
 
+class VSCodeSetPendingAction(VSCodeAction): ...
+
+
 class VSCodeStatus(Immutable):
     is_service_installed: bool
     is_running: bool
@@ -27,6 +30,7 @@ class VSCodeSetStatusAction(VSCodeAction):
 
 
 class VSCodeState(Immutable):
+    is_pending: bool = True
     is_downloading: bool = False
     is_binary_installed: bool = False
     is_logged_in: bool = False

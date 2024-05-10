@@ -1,5 +1,6 @@
 """Compatibility layer for different environments."""
 
+from pathlib import Path
 from typing import Any
 
 
@@ -35,14 +36,16 @@ def setup() -> None:
 
         original_asyncio_create_subprocess_exec = asyncio.create_subprocess_exec
 
-        def fake_create_subprocess_exec(*command: str, **kwargs: Any) -> object:  # noqa: ANN401
-            if any(i in command[0] for i in ('reboot', 'poweroff')):
+        def fake_create_subprocess_exec(*args: str, **kwargs: Any) -> object:  # noqa: ANN401
+            command = args[0]
+            if command == '/usr/bin/env':
+                command = args[1]
+            if isinstance(command, Path):
+                command = command.as_posix()
+            if any(i in command for i in ('reboot', 'poweroff')):
                 return Fake()
-            if command[0] == '/usr/bin/env':
-                if command[1] in ('curl', 'tar'):
-                    return original_asyncio_create_subprocess_exec(*command, **kwargs)
-            elif command[0].endswith('/code'):
-                return original_asyncio_create_subprocess_exec(*command, **kwargs)
+            if command in ('curl', 'tar') or command.endswith('/code'):
+                return original_asyncio_create_subprocess_exec(*args, **kwargs)
             return Fake(
                 _Fake__await_value=Fake(
                     _Fake__props={

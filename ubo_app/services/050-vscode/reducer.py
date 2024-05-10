@@ -8,6 +8,7 @@ from redux import InitAction, InitializationActionError
 from ubo_app.store.services.vscode import (
     VSCodeAction,
     VSCodeDoneDownloadingAction,
+    VSCodeSetPendingAction,
     VSCodeSetStatusAction,
     VSCodeStartDownloadingAction,
     VSCodeState,
@@ -26,9 +27,13 @@ def reducer(state: VSCodeState | None, action: VSCodeAction) -> VSCodeState:
     if isinstance(action, VSCodeDoneDownloadingAction):
         return replace(state, is_downloading=False)
 
+    if isinstance(action, VSCodeSetPendingAction):
+        return replace(state, is_pending=True)
+
     if isinstance(action, VSCodeSetStatusAction):
         return replace(
             state,
+            is_pending=False,
             is_binary_installed=action.is_binary_installed,
             is_logged_in=action.is_logged_in,
             status=action.status,

@@ -6,7 +6,7 @@ import pathlib
 import re
 import subprocess
 
-from checks import check_status
+from commands import check_status
 from constants import CODE_BINARY_PATH
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder

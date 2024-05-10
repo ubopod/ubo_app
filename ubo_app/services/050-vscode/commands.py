@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import socket
 import subprocess
 from typing import Literal, TypedDict
 
@@ -19,6 +20,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.vscode import (
+    VSCodeSetPendingAction,
     VSCodeSetStatusAction,
     VSCodeStatus,
 )
@@ -121,3 +123,92 @@ async def check_status() -> None:
             ),
         ),
     )
+
+
+async def set_name() -> None:
+    dispatch(VSCodeSetPendingAction())
+    try:
+        hostname = socket.gethostname()
+        process = await asyncio.create_subprocess_exec(
+            CODE_BINARY_PATH,
+            'tunnel',
+            '--accept-server-license-terms',
+            'rename',
+            hostname,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        await process.wait()
+    except subprocess.CalledProcessError:
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='VSCode',
+                    content='Failed to setup: renaming the tunnel',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+    finally:
+        await check_status()
+
+
+async def install_service() -> None:
+    dispatch(VSCodeSetPendingAction())
+    try:
+        process = await asyncio.create_subprocess_exec(
+            CODE_BINARY_PATH,
+            'tunnel',
+            '--accept-server-license-terms',
+            'service',
+            'install',
+        )
+        await process.wait()
+    except subprocess.CalledProcessError:
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='VSCode',
+                    content='Failed to setup: installing service',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+    finally:
+        await check_status()
+
+
+async def uninstall_service() -> None:
+    dispatch(VSCodeSetPendingAction())
+    try:
+        process = await asyncio.create_subprocess_exec(
+            CODE_BINARY_PATH,
+            'tunnel',
+            '--accept-server-license-terms',
+            'service',
+            'uninstall',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        await process.wait()
+    except subprocess.CalledProcessError:
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='VSCode',
+                    content='Failed to setup: uninstalling service',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+    finally:
+        await check_status()
