@@ -17,6 +17,7 @@
 - refactor(vscode): flatten vscode menu items into its main menu #102
 - feat(vscode): show a notification with chime and led feedback when VSCode successfully
   logs in #96
+- feat(ip): make the internet icon red when there is no connection #95
 
 ## Version 0.14.0
 

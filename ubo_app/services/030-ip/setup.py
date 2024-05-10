@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
+from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.store import autorun, dispatch
@@ -94,7 +95,7 @@ async def check_connection() -> bool:
         else:
             dispatch(
                 StatusIconsRegisterAction(
-                    icon='󰪎',
+                    icon=f'[color={DANGER_COLOR}]󰪎[/color]',
                     priority=INTERNET_STATE_ICON_PRIORITY,
                     id=INTERNET_STATE_ICON_ID,
                 ),

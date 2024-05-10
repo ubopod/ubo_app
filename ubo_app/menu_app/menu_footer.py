@@ -142,6 +142,7 @@ class MenuAppFooter(UboApp):
                 font_features='fill=0',
                 size_hint=(None, 1),
                 width=dp(22),
+                markup=True,
             )
             self.icons_layout.add_widget(label)
         self.icons_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
