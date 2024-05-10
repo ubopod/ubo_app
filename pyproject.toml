@@ -47,7 +47,7 @@ adafruit-circuitpython-veml7700 = "^1.1.22"
 docker = "^7.0.0"
 python-dotenv = "^1.0.1"
 sentry-sdk = "^1.43.0"
-pvorca = "^0.1.4"
+pvorca = "^0.2.1"
 platformdirs = "^4.2.0"
 dill = "^0.3.8"
 

@@ -112,7 +112,12 @@ def synthesize(event: VoiceSynthesizeTextEvent) -> None:
         )
 
         dispatch(
-            SoundPlayAudioAction(sample=audio_sequence, channels=1, rate=rate, width=2),
+            SoundPlayAudioAction(
+                sample=audio_sequence[0],
+                channels=1,
+                rate=rate,
+                width=2,
+            ),
         )
 
 

@@ -1379,13 +1379,13 @@ tests = ["pytest"]
 
 [[package]]
 name = "pvorca"
-version = "0.1.4"
-description = "Orca Text-to-Speech Engine."
+version = "0.2.1"
+description = "Orca Streaming Text-to-Speech Engine"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "pvorca-0.1.4-py3-none-any.whl", hash = "sha256:20a6fbd4263543845822199ec61c846abc6c6eefe724e6e9e70a6634c97063b8"},
-    {file = "pvorca-0.1.4.tar.gz", hash = "sha256:8413bea22ca0087ce62c22859aebe7b4fcc65e83ee845a1d7cbd4ce608464480"},
+    {file = "pvorca-0.2.1-py3-none-any.whl", hash = "sha256:02fca80e2507c1be2520751361e31fc4d23b45054f3801b6c19db53738146a84"},
+    {file = "pvorca-0.2.1.tar.gz", hash = "sha256:eed48a951b28b64fb40eb0accc2346905b5fa2789f88eba8fd27232632346f3e"},
 ]
 
 [[package]]
@@ -2193,4 +2193,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "d26ee0cbb604ef821d6e3acd692836718945588a17198091d30f1aa0e6ba2213"
+content-hash = "280074b33ec742f712b2cc43fc90dc8a10ed487a0e5a9f40fa0858fbaf5c9a06"
