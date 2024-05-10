@@ -18,6 +18,7 @@
 - feat(vscode): show a notification with chime and led feedback when VSCode successfully
   logs in #96
 - feat(ip): make the internet icon red when there is no connection #95
+- fix(docker): remove ngrok dashboard url from `qrcode_input` prompt message #90
 
 ## Version 0.14.0
 
