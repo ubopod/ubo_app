@@ -21,6 +21,7 @@
 - fix(docker): remove ngrok dashboard url from `qrcode_input` prompt message #90
 - fix(core): update ubo-gui to the latest version to align menu items with
   the physical buttons - closes #93
+- refactor(docker): update ngrok extra information text messages - closes #100
 
 ## Version 0.14.0
 
