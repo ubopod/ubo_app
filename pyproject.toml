@@ -18,19 +18,11 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.11.7", markers = "extra=='default'", extras = [
+  { version = "^0.11.8", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.11.7", markers = "extra=='dev'", extras = [
+  { version = "^0.11.8", markers = "extra=='dev'", extras = [
     "dev",
-  ] },
-]
-headless-kivy-pi = [
-  { version = "^0.7.4", markers = "extra=='default'", extras = [
-    'default',
-  ] },
-  { version = "^0.7.4", markers = "extra=='dev'", extras = [
-    'dev',
   ] },
 ]
 python-redux = "^0.15.2"

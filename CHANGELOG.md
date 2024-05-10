@@ -19,6 +19,8 @@
   logs in #96
 - feat(ip): make the internet icon red when there is no connection #95
 - fix(docker): remove ngrok dashboard url from `qrcode_input` prompt message #90
+- fix(core): update ubo-gui to the latest version to align menu items with
+  the physical buttons - closes #93
 
 ## Version 0.14.0
 
