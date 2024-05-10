@@ -15,6 +15,8 @@
 - fix(voice): remove "clear access key" item when access key is not set #97
 - fix(voice): update pvorca to 2.1.0 as they suddenly yanked 1.4.0 in pypi #103
 - refactor(vscode): flatten vscode menu items into its main menu #102
+- feat(vscode): show a notification with chime and led feedback when VSCode successfully
+  logs in #96
 
 ## Version 0.14.0
 
