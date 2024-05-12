@@ -416,9 +416,9 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "󰐲",
+                                  "icon": "󰌉",
                                   "is_short": false,
-                                  "label": "Set Access Key",
+                                  "label": "Add Registry",
                                   "opacity": null
                                 }
                               ],

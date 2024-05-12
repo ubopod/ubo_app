@@ -7,6 +7,7 @@
 - refactor(vscode): add name of the vscode instance to the sub heading of the vscode
   menu when it is running
 - fix(vscode): set a timeout for vscode commands - closes #101
+- feat(docker): dedicated menu for logging out of registries
 
 ## Version 0.14.1
 

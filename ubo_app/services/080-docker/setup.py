@@ -14,6 +14,7 @@ import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
 from reducer import IMAGES
+from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.constants import (
@@ -327,18 +328,34 @@ def settings_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     """Get the settings menu items for the Docker service."""
     return [
         ActionItem(
-            label='Set Access Key',
-            icon='󰐲',
+            label='Add Registry',
+            icon='󰌉',
             action=input_credentials,
         ),
-        *[
-            ActionItem(
-                label=registry,
-                icon='󰌊',
-                action=functools.partial(clear_credentials, registry),
-            )
-            for registry in usernames
-        ],
+        *(
+            [
+                SubMenuItem(
+                    label='Registries',
+                    icon='󱕴',
+                    sub_menu=HeadedMenu(
+                        title='󱕴Registries',
+                        heading='Logged in Registries',
+                        sub_heading='Log out of any registry by selecting it',
+                        items=[
+                            ActionItem(
+                                label=registry,
+                                icon='󰌊',
+                                background_color=DANGER_COLOR,
+                                action=functools.partial(clear_credentials, registry),
+                            )
+                            for registry in usernames
+                        ],
+                    ),
+                ),
+            ]
+            if usernames
+            else []
+        ),
     ]
 
 
