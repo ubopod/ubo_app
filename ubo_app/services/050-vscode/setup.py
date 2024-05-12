@@ -239,7 +239,7 @@ async def init_service() -> None:
         ),
     )
     while True:
-        await asyncio.sleep(3)
+        await asyncio.sleep(5)
         await check_status()
 
 

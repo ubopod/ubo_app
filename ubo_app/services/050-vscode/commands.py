@@ -44,7 +44,6 @@ async def check_status() -> None:
     is_binary_installed = CODE_BINARY_PATH.exists()
     status_data: TunnelServiceStatus | None = None
     is_logged_in = False
-
     try:
         if is_binary_installed:
             process = await asyncio.create_subprocess_exec(
@@ -55,11 +54,13 @@ async def check_status() -> None:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
             )
-            await process.wait()
+            await asyncio.wait_for(process.wait(), timeout=3)
+            if process.returncode is None:
+                process.kill()
             if process.stdout and process.returncode == 0:
                 output = await process.stdout.read()
                 status_data = json.loads(output)
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, TimeoutError):
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
@@ -84,9 +85,11 @@ async def check_status() -> None:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-                await process.wait()
+                await asyncio.wait_for(process.wait(), timeout=3)
+                if process.returncode is None:
+                    process.kill()
                 is_logged_in = process.returncode == 0
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, TimeoutError):
             dispatch(
                 NotificationsAddAction(
                     notification=Notification(
@@ -138,8 +141,10 @@ async def set_name() -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        await process.wait()
-    except subprocess.CalledProcessError:
+        await asyncio.wait_for(process.wait(), timeout=3)
+        if process.returncode is None:
+            process.kill()
+    except (subprocess.CalledProcessError, TimeoutError):
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
@@ -166,8 +171,10 @@ async def install_service() -> None:
             'service',
             'install',
         )
-        await process.wait()
-    except subprocess.CalledProcessError:
+        await asyncio.wait_for(process.wait(), timeout=3)
+        if process.returncode is None:
+            process.kill()
+    except (subprocess.CalledProcessError, TimeoutError):
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
@@ -196,8 +203,10 @@ async def uninstall_service() -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        await process.wait()
-    except subprocess.CalledProcessError:
+        await asyncio.wait_for(process.wait(), timeout=3)
+        if process.returncode is None:
+            process.kill()
+    except (subprocess.CalledProcessError, TimeoutError):
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
