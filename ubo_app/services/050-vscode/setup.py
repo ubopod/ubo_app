@@ -141,7 +141,7 @@ def status_based_actions(status: VSCodeStatus) -> list[ActionItem | ApplicationI
     return actions
 
 
-def login_actions(*, is_logged_in: bool) -> list[ActionItem | ApplicationItem]:
+def login_actions(*, is_logged_in: bool | None) -> list[ActionItem | ApplicationItem]:
     actions = []
     if is_logged_in:
         actions.extend(
@@ -153,7 +153,7 @@ def login_actions(*, is_logged_in: bool) -> list[ActionItem | ApplicationItem]:
                 ),
             ],
         )
-    else:
+    elif is_logged_in is False:
         actions.append(
             ApplicationItem(
                 label='Login',
@@ -208,7 +208,9 @@ def vscode_menu(state: VSCodeState) -> HeadedMenu:
         status = 'Downloading...'
     elif not state.is_binary_installed:
         status = 'Code CLI not installed'
-    elif not state.is_logged_in:
+    elif state.is_logged_in is None:
+        status = 'Checking status...'
+    elif state.is_logged_in is False:
         status = 'Needs authentication'
     else:
         status = 'Unknown status'

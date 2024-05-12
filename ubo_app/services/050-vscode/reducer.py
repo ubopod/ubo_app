@@ -49,17 +49,12 @@ def reducer(
 
     if isinstance(action, VSCodeSetStatusAction):
         actions = []
-        if (
-            state.status
-            and not state.status.is_running
-            and action.status
-            and action.status.is_running
-        ):
+        if state.is_logged_in is False and action.is_logged_in:
             actions.append(
                 NotificationsAddAction(
                     notification=Notification(
                         title='VSCode',
-                        content='Service is running',
+                        content='Successful Login',
                         icon='󰨞',
                         importance=Importance.MEDIUM,
                         color=SUCCESS_COLOR,

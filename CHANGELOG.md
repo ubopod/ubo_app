@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 0.14.2
+
+- fix(vscode): show a success notification when the login process is completed instead
+  of when the service runs #96
+
 ## Version 0.14.1
 
 - fix(docker): handle the case when ip interfaces are not initialized yet

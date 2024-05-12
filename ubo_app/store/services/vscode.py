@@ -33,5 +33,5 @@ class VSCodeState(Immutable):
     is_pending: bool = True
     is_downloading: bool = False
     is_binary_installed: bool = False
-    is_logged_in: bool = False
+    is_logged_in: bool | None = None
     status: VSCodeStatus | None = None
