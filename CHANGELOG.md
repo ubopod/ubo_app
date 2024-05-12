@@ -4,6 +4,8 @@
 
 - fix(vscode): show a success notification when the login process is completed instead
   of when the service runs #96
+- refactor(vscode): add name of the vscode instance to the sub heading of the vscode
+  menu when it is running
 
 ## Version 0.14.1
 

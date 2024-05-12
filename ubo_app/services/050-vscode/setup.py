@@ -199,7 +199,10 @@ def vscode_menu(state: VSCodeState) -> HeadedMenu:
     status = ''
     if state.status:
         if state.status.is_running:
-            status = 'Service is running'
+            if state.status.name:
+                status = f'Service is running, name:\n{state.status.name}'
+            else:
+                status = 'Service is running\nWaiting for name...'
         elif not state.status.is_service_installed:
             status = 'Service not installed'
         else:
