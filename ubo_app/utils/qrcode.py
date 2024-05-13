@@ -118,7 +118,7 @@ async def qrcode_input(
 
     def handle_cancel(event: CameraStopViewfinderEvent) -> None:
         if event.id == id:
-            future.cancel()
+            loop.call_soon_threadsafe(future.cancel)
 
     subscribe_event(
         CameraBarcodeEvent,

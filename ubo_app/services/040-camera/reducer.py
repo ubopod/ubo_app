@@ -22,7 +22,7 @@ from ubo_app.store.services.camera import (
     CameraStopViewfinderEvent,
     InputDescription,
 )
-from ubo_app.store.services.keypad import Key, KeypadAction
+from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 
 Action = InitAction | CameraAction
 
@@ -96,7 +96,7 @@ def reducer(
 
             return state
 
-    if isinstance(action, KeypadAction):  # noqa: SIM102
+    if isinstance(action, KeypadKeyPressAction):  # noqa: SIM102
         if action.key == Key.BACK:
             return CompleteReducerResult(
                 state=pop_queue(state),

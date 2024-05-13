@@ -8,10 +8,12 @@ from typing import TYPE_CHECKING
 import headless_kivy_pi.config
 import numpy as np
 from debouncer import DebounceOptions, debounce
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 from pyzbar.pyzbar import decode
+from ubo_gui.page import PageWidget
 
 from ubo_app.store import dispatch, subscribe_event
+from ubo_app.store.main import CloseApplicationEvent, OpenApplicationEvent
 from ubo_app.store.services.camera import (
     CameraReportBarcodeAction,
     CameraStartViewfinderEvent,
@@ -49,6 +51,11 @@ async def check_codes(codes: list[str]) -> None:
     dispatch(CameraReportBarcodeAction(codes=codes))
 
 
+class CameraApplication(PageWidget):
+    def go_back(self: CameraApplication) -> bool:
+        return True
+
+
 def run_fake_camera() -> None:  # pragma: no cover
     async def provide() -> None:
         while True:
@@ -60,9 +67,12 @@ def run_fake_camera() -> None:  # pragma: no cover
             path.unlink(missing_ok=True)
             await check_codes([data])
 
+    @mainthread
     def run_provider() -> None:
         from kivy.core.window import Window
 
+        application = CameraApplication()
+        dispatch(OpenApplicationEvent(application=application))
         Window.opacity = 0.2
 
         def set_task(task: asyncio.Task) -> None:
@@ -70,6 +80,7 @@ def run_fake_camera() -> None:  # pragma: no cover
                 task.cancel()
                 cancel_subscription()
                 Window.opacity = 1
+                dispatch(CloseApplicationEvent(application=application))
 
             cancel_subscription = subscribe_event(
                 CameraStopViewfinderEvent,
@@ -106,7 +117,10 @@ def init_service() -> None:
 
     picam2.start()
 
+    @mainthread
     def start_camera_viewfinder() -> None:
+        application = CameraApplication()
+        dispatch(OpenApplicationEvent(application=application))
         display = headless_kivy_pi.config._display  # noqa: SLF001
         if not display:
             return
@@ -174,6 +188,7 @@ def init_service() -> None:
         headless_kivy_pi.config.pause()
 
         def handle_stop_viewfinder() -> None:
+            dispatch(CloseApplicationEvent(application=application))
             feed_viewfinder_scheduler.cancel()
             headless_kivy_pi.config.resume()
             cancel_subscription()

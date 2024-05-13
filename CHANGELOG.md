@@ -12,6 +12,8 @@
   - closes #104
 - fix(voice): update the status message in the voice setup page when the access key
   is set/cleared - closes #105
+- fix(camera) - back button in the camera viewfinder doesn't cancel the parent application/menu
+  - closes #106
 
 ## Version 0.14.1
 
