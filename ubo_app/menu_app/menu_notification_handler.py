@@ -31,19 +31,24 @@ class MenuNotificationHandler(UboApp):
         event: NotificationsDisplayEvent,
     ) -> None:
         def run_notification_action(action: NotificationActionItem) -> None:
+            result = action.action()
             if action.dismiss_notification:
                 dismiss()
-            return action.action()
+            else:
+                close()
+            return result
 
         notification = event.notification
 
         @mainthread
+        def close(_: object = None) -> None:
+            unsubscribe()
+            notification_application.unbind(on_close=close)
+            dispatch(CloseApplicationEvent(application=notification_application))
+
         def dismiss(_: object = None) -> None:
-            notification_application.unbind(on_close=dismiss)
-            dispatch(
-                CloseApplicationEvent(application=notification_application),
-                NotificationsClearAction(notification=notification),
-            )
+            close()
+            dispatch(NotificationsClearAction(notification=notification))
 
         items = []
 
@@ -116,20 +121,14 @@ class MenuNotificationHandler(UboApp):
         dispatch(OpenApplicationEvent(application=notification_application))
 
         if notification.display_type is NotificationDisplayType.FLASH:
-            Clock.schedule_once(
-                lambda _: dispatch(
-                    CloseApplicationEvent(application=notification_application),
-                ),
-                notification.flash_time,
-            )
+            Clock.schedule_once(close, notification.flash_time)
 
-        notification_application.bind(on_close=dismiss)
+        notification_application.bind(on_close=close)
 
         @mainthread
         def clear_notification(event: NotificationsClearEvent) -> None:
             if event.notification == notification:
-                dispatch(CloseApplicationEvent(application=notification_application))
-                unsubscribe()
+                close()
                 if notification.on_close:
                     notification.on_close()
 

@@ -8,6 +8,8 @@
   menu when it is running
 - fix(vscode): set a timeout for vscode commands - closes #101
 - feat(docker): dedicated menu for logging out of registries
+- fix(notifications): notifications aren't dismissed when the back button is pressed
+  - closes #104
 
 ## Version 0.14.1
 

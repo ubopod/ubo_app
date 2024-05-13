@@ -99,9 +99,9 @@ def show_onboarding_notification() -> None:
                         dismiss_notification=True,
                     ),
                 ],
-                extra_information="""Press middle button to add WiFi network with \
-{QR|K Y UW AA R} code.\nIf you dismiss this, you can always add WiFi network through \
-Settings → Network → WiFi""",
+                extra_information="""Press middle button to add {WiFi|W AY F AY} \
+network with {QR|K Y UW AA R} code.\nIf you dismiss this, you can always add \
+{WiFi|W AY F AY} network through Settings → Network → {WiFi|W AY F AY}""",
                 color=INFO_COLOR,
             ),
         ),
