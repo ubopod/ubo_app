@@ -72,8 +72,8 @@ def input_access_key() -> None:
 
 def clear_access_key() -> None:
     """Clear the Picovoice access key."""
-    to_thread(_context.cleanup)
     secrets.clear_secret(PICOVOICE_ACCESS_KEY)
+    to_thread(_context.cleanup)
 
 
 def synthesize(event: VoiceSynthesizeTextEvent) -> None:
@@ -123,7 +123,15 @@ def synthesize(event: VoiceSynthesizeTextEvent) -> None:
 
 @autorun(lambda state: state.voice.is_access_key_set)
 def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
-    items = [
+    if is_access_key_set:
+        return [
+            ActionItem(
+                label='Clear Access Key',
+                icon='󰌊',
+                action=clear_access_key,
+            ),
+        ]
+    return [
         ActionItem(
             label='Set Access Key',
             icon='󰐲',
@@ -131,16 +139,11 @@ def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
         ),
     ]
 
-    if is_access_key_set:
-        items.append(
-            ActionItem(
-                label='Clear Access Key',
-                icon='󰌊',
-                action=clear_access_key,
-            ),
-        )
 
-    return items
+@autorun(lambda state: state.voice.is_access_key_set)
+def _menu_sub_heading(_: bool | None) -> str:
+    return f"""Set the access key
+Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}"""
 
 
 def init_service() -> None:
@@ -163,8 +166,7 @@ def init_service() -> None:
                 sub_menu=HeadedMenu(
                     title='Voice Settings',
                     heading='󰔊 Picovoice',
-                    sub_heading='Set the access key\n Current value: '
-                    f'{secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}',
+                    sub_heading=_menu_sub_heading,
                     items=_menu_items,
                 ),
             ),

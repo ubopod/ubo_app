@@ -10,6 +10,8 @@
 - feat(docker): dedicated menu for logging out of registries
 - fix(notifications): notifications aren't dismissed when the back button is pressed
   - closes #104
+- fix(voice): update the status message in the voice setup page when the access key
+  is set/cleared - closes #105
 
 ## Version 0.14.1
 
