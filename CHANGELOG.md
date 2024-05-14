@@ -14,6 +14,8 @@
   is set/cleared - closes #105
 - fix(camera) - back button in the camera viewfinder doesn't cancel the parent application/menu
   - closes #106
+- fix (vscode) - schedule vscode status check using `kivy.clock.Clock` instead of
+  `asyncio` - closes #101
 
 ## Version 0.14.1
 

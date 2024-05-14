@@ -12,7 +12,7 @@ async def setup(service: Service) -> None:
     from setup import init_service
 
     service.register_reducer(reducer)
-    await init_service()
+    init_service()
 
 
 register(

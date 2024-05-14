@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from commands import check_status, install_service, uninstall_service
 from constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
+from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
 from ubo_gui.constants import DANGER_COLOR
@@ -231,16 +232,14 @@ def generate_vscode_menu() -> Callable[[], HeadedMenu]:
     return vscode_menu
 
 
-async def init_service() -> None:
+def init_service() -> None:
     dispatch(
         RegisterSettingAppAction(
             menu_item=ActionItem(label='VSCode', icon='󰨞', action=generate_vscode_menu),
             category=SettingsCategory.REMOTE,
         ),
     )
-    while True:
-        await asyncio.sleep(5)
-        await check_status()
+    Clock.schedule_interval(lambda _: create_task(check_status()), 5)
 
 
 Builder.load_file(

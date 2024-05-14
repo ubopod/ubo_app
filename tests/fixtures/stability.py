@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
@@ -10,6 +11,9 @@ from tenacity import RetryError, stop_after_delay, wait_fixed
 from tests.fixtures.snapshot import write_image
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
+    from numpy._typing import NDArray
     from redux_pytest.fixtures import StoreSnapshot
     from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
 
@@ -27,10 +31,46 @@ class Stability(Protocol):
         ...
 
 
+async def _run(
+    *,
+    check: Callable[[], Coroutine],
+    store_snapshot: StoreSnapshot,
+    window_snapshot: WindowSnapshot,
+    store_snapshots: list[str],
+    window_snapshots: list[NDArray],
+) -> None:
+    await asyncio.sleep(2)
+    for _ in range(3):
+        try:
+            await check()
+        except RetryError as exception:
+            if isinstance(exception.last_attempt.exception(), AssertionError):
+                continue
+            raise
+        except AssertionError:
+            continue
+
+    try:
+        await check()
+    except RetryError:
+        for i, snapshot in enumerate(store_snapshots):
+            (
+                store_snapshot.results_dir
+                / f'store-unstability_snapshot_{i}.mismatch.jsonc'
+            ).write_text(snapshot)
+        for i, snapshot in enumerate(window_snapshots):
+            write_image(
+                window_snapshot.results_dir
+                / f'window-unstability_snapshot_{i}.mismatch.png',
+                snapshot,
+            )
+        raise
+
+
 @pytest.fixture()
 async def stability(
-    window_snapshot: WindowSnapshot,
     store_snapshot: StoreSnapshot,
+    window_snapshot: WindowSnapshot,
     wait_for: WaitFor,
 ) -> AsyncWaiter:
     """Wait for the screen and store to stabilize."""
@@ -72,20 +112,12 @@ async def stability(
             assert is_window_stable, 'The content of the screen is not stable yet'
             assert is_store_stable, 'The content of the store is not stable yet'
 
-        try:
-            await check()
-        except RetryError:
-            for i, snapshot in enumerate(store_snapshots):
-                (
-                    store_snapshot.results_dir
-                    / f'store-unstability_snapshot_{i}.mismatch.jsonc'
-                ).write_text(snapshot)
-            for i, snapshot in enumerate(window_snapshots):
-                write_image(
-                    window_snapshot.results_dir
-                    / f'window-unstability_snapshot_{i}.mismatch.png',
-                    snapshot,
-                )
-            raise
+        await _run(
+            check=check,
+            store_snapshot=store_snapshot,
+            window_snapshot=window_snapshot,
+            store_snapshots=store_snapshots,
+            window_snapshots=window_snapshots,
+        )
 
     return wrapper
