@@ -4,6 +4,8 @@
 
 - feat(tests): add `pyfakefs` to mock filesystem in tests
 - feat(tests): add `set_persistent_storage_value` to app fixture
+- feat(tests): add `initial_wait`, `attempts` and `wait` parameters to `stability`
+  fixture
 
 ## Version 0.14.2
 

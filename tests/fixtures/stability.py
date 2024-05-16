@@ -25,7 +25,10 @@ class Stability(Protocol):
 
     async def __call__(
         self: Stability,
-        timeout: float | None = None,
+        timeout: float = 2,
+        initial_wait: float = 0.1,
+        attempts: int = 1,
+        wait: float = 0.25,
     ) -> AsyncWaiter:
         """Wait for the screen and store to stabilize."""
         ...
@@ -33,14 +36,16 @@ class Stability(Protocol):
 
 async def _run(
     *,
+    initial_wait: float,
+    attempts: int,
     check: Callable[[], Coroutine],
     store_snapshot: StoreSnapshot,
     window_snapshot: WindowSnapshot,
     store_snapshots: list[str],
     window_snapshots: list[NDArray],
 ) -> None:
-    await asyncio.sleep(2)
-    for _ in range(3):
+    await asyncio.sleep(initial_wait)
+    for _ in range(attempts):
         try:
             await check()
         except RetryError as exception:
@@ -76,7 +81,10 @@ async def stability(
     """Wait for the screen and store to stabilize."""
 
     async def wrapper(
-        timeout: float | None = None,
+        timeout: float = 2,
+        initial_wait: float = 0.1,
+        attempts: int = 1,
+        wait: float = 0.25,
     ) -> None:
         latest_window_hash = None
         latest_store_snapshot = None
@@ -86,8 +94,8 @@ async def stability(
 
         @wait_for(
             run_async=True,
-            wait=wait_fixed(1),
-            stop=stop_after_delay(timeout or 4),
+            wait=wait_fixed(wait),
+            stop=stop_after_delay(timeout),
         )
         def check() -> None:
             nonlocal latest_window_hash, latest_store_snapshot
@@ -113,6 +121,8 @@ async def stability(
             assert is_store_stable, 'The content of the store is not stable yet'
 
         await _run(
+            initial_wait=initial_wait,
+            attempts=attempts,
             check=check,
             store_snapshot=store_snapshot,
             window_snapshot=window_snapshot,
