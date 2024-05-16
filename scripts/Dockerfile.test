@@ -1,5 +1,6 @@
 FROM ubo-app-dev
 
 RUN mkdir -p /root/.kivy/mods
+RUN touch /root/.kivy/icon
 
 ENTRYPOINT ["/bin/bash", "-c", "reset; poetry install --with dev --extras=dev --verbose && poetry run poe test $@"]

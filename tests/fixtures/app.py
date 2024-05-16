@@ -7,8 +7,10 @@ import gc
 import logging
 import sys
 import weakref
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+import platformdirs
 import pytest
 
 from ubo_app.setup import setup
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from _pytest.fixtures import SubRequest
+    from pyfakefs.fake_filesystem import FakeFilesystem
 
     from ubo_app.menu_app.menu import MenuApp
 
@@ -26,9 +29,10 @@ modules_snapshot = set(sys.modules)
 class AppContext:
     """Context object for tests running a menu application."""
 
-    def __init__(self: AppContext, request: SubRequest) -> None:
+    def __init__(self: AppContext, request: SubRequest, *, fs: FakeFilesystem) -> None:
         """Initialize the context."""
         self.request = request
+        self.fs = fs
 
     def set_app(self: AppContext, app: MenuApp) -> None:
         """Set the application."""
@@ -81,24 +85,17 @@ class AppContext:
 
         Window.close()
 
-        for module in set(sys.modules) - modules_snapshot:
-            if module != 'objc' and 'numpy' not in module and 'cache' not in module:
-                del sys.modules[module]
-        gc.collect()
-
 
 @pytest.fixture()
-async def app_context(
-    request: SubRequest,
-) -> AsyncGenerator[AppContext, None]:
+async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
     import os
+
+    from pyfakefs.fake_filesystem_unittest import Patcher
 
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
     os.environ['KIVY_METRICS_DENSITY'] = '1'
-
-    setup()
 
     import headless_kivy_pi.config
 
@@ -106,10 +103,43 @@ async def app_context(
         {'automatic_fps': True, 'flip_vertical': True},
     )
 
-    context = AppContext(request)
+    current_path = Path()
+    with Patcher(
+        additional_skip_names=[
+            'redux_pytest.fixtures',
+            'tests.fixtures.snapshot',
+            'pathlib',
+        ],
+    ) as patcher:
+        assert patcher.fs is not None
 
-    yield context
+        patcher.fs.add_real_paths(
+            [
+                (current_path / 'tests').absolute().as_posix(),
+                (current_path / 'ubo_app').absolute().as_posix(),
+                platformdirs.user_cache_dir('pypoetry'),
+            ],
+        )
 
-    await context.clean_up()
+        setup()
 
-    assert not hasattr(context, 'app'), 'App not cleaned up'
+        context = AppContext(request, fs=patcher.fs)
+
+        yield context
+
+        await context.clean_up()
+
+        assert not hasattr(context, 'app'), 'App not cleaned up'
+
+        del context
+        del patcher
+
+        for module in set(sys.modules) - modules_snapshot:
+            if (
+                module != 'objc'
+                and 'numpy' not in module
+                and 'kivy.cache' not in module
+            ):
+                del sys.modules[module]
+
+        gc.collect()

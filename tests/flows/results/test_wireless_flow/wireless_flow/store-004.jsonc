@@ -79,7 +79,7 @@
                             "sub_menu": {
                               "items": [
                                 {
-                                  "application": "ubo_app/services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                                  "application": "services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,

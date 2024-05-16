@@ -151,9 +151,14 @@ class UboStore(Store[RootState, ActionType, EventType]):
         if isinstance(obj, Autorun):
             obj = obj()
         if isinstance(obj, type) and issubclass(obj, PageWidget):
+            import ubo_app
+
+            _ = ubo_app
             file_path = sys.modules[obj.__module__].__file__
-            if file_path:
-                return f"""{Path(file_path).relative_to(Path().absolute()).as_posix()}:{
+            ubo_app_path = sys.modules['ubo_app'].__file__
+            if file_path and ubo_app_path:
+                root_path = Path(ubo_app_path).parent
+                return f"""{Path(file_path).relative_to(root_path).as_posix()}:{
                 obj.__name__}"""
             return f'{obj.__module__}:{obj.__name__}'
         if callable(obj):

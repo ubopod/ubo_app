@@ -50,13 +50,13 @@ adafruit-circuitpython-typing = "*"
 
 [[package]]
 name = "adafruit-circuitpython-connectionmanager"
-version = "2.0.0"
+version = "3.1.0"
 description = "A urllib3.poolmanager/urllib3.connectionpool-like library for managing sockets and connections"
 optional = false
 python-versions = "*"
 files = [
-    {file = "adafruit_circuitpython_connectionmanager-2.0.0-py3-none-any.whl", hash = "sha256:a7164831e02c02792c65123d2931dfeb6e998456aa0da48a0effaaddc8af7691"},
-    {file = "adafruit_circuitpython_connectionmanager-2.0.0.tar.gz", hash = "sha256:32b0a2e38f703bf6e22d93e6929a301fe4e18fff6f68ad251521b8d250ef6436"},
+    {file = "adafruit_circuitpython_connectionmanager-3.1.0-py3-none-any.whl", hash = "sha256:8dffd3e60d795e11c13f98795a45c42b568ea135953b2383c56a2fa6090512d3"},
+    {file = "adafruit_circuitpython_connectionmanager-3.1.0.tar.gz", hash = "sha256:2a89f27e31be1b09dc221bffaa599baacd238a0bc369fe695c41be86c0d779a2"},
 ]
 
 [package.dependencies]
@@ -126,13 +126,13 @@ typing-extensions = ">=4.0,<5.0"
 
 [[package]]
 name = "adafruit-circuitpython-requests"
-version = "3.2.8"
+version = "3.2.9"
 description = "A requests-like library for web interfacing"
 optional = false
 python-versions = "*"
 files = [
-    {file = "adafruit_circuitpython_requests-3.2.8-py3-none-any.whl", hash = "sha256:aca829e7a84bda37b8a70a867e28ae8c8aa27cbf596ea16f52805b0d2051be13"},
-    {file = "adafruit_circuitpython_requests-3.2.8.tar.gz", hash = "sha256:50e46e4a1ee9a4f2e832308468191b855424ebc468a0bc8c911c68df33918863"},
+    {file = "adafruit_circuitpython_requests-3.2.9-py3-none-any.whl", hash = "sha256:9b9350b47eb1f0de97c6bac6852274515eccc7cec56660e2290e5885c1c25369"},
+    {file = "adafruit_circuitpython_requests-3.2.9.tar.gz", hash = "sha256:4cbcfff2fcf0888363033d9d18681fa61af65f6d88bdb5965507821b34d91cf2"},
 ]
 
 [package.dependencies]
@@ -1252,13 +1252,13 @@ ptyprocess = ">=0.5"
 
 [[package]]
 name = "platformdirs"
-version = "4.2.1"
+version = "4.2.2"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "platformdirs-4.2.1-py3-none-any.whl", hash = "sha256:17d5a1161b3fd67b390023cb2d3b026bbd40abde6fdb052dfbd3a29c3ba22ee1"},
-    {file = "platformdirs-4.2.1.tar.gz", hash = "sha256:031cd18d4ec63ec53e82dceaac0417d218a6863f7745dfcc9efe7793b7039bdf"},
+    {file = "platformdirs-4.2.2-py3-none-any.whl", hash = "sha256:2d7a1657e36a80ea911db832a8a6ece5ee53d8de21edd5cc5879af6530b1bfee"},
+    {file = "platformdirs-4.2.2.tar.gz", hash = "sha256:38b7b51f512eed9e84a22788b4bce1de17c0adb134d6becb09836e37d8654cd3"},
 ]
 
 [package.extras]
@@ -1412,6 +1412,17 @@ files = [
 test = ["numpy"]
 
 [[package]]
+name = "pyfakefs"
+version = "5.5.0"
+description = "pyfakefs implements a fake file system that mocks the Python file system modules."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pyfakefs-5.5.0-py3-none-any.whl", hash = "sha256:8dbf203ab7bef1529f11f7d41b9478b898e95bf9f3b71262163aac07a518cd76"},
+    {file = "pyfakefs-5.5.0.tar.gz", hash = "sha256:7448aaa07142f892d0a4eb52a5ed3206a9f02c6599e686cd97d624c18979c154"},
+]
+
+[[package]]
 name = "pyftdi"
 version = "0.55.4"
 description = "FTDI device driver (pure Python)"
@@ -1502,13 +1513,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.362"
+version = "1.1.363"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.362-py3-none-any.whl", hash = "sha256:969957cff45154d8a45a4ab1dae5bdc8223d8bd3c64654fa608ab3194dfff319"},
-    {file = "pyright-1.1.362.tar.gz", hash = "sha256:6a477e448d4a07a6a0eab58b2a15a1bbed031eb3169fa809edee79cca168d83a"},
+    {file = "pyright-1.1.363-py3-none-any.whl", hash = "sha256:d3b8d73c8d230e26cc3523862f3398032a0c39a00d7bb69dc0f595f8e888fd01"},
+    {file = "pyright-1.1.363.tar.gz", hash = "sha256:00a8f0ae0e339473bb0488f8a2a2dcdf574e94a16cd7b4390d49d144714d8db2"},
 ]
 
 [package.dependencies]
@@ -1684,13 +1695,13 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.15.2"
+version = "0.15.4"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.15.2-py3-none-any.whl", hash = "sha256:bb6530d4d4da04a441f38542bc6889a3f710bc499959c885d0cbf75b9a3b1216"},
-    {file = "python_redux-0.15.2.tar.gz", hash = "sha256:87ec46335130267bb23c28cdd031b204d8c31aef77bceac662fda40161ff7266"},
+    {file = "python_redux-0.15.4-py3-none-any.whl", hash = "sha256:e7a2e806866da1a916fdbbee29791316896c59a3b0965ae17be2177886098d85"},
+    {file = "python_redux-0.15.4.tar.gz", hash = "sha256:6f16f2cbbd2c2de80480336f61d0b00771589ab1f7fdfde642905127dfed36f5"},
 ]
 
 [package.dependencies]
@@ -2193,4 +2204,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "df39e96f354f86fd3a532a3c2786e2f6b444efc16554d81051cb0460ee16eebe"
+content-hash = "1e24aaf173dbd05aafd924fab7dd1bf35c2bb6bdb538f54a95c6a1aeb3bdf3ab"

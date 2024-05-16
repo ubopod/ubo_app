@@ -239,6 +239,14 @@ class UboServiceThread(threading.Thread):
     def run(self: UboServiceThread) -> None:
         self.loop = asyncio.new_event_loop()
         self.loop.set_exception_handler(loop_exception_handler)
+        logger.debug(
+            'Starting service thread',
+            extra={
+                'thread_native_id': self.native_id,
+                'service_label': self.label,
+                'service_id': self.service_id,
+            },
+        )
         asyncio.set_event_loop(self.loop)
         if DEBUG_MODE:
             self.loop.set_debug(enabled=True)

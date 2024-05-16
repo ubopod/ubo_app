@@ -135,7 +135,6 @@ jobs:
 
       - name: Run Tests
         run: |
-          mkdir -p $HOME/.kivy/mods
           POETRY_VIRTUALENVS_OPTIONS_SYSTEM_SITE_PACKAGES=true poetry run poe test --make-screenshots --cov-report=xml --cov-report=html -n auto --log-level=DEBUG
 
       - name: Collect Window Screenshots

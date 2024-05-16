@@ -243,6 +243,7 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
     monkeypatch.setattr('ubo_app.constants.STORE_GRACE_TIME', 0.1)
     monkeypatch.setattr('ubo_app.utils.serializer.add_type_field', lambda _, y: y)
+    monkeypatch.setattr('pyzbar.pyzbar.decode', Fake())
 
     def fake_read_from_persistent_store(
         key: str,

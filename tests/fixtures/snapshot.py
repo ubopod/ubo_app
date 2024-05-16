@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from pathlib import Path
 
     from _pytest.fixtures import SubRequest
     from _pytest.nodes import Node
@@ -49,11 +49,11 @@ class WindowSnapshot:
         self.make_screenshots = make_screenshots
         self.test_counter: dict[str | None, int] = defaultdict(int)
         file = test_node.path.with_suffix('').name
-        self.results_dir = (
+        self.results_dir = Path(
             test_node.path.parent
             / 'results'
             / file
-            / test_node.nodeid.split('::')[-1][5:]
+            / test_node.nodeid.split('::')[-1][5:],
         )
         if self.results_dir.exists():
             for file in self.results_dir.glob(
