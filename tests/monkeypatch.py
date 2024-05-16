@@ -245,25 +245,6 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('ubo_app.utils.serializer.add_type_field', lambda _, y: y)
     monkeypatch.setattr('pyzbar.pyzbar.decode', Fake())
 
-    def fake_read_from_persistent_store(
-        key: str,
-        *,
-        object_type: type[object] | None = None,
-        default: object | None = None,
-    ) -> object:
-        if key == 'wifi_has_visited_onboarding':
-            return True
-        if default is not None:
-            return default
-        if object_type is not None:
-            return object_type()
-        return None
-
-    sys.modules['ubo_app.utils.persistent_store'] = Fake(
-        _Fake__props={
-            'read_from_persistent_store': fake_read_from_persistent_store,
-        },
-    )
     sys.modules['ubo_app.utils.secrets'] = Fake(
         _Fake__props={'read_secret': lambda _: None},
     )

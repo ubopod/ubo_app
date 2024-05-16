@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import gc
+import json
 import logging
 import sys
 import weakref
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING
 import platformdirs
 import pytest
 
+from ubo_app.constants import PERSISTENT_STORE_PATH
 from ubo_app.setup import setup
 
 if TYPE_CHECKING:
@@ -32,10 +34,29 @@ class AppContext:
     def __init__(self: AppContext, request: SubRequest, *, fs: FakeFilesystem) -> None:
         """Initialize the context."""
         self.request = request
+        self.persistent_store_data = {}
         self.fs = fs
+
+    def set_persistent_storage_value(
+        self: AppContext,
+        key: str,
+        *,
+        value: object,
+    ) -> None:
+        """Set initial value in persistent store."""
+        assert not hasattr(
+            self,
+            'app',
+        ), "Can't set persistent storage values after app has been set"
+        self.persistent_store_data[key] = value
 
     def set_app(self: AppContext, app: MenuApp) -> None:
         """Set the application."""
+        self.fs.create_file(
+            PERSISTENT_STORE_PATH.as_posix(),
+            contents=json.dumps(self.persistent_store_data),
+        )
+
         from ubo_app.utils.loop import setup_event_loop
 
         setup_event_loop()

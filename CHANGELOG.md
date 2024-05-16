@@ -3,6 +3,7 @@
 ## Version 0.14.3
 
 - feat(tests): add `pyfakefs` to mock filesystem in tests
+- feat(tests): add `set_persistent_storage_value` to app fixture
 
 ## Version 0.14.2
 

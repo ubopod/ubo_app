@@ -19,7 +19,7 @@ from tests.fixtures import (  # noqa: E402, I001
     LoadServices,
     Stability,
     WindowSnapshot,
-    app_context,
+    app_context as original_app_context,
     load_services,
     stability,
     store,
@@ -36,7 +36,6 @@ from redux_pytest.fixtures import (  # noqa: E402
     wait_for,
 )
 
-
 fixtures = (
     AppContext,
     LoadServices,
@@ -45,7 +44,7 @@ fixtures = (
     WaitFor,
     WindowSnapshot,
     StoreMonitor,
-    app_context,
+    original_app_context,
     load_services,
     needs_finish,
     stability,
@@ -61,6 +60,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     """Add options to the pytest command line."""
     parser.addoption('--override-window-snapshots', action='store_true')
     parser.addoption('--make-screenshots', action='store_true')
+
+
+@pytest.fixture(autouse=True)
+def app_context(original_app_context: AppContext) -> AppContext:
+    """Set defaults for app-context for tests."""
+    original_app_context.set_persistent_storage_value(
+        'wifi_has_visited_onboarding',
+        value=True,
+    )
+    return original_app_context
 
 
 @pytest.fixture(autouse=True)

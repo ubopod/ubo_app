@@ -81,7 +81,11 @@ def read_from_persistent_store(
             file_content = Path(PERSISTENT_STORE_PATH).read_text()
             current_state = json.loads(file_content)
         except FileNotFoundError:
-            return default or (None if object_type is None else object_type())
+            return (
+                (None if object_type is None else object_type())
+                if default is None
+                else default
+            )
         except json.JSONDecodeError:
             continue
         else:
@@ -91,7 +95,11 @@ def read_from_persistent_store(
         raise RuntimeError(msg)
     value = current_state.get(key)
     if value is None:
-        return default or (None if object_type is None else object_type())
+        return (
+            (None if object_type is None else object_type())
+            if default is None
+            else default
+        )
     return store.load_object(
         value,
         object_type=cast(type[T], object_type),
