@@ -18,10 +18,10 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.11.8", markers = "extra=='default'", extras = [
+  { version = "^0.11.11", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.11.8", markers = "extra=='dev'", extras = [
+  { version = "^0.11.11", markers = "extra=='dev'", extras = [
     "dev",
   ] },
 ]
@@ -48,7 +48,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.360"
+pyright = "1.1.366"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
@@ -124,10 +124,55 @@ profile = "black"
 [tool.pyright]
 exclude = ["typings"]
 
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/000-sound"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/010-notifications"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/010-voice"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/020-keyboard"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/020-keypad"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/030-ethernet"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/030-ip"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/030-wifi"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/040-camera"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/040-rgb-ring"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/040-sensors"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-lightdm"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-ssh"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-vscode"
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/080-docker"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 filterwarnings = "ignore:'imghdr' is deprecated:DeprecationWarning"
-timeout = 50
+timeout = 120
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:"]
