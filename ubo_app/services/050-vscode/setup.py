@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from commands import check_status, install_service, uninstall_service
 from constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
-from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
 from ubo_gui.constants import DANGER_COLOR
@@ -239,7 +238,6 @@ def init_service() -> None:
             category=SettingsCategory.REMOTE,
         ),
     )
-    Clock.schedule_interval(lambda _: create_task(check_status()), 5)
 
 
 Builder.load_file(

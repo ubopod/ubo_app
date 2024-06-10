@@ -6,6 +6,9 @@
 - feat(tests): add `set_persistent_storage_value` to app fixture
 - feat(tests): add `initial_wait`, `attempts` and `wait` parameters to `stability`
   fixture
+- fix(vscode): no longer schedule a status check for vscode every 5 seconds, it now
+  only checks the status when the it runs a command using vscode, one second after
+  running the command and 4 seconds after that
 
 ## Version 0.14.2
 
@@ -19,9 +22,9 @@
   - closes #104
 - fix(voice): update the status message in the voice setup page when the access key
   is set/cleared - closes #105
-- fix(camera) - back button in the camera viewfinder doesn't cancel the parent application/menu
+- fix(camera): back button in the camera viewfinder doesn't cancel the parent application/menu
   - closes #106
-- fix (vscode) - schedule vscode status check using `kivy.clock.Clock` instead of
+- fix (vscode): schedule vscode status check using `kivy.clock.Clock` instead of
   `asyncio` - closes #101
 
 ## Version 0.14.1
