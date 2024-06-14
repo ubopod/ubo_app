@@ -9,6 +9,7 @@
 - fix(vscode): no longer schedule a status check for vscode every 5 seconds, it now
   only checks the status when the it runs a command using vscode, one second after
   running the command and 4 seconds after that
+- ci(github): fix release workflow not including assets
 
 ## Version 0.14.2
 
@@ -334,8 +335,7 @@
 
 ## Version 0.9.8
 
-- hotfix: wait for lingering process to finish and retry usreland `systemctl --user
-daemon-reload` if needed
+- hotfix: wait for lingering process to finish and retry usreland `systemctl --user daemon-reload` if needed
 - hotfix: the `install_docker.sh` script now runs if an optional flag is set for
   bootstrap command
 
