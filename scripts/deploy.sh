@@ -14,20 +14,27 @@ restart=${restart:-"False"}
 env=${env:-"False"}
 
 function run_on_pod() {
-  if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-    echo "Usage: run_on_pod <command> [is_root]"
+  if [ $# -lt 1 ]; then
+    echo "Usage: run_on_pod <command>"
     return 1
   fi
   if [ $# -eq 1 ]; then
     ssh ubo-development-pod "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
     return 0
   fi
-  if [ "$2" == "root" ]; then
-    ssh ubo-development-pod "sudo bash -c '$1'"
-    return 0
-  else
+  return 1
+}
+
+function run_on_pod_as_root() {
+  if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "Usage: run_on_pod_as_root <command>"
     return 1
   fi
+  if [ $# -eq 1 ]; then
+    ssh ubo-development-pod "sudo bash -c '$1'"
+    return 0
+  fi
+  return 1
 }
 
 scp dist/$LATEST_VERSION ubo-development-pod:/tmp/
@@ -37,11 +44,11 @@ test "$deps" == "True" && run_on_pod "pip install --upgrade /tmp/$LATEST_VERSION
 run_on_pod "pip install --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION[default]"
 
 test "$bootstrap" == "True" &&
-  run_on_pod "/opt/ubo/env/bin/bootstrap; systemctl restart ubo-system.service" "root"
+  run_on_pod_as_root "/opt/ubo/env/bin/bootstrap; systemctl restart ubo-system.service"
 
 test "$env" == "True" &&
   scp ubo_app/.dev.env ubo-development-pod:/tmp/ &&
-  run_on_pod "chown ubo:ubo /tmp/.dev.env" "root" &&
+  run_on_pod_as_root "chown ubo:ubo /tmp/.dev.env" &&
   run_on_pod "mv /tmp/.dev.env /opt/ubo/env/lib/python3.11/site-packages/ubo_app/"
 
 test "$run" == "True" &&

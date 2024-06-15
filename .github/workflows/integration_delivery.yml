@@ -21,17 +21,8 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y portaudio19-dev
 
-      - name: Load Cached Poetry
-        id: cached-poetry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache
-            ~/.local
-          key: poetry-${{ hashFiles('poetry.lock') }}-${{ env.PYTHON_VERSION}}
-
-      - uses: actions/setup-python@v5
-        name: Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
@@ -41,8 +32,80 @@ jobs:
         with:
           virtualenvs-create: true
 
+      - name: Check Cached Poetry
+        id: cached-poetry
+        uses: actions/cache/restore@v4
+        with:
+          lookup-only: true
+          path: |
+            ~/.cache
+            ~/.local
+          key:
+            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            }}-${{hashFiles('poetry.lock') }}
+
       - name: Install dependencies
-        run: poetry install --extras=dev --with dev
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root --extras=dev --with dev
+
+      - name: Save Cached Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key:
+            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            }}-${{hashFiles('poetry.lock') }}
+
+  ubo-pod-dependencies:
+    name: Install Ubo Pod Dependencies
+    runs-on: ubo-pod
+    outputs:
+      python-version: ${{ steps.get-python-version.outputs.PYTHON_VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - name: Extract Python Version
+        id: get-python-version
+        run: |
+          echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+          echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)"
+
+      - name: Check Cached Poetry
+        id: cached-poetry
+        uses: actions/cache/restore@v4
+        with:
+          lookup-only: true
+          path: |
+            ~/.cache
+            ~/.local
+          key:
+            poetry-ubo-pod-python${{
+            steps.get-python-version.outputs.PYTHON_VERSION }}-${{
+            hashFiles('poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        run: |
+          poetry env remove 3.11
+          poetry config virtualenvs.options.system-site-packages true --local
+          poetry env use 3.11
+          poetry install --no-root --no-interaction --extras=dev --with dev
+
+      - name: Save Cached Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache
+            ~/.local
+          key:
+            poetry-ubo-pod-python${{
+            steps.get-python-version.outputs.PYTHON_VERSION }}-${{
+            hashFiles('poetry.lock') }}
 
   type-check:
     name: Type Check
@@ -66,13 +129,16 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-${{ hashFiles('poetry.lock') }}-${{ env.PYTHON_VERSION}}
+          key:
+            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            }}-${{hashFiles('poetry.lock') }}
 
       - name: Create stub files
         run: poetry run pyright --createstub kivy
 
       - name: Type Check
-        run: poetry run poe typecheck
+        run: |
+          poetry run poe typecheck
 
   lint:
     name: Lint
@@ -96,7 +162,9 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-${{ hashFiles('poetry.lock') }}-${{ env.PYTHON_VERSION}}
+          key:
+            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            }}-${{hashFiles('poetry.lock') }}
 
       - name: Lint
         run: poetry run poe lint
@@ -105,24 +173,23 @@ jobs:
     name: Test
     needs:
       - dependencies
-    runs-on: ubuntu-latest
+      - ubo-pod-dependencies
+    strategy:
+      matrix:
+        runner: ['ubo-pod']
+    runs-on: ${{ matrix.runner }}
     environment:
       name: test
       url: https://app.codecov.io/gh/${{ github.repository }}/
     steps:
       - name: System Dependencies
+        if: matrix.runner != 'ubo-pod'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0
 
       - uses: actions/checkout@v4
         name: Checkout
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
 
       - name: Load Cached Poetry
         uses: actions/cache/restore@v4
@@ -131,11 +198,13 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-${{ hashFiles('poetry.lock') }}-${{ env.PYTHON_VERSION}}
+          key:
+            poetry-ubo-pod-python${{ needs.dependencies.outputs.python-version
+            }}-${{hashFiles('poetry.lock') }}
 
       - name: Run Tests
         run: |
-          POETRY_VIRTUALENVS_OPTIONS_SYSTEM_SITE_PACKAGES=true poetry run poe test --make-screenshots --cov-report=xml --cov-report=html -n auto --log-level=DEBUG
+          poetry run poe test --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ matrix.runner == 'ubo-pod' && '1' || 'auto' }}
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
@@ -192,7 +261,9 @@ jobs:
           path: |
             ~/.cache
             ~/.local
-          key: poetry-${{ hashFiles('poetry.lock') }}-${{ env.PYTHON_VERSION}}
+          key:
+            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            }}-${{hashFiles('poetry.lock') }}
 
       - name: Extract Version
         id: extract-version

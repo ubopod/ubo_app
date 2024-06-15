@@ -14,7 +14,7 @@
         orientation: 'horizontal'
         size_hint: 1, 1
         Label:
-          text: '󱛃'
+          text: '󱛃' if root.creating else ''
           size_hint: 1, None
           text_width: self.width
           height: self.texture_size[1]
@@ -22,7 +22,7 @@
           halign: 'center'
 
       Label:
-        text: 'Creating Scanned WiFi Connection'
+        text: 'Creating Scanned WiFi Connection' if root.creating else ''
         text_size: self.width, None
         font_size: dp(19)
         halign: 'center'

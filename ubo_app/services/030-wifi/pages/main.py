@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, Any
 
 from constants import get_signal_icon
 from debouncer import DebounceOptions, debounce
-from kivy.properties import BooleanProperty
+from kivy.clock import mainthread
+from kivy.properties import AliasProperty, BooleanProperty
 from ubo_gui.menu.types import (
     ActionItem,
     ApplicationItem,
@@ -22,11 +23,11 @@ from wifi_manager import (
     get_wifi_device,
 )
 
-from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import CloseApplicationEvent
+from ubo_app.store.core import CloseApplicationEvent
+from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.wifi import (
     ConnectionState,
-    WiFiState,
+    WiFiConnection,
     WiFiUpdateRequestAction,
 )
 from ubo_app.utils.async_ import create_task
@@ -34,12 +35,27 @@ from ubo_app.utils.async_ import create_task
 from .create_wireless_connection import CreateWirelessConnectionPage
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
 
 class WiFiConnectionPage(PromptWidget):
     ssid: str
     is_active = BooleanProperty(defaultvalue=None)
+
+    def items_getter(self: WiFiConnectionPage) -> Sequence[Item | None]:
+        return [self.first_item, self.second_item]
+
+    def items_setter(self: WiFiConnectionPage, value: Sequence[Item | None]) -> None:
+        if len(value) == 0:
+            return
+        msg = 'Cannot set items'
+        raise ValueError(msg)
+
+    items: Sequence[Item | None] = AliasProperty(
+        getter=items_getter,
+        setter=items_setter,
+        bind=['first_item', 'second_item'],
+    )
 
     def first_option_callback(self: WiFiConnectionPage) -> None:
         if self.is_active:
@@ -90,7 +106,8 @@ class WiFiConnectionPage(PromptWidget):
             options=DebounceOptions(leading=False, trailing=True, time_window=2),
         )
         async def update_status() -> None:
-            self.is_active = await get_active_connection_ssid() == self.ssid
+            is_active = await get_active_connection_ssid() == self.ssid
+            mainthread(lambda: setattr(self, 'is_active', is_active))()
 
         create_task(update_status())
 
@@ -105,10 +122,16 @@ class WiFiConnectionPage(PromptWidget):
         create_task(listener())
 
 
-@autorun(lambda state: state.wifi)
-def wireless_connection_items(wifi_state: WiFiState) -> Sequence[Item]:
-    if not wifi_state:
-        return []
+@autorun(lambda state: state.wifi.connections)
+def wireless_connections_menu(
+    connections: Sequence[WiFiConnection] | None,
+) -> HeadlessMenu:
+    if connections is None:
+        return HeadlessMenu(
+            title='Wi-Fi',
+            items=[],
+            placeholder='Loading...',
+        )
 
     def wifi_network_creator(ssid: str) -> type[WiFiConnectionPage]:
         class WiFiNetworkPageWithSSID(WiFiConnectionPage):
@@ -125,7 +148,7 @@ def wireless_connection_items(wifi_state: WiFiState) -> Sequence[Item]:
         ConnectionState.CONNECTING: '󱛇',
         ConnectionState.UNKNOWN: '󱚵',
     }
-    return (
+    items = (
         [
             ApplicationItem(
                 label=connection.ssid,
@@ -134,20 +157,24 @@ def wireless_connection_items(wifi_state: WiFiState) -> Sequence[Item]:
                 if connection.state == ConnectionState.DISCONNECTED
                 else icons[connection.state],
             )
-            for connection in wifi_state.connections
+            for connection in connections
         ]
-        if wifi_state.connections is not None
-        else [Item(label='Loading...')]
+        if connections is not None
+        else []
     )
 
+    placeholder = 'Loading...' if connections is None else 'No Wi-Fi connections found'
 
-def list_connections() -> HeadlessMenu:
-    dispatch(WiFiUpdateRequestAction())
     return HeadlessMenu(
         title='Wi-Fi',
-        items=wireless_connection_items,
-        placeholder='No Wi-Fi connections found',
+        items=items,
+        placeholder=placeholder,
     )
+
+
+def list_connections() -> Callable[[], HeadlessMenu]:
+    dispatch(WiFiUpdateRequestAction())
+    return wireless_connections_menu
 
 
 WiFiMainMenu = SubMenuItem(

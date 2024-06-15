@@ -8,15 +8,18 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
 from ubo_gui.app import UboApp, cached_property
-from ubo_gui.menu import MenuWidget
+from ubo_gui.menu import Item, MenuWidget
 
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
-from ubo_app.store import autorun, dispatch, subscribe_event
-from ubo_app.store.main import (
+from ubo_app.store.core import (
+    ChooseMenuItemByIconEvent,
+    ChooseMenuItemByIndexEvent,
+    ChooseMenuItemByLabelEvent,
     CloseApplicationEvent,
     OpenApplicationEvent,
     SetMenuPathAction,
 )
+from ubo_app.store.main import autorun, dispatch, subscribe_event
 from ubo_app.store.services.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
 
@@ -113,6 +116,17 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         subscribe_event(OpenApplicationEvent, self.open_application, keep_ref=False)
         subscribe_event(CloseApplicationEvent, self.close_application, keep_ref=False)
+        subscribe_event(ChooseMenuItemByIconEvent, self.select_by_icon, keep_ref=False)
+        subscribe_event(
+            ChooseMenuItemByLabelEvent,
+            self.select_by_label,
+            keep_ref=False,
+        )
+        subscribe_event(
+            ChooseMenuItemByIndexEvent,
+            self.select_by_index,
+            keep_ref=False,
+        )
 
         return self.menu_widget
 
@@ -143,3 +157,51 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     @mainthread
     def close_application(self: MenuAppCentral, event: CloseApplicationEvent) -> None:
         self.menu_widget.close_application(event.application)
+
+    @mainthread
+    def select_by_icon(self: MenuAppCentral, event: ChooseMenuItemByIconEvent) -> None:
+        current_page = self.menu_widget.current_screen
+        if current_page is None:
+            msg = 'No current page'
+            raise ValueError(msg)
+        items: list[Item | None] = current_page.items
+        filtered_items = [item for item in items if item and item.icon == event.icon]
+        if not filtered_items:
+            msg = f'No item with icon "{event.icon}"'
+            raise ValueError(msg)
+        if len(filtered_items) > 1:
+            msg = (
+                f'Expected 1 item with icon "{event.icon}", found '
+                f'"{len(filtered_items)}"'
+            )
+            raise ValueError(msg)
+        self.menu_widget.select_item(filtered_items[0])
+
+    @mainthread
+    def select_by_label(
+        self: MenuAppCentral,
+        event: ChooseMenuItemByLabelEvent,
+    ) -> None:
+        current_page = self.menu_widget.current_screen
+        if current_page is None:
+            msg = 'No current page'
+            raise ValueError(msg)
+        items: list[Item | None] = current_page.items
+        filtered_items = [item for item in items if item and item.label == event.label]
+        if not filtered_items:
+            msg = f'No item with label "{event.label}"'
+            raise ValueError(msg)
+        if len(filtered_items) > 1:
+            msg = (
+                f'Expected 1 item with label "{event.label}", found '
+                f'"{len(filtered_items)}"'
+            )
+            raise ValueError(msg)
+        self.menu_widget.select_item(filtered_items[0])
+
+    @mainthread
+    def select_by_index(
+        self: MenuAppCentral,
+        event: ChooseMenuItemByIndexEvent,
+    ) -> None:
+        self.menu_widget.select(event.index)

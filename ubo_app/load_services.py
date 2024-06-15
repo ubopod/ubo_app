@@ -90,9 +90,9 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         matching_path = next(
             (
                 registered_path
-                for stack_path in stack[-2::-1]
+                for frame in stack[-2::-1]
                 for registered_path in (*REGISTERED_PATHS.keys(), Path('/'))
-                if stack_path.filename.startswith(registered_path.as_posix())
+                if frame.filename.startswith(registered_path.as_posix())
             ),
             None,
         )
@@ -145,7 +145,7 @@ class UboServiceThread(threading.Thread):
         self.module = None
 
     def register_reducer(self: UboServiceThread, reducer: ReducerType) -> None:
-        from ubo_app import store
+        from ubo_app.store.main import dispatch, root_reducer_id
 
         logger.debug(
             'Registering ubo service reducer',
@@ -156,9 +156,9 @@ class UboServiceThread(threading.Thread):
             },
         )
 
-        store.dispatch(
+        dispatch(
             CombineReducerRegisterAction(
-                _id=store.root_reducer_id,
+                _id=root_reducer_id,
                 key=self.service_id,
                 reducer=reducer,
             ),
@@ -263,7 +263,7 @@ class UboServiceThread(threading.Thread):
 
         from redux import FinishEvent
 
-        from ubo_app.store import store
+        from ubo_app.store.main import store
 
         store.subscribe_event(FinishEvent, self.stop)
         self.loop.run_forever()
@@ -277,7 +277,14 @@ class UboServiceThread(threading.Thread):
     async def shutdown(self: UboServiceThread) -> None:
         from ubo_app.logging import logger
 
-        logger.info('Shutting down worker thread')
+        logger.debug(
+            'Shutting down service thread',
+            extra={
+                'thread_native_id': self.native_id,
+                'service_label': self.label,
+                'service_id': self.service_id,
+            },
+        )
 
         while True:
             tasks = [
@@ -295,8 +302,9 @@ class UboServiceThread(threading.Thread):
             if not tasks:
                 break
             for task in tasks:
-                with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
+                with contextlib.suppress(asyncio.TimeoutError):
                     await asyncio.wait_for(task, 0.1)
+
         logger.debug('Stopping event loop', extra={'thread_': self})
         self.loop.stop()
 

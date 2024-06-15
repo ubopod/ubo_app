@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import cast
 
@@ -17,10 +18,12 @@ pytest.register_assert_rewrite('tests.fixtures')
 from tests.fixtures import (  # noqa: E402, I001
     AppContext,
     LoadServices,
+    MockCamera,
     Stability,
     WindowSnapshot,
     app_context as original_app_context,
     load_services,
+    camera,
     stability,
     store,
     window_snapshot,
@@ -39,6 +42,7 @@ from redux_pytest.fixtures import (  # noqa: E402
 fixtures = (
     AppContext,
     LoadServices,
+    MockCamera,
     Stability,
     Waiter,
     WaitFor,
@@ -46,6 +50,7 @@ fixtures = (
     StoreMonitor,
     original_app_context,
     load_services,
+    camera,
     needs_finish,
     stability,
     store,
@@ -60,6 +65,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     """Add options to the pytest command line."""
     parser.addoption('--override-window-snapshots', action='store_true')
     parser.addoption('--make-screenshots', action='store_true')
+    parser.addoption('--use-fake-filesystem', action='store_true')
 
 
 @pytest.fixture(autouse=True)
@@ -85,5 +91,24 @@ def _logger() -> None:
             handler.formatter.format = extra_formatter.format
             cast(ExtraFormatter, handler.formatter).def_keys = extra_formatter.def_keys
 
+    import time
 
-_ = fixtures, _logger, _monkeypatch
+    time.sleep(5)
+
+
+@pytest.fixture(autouse=True)
+def _setup_script(request: pytest.FixtureRequest) -> None:
+    """Run the setup script for the test."""
+    # Get the directory of the test file that invoked the fixture
+    test_dir = request.path.parent
+
+    script_path = test_dir / 'setup.sh'
+
+    if not script_path.exists():
+        return
+
+    # Running the setup script
+    subprocess.run(['/usr/bin/env', 'bash', script_path], check=True)  # noqa: S603
+
+
+_ = fixtures, _logger, _monkeypatch, _setup_script

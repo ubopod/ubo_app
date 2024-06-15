@@ -26,7 +26,7 @@ class WorkerThread(threading.Thread):
     def __init__(self: WorkerThread) -> None:
         from redux.basic_types import FinishEvent
 
-        from ubo_app.store import subscribe_event
+        from ubo_app.store.main import subscribe_event
 
         super().__init__()
         try:
@@ -62,7 +62,7 @@ class WorkerThread(threading.Thread):
     async def shutdown(self: WorkerThread) -> None:
         from ubo_app.logging import logger
 
-        logger.info('Shutting down worker thread')
+        logger.debug('Shutting down worker thread')
 
         while True:
             tasks = [
@@ -80,8 +80,9 @@ class WorkerThread(threading.Thread):
             if not tasks:
                 break
             for task in tasks:
-                with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
+                with contextlib.suppress(asyncio.TimeoutError):
                     await asyncio.wait_for(task, 1)
+
         logger.debug('Stopping event loop', extra={'thread_': self})
         self.loop.stop()
 

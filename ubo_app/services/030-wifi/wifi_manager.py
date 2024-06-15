@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
-from ubo_app.store import dispatch
+from ubo_app.store.main import dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -225,9 +225,6 @@ async def add_wireless_connection(
         None,
     )
 
-    if not access_point:
-        return
-
     if type == WiFiType.nopass:
         security = {
             'key-mgmt': ('s', 'none'),
@@ -245,6 +242,7 @@ async def add_wireless_connection(
             'auth-alg': ('s', 'open'),
             'psk': ('s', password),
         }
+    from ubo_app.logging import logger
 
     properties: NetworkManagerConnectionProperties = {
         'connection': {
@@ -265,13 +263,15 @@ async def add_wireless_connection(
     }
 
     network_manager = NetworkManager(get_system_bus())
-    await wait_for(
+    connection = await wait_for(
         network_manager.add_and_activate_connection(
             properties,
             wifi_device._dbus.object_path,  # noqa: SLF001
-            access_point._dbus.object_path,  # noqa: SLF001
+            access_point._dbus.object_path if access_point else '/',  # noqa: SLF001
         ),
     )
+
+    logger.info('Connection added', extra={'connection': connection})
 
 
 async def connect_wireless_connection(ssid: str) -> None:

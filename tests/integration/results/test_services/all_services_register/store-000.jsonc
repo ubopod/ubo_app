@@ -74,8 +74,8 @@
     "is_connected": true
   },
   "lightdm": {
-    "is_active": true,
-    "is_enabled": false
+    "is_active": false,
+    "is_enabled": true
   },
   "main": {
     "menu": {
@@ -335,7 +335,7 @@
                               1,
                               1
                             ],
-                            "icon": "[color=#008000]󰪥[/color]",
+                            "icon": "[color=#ffff00]󰝦[/color]",
                             "is_short": false,
                             "label": "LightDM",
                             "opacity": null
@@ -368,7 +368,7 @@
                               1,
                               1
                             ],
-                            "icon": "[color=#008000]󰪥[/color]",
+                            "icon": "[color=#ffff00]󰝦[/color]",
                             "is_short": false,
                             "label": "SSH",
                             "opacity": null
@@ -532,13 +532,13 @@
   },
   "sound": {
     "capture_volume": 0.5,
-    "is_capture_mute": false,
+    "is_capture_mute": true,
     "is_playback_mute": false,
     "playback_volume": 0.5
   },
   "ssh": {
-    "is_active": true,
-    "is_enabled": false
+    "is_active": false,
+    "is_enabled": true
   },
   "status_icons": {
     "icons": [
@@ -552,7 +552,7 @@
         "color": "white",
         "id": "ethernet:state",
         "priority": -13,
-        "symbol": "󰌙"
+        "symbol": "󱊪"
       },
       {
         "color": "white",
@@ -571,7 +571,7 @@
   "update_manager": {
     "current_version": "0.0.0",
     "latest_version": "0.0.0",
-    "serial_number": "<not-available>",
+    "serial_number": "ZFH2UL4UGF",
     "update_status": "up_to_date"
   },
   "voice": {

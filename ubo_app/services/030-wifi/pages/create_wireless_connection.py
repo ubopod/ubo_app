@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
-from distutils.util import strtobool
 from typing import TYPE_CHECKING, cast
 
 from kivy.lang.builder import Builder
@@ -13,8 +12,8 @@ from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
-from ubo_app.store import dispatch
-from ubo_app.store.main import CloseApplicationEvent
+from ubo_app.store.core import CloseApplicationEvent
+from ubo_app.store.main import dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -23,6 +22,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.miscellaneous import strtobool
 from ubo_app.utils.qrcode import qrcode_input
 
 if TYPE_CHECKING:
@@ -34,7 +34,9 @@ if TYPE_CHECKING:
 # WIFI:S:<SSID>;T:<WEP|WPA|blank>;P:<PASSWORD>;H:<true|false|blank>;;
 BARCODE_PATTERN = (
     r'^WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
-    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$'
+    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$|'
+    r'^WIFI:T:(?P<Type_>(?i:WEP|WPA|WPA2|nopass));S:(?P<SSID_>[^;]*);'
+    r'(?:P:(?P<Password_>[^;]*);)?(?:H:(?P<Hidden_>(?i:true|false|));)?;$'
 )
 
 
@@ -65,14 +67,14 @@ class CreateWirelessConnectionPage(PageWidget):
         if not match:
             dispatch(CloseApplicationEvent(application=self))
             return
-        ssid = match.get('SSID')
+        ssid = match.get('SSID') or match.get('SSID_')
         if ssid is None:
             dispatch(CloseApplicationEvent(application=self))
             return
 
-        password = match.get('Password')
-        type = cast(WiFiType, match.get('Type'))
-        hidden = strtobool(match.get('Hidden') or 'false') == 1
+        password = match.get('Password') or match.get('Password_')
+        type = cast(WiFiType, match.get('Type') or match.get('Type_'))
+        hidden = strtobool(match.get('Hidden') or match.get('Hidden_') or 'false') == 1
 
         if not password:
             logger.warning('Password is required')
@@ -110,8 +112,8 @@ class CreateWirelessConnectionPage(PageWidget):
                     chime=Chime.ADD,
                 ),
             ),
+            CloseApplicationEvent(application=self),
         )
-        dispatch(CloseApplicationEvent(application=self))
 
 
 Builder.load_file(

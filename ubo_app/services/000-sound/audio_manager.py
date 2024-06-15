@@ -148,13 +148,13 @@ class AudioManager:
 
         Parameters
         ----------
-        channels : int
+        channels: int
             Number of channels
 
-        rate : int
+        rate: int
             Frame rate of the audio
 
-        width : int
+        width: int
             Sample width of the audio
 
         """
@@ -174,7 +174,7 @@ class AudioManager:
 
         Parameters
         ----------
-        filename : str
+        filename: str
             Path to wav file
 
         """
@@ -211,16 +211,16 @@ class AudioManager:
 
         Parameters
         ----------
-        sequence : Sequence[int]
+        sequence: Sequence[int]
             Audio as a sequence of 16-bit linearly-encoded integers.
 
-        channels : int
+        channels: int
             Number of channels
 
-        rate : int
+        rate: int
             Frame rate of the audio
 
-        width : int
+        width: int
             Sample width of the audio
 
         """
@@ -246,7 +246,7 @@ class AudioManager:
 
         Parameters
         ----------
-        mute : bool
+        mute: bool
             Mute to set
 
         """
@@ -275,7 +275,7 @@ class AudioManager:
 
         Parameters
         ----------
-        volume : float
+        volume: float
             Volume to set, a float between 0 and 1
 
         """
@@ -309,7 +309,7 @@ class AudioManager:
 
         Parameters
         ----------
-        volume : float
+        volume: float
             Volume to set, a float between 0 and 1
 
         """

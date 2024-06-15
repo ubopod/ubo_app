@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 from redux import FinishEvent
 
-from ubo_app.store import dispatch, subscribe_event
+from ubo_app.store.main import dispatch, subscribe_event
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
 
 

@@ -72,7 +72,7 @@ class Fake(ModuleType):
                 '__return_value': self.__return_value,
             },
         )
-        return self.__return_value or self
+        return self.__return_value if self.__return_value is not None else self
 
     def __await__(self: Fake) -> Generator[Any, Any, object]:
         yield

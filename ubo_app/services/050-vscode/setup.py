@@ -15,8 +15,8 @@ from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
 
 from ubo_app.constants import INSTALLATION_PATH
-from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,

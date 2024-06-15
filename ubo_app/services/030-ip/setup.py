@@ -11,8 +11,8 @@ from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.ip import (
     IpNetworkInterface,
     IpSetIsConnectedAction,

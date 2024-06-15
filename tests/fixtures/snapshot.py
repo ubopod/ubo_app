@@ -9,11 +9,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
+from ubo_app.utils.miscellaneous import strtobool
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from _pytest.fixtures import SubRequest
-    from _pytest.nodes import Node
     from numpy._typing import NDArray
 
 
@@ -38,22 +39,20 @@ class WindowSnapshot:
     def __init__(
         self: WindowSnapshot,
         *,
-        test_node: Node,
+        test_id: str,
+        path: Path,
         override: bool,
         make_screenshots: bool,
     ) -> None:
         """Create a new window snapshot context."""
-        self.failed = False
-        self.closed = False
+        self._is_failed = False
+        self._is_closed = False
         self.override = override
         self.make_screenshots = make_screenshots
         self.test_counter: dict[str | None, int] = defaultdict(int)
-        file = test_node.path.with_suffix('').name
+        file = path.with_suffix('').name
         self.results_dir = Path(
-            test_node.path.parent
-            / 'results'
-            / file
-            / test_node.nodeid.split('::')[-1][5:],
+            path.parent / 'results' / file / test_id.split('::')[-1][5:],
         )
         if self.results_dir.exists():
             for file in self.results_dir.glob(
@@ -83,17 +82,19 @@ class WindowSnapshot:
 
     def take(self: WindowSnapshot, title: str | None = None) -> None:
         """Take a snapshot of the content of the window."""
-        if self.closed:
+        if self._is_closed:
             msg = (
                 'Snapshot context is closed, make sure `window_snapshot` is before any '
                 'fixture dispatching actions in the fixtures list'
             )
             raise RuntimeError(msg)
 
+        from pathlib import Path
+
         from headless_kivy_pi.config import _display
 
         filename = self.get_filename(title)
-        path = self.results_dir / filename
+        path = Path(self.results_dir / filename)
         hash_path = path.with_suffix('.hash')
         image_path = path.with_suffix('.png')
         hash_mismatch_path = path.with_suffix('.mismatch.hash')
@@ -112,7 +113,7 @@ class WindowSnapshot:
             else:
                 old_snapshot = None
             if old_snapshot != new_snapshot:
-                self.failed = True
+                self._is_failed = True
                 hash_mismatch_path.write_text(  # pragma: no cover
                     f'// MISMATCH: {filename}\n{new_snapshot}\n',
                 )
@@ -128,8 +129,8 @@ class WindowSnapshot:
 
     def close(self: WindowSnapshot) -> None:
         """Close the snapshot context."""
-        self.closed = True
-        if self.failed:
+        self._is_closed = True
+        if self._is_failed:
             return
         for title in self.test_counter:
             filename = self.get_filename(title)
@@ -148,7 +149,7 @@ def window_snapshot(
             '--override-window-snapshots',
             default=cast(
                 Any,
-                os.environ.get('UBO_TEST_OVERRIDE_SNAPSHOTS', '0') == '1',
+                strtobool(os.environ.get('UBO_TEST_OVERRIDE_SNAPSHOTS', 'false')) == 1,
             ),
         )
         is True
@@ -156,13 +157,17 @@ def window_snapshot(
     make_screenshots = (
         request.config.getoption(
             '--make-screenshots',
-            default=cast(Any, os.environ.get('UBO_TEST_MAKE_SCREENSHOTS', '0') == '1'),
+            default=cast(
+                Any,
+                strtobool(os.environ.get('UBO_TEST_MAKE_SCREENSHOTS', 'false')) == 1,
+            ),
         )
         is True
     )
 
     context = WindowSnapshot(
-        test_node=request.node,
+        test_id=request.node.nodeid,
+        path=request.node.path,
         override=override,
         make_screenshots=make_screenshots,
     )

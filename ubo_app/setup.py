@@ -3,9 +3,14 @@
 from pathlib import Path
 from typing import Any
 
+import dotenv
+import numpy as np
+
 
 def setup() -> None:
     """Set up for different environments."""
+    dotenv.load_dotenv(Path(__file__).parent / '.env')
+
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
@@ -21,6 +26,19 @@ def setup() -> None:
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()
         sys.modules['sdbus_async.networkmanager.enums'] = Fake()
+        sys.modules['picamera2'] = Fake(
+            _Fake__props={
+                'Picamera2': Fake(
+                    _Fake__return_value=Fake(
+                        _Fake__props={
+                            'capture_array': Fake(
+                                _Fake__return_value=np.zeros((1, 1, 3), dtype=np.uint8),
+                            ),
+                        },
+                    ),
+                ),
+            },
+        )
         original_subprocess_run = subprocess.run
 
         def fake_subprocess_run(

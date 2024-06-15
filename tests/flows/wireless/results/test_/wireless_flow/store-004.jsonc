@@ -1,0 +1,16 @@
+// store-004
+{
+  "connections": [
+    {
+      "hidden": false,
+      "password": null,
+      "signal_strength": 100,
+      "ssid": "ubo-test-ssid",
+      "state": "Connecting",
+      "type": null
+    }
+  ],
+  "current_connection": null,
+  "has_visited_onboarding": true,
+  "state": "Pending"
+}

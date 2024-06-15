@@ -12,8 +12,8 @@ from redux import FinishEvent
 from ubo_gui.menu.types import ActionItem, HeadedMenu, SubMenuItem
 
 from ubo_app.constants import PICOVOICE_ACCESS_KEY
-from ubo_app.store import autorun, dispatch, subscribe_event
-from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.main import autorun, dispatch, subscribe_event
 from ubo_app.store.services.sound import SoundPlayAudioAction
 from ubo_app.store.services.voice import (
     VoiceSynthesizeTextEvent,

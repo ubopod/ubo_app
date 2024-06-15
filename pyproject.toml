@@ -18,14 +18,14 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.11.11", markers = "extra=='default'", extras = [
+  { version = "^0.11.10", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.11.11", markers = "extra=='dev'", extras = [
+  { version = "^0.11.10", markers = "extra=='dev'", extras = [
     "dev",
   ] },
 ]
-python-redux = "^0.15.2"
+python-redux = "^0.15.7"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -42,25 +42,26 @@ sentry-sdk = "^1.43.0"
 pvorca = "^0.2.1"
 platformdirs = "^4.2.0"
 dill = "^0.3.8"
+setuptools = "^70.0.0"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "1.1.366"
+pyright = "^1.1.367"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.5.0"
-ruff = "^0.4.1"
+ruff = "^0.4.9"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"
 pyaudio = { version = "^0.2.14", markers = "platform_machine!='aarch64'" }
 ipython = "^8.23.0"
-pyfakefs = "^5.5.0"
+pyfakefs = { git = "https://github.com/sassanh/pyfakefs.git", branch = "skip_names" }
 
 [tool.poetry.extras]
 default = ["ubo-gui"]
@@ -81,8 +82,9 @@ typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
+test-on-device = "scripts/test_on_device.sh"
 
-[tool.poe.tasks.deploy_to_device]
+[tool.poe.tasks.deploy-to-device]
 args = [
   { name = "deps", type = "boolean" },
   { name = "run", type = "boolean" },
@@ -168,6 +170,9 @@ root = "ubo_app/services/050-vscode"
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/080-docker"
+
+[[tool.pyright.executionEnvironments]]
+root = "."
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

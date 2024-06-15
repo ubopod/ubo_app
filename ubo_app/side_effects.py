@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from redux import FinishAction
 
-from ubo_app.store import (
+from ubo_app.store.core import PowerOffEvent
+from ubo_app.store.main import (
     ScreenshotEvent,
     SnapshotEvent,
     dispatch,
     store,
     subscribe_event,
 )
-from ubo_app.store.main import PowerOffEvent
 from ubo_app.store.services.notifications import Chime
 from ubo_app.store.services.sound import SoundPlayChimeAction
 from ubo_app.store.update_manager import (

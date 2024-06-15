@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, TypeAlias, overload
 
 from typing_extensions import TypeVar
 
-from ubo_app.store import dispatch, subscribe_event
+from ubo_app.store.main import dispatch, subscribe_event
 from ubo_app.store.services.camera import (
     CameraBarcodeEvent,
     CameraStartViewfinderAction,
@@ -59,8 +59,7 @@ async def qrcode_input(
     resolver: Callable[[str, QrCodeGroupDict], ReturnType] | None = None,
 ) -> tuple[str, QrCodeGroupDict] | ReturnType:
     """Use the camera to scan a QR code."""
-    future = Future[tuple[str, QrCodeGroupDict]]()
-    id = uuid.uuid4().hex
+    prompt_id = uuid.uuid4().hex
     loop = asyncio.get_running_loop()
 
     if prompt:
@@ -89,6 +88,7 @@ async def qrcode_input(
                         ),
                     ],
                     dismissable=False,
+                    dismiss_on_close=True,
                     on_close=lambda: loop.call_soon_threadsafe(
                         notification_future.cancel,
                     ),
@@ -98,8 +98,10 @@ async def qrcode_input(
 
         await notification_future
 
-    async def handle_barcode_event(event: CameraBarcodeEvent) -> None:
-        if event.id == id:
+    future = Future[tuple[str, QrCodeGroupDict]]()
+
+    def handle_barcode_event(event: CameraBarcodeEvent) -> None:
+        if event.id == prompt_id:
             from kivy.utils import get_color_from_hex
 
             loop.call_soon_threadsafe(future.set_result, (event.code, event.group_dict))
@@ -117,7 +119,7 @@ async def qrcode_input(
             )
 
     def handle_cancel(event: CameraStopViewfinderEvent) -> None:
-        if event.id == id:
+        if event.id == prompt_id:
             loop.call_soon_threadsafe(future.cancel)
 
     subscribe_event(
@@ -129,7 +131,7 @@ async def qrcode_input(
         CameraStopViewfinderEvent,
         handle_cancel,
     )
-    dispatch(CameraStartViewfinderAction(id=id, pattern=pattern))
+    dispatch(CameraStartViewfinderAction(id=prompt_id, pattern=pattern))
 
     result = await future
 

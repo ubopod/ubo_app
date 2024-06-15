@@ -2,13 +2,11 @@
 from __future__ import annotations
 
 import os
-from distutils.util import strtobool
 from pathlib import Path
 
-import dotenv
 import platformdirs
 
-dotenv.load_dotenv(Path(__file__).parent / '.env')
+from ubo_app.utils.miscellaneous import strtobool
 
 USERNAME = os.environ.get('UBO_USERNAME', 'ubo')
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
