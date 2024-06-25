@@ -14,7 +14,7 @@ from kivy.properties import NumericProperty, StringProperty
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.page import PageWidget
 
-from ubo_app.store import dispatch
+from ubo_app.store.main import dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,

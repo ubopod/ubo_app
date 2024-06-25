@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.14.4"
+version = "0.15.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -18,14 +18,14 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.11.11", markers = "extra=='default'", extras = [
+  { version = "^0.11.12", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.11.11", markers = "extra=='dev'", extras = [
+  { version = "^0.11.12", markers = "extra=='dev'", extras = [
     "dev",
   ] },
 ]
-python-redux = "^0.15.2"
+python-redux = "^0.15.9"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
@@ -42,25 +42,26 @@ sentry-sdk = "^1.43.0"
 pvorca = "^0.2.1"
 platformdirs = "^4.2.0"
 dill = "^0.3.8"
+python-strtobool = "^1.0.0"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "1.1.366"
+pyright = "^1.1.368"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.5.0"
-ruff = "^0.4.1"
+ruff = "^0.4.10"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"
 pyaudio = { version = "^0.2.14", markers = "platform_machine!='aarch64'" }
 ipython = "^8.23.0"
-pyfakefs = "^5.5.0"
+pyfakefs = { git = "https://github.com/sassanh/pyfakefs.git", branch = "skip_names" }
 
 [tool.poetry.extras]
 default = ["ubo-gui"]
@@ -81,8 +82,9 @@ typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
+test-on-device = "scripts/test_on_device.sh"
 
-[tool.poe.tasks.deploy_to_device]
+[tool.poe.tasks.deploy-to-device]
 args = [
   { name = "deps", type = "boolean" },
   { name = "run", type = "boolean" },
@@ -126,52 +128,70 @@ exclude = ["typings"]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/000-sound"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/010-notifications"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/010-voice"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/020-keyboard"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/020-keypad"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/030-ethernet"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/030-ip"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/030-wifi"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/040-camera"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/040-rgb-ring"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/040-sensors"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/050-lightdm"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/050-ssh"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/050-vscode"
+extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/080-docker"
+extraPaths = ["."]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-filterwarnings = "ignore:'imghdr' is deprecated:DeprecationWarning"
+filterwarnings = [
+  "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
+  "ignore:'imghdr' is deprecated:DeprecationWarning",
+]
 timeout = 120
 
 [tool.coverage.report]

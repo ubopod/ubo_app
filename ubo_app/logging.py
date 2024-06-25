@@ -4,6 +4,7 @@ from __future__ import annotations
 import atexit
 import json
 import logging
+import logging.handlers
 import sys
 from typing import TYPE_CHECKING, cast
 
@@ -105,7 +106,11 @@ def add_stdout_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
 
 
 def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
-    file_handler = logging.FileHandler(f'{logger.name}.log')
+    file_handler = logging.handlers.RotatingFileHandler(
+        f'{logger.name}.log',
+        backupCount=3,
+    )
+    file_handler.doRollover()
     file_handler.setLevel(level)
     file_handler.setFormatter(
         ExtraFormatter(
@@ -118,4 +123,34 @@ def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     atexit.register(file_handler.flush)
 
 
-__all__ = ('logger', 'add_stdout_handler', 'add_file_handler')
+def setup_logging() -> None:
+    from ubo_app.constants import GUI_LOG_LEVEL, LOG_LEVEL
+
+    if LOG_LEVEL:
+        import logging
+
+        level = globals().get(
+            LOG_LEVEL,
+            getattr(logging, LOG_LEVEL, logging.INFO),
+        )
+
+        logger.setLevel(level)
+        add_file_handler(logger, level)
+        add_stdout_handler(logger, level)
+    if GUI_LOG_LEVEL:
+        import logging
+
+        import ubo_gui.logger
+
+        level = getattr(
+            ubo_gui.logger,
+            GUI_LOG_LEVEL,
+            getattr(logging, GUI_LOG_LEVEL, logging.INFO),
+        )
+
+        ubo_gui.logger.logger.setLevel(level)
+        ubo_gui.logger.add_file_handler(level)
+        ubo_gui.logger.add_stdout_handler(level)
+
+
+__all__ = ('logger', 'add_stdout_handler', 'add_file_handler', 'setup_logging')

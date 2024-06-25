@@ -14,7 +14,7 @@ from kivy.uix.widget import Widget
 from redux import AutorunOptions
 from ubo_gui.app import UboApp
 
-from ubo_app.store import autorun
+from ubo_app.store.main import autorun
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

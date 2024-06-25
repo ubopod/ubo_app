@@ -1,19 +1,18 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import asyncio
 import sys
 import threading
 import traceback
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    import asyncio
     from types import TracebackType
 
 
 def setup_sentry() -> None:  # pragma: no cover
     import os
-    from asyncio import CancelledError
 
     import sentry_sdk
 
@@ -21,7 +20,7 @@ def setup_sentry() -> None:  # pragma: no cover
         sentry_sdk.init(
             traces_sample_rate=1.0,
             profiles_sample_rate=1.0,
-            ignore_errors=[KeyboardInterrupt, CancelledError],
+            ignore_errors=[KeyboardInterrupt, asyncio.CancelledError],
         )
 
 
@@ -92,7 +91,7 @@ def loop_exception_handler(
 
     exception = context.get('exception')
 
-    if exception:
+    if exception and not isinstance(exception, asyncio.CancelledError):
         logger.exception(
             'Event loop exception',
             extra={

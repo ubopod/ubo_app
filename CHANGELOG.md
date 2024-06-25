@@ -1,8 +1,15 @@
 # ChangeLog
 
-## Version 0.14.4
+## Version 0.15.0
 
--
+- refactor: wireless flow test is complete, during this process debugging and refactoring
+  is done in different parts of code as the issues were found - closes #52
+- feat(core): make file handlers in logging `RotatingFileHandler`s
+- feat(tests): add `ChooseMenuItemByIconEvent`, `ChooseMenuItemByIndexEvent`, `ChooseMenuItemByLabelEvent`
+  helper events to be used in tests
+- feat(tests): a `setup.sh` in `tests` directory or any of its parent directories
+  is sourced before running tests
+- feat(tests): add `wait_for_menu_item` and `wait_for_empty_menu` fixtures
 
 ## Version 0.14.3
 

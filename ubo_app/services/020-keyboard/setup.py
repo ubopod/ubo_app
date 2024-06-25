@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 from kivy.core.window import Keyboard, Window, WindowBase
 from redux import FinishAction, FinishEvent
 
-from ubo_app.store import ScreenshotEvent, SnapshotEvent, subscribe_event
+from ubo_app.store.main import ScreenshotEvent, SnapshotEvent, subscribe_event
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 from ubo_app.store.services.sound import SoundDevice, SoundToggleMuteStatusAction
 
@@ -23,7 +23,7 @@ def on_keyboard(  # noqa: C901
 ) -> None:
     """Handle keyboard events."""
     _ = window, scancode, codepoint
-    from ubo_app.store import dispatch
+    from ubo_app.store.main import dispatch
 
     if modifier == []:
         if key in (Keyboard.keycodes['up'], Keyboard.keycodes['k']):
@@ -45,7 +45,7 @@ def on_keyboard(  # noqa: C901
         elif key == Keyboard.keycodes['backspace']:
             dispatch(KeypadKeyPressAction(key=Key.HOME))
         elif key == Keyboard.keycodes['m']:
-            from ubo_app.store import dispatch
+            from ubo_app.store.main import dispatch
 
             dispatch(
                 SoundToggleMuteStatusAction(

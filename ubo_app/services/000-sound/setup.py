@@ -6,7 +6,7 @@ from pathlib import Path
 from audio_manager import AudioManager
 from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
 
-from ubo_app.store import autorun, dispatch, subscribe_event
+from ubo_app.store.main import autorun, dispatch, subscribe_event
 from ubo_app.store.services.sound import SoundPlayAudioEvent, SoundPlayChimeEvent
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.persistent_store import register_persistent_store

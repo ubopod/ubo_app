@@ -1,0 +1,23 @@
+// store-003
+{
+  "connections": [
+    {
+      "hidden": false,
+      "password": null,
+      "signal_strength": 100,
+      "ssid": "ubo-test-ssid",
+      "state": "Connected",
+      "type": null
+    }
+  ],
+  "current_connection": {
+    "hidden": false,
+    "password": null,
+    "signal_strength": 100,
+    "ssid": "ubo-test-ssid",
+    "state": "Connected",
+    "type": null
+  },
+  "has_visited_onboarding": true,
+  "state": "Connected"
+}

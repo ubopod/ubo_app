@@ -16,7 +16,7 @@ from ubo_gui.menu.types import ActionItem, Item
 
 from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.logging import logger
-from ubo_app.store import autorun, dispatch
+from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,

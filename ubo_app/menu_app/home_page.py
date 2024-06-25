@@ -12,7 +12,7 @@ from ubo_gui.menu.constants import PAGE_SIZE
 from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
-from ubo_app.store import autorun
+from ubo_app.store.main import autorun
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

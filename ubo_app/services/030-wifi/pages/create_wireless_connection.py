@@ -3,18 +3,18 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
-from distutils.util import strtobool
 from typing import TYPE_CHECKING, cast
 
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
+from str_to_bool import str_to_bool
 from ubo_gui.constants import SUCCESS_COLOR
 from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
-from ubo_app.store import dispatch
-from ubo_app.store.main import CloseApplicationEvent
+from ubo_app.store.core import CloseApplicationEvent
+from ubo_app.store.main import dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -34,7 +34,9 @@ if TYPE_CHECKING:
 # WIFI:S:<SSID>;T:<WEP|WPA|blank>;P:<PASSWORD>;H:<true|false|blank>;;
 BARCODE_PATTERN = (
     r'^WIFI:S:(?P<SSID>[^;]*);(?:T:(?P<Type>(?i:WEP|WPA|WPA2|nopass));)'
-    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$'
+    r'?(?:P:(?P<Password>[^;]*);)?(?:H:(?P<Hidden>(?i:true|false));)?;$|'
+    r'^WIFI:T:(?P<Type_>(?i:WEP|WPA|WPA2|nopass));S:(?P<SSID_>[^;]*);'
+    r'(?:P:(?P<Password_>[^;]*);)?(?:H:(?P<Hidden_>(?i:true|false|));)?;$'
 )
 
 
@@ -65,14 +67,16 @@ class CreateWirelessConnectionPage(PageWidget):
         if not match:
             dispatch(CloseApplicationEvent(application=self))
             return
-        ssid = match.get('SSID')
+        ssid = match.get('SSID') or match.get('SSID_')
         if ssid is None:
             dispatch(CloseApplicationEvent(application=self))
             return
 
-        password = match.get('Password')
-        type = cast(WiFiType, match.get('Type'))
-        hidden = strtobool(match.get('Hidden') or 'false') == 1
+        password = match.get('Password') or match.get('Password_')
+        type = cast(WiFiType, match.get('Type') or match.get('Type_'))
+        hidden = (
+            str_to_bool(match.get('Hidden') or match.get('Hidden_') or 'false') == 1
+        )
 
         if not password:
             logger.warning('Password is required')
@@ -110,8 +114,8 @@ class CreateWirelessConnectionPage(PageWidget):
                     chime=Chime.ADD,
                 ),
             ),
+            CloseApplicationEvent(application=self),
         )
-        dispatch(CloseApplicationEvent(application=self))
 
 
 Builder.load_file(

@@ -7,42 +7,10 @@ from pathlib import Path
 import dotenv
 
 from ubo_app.error_handlers import setup_error_handling
+from ubo_app.logging import setup_logging
 from ubo_app.setup import setup
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
-
-
-def setup_logging() -> None:
-    from ubo_app.constants import GUI_LOG_LEVEL, LOG_LEVEL
-
-    if LOG_LEVEL:
-        import logging
-
-        import ubo_app.logging
-
-        level = getattr(
-            ubo_app.logging,
-            LOG_LEVEL,
-            getattr(logging, LOG_LEVEL, logging.INFO),
-        )
-
-        ubo_app.logging.logger.setLevel(level)
-        ubo_app.logging.add_file_handler(ubo_app.logging.logger, level)
-        ubo_app.logging.add_stdout_handler(ubo_app.logging.logger, level)
-    if GUI_LOG_LEVEL:
-        import logging
-
-        import ubo_gui.logger
-
-        level = getattr(
-            ubo_gui.logger,
-            GUI_LOG_LEVEL,
-            getattr(logging, GUI_LOG_LEVEL, logging.INFO),
-        )
-
-        ubo_gui.logger.logger.setLevel(level)
-        ubo_gui.logger.add_file_handler(level)
-        ubo_gui.logger.add_stdout_handler(level)
 
 
 def main() -> None:
@@ -56,9 +24,9 @@ def main() -> None:
     setup_error_handling()
     setup_logging()
 
-    from ubo_app.utils.loop import setup_event_loop
+    from ubo_app.utils.loop import start_event_loop
 
-    setup_event_loop()
+    start_event_loop()
 
     import headless_kivy_pi.config
 
@@ -81,7 +49,7 @@ def main() -> None:
         logger.exception('An error occurred while running the app.')
         from redux import FinishAction
 
-        from ubo_app.store import dispatch
+        from ubo_app.store.main import dispatch
 
         dispatch(FinishAction())
 

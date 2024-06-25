@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from threading import current_thread
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from ubo_app.store.services.ethernet import GlobalEthernetState
+from ubo_app.utils.bus_provider import get_system_bus
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -20,7 +20,6 @@ def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
     return asyncio.wait_for(task, timeout=10.0)
 
 
-from sdbus import SdBus, sd_bus_open_system, set_default_bus  # noqa: E402
 from sdbus_async.networkmanager import (  # noqa: E402
     DeviceState,
     NetworkDeviceGeneric,
@@ -29,14 +28,6 @@ from sdbus_async.networkmanager import (  # noqa: E402
 from sdbus_async.networkmanager.enums import DeviceType  # noqa: E402
 
 system_buses = {}
-
-
-def get_system_bus() -> SdBus:
-    thread = current_thread()
-    if thread not in system_buses:
-        system_buses[thread] = sd_bus_open_system()
-    set_default_bus(system_buses[thread])
-    return system_buses[thread]
 
 
 async def get_ethernet_device() -> NetworkDeviceGeneric | None:

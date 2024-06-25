@@ -97,6 +97,7 @@ class Notification(Immutable):
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = 4
     dismissable: bool = True
+    dismiss_on_close: bool = False
     on_close: Callable[[], Any] | None = None
 
 

@@ -97,7 +97,7 @@ def reducer(
             return state
 
     if isinstance(action, KeypadKeyPressAction):  # noqa: SIM102
-        if action.key == Key.BACK:
+        if action.key == Key.BACK and state.is_viewfinder_active:
             return CompleteReducerResult(
                 state=pop_queue(state),
                 events=[

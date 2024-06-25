@@ -160,19 +160,34 @@ def _monkeypatch_aiohttp() -> None:
 
 def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     import subprocess
+    from pathlib import Path
 
     from ubo_app.utils.fake import Fake
 
     original_subprocess_run = subprocess.run
 
     def fake_subprocess_run(
-        command: list[str],
+        command_: list[str | Path],
         *args: object,
         **kwargs: object,
     ) -> Fake:
         _ = args, kwargs
-        if command == ['/usr/bin/env', 'systemctl', 'poweroff', '-i']:
-            return Fake()
+        here = Path().absolute()
+        command = [
+            c.relative_to(here).as_posix() if isinstance(c, Path) else c
+            for c in command_
+        ]
+        if command[0] == '/usr/bin/env':
+            # Setup scripts for tests
+            if (
+                command[1] == 'bash'
+                and command[2].startswith('tests/')
+                and command[2].endswith('setup.sh')
+            ):
+                return original_subprocess_run(command, *cast(Any, args), **kwargs)
+            # Reboot and poweroff
+            if command[1] == 'systemctl' and command[2] in ('reboot', 'poweroff'):
+                return Fake()
         if command[0] in ('cat', 'file'):
             return original_subprocess_run(command, *cast(Any, args), **kwargs)
         msg = f'Unexpected `subprocess.run` command in test environment: {command}'
@@ -187,6 +202,9 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     from ubo_app.utils.fake import Fake
 
     class FakeAsyncProcess(Fake):
+        def __init__(self: FakeAsyncProcess, output: bytes = b'') -> None:
+            super().__init__(_Fake__props={'output': output})
+
         async def communicate(self: FakeAsyncProcess) -> tuple[bytes, bytes]:
             return cast(bytes, self.output), b''
 
@@ -230,9 +248,13 @@ def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, 'open_connection', Fake())
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
+    import importlib.metadata
+
+    import ubo_app.constants
+    import ubo_app.utils.serializer
     from ubo_app.utils.fake import Fake
 
     random.seed(0)
@@ -240,10 +262,9 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(atexit, 'register', lambda _: None)
 
-    monkeypatch.setattr('importlib.metadata.version', lambda _: '0.0.0')
-    monkeypatch.setattr('ubo_app.constants.STORE_GRACE_TIME', 0.1)
-    monkeypatch.setattr('ubo_app.utils.serializer.add_type_field', lambda _, y: y)
-    monkeypatch.setattr('pyzbar.pyzbar.decode', Fake())
+    monkeypatch.setattr(importlib.metadata, 'version', lambda _: '0.0.0')
+    monkeypatch.setattr(ubo_app.constants, 'STORE_GRACE_PERIOD', 0.1)
+    monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', lambda _, obj: obj)
 
     sys.modules['ubo_app.utils.secrets'] = Fake(
         _Fake__props={'read_secret': lambda _: None},

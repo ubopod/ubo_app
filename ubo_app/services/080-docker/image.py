@@ -20,7 +20,7 @@ from ubo_gui.page import PageWidget
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.logging import logger
-from ubo_app.store import autorun, dispatch, subscribe_event, view
+from ubo_app.store.main import autorun, dispatch, subscribe_event, view
 from ubo_app.store.services.docker import (
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
@@ -299,12 +299,12 @@ async def _process_str(
         value = value()
     if iscoroutine(value):
         value = cast(str, await value)
-    return cast(str | None, value)
+    return value
 
 
-async def _process_environment_variables(image_id: str) -> Mapping[str, str]:
+async def _process_environment_variables(image_id: str) -> Mapping[str, str | None]:
     environment_variables = IMAGES[image_id].environment_vairables or {}
-    result: dict[str, str] = {}
+    result: dict[str, str | None] = {}
 
     for key in environment_variables:
         result[key] = await _process_str(environment_variables[key])

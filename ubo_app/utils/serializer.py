@@ -12,5 +12,7 @@ def add_type_field(
     serialized: dict[str, Any],
 ) -> dict[str, Any]:
     """Add the type field to the serialized object."""
-    serialized['_type'] = base64.b64encode(dill.dumps(obj.__class__)).decode('utf-8')
-    return serialized
+    return {
+        **serialized,
+        '_type': base64.b64encode(dill.dumps(obj.__class__)).decode('utf-8'),
+    }

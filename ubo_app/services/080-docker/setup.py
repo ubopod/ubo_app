@@ -22,12 +22,12 @@ from ubo_app.constants import (
     DOCKER_INSTALLATION_LOCK_FILE,
     SERVER_SOCKET_PATH,
 )
-from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import (
+from ubo_app.store.core import (
     RegisterRegularAppAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
+from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.docker import (
     DockerRemoveUsernameAction,
     DockerSetStatusAction,

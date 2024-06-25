@@ -13,6 +13,6 @@ if TYPE_CHECKING:
 @pytest.fixture()
 def store() -> Store:
     """Take a snapshot of the store."""
-    from ubo_app.store import store
+    from ubo_app.store.main import store
 
     return store

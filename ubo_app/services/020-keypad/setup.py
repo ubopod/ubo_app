@@ -209,7 +209,7 @@ class Keypad:
         index: int,
         status: ButtonStatus,
     ) -> None:
-        from ubo_app.store import dispatch
+        from ubo_app.store.main import dispatch
 
         if index in KEY_INDEX:
             if status == 'pressed':

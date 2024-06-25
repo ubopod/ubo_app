@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
-from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.lightdm import (
     LightDMClearEnabledStateAction,
     LightDMUpdateStateAction,

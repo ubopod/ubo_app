@@ -30,26 +30,37 @@ def create_task(
         if awaitable is None:
             return
         try:
+            thread = current_thread()
             logger.verbose(
                 'Starting task',
                 extra={
                     'awaitable': awaitable,
+                    'thread_': thread,
                     **(
-                        {'ubo_service': current_thread().name}
-                        if isinstance(current_thread(), UboServiceThread)
+                        {
+                            'ubo_service_path': thread.path.as_posix(),
+                            'ubo_service_label': thread.label,
+                        }
+                        if isinstance(thread, UboServiceThread)
                         else {}
                     ),
                 },
             )
             await awaitable
         except Exception:
+            task = asyncio.current_task()
             thread = current_thread()
             logger.exception(
                 'Task failed',
                 extra={
                     'awaitable': awaitable,
+                    'task': task,
+                    'thread_': thread,
                     **(
-                        {'ubo_service': thread.path.as_posix()}
+                        {
+                            'ubo_service_path': thread.path.as_posix(),
+                            'ubo_service_label': thread.label,
+                        }
                         if isinstance(thread, UboServiceThread)
                         else {}
                     ),

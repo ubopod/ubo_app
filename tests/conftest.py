@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import cast
 
@@ -17,15 +18,18 @@ pytest.register_assert_rewrite('tests.fixtures')
 from tests.fixtures import (  # noqa: E402, I001
     AppContext,
     LoadServices,
+    MockCamera,
     Stability,
-    WindowSnapshot,
+    WaitForEmptyMenu,
     app_context as original_app_context,
     load_services,
+    camera,
     stability,
     store,
-    window_snapshot,
+    wait_for_empty_menu,
+    wait_for_menu_item,
 )
-
+from headless_kivy_pi_pytest.fixtures import WindowSnapshot, window_snapshot  # noqa: E402
 from redux_pytest.fixtures import (  # noqa: E402
     StoreMonitor,
     Waiter,
@@ -39,19 +43,24 @@ from redux_pytest.fixtures import (  # noqa: E402
 fixtures = (
     AppContext,
     LoadServices,
+    MockCamera,
     Stability,
     Waiter,
     WaitFor,
+    WaitForEmptyMenu,
     WindowSnapshot,
     StoreMonitor,
     original_app_context,
     load_services,
+    camera,
     needs_finish,
     stability,
     store,
     store_monitor,
     store_snapshot,
     wait_for,
+    wait_for_empty_menu,
+    wait_for_menu_item,
     window_snapshot,
 )
 
@@ -60,6 +69,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     """Add options to the pytest command line."""
     parser.addoption('--override-window-snapshots', action='store_true')
     parser.addoption('--make-screenshots', action='store_true')
+    parser.addoption('--use-fake-filesystem', action='store_true')
+
+
+@pytest.fixture()
+def snapshot_prefix() -> str:
+    """Return the prefix for the snapshots."""
+    from ubo_app.utils import IS_RPI
+
+    if IS_RPI:
+        return 'rpi'
+
+    return 'desktop'
 
 
 @pytest.fixture(autouse=True)
@@ -86,4 +107,21 @@ def _logger() -> None:
             cast(ExtraFormatter, handler.formatter).def_keys = extra_formatter.def_keys
 
 
-_ = fixtures, _logger, _monkeypatch
+@pytest.fixture(autouse=True)
+def _setup_script(request: pytest.FixtureRequest) -> None:
+    """Run the setup script for the test."""
+    # Get the directory of the test file that invoked the fixture
+    test_dir = request.path.parent
+    current_dir = Path().absolute()
+
+    while test_dir != current_dir.parent:
+        script_path = test_dir / 'setup.sh'
+
+        if script_path.exists():
+            # Running the setup script
+            subprocess.run(['/usr/bin/env', 'bash', script_path], check=True)  # noqa: S603
+
+        test_dir = test_dir.parent
+
+
+_ = fixtures, _logger, _monkeypatch, _setup_script

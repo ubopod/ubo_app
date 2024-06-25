@@ -6,18 +6,18 @@ import asyncio
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
+from headless_kivy_pi_pytest.fixtures.snapshot import write_image
 from tenacity import RetryError, stop_after_delay, wait_fixed
-
-from tests.fixtures.snapshot import write_image
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
+    from headless_kivy_pi_pytest.fixtures import WindowSnapshot
     from numpy._typing import NDArray
     from redux_pytest.fixtures import StoreSnapshot
     from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
 
-    from .snapshot import WindowSnapshot
+    from tests.fixtures.app import AppContext
 
 
 class Stability(Protocol):
@@ -25,10 +25,10 @@ class Stability(Protocol):
 
     async def __call__(
         self: Stability,
-        timeout: float = 2,
-        initial_wait: float = 0.1,
+        timeout: float = 5,
+        initial_wait: float = 0.2,
         attempts: int = 1,
-        wait: float = 0.25,
+        wait: float = 0.5,
     ) -> AsyncWaiter:
         """Wait for the screen and store to stabilize."""
         ...
@@ -38,6 +38,7 @@ async def _run(
     *,
     initial_wait: float,
     attempts: int,
+    wait: float,
     check: Callable[[], Coroutine],
     store_snapshot: StoreSnapshot,
     window_snapshot: WindowSnapshot,
@@ -48,6 +49,7 @@ async def _run(
     for _ in range(attempts):
         try:
             await check()
+            await asyncio.sleep(wait)
         except RetryError as exception:
             if isinstance(exception.last_attempt.exception(), AssertionError):
                 continue
@@ -77,14 +79,15 @@ async def stability(
     store_snapshot: StoreSnapshot,
     window_snapshot: WindowSnapshot,
     wait_for: WaitFor,
+    app_context: AppContext,
 ) -> AsyncWaiter:
     """Wait for the screen and store to stabilize."""
 
     async def wrapper(
-        timeout: float = 2,
-        initial_wait: float = 0.1,
+        timeout: float = 5,
+        initial_wait: float = 0.2,
         attempts: int = 1,
-        wait: float = 0.25,
+        wait: float = 0.5,
     ) -> None:
         latest_window_hash = None
         latest_store_snapshot = None
@@ -101,7 +104,7 @@ async def stability(
             nonlocal latest_window_hash, latest_store_snapshot
 
             new_hash = window_snapshot.hash
-            new_snapshot = store_snapshot.json_snapshot
+            new_snapshot = store_snapshot.json_snapshot()
 
             is_window_stable = latest_window_hash == new_hash
             is_store_stable = latest_store_snapshot == new_snapshot
@@ -115,14 +118,23 @@ async def stability(
                 window_snapshots.append(_display.raw_data.copy())
 
             if not is_store_stable:
-                store_snapshots.append(store_snapshot.json_snapshot)
+                store_snapshots.append(store_snapshot.json_snapshot())
 
             assert is_window_stable, 'The content of the screen is not stable yet'
             assert is_store_stable, 'The content of the store is not stable yet'
 
+            from headless_kivy_pi import HeadlessWidget, config
+
+            headless_widget_instance = HeadlessWidget.get_instance(app_context.app.root)
+            if headless_widget_instance:
+                assert (
+                    headless_widget_instance.fps == config.min_fps()
+                ), 'Not in low fps mode'
+
         await _run(
             initial_wait=initial_wait,
             attempts=attempts,
+            wait=wait,
             check=check,
             store_snapshot=store_snapshot,
             window_snapshot=window_snapshot,

@@ -18,12 +18,12 @@ from ubo_gui.menu.types import (
 )
 from ubo_gui.prompt import PromptWidget
 
-from ubo_app.store import autorun, dispatch
-from ubo_app.store.main import (
+from ubo_app.store.core import (
     CloseApplicationEvent,
     RegisterSettingAppAction,
     SettingsCategory,
 )
+from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,

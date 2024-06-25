@@ -14,7 +14,7 @@ from ubo_app.constants import PERSISTENT_STORE_PATH
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_app.store import RootState
+    from ubo_app.store.main import RootState
 
 T = TypeVar('T')
 
@@ -26,7 +26,7 @@ def register_persistent_store(
     selector: Callable[[RootState], T],
 ) -> None:
     """Register a part of the store to be persistent in the filesystem."""
-    from ubo_app.store import autorun, store, subscribe_event
+    from ubo_app.store.main import autorun, store, subscribe_event
 
     @autorun(selector)
     async def write(value: T) -> None:
@@ -74,7 +74,7 @@ def read_from_persistent_store(
     object_type: type[T] | None = None,
 ) -> T | None:
     """Read a part of the store from the filesystem."""
-    from ubo_app.store import store
+    from ubo_app.store.main import store
 
     for _ in range(5):
         try:

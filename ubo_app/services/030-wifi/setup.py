@@ -15,11 +15,11 @@ from wifi_manager import (
 )
 
 from ubo_app.logging import logger
-from ubo_app.store import dispatch, subscribe_event, view
-from ubo_app.store.main import (
+from ubo_app.store.core import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
+from ubo_app.store.main import dispatch, subscribe_event, view
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,

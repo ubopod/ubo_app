@@ -3,25 +3,30 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import gc
 import json
 import logging
 import sys
 import weakref
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
+# It needs to be included in `modules_snapshot`
+import numpy as np  # noqa: F401
 import platformdirs
 import pytest
+from pyfakefs.fake_filesystem_unittest import Patcher
+from str_to_bool import str_to_bool
 
-from ubo_app.constants import PERSISTENT_STORE_PATH
+from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD, PERSISTENT_STORE_PATH
 from ubo_app.setup import setup
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from types import TracebackType
 
     from _pytest.fixtures import SubRequest
-    from pyfakefs.fake_filesystem import FakeFilesystem
 
     from ubo_app.menu_app.menu import MenuApp
 
@@ -31,11 +36,12 @@ modules_snapshot = set(sys.modules)
 class AppContext:
     """Context object for tests running a menu application."""
 
-    def __init__(self: AppContext, request: SubRequest, *, fs: FakeFilesystem) -> None:
+    def __init__(self: AppContext, request: SubRequest) -> None:
         """Initialize the context."""
+        setup()
+
         self.request = request
         self.persistent_store_data = {}
-        self.fs = fs
 
     def set_persistent_storage_value(
         self: AppContext,
@@ -52,14 +58,12 @@ class AppContext:
 
     def set_app(self: AppContext, app: MenuApp) -> None:
         """Set the application."""
-        self.fs.create_file(
-            PERSISTENT_STORE_PATH.as_posix(),
-            contents=json.dumps(self.persistent_store_data),
-        )
+        PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
 
-        from ubo_app.utils.loop import setup_event_loop
+        from ubo_app.utils.loop import start_event_loop
 
-        setup_event_loop()
+        start_event_loop()
         self.app = app
         loop = asyncio.get_event_loop()
         self.task = loop.create_task(self.app.async_run(async_lib='asyncio'))
@@ -74,7 +78,9 @@ class AppContext:
         app_ref = weakref.ref(self.app)
         self.app.root.clear_widgets()
 
-        await asyncio.sleep(0.5)
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.sleep(MAIN_LOOP_GRACE_PERIOD + 0.2)
+
         del self.app
         del self.task
 
@@ -107,16 +113,110 @@ class AppContext:
         Window.close()
 
 
-@pytest.fixture()
-async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
-    """Create the application."""
-    import os
+class ConditionalFSWrapper:
+    """Conditional wrapper for the fake filesystem."""
 
-    from pyfakefs.fake_filesystem_unittest import Patcher
+    def __init__(
+        self: ConditionalFSWrapper,
+        *,
+        condition: bool,
+    ) -> None:
+        """Initialize the wrapper."""
+        self.condition = condition
+
+        # These needs to be imported before setting up fake fs
+        import coverage
+
+        from ubo_app.utils import IS_RPI
+
+        if IS_RPI:
+            import picamera2  # pyright: ignore [reportMissingImports]
+
+            picamera_skip_modules = [
+                picamera2,
+                picamera2.allocators.dmaallocator,
+                picamera2.dma_heap,
+            ]
+        else:
+            picamera_skip_modules = []
+        import headless_kivy_pi_pytest.fixtures.snapshot
+        import pyzbar.pyzbar
+        import redux_pytest.fixtures.snapshot
+
+        self.patcher = Patcher(
+            additional_skip_names=[
+                coverage,
+                pytest,
+                pyzbar.pyzbar,
+                headless_kivy_pi_pytest.fixtures.snapshot,
+                redux_pytest.fixtures.snapshot,
+                *picamera_skip_modules,
+            ],
+        )
+
+    def __enter__(self: ConditionalFSWrapper) -> Patcher | None:
+        """Enter the context."""
+        if self.condition:
+            import os
+
+            real_paths = [
+                path
+                for path in os.environ.get('UBO_TEST_REAL_PATHS', '').split(':')
+                if path
+            ]
+            patcher = self.patcher.__enter__()
+            assert patcher.fs is not None
+
+            patcher.fs.add_real_paths(
+                [
+                    os.environ['TEST_ROOT_PATH'] + '/ubo_app',
+                    os.environ['TEST_ROOT_PATH'] + '/tests/data',
+                    platformdirs.user_cache_dir('pypoetry'),
+                    *real_paths,
+                ],
+            )
+            patcher.fs.create_file(
+                '/proc/device-tree/hat/custom_0',
+                contents='{"serial_number": "<TEST_SERIAL_NUMBER>"}',
+            )
+
+            return patcher
+        return None
+
+    def __exit__(
+        self: ConditionalFSWrapper,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Exit the context."""
+        if self.condition:
+            return self.patcher.__exit__(exc_type, exc_value, traceback)
+        return None
+
+
+def _setup_headless_kivy() -> None:
+    import os
 
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
     os.environ['KIVY_METRICS_DENSITY'] = '1'
+    if sys.platform == 'darwin':
+        # Some dirty patches to make Kivy generate the same window size on macOS
+        from kivy.config import Config
+
+        os.environ['KIVY_DPI'] = '96'
+        original_config_set = Config.set
+
+        def patched_config_set(category: str, key: str, value: str) -> None:
+            if category == 'graphics':
+                if key == 'width':
+                    value = str(int(value) // 2)
+                if key == 'height':
+                    value = str(int(value) // 2)
+            original_config_set(category, key, value)
+
+        Config.set = patched_config_set
 
     import headless_kivy_pi.config
 
@@ -124,43 +224,53 @@ async def app_context(request: SubRequest) -> AsyncGenerator[AppContext, None]:
         {'automatic_fps': True, 'flip_vertical': True},
     )
 
-    current_path = Path()
-    with Patcher(
-        additional_skip_names=[
-            'redux_pytest.fixtures',
-            'tests.fixtures.snapshot',
-            'pathlib',
-        ],
-    ) as patcher:
-        assert patcher.fs is not None
 
-        patcher.fs.add_real_paths(
-            [
-                (current_path / 'tests').absolute().as_posix(),
-                (current_path / 'ubo_app').absolute().as_posix(),
-                platformdirs.user_cache_dir('pypoetry'),
-            ],
+@pytest.fixture()
+async def app_context(
+    request: SubRequest,
+    _monkeypatch: pytest.MonkeyPatch,
+) -> AsyncGenerator[AppContext, None]:
+    """Create the application."""
+    _setup_headless_kivy()
+
+    import os
+
+    from ubo_app.logging import setup_logging
+
+    setup_logging()
+
+    os.environ['TEST_ROOT_PATH'] = Path().absolute().as_posix()
+    should_use_fake_fs = (
+        request.config.getoption(
+            '--use-fake-filesystem',
+            default=cast(
+                Any,
+                str_to_bool(os.environ.get('UBO_TEST_USE_FAKE_FILESYSTEM', 'false'))
+                == 1,
+            ),
         )
+        is True
+    )
 
-        setup()
-
-        context = AppContext(request, fs=patcher.fs)
+    with ConditionalFSWrapper(condition=should_use_fake_fs) as patcher:
+        context = AppContext(request)
 
         yield context
 
         await context.clean_up()
 
-        assert not hasattr(context, 'app'), 'App not cleaned up'
-
-        del context
         del patcher
 
-        for module in set(sys.modules) - modules_snapshot:
-            if (
-                module != 'objc'
-                and 'numpy' not in module
-                and 'kivy.cache' not in module
-            ):
-                del sys.modules[module]
+    assert not hasattr(context, 'app'), 'App not cleaned up'
 
-        gc.collect()
+    del context
+
+    for module_name in set(sys.modules) - modules_snapshot:
+        if (
+            module_name != 'objc'
+            and 'kivy.cache' not in module_name
+            and 'sdbus' not in module_name
+        ):
+            del sys.modules[module_name]
+
+    gc.collect()

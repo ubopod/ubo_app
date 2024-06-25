@@ -68,7 +68,7 @@ def setup_hostname() -> None:
     id_path = Path(INSTALLATION_PATH) / 'id'
     if not id_path.exists():
         # Generate 2 letters random id
-        id = f'ubo-{" ".join(random.sample(available_letters, 2))}'
+        id = f'ubo-{random.sample(available_letters, 2)}'
         id_path.write_text(id)
 
     id = id_path.read_text().strip()
