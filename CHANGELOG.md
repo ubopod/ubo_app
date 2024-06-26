@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 0.15.1
+
+- refactor: rename "Update Code CLI" to "Redownload Code" - closes #117
+
 ## Version 0.15.0
 
 - refactor: wireless flow test is complete, during this process debugging and refactoring

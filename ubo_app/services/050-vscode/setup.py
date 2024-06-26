@@ -174,7 +174,7 @@ def generate_actions(state: VSCodeState) -> list[ActionItem | ApplicationItem]:
 
         actions.append(
             ActionItem(
-                label='Update Code CLI'
+                label='Redownload Code'
                 if state.is_binary_installed
                 else 'Download Code CLI',
                 icon='󰇚',
