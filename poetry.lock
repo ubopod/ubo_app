@@ -2,12 +2,13 @@
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.45.0"
+version = "8.45.2"
 description = "CircuitPython APIs for non-CircuitPython versions of Python such as CPython on Linux and MicroPython."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "adafruit_blinka-8.45.0.tar.gz", hash = "sha256:140c6a56ca33fcffd23a5b640fe4289a463cbe8264771d98a9a7c49d9c6099db"},
+    {file = "Adafruit_Blinka-8.45.2-py3-none-any.whl", hash = "sha256:af72f085e72f3a14a37d5d836d29c60c74c1c6da9dfd1572a5b4a30e5e480deb"},
+    {file = "adafruit_blinka-8.45.2.tar.gz", hash = "sha256:d61d2ad58e897f1033d8e629dc12f3f9efb040810c48d8aa08fffd8e91fb3452"},
 ]
 
 [package.dependencies]
@@ -17,7 +18,7 @@ Adafruit-PureIO = ">=1.1.7"
 binho-host-adapter = ">=0.1.6"
 numpy = ">=1.21.5"
 pyftdi = ">=0.40.0"
-sysv_ipc = {version = ">=1.1.0", markers = "sys_platform == \"linux\" and platform_machine != \"mips\""}
+sysv-ipc = {version = ">=1.1.0", markers = "sys_platform == \"linux\" and platform_machine != \"mips\""}
 
 [[package]]
 name = "adafruit-circuitpython-aw9523"
@@ -128,13 +129,13 @@ typing-extensions = ">=4.0,<5.0"
 
 [[package]]
 name = "adafruit-circuitpython-requests"
-version = "4.1.1"
+version = "4.1.2"
 description = "A requests-like library for web interfacing"
 optional = false
 python-versions = "*"
 files = [
-    {file = "adafruit_circuitpython_requests-4.1.1-py3-none-any.whl", hash = "sha256:19f4115f082086af108f8120f8ce348bc6368eb9735daa73b3c03431f049fb26"},
-    {file = "adafruit_circuitpython_requests-4.1.1.tar.gz", hash = "sha256:f032980afcc7f84919cb3772b79eaa2f2ab079749991d4ba6d72d7348a1f57a3"},
+    {file = "adafruit_circuitpython_requests-4.1.2-py3-none-any.whl", hash = "sha256:bc377084cc2b801044a45209fe81cc9741ae8863bf3ee61a805fc144e102ec10"},
+    {file = "adafruit_circuitpython_requests-4.1.2.tar.gz", hash = "sha256:6060c075e3bf63ee4dba20f297f9468250dcb4e6d60f4235bfd46a79c9dfbd2f"},
 ]
 
 [package.dependencies]
@@ -801,13 +802,13 @@ files = [
 
 [[package]]
 name = "headless-kivy-pi"
-version = "0.8.0"
-description = "Headless renderer for Kivy framework on Raspberry Pi"
+version = "0.8.2"
+description = "Headless renderer for Kivy framework"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "headless_kivy_pi-0.8.0-py3-none-any.whl", hash = "sha256:5bae90db127539f9ac913f02f8a2f0573810722843d509bd01d0bb57729dbe2b"},
-    {file = "headless_kivy_pi-0.8.0.tar.gz", hash = "sha256:effd86e6eba2cd339fc48ba47c7eefeaadec9700741651388057663a2ff9a65c"},
+    {file = "headless_kivy_pi-0.8.2-py3-none-any.whl", hash = "sha256:075568a07234a544e77619a293f5481e06e8f5448956000f4eb6e20914684d15"},
+    {file = "headless_kivy_pi-0.8.2.tar.gz", hash = "sha256:016ed91def7994a3fa29574398f4186ba361697fdce94e3512d702344da1f7ad"},
 ]
 
 [package.dependencies]
@@ -847,13 +848,13 @@ files = [
 
 [[package]]
 name = "ipython"
-version = "8.25.0"
+version = "8.26.0"
 description = "IPython: Productive Interactive Computing"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "ipython-8.25.0-py3-none-any.whl", hash = "sha256:53eee7ad44df903a06655871cbab66d156a051fd86f3ec6750470ac9604ac1ab"},
-    {file = "ipython-8.25.0.tar.gz", hash = "sha256:c6ed726a140b6e725b911528f80439c534fac915246af3efc39440a6b0f9d716"},
+    {file = "ipython-8.26.0-py3-none-any.whl", hash = "sha256:e6b347c27bdf9c32ee9d31ae85defc525755a1869f14057e900675b9e8d6e6ff"},
+    {file = "ipython-8.26.0.tar.gz", hash = "sha256:1cec0fbba8404af13facebe83d04436a7434c7400e59f47acf467c64abd0956c"},
 ]
 
 [package.dependencies]
@@ -879,7 +880,7 @@ nbformat = ["nbformat"]
 notebook = ["ipywidgets", "notebook"]
 parallel = ["ipyparallel"]
 qtconsole = ["qtconsole"]
-test = ["pickleshare", "pytest", "pytest-asyncio (<0.22)", "testpath"]
+test = ["packaging", "pickleshare", "pytest", "pytest-asyncio (<0.22)", "testpath"]
 test-extra = ["curio", "ipython[test]", "matplotlib (!=3.2.0)", "nbformat", "numpy (>=1.23)", "pandas", "trio"]
 
 [[package]]
@@ -1537,13 +1538,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.368"
+version = "1.1.369"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.368-py3-none-any.whl", hash = "sha256:4a86e34b61c755b43b367af7fbf927fc6466fff6b81a9dcea07d42416c640af3"},
-    {file = "pyright-1.1.368.tar.gz", hash = "sha256:9b2aa48142d9d9fc9a6aedff743c76873cc4e615f3297cdbf893d5793f75b306"},
+    {file = "pyright-1.1.369-py3-none-any.whl", hash = "sha256:06d5167a8d7be62523ced0265c5d2f1e022e110caf57a25d92f50fb2d07bcda0"},
+    {file = "pyright-1.1.369.tar.gz", hash = "sha256:ad290710072d021e213b98cc7a2f90ae3a48609ef5b978f749346d1a47eb9af8"},
 ]
 
 [package.dependencies]
@@ -1734,13 +1735,13 @@ python-strtobool = ">=1.0.0,<2.0.0"
 
 [[package]]
 name = "python-strtobool"
-version = "1.0.0"
+version = "1.0.2"
 description = "str_to_bool function for Python"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "python_strtobool-1.0.0-py3-none-any.whl", hash = "sha256:a8207d1536ba22a9dd74e1511fe45c233723bb73c65f36686206f244a0239ec1"},
-    {file = "python_strtobool-1.0.0.tar.gz", hash = "sha256:0f72eca34f1e3bc6cc5ba0adcd8fe745c48a4e0a563a46d933147941702c8794"},
+    {file = "python_strtobool-1.0.2-py3-none-any.whl", hash = "sha256:107d93760078a7b7eee91b455077fd6123fd94e6474815dfe306854cdfa47d70"},
+    {file = "python_strtobool-1.0.2.tar.gz", hash = "sha256:0c72ed5391e2aeef11bcbe754b96ed8770066000ea7ef0c2d33555c4538c6139"},
 ]
 
 [[package]]
@@ -2079,26 +2080,26 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.11.12"
+version = "0.11.15"
 description = "GUI sdk for Ubo Pod"
 optional = true
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.11.12-py3-none-any.whl", hash = "sha256:ea1c32c45f6968a5e1fe24b9ebb2bf832fbd4e55c82e1a77b8ebcb6743b200e7"},
-    {file = "ubo_gui-0.11.12.tar.gz", hash = "sha256:a313d2257f5a0a970d3acc532a9dd984d9f7f705abde5c52a197cc0ab410e2ce"},
+    {file = "ubo_gui-0.11.15-py3-none-any.whl", hash = "sha256:2f54b699e16ee0bb4506d21126d5d929dbfe0682fd7a026a9b4f635d4179bbbf"},
+    {file = "ubo_gui-0.11.15.tar.gz", hash = "sha256:f7f5c80dd32c1736d84528085f7d1106aab3ff636d0ec61550762e393cd265b1"},
 ]
 
 [package.dependencies]
 headless-kivy-pi = [
-    {version = ">=0.8.0,<0.9.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
-    {version = ">=0.8.0,<0.9.0", extras = ["default"], optional = true, markers = "extra == \"default\""},
+    {version = ">=0.8.1,<0.9.0", extras = ["dev"], optional = true, markers = "extra == \"dev\""},
+    {version = ">=0.8.1,<0.9.0", extras = ["default"], optional = true, markers = "extra == \"default\""},
 ]
 python-immutable = ">=1.0.2,<2.0.0"
 qrcode = ">=7.4.2,<8.0.0"
 
 [package.extras]
-default = ["headless-kivy-pi[default] (>=0.8.0,<0.9.0)"]
-dev = ["headless-kivy-pi[dev] (>=0.8.0,<0.9.0)"]
+default = ["headless-kivy-pi[default] (>=0.8.1,<0.9.0)"]
+dev = ["headless-kivy-pi[dev] (>=0.8.1,<0.9.0)"]
 
 [[package]]
 name = "urllib3"
@@ -2238,4 +2239,4 @@ dev = ["ubo-gui", "ubo-gui"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "daa51bdc276e5b80d64b01dba55d271d9b296f3e60a9466289ec37a07e40b7af"
+content-hash = "d412f273bdcd3ea04ed92404f29d34a010186da1f277e2f31c984e761d6d7f4d"

@@ -60,7 +60,7 @@ def wait_for_menu_item(
                 assert any(item and item.icon == icon for item in items)
 
         await check()
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(1)
 
     return wait_for_menu_item
 
@@ -96,6 +96,6 @@ def wait_for_empty_menu(app_context: AppContext, wait_for: WaitFor) -> WaitForEm
                 assert current_page.placeholder == placeholder
 
         await check()
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(1)
 
     return wait_for_empty_menu

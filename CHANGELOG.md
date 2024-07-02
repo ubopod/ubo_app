@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 0.15.2
+
+- feat: make tests running on an ubo pod visible on its screen
+
 ## Version 0.15.1
 
 - refactor: rename "Update Code CLI" to "Redownload Code" - closes #117

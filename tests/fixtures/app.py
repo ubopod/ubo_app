@@ -218,6 +218,13 @@ def _setup_headless_kivy() -> None:
 
         Config.set = patched_config_set
 
+    from ubo_app.utils import IS_RPI
+
+    if not IS_RPI:
+        from kivy.config import Config
+
+        Config.set('graphics', 'window_state', 'hidden')
+
     import headless_kivy_pi.config
 
     headless_kivy_pi.config.setup_headless_kivy(

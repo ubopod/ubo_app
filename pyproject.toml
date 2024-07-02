@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.15.1"
+version = "0.15.2"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -18,10 +18,10 @@ priority = "primary"
 python = "^3.11"
 psutil = "^5.9.8"
 ubo-gui = [
-  { version = "^0.11.12", markers = "extra=='default'", extras = [
+  { version = "^0.11.15", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.11.12", markers = "extra=='dev'", extras = [
+  { version = "^0.11.15", markers = "extra=='dev'", extras = [
     "dev",
   ] },
 ]
