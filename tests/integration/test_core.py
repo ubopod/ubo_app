@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from tenacity import stop_after_attempt
 
 if TYPE_CHECKING:
-    from headless_kivy_pi_pytest.fixtures import WindowSnapshot
+    from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot, WaitFor
 
     from tests.fixtures import AppContext
@@ -34,7 +34,7 @@ async def test_app_runs_and_exits(
 
     await stack_is_loaded()
 
-    from headless_kivy_pi import HeadlessWidget, config
+    from headless_kivy import HeadlessWidget, config
 
     @wait_for(run_async=True, stop=stop_after_attempt(5))
     def check() -> None:

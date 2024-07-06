@@ -19,7 +19,12 @@ import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
 
-from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD, PERSISTENT_STORE_PATH
+from ubo_app.constants import (
+    HEIGHT,
+    MAIN_LOOP_GRACE_PERIOD,
+    PERSISTENT_STORE_PATH,
+    WIDTH,
+)
 from ubo_app.setup import setup
 
 if TYPE_CHECKING:
@@ -139,7 +144,7 @@ class ConditionalFSWrapper:
             ]
         else:
             picamera_skip_modules = []
-        import headless_kivy_pi_pytest.fixtures.snapshot
+        import headless_kivy_pytest.fixtures.snapshot
         import pyzbar.pyzbar
         import redux_pytest.fixtures.snapshot
 
@@ -148,7 +153,7 @@ class ConditionalFSWrapper:
                 coverage,
                 pytest,
                 pyzbar.pyzbar,
-                headless_kivy_pi_pytest.fixtures.snapshot,
+                headless_kivy_pytest.fixtures.snapshot,
                 redux_pytest.fixtures.snapshot,
                 *picamera_skip_modules,
             ],
@@ -225,10 +230,18 @@ def _setup_headless_kivy() -> None:
 
         Config.set('graphics', 'window_state', 'hidden')
 
-    import headless_kivy_pi.config
+    import headless_kivy.config
 
-    headless_kivy_pi.config.setup_headless_kivy(
-        {'automatic_fps': True, 'flip_vertical': True},
+    from ubo_app.display import render_on_display
+
+    headless_kivy.config.setup_headless_kivy(
+        {
+            'callback': render_on_display,
+            'automatic_fps': True,
+            'flip_vertical': True,
+            'width': WIDTH,
+            'height': HEIGHT,
+        },
     )
 
 

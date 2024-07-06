@@ -137,6 +137,7 @@ def setup_logging() -> None:
         logger.setLevel(level)
         add_file_handler(logger, level)
         add_stdout_handler(logger, level)
+
     if GUI_LOG_LEVEL:
         import logging
 

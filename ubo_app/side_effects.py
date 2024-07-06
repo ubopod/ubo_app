@@ -69,14 +69,14 @@ def write_image(image_path: Path, array: NDArray) -> None:
 
 def take_screenshot() -> None:
     """Take a screenshot of the screen."""
-    import headless_kivy_pi.config
+    from headless_kivy import HeadlessWidget
 
     counter = 0
     while (path := Path(f'screenshots/ubo-screenshot-{counter:03d}.png')).exists():
         counter += 1
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    write_image(path, headless_kivy_pi.config._display.raw_data)  # noqa: SLF001
+    write_image(path, HeadlessWidget.raw_data)
 
 
 def take_snapshot() -> None:

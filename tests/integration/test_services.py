@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from headless_kivy_pi_pytest.fixtures import WindowSnapshot
+    from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot
 
     from tests.fixtures import AppContext, LoadServices, Stability

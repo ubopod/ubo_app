@@ -6,13 +6,13 @@ import asyncio
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
-from headless_kivy_pi_pytest.fixtures.snapshot import write_image
+from headless_kivy_pytest.fixtures.snapshot import write_image
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-    from headless_kivy_pi_pytest.fixtures import WindowSnapshot
+    from headless_kivy_pytest.fixtures import WindowSnapshot
     from numpy._typing import NDArray
     from redux_pytest.fixtures import StoreSnapshot
     from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
@@ -113,9 +113,9 @@ async def stability(
             latest_store_snapshot = new_snapshot
 
             if not is_window_stable:
-                from headless_kivy_pi.config import _display
+                from headless_kivy import HeadlessWidget
 
-                window_snapshots.append(_display.raw_data.copy())
+                window_snapshots.append(HeadlessWidget.raw_data.copy())
 
             if not is_store_stable:
                 store_snapshots.append(store_snapshot.json_snapshot())
@@ -123,7 +123,7 @@ async def stability(
             assert is_window_stable, 'The content of the screen is not stable yet'
             assert is_store_stable, 'The content of the store is not stable yet'
 
-            from headless_kivy_pi import HeadlessWidget, config
+            from headless_kivy import HeadlessWidget, config
 
             headless_widget_instance = HeadlessWidget.get_instance(app_context.app.root)
             if headless_widget_instance:

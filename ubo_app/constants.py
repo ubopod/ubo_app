@@ -40,3 +40,7 @@ DOCKER_INSTALLATION_LOCK_FILE = Path('/var/run/ubo/docker_installation.lock')
 CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)
 SECRETS_PATH = CONFIG_PATH / '.secrets.env'
 PERSISTENT_STORE_PATH = CONFIG_PATH / 'state.json'
+
+WIDTH = 240
+HEIGHT = 240
+BYTES_PER_PIXEL = 2

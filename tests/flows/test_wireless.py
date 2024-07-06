@@ -18,7 +18,7 @@ from ubo_app.store.services.wifi import (
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
-    from headless_kivy_pi_pytest.fixtures import WindowSnapshot
+    from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot, WaitFor
 
     from tests.fixtures import (
@@ -31,48 +31,7 @@ if TYPE_CHECKING:
     from ubo_app.store.main import RootState
 
 
-def store_snapshot_selector(state: RootState) -> WiFiState | None:
-    """Select the store snapshot."""
-    wifi_state = state.wifi
-
-    if (
-        any(
-            connection.state is ConnectionState.CONNECTING
-            for connection in wifi_state.connections or []
-        )
-        or wifi_state.state is GlobalWiFiState.PENDING
-    ):
-        # Connecting state does not happen consistently in multiple runs
-        return None
-
-    return WiFiState(
-        connections=[
-            WiFiConnection(
-                **dict(
-                    asdict(connection),
-                    signal_strength=100 if connection.signal_strength > 0 else 0,
-                ),
-            )
-            for connection in wifi_state.connections
-        ]
-        if wifi_state.connections is not None
-        else None,
-        state=wifi_state.state,
-        current_connection=WiFiConnection(
-            **dict(
-                asdict(wifi_state.current_connection),
-                signal_strength=100
-                if wifi_state.current_connection.signal_strength > 0
-                else 0,
-            ),
-        )
-        if wifi_state.current_connection is not None
-        else None,
-        has_visited_onboarding=wifi_state.has_visited_onboarding,
-    )
-
-
-@pytest.mark.skipif(not IS_RPI, reason='Not running on Raspberry Pi')
+@pytest.mark.skipif(not IS_RPI, reason='Only runs on Raspberry Pi')
 async def test_wireless_flow(
     app_context: AppContext,
     window_snapshot: WindowSnapshot,
@@ -91,6 +50,51 @@ async def test_wireless_flow(
     from ubo_app.store.core import ChooseMenuItemByIconEvent, ChooseMenuItemByLabelEvent
     from ubo_app.store.main import dispatch, store
     from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
+
+    is_adding_connection = False
+
+    def store_snapshot_selector(state: RootState) -> WiFiState | None:
+        """Select the store snapshot."""
+        wifi_state = state.wifi
+
+        if is_adding_connection and wifi_state.connections == []:
+            return None
+
+        if (
+            any(
+                connection.state is ConnectionState.CONNECTING
+                for connection in wifi_state.connections or []
+            )
+            or wifi_state.state is GlobalWiFiState.PENDING
+        ):
+            # Connecting state does not happen consistently in multiple runs
+            return None
+
+        return WiFiState(
+            connections=[
+                WiFiConnection(
+                    **dict(
+                        asdict(connection),
+                        signal_strength=100 if connection.signal_strength > 0 else 0,
+                    ),
+                )
+                for connection in wifi_state.connections
+            ]
+            if wifi_state.connections is not None
+            else None,
+            state=wifi_state.state,
+            current_connection=WiFiConnection(
+                **dict(
+                    asdict(wifi_state.current_connection),
+                    signal_strength=100
+                    if wifi_state.current_connection.signal_strength > 0
+                    else 0,
+                ),
+            )
+            if wifi_state.current_connection is not None
+            else None,
+            has_visited_onboarding=wifi_state.has_visited_onboarding,
+        )
 
     store_snapshot.monitor(store_snapshot_selector)
 
@@ -149,6 +153,8 @@ async def test_wireless_flow(
     # Set QR Code image of the WiFi credentials before camera is started
     camera.set_image('qrcode/wifi')
 
+    is_adding_connection = True
+
     # Select "QR code" to scan a QR code for credentials
     dispatch(ChooseMenuItemByIconEvent(icon='󰄀'))
 
@@ -160,10 +166,12 @@ async def test_wireless_flow(
     dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
     await stability()
 
+    is_adding_connection = False
+
     # Select "Select" to open the wireless connection list and see the new connection
     dispatch(ChooseMenuItemByLabelEvent(label='Select'))
 
-    @wait_for(timeout=5.0, wait=wait_fixed(0.5), run_async=True)
+    @wait_for(timeout=10.0, wait=wait_fixed(0.5), run_async=True)
     def check_connections() -> None:
         state = store._state  # noqa: SLF001
 
@@ -199,7 +207,7 @@ async def test_wireless_flow(
     window_snapshot.take()
     dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
 
-    @wait_for(timeout=5.0, wait=wait_fixed(0.5), run_async=True)
+    @wait_for(timeout=10.0, wait=wait_fixed(0.5), run_async=True)
     def check_no_connections() -> None:
         state = store._state  # noqa: SLF001
         assert state

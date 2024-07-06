@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 0.15.3
+
+- refactor: update to the latest version of `headless-kivy` and migrate its hardware
+  related code to this codebase
+
 ## Version 0.15.2
 
 - feat: make tests running on an ubo pod visible on its screen
@@ -354,7 +359,8 @@
 
 ## Version 0.9.8
 
-- hotfix: wait for lingering process to finish and retry usreland `systemctl --user daemon-reload` if needed
+- hotfix: wait for lingering process to finish and retry usreland
+  `systemctl --user daemon-reload` if needed
 - hotfix: the `install_docker.sh` script now runs if an optional flag is set for
   bootstrap command
 

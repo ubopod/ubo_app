@@ -29,7 +29,7 @@ from tests.fixtures import (  # noqa: E402, I001
     wait_for_empty_menu,
     wait_for_menu_item,
 )
-from headless_kivy_pi_pytest.fixtures import WindowSnapshot, window_snapshot  # noqa: E402
+from headless_kivy_pytest.fixtures import WindowSnapshot, window_snapshot  # noqa: E402
 from redux_pytest.fixtures import (  # noqa: E402
     StoreMonitor,
     Waiter,

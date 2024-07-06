@@ -13,7 +13,6 @@ import wave
 from typing import TYPE_CHECKING
 
 import alsaaudio
-import pulsectl
 import pyaudio
 
 from ubo_app.logging import logger
@@ -58,17 +57,6 @@ class AudioManager:
                     self.cardindex = cards.index(
                         next(card for card in cards if 'wm8960' in card),
                     )
-                    try:
-                        with pulsectl.Pulse('set-default-sink') as pulse:
-                            for sink in pulse.sink_list():
-                                if 'alsa.card' in sink.proplist and str(
-                                    sink.proplist['alsa.card'],
-                                ) == str(self.cardindex):
-                                    pulse.sink_default_set(sink)
-                                    return
-                            logger.error('No audio card found')
-                    except pulsectl.PulseError:
-                        logger.exception('Not able to connect to pulseaudio')
                 except StopIteration:
                     logger.exception('No audio card found')
                 except OSError:

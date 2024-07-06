@@ -21,17 +21,26 @@ def main() -> None:
     os.environ['KCFG_KIVY_EXIT_ON_ESCAPE'] = '0'
 
     setup()
-    setup_error_handling()
     setup_logging()
+    setup_error_handling()
 
     from ubo_app.utils.loop import start_event_loop
 
     start_event_loop()
 
-    import headless_kivy_pi.config
+    import headless_kivy.config
 
-    headless_kivy_pi.config.setup_headless_kivy(
-        {'automatic_fps': True, 'flip_vertical': True},
+    from ubo_app.constants import HEIGHT, WIDTH
+    from ubo_app.display import render_on_display
+
+    headless_kivy.config.setup_headless_kivy(
+        {
+            'callback': render_on_display,
+            'automatic_fps': True,
+            'flip_vertical': True,
+            'width': WIDTH,
+            'height': HEIGHT,
+        },
     )
 
     from ubo_app.load_services import load_services

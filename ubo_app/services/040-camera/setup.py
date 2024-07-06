@@ -5,7 +5,7 @@ from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING
 
-import headless_kivy_pi.config
+import headless_kivy.config
 import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
@@ -14,6 +14,7 @@ from picamera2 import Picamera2  # pyright: ignore [reportMissingImports]
 from pyzbar.pyzbar import decode
 from ubo_gui.page import PageWidget
 
+from ubo_app import display
 from ubo_app.store.core import CloseApplicationEvent, OpenApplicationEvent
 from ubo_app.store.main import dispatch, subscribe_event
 from ubo_app.store.services.camera import (
@@ -64,8 +65,8 @@ def initialize_camera() -> Picamera2:
         {
             'format': 'RGB888',
             'size': (
-                headless_kivy_pi.config.width() * 2,
-                headless_kivy_pi.config.height() * 2,
+                headless_kivy.config.width() * 2,
+                headless_kivy.config.height() * 2,
             ),
         },
     )
@@ -78,9 +79,8 @@ def initialize_camera() -> Picamera2:
 
 
 def feed_viewfinder(picamera2: Picamera2) -> None:
-    width = headless_kivy_pi.config.width()
-    height = headless_kivy_pi.config.height()
-    display = headless_kivy_pi.config._display  # noqa: SLF001
+    width = headless_kivy.config.width()
+    height = headless_kivy.config.height()
 
     if not IS_RPI:
         path = Path('/tmp/qrcode_input.txt')  # noqa: S108
@@ -149,7 +149,7 @@ def feed_viewfinder(picamera2: Picamera2) -> None:
         np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
     )
 
-    display._block(0, 0, width - 1, height - 1, data_bytes)  # noqa: SLF001
+    display.display._block(0, 0, width - 1, height - 1, data_bytes)  # noqa: SLF001
 
 
 @mainthread
@@ -169,7 +169,7 @@ def start_camera_viewfinder() -> None:
 
     feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder_locked, 0.04)
 
-    headless_kivy_pi.config.pause()
+    display.pause()
 
     def handle_stop_viewfinder() -> None:
         with fs_lock:
@@ -177,7 +177,7 @@ def start_camera_viewfinder() -> None:
             is_running = False
             feed_viewfinder_scheduler.cancel()
             dispatch(CloseApplicationEvent(application=application))
-            headless_kivy_pi.config.resume()
+            display.resume()
             cancel_subscription()
             picamera2.stop()
 

@@ -10,7 +10,7 @@ import numpy as np
 def setup() -> None:
     """Set up for different environments."""
     dotenv.load_dotenv(Path(__file__).parent / '.env')
-
+    import ubo_app.display as _  # noqa: F401
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
@@ -21,6 +21,8 @@ def setup() -> None:
         from ubo_app.utils.fake import Fake
 
         sys.modules['alsaaudio'] = Fake()
+        sys.modules['board'] = Fake()
+        sys.modules['digitalio'] = Fake()
         sys.modules['pulsectl'] = Fake()
         sys.modules['sdbus'] = Fake()
         sys.modules['sdbus_async'] = Fake()

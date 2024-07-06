@@ -46,11 +46,7 @@ class WiFiConnectionPage(PromptWidget):
             create_task(disconnect_wireless_connection())
         else:
             create_task(connect_wireless_connection(self.ssid))
-        dispatch(
-            WiFiUpdateRequestAction(
-                reset=True,
-            ),
-        )
+        dispatch(WiFiUpdateRequestAction(reset=True))
 
     def second_option_callback(self: WiFiConnectionPage) -> None:
         create_task(forget_wireless_connection(self.ssid))
