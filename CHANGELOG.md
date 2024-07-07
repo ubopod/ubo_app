@@ -4,6 +4,8 @@
 
 - refactor: update to the latest version of `headless-kivy` and migrate its hardware
   related code to this codebase
+- refactor(sensors): migrate initialization of i2c sensors out of the read function
+  so that it happens once
 
 ## Version 0.15.2
 

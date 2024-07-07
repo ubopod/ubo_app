@@ -202,11 +202,6 @@ async def test_wireless_flow(
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Delete'))
 
-    # Dismiss the notification informing the user that the connection was deleted
-    await wait_for_menu_item(label='', icon='󰆴')
-    window_snapshot.take()
-    dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
-
     @wait_for(timeout=10.0, wait=wait_fixed(0.5), run_async=True)
     def check_no_connections() -> None:
         state = store._state  # noqa: SLF001
@@ -215,6 +210,11 @@ async def test_wireless_flow(
 
     await check_no_connections()
     await stability()
+
+    # Dismiss the notification informing the user that the connection was deleted
+    await wait_for_menu_item(label='', icon='󰆴')
+    window_snapshot.take()
+    dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
 
     await wait_for_empty_menu(placeholder='No Wi-Fi connections found')
     await asyncio.sleep(1)

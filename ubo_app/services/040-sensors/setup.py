@@ -4,22 +4,21 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import adafruit_pct2075
+import adafruit_veml7700
+import board
 from redux import FinishEvent
 
 from ubo_app.store.main import dispatch, subscribe_event
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
 
+temperature_sensor: adafruit_pct2075.PCT2075
+light_sensor: adafruit_veml7700.VEML7700
+
 
 def read_sensors(_: float | None = None) -> None:
     """Read the sensor."""
-    import adafruit_pct2075
-    import adafruit_veml7700
-    import board
-
-    i2c = board.I2C()
-    temperature_sensor = adafruit_pct2075.PCT2075(i2c, address=0x48)
     temperature = temperature_sensor.temperature
-    light_sensor = adafruit_veml7700.VEML7700(i2c, address=0x10)
     light = light_sensor.lux
     dispatch(
         SensorsReportReadingAction(
@@ -38,6 +37,12 @@ def read_sensors(_: float | None = None) -> None:
 def init_service() -> None:
     """Initialize the service."""
     from kivy.clock import Clock
+
+    global temperature_sensor, light_sensor  # noqa: PLW0603
+
+    i2c = board.I2C()
+    temperature_sensor = adafruit_pct2075.PCT2075(i2c, address=0x48)
+    light_sensor = adafruit_veml7700.VEML7700(i2c, address=0x10)
 
     clock_event = Clock.schedule_interval(read_sensors, 1)
     subscribe_event(FinishEvent, clock_event.cancel)
