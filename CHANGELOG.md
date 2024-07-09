@@ -6,6 +6,7 @@
   related code to this codebase
 - refactor(sensors): migrate initialization of i2c sensors out of the read function
   so that it happens once
+- fix(system): disable led-ring in RPi5 as it is not supported yet
 
 ## Version 0.15.2
 

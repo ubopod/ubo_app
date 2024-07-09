@@ -3,15 +3,23 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from threading import Thread
 from typing import TYPE_CHECKING, cast
 
 import board
-import neopixel
 from adafruit_blinka.microcontroller.generic_micropython import Pin
 from ubo_gui.menu import warnings
 
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
+from ubo_app.utils.fake import Fake
+
+if Path('/proc/device-tree/model').read_text().startswith('Raspberry Pi 5'):
+    import sys
+
+    sys.modules['neopixel'] = Fake()
+
+import neopixel
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -46,6 +54,7 @@ class LEDManager:
             self.brightness = 1.0
 
         self.num_leds = NUM_LEDS
+
         self.pixels = neopixel.NeoPixel(
             pin=cast(Pin, board.D12),
             n=self.num_leds,

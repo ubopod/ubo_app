@@ -63,6 +63,12 @@ class Fake(ModuleType):
         )
         return self
 
+    def __setitem__(self: Fake, key: object, value: object) -> None:
+        logger.verbose(
+            'Setting fake item of a `Fake` instance',
+            extra={'key': key, 'value': value},
+        )
+
     def __call__(self: Fake, *args: object, **kwargs: dict[str, Any]) -> object:
         logger.verbose(
             'Calling a `Fake` instance',
