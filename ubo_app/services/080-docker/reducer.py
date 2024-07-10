@@ -81,7 +81,7 @@ class ImageEntry(Immutable):
     path: str
     registry: str
     dependencies: list[str] | None = None
-    ports: dict[str, str] = field(default_factory=dict)
+    ports: dict[str, int | None] = field(default_factory=dict)
     hosts: dict[str, str] = field(default_factory=dict)
     note: str | None = None
     environment_vairables: (
@@ -112,7 +112,7 @@ IMAGES = {
             icon='󰟐',
             path=DOCKER_PREFIX + 'homeassistant/home-assistant:stable',
             registry='docker.io',
-            ports={'8123/tcp': '8123'},
+            ports={'8123/tcp': 8123},
         ),
         ImageEntry(
             id='home_bridge',
@@ -144,7 +144,7 @@ IMAGES = {
             icon='󰳆',
             path=DOCKER_PREFIX + 'ollama/ollama:latest',
             registry='docker.io',
-            ports={'11434/tcp': '11434'},
+            ports={'11434/tcp': 11434},
         ),
         ImageEntry(
             id='open_webui',
@@ -153,7 +153,7 @@ IMAGES = {
             path=DOCKER_PREFIX + 'open-webui/open-webui:main',
             registry='ghcr.io',
             dependencies=['ollama'],
-            ports={'8080/tcp': '8080'},
+            ports={'8080/tcp': 8080},
             hosts={'host.docker.internal': 'ollama'},
         ),
         ImageEntry(

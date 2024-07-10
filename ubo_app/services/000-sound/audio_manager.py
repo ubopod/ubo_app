@@ -39,7 +39,7 @@ def _linear_to_logarithmic(volume_linear: float) -> int:
 class AudioManager:
     """Class for managing audio playback and recording."""
 
-    stream: pyaudio.PyAudio.Stream | None = None
+    stream: pyaudio.Stream | None = None
 
     def __init__(self: AudioManager) -> None:
         """Initialize the audio manager."""
@@ -131,7 +131,7 @@ class AudioManager:
         channels: int,
         rate: int,
         width: int,
-    ) -> pyaudio.PyAudio.Stream:
+    ) -> pyaudio.Stream:
         """Initialize the playback stream.
 
         Parameters

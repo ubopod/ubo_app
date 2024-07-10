@@ -50,9 +50,9 @@ Ubo Pod ships with a pre-flashed MicroSD card that has the app installed on it b
 If you don't have it, or you just want to set up a fresh device, then:
 
 1. download one of the images from the release section
-2. Use Raspberry Pi Images and choose `custom image` to provide the download image file.
-3. Write to the image
-4. Use the image to boot your Ubo Pod or Raspberry Pi
+1. Use Raspberry Pi Images and choose `custom image` to provide the download image file.
+1. Write to the image
+1. Use the image to boot your Ubo Pod or Raspberry Pi
 
 This is the fastest, easiest, and recommended way to get started with Ubo App.
 
@@ -111,6 +111,7 @@ Note that as part of the installation process, these debian packages are install
 - python3-pip
 - python3-pyaudio
 - python3-virtualenv
+- rpi-lgpio
 
 Also be aware that ubo-app only installs in `/opt/ubo` and it is not customizable
 at the moment.

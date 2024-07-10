@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.15.3"
+version = "0.15.4"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -47,6 +47,7 @@ python-strtobool = "^1.0.0"
 
 adafruit-circuitpython-rgb-display = { version = "^3.11.0", markers = "platform_machine=='aarch64'" }
 adafruit-circuitpython-aw9523 = { version = "^1.1.7", markers = "platform_machine=='aarch64'" }
+rpi-lgpio = { version = "^0.6", markers = "platform_machine=='aarch64'" }
 
 [tool.poetry.group.dev]
 optional = true

@@ -37,7 +37,7 @@ from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine, Mapping, Sequence
+    from collections.abc import Callable, Coroutine, Sequence
 
     from ubo_app.store.services.ip import IpNetworkInterface
 
@@ -302,9 +302,9 @@ async def _process_str(
     return value
 
 
-async def _process_environment_variables(image_id: str) -> Mapping[str, str | None]:
+async def _process_environment_variables(image_id: str) -> dict[str, str]:
     environment_variables = IMAGES[image_id].environment_vairables or {}
-    result: dict[str, str | None] = {}
+    result: dict[str, str] = {}
 
     for key in environment_variables:
         result[key] = await _process_str(environment_variables[key])
