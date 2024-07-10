@@ -3,6 +3,8 @@
 ## Version 0.15.4
 
 - fix(core): add `rpi-lgpio` to dependencies to make the LCD work on RPi5
+- fix(core): add `dtoverlay=spi0-0cs` to `/boot/firmware/config.txt` to make the
+  LCD work on RPi5
 
 ## Version 0.15.3
 

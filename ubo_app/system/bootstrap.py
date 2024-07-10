@@ -190,6 +190,7 @@ def configure_fan() -> None:
         return
     with Path('/boot/firmware/config.txt').open('a') as config_file:
         config_file.write('dtoverlay=gpio-fan,gpiopin=22,temp=60000\n')
+        config_file.write('dtoverlay=spi0-0cs\n')
 
 
 def setup_polkit() -> None:
