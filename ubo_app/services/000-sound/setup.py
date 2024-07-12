@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import sleep
 
 from audio_manager import AudioManager
 from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
@@ -13,6 +14,7 @@ from ubo_app.utils.persistent_store import register_persistent_store
 
 
 def init_service() -> None:
+    sleep(5)  # Wait for the system to boot
     audio_manager = AudioManager()
 
     register_persistent_store(
