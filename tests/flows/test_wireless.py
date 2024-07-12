@@ -209,7 +209,6 @@ async def test_wireless_flow(
         assert state.wifi.connections == []
 
     await check_no_connections()
-    await stability()
 
     # Dismiss the notification informing the user that the connection was deleted
     await wait_for_menu_item(label='', icon='󰆴')

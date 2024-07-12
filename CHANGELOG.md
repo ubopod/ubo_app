@@ -3,15 +3,13 @@
 ## Version 0.15.4
 
 - fix(core): add `rpi-lgpio` to dependencies to make the LCD work on RPi5
-- fix(core): add `dtoverlay=spi0-0cs` to `/boot/firmware/config.txt` to make the
-  LCD work on RPi5
+- fix(core): add `dtoverlay=spi0-0cs` to `/boot/firmware/config.txt` to make the LCD work on RPi5
+- refactor: general housekeeping, improving typing, linting, resource management, etc
 
 ## Version 0.15.3
 
-- refactor: update to the latest version of `headless-kivy` and migrate its hardware
-  related code to this codebase
-- refactor(sensors): migrate initialization of i2c sensors out of the read function
-  so that it happens once
+- refactor: update to the latest version of `headless-kivy` and migrate its hardware related code to this codebase
+- refactor(sensors): migrate initialization of i2c sensors out of the read function so that it happens once
 - fix(system): disable led-ring in RPi5 as it is not supported yet
 
 ## Version 0.15.2
@@ -24,42 +22,30 @@
 
 ## Version 0.15.0
 
-- refactor: wireless flow test is complete, during this process debugging and refactoring
-  is done in different parts of code as the issues were found - closes #52
+- refactor: wireless flow test is complete, during this process debugging and refactoringggis done in different parts of code as the issues were found - closes #52
 - feat(core): make file handlers in logging `RotatingFileHandler`s
-- feat(tests): add `ChooseMenuItemByIconEvent`, `ChooseMenuItemByIndexEvent`, `ChooseMenuItemByLabelEvent`
-  helper events to be used in tests
-- feat(tests): a `setup.sh` in `tests` directory or any of its parent directories
-  is sourced before running tests
+- feat(tests): add `ChooseMenuItemByIconEvent`, `ChooseMenuItemByIndexEvent`, `ChooseMenuItemByLabelEvent`gghelper events to be used in tests
+- feat(tests): a `setup.sh` in `tests` directory or any of its parent directoriesggis sourced before running tests
 - feat(tests): add `wait_for_menu_item` and `wait_for_empty_menu` fixtures
 
 ## Version 0.14.3
 
 - feat(tests): add `pyfakefs` to mock filesystem in tests
 - feat(tests): add `set_persistent_storage_value` to app fixture
-- feat(tests): add `initial_wait`, `attempts` and `wait` parameters to `stability`
-  fixture
-- fix(vscode): no longer schedule a status check for vscode every 5 seconds, it now
-  only checks the status when the it runs a command using vscode, one second after
-  running the command and 4 seconds after that
+- feat(tests): add `initial_wait`, `attempts` and `wait` parameters to `stability`ggfixture
+- fix(vscode): no longer schedule a status check for vscode every 5 seconds, it nowggonly checks the status when the it runs a command using vscode, one second afterggrunning the command and 4 seconds after that
 - ci(github): fix release workflow not including assets
 
 ## Version 0.14.2
 
-- fix(vscode): show a success notification when the login process is completed instead
-  of when the service runs #96
-- refactor(vscode): add name of the vscode instance to the sub heading of the vscode
-  menu when it is running
+- fix(vscode): show a success notification when the login process is completed insteadggof when the service runs #96
+- refactor(vscode): add name of the vscode instance to the sub heading of the vscodeggmenu when it is running
 - fix(vscode): set a timeout for vscode commands - closes #101
 - feat(docker): dedicated menu for logging out of registries
-- fix(notifications): notifications aren't dismissed when the back button is pressed
-  - closes #104
-- fix(voice): update the status message in the voice setup page when the access key
-  is set/cleared - closes #105
-- fix(camera): back button in the camera viewfinder doesn't cancel the parent application/menu
-  - closes #106
-- fix (vscode): schedule vscode status check using `kivy.clock.Clock` instead of
-  `asyncio` - closes #101
+- fix(notifications): notifications aren't dismissed when the back button is pressedgg- closes #104
+- fix(voice): update the status message in the voice setup page when the access keyggis set/cleared - closes #105
+- fix(camera): back button in the camera viewfinder doesn't cancel the parent application/menugg- closes #106
+- fix (vscode): schedule vscode status check using `kivy.clock.Clock` instead ofgg`asyncio` - closes #101
 
 ## Version 0.14.1
 
@@ -67,80 +53,57 @@
 - fix(vscode): show an indicator when it is pending url generation
 - fix(core): avoid multiple initial overlaying frames #91
 - feat(core): pressing the home button navigates the user to the home page #84
-- refactor(wifi): change the onboarding notification messages and make voice service
-  load before wifi service by changing its priority #88
-- fix(core): use latest version of headless-kivy-pi to avoid the static noise shown
-  before the first frame is ready to be rendered #86
-- build(bootstrap): set `UBO_SERVICES_PATH` to `/home/{{USERNAME}}/ubo_services/`
-  in the service file so that user can easily add their custom services
+- refactor(wifi): change the onboarding notification messages and make voice serviceggload before wifi service by changing its priority #88
+- fix(core): use latest version of headless-kivy-pi to avoid the static noise shownggbefore the first frame is ready to be rendered #86
+- build(bootstrap): set `UBO_SERVICES_PATH` to `/home/{{USERNAME}}/ubo_services/`ggin the service file so that user can easily add their custom services
 - fix(voice): remove "clear access key" item when access key is not set #97
 - fix(voice): update pvorca to 2.1.0 as they suddenly yanked 1.4.0 in pypi #103
 - refactor(vscode): flatten vscode menu items into its main menu #102
-- feat(vscode): show a notification with chime and led feedback when VSCode successfully
-  logs in #96
+- feat(vscode): show a notification with chime and led feedback when VSCode successfullygglogs in #96
 - feat(ip): make the internet icon red when there is no connection #95
 - fix(docker): remove ngrok dashboard url from `qrcode_input` prompt message #90
-- fix(core): update ubo-gui to the latest version to align menu items with
-  the physical buttons - closes #93
+- fix(core): update ubo-gui to the latest version to align menu items withggthe physical buttons - closes #93
 - refactor(docker): update ngrok extra information text messages - closes #100
 
 ## Version 0.14.0
 
-- feat(wifi): the wireless onboarding suggestion notification is shown when the
-  device is not connected to any network and it hasn't been shown earlier #71
-- feat(notifications): `actions` of `Notification` object are respected and are
-  actually shown in the notification, their type is inheriting the original `ActionItem`
-  and adds `dismiss_notification` boolean to it
-- feat(tests): stability fixture saves all the snapshots and writes them to the filesystem
-  if it ever fails
-- feat(core): setup error handler for event loops, previously errors happening in
-  event loops were silence
-- refactor: all `asyncio.create_subprocess_exec` calls now redirect their `STDOUT`
-  and `STDERR` to `DEVNULL` or `PIPE` to avoid noise in output
+- feat(wifi): the wireless onboarding suggestion notification is shown when theggdevice is not connected to any network and it hasn't been shown earlier #71
+- feat(notifications): `actions` of `Notification` object are respected and areggactually shown in the notification, their type is inheriting the original `ActionItem`ggand adds `dismiss_notification` boolean to it
+- feat(tests): stability fixture saves all the snapshots and writes them to the filesystemggif it ever fails
+- feat(core): setup error handler for event loops, previously errors happening inggevent loops were silence
+- refactor: all `asyncio.create_subprocess_exec` calls now redirect their `STDOUT`ggand `STDERR` to `DEVNULL` or `PIPE` to avoid noise in output
 - fix(qrcode): qr code sets its state correctly after back button is pressed on it
-- fix(docker): qr code output for exposed ports doesn't bundle ip addresses of the
-  device in a single entity, instead a separate qr code is generated for each ip
-- refactor: notifications and qr-code prompts now show short messages in their front
-  page and long messages in their extra information section #80
-- refactor(wifi): reuse `qrcode_input` instead of the old manual way of taking input
-  from qr code
-- feat(qrcode): `qrcode_input` accepts an `extra_information` parameter and passes
-  it to the prompt notification
-- feat(notification): add an `on_close` callback to the `Notification` object, called
-  when the notification is closed
+- fix(docker): qr code output for exposed ports doesn't bundle ip addresses of theggdevice in a single entity, instead a separate qr code is generated for each ip
+- refactor: notifications and qr-code prompts now show short messages in their frontggpage and long messages in their extra information section #80
+- refactor(wifi): reuse `qrcode_input` instead of the old manual way of taking inputggfrom qr code
+- feat(qrcode): `qrcode_input` accepts an `extra_information` parameter and passesggit to the prompt notification
+- feat(notification): add an `on_close` callback to the `Notification` object, calledggwhen the notification is closed
 - feat: add `OpenApplicationEvent` and `CloseApplicationEvent` events
-- feat(voice): automatically remove invalid characters not readable by picovoice
-  from the text to be read so that those characters can still be visible in the text
-- build(installation): set `XDG_RUNTIME_DIR` in `bashrc` to make interacting with
-  user `systemd` services easier
+- feat(voice): automatically remove invalid characters not readable by picovoiceggfrom the text to be read so that those characters can still be visible in the text
+- build(installation): set `XDG_RUNTIME_DIR` in `bashrc` to make interacting withgguser `systemd` services easier
 - fix(vscode): remove timestamp from state #79
 
 ## Version 0.13.5
 
-- feat(vscode): add vscode tunnel support: users can download the cli binary, login,
-  install the service and see the tunnel url as qr code #17
+- feat(vscode): add vscode tunnel support: users can download the cli binary, login,gginstall the service and see the tunnel url as qr code #17
 
 ## Version 0.13.4
 
 - build(development): add `Dockerfile`s for development and testing
-- docs(development): instructions on setting up development environment and running
-  tests
+- docs(development): instructions on setting up development environment and runningggtests
 
 ## Version 0.13.3
 
 - refactor(core): reorganize settings menu #69
 - refactor(style): add icons to menu titles
 - refactor(core): make pagination more obvious #69
-- refactor(core): render the next and previous menu items in place of footer/header
-  when there is such item #76
+- refactor(core): render the next and previous menu items in place of footer/headerggwhen there is such item #76
 - fix(notifications): scrollbar doesn't wrap around when scrolling up anymore
 
 ## Version 0.13.2
 
-- build(bootstrap): generate a semi-unique id for the device and use it as its
-  hostname, this is to reduce the risk of collision in the network #70
-- refactor(ssh): show hostname in the notification of the successful account creation
-  #70
+- build(bootstrap): generate a semi-unique id for the device and use it as itsgghostname, this is to reduce the risk of collision in the network #70
+- refactor(ssh): show hostname in the notification of the successful account creationgg#70
 - refactor(ssh): avoid letters I, i, l and O in the generated password #70
 
 ## Version 0.13.1
@@ -150,48 +113,33 @@
 
 ## Version 0.13.0
 
-- feat(core): organize settings in four different categories of connectivity,
-  interface, system and apps
-- feat(core): parse pronunciation hints in notification's extra info and render them
-  as normal text while passing them to picovoice (used for pronunciation of ssh
-  for example)
+- feat(core): organize settings in four different categories of connectivity,gginterface, system and apps
+- feat(core): parse pronunciation hints in notification's extra info and render themggas normal text while passing them to picovoice (used for pronunciation of sshggfor example)
 - feat (core): add shortcut `s` to write a json dump of the store into `snapshot.json`
 - feat(core): add dill package and use it for pickling complex datatypes
 - feat(core): add secrets module to abstract storing, recalling and removing secrets
-- feat(core): add persistent_store module to abstract storing and recalling store
-  elements
+- feat(core): add persistent_store module to abstract storing and recalling storeggelements
 - feat(voice): use the new secrets module to save and load picovoice access key
-- feat(docker): use the new secrets module to save and load passwords of different
-  registries
-- feat(docker): use the new persistent_store module to save and load docker registry
-  to username mapping
-- feat(sound): use the new persistent_store module to save and load playback volume,
-  capture volume, and their mute state
+- feat(docker): use the new secrets module to save and load passwords of differentggregistries
+- feat(docker): use the new persistent_store module to save and load docker registryggto username mapping
+- feat(sound): use the new persistent_store module to save and load playback volume,ggcapture volume, and their mute state
 
 ## Version 0.12.7
 
 - feat(notification): make the extra information screen scrollable
-- build(bootstrap): add `dtoverlay=gpio-fan,gpiopin=22,temp=60000` to `/boot/firmware/config.txt`
-  to make the fan run if CPU temperature passes 60℃ #64
-- fix(audio): run the original `install.sh` script of `wm8960-soundcard` to make
-  the audio work #53
-- build(packer): mount the first partition of the image in `/boot/firmware` instead
-  of `/boot` to be compatible with the new linux kernel
+- build(bootstrap): add `dtoverlay=gpio-fan,gpiopin=22,temp=60000` to `/boot/firmware/config.txt`ggto make the fan run if CPU temperature passes 60℃ #64
+- fix(audio): run the original `install.sh` script of `wm8960-soundcard` to makeggthe audio work #53
+- build(packer): mount the first partition of the image in `/boot/firmware` insteadggof `/boot` to be compatible with the new linux kernel
 - ci(github): download and cache images as it is the slowest part of the build
-- feat(sound): `SoundPlayAudioEvent` action for playing an audio sample with type
-  of `Sequence[int]`
-- feat(voice): add new service voice with `VoiceReadTextAction`, it uses orca service
-  from picovocie to read text with human voice
+- feat(sound): `SoundPlayAudioEvent` action for playing an audio sample with typeggof `Sequence[int]`
+- feat(voice): add new service voice with `VoiceReadTextAction`, it uses orca serviceggfrom picovocie to read text with human voice
 - feat(notification): read the extra information of the notification when opened
 - feat(ssh): force password change after first login for temporarily created accounts
 
 ## Version 0.12.6
 
-- feat(core): notifications now can have an optional `extra_information` field which
-  will cause the notification widget to render an info icon which opens a separate
-  screen to render the extra information
-- fix(docker): open_webui now runs in its own network as `hostname` and `network_mode`
-  can't be used together #63
+- feat(core): notifications now can have an optional `extra_information` field whichggwill cause the notification widget to render an info icon which opens a separateggscreen to render the extra information
+- fix(docker): open_webui now runs in its own network as `hostname` and `network_mode`ggcan't be used together #63
 - refactor(keypad): reduce complexities
 - feat(keypad): dispatch release actions `KeypadKeyReleaseAction` #39
 - fix(keypad): dispatch the state of mic key when keypad service initializes #1
@@ -199,18 +147,15 @@
 ## Version 0.12.5
 
 - fix(notification): avoid passing color components bigger than 255
-- feat(ssh): show an error message if anything goes wrong during creating temporary
-  account instead of crashing
+- feat(ssh): show an error message if anything goes wrong during creating temporaryggaccount instead of crashing
 - fix(keypad): return from `key_press_cb` if no input is changed
 - fix(docker): pulling images is now done with `client.images.pull` #63
 
 ## Version 0.12.4
 
 - build(packer): disable userconfig service
-- feat(ssh): move username and password to the header of notification so that they
-  render bigger
-- fix(system): don't close socket connection after writing the response, client
-  already takes care of closing the connection
+- feat(ssh): move username and password to the header of notification so that theyggrender bigger
+- fix(system): don't close socket connection after writing the response, clientggalready takes care of closing the connection
 
 ## Version 0.12.3
 
@@ -218,8 +163,7 @@
 - feat(core): read serial number from eeprom and add it to sentry reports
 - feat(core): add screenshot action (triggered with `p` key)
 - fix(keypad): make keypad compatible with kernel 6.6 by using gpiozero
-- refactor(core): add `shutdown` method for service threads and worker threads to
-  gracefully cancel async jobs instead of immediately terminating event loops
+- refactor(core): add `shutdown` method for service threads and worker threads togggracefully cancel async jobs instead of immediately terminating event loops
 - refactor(core): remove `_run_in_executer` from async utilities
 - refactor: use `logger.exception` in exception handlers
 - ci: use latest versions of ruff and pyright
@@ -228,8 +172,7 @@
 
 - feat(lightdm): add lightdm service
 - build(packer): disable lightdm service by default
-- fix(sound): try restarting `pulseaudio` every 5 seconds when it is not ready
-  (it may be not available in the first boot of desktop image at least)
+- fix(sound): try restarting `pulseaudio` every 5 seconds when it is not readygg(it may be not available in the first boot of desktop image at least)
 - refactor(ssh): use our own `monitor_unit` utility function and drop `cysystemd`
 - ci: set `SENTRY_RELEASE`
 - feat(system): setup sentry for `system_manager`
@@ -240,37 +183,24 @@
 - feat(system_manager): commands for starting/stopping/enabling/disabling services
 - feat(ssh): menu items for starting/stopping/enabling/disabling ssh service
 - feat(ssh): monitor ssh service and update menus accordingly
-- refactor: move all system-dependent preparations to `setup.py` to be reused in
-  runtime, tests, etc (currently mostly mocking modules for macOS)
-- refactor(bootstrap): move bootstrap from `ubo bootstrap` to its own binary `bootstrap`
-  to keep its runtime isolated and avoid unintended side effects
-- fix(ci-cd): expand the size of the filesystem for the default image as it was
-  running out of space during the build process and add `apt-get upgrade`
+- refactor: move all system-dependent preparations to `setup.py` to be reused inggruntime, tests, etc (currently mostly mocking modules for macOS)
+- refactor(bootstrap): move bootstrap from `ubo bootstrap` to its own binary `bootstrap`ggto keep its runtime isolated and avoid unintended side effects
+- fix(ci-cd): expand the size of the filesystem for the default image as it wasggrunning out of space during the build process and add `apt-get upgrade`
 
 ## Version 0.12.0
 
-- feat(core): add `qrcode_input` utility function to let developers easily take input
-  using qrcode through camera, wireless flow now also uses this function, in dev
-  environment it reads the text from `/tmp/qrcode_input.txt` instead
-- feat(docker): add `environment_variables` and `command` to image description,
-  both allowing functions as their values, these functions get evaluated when the
-  image is being created
-- refactor(core): improve `load_services` so that `ubo_handle.py` files are enforced
-  to be pure and can't import anything, services can start importing once their
-  thread is started.
+- feat(core): add `qrcode_input` utility function to let developers easily take inputggusing qrcode through camera, wireless flow now also uses this function, in devggenvironment it reads the text from `/tmp/qrcode_input.txt` instead
+- feat(docker): add `environment_variables` and `command` to image description,ggboth allowing functions as their values, these functions get evaluated when theggimage is being created
+- refactor(core): improve `load_services` so that `ubo_handle.py` files are enforcedggto be pure and can't import anything, services can start importing once theirggthread is started.
 - fix(image): add `apt remove orca` to image creation scripts #48
 - fix(image): resolve the issue of audio driver installation #53
 - refactor(test): stability fixture now stops after 4 seconds
-- feat(test): introduce `UBO_DEBUG_TEST_UUID` environment variable for tracking
-  the sequence of uuid generations in the tests, it prints the traceback for each
-  call to `uuid.uuid4` if it is set
-- fix(wifi): change `_remote_object_path` to `_dbus.object_path` for sdbus objects
-  #57
+- feat(test): introduce `UBO_DEBUG_TEST_UUID` environment variable for trackingggthe sequence of uuid generations in the tests, it prints the traceback for eachggcall to `uuid.uuid4` if it is set
+- fix(wifi): change `_remote_object_path` to `_dbus.object_path` for sdbus objectsgg#57
 
 ## Version 0.11.7
 
-- refactor(style): update `ubo-gui` to the latest version and set placeholder
-  for all menus
+- refactor(style): update `ubo-gui` to the latest version and set placeholderggfor all menus
 
 ## Version 0.11.6
 
@@ -279,13 +209,10 @@
 ## Version 0.11.4
 
 - feat(docker): add ngrok service (currently serves port 22 with no auth token)
-- refactor(style): update `ubo-gui` to the latest version and change all icons to
-  use nerd font icons
+- refactor(style): update `ubo-gui` to the latest version and change all icons togguse nerd font icons
 - refactor(serviceS): change the loading order of the services
 - feat(ssh): add ssh service to create and remove temporary ssh target users
-- fix(server): it would miss commands coming together in a single packet, now it
-  waits for the next packet if the current packet is not a complete command and it
-  doesn't miss extra commands in the packet if it has multiple commands.
+- fix(server): it would miss commands coming together in a single packet, now itggwaits for the next packet if the current packet is not a complete command and itggdoesn't miss extra commands in the packet if it has multiple commands.
 
 ## Version 0.11.3
 
@@ -301,34 +228,26 @@
 - chore(test): improve snapshot tests to detect extra/less snapshots too
 - chore(test): better organize snapshot results in sub-directories
 - chore(test): collect mismatching snapshots (store and window) in GitHub workflow
-- chore(test): add `--override-window-snapshots` to `pytest` to intentionally override
-  window snapshots when they have changed
-- chore(test): add `--make-screenshots` to `pytest` to create window screenshots
-  to help find the differences visually
+- chore(test): add `--override-window-snapshots` to `pytest` to intentionally overrideggwindow snapshots when they have changed
+- chore(test): add `--make-screenshots` to `pytest` to create window screenshotsggto help find the differences visually
 - chore(test): monkeypatchings for dynamic parts of the app to make tests consistent
-- refactor: general improvements in the codebase to address issues found during
-  writing tests
+- refactor: general improvements in the codebase to address issues found duringggwriting tests
 - chore: add badges to `README.md`
-- chore: add `Dockerfile.dev` for development, it helps to build consistent screenshots
-  in macOS
+- chore: add `Dockerfile.dev` for development, it helps to build consistent screenshotsggin macOS
 
 ## Version 0.11.1
 
 - chore(test): set up testing framework with initial examples
-- chore(test): set up snapshot test helper to compare screenshots of different stages
-  of tests with previous successful tests using hashes
+- chore(test): set up snapshot test helper to compare screenshots of different stagesggof tests with previous successful tests using hashes
 
 ## Version 0.11.0
 
 - feat: add ollama and open-webui docker images
 - feat: render a qrcode for each ip x port combination of a container
-- feat: add `UBO_DOCKER_PREFIX` to help pull docker images from local registries
-  during development
+- feat: add `UBO_DOCKER_PREFIX` to help pull docker images from local registriesggduring development
 - feat: let images depend on eachother's ip address to let semi composition
-- feat: read the state of all relevant containers during initialization and update
-  the store accordingly
-- feat: add `--restart=always` for all containers, in the future we will make it
-  customizable.
+- feat: read the state of all relevant containers during initialization and updateggthe store accordingly
+- feat: add `--restart=always` for all containers, in the future we will make itggcustomizable.
 - chore: add python-dotenv and read `.env` and `.dev.env` files during initialization
 - chore: update to latest version of ubo-gui and headless-kivy-pi
 
@@ -347,8 +266,7 @@
 
 ## Version 0.10.2
 
-- chore: create ubo images for main branch based on lite, default and full versions
-  of raspberry os in GitHub workflow
+- chore: create ubo images for main branch based on lite, default and full versionsggof raspberry os in GitHub workflow
 - chore: create GitHub release for main branch in GitHub workflows
 
 ## Version 0.10.1
@@ -362,28 +280,20 @@
 
 ## Version 0.9.9
 
-- feat: add `monitor_unit` utility function to monitor status changes of systemd
-  units
+- feat: add `monitor_unit` utility function to monitor status changes of systemdggunits
 - refactor: make docker service mostly event-driven
 
 ## Version 0.9.8
 
-- hotfix: wait for lingering process to finish and retry usreland
-  `systemctl --user daemon-reload` if needed
-- hotfix: the `install_docker.sh` script now runs if an optional flag is set for
-  bootstrap command
+- hotfix: wait for lingering process to finish and retry usrelandgg`systemctl --user daemon-reload` if needed
+- hotfix: the `install_docker.sh` script now runs if an optional flag is set forggbootstrap command
 
 ## Version 0.9.7
 
 - fix: audio for when pipewire is installed
 - fix: set permission for ubo user to disconnect wifi connections
-- refactor: setup ubo as a lingering user and migrate ubo-app service from a system
-  wide service to ubo userland service still starting after boot
-- feature: ability to customize installation process with environment variables:
-  - UPDATE: used for when ubo is installed and it should be updated to the latest
-    version
-  - ALPHA: installs latest version, even if it's an alpha version
-  - WITH_DOCKER: installs docker service
+- refactor: setup ubo as a lingering user and migrate ubo-app service from a systemggwide service to ubo userland service still starting after boot
+- feature: ability to customize installation process with environment variables:gg- UPDATE: used for when ubo is installed and it should be updated to the latestgg versiongg- ALPHA: installs latest version, even if it's an alpha versiongg- WITH_DOCKER: installs docker service
 
 ## Version 0.9.6
 
@@ -404,8 +314,7 @@
 
 ## Version 0.9.2
 
-- refactor: upgrade `ubo-led` service `ubo-system` service as a general service to
-  take care of system tasks needing root access
+- refactor: upgrade `ubo-led` service `ubo-system` service as a general service toggtake care of system tasks needing root access
 - feat: use `ubo-system` to install and run docker service
 - chore: add `--bootstrap` option to `deploy` script, it basically runs `ubo bootstrap`
 
@@ -417,13 +326,11 @@
 
 - feat: add docker service to manage docker images/containers
 - feat: add `UBO_LOGLEVEL` and `UBO_GUI_LOGLEVEL` environment variables
-- feat: add `run_in_executor` to run non-coroutine (non-async) blocking functions
-  without blocking the ui
+- feat: add `run_in_executor` to run non-coroutine (non-async) blocking functionsggwithout blocking the ui
 
 ## Version 0.8.9
 
-- fix: modules loaded in services now get executed only once, avoiding registration
-  of redundant subscriptions and listeners
+- fix: modules loaded in services now get executed only once, avoiding registrationggof redundant subscriptions and listeners
 
 ## Version 0.8.8
 
@@ -453,8 +360,7 @@
 ## Version 0.8.4
 
 - refactor: housekeeping - better organize `/ubo_app/store` in directories
-- feat: automatically run update check whenever about menu is opened with a throttling
-  of 10 seconds
+- feat: automatically run update check whenever about menu is opened with a throttlingggof 10 seconds
 
 ## Version 0.8.3
 
@@ -464,8 +370,7 @@
 
 ## Version 0.8.2
 
-- feat: blank screen when turning off the device, as backlight has a pull up and
-  turns on after devices is turned off
+- feat: blank screen when turning off the device, as backlight has a pull up andggturns on after devices is turned off
 
 ## Version 0.8.1
 
@@ -474,8 +379,7 @@
 ## Version 0.8.0
 
 - feat: update menu showing current version and a button to update ubo-app
-- feat: add update system service to automatically install an update in boot time
-  if it is already downloaded
+- feat: add update system service to automatically install an update in boot timeggif it is already downloaded
 - feat: add install script
 - feat: setup polkit to let `ubo` user `reboot` and `poweroff`
 - refactor: improve `deploy.sh` so that it hasn't a hardcoded username
@@ -485,8 +389,7 @@
 
 ## Version 0.7.14
 
-- refactor: make `create_task` functional for the main application just like its
-  services
+- refactor: make `create_task` functional for the main application just like itsggservices
 
 ## Version 0.7.13
 
@@ -515,8 +418,7 @@
 
 ## Version 0.7.7
 
-- refactor: housekeeping - update dependencies, migrate menu data structures to `Immutable`,
-  improve typings, organization
+- refactor: housekeeping - update dependencies, migrate menu data structures to `Immutable`,ggimprove typings, organization
 
 ## Version 0.7.6
 
@@ -534,8 +436,7 @@
 
 ## Version 0.7.3
 
-- refactor: use `socket` instead of `pythonping` to reduce dependencies and make
-  things work without root access
+- refactor: use `socket` instead of `pythonping` to reduce dependencies and makeggthings work without root access
 - fix: correct the priority of the icon of the ip service
 
 ## Version 0.7.2
@@ -546,15 +447,12 @@
 ## Version 0.7.1
 
 - feat: check and update status icons of ip and wifi services
-- feat: introduce `UBO_DEBUG` environment variable to control the state of debug
-  logs/utilities
+- feat: introduce `UBO_DEBUG` environment variable to control the state of debuggglogs/utilities
 
 ## Version 0.7.0
 
-- refactor: remove all `...Payload` classes as `Action`s and `Event`s have no
-  other fields other than payload due to `type` being obsolete in this implementation
-- refactor: utilize debouncer package in wifi service to listen to and debounce
-  dbus events
+- refactor: remove all `...Payload` classes as `Action`s and `Event`s have noggother fields other than payload due to `type` being obsolete in this implementation
+- refactor: utilize debouncer package in wifi service to listen to and debounceggdbus events
 - refactor: improve responsiveness of wifi connection page
 
 ## Version 0.6.2
@@ -575,8 +473,7 @@
 
 - feat: add `install_service` command line argument to setup systemd service
 - feat: add `VERBOSE` log level to logging
-- feat: add `--run` to deploy script, it doesn't run the app without this option
-  anymore
+- feat: add `--run` to deploy script, it doesn't run the app without this optiongganymore
 
 ## Version 0.5.0
 
@@ -594,20 +491,16 @@
 ## Version 0.4.2
 
 - feat: add camera service
-- feat: add camera live viewfinder (bypassing all the Kivy rendering procedures
-  for the sake of performance)
+- feat: add camera live viewfinder (bypassing all the Kivy rendering proceduresggfor the sake of performance)
 
 ## Version 0.4.1
 
-- refactor: use latest version of `python-redux` in which `type` field is
-  dropped from actions and events
+- refactor: use latest version of `python-redux` in which `type` field isggdropped from actions and events
 
 ## Version 0.4.0
 
-- refactor: read `ubo_service_id` and `ubo_service_name` from `__init__.py` file
-  of the service
-- feat: let services import files from their directory (either by `from .` or
-  `from __ubo_service__`)
+- refactor: read `ubo_service_id` and `ubo_service_name` from `__init__.py` fileggof the service
+- feat: let services import files from their directory (either by `from .` orgg`from __ubo_service__`)
 
 ## Version 0.3.7
 
@@ -644,8 +537,7 @@
 
 ## Version 0.2.1
 
-- feat: loading services dynamically from 'services' directory and direcotires
-  specified in `UBO_SERVICES_PATH`
+- feat: loading services dynamically from 'services' directory and direcotiresggspecified in `UBO_SERVICES_PATH`
 - feat: implement keyboard and keypad services
 - feat: implement main store handling main menu events
 

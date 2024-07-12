@@ -12,8 +12,6 @@ import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-# It needs to be included in `modules_snapshot`
-import numpy as np  # noqa: F401
 import platformdirs
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
@@ -35,6 +33,8 @@ if TYPE_CHECKING:
 
     from ubo_app.menu_app.menu import MenuApp
 
+# It needs to be included in `modules_snapshot`
+__import__('numpy')
 modules_snapshot = set(sys.modules)
 
 
@@ -93,7 +93,7 @@ class AppContext:
         app = app_ref()
 
         if app is not None and self.request.session.testsfailed == 0:
-            logging.getLogger().debug(
+            logging.debug(
                 'Memory leak: failed to release app for test.',
                 extra={
                     'refcount': sys.getrefcount(app),
@@ -106,7 +106,7 @@ class AppContext:
                 if type(cell).__name__ == 'cell':
                     from ubo_app.utils.garbage_collection import examine
 
-                    logging.getLogger().debug(
+                    logging.debug(
                         'CELL EXAMINATION',
                         extra={'cell': cell},
                     )
@@ -116,6 +116,11 @@ class AppContext:
         from kivy.core.window import Window
 
         Window.close()
+
+        from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
+
+        GPIO.cleanup(26)
+        GPIO.cleanup(17)
 
 
 class ConditionalFSWrapper:
@@ -135,12 +140,10 @@ class ConditionalFSWrapper:
         from ubo_app.utils import IS_RPI
 
         if IS_RPI:
-            import picamera2  # pyright: ignore [reportMissingImports]
-
             picamera_skip_modules = [
-                picamera2,
-                picamera2.allocators.dmaallocator,
-                picamera2.dma_heap,
+                'picamera2',
+                'picamera2.allocators.dmaallocator',
+                'picamera2.dma_heap',
             ]
         else:
             picamera_skip_modules = []
@@ -290,6 +293,7 @@ async def app_context(
             module_name != 'objc'
             and 'kivy.cache' not in module_name
             and 'sdbus' not in module_name
+            and 'ubo_app.display' not in module_name
         ):
             del sys.modules[module_name]
 

@@ -1,4 +1,3 @@
-# pyright: reportMissingImports=false, reportMissingModuleSource=false
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
@@ -46,7 +45,7 @@ class Keypad:
     """Class to handle keypad events."""
 
     previous_inputs: int
-    aw: AW9523
+    aw: AW9523 | None
     inputs: UnaryStruct
 
     def __init__(self: Keypad) -> None:

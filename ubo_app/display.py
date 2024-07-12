@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import atexit
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
-from headless_kivy.logger import logger
-
-from ubo_app.constants import HEIGHT, WIDTH
+from adafruit_rgb_display.st7789 import ST7789
 
 if TYPE_CHECKING:
     from threading import Thread
@@ -19,31 +17,25 @@ if TYPE_CHECKING:
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.fake import Fake
 
-if not IS_RPI:
-    import sys
+if IS_RPI:
+    import board
+    import digitalio
 
-    sys.modules['adafruit_rgb_display.st7789'] = Fake()
-from adafruit_rgb_display.st7789 import (  # pyright: ignore [reportMissingImports=false]
-    ST7789,
-)
+    cs_pin = digitalio.DigitalInOut(board.CE0)
+    dc_pin = digitalio.DigitalInOut(board.D25)
+    reset_pin = digitalio.DigitalInOut(board.D24)
+    spi = board.SPI()
 
 
-def setup_display(width: int, height: int) -> ST7789:
+def setup_display() -> ST7789:
     """Set the display for the Raspberry Pi."""
-    splash_screen: bytes | None = None
-
     if IS_RPI:
-        import board
-        import digitalio
+        from ubo_app.constants import HEIGHT, WIDTH
 
-        cs_pin = digitalio.DigitalInOut(board.CE0)
-        dc_pin = digitalio.DigitalInOut(board.D25)
-        reset_pin = digitalio.DigitalInOut(board.D24)
-        spi = board.SPI()
         display = ST7789(
             spi,
-            height=height,
-            width=width,
+            height=HEIGHT,
+            width=WIDTH,
             y_offset=80,
             x_offset=0,
             cs=cs_pin,
@@ -51,24 +43,8 @@ def setup_display(width: int, height: int) -> ST7789:
             rst=reset_pin,
             baudrate=60000000,
         )
-        display._block(  # noqa: SLF001
-            0,
-            0,
-            width - 1,
-            height - 1,
-            bytes(width * height * 2) if splash_screen is None else splash_screen,
-        )
-        atexit.register(
-            lambda: display._block(  # noqa: SLF001
-                0,
-                0,
-                width - 1,
-                height - 1,
-                bytes(width * height * 2),
-            ),
-        )
     else:
-        display = Fake()
+        display = cast(ST7789, Fake())
 
     return display
 
@@ -81,8 +57,10 @@ def render_on_display(
     last_render_thread: Thread,
 ) -> None:
     """Transfer data to the display via SPI controller."""
-    if IS_RPI and is_running:
-        logger.debug(f'Rendering frame with hash "{data_hash}"')
+    if IS_RPI and state.is_running:
+        from ubo_app.logging import logger
+
+        logger.verbose('Rendering frame', extra={'data_hash': data_hash})
 
         data = data.astype(np.uint16)
         color = (
@@ -99,21 +77,47 @@ def render_on_display(
             last_render_thread.join()
 
         # Only render when running on a Raspberry Pi
-        if display:
-            display._block(*rectangle, data_bytes)  # noqa: SLF001
+        state.block(rectangle, data_bytes)
 
 
 def pause() -> None:
     """Pause the display."""
-    global is_running  # noqa: PLW0603
-    is_running = False
+    state.is_running = False
 
 
 def resume() -> None:
     """Resume the display."""
-    global is_running  # noqa: PLW0603
+    state.is_running = True
+
+
+class _State:
+    """The state of the display."""
+
     is_running = True
+    display = setup_display()
+
+    def __init__(self: _State, splash_screen: bytes | None = None) -> None:
+        from ubo_app.constants import HEIGHT, WIDTH
+
+        self.block(
+            (0, 0, WIDTH - 1, HEIGHT - 1),
+            bytes(WIDTH * HEIGHT * 2) if splash_screen is None else splash_screen,
+        )
+        atexit.register(
+            lambda: self.block(
+                (0, 0, WIDTH - 1, HEIGHT - 1),
+                bytes(WIDTH * HEIGHT * 2),
+            ),
+        )
+
+    def block(
+        self: _State,
+        rectangle: tuple[int, int, int, int],
+        data_bytes: bytes,
+    ) -> None:
+        """Block the display."""
+        if self.is_running:
+            self.display._block(*rectangle, data_bytes)  # noqa: SLF001
 
 
-is_running = True
-display = setup_display(WIDTH, HEIGHT)
+state = _State()

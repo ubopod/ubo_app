@@ -120,8 +120,8 @@ def reload_daemon() -> None:
         stdout.write('.')
         stdout.flush()
         try:
-            subprocess.run(
-                [  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [
                     '/usr/bin/env',
                     'sudo',
                     f'XDG_RUNTIME_DIR=/run/user/{uid}',
@@ -144,8 +144,8 @@ def reload_daemon() -> None:
         logger.error(msg)
         warnings.warn(msg, stacklevel=2)
     stdout.flush()
-    subprocess.run(
-        ['/usr/bin/env', 'systemctl', 'daemon-reload'],  # noqa: S603
+    subprocess.run(  # noqa: S603
+        ['/usr/bin/env', 'systemctl', 'daemon-reload'],
         check=True,
     )
 
@@ -155,8 +155,8 @@ def enable_services() -> None:
     for service in SERVICES:
         # Enable the service to start on boot
         if service['scope'] == 'user':
-            subprocess.run(
-                [  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [
                     '/usr/bin/env',
                     'sudo',
                     f'XDG_RUNTIME_DIR=/run/user/{uid}',
@@ -170,8 +170,8 @@ def enable_services() -> None:
                 check=True,
             )
         elif service['scope'] == 'system':
-            subprocess.run(
-                ['/usr/bin/env', 'systemctl', 'enable', service['name']],  # noqa: S603
+            subprocess.run(  # noqa: S603
+                ['/usr/bin/env', 'systemctl', 'enable', service['name']],
                 check=True,
             )
 
@@ -214,8 +214,8 @@ def install_docker() -> None:
         stdout.write('.')
         stdout.flush()
         try:
-            subprocess.run(
-                [Path(__file__).parent.joinpath('install_docker.sh').as_posix()],  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [Path(__file__).parent.joinpath('install_docker.sh').as_posix()],
                 env={'USERNAME': USERNAME},
                 check=True,
             )
@@ -238,8 +238,8 @@ def install_audio_driver(*, in_packer: bool) -> None:
     """Install the audio driver."""
     stdout.write('Installing wm8960...\n')
     stdout.flush()
-    subprocess.run(
-        [  # noqa: S603
+    subprocess.run(  # noqa: S603
+        [
             Path(__file__).parent.joinpath('install_wm8960.sh').as_posix(),
         ]
         + (['--in-packer'] if in_packer else []),
@@ -266,8 +266,8 @@ def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
         Path('/var/lib/systemd/linger').mkdir(exist_ok=True, parents=True)
         Path(f'/var/lib/systemd/linger/{USERNAME}').touch(mode=0o644, exist_ok=True)
     else:
-        subprocess.run(
-            ['/usr/bin/env', 'loginctl', 'enable-linger', USERNAME],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'loginctl', 'enable-linger', USERNAME],
             check=True,
         )
 

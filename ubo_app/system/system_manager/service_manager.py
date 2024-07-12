@@ -11,8 +11,8 @@ from ubo_app.logging import get_logger
 def ssh_handler(command: str) -> str | None:
     """Handle ssh commands."""
     if command == 'create_temporary_ssh_account':
-        result = subprocess.run(
-            Path(__file__).parent.joinpath('create_temporary_ssh_account.sh'),  # noqa: S603
+        result = subprocess.run(  # noqa: S603
+            Path(__file__).parent.joinpath('create_temporary_ssh_account.sh'),
             check=True,
             text=True,
             stdout=subprocess.PIPE,
@@ -20,28 +20,28 @@ def ssh_handler(command: str) -> str | None:
         result.check_returncode()
         return result.stdout
     if command == 'clear_all_temporary_accounts':
-        subprocess.run(
-            Path(__file__).parent.joinpath('clear_all_temporary_accounts.sh'),  # noqa: S603
+        subprocess.run(  # noqa: S603
+            Path(__file__).parent.joinpath('clear_all_temporary_accounts.sh'),
             check=False,
         )
     elif command == 'start':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'start', 'ssh'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'start', 'ssh'],
             check=True,
         )
     elif command == 'stop':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'stop', 'ssh'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'stop', 'ssh'],
             check=True,
         )
     elif command == 'enable':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'enable', 'ssh'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'enable', 'ssh'],
             check=True,
         )
     elif command == 'disable':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'disable', 'ssh'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'disable', 'ssh'],
             check=True,
         )
     else:
@@ -53,23 +53,23 @@ def ssh_handler(command: str) -> str | None:
 def lightdm_handler(command: str) -> None:
     """Handle LightDM commands."""
     if command == 'start':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'start', 'lightdm'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'start', 'lightdm'],
             check=True,
         )
     elif command == 'stop':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'stop', 'lightdm'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'stop', 'lightdm'],
             check=True,
         )
     elif command == 'enable':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'enable', 'lightdm'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'enable', 'lightdm'],
             check=True,
         )
     elif command == 'disable':
-        subprocess.run(
-            ['/usr/bin/env', 'systemctl', 'disable', 'lightdm'],  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ['/usr/bin/env', 'systemctl', 'disable', 'lightdm'],
             check=True,
         )
     else:

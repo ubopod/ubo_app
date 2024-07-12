@@ -17,14 +17,14 @@ def docker_handler(command: str) -> None:
     )
     try:
         if command == 'install':
-            subprocess.run(
-                Path(__file__).parent.parent.joinpath('install_docker.sh'),  # noqa: S603
+            subprocess.run(  # noqa: S603
+                Path(__file__).parent.parent.joinpath('install_docker.sh'),
                 env={'USERNAME': USERNAME},
                 check=False,
             )
         elif command == 'start':
-            subprocess.run(
-                [  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [
                     '/usr/bin/env',
                     'systemctl',
                     'start',
@@ -32,8 +32,8 @@ def docker_handler(command: str) -> None:
                 ],
                 check=False,
             )
-            subprocess.run(
-                [  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [
                     '/usr/bin/env',
                     'systemctl',
                     'start',
@@ -42,8 +42,8 @@ def docker_handler(command: str) -> None:
                 check=False,
             )
         elif command == 'stop':
-            subprocess.run(
-                [  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [
                     '/usr/bin/env',
                     'systemctl',
                     'stop',
@@ -51,8 +51,8 @@ def docker_handler(command: str) -> None:
                 ],
                 check=False,
             )
-            subprocess.run(
-                [  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [
                     '/usr/bin/env',
                     'systemctl',
                     'stop',

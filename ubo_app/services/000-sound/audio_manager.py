@@ -1,4 +1,4 @@
-# pyright: reportMissingImports=false,reportMissingModuleSource=false
+# pyright: reportMissingModuleSource=false
 """Module for managing audio playback and recording."""
 
 from __future__ import annotations

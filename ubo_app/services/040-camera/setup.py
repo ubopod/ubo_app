@@ -1,3 +1,4 @@
+# pyright: reportMissingModuleSource=false
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
-from picamera2 import Picamera2  # pyright: ignore [reportMissingImports]
+from picamera2.picamera2 import Picamera2
 from pyzbar.pyzbar import decode
 from ubo_gui.page import PageWidget
 
@@ -149,7 +150,7 @@ def feed_viewfinder(picamera2: Picamera2) -> None:
         np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
     )
 
-    display.display._block(0, 0, width - 1, height - 1, data_bytes)  # noqa: SLF001
+    display.state.block((0, 0, width - 1, height - 1), data_bytes)
 
 
 @mainthread

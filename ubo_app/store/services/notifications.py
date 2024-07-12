@@ -19,6 +19,9 @@ if TYPE_CHECKING:
     from kivy.graphics.context_instructions import Color
 
 
+FLASH_TIME = 4
+
+
 class Importance(StrEnum):
     CRITICAL = auto()
     HIGH = auto()
@@ -95,7 +98,7 @@ class Notification(Immutable):
     color: str = field(default_factory=default_color)
     expiry_date: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
-    flash_time: float = 4
+    flash_time: float = FLASH_TIME
     dismissable: bool = True
     dismiss_on_close: bool = False
     on_close: Callable[[], Any] | None = None

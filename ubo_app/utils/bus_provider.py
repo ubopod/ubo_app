@@ -1,4 +1,4 @@
-# pyright: reportMissingImports=false
+# pyright: reportMissingModuleSource=false
 """Provides the system bus for the application."""
 
 from __future__ import annotations

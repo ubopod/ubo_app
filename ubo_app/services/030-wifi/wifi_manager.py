@@ -1,4 +1,4 @@
-# pyright: reportMissingImports=false
+# pyright: reportMissingModuleSource=false
 # ruff: noqa: D100, D101, D102, D103, D104, D105, D107
 from __future__ import annotations
 
@@ -29,17 +29,9 @@ if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
     from collections.abc import Coroutine
 
-RETRIES = 3
-
-T = TypeVar('T')
-
-
-def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
-    return asyncio.wait_for(task, timeout=10.0)
-
-
-from sdbus import dbus_exceptions  # noqa: E402
-from sdbus_async.networkmanager import (  # noqa: E402
+from sdbus import dbus_exceptions
+from sdbus.utils.inspect import inspect_dbus_path
+from sdbus_async.networkmanager import (
     AccessPoint,
     ActiveConnection,
     DeviceState,
@@ -50,10 +42,18 @@ from sdbus_async.networkmanager import (  # noqa: E402
     NetworkManagerConnectionProperties,
     NetworkManagerSettings,
 )
-from sdbus_async.networkmanager.enums import (  # noqa: E402
+from sdbus_async.networkmanager.enums import (
     ConnectionState as SdBusConnectionState,
 )
-from sdbus_async.networkmanager.enums import DeviceType  # noqa: E402
+from sdbus_async.networkmanager.enums import DeviceType
+
+RETRIES = 3
+
+T = TypeVar('T')
+
+
+def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
+    return asyncio.wait_for(task, timeout=10.0)
 
 
 async def get_wifi_device() -> NetworkDeviceWireless | None:
@@ -271,8 +271,8 @@ async def add_wireless_connection(
     connection = await wait_for(
         network_manager.add_and_activate_connection(
             properties,
-            wifi_device._dbus.object_path,  # noqa: SLF001
-            access_point._dbus.object_path if access_point else '/',  # noqa: SLF001
+            inspect_dbus_path(wifi_device),
+            inspect_dbus_path(access_point) if access_point else '/',
         ),
     )
 
@@ -297,7 +297,7 @@ async def connect_wireless_connection(ssid: str) -> None:
             await wait_for(
                 connection.get_settings(),
             ),
-            connection._dbus.object_path,  # noqa: SLF001
+            inspect_dbus_path(connection),
         )
         for connection in connections
     ]
@@ -318,7 +318,7 @@ async def connect_wireless_connection(ssid: str) -> None:
     await wait_for(
         network_manager.activate_connection(
             desired_connection,
-            wifi_device._dbus.object_path,  # noqa: SLF001
+            inspect_dbus_path(wifi_device),
         ),
     )
 

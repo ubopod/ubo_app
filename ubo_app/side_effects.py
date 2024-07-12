@@ -45,8 +45,8 @@ def power_off() -> None:
     dispatch(SoundPlayChimeAction(name=Chime.FAILURE), FinishAction())
     if IS_RPI:
         atexit.register(
-            lambda: subprocess.run(
-                ['/usr/bin/env', 'systemctl', 'poweroff', '-i'],  # noqa: S603
+            lambda: subprocess.run(  # noqa: S603
+                ['/usr/bin/env', 'systemctl', 'poweroff', '-i'],
                 check=True,
             ),
         )

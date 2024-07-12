@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import atexit
-import datetime
 import random
 import sys
 import tracemalloc
@@ -50,7 +48,7 @@ def _monkeypatch_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
         'net_if_addrs',
         lambda: {
             'eth0': [
-                psutil._common.snicaddr(  # noqa: SLF001 # pyright: ignore [reportAttributeAccessIssue]
+                psutil._common.snicaddr(  # noqa: SLF001
                     family=socket.AddressFamily.AF_INET,
                     address='192.168.1.1',
                     netmask='255.255.255.0',
@@ -71,6 +69,8 @@ def _monkeypatch_docker(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _monkeypatch_datetime(monkeypatch: pytest.MonkeyPatch) -> None:
+    import datetime
+
     class DateTime(datetime.datetime):
         @classmethod
         def now(cls: type[DateTime], tz: datetime.tzinfo | None = None) -> DateTime:
@@ -251,19 +251,24 @@ def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture()
 def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
+    random.seed(0)
+    _monkeypatch_datetime(monkeypatch)
+
+    import atexit
     import importlib.metadata
 
     import ubo_app.constants
+    import ubo_app.store.services.notifications
     import ubo_app.utils.serializer
     from ubo_app.utils.fake import Fake
 
-    random.seed(0)
     tracemalloc.start()
 
     monkeypatch.setattr(atexit, 'register', lambda _: None)
-
     monkeypatch.setattr(importlib.metadata, 'version', lambda _: '0.0.0')
+
     monkeypatch.setattr(ubo_app.constants, 'STORE_GRACE_PERIOD', 0.1)
+    monkeypatch.setattr(ubo_app.store.services.notifications, 'FLASH_TIME', 1000)
     monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', lambda _, obj: obj)
 
     sys.modules['ubo_app.utils.secrets'] = Fake(
@@ -274,7 +279,6 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)
     _monkeypatch_docker(monkeypatch)
-    _monkeypatch_datetime(monkeypatch)
     _monkeypatch_uuid(monkeypatch)
     _monkeypatch_aiohttp()
     _monkeypatch_rpi_modules()

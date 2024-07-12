@@ -1,4 +1,4 @@
-# pyright: reportMissingImports=false
+# pyright: reportMissingModuleSource=false
 # ruff: noqa: D100, D101, D102, D103, D104, D105, D107
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class SystemdUnitInterface(  # pyright: ignore [reportGeneralTypeIssues]
+class SystemdUnitInterface(
     DbusInterfaceCommonAsync,
-    interface_name='org.freedesktop.systemd1.Unit',  # pyright: ignore [reportCallIssue]
+    interface_name='org.freedesktop.systemd1.Unit',
 ):
     @dbus_property_async(property_signature='s')
     def active_state(self: SystemdUnitInterface) -> str:

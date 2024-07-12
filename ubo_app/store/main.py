@@ -199,7 +199,7 @@ class UboStore(Store[RootState, ActionType, EventType]):
         self: UboStore,
         data: Any,
         *,
-        object_type: type[T] | None = None,
+        object_type: GenericAlias | type[T] | None = None,
     ) -> LoadedObject | T:
         if isinstance(data, int | float | str | bool | None):
             return data
@@ -214,12 +214,11 @@ class UboStore(Store[RootState, ActionType, EventType]):
             parameters = {key: self.load_object(value) for key, value in data.items()}
 
             return class_(**parameters)
-        if not object_type or isinstance(
-            data,
-            get_origin(object_type)  # pyright: ignore [reportArgumentType]
-            if isinstance(object_type, GenericAlias)
-            else object_type,
-        ):
+        if isinstance(object_type, GenericAlias):
+            origin = get_origin(object_type)
+            if isinstance(data, origin):
+                return cast(T, data)
+        elif not object_type or isinstance(data, object_type):
             return cast(T, data)
 
         msg = f'Invalid data type {type(data)}'

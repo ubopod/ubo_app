@@ -39,7 +39,7 @@ def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuIt
             if interface.name.startswith('lo')
             else '󰛳',
             sub_menu=HeadlessMenu(
-                title=f'IP Addresses - {interface.name}',
+                title=f'󰩟{interface.name}',
                 items=[
                     Item(
                         label=ip_address,
@@ -108,7 +108,7 @@ IpMainMenu = SubMenuItem(
     label='IP Addresses',
     icon='󰩟',
     sub_menu=HeadlessMenu(
-        title='IP Addresses',
+        title='󰩟IP Addresses',
         items=get_ip_addresses,
         placeholder='No IP addresses',
     ),
