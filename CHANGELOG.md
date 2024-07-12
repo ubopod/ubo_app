@@ -5,6 +5,7 @@
 - fix(core): add `rpi-lgpio` to dependencies to make the LCD work on RPi5
 - fix(core): add `dtoverlay=spi0-0cs` to `/boot/firmware/config.txt` to make the LCD work on RPi5
 - refactor: general housekeeping, improving typing, linting, resource management, etc
+- fix(notifications): avoid auto-closing notifications shown in the notification center
 
 ## Version 0.15.3
 

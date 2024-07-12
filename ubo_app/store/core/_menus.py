@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,7 @@ from ubo_app.store.core import SETTINGS_ICONS, PowerOffAction, SettingsCategory
 from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Notification,
+    NotificationDisplayType,
     NotificationsDisplayEvent,
 )
 from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
@@ -99,7 +101,10 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
             action=functools.partial(
                 dispatch,
                 NotificationsDisplayEvent(
-                    notification=notification,
+                    notification=replace(
+                        notification,
+                        display_type=NotificationDisplayType.STICKY,
+                    ),
                     index=index,
                     count=len(notifications),
                 ),
