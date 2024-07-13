@@ -7,6 +7,7 @@
 - refactor: general housekeeping, improving typing, linting, resource management, etc
 - fix(notifications): avoid auto-closing notifications shown in the notification center
 - feat(camera): fail-proof the camera initialization when no camera is connected
+- fix(ci): run typecheck on ubo-pod to avoid missing packages
 
 ## Version 0.15.3
 

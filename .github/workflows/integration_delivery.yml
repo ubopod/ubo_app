@@ -71,7 +71,6 @@ jobs:
       - name: Extract Python Version
         id: get-python-version
         run: |
-          sudo apt-get install -y libsystemd-dev
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)"
 
@@ -111,17 +110,11 @@ jobs:
   type-check:
     name: Type Check
     needs:
-      - dependencies
-    runs-on: ubuntu-latest
+      - ubo-pod-dependencies
+    runs-on: ubo-pod
     steps:
       - uses: actions/checkout@v4
         name: Checkout
-
-      - uses: actions/setup-python@v5
-        name: Setup Python
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
 
       - name: Load Cached Poetry
         id: cached-poetry
@@ -131,11 +124,13 @@ jobs:
             ~/.cache
             ~/.local
           key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
-            }}-${{hashFiles('poetry.lock') }}
+            poetry-ubo-pod-python${{
+            steps.get-python-version.outputs.PYTHON_VERSION }}-${{
+            hashFiles('poetry.lock') }}
 
       - name: Create stub files
-        run: poetry run pyright --createstub kivy
+        run: |
+          poetry run pyright --createstub kivy
 
       - name: Type Check
         run: |
