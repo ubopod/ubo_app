@@ -48,7 +48,7 @@ def _monkeypatch_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
         'net_if_addrs',
         lambda: {
             'eth0': [
-                psutil._common.snicaddr(  # noqa: SLF001
+                psutil._common.snicaddr(  # pyright: ignore [reportAttributeAccessIssue]  # noqa: SLF001
                     family=socket.AddressFamily.AF_INET,
                     address='192.168.1.1',
                     netmask='255.255.255.0',

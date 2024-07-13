@@ -93,7 +93,7 @@ jobs:
           poetry env remove 3.11 || true
           poetry config virtualenvs.options.system-site-packages true --local
           poetry env use 3.11
-          poetry install --no-root --no-interaction --extras=dev --with dev
+          poetry install --no-interaction --no-root --extras=dev --with dev
 
       - name: Save Cached Poetry
         if: steps.cached-poetry.outputs.cache-hit != 'true'

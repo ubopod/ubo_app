@@ -1,16 +1,37 @@
 """Compatibility layer for different environments."""
 
+import random
+import string
 from pathlib import Path
 from typing import Any
 
 import dotenv
 import numpy as np
 
+from ubo_app.constants import INSTALLATION_PATH
+
+
+def setup_hostname() -> None:
+    """Set the hostname to 'ubo'."""
+    available_letters = list(
+        set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
+    )
+
+    id_path = Path(INSTALLATION_PATH) / 'pod-id'
+    if not id_path.exists():
+        # Generate 2 letters random id
+        id = f'ubo-{random.sample(available_letters, 2)}'
+        id_path.write_text(id)
+
+    id = id_path.read_text().strip()
+
+    # Set hostname of the system
+    Path('/etc/hostname').write_text(id)
+
 
 def setup() -> None:
     """Set up for different environments."""
     dotenv.load_dotenv(Path(__file__).parent / '.env')
-    import ubo_app.display as _  # noqa: F401
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
@@ -20,11 +41,14 @@ def setup() -> None:
 
         from ubo_app.utils.fake import Fake
 
+        sys.modules['adafruit_rgb_display.st7789'] = Fake()
         sys.modules['alsaaudio'] = Fake()
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()
         sys.modules['pulsectl'] = Fake()
         sys.modules['sdbus'] = Fake()
+        sys.modules['sdbus.utils'] = Fake()
+        sys.modules['sdbus.utils.inspect'] = Fake()
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()
         sys.modules['sdbus_async.networkmanager.enums'] = Fake()
@@ -77,3 +101,5 @@ def setup() -> None:
             )
 
         asyncio.create_subprocess_exec = fake_create_subprocess_exec
+
+    import ubo_app.display as _  # noqa: F401

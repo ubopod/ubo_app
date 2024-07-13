@@ -90,6 +90,7 @@ apt-get -y install \
   python3-pip \
   python3-pyaudio \
   python3-virtualenv \
+  libsystemd-dev \
   --no-install-recommends --no-install-suggests
 apt-get -y clean
 

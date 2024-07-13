@@ -43,8 +43,6 @@ class AppContext:
 
     def __init__(self: AppContext, request: SubRequest) -> None:
         """Initialize the context."""
-        setup()
-
         self.request = request
         self.persistent_store_data = {}
 
@@ -117,10 +115,13 @@ class AppContext:
 
         Window.close()
 
-        from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
+        from ubo_app.utils import IS_RPI
 
-        GPIO.cleanup(26)
-        GPIO.cleanup(17)
+        if IS_RPI:
+            from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
+
+            GPIO.cleanup(26)
+            GPIO.cleanup(17)
 
 
 class ConditionalFSWrapper:
@@ -254,6 +255,7 @@ async def app_context(
     _monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
+    setup()
     _setup_headless_kivy()
 
     import os

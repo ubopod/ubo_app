@@ -5,14 +5,13 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from threading import Lock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import headless_kivy.config
 import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
-from picamera2.picamera2 import Picamera2
 from pyzbar.pyzbar import decode
 from ubo_gui.page import PageWidget
 
@@ -26,9 +25,17 @@ from ubo_app.store.services.camera import (
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.fake import Fake
 
 if TYPE_CHECKING:
     from numpy._typing import NDArray
+
+if not IS_RPI:
+    import sys
+
+    sys.modules['picamera2.picamera2'] = Fake()
+
+from picamera2.picamera2 import Picamera2
 
 THROTTL_TIME = 0.5
 
@@ -67,14 +74,17 @@ def initialize_camera() -> Picamera2 | None:
     except IndexError:
         logging.exception('Camera not found, using fake camera.')
         return None
-    preview_config = picamera2.create_still_configuration(
-        {
-            'format': 'RGB888',
-            'size': (
-                headless_kivy.config.width() * 2,
-                headless_kivy.config.height() * 2,
-            ),
-        },
+    preview_config = cast(
+        str,
+        picamera2.create_still_configuration(
+            {
+                'format': 'RGB888',
+                'size': (
+                    headless_kivy.config.width() * 2,
+                    headless_kivy.config.height() * 2,
+                ),
+            },
+        ),
     )
     picamera2.configure(preview_config)
     picamera2.set_controls({'AwbEnable': True})

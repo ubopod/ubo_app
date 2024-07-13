@@ -8,6 +8,7 @@
 - fix(notifications): avoid auto-closing notifications shown in the notification center
 - feat(camera): fail-proof the camera initialization when no camera is connected
 - fix(ci): run typecheck on ubo-pod to avoid missing packages
+- fix(core): move hostname generation code from `bootstrap()` to `setup()` - closes #141
 
 ## Version 0.15.3
 

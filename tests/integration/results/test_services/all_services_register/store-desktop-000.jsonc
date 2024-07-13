@@ -245,12 +245,12 @@
                                       }
                                     ],
                                     "placeholder": "No IP addresses",
-                                    "title": "IP Addresses - eth0"
+                                    "title": "󰩟eth0"
                                   }
                                 }
                               ],
                               "placeholder": "No IP addresses",
-                              "title": "IP Addresses"
+                              "title": "󰩟IP Addresses"
                             }
                           }
                         ],
