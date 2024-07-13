@@ -9,6 +9,7 @@
 - feat(camera): fail-proof the camera initialization when no camera is connected
 - fix(ci): run typecheck on ubo-pod to avoid missing packages
 - fix(core): move hostname generation code from `bootstrap()` to `setup()` - closes #141
+- build: update bookworm images to the latest version 2024-07-04
 
 ## Version 0.15.3
 
