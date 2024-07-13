@@ -2,6 +2,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING
@@ -60,8 +61,12 @@ class CameraApplication(PageWidget):
         return True
 
 
-def initialize_camera() -> Picamera2:
-    picamera2 = Picamera2()
+def initialize_camera() -> Picamera2 | None:
+    try:
+        picamera2 = Picamera2()
+    except IndexError:
+        logging.exception('Camera not found, using fake camera.')
+        return None
     preview_config = picamera2.create_still_configuration(
         {
             'format': 'RGB888',
@@ -79,7 +84,7 @@ def initialize_camera() -> Picamera2:
     return picamera2
 
 
-def feed_viewfinder(picamera2: Picamera2) -> None:
+def feed_viewfinder(picamera2: Picamera2 | None) -> None:
     width = headless_kivy.config.width()
     height = headless_kivy.config.height()
 
@@ -98,59 +103,64 @@ def feed_viewfinder(picamera2: Picamera2) -> None:
             width, height, data, _ = reader.read()
             data = np.array(list(data)).reshape((height, width, 4))
         qrcode_path.unlink(missing_ok=True)
-    else:
+    elif picamera2:
         data = picamera2.capture_array('main')
+    else:
+        data = None
 
-    barcodes = decode(data)
-    if len(barcodes) > 0:
-        create_task(
-            check_codes(
-                codes=[barcode.data.decode() for barcode in barcodes],
+    if data is not None:
+        barcodes = decode(data)
+        if len(barcodes) > 0:
+            create_task(
+                check_codes(
+                    codes=[barcode.data.decode() for barcode in barcodes],
+                ),
+            )
+
+        if not display:
+            return
+
+        data = resize_image(data, new_size=(width, height))
+        data = np.rot90(data, 2)
+
+        # Mirror the image
+        data = data[:, ::-1, :3].astype(np.uint16)
+
+        # Render an empty rounded rectangle
+        margin = 15
+        thickness = 7
+
+        lines = [
+            ((margin, width - margin), (margin, margin + thickness)),
+            (
+                (margin, width - margin),
+                (height - margin - thickness, height - margin),
             ),
+            (
+                (margin, margin + thickness),
+                (margin + thickness, height - margin - thickness),
+            ),
+            (
+                (width - margin - thickness, width - margin),
+                (margin + thickness, height - margin - thickness),
+            ),
+        ]
+        for line in lines:
+            data[line[0][0] : line[0][1], line[1][0] : line[1][1]] = (
+                0xFF - data[line[0][0] : line[0][1], line[1][0] : line[1][1]]
+            ) // 2
+
+        color = (
+            (data[:, :, 2] & 0xF8) << 8
+            | (data[:, :, 1] & 0xFC) << 3
+            | data[:, :, 0] >> 3
         )
 
-    if not display:
-        return
+        data_bytes = bytes(
+            np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
+        )
 
-    data = resize_image(data, new_size=(width, height))
-    data = np.rot90(data, 2)
-
-    # Mirror the image
-    data = data[:, ::-1, :3].astype(np.uint16)
-
-    # Render an empty rounded rectangle
-    margin = 15
-    thickness = 7
-
-    lines = [
-        ((margin, width - margin), (margin, margin + thickness)),
-        (
-            (margin, width - margin),
-            (height - margin - thickness, height - margin),
-        ),
-        (
-            (margin, margin + thickness),
-            (margin + thickness, height - margin - thickness),
-        ),
-        (
-            (width - margin - thickness, width - margin),
-            (margin + thickness, height - margin - thickness),
-        ),
-    ]
-    for line in lines:
-        data[line[0][0] : line[0][1], line[1][0] : line[1][1]] = (
-            0xFF - data[line[0][0] : line[0][1], line[1][0] : line[1][1]]
-        ) // 2
-
-    color = (
-        (data[:, :, 2] & 0xF8) << 8 | (data[:, :, 1] & 0xFC) << 3 | data[:, :, 0] >> 3
-    )
-
-    data_bytes = bytes(
-        np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
-    )
-
-    display.state.block((0, 0, width - 1, height - 1), data_bytes)
+        display.state.block((0, 0, width - 1, height - 1), data_bytes)
 
 
 @mainthread
@@ -180,7 +190,8 @@ def start_camera_viewfinder() -> None:
             dispatch(CloseApplicationEvent(application=application))
             display.resume()
             cancel_subscription()
-            picamera2.stop()
+            if picamera2:
+                picamera2.stop()
 
     cancel_subscription = subscribe_event(
         CameraStopViewfinderEvent,

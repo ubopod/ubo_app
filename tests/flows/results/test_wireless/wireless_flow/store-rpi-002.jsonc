@@ -1,6 +1,15 @@
 // store-rpi-002
 {
-  "connections": null,
+  "connections": [
+    {
+      "hidden": false,
+      "password": null,
+      "signal_strength": 100,
+      "ssid": "ubo-test-ssid",
+      "state": "Disconnected",
+      "type": null
+    }
+  ],
   "current_connection": null,
   "has_visited_onboarding": true,
   "state": "Disconnected"

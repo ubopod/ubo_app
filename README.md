@@ -8,8 +8,7 @@
 
 ## 🌟 Overview
 
-Ubo App is a Python application for managing Raspberry Pi utilities and Ubo-specific
-features.
+Ubo App is a Python application for managing Raspberry Pi utilities and Ubo-specific features.
 
 <img width="550" alt="Ubo ai pod photo" src="https://github.com/ubopod/ubo-app/assets/94014876/9438ab51-9b40-46b8-a656-80b8fcb72bc3">
 
@@ -19,8 +18,7 @@ Example screenshots:
 
 ## 🚧 Disclaimer
 
-Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will
-limit this to beta versions only.
+Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will limit this to beta versions only.
 
 ## ⚙️ Notable Features
 
@@ -62,11 +60,7 @@ If you want to install the image on an existing operating system, then read on. 
 
 ---
 
-⚠️ **Executing scripts directly from the internet with root privileges poses a significant
-security risk. It's generally a good practice to ensure you understand the script's
-content before running it. You can check the content of this particular script
-[here](https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh)
-before running it.**
+⚠️ **Executing scripts directly from the internet with root privileges poses a significant security risk. It's generally a good practice to ensure you understand the script's content before running it. You can check the content of this particular script [here](https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh) before running it.**
 
 ---
 
@@ -123,10 +117,8 @@ Contributions following Python best practices are welcome.
 ### ℹ️️ Conventions
 
 - Use `UBO_` prefix for environment variables.
-- Use `ubo:` prefix for notification ids used in ubo core and `<service_name>:` prefix
-  for notification ids used in services.
-- Use `ubo:` prefix for icon ids used in ubo core and `<service_name>:` prefix for
-  icon ids used in services.
+- Use `ubo:` prefix for notification ids used in ubo core and `<service_name>:` prefix for notification ids used in services.
+- Use `ubo:` prefix for icon ids used in ubo core and `<service_name>:` prefix for icon ids used in services.
 
 ### Development
 
@@ -148,8 +140,7 @@ poetry run ubo
 
 #### Running tests
 
-Easiest way to run tests is to use the provided `Dockerfile`s. To run the tests
-in a container, you first need to create the development images by running:
+Easiest way to run tests is to use the provided `Dockerfile`s. To run the tests in a container, you first need to create the development images by running:
 
 ```bash
 poetry run poe build-docker-images

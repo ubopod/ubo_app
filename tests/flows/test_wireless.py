@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
@@ -96,8 +95,6 @@ async def test_wireless_flow(
             has_visited_onboarding=wifi_state.has_visited_onboarding,
         )
 
-    store_snapshot.monitor(store_snapshot_selector)
-
     app = MenuApp()
     app_context.set_app(app)
     load_services(['camera', 'wifi', 'notifications'])
@@ -119,6 +116,7 @@ async def test_wireless_flow(
 
     await check_icon()
     await stability()
+    store_snapshot.take(selector=store_snapshot_selector)
 
     # Select the main menu
     dispatch(ChooseMenuItemByIconEvent(icon='󰍜'))
@@ -180,6 +178,7 @@ async def test_wireless_flow(
 
     await check_connections()
     await wait_for_menu_item(label='ubo-test-ssid', icon='󱚽', timeout=20)
+    store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
 
     # Select the connection
@@ -194,11 +193,13 @@ async def test_wireless_flow(
     # Wait for the "Connect" item to show up
     await wait_for_menu_item(label='Connect')
     await stability()
+    store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Connect'))
 
     await wait_for_menu_item(label='Disconnect')
     await stability()
+    store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Delete'))
 
@@ -209,6 +210,7 @@ async def test_wireless_flow(
         assert state.wifi.connections == []
 
     await check_no_connections()
+    store_snapshot.take(selector=store_snapshot_selector)
 
     # Dismiss the notification informing the user that the connection was deleted
     await wait_for_menu_item(label='', icon='󰆴')
@@ -216,5 +218,5 @@ async def test_wireless_flow(
     dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
 
     await wait_for_empty_menu(placeholder='No Wi-Fi connections found')
-    await asyncio.sleep(1)
     window_snapshot.take()
+    store_snapshot.take(selector=store_snapshot_selector)
