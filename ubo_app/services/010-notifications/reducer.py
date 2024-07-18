@@ -52,18 +52,36 @@ def reducer(
         if action.notification in state.notifications:
             return CompleteReducerResult(state=state, events=events)
         kivy_color = get_color_from_hex(action.notification.color)
+        new_notifications = (
+            [
+                action.notification
+                if notification.id == action.notification.id
+                else notification
+                for notification in state.notifications
+            ]
+            if any(
+                notification.id == action.notification.id
+                for notification in state.notifications
+            )
+            else [action.notification, *state.notifications]
+        )
         return CompleteReducerResult(
             state=replace(
                 state,
-                notifications=[
-                    *[
-                        notification
-                        for notification in state.notifications
-                        if notification.id != action.notification.id
-                    ],
-                    action.notification,
-                ],
-                unread_count=state.unread_count + 1,
+                notifications=new_notifications,
+                unread_count=sum(
+                    1 for notification in new_notifications if not notification.is_read
+                ),
+                progress=sum(
+                    notification.progress * notification.progress_weight
+                    for notification in new_notifications
+                    if notification.progress is not None
+                )
+                if any(
+                    notification.progress is not None
+                    for notification in new_notifications
+                )
+                else None,
             ),
             actions=[
                 RgbRingBlinkAction(
@@ -80,7 +98,11 @@ def reducer(
                     }[action.notification.importance],
                     wait=400,
                 ),
-                SoundPlayChimeAction(name=action.notification.chime),
+                *(
+                    [SoundPlayChimeAction(name=action.notification.chime)]
+                    if action.notification.chime
+                    else []
+                ),
             ],
             events=events,
         )

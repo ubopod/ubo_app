@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.15.4"
+version = "0.15.5"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ priority = "primary"
 [tool.poetry.dependencies]
 python = "^3.11"
 psutil = "^6.0.0"
-ubo-gui = "^0.11.17"
+ubo-gui = "^0.12.0"
 headless-kivy = [
   { version = "^0.9.4", markers = "extra=='default'", extras = [
     "default",
@@ -28,7 +28,6 @@ headless-kivy = [
 ]
 python-redux = "^0.15.9"
 pyzbar = "^0.1.9"
-sdbus = { git = "https://github.com/python-sdbus/python-sdbus.git", branch = "split-sdbus-utils", markers = "platform_machine=='aarch64'" }
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
 python-debouncer = "^0.1.4"

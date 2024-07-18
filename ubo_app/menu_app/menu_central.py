@@ -38,14 +38,15 @@ class MenuWidgetWithHomePage(MenuWidget):
             name='Page 1 0',
             padding_bottom=self.padding_bottom,
             padding_top=self.padding_top,
+            render_surroundings=self.render_surroundings,
         )
 
-    def _render_items(self: MenuWidgetWithHomePage, *_: object) -> None:
+    def _render_menu(self: MenuWidgetWithHomePage, *_: object) -> PageWidget | None:
         if self.depth <= 1:
             self.home_page.set_items(self.current_menu_items)
             self.current_screen = self.home_page
-        else:
-            super()._render_items()
+            return self.home_page
+        return super()._render_menu()
 
 
 def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) -> None:
@@ -59,7 +60,7 @@ def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) ->
 class MenuAppCentral(MenuNotificationHandler, UboApp):
     def __init__(self: MenuAppCentral, **kwargs: object) -> None:
         super().__init__(**kwargs)
-        self.menu_widget = MenuWidgetWithHomePage()
+        self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)
 
         _self = weakref.ref(self)
 
@@ -78,6 +79,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         root = super().build()
         self.menu_widget.padding_top = root.ids.header_layout.height
         self.menu_widget.padding_bottom = root.ids.footer_layout.height
+
         return root
 
     def handle_page_index_change(

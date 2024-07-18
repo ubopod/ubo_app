@@ -130,16 +130,15 @@ async def check_docker() -> None:
 def setup_menu(status: DockerStatus) -> HeadedMenu:
     """Get the menu items for the Docker service."""
     title = 'Setup Docker'
-    if status == DockerStatus.UNKNOWN:
-        return HeadedMenu(
+    return {
+        DockerStatus.UNKNOWN: HeadedMenu(
             title=title,
             heading='Checking',
             sub_heading='Checking Docker service status',
             items=[],
             placeholder='',
-        )
-    if status == DockerStatus.NOT_INSTALLED:
-        return HeadedMenu(
+        ),
+        DockerStatus.NOT_INSTALLED: HeadedMenu(
             title=title,
             heading='Docker is not Installed',
             sub_heading='Install it to enjoy the power of Docker on your Ubo pod',
@@ -150,17 +149,15 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
                     action=install_docker,
                 ),
             ],
-        )
-    if status == DockerStatus.INSTALLING:
-        return HeadedMenu(
+        ),
+        DockerStatus.INSTALLING: HeadedMenu(
             title=title,
             heading='Installing...',
             sub_heading='Docker is being installed',
             items=[],
             placeholder='',
-        )
-    if status == DockerStatus.NOT_RUNNING:
-        return HeadedMenu(
+        ),
+        DockerStatus.NOT_RUNNING: HeadedMenu(
             title=title,
             heading='Docker is not Running',
             sub_heading='Run it to enjoy the power of Docker on your Ubo pod',
@@ -171,9 +168,8 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
                     action=run_docker,
                 ),
             ],
-        )
-    if status == DockerStatus.RUNNING:
-        return HeadedMenu(
+        ),
+        DockerStatus.RUNNING: HeadedMenu(
             title=title,
             heading='Docker is Running',
             sub_heading='Enjoy the power of Docker on your Ubo pod',
@@ -184,18 +180,15 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
                     action=stop_docker,
                 ),
             ],
-        )
-    if status == DockerStatus.ERROR:
-        return HeadedMenu(
+        ),
+        DockerStatus.ERROR: HeadedMenu(
             title=title,
             heading='Docker Error',
             sub_heading='Please check the logs for more information',
             items=[],
             placeholder='',
-        )
-
-    msg = f'Unknown status: {status}'
-    raise ValueError(msg)
+        ),
+    }[status]
 
 
 def setup_menu_action() -> Callable[[], HeadedMenu]:

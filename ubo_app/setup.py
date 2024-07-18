@@ -32,14 +32,24 @@ def setup_hostname() -> None:
 def setup() -> None:
     """Set up for different environments."""
     dotenv.load_dotenv(Path(__file__).parent / '.env')
+    import sys
+
+    # it should be changed to `Fake()` and  moved inside the `if not IS_RPI` when the
+    # new sdbus is released {-
+    from ubo_app.utils.fake import Fake
+
+    sys.modules['sdbus.utils.inspect'] = Fake(
+        _Fake__props={
+            'inspect_dbus_path': lambda obj: obj._dbus.object_path,  # noqa: SLF001
+        },
+    )
+    # -}
+
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
         import asyncio
         import subprocess
-        import sys
-
-        from ubo_app.utils.fake import Fake
 
         sys.modules['adafruit_rgb_display.st7789'] = Fake()
         sys.modules['alsaaudio'] = Fake()
@@ -48,7 +58,6 @@ def setup() -> None:
         sys.modules['pulsectl'] = Fake()
         sys.modules['sdbus'] = Fake()
         sys.modules['sdbus.utils'] = Fake()
-        sys.modules['sdbus.utils.inspect'] = Fake()
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()
         sys.modules['sdbus_async.networkmanager.enums'] = Fake()

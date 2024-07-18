@@ -32,7 +32,6 @@ class HomePage(PageWidget):
             *args,
             count=PAGE_SIZE + 2,
             offset=1,
-            render_surroundings=True,
             **kwargs,
         )
 

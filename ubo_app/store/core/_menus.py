@@ -109,6 +109,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
                     count=len(notifications),
                 ),
             ),
+            progress=notification.progress,
         )
         for index, notification in enumerate(notifications)
         if notification.expiry_date is None

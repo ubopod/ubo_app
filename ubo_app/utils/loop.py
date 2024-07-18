@@ -33,6 +33,7 @@ class WorkerThread(threading.Thread):
             self.loop = asyncio.get_event_loop()
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
+
         self.loop.set_exception_handler(loop_exception_handler)
         asyncio.set_event_loop(self.loop)
 

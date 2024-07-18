@@ -255,6 +255,7 @@ async def app_context(
     _monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
+    _ = _monkeypatch
     setup()
     _setup_headless_kivy()
 

@@ -27,8 +27,6 @@ def create_task(
 
         logger = get_logger('ubo-app')
 
-        if awaitable is None:
-            return
         try:
             thread = current_thread()
             logger.verbose(

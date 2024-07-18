@@ -30,7 +30,9 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine
 
 from sdbus import dbus_exceptions
-from sdbus.utils.inspect import inspect_dbus_path
+from sdbus.utils.inspect import (  # pyright: ignore [reportMissingImports]
+    inspect_dbus_path,
+)
 from sdbus_async.networkmanager import (
     AccessPoint,
     ActiveConnection,

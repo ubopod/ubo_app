@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from ubo_gui.app import UboApp
 
-from .menu_central import MenuAppCentral
-from .menu_footer import MenuAppFooter
+from ubo_app.menu_app.menu_central import MenuAppCentral
+from ubo_app.menu_app.menu_footer import MenuAppFooter
+from ubo_app.menu_app.menu_header import MenuAppHeader
 
 
-class MenuApp(MenuAppCentral, MenuAppFooter, UboApp):
+class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
     """Menu application."""
 
     def on_start(self: MenuApp) -> None:

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.15.5
+
+- feat(notifications): add `progress` and `progress_weight` properties to `Notification` object and show the progress on the header of the app
+
 ## Version 0.15.4
 
 - fix(core): add `rpi-lgpio` to dependencies to make the LCD work on RPi5

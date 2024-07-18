@@ -16,6 +16,7 @@
           "is_short": true,
           "label": "",
           "opacity": null,
+          "progress": null,
           "sub_menu": {
             "items": [
               {
@@ -30,6 +31,7 @@
                 "is_short": false,
                 "label": "Apps",
                 "opacity": null,
+                "progress": null,
                 "sub_menu": {
                   "items": [],
                   "placeholder": "No apps",
@@ -48,6 +50,7 @@
                 "is_short": false,
                 "label": "Settings",
                 "opacity": null,
+                "progress": null,
                 "sub_menu": {
                   "items": [
                     {
@@ -62,6 +65,7 @@
                       "is_short": false,
                       "label": "Network",
                       "opacity": null,
+                      "progress": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
@@ -80,6 +84,7 @@
                       "is_short": false,
                       "label": "Accessibility",
                       "opacity": null,
+                      "progress": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
@@ -98,6 +103,7 @@
                       "is_short": false,
                       "label": "Utilities",
                       "opacity": null,
+                      "progress": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
@@ -116,6 +122,7 @@
                       "is_short": false,
                       "label": "Remote",
                       "opacity": null,
+                      "progress": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
@@ -134,6 +141,7 @@
                       "is_short": false,
                       "label": "Apps",
                       "opacity": null,
+                      "progress": null,
                       "sub_menu": {
                         "items": [],
                         "placeholder": "No settings in this category",
@@ -157,6 +165,7 @@
                 "is_short": false,
                 "label": "About",
                 "opacity": null,
+                "progress": null,
                 "sub_menu": {
                   "heading": "Ubo v0.0.0",
                   "items": [
@@ -166,7 +175,8 @@
                       "icon": "󰄬",
                       "is_short": false,
                       "label": "Already up to date!",
-                      "opacity": null
+                      "opacity": null,
+                      "progress": null
                     }
                   ],
                   "placeholder": null,
@@ -186,6 +196,7 @@
           "is_short": true,
           "label": "",
           "opacity": null,
+          "progress": null,
           "sub_menu": {
             "items": [],
             "placeholder": "No notifications",
@@ -204,7 +215,8 @@
           "icon": "󰐥",
           "is_short": true,
           "label": "Turn off",
-          "opacity": null
+          "opacity": null,
+          "progress": null
         }
       ],
       "placeholder": null,
