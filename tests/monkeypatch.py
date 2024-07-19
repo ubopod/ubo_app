@@ -15,6 +15,8 @@ def _monkeypatch_socket(monkeypatch: pytest.MonkeyPatch) -> None:
 
     from ubo_app.utils.fake import Fake
 
+    monkeypatch.setattr(socket, 'gethostname', lambda: 'test-hostname')
+
     monkeypatch.setattr(
         socket,
         'create_connection',

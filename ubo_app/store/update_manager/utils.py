@@ -28,7 +28,6 @@ from ubo_app.store.update_manager import (
     UpdateManagerState,
     UpdateStatus,
 )
-from ubo_app.store.update_manager.reducer import ABOUT_MENU_PATH
 from ubo_app.utils.eeprom import read_serial_number
 
 CURRENT_VERSION = importlib.metadata.version('ubo_app')
@@ -57,7 +56,9 @@ async def check_version() -> None:
             dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
                     flash_notification=state is None
-                    or state.main.path[:3] != ABOUT_MENU_PATH,
+                    # TODO(Sassan): We need a better approach for  # noqa: FIX002, TD003
+                    # serializing and checking paths of menus
+                    or state.main.path[1:3] != ['Main', 'About'],
                     current_version=CURRENT_VERSION,
                     latest_version=latest_version,
                     serial_number=serial_number,

@@ -30,8 +30,6 @@ from ubo_app.store.update_manager import (
     UpdateStatus,
 )
 
-ABOUT_MENU_PATH = ['Dashboard', 'Main', 'About']
-
 
 def reducer(
     state: UpdateManagerState | None,

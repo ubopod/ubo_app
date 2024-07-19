@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import socket
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -131,7 +132,7 @@ def notifications_color(unread_count: int) -> str:
 
 
 HOME_MENU = HeadlessMenu(
-    title='Dashboard',
+    title=f'󰋜{socket.gethostname()}.local',
     items=[
         SubMenuItem(
             label='',
