@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib.metadata
-import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -30,7 +29,7 @@ from ubo_app.store.update_manager import (
     UpdateStatus,
 )
 from ubo_app.store.update_manager.reducer import ABOUT_MENU_PATH
-from ubo_app.utils import IS_RPI
+from ubo_app.utils.eeprom import read_serial_number
 
 CURRENT_VERSION = importlib.metadata.version('ubo_app')
 
@@ -54,20 +53,7 @@ async def check_version() -> None:
             data = await response.json()
             latest_version = data['info']['version']
 
-            serial_number = '<not-available>'
-            if IS_RPI:
-                try:
-                    eeprom_json_data = Path(
-                        '/proc/device-tree/hat/custom_0',
-                    ).read_text(encoding='utf-8')
-                    eeprom_data = json.loads(eeprom_json_data)
-                    serial_number = eeprom_data['serial_number']
-                except Exception:
-                    logger.exception('Failed to read serial number')
-
-                from sentry_sdk import set_user
-
-                set_user({'id': serial_number})
+            serial_number = read_serial_number()
             dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
                     flash_notification=state is None

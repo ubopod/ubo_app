@@ -7,6 +7,7 @@
 - fix(camera): render the viewfinder on the display even if the display is paused - closes #78
 - refactor(core): make the power-off menu, a sub-menu with power-off and reboot action items - closes #123
 - fix(core): headed menus not showing the first item in the list - closes #144
+- refactor(system): generate the hostname of the device based on a hash of its serial number
 
 ## Version 0.15.4
 

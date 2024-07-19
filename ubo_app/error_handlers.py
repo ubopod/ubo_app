@@ -7,6 +7,8 @@ import threading
 import traceback
 from typing import TYPE_CHECKING, cast
 
+from ubo_app.utils.eeprom import read_serial_number
+
 if TYPE_CHECKING:
     from types import TracebackType
 
@@ -16,12 +18,18 @@ def setup_sentry() -> None:  # pragma: no cover
 
     import sentry_sdk
 
+    serial_number = read_serial_number()
+
     if 'SENTRY_DSN' in os.environ:
+        from sentry_sdk import set_user
+
         sentry_sdk.init(
             traces_sample_rate=1.0,
             profiles_sample_rate=1.0,
             ignore_errors=[KeyboardInterrupt, asyncio.CancelledError],
+            server_name=serial_number,
         )
+        set_user({'id': serial_number})
 
 
 def get_all_thread_stacks() -> dict[str, list[str]]:

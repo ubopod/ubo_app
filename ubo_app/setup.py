@@ -1,32 +1,10 @@
 """Compatibility layer for different environments."""
 
-import random
-import string
 from pathlib import Path
 from typing import Any
 
 import dotenv
 import numpy as np
-
-
-def setup_hostname() -> None:
-    """Set the hostname to 'ubo'."""
-    from ubo_app.constants import INSTALLATION_PATH
-
-    available_letters = list(
-        set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
-    )
-
-    id_path = Path(INSTALLATION_PATH) / 'pod-id'
-    if not id_path.exists():
-        # Generate 2 letters random id
-        id = f'ubo-{random.sample(available_letters, 2)}'
-        id_path.write_text(id)
-
-    id = id_path.read_text().strip()
-
-    # Set hostname of the system
-    Path('/etc/hostname').write_text(id, encoding='utf-8')
 
 
 def setup() -> None:

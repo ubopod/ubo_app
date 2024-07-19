@@ -5,8 +5,11 @@ import grp
 import logging
 import os
 import pwd
+import random
 import socket
 import stat
+import string
+import subprocess
 import sys
 from pathlib import Path
 from threading import Thread
@@ -17,6 +20,7 @@ from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.led import LEDManager
 from ubo_app.system.system_manager.service_manager import service_handler
+from ubo_app.utils.eeprom import read_serial_number
 
 SOCKET_PATH = Path(os.environ.get('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
     'system_manager.sock',
@@ -42,10 +46,45 @@ def handle_command(command: str) -> str | None:
     return None
 
 
+def setup_hostname() -> None:
+    """Set the hostname to 'ubo'."""
+    logger.debug('Setting hostname...')
+    from ubo_app.constants import INSTALLATION_PATH
+
+    available_letters = list(
+        set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
+    )
+
+    id_path = Path(INSTALLATION_PATH) / 'pod-id'
+
+    if not id_path.exists():
+        serial_number = read_serial_number()
+        random.seed(serial_number)
+        # Generate 2 letters random id
+        id = f'ubo-{"".join(random.sample(available_letters, 2))}'
+        id_path.write_text(id)
+
+    id = id_path.read_text().strip()
+
+    # Set hostname of the system
+    subprocess.run(  # noqa: S603
+        [
+            '/usr/bin/env',
+            'hostnamectl',
+            'set-hostname',
+            f'{id}',
+        ],
+        check=True,
+    )
+    logger.debug('Hostname set to %s', id)
+
+
 def main() -> None:
     """Initialise the System-Manager."""
     setup_error_handling()
     logger.debug('Initialising System-Manager...')
+
+    setup_hostname()
 
     led_manager.run_command_thread_safe('spinning_wheel 255 255 255 50 6 100'.split())
 
