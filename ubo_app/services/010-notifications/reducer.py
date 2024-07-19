@@ -84,19 +84,25 @@ def reducer(
                 else None,
             ),
             actions=[
-                RgbRingBlinkAction(
-                    color=(
-                        round(kivy_color[0] * 255),
-                        round(kivy_color[1] * 255),
-                        round(kivy_color[2] * 255),
-                    ),
-                    repetitions={
-                        Importance.LOW: 1,
-                        Importance.MEDIUM: 2,
-                        Importance.HIGH: 3,
-                        Importance.CRITICAL: 4,
-                    }[action.notification.importance],
-                    wait=400,
+                *(
+                    [
+                        RgbRingBlinkAction(
+                            color=(
+                                round(kivy_color[0] * 255),
+                                round(kivy_color[1] * 255),
+                                round(kivy_color[2] * 255),
+                            ),
+                            repetitions={
+                                Importance.LOW: 1,
+                                Importance.MEDIUM: 2,
+                                Importance.HIGH: 3,
+                                Importance.CRITICAL: 4,
+                            }[action.notification.importance],
+                            wait=400,
+                        ),
+                    ]
+                    if action.notification.blink
+                    else []
                 ),
                 *(
                     [SoundPlayChimeAction(name=action.notification.chime)]

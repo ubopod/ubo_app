@@ -115,9 +115,10 @@ if [ "$UPDATE" = true ]; then
   fi
 else
   if [ "$ALPHA" = true ]; then
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre "$SOURCE"[default]
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre "$SOURCE"[default] | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
   else
-    "$INSTALLATION_PATH/env/bin/python" -m pip install "$SOURCE"[default]
+    # Count number of Collecting instances
+    "$INSTALLATION_PATH/env/bin/python" -m pip install "$SOURCE"[default] | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
   fi
 fi
 

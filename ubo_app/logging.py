@@ -20,7 +20,7 @@ class UboLogger(logging.getLoggerClass()):
 
         logging.addLevelName(VERBOSE, 'VERBOSE')
 
-    def verbose(  # noqa: PLR0913
+    def verbose(
         self: UboLogger,
         msg: object,
         *args: tuple[object],

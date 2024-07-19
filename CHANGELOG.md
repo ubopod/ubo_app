@@ -3,6 +3,7 @@
 ## Version 0.15.5
 
 - feat(notifications): add `progress` and `progress_weight` properties to `Notification` object and show the progress on the header of the app
+- feat(core): show the progress of the update using the new `progress` property of the `Notification` object
 
 ## Version 0.15.4
 

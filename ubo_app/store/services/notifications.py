@@ -89,7 +89,7 @@ class Notification(Immutable):
     content: str
     extra_information: str | None = None
     importance: Importance = Importance.LOW
-    chime: Chime | None = Chime.DONE
+    chime: Chime | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     is_read: bool = False
     sender: str | None = None
@@ -102,6 +102,7 @@ class Notification(Immutable):
     dismissable: bool = True
     dismiss_on_close: bool = False
     on_close: Callable[[], Any] | None = None
+    blink: bool = True
     progress: float | None = None
     progress_weight: float = 1
 

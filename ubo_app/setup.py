@@ -8,11 +8,11 @@ from typing import Any
 import dotenv
 import numpy as np
 
-from ubo_app.constants import INSTALLATION_PATH
-
 
 def setup_hostname() -> None:
     """Set the hostname to 'ubo'."""
+    from ubo_app.constants import INSTALLATION_PATH
+
     available_letters = list(
         set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
     )
@@ -26,7 +26,7 @@ def setup_hostname() -> None:
     id = id_path.read_text().strip()
 
     # Set hostname of the system
-    Path('/etc/hostname').write_text(id)
+    Path('/etc/hostname').write_text(id, encoding='utf-8')
 
 
 def setup() -> None:
@@ -97,7 +97,7 @@ def setup() -> None:
                 command = command.as_posix()
             if any(i in command for i in ('reboot', 'poweroff')):
                 return Fake()
-            if command in ('curl', 'tar') or command.endswith('/code'):
+            if command in {'curl', 'tar'} or command.endswith('/code'):
                 return original_asyncio_create_subprocess_exec(*args, **kwargs)
             return Fake(
                 _Fake__await_value=Fake(

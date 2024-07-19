@@ -11,7 +11,7 @@ from pathlib import Path
 
 import aiohttp
 import requests
-from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR
+from ubo_gui.constants import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, Item
 
 from ubo_app.constants import INSTALLATION_PATH
@@ -59,7 +59,7 @@ async def check_version() -> None:
                 try:
                     eeprom_json_data = Path(
                         '/proc/device-tree/hat/custom_0',
-                    ).read_text()
+                    ).read_text(encoding='utf-8')
                     eeprom_data = json.loads(eeprom_json_data)
                     serial_number = eeprom_data['serial_number']
                 except Exception:
@@ -86,11 +86,32 @@ async def check_version() -> None:
 async def update() -> None:
     """Update the Ubo app."""
     logger.info('Updating Ubo app...')
+    dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='ubo:update_manager',
+                title='Updating...',
+                content='Fetching the latest version of Ubo app...',
+                display_type=NotificationDisplayType.BACKGROUND,
+                color=INFO_COLOR,
+                icon='󰇚',
+                blink=False,
+                progress=0,
+            ),
+        ),
+    )
 
     async def download_files() -> None:
         target_path = Path(f'{INSTALLATION_PATH}/_update/')
         shutil.rmtree(target_path, ignore_errors=True)
         target_path.mkdir(parents=True, exist_ok=True)
+
+        packages_count_path = f'{INSTALLATION_PATH}/.packages-count'
+
+        try:
+            packages_count = int(Path(packages_count_path).read_text(encoding='utf-8'))
+        except FileNotFoundError:
+            packages_count = 55
 
         process = await asyncio.create_subprocess_exec(
             '/usr/bin/env',
@@ -101,10 +122,65 @@ async def update() -> None:
             'ubo-app[default]',
             'setuptools',
             'wheel',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
+        if process.stdout is None:
+            logger.exception('Failed to update (pip has no stdout)')
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        id='ubo:update_manager',
+                        title='Failed to update',
+                        content='Failed to download packages',
+                        display_type=NotificationDisplayType.FLASH,
+                        color=DANGER_COLOR,
+                        icon='󰜺',
+                        chime=Chime.FAILURE,
+                    ),
+                ),
+                UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
+            )
+            return
+        counter = 0
+        while True:
+            line = (await process.stdout.readline()).decode()
+            if not line:
+                break
+            if line.startswith('Collecting'):
+                counter += 1
+                dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            id='ubo:update_manager',
+                            title='Updating...',
+                            content=f'Downloading {line.partition(" ")[2].strip()}',
+                            display_type=NotificationDisplayType.BACKGROUND,
+                            color=INFO_COLOR,
+                            icon='󰇚',
+                            blink=False,
+                            progress=min(counter / (packages_count * 2), 1),
+                        ),
+                    ),
+                )
         await process.wait()
+
+        # Update the packages count estimate for the next update
+        Path(packages_count_path).write_text(str(counter), encoding='utf-8')
+
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='ubo:update_manager',
+                    title='Updating...',
+                    content='All packages downloaded successfully, rebooting...',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    progress=1,
+                ),
+            ),
+        )
         if process.returncode != 0:
             msg = 'Failed to download packages'
             raise RuntimeError(msg)
