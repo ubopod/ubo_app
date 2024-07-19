@@ -127,9 +127,6 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
                 ),
             )
 
-        if not display:
-            return
-
         data = resize_image(data, new_size=(width, height))
         data = np.rot90(data, 2)
 
@@ -170,7 +167,11 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
             np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
         )
 
-        display.state.block((0, 0, width - 1, height - 1), data_bytes)
+        display.state.block(
+            (0, 0, width - 1, height - 1),
+            data_bytes,
+            bypass_pause=True,
+        )
 
 
 @mainthread

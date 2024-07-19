@@ -114,9 +114,11 @@ class _State:
         self: _State,
         rectangle: tuple[int, int, int, int],
         data_bytes: bytes,
+        *,
+        bypass_pause: bool = False,
     ) -> None:
         """Block the display."""
-        if self.is_running:
+        if self.is_running or bypass_pause:
             self.display._block(*rectangle, data_bytes)  # noqa: SLF001
 
 
