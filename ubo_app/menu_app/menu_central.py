@@ -38,12 +38,11 @@ class MenuWidgetWithHomePage(MenuWidget):
             name='Page 1 0',
             padding_bottom=self.padding_bottom,
             padding_top=self.padding_top,
-            render_surroundings=self.render_surroundings,
         )
 
     def _render_menu(self: MenuWidgetWithHomePage, *_: object) -> PageWidget | None:
         if self.depth <= 1:
-            self.home_page.set_items(self.current_menu_items)
+            self.home_page.items = self.current_menu_items
             self.current_screen = self.home_page
             return self.home_page
         return super()._render_menu()

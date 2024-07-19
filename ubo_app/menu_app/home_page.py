@@ -30,9 +30,9 @@ class HomePage(PageWidget):
         super().__init__(
             [None, *items, None],
             *args,
-            count=PAGE_SIZE + 2,
-            offset=1,
             **kwargs,
+            count=PAGE_SIZE,
+            render_surroundings=False,
         )
 
         self.ids.central_column.add_widget(self.cpu_gauge)
@@ -42,9 +42,6 @@ class HomePage(PageWidget):
         self.ids.right_column.add_widget(self.volume_widget)
 
         autorun(lambda state: state.sound.playback_volume)(self._sync_output_volume)
-
-    def set_items(self: HomePage, items: Sequence[Item | None] = []) -> None:
-        self.items = [None, *items, None]
 
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
         self.volume_widget.value = selector_result * 100
