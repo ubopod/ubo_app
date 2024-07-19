@@ -8,10 +8,10 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from debouncer import DebounceOptions, debounce
+from kivy.clock import Clock
 from redux import FinishAction
 
-from ubo_app.store.core import PowerOffEvent
+from ubo_app.store.core import PowerOffEvent, RebootEvent
 from ubo_app.store.main import (
     ScreenshotEvent,
     SnapshotEvent,
@@ -28,7 +28,6 @@ from ubo_app.store.update_manager import (
     UpdateStatus,
 )
 from ubo_app.store.update_manager.utils import check_version, update
-from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import (
     IS_RPI,
     initialize_board,
@@ -44,12 +43,30 @@ def power_off() -> None:
     """Power off the device."""
     dispatch(SoundPlayChimeAction(name=Chime.FAILURE), FinishAction())
     if IS_RPI:
-        atexit.register(
-            lambda: subprocess.run(  # noqa: S603
+
+        def power_off_system(*_: list[object]) -> None:
+            subprocess.run(  # noqa: S603
                 ['/usr/bin/env', 'systemctl', 'poweroff', '-i'],
                 check=True,
-            ),
-        )
+            )
+
+        Clock.schedule_once(power_off_system, 5)
+        atexit.register(power_off_system)
+
+
+def reboot() -> None:
+    """Reboot the device."""
+    dispatch(SoundPlayChimeAction(name=Chime.FAILURE), FinishAction())
+    if IS_RPI:
+
+        def reboot_system(*_: list[object]) -> None:
+            subprocess.run(  # noqa: S603
+                ['/usr/bin/env', 'systemctl', 'reboot', '-i'],
+                check=True,
+            )
+
+        Clock.schedule_once(reboot_system, 5)
+        atexit.register(reboot_system)
 
 
 def write_image(image_path: Path, array: NDArray) -> None:
@@ -91,18 +108,12 @@ def setup_side_effects() -> None:
     initialize_board()
 
     subscribe_event(PowerOffEvent, power_off)
+    subscribe_event(RebootEvent, reboot)
     subscribe_event(UpdateManagerUpdateEvent, update)
     subscribe_event(UpdateManagerCheckEvent, check_version)
     subscribe_event(ScreenshotEvent, take_screenshot)
     subscribe_event(SnapshotEvent, take_snapshot)
 
-    @debounce(
-        wait=10,
-        options=DebounceOptions(leading=True, trailing=False, time_window=10),
-    )
-    async def request_check_version() -> None:
-        dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
-
-    create_task(request_check_version())
+    dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
 
     atexit.register(turn_off_screen)

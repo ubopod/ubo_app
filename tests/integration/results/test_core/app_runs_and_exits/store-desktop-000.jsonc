@@ -204,7 +204,6 @@
           }
         },
         {
-          "action": "<function:<lambda>>",
           "background_color": "#68B7FF",
           "color": [
             1,
@@ -214,9 +213,45 @@
           ],
           "icon": "󰐥",
           "is_short": true,
-          "label": "Turn off",
+          "label": "",
           "opacity": null,
-          "progress": null
+          "progress": null,
+          "sub_menu": {
+            "items": [
+              {
+                "action": "<function:<lambda>>",
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "󰜉",
+                "is_short": false,
+                "label": "Reboot",
+                "opacity": null,
+                "progress": null
+              },
+              {
+                "action": "<function:<lambda>>",
+                "background_color": "#68B7FF",
+                "color": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "icon": "󰤂",
+                "is_short": false,
+                "label": "Power off",
+                "opacity": null,
+                "progress": null
+              }
+            ],
+            "placeholder": null,
+            "title": "󰐥Power"
+          }
         }
       ],
       "placeholder": null,

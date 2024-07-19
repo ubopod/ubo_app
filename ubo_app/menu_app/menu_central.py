@@ -69,7 +69,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         @autorun(lambda state: state.main.menu)
         @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
-        async def _(menu: Menu | None) -> None:
+        def _(menu: Menu | None) -> None:
             self = _self()
             if not self or not menu:
                 return

@@ -30,7 +30,7 @@ python-redux = "^0.15.9"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
-python-debouncer = "^0.1.4"
+python-debouncer = "^0.1.5"
 pulsectl = "^23.5.2"
 aiohttp = "^3.9.1"
 semver = "^3.0.2"
@@ -55,13 +55,13 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.371"
+pyright = "^1.1.372"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.5.0"
-ruff = "^0.5.1"
+ruff = "^0.5.3"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"

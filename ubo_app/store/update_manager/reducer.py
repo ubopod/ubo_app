@@ -75,8 +75,8 @@ def reducer(
                         notification=Notification(
                             id=UPDATE_MANAGER_NOTIFICATION_ID,
                             title='Update available!',
-                            content=f"""Ubo v{action.latest_version
-                            } is available. Go to the About menu to update.""",
+                            content=f"""Ubo v{action.latest_version} is available. Go to
+                            the About menu to update.""",
                             display_type=NotificationDisplayType.FLASH
                             if action.flash_notification
                             else NotificationDisplayType.BACKGROUND,

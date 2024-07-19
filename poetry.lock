@@ -992,16 +992,6 @@ files = [
 ]
 
 [[package]]
-name = "lock"
-version = "2018.3.25.2110"
-description = "module for enabling file locks"
-optional = false
-python-versions = "*"
-files = [
-    {file = "lock-2018.3.25.2110.tar.gz", hash = "sha256:cc5ac770930493eed7a8cfd0cf2568a125faf112eb8aa6b6149b3e581523d0c7"},
-]
-
-[[package]]
 name = "matplotlib-inline"
 version = "0.1.7"
 description = "Inline Matplotlib backend for Jupyter"
@@ -1593,17 +1583,16 @@ testing = ["filelock"]
 
 [[package]]
 name = "python-debouncer"
-version = "0.1.4"
+version = "0.1.5"
 description = "Debouncer and friends for Python"
 optional = false
-python-versions = ">=3.9,<4.0"
+python-versions = "<4.0,>=3.9"
 files = [
-    {file = "python_debouncer-0.1.4-py3-none-any.whl", hash = "sha256:fbab13f8b1639144d99184836d169b22cd4bc54339e331f83cd45e581234d074"},
-    {file = "python_debouncer-0.1.4.tar.gz", hash = "sha256:a053a4b35108a72c2c4af6fddb685626487b012d21aa16e4b1d4437b48484b05"},
+    {file = "python_debouncer-0.1.5-py3-none-any.whl", hash = "sha256:d92bef943f169f93b5be79bc5c71e315f155ec7090e95c02a14c420ebdd4765d"},
+    {file = "python_debouncer-0.1.5.tar.gz", hash = "sha256:ad4bc0229334f12cf0268a55c76ea98cb89a28f933c12fb556f92623e0c72b04"},
 ]
 
 [package.dependencies]
-lock = ">=2018.3.25.2110,<2019.0.0.0"
 python-immutable = ">=1.0.4,<2.0.0"
 
 [[package]]
@@ -2152,4 +2141,4 @@ dev = ["headless-kivy", "headless-kivy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "3a37c1b9c59c2e633053f2b0c925a601a87da9d348c3ccefb4fc19e91dda973d"
+content-hash = "6a39da6bb5d8d280c9bb23b0a1d5e42e627d0f897d3f30b85744643ed2d95056"

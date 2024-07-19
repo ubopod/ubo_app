@@ -13,6 +13,7 @@ import png
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
 from pyzbar.pyzbar import decode
+from typing_extensions import override
 from ubo_gui.page import PageWidget
 
 from ubo_app import display
@@ -59,11 +60,12 @@ def resize_image(
     wait=THROTTL_TIME,
     options=DebounceOptions(leading=True, trailing=False, time_window=THROTTL_TIME),
 )
-async def check_codes(codes: list[str]) -> None:
+def check_codes(codes: list[str]) -> None:
     dispatch(CameraReportBarcodeAction(codes=codes))
 
 
 class CameraApplication(PageWidget):
+    @override
     def go_back(self: CameraApplication) -> bool:
         return True
 

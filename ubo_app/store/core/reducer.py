@@ -16,8 +16,11 @@ from ubo_app.store.core import (
     InitEvent,
     MainAction,
     MainState,
+    PowerEvent,
     PowerOffAction,
     PowerOffEvent,
+    RebootAction,
+    RebootEvent,
     RegisterRegularAppAction,
     RegisterSettingAppAction,
     SetMenuPathAction,
@@ -39,7 +42,7 @@ def reducer(
 ) -> ReducerResult[
     MainState,
     SoundChangeVolumeAction,
-    KeypadEvent | InitEvent | PowerOffEvent,
+    KeypadEvent | InitEvent | PowerEvent,
 ]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
@@ -226,6 +229,12 @@ def reducer(
         return CompleteReducerResult(
             state=state,
             events=[PowerOffEvent()],
+        )
+
+    if isinstance(action, RebootAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[RebootEvent()],
         )
 
     return state

@@ -53,7 +53,13 @@ class RegisterSettingAppAction(RegisterAppAction):
     priority: int | None = None
 
 
-class PowerOffAction(MainAction): ...
+class PowerAction(MainAction): ...
+
+
+class PowerOffAction(PowerAction): ...
+
+
+class RebootAction(PowerAction): ...
 
 
 class SetMenuPathAction(MainAction):
@@ -91,7 +97,13 @@ class CloseApplicationEvent(MainEvent):
     application: PageWidget
 
 
-class PowerOffEvent(MainEvent): ...
+class PowerEvent(MainEvent): ...
+
+
+class PowerOffEvent(PowerEvent): ...
+
+
+class RebootEvent(PowerEvent): ...
 
 
 class MainState(Immutable):

@@ -13,7 +13,12 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
-from ubo_app.store.core import SETTINGS_ICONS, PowerOffAction, SettingsCategory
+from ubo_app.store.core import (
+    SETTINGS_ICONS,
+    PowerOffAction,
+    RebootAction,
+    SettingsCategory,
+)
 from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Notification,
@@ -145,9 +150,23 @@ HOME_MENU = HeadlessMenu(
             icon='',
             is_short=True,
         ),
-        ActionItem(
-            label='Turn off',
-            action=lambda: dispatch(PowerOffAction()),
+        SubMenuItem(
+            label='',
+            sub_menu=HeadlessMenu(
+                title='󰐥Power',
+                items=[
+                    ActionItem(
+                        label='Reboot',
+                        action=lambda: dispatch(RebootAction()),
+                        icon='󰜉',
+                    ),
+                    ActionItem(
+                        label='Power off',
+                        action=lambda: dispatch(PowerOffAction()),
+                        icon='󰤂',
+                    ),
+                ],
+            ),
             icon='󰐥',
             is_short=True,
         ),

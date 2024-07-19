@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from numpy._typing import NDArray
 
 
+from ubo_app.constants import BYTES_PER_PIXEL
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.fake import Fake
 
@@ -101,12 +102,14 @@ class _State:
 
         self.block(
             (0, 0, WIDTH - 1, HEIGHT - 1),
-            bytes(WIDTH * HEIGHT * 2) if splash_screen is None else splash_screen,
+            bytes(WIDTH * HEIGHT * BYTES_PER_PIXEL)
+            if splash_screen is None
+            else splash_screen,
         )
         atexit.register(
             lambda: self.block(
                 (0, 0, WIDTH - 1, HEIGHT - 1),
-                bytes(WIDTH * HEIGHT * 2),
+                np.zeros((WIDTH, HEIGHT, BYTES_PER_PIXEL), dtype=np.uint8).tobytes(),
             ),
         )
 
