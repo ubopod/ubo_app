@@ -10,6 +10,7 @@
 - refactor(system): generate the hostname of the device based on a hash of its serial number
 - feat(core): show hostname of device on the home page - closes #128
 - feat(core): long-pressing the reset button for 3 seconds or more reboots the device - closes #116
+- fix(keypad): keypad becoming unresponsive if a key was pressed while the app was loading - closes #118
 
 ## Version 0.15.4
 

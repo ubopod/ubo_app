@@ -319,7 +319,6 @@ class UboServiceThread(threading.Thread):
 
 def load_services(service_ids: Sequence[str] | None = None) -> None:
     WHITE_LIST.extend(service_ids or [])
-    import time
 
     services = []
     for services_directory_path in [
@@ -339,4 +338,3 @@ def load_services(service_ids: Sequence[str] | None = None) -> None:
 
     for service in services:
         service.initiate()
-        time.sleep(0.02)

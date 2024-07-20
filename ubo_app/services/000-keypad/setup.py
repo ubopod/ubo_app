@@ -145,6 +145,8 @@ class Keypad:
             status='released' if is_mic_active else 'pressed',
         )
 
+        self.clear_interrupt_flags(new_i2c)
+
     def key_press_cb(self: Keypad, _: object) -> None:
         """Handle key press dispatched by GPIO interrupt.
 
