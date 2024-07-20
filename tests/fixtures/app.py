@@ -120,7 +120,6 @@ class AppContext:
         if IS_RPI:
             from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
 
-            GPIO.cleanup(26)
             GPIO.cleanup(17)
 
 

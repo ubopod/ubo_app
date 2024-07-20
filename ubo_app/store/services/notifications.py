@@ -13,13 +13,12 @@ from redux import BaseAction, BaseEvent
 from ubo_gui.constants import SECONDARY_COLOR_LIGHT
 from ubo_gui.menu.types import ActionItem
 
+from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from kivy.graphics.context_instructions import Color
-
-
-FLASH_TIME = 4
 
 
 class Importance(StrEnum):
@@ -98,7 +97,7 @@ class Notification(Immutable):
     color: str = field(default_factory=default_color)
     expiry_date: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
-    flash_time: float = FLASH_TIME
+    flash_time: float = NOTIFICATIONS_FLASH_TIME
     dismissable: bool = True
     dismiss_on_close: bool = False
     on_close: Callable[[], Any] | None = None

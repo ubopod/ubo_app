@@ -9,6 +9,7 @@
 - fix(core): headed menus not showing the first item in the list - closes #144
 - refactor(system): generate the hostname of the device based on a hash of its serial number
 - feat(core): show hostname of device on the home page - closes #128
+- feat(core): long-pressing the reset button for 3 seconds or more reboots the device - closes #116
 
 ## Version 0.15.4
 

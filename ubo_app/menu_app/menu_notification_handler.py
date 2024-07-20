@@ -123,7 +123,7 @@ class MenuNotificationHandler(UboApp):
             icon=notification.icon,
             color=notification.color,
             items=items,
-            title=f'Notification ({event.index+1}/{event.count})'
+            title=f'Notification ({event.index + 1}/{event.count})'
             if event.index is not None
             else ' ',
         )

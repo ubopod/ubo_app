@@ -28,12 +28,7 @@ from ubo_app.store.update_manager import (
     UpdateStatus,
 )
 from ubo_app.store.update_manager.utils import check_version, update
-from ubo_app.utils.hardware import (
-    IS_RPI,
-    initialize_board,
-    turn_off_screen,
-    turn_on_screen,
-)
+from ubo_app.utils.hardware import IS_RPI, initialize_board
 
 if TYPE_CHECKING:
     from numpy._typing import NDArray
@@ -104,7 +99,6 @@ def take_snapshot() -> None:
 
 def setup_side_effects() -> None:
     """Set up the application."""
-    turn_on_screen()
     initialize_board()
 
     subscribe_event(PowerOffEvent, power_off)
@@ -115,5 +109,3 @@ def setup_side_effects() -> None:
     subscribe_event(SnapshotEvent, take_snapshot)
 
     dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
-
-    atexit.register(turn_off_screen)

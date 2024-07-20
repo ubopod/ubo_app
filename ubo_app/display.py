@@ -98,6 +98,13 @@ class _State:
     display = setup_display()
 
     def __init__(self: _State, splash_screen: bytes | None = None) -> None:
+        if IS_RPI:
+            from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
+
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(26, GPIO.OUT)
+            GPIO.output(26, GPIO.HIGH)
+
         from ubo_app.constants import HEIGHT, WIDTH
 
         self.block(
@@ -106,12 +113,25 @@ class _State:
             if splash_screen is None
             else splash_screen,
         )
-        atexit.register(
-            lambda: self.block(
-                (0, 0, WIDTH - 1, HEIGHT - 1),
-                np.zeros((WIDTH, HEIGHT, BYTES_PER_PIXEL), dtype=np.uint8).tobytes(),
-            ),
+
+        atexit.register(self.turn_off)
+
+    def turn_off(self: _State) -> None:
+        """Destroy the display."""
+        from ubo_app.constants import HEIGHT, WIDTH
+
+        self.block(
+            (0, 0, WIDTH - 1, HEIGHT - 1),
+            np.zeros((WIDTH, HEIGHT, BYTES_PER_PIXEL), dtype=np.uint8).tobytes(),
         )
+
+        if IS_RPI:
+            from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
+
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(26, GPIO.OUT)
+            GPIO.output(26, GPIO.LOW)
+            GPIO.cleanup(26)
 
     def block(
         self: _State,

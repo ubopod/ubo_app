@@ -19,6 +19,7 @@ from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.led import LEDManager
+from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
 from ubo_app.utils.eeprom import read_serial_number
 
@@ -85,6 +86,7 @@ def main() -> None:
     logger.debug('Initialising System-Manager...')
 
     setup_hostname()
+    setup_reset_button()
 
     led_manager.run_command_thread_safe('spinning_wheel 255 255 255 50 6 100'.split())
 

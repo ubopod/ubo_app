@@ -64,7 +64,8 @@ class Keypad:
         self.enabled = True
         self.init_i2c()
 
-    def clear_interrupt_flags(self: Keypad, i2c: i2c_device.I2CDevice) -> None:
+    @staticmethod
+    def clear_interrupt_flags(i2c: i2c_device.I2CDevice) -> None:
         # Write to both registers to reset the interrupt flag
         buffer = bytearray(2)
         buffer[0] = 0x00
@@ -79,10 +80,8 @@ class Keypad:
         i2c.write_then_readinto(buffer, buffer, out_end=1, in_start=1)
         time.sleep(0.1)
 
-    def disable_interrupt_for_higher_bits(
-        self: Keypad,
-        i2c: i2c_device.I2CDevice,
-    ) -> None:
+    @staticmethod
+    def disable_interrupt_for_higher_bits(i2c: i2c_device.I2CDevice) -> None:
         # disable interrupt for higher bits
         buffer = bytearray(2)
         buffer[0] = 0x06
@@ -202,12 +201,8 @@ class Keypad:
 
         self.previous_inputs = inputs
 
-    def on_button_event(
-        self: Keypad,
-        *,
-        index: int,
-        status: ButtonStatus,
-    ) -> None:
+    @staticmethod
+    def on_button_event(*, index: int, status: ButtonStatus) -> None:
         from ubo_app.store.main import dispatch
 
         if index in KEY_INDEX:
