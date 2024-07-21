@@ -145,6 +145,7 @@ class Keypad:
             status='released' if is_mic_active else 'pressed',
         )
 
+        # This should always be the last line of this method
         self.clear_interrupt_flags(new_i2c)
 
     def key_press_cb(self: Keypad, _: object) -> None:

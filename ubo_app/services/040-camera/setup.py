@@ -205,6 +205,7 @@ def start_camera_viewfinder() -> None:
             cancel_subscription()
             if picamera2:
                 picamera2.stop()
+                picamera2.close()
 
     cancel_subscription = subscribe_event(
         CameraStopViewfinderEvent,
