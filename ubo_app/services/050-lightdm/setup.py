@@ -108,9 +108,9 @@ def lightdm_title(_: LightDMState) -> str:
 async def check_is_lightdm_active() -> None:
     """Check if the LightDM service is active."""
     if await is_unit_active('lightdm'):
-        dispatch(LightDMUpdateStateAction(is_enabled=True))
+        dispatch(LightDMUpdateStateAction(is_active=True))
     else:
-        dispatch(LightDMUpdateStateAction(is_enabled=False))
+        dispatch(LightDMUpdateStateAction(is_active=False))
 
 
 async def check_is_lightdm_enabled() -> None:

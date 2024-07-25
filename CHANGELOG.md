@@ -12,6 +12,7 @@
 - feat(core): long-pressing the reset button for 3 seconds or more reboots the device - closes #116
 - fix(keypad): keypad becoming unresponsive if a key was pressed while the app was loading - closes #118
 - fix(camera): closing the camera viewfinder will close the picamera instance so that it can be used again
+- refactor(core): use python-fake for faking
 
 ## Version 0.15.4
 

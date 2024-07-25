@@ -26,15 +26,9 @@ from ubo_app.store.services.camera import (
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.fake import Fake
 
 if TYPE_CHECKING:
     from numpy._typing import NDArray
-
-if not IS_RPI:
-    import sys
-
-    sys.modules['picamera2.picamera2'] = Fake()
 
 from picamera2.picamera2 import Picamera2
 

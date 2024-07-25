@@ -81,7 +81,9 @@ class ImageEntry(Immutable):
     path: str
     registry: str
     dependencies: list[str] | None = None
-    ports: dict[str, int | None] = field(default_factory=dict)
+    ports: dict[str, int | list[int] | tuple[str, int] | None] = field(
+        default_factory=dict,
+    )
     hosts: dict[str, str] = field(default_factory=dict)
     note: str | None = None
     environment_vairables: (

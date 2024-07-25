@@ -13,7 +13,7 @@ import pytest
 def _monkeypatch_socket(monkeypatch: pytest.MonkeyPatch) -> None:
     import socket
 
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     monkeypatch.setattr(socket, 'gethostname', lambda: 'test-hostname')
 
@@ -63,7 +63,7 @@ def _monkeypatch_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _monkeypatch_docker(monkeypatch: pytest.MonkeyPatch) -> None:
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     monkeypatch.setattr(
         'docker.from_env',
@@ -84,7 +84,7 @@ def _monkeypatch_datetime(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     counter = 0
 
@@ -121,7 +121,7 @@ def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _monkeypatch_rpi_modules() -> None:
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     class FakeSensor(Fake):
         lux = 0.0
@@ -137,7 +137,7 @@ def _monkeypatch_rpi_modules() -> None:
 
 
 def _monkeypatch_aiohttp() -> None:
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     class FakeUpdateResponse(Fake):
         async def json(self: FakeUpdateResponse) -> dict[str, object]:
@@ -165,7 +165,7 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     import subprocess
     from pathlib import Path
 
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     original_subprocess_run = subprocess.run
 
@@ -202,7 +202,7 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
 def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
 
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     class FakeAsyncProcess(Fake):
         def __init__(self: FakeAsyncProcess, output: bytes = b'') -> None:
@@ -212,41 +212,37 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
             return cast(bytes, self.output), b''
 
     async def fake_create_subprocess_exec(
-        command: str,
-        *args: list[str],
-        **kwargs: object,
-    ) -> FakeAsyncProcess:
+        *_args: str,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> object:
         _ = kwargs
-        if command == '/usr/bin/env' and args == ('systemctl', 'is-enabled', 'ssh'):
-            return FakeAsyncProcess(output=b'enabled')
-        if command == '/usr/bin/env' and args == ('systemctl', 'is-active', 'ssh'):
-            return FakeAsyncProcess(output=b'active')
-        if command == '/usr/bin/env' and args == ('systemctl', 'is-enabled', 'lightdm'):
-            return FakeAsyncProcess(output=b'enabled')
-        if command == '/usr/bin/env' and args == ('systemctl', 'is-active', 'lightdm'):
-            return FakeAsyncProcess(output=b'active')
-        if command == '/usr/bin/env' and args == ('which', 'docker'):
-            return FakeAsyncProcess(output=b'/bin/docker')
-        if command == '/usr/bin/env' and args[0] == 'pulseaudio':
-            return FakeAsyncProcess()
-        msg = (
-            'Unexpected `asyncio.create_subprocess_exec` command in test '
-            f'environment: {command} - {args}'
-        )
-        raise ValueError(msg)
+        command = _args[0]
+        args = _args[1:]
 
+        if command == '/usr/bin/env':
+            command = args[0]
+            args = args[1:]
+
+        if command == 'systemctl':
+            if args[0] == 'is-enabled':
+                return FakeAsyncProcess(output=b'enabled')
+            if args[0] == 'is-active':
+                return FakeAsyncProcess(output=b'active')
+        if command == 'which' and args[0] == 'docker':
+            return FakeAsyncProcess(output=b'/bin/docker')
+        if command == 'pulseaudio':
+            return FakeAsyncProcess()
+
+        return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
+
+    original_asyncio_create_subprocess_exec = asyncio.create_subprocess_exec
     monkeypatch.setattr(asyncio, 'create_subprocess_exec', fake_create_subprocess_exec)
-    monkeypatch.setattr(
-        asyncio,
-        'open_unix_connection',
-        Fake(_Fake__return_value=Fake(_Fake__await_value=(Fake(), Fake()))),
-    )
 
 
 def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
 
-    from ubo_app.utils.fake import Fake
+    from fake import Fake
 
     monkeypatch.setattr(asyncio, 'open_connection', Fake())
 
@@ -260,9 +256,10 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     import atexit
     import importlib.metadata
 
+    from fake import Fake
+
     import ubo_app.constants
     import ubo_app.utils.serializer
-    from ubo_app.utils.fake import Fake
 
     tracemalloc.start()
 

@@ -74,7 +74,7 @@
     "is_connected": true
   },
   "lightdm": {
-    "is_active": false,
+    "is_active": true,
     "is_enabled": true
   },
   "main": {
@@ -350,7 +350,7 @@
                               1,
                               1
                             ],
-                            "icon": "[color=#ffff00]󰝦[/color]",
+                            "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
                             "label": "LightDM",
                             "opacity": null,
@@ -385,7 +385,7 @@
                               1,
                               1
                             ],
-                            "icon": "[color=#ffff00]󰝦[/color]",
+                            "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
                             "label": "SSH",
                             "opacity": null,
@@ -598,7 +598,7 @@
     "playback_volume": 0.5
   },
   "ssh": {
-    "is_active": false,
+    "is_active": true,
     "is_enabled": true
   },
   "status_icons": {

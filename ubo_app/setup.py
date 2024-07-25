@@ -1,10 +1,21 @@
 """Compatibility layer for different environments."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import dotenv
 import numpy as np
+from fake import Fake
+
+
+class _FakeAsyncProcess(Fake):
+    def __init__(self: _FakeAsyncProcess, output: bytes = b'') -> None:
+        super().__init__(_Fake__props={'output': output})
+
+    async def communicate(self: _FakeAsyncProcess) -> tuple[bytes, bytes]:
+        return cast(bytes, self.output), b''
 
 
 def setup() -> None:
@@ -14,8 +25,6 @@ def setup() -> None:
 
     # it should be changed to `Fake()` and  moved inside the `if not IS_RPI` when the
     # new sdbus is released {-
-    from ubo_app.utils.fake import Fake
-
     sys.modules['sdbus.utils.inspect'] = Fake(
         _Fake__props={
             'inspect_dbus_path': lambda obj: obj._dbus.object_path,  # noqa: SLF001
@@ -39,16 +48,10 @@ def setup() -> None:
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()
         sys.modules['sdbus_async.networkmanager.enums'] = Fake()
-        sys.modules['picamera2'] = Fake(
+        sys.modules['picamera2.picamera2'] = Fake(
             _Fake__props={
-                'Picamera2': Fake(
-                    _Fake__return_value=Fake(
-                        _Fake__props={
-                            'capture_array': Fake(
-                                _Fake__return_value=np.zeros((1, 1, 3), dtype=np.uint8),
-                            ),
-                        },
-                    ),
+                'capture_array': Fake(
+                    _Fake__return_value=np.zeros((1, 1, 3), dtype=np.uint8),
                 ),
             },
         )
@@ -65,28 +68,31 @@ def setup() -> None:
 
         subprocess.run = fake_subprocess_run
 
-        original_asyncio_create_subprocess_exec = asyncio.create_subprocess_exec
+        async def fake_create_subprocess_exec(
+            *_args: str,
+            **kwargs: Any,  # noqa: ANN401
+        ) -> object:
+            command = _args[0]
+            args = _args[1:]
 
-        def fake_create_subprocess_exec(*args: str, **kwargs: Any) -> object:  # noqa: ANN401
-            command = args[0]
             if command == '/usr/bin/env':
-                command = args[1]
+                command = args[0]
+                args = args[1:]
             if isinstance(command, Path):
                 command = command.as_posix()
             if any(i in command for i in ('reboot', 'poweroff')):
                 return Fake()
             if command in {'curl', 'tar'} or command.endswith('/code'):
                 return original_asyncio_create_subprocess_exec(*args, **kwargs)
-            return Fake(
-                _Fake__await_value=Fake(
-                    _Fake__props={
-                        'communicate': Fake(
-                            _Fake__return_value=Fake(_Fake__await_value=['', '']),
-                        ),
-                    },
-                ),
-            )
+
+            return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
+
+        original_asyncio_create_subprocess_exec = asyncio.create_subprocess_exec
 
         asyncio.create_subprocess_exec = fake_create_subprocess_exec
+
+        asyncio.open_unix_connection = (
+            Fake(_Fake__return_value=Fake(_Fake__await_value=(Fake(), Fake()))),
+        )
 
     import ubo_app.display as _  # noqa: F401

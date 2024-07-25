@@ -12,6 +12,7 @@ from types import GenericAlias
 from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin, overload
 
 import dill
+from fake import Fake
 from immutable import Immutable
 from redux import (
     BaseCombineReducerState,
@@ -49,7 +50,6 @@ from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.update_manager import UpdateManagerAction, UpdateManagerState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
-from ubo_app.utils.fake import Fake
 from ubo_app.utils.serializer import add_type_field
 
 if TYPE_CHECKING:

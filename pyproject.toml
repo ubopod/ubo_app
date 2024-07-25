@@ -17,7 +17,7 @@ priority = "primary"
 [tool.poetry.dependencies]
 python = "^3.11"
 psutil = "^6.0.0"
-ubo-gui = "^0.12.2"
+ubo-gui = "^0.12.3a1"
 headless-kivy = [
   { version = "^0.9.4", markers = "extra=='default'", extras = [
     "default",
@@ -49,6 +49,7 @@ adafruit-circuitpython-pct2075 = "^1.1.21"
 adafruit-circuitpython-veml7700 = "^1.1.22"
 
 rpi-lgpio = { version = "^0.6", markers = "platform_machine=='aarch64'" }
+python-fake = "^0.1.0"
 
 [tool.poetry.group.dev]
 optional = true

@@ -1,13 +1,25 @@
 #!/bin/bash
 
-# Disconnect all active connections
-nmcli connection show --active | grep wifi | awk '{print $1}' | while read conn; do
-    nmcli connection down "$conn"
-done
+IS_RPI=false
 
-# Delete all Wi-Fi connections
-nmcli connection show | grep wifi | awk '{print $1}' | while read conn; do
-    nmcli connection delete "$conn"
-done
+# Check if the script is running on a Raspberry Pi
+if [ -e /etc/os-release ]; then
+    source /etc/os-release
+    if [[ $ID == "raspbian" ]]; then
+        IS_RPI=true
+    fi
+fi
 
-echo "All Wi-Fi connections have been disconnected and deleted."
+if [ "$IS_RPI" = true ]; then
+  # Disconnect all active connections
+  nmcli connection show --active | grep wifi | awk '{print $1}' | while read conn; do
+      nmcli connection down "$conn"
+  done
+
+  # Delete all Wi-Fi connections
+  nmcli connection show | grep wifi | awk '{print $1}' | while read conn; do
+      nmcli connection delete "$conn"
+  done
+
+  echo "All Wi-Fi connections have been disconnected and deleted."
+fi

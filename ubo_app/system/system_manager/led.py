@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, cast
 
 import board
 from adafruit_blinka.microcontroller.generic_micropython import Pin
+from fake import Fake
 from ubo_gui.menu import warnings
 
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
-from ubo_app.utils.fake import Fake
 
 if Path('/proc/device-tree/model').read_text().startswith('Raspberry Pi 5'):
     import sys

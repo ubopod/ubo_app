@@ -239,9 +239,9 @@ def ssh_title(_: SSHState) -> str:
 async def check_is_ssh_active() -> None:
     """Check if the SSH service is active."""
     if await is_unit_active('ssh'):
-        dispatch(SSHUpdateStateAction(is_enabled=True))
+        dispatch(SSHUpdateStateAction(is_active=True))
     else:
-        dispatch(SSHUpdateStateAction(is_enabled=False))
+        dispatch(SSHUpdateStateAction(is_active=False))
 
 
 async def check_is_ssh_enabled() -> None:

@@ -14,9 +14,10 @@ if TYPE_CHECKING:
     from numpy._typing import NDArray
 
 
+from fake import Fake
+
 from ubo_app.constants import BYTES_PER_PIXEL
 from ubo_app.utils import IS_RPI
-from ubo_app.utils.fake import Fake
 
 if IS_RPI:
     import board
