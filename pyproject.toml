@@ -26,7 +26,7 @@ headless-kivy = [
     "test",
   ] },
 ]
-python-redux = "^0.15.9"
+python-redux = "^0.15.10"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }

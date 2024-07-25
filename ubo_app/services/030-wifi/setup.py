@@ -39,7 +39,7 @@ from ubo_app.utils.persistent_store import register_persistent_store
 
 @debounce(
     wait=0.5,
-    options=DebounceOptions(leading=True, trailing=False, time_window=2),
+    options=DebounceOptions(leading=True, trailing=False, time_window=0.5),
 )
 async def update_wifi_list(_: WiFiUpdateRequestEvent | None = None) -> None:
     connections = await get_connections()

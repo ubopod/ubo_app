@@ -168,6 +168,27 @@ async def get_active_connection() -> ActiveConnection | None:
     return ActiveConnection(active_connection, get_system_bus())
 
 
+async def get_active_connection_state() -> ConnectionState:
+    active_connection = await get_active_connection()
+    if not active_connection:
+        return ConnectionState.UNKNOWN
+
+    active_connection_state = (
+        cast(SdBusConnectionState, await active_connection.state)
+        if active_connection
+        else None
+    )
+
+    return {
+        SdBusConnectionState.ACTIVATED: ConnectionState.CONNECTED,
+        SdBusConnectionState.ACTIVATING: ConnectionState.CONNECTING,
+        SdBusConnectionState.DEACTIVATED: ConnectionState.DISCONNECTED,
+        SdBusConnectionState.DEACTIVATING: ConnectionState.DISCONNECTED,
+        SdBusConnectionState.UNKNOWN: ConnectionState.UNKNOWN,
+        None: ConnectionState.UNKNOWN,
+    }[active_connection_state]
+
+
 async def get_active_connection_ssid() -> str | None:
     active_connection = await get_active_connection()
     if not active_connection:
@@ -378,7 +399,7 @@ async def get_connections() -> list[WiFiConnection]:
     # available when active_connection.state is queried
     for _ in range(RETRIES):
         with contextlib.suppress(Exception):
-            active_connection = await get_active_connection()
+            active_connection_state = await get_active_connection_state()
             active_connection_ssid = await get_active_connection_ssid()
             saved_ssids = await get_saved_ssids()
             access_point_ssids = {
@@ -390,19 +411,6 @@ async def get_connections() -> list[WiFiConnection]:
                 for i in await get_access_points()
             }
 
-            active_connection_state = cast(
-                SdBusConnectionState,
-                await active_connection.state if active_connection else None,
-            )
-
-            state_map = {
-                SdBusConnectionState.ACTIVATED: ConnectionState.CONNECTED,
-                SdBusConnectionState.ACTIVATING: ConnectionState.CONNECTING,
-                SdBusConnectionState.DEACTIVATED: ConnectionState.DISCONNECTED,
-                SdBusConnectionState.DEACTIVATING: ConnectionState.DISCONNECTED,
-                SdBusConnectionState.UNKNOWN: ConnectionState.UNKNOWN,
-            }
-
             return [
                 WiFiConnection(
                     ssid=ssid,
@@ -411,7 +419,7 @@ async def get_connections() -> list[WiFiConnection]:
                     )
                     if ssid in access_point_ssids
                     else 0,
-                    state=state_map[active_connection_state]
+                    state=active_connection_state
                     if active_connection_ssid == ssid
                     else ConnectionState.DISCONNECTED,
                 )

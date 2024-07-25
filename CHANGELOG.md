@@ -13,6 +13,7 @@
 - fix(keypad): keypad becoming unresponsive if a key was pressed while the app was loading - closes #118
 - fix(camera): closing the camera viewfinder will close the picamera instance so that it can be used again
 - refactor(core): use python-fake for faking
+- refactor(tests): wait for wifi status icons in `test_wireless`
 
 ## Version 0.15.4
 

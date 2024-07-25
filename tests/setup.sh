@@ -3,11 +3,8 @@
 IS_RPI=false
 
 # Check if the script is running on a Raspberry Pi
-if [ -e /etc/os-release ]; then
-    source /etc/os-release
-    if [[ $ID == "raspbian" ]]; then
-        IS_RPI=true
-    fi
+if [ -e /etc/rpi-issue ]; then
+  IS_RPI=true
 fi
 
 if [ "$IS_RPI" = true ]; then

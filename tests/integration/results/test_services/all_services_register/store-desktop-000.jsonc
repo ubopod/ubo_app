@@ -639,7 +639,16 @@
     "is_access_key_set": false
   },
   "wifi": {
-    "connections": [],
+    "connections": [
+      {
+        "hidden": false,
+        "password": null,
+        "signal_strength": "<function:>",
+        "ssid": "<function:>",
+        "state": "Unknown",
+        "type": null
+      }
+    ],
     "current_connection": null,
     "has_visited_onboarding": true,
     "state": "Disconnected"

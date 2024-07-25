@@ -9,8 +9,6 @@ import pytest
 from tenacity import wait_fixed
 
 from ubo_app.store.services.wifi import (
-    ConnectionState,
-    GlobalWiFiState,
     WiFiConnection,
     WiFiState,
 )
@@ -50,24 +48,9 @@ async def test_wireless_flow(
     from ubo_app.store.main import dispatch, store
     from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 
-    is_adding_connection = False
-
     def store_snapshot_selector(state: RootState) -> WiFiState | None:
         """Select the store snapshot."""
         wifi_state = state.wifi
-
-        if is_adding_connection and wifi_state.connections == []:
-            return None
-
-        if (
-            any(
-                connection.state is ConnectionState.CONNECTING
-                for connection in wifi_state.connections or []
-            )
-            or wifi_state.state is GlobalWiFiState.PENDING
-        ):
-            # Connecting state does not happen consistently in multiple runs
-            return None
 
         return WiFiState(
             connections=[
@@ -99,8 +82,8 @@ async def test_wireless_flow(
     app_context.set_app(app)
     load_services(['camera', 'wifi', 'notifications'])
 
-    @wait_for(timeout=5.0, wait=wait_fixed(0.5), run_async=True)
-    def check_icon() -> None:
+    @wait_for(timeout=20.0, wait=wait_fixed(1), run_async=True)
+    def check_icon(expected_icon: str) -> None:
         state = store._state  # noqa: SLF001
 
         assert state is not None
@@ -111,10 +94,10 @@ async def test_wireless_flow(
         )
 
         assert icon is not None, 'wifi icon not registered'
-        assert icon.symbol != '󰖩', 'wifi is already connected'
-        assert icon.symbol == '󰖪', f'unexpected wifi icon {icon.symbol}'
+        assert icon.symbol == expected_icon
 
-    await check_icon()
+    await check_icon('󰖪')
+
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
 
@@ -151,8 +134,6 @@ async def test_wireless_flow(
     # Set QR Code image of the WiFi credentials before camera is started
     camera.set_image('qrcode/wifi')
 
-    is_adding_connection = True
-
     # Select "QR code" to scan a QR code for credentials
     dispatch(ChooseMenuItemByIconEvent(icon='󰄀'))
 
@@ -160,16 +141,15 @@ async def test_wireless_flow(
     window_snapshot.take()
 
     # Dismiss the notification informing the user that the connection was added
+    await check_icon('󰤨')
     await wait_for_menu_item(label='', icon='󰆴')
     dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
     await stability()
 
-    is_adding_connection = False
-
     # Select "Select" to open the wireless connection list and see the new connection
     dispatch(ChooseMenuItemByLabelEvent(label='Select'))
 
-    @wait_for(timeout=10.0, wait=wait_fixed(0.5), run_async=True)
+    @wait_for(timeout=20.0, wait=wait_fixed(1), run_async=True)
     def check_connections() -> None:
         state = store._state  # noqa: SLF001
 
@@ -185,31 +165,34 @@ async def test_wireless_flow(
     dispatch(ChooseMenuItemByLabelEvent(label='ubo-test-ssid'))
 
     # Wait for the "Disconnect" item to show up
-    await wait_for_menu_item(label='Disconnect')
+    await wait_for_menu_item(label='Disconnect', timeout=10)
     await stability()
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Disconnect'))
 
     # Wait for the "Connect" item to show up
-    await wait_for_menu_item(label='Connect')
+    await wait_for_menu_item(label='Connect', timeout=10)
+    await check_icon('󰖪')
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Connect'))
 
-    await wait_for_menu_item(label='Disconnect')
+    await wait_for_menu_item(label='Disconnect', timeout=10)
+    await check_icon('󰤨')
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Delete'))
 
-    @wait_for(timeout=10.0, wait=wait_fixed(0.5), run_async=True)
+    @wait_for(timeout=20.0, wait=wait_fixed(1), run_async=True)
     def check_no_connections() -> None:
         state = store._state  # noqa: SLF001
         assert state
         assert state.wifi.connections == []
 
     await check_no_connections()
+    await check_icon('󰖪')
     store_snapshot.take(selector=store_snapshot_selector)
 
     # Dismiss the notification informing the user that the connection was deleted

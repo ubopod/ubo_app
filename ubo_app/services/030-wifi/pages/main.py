@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from constants import get_signal_icon
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
-from kivy.properties import BooleanProperty
+from kivy.properties import StringProperty
 from ubo_gui.menu.types import (
     ActionItem,
     ApplicationItem,
@@ -19,6 +19,7 @@ from wifi_manager import (
     disconnect_wireless_connection,
     forget_wireless_connection,
     get_active_connection_ssid,
+    get_active_connection_state,
     get_wifi_device,
 )
 
@@ -39,12 +40,12 @@ if TYPE_CHECKING:
 
 class WiFiConnectionPage(PromptWidget):
     ssid: str
-    is_active = BooleanProperty(defaultvalue=None)
+    state: ConnectionState = StringProperty(defaultvalue=ConnectionState.UNKNOWN)
 
     def first_option_callback(self: WiFiConnectionPage) -> None:
-        if self.is_active:
+        if self.state is ConnectionState.CONNECTED:
             create_task(disconnect_wireless_connection())
-        else:
+        elif self.state is ConnectionState.DISCONNECTED:
             create_task(connect_wireless_connection(self.ssid))
         dispatch(WiFiUpdateRequestAction(reset=True))
 
@@ -56,38 +57,56 @@ class WiFiConnectionPage(PromptWidget):
         )
 
     def update(self: WiFiConnectionPage, *_: tuple[Any, ...]) -> None:
-        self.first_option_background_color = (
-            PromptWidget.first_option_background_color.defaultvalue
-        )
-        if self.is_active:
+        if self.state is ConnectionState.CONNECTED:
             self.first_option_label = 'Disconnect'
             self.first_option_icon = '󰖪'
+            self.first_option_color = 'black'
+            self.first_option_background_color = (
+                PromptWidget.first_option_background_color.defaultvalue
+            )
             self.icon = '󰖩'
-        else:
+        elif self.state is ConnectionState.DISCONNECTED:
             self.first_option_label = 'Connect'
             self.first_option_icon = '󰖩'
+            self.first_option_color = 'black'
+            self.first_option_background_color = (
+                PromptWidget.first_option_background_color.defaultvalue
+            )
             self.icon = '󰖪'
+        elif self.state is ConnectionState.CONNECTING:
+            self.first_option_label = 'Connecting...'
+            self.first_option_icon = ''
+            self.first_option_color = 'white'
+            self.first_option_background_color = 'black'
+            self.icon = ''
+        elif self.state is ConnectionState.UNKNOWN:
+            self.first_option_label = ''
+            self.first_option_icon = ''
+            self.first_option_color = 'white'
+            self.first_option_background_color = 'black'
+            self.icon = ''
 
     def __init__(self: WiFiConnectionPage, **kwargs: object) -> None:
         super().__init__(**kwargs, items=None)
         self.prompt = f'SSID: {self.ssid}'
-        self.icon = ''
-        self.first_option_background_color = 'black'
-        self.first_option_label = ''
         self.first_option_is_short = False
         self.second_option_label = 'Delete'
         self.second_option_icon = '󰆴'
         self.second_option_is_short = False
 
-        self.bind(is_active=self.update)
+        self.bind(state=self.update)
+        self.update()
 
         @debounce(
             wait=0.5,
-            options=DebounceOptions(leading=False, trailing=True, time_window=2),
+            options=DebounceOptions(leading=False, trailing=True, time_window=0.5),
         )
         async def update_status() -> None:
-            is_active = await get_active_connection_ssid() == self.ssid
-            mainthread(lambda: setattr(self, 'is_active', is_active))()
+            if await get_active_connection_ssid() == self.ssid:
+                state = await get_active_connection_state()
+            else:
+                state = ConnectionState.DISCONNECTED
+            mainthread(lambda: setattr(self, 'state', state))()
 
         create_task(update_status())
 

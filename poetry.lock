@@ -1635,13 +1635,13 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.15.9"
+version = "0.15.10"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.15.9-py3-none-any.whl", hash = "sha256:6807ef0d3e28821d96b9ee24976731213d94798ab50e6173d2e7c9c61ff4aff3"},
-    {file = "python_redux-0.15.9.tar.gz", hash = "sha256:5d4374907e26d0b6916dc6fb32f2a54cba87eebd8ed6e4c5fb4b35951cdd0871"},
+    {file = "python_redux-0.15.10-py3-none-any.whl", hash = "sha256:dbd4b65a26fe7504f94df5fb55df9b94fe8bef3ff42948cffdb0f7818007cf05"},
+    {file = "python_redux-0.15.10.tar.gz", hash = "sha256:eb72e931896632e2cc1922f704434f6a52cce9133992be655af6d7e3939ee4e4"},
 ]
 
 [package.dependencies]
@@ -2151,4 +2151,4 @@ dev = ["headless-kivy", "headless-kivy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "73d8d6ab57518e053125ba9fdb3240a62c6640589acd1f66f53540b4187de94c"
+content-hash = "16eb0e0397dfc673f1341f3cd0630af04039ade888f9ae14de6703769cf2032c"
