@@ -12,6 +12,7 @@ import sys
 import threading
 import traceback
 import uuid
+import weakref
 from collections.abc import Callable, Coroutine, Sequence
 from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
@@ -44,7 +45,7 @@ WHITE_LIST = []
 # loading conflicting names in different services.
 # This is a temporary hack until each service runs in its own process.
 class UboModuleLoader(SourceFileLoader):
-    cache: ClassVar[dict[str, ModuleType]] = {}
+    cache: ClassVar[dict[str, weakref.ReferenceType[ModuleType]]] = {}
 
     @property
     def cache_id(self: UboModuleLoader) -> str:
@@ -55,15 +56,21 @@ class UboModuleLoader(SourceFileLoader):
         spec: ModuleSpec,
     ) -> ModuleType | None:
         _ = spec
-        if self.cache_id in UboModuleLoader.cache:
-            return UboModuleLoader.cache[self.cache_id]
+        if (
+            self.cache_id in UboModuleLoader.cache
+            and UboModuleLoader.cache[self.cache_id]() is not None
+        ):
+            return UboModuleLoader.cache[self.cache_id]()
         return None
 
     def exec_module(self: UboModuleLoader, module: ModuleType) -> None:
-        if self.cache_id in UboModuleLoader.cache:
+        if (
+            self.cache_id in UboModuleLoader.cache
+            and UboModuleLoader.cache[self.cache_id]() is not None
+        ):
             return
         super().exec_module(module)
-        UboModuleLoader.cache[self.cache_id] = module
+        UboModuleLoader.cache[self.cache_id] = weakref.ref(module)
 
     def get_filename(self: UboModuleLoader, name: str | None = None) -> str:
         return super().get_filename(name.split(':')[-1] if name else name)
