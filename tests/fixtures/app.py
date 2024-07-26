@@ -17,13 +17,9 @@ import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
 
-from ubo_app.constants import (
-    HEIGHT,
-    MAIN_LOOP_GRACE_PERIOD,
-    PERSISTENT_STORE_PATH,
-    WIDTH,
-)
-from ubo_app.setup import setup
+# It needs to be included in `modules_snapshot`
+__import__('numpy')
+modules_snapshot = set(sys.modules)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -32,10 +28,6 @@ if TYPE_CHECKING:
     from _pytest.fixtures import SubRequest
 
     from ubo_app.menu_app.menu import MenuApp
-
-# It needs to be included in `modules_snapshot`
-__import__('numpy')
-modules_snapshot = set(sys.modules)
 
 
 class AppContext:
@@ -61,18 +53,22 @@ class AppContext:
 
     def set_app(self: AppContext, app: MenuApp) -> None:
         """Set the application."""
+        from ubo_app.constants import PERSISTENT_STORE_PATH
+
         PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
 
-        from ubo_app.utils.loop import start_event_loop
+        from ubo_app import service
 
-        start_event_loop()
+        service.start_event_loop()
         self.app = app
         loop = asyncio.get_event_loop()
         self.task = loop.create_task(self.app.async_run(async_lib='asyncio'))
 
     async def clean_up(self: AppContext) -> None:
         """Clean up the application."""
+        from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD
+
         assert hasattr(self, 'task'), 'App not set for test'
 
         self.app.stop()
@@ -206,6 +202,8 @@ class ConditionalFSWrapper:
 def _setup_headless_kivy() -> None:
     import os
 
+    from ubo_app.constants import HEIGHT, WIDTH
+
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
     os.environ['KIVY_METRICS_DENSITY'] = '1'
@@ -254,6 +252,8 @@ async def app_context(
     _monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
+    from ubo_app.setup import setup
+
     _ = _monkeypatch
     setup()
     _setup_headless_kivy()
@@ -283,7 +283,6 @@ async def app_context(
         yield context
 
         await context.clean_up()
-
         del patcher
 
     assert not hasattr(context, 'app'), 'App not cleaned up'

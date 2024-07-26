@@ -65,9 +65,9 @@ def create_task(
                 },
             )
 
-    import ubo_app.utils.loop
+    from ubo_app import service
 
-    handle = ubo_app.utils.loop._create_task(wrapper(), callback)  # noqa: SLF001
+    handle = service._create_task(wrapper(), callback)  # noqa: SLF001
     background_tasks.add(handle)
     return handle
 
@@ -81,6 +81,8 @@ def to_thread(
     *args: T_params.args,
     **kwargs: T_params.kwargs,
 ) -> Handle:
-    import ubo_app.utils.loop
+    from ubo_app import service
 
-    return ubo_app.utils.loop._create_task(asyncio.to_thread(task, *args, **kwargs))  # noqa: SLF001
+    return service._create_task(  # noqa: SLF001
+        asyncio.to_thread(task, *args, **kwargs),
+    )

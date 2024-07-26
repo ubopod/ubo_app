@@ -230,9 +230,12 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         ]
     if state.update_status is UpdateStatus.UP_TO_DATE:
         return [
-            Item(
+            ActionItem(
                 label='Already up to date!',
                 icon='󰄬',
+                action=lambda: dispatch(
+                    UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
+                ),
                 background_color=SUCCESS_COLOR,
                 color='#000000',
             ),

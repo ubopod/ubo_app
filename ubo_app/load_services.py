@@ -12,7 +12,7 @@ import sys
 import threading
 import traceback
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -29,6 +29,7 @@ from ubo_app.error_handlers import loop_exception_handler
 from ubo_app.logging import logger
 
 if TYPE_CHECKING:
+    from asyncio.tasks import Task
     from importlib.machinery import ModuleSpec
     from types import ModuleType
 
@@ -42,53 +43,58 @@ WHITE_LIST = []
 # Customized module finder and module loader for ubo services to avoid mistakenly
 # loading conflicting names in different services.
 # This is a temporary hack until each service runs in its own process.
-class UboServiceModuleLoader(SourceFileLoader):
+class UboModuleLoader(SourceFileLoader):
     cache: ClassVar[dict[str, ModuleType]] = {}
 
     @property
-    def cache_id(self: UboServiceModuleLoader) -> str:
+    def cache_id(self: UboModuleLoader) -> str:
         return f'{self.path}:{self.name}'
 
     def create_module(
-        self: UboServiceModuleLoader,
+        self: UboModuleLoader,
         spec: ModuleSpec,
     ) -> ModuleType | None:
         _ = spec
-        if self.cache_id in UboServiceModuleLoader.cache:
-            return UboServiceModuleLoader.cache[self.cache_id]
+        if self.cache_id in UboModuleLoader.cache:
+            return UboModuleLoader.cache[self.cache_id]
         return None
 
-    def exec_module(self: UboServiceModuleLoader, module: ModuleType) -> None:
-        if self.cache_id in UboServiceModuleLoader.cache:
+    def exec_module(self: UboModuleLoader, module: ModuleType) -> None:
+        if self.cache_id in UboModuleLoader.cache:
             return
         super().exec_module(module)
-        UboServiceModuleLoader.cache[self.cache_id] = module
+        UboModuleLoader.cache[self.cache_id] = module
 
-    def get_filename(self: UboServiceModuleLoader, name: str | None = None) -> str:
+    def get_filename(self: UboModuleLoader, name: str | None = None) -> str:
         return super().get_filename(name.split(':')[-1] if name else name)
 
 
-class UboServiceLoopLoader(importlib.abc.Loader):
-    def __init__(self: UboServiceLoopLoader, service: UboServiceThread) -> None:
+class UboServiceLoader(importlib.abc.Loader):
+    def __init__(self: UboServiceLoader, service: UboServiceThread) -> None:
         self.service = service
 
-    def exec_module(self: UboServiceLoopLoader, module: ModuleType) -> None:
+    def exec_module(self: UboServiceLoader, module: ModuleType) -> None:
+        cast(Any, module).name = self.service.name
+        cast(Any, module).service_uid = self.service.service_uid
+        cast(Any, module).label = self.service.label
+        cast(Any, module).service_id = self.service.service_id
+        cast(Any, module).path = self.service.path
         cast(Any, module)._create_task = (  # noqa: SLF001
-            lambda task: self.service.loop.call_soon_threadsafe(
-                self.service.loop.create_task,
+            lambda task, callback=None: self.service.run_task(
                 task,
+                callback,
             )
         )
 
-    def __repr__(self: UboServiceLoopLoader) -> str:
-        return f'{self.service.path}:LoopLoader'
+    def __repr__(self: UboServiceLoader) -> str:
+        return f'{self.service.path}:ServiceLoader'
 
 
 class UboServiceFinder(importlib.abc.MetaPathFinder):
     def find_spec(
         self: UboServiceFinder,
         fullname: str,
-        _: Sequence[str] | None,
+        path: Sequence[str] | None,
         target: ModuleType | None = None,
     ) -> ModuleSpec | None:
         stack = traceback.extract_stack()
@@ -96,7 +102,7 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
             (
                 registered_path
                 for frame in stack[-2::-1]
-                for registered_path in (*REGISTERED_PATHS.keys(), Path('/'))
+                for registered_path in REGISTERED_PATHS
                 if frame.filename.startswith(registered_path.as_posix())
             ),
             None,
@@ -113,10 +119,10 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
                 )
                 raise RuntimeError(msg)
 
-            if fullname == 'ubo_app.utils.loop':
+            if fullname == 'ubo_app.service':
                 return importlib.util.spec_from_loader(
                     module_name,
-                    UboServiceLoopLoader(service),
+                    UboServiceLoader(service),
                 )
 
             spec = PathFinder.find_spec(
@@ -126,8 +132,21 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
             )
             if spec and spec.origin:
                 spec.name = module_name
-                spec.loader = UboServiceModuleLoader(fullname, spec.origin)
+                spec.loader = UboModuleLoader(fullname, spec.origin)
             return spec
+
+        if fullname == 'ubo_app.service':
+            module_name = f'_:{fullname}'
+            spec = PathFinder.find_spec(
+                fullname,
+                path,
+                target,
+            )
+            if spec and spec.origin:
+                spec.name = module_name
+                spec.loader = UboModuleLoader(fullname, spec.origin)
+            return spec
+
         return None
 
 
@@ -224,7 +243,7 @@ class UboServiceThread(threading.Thread):
                 if not self.spec or not self.spec.origin:
                     return
                 self.spec.name = module_name
-                self.spec.loader = UboServiceModuleLoader(
+                self.spec.loader = UboModuleLoader(
                     'ubo_handle',
                     self.spec.origin,
                 )
@@ -244,6 +263,7 @@ class UboServiceThread(threading.Thread):
     def run(self: UboServiceThread) -> None:
         self.loop = asyncio.new_event_loop()
         self.loop.set_exception_handler(loop_exception_handler)
+
         logger.debug(
             'Starting service thread',
             extra={
@@ -278,6 +298,18 @@ class UboServiceThread(threading.Thread):
             f'<UboServiceThread id='
             f'{self.service_id} label={self.label} name={self.name}>'
         )
+
+    def run_task(
+        self: UboServiceThread,
+        task: Coroutine,
+        callback: Callable[[Task], None] | None = None,
+    ) -> asyncio.Handle:
+        def task_wrapper() -> None:
+            result = self.loop.create_task(task)
+            if callback:
+                callback(result)
+
+        return self.loop.call_soon_threadsafe(task_wrapper)
 
     async def shutdown(self: UboServiceThread) -> None:
         from ubo_app.logging import logger
@@ -320,7 +352,7 @@ class UboServiceThread(threading.Thread):
 def load_services(service_ids: Sequence[str] | None = None) -> None:
     WHITE_LIST.extend(service_ids or [])
 
-    services = []
+    services: list[UboServiceThread] = []
     for services_directory_path in [
         ROOT_PATH.joinpath('services').as_posix(),
         *SERVICES_PATH,

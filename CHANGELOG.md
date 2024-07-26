@@ -14,6 +14,7 @@
 - fix(camera): closing the camera viewfinder will close the picamera instance so that it can be used again
 - refactor(core): use python-fake for faking
 - refactor(tests): wait for wifi status icons in `test_wireless`
+- refactor(core): move `ubo_app.utils.loop` to `ubo_app.service` and add service properties like `service_id`, `name`, `label`, etc as module level variables to it
 
 ## Version 0.15.4
 

@@ -475,6 +475,7 @@
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
+                      "action": "<function:<lambda>>",
                       "background_color": "#03F7AE",
                       "color": "#000000",
                       "icon": "󰄬",

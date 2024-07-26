@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING, TypeVarTuple
 
 from typing_extensions import TypeVar
 
-from ubo_app.error_handlers import loop_exception_handler
+service_id: str
+service_uid: str
+name: str
+label: str
+path: str
 
 if TYPE_CHECKING:
     from asyncio import Handle
@@ -24,22 +28,19 @@ Ts = TypeVarTuple('Ts')
 
 class WorkerThread(threading.Thread):
     def __init__(self: WorkerThread) -> None:
-        from redux.basic_types import FinishEvent
-
-        from ubo_app.store.main import subscribe_event
-
         super().__init__()
+        from ubo_app.error_handlers import loop_exception_handler
+
         try:
             self.loop = asyncio.get_event_loop()
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
 
         self.loop.set_exception_handler(loop_exception_handler)
+
         asyncio.set_event_loop(self.loop)
 
         from ubo_app.constants import DEBUG_MODE
-
-        subscribe_event(FinishEvent, self.stop)
 
         if DEBUG_MODE:
             self.loop.set_debug(enabled=True)
@@ -97,6 +98,16 @@ thread = WorkerThread()
 
 def start_event_loop() -> None:
     thread.start()
+
+    from redux.basic_types import FinishEvent
+
+    from ubo_app.store.main import subscribe_event
+
+    def stop() -> None:
+        unsubscribe()
+        thread.loop.call_soon_threadsafe(thread.loop.create_task, thread.shutdown())
+
+    unsubscribe = subscribe_event(FinishEvent, stop)
 
 
 def _create_task(
