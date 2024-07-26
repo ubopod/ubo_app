@@ -56,9 +56,7 @@ async def check_version() -> None:
             dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
                     flash_notification=state is None
-                    # TODO(Sassan): We need a better approach for  # noqa: FIX002, TD003
-                    # serializing and checking paths of menus
-                    or state.main.path[1:3] != ['Main', 'About'],
+                    or state.main.path[:2] != ['main', 'about'],
                     current_version=CURRENT_VERSION,
                     latest_version=latest_version,
                     serial_number=serial_number,

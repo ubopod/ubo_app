@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
 from ubo_gui.app import UboApp, cached_property
-from ubo_gui.menu import Item, MenuWidget
+from ubo_gui.menu import Item, MenuWidget, StackMenuItem
 
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core import (
@@ -40,18 +40,22 @@ class MenuWidgetWithHomePage(MenuWidget):
             padding_top=self.padding_top,
         )
 
-    def _render_menu(self: MenuWidgetWithHomePage, *_: object) -> PageWidget | None:
+    def _render_menu(self: MenuWidgetWithHomePage, menu: Menu) -> PageWidget | None:
         if self.depth <= 1:
             self.home_page.items = self.current_menu_items
             self.current_screen = self.home_page
             return self.home_page
-        return super()._render_menu()
+        return super()._render_menu(menu)
 
 
 def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) -> None:
     dispatch(
         SetMenuPathAction(
-            path=[i.title for i in menu_widget.stack],
+            path=[
+                stack_item.selection.key
+                for stack_item in menu_widget.stack
+                if isinstance(stack_item, StackMenuItem) and stack_item.selection
+            ],
         ),
     )
 

@@ -59,14 +59,14 @@ def reducer(
     if isinstance(action, KeypadKeyPressAction):
         actions: list[SoundChangeVolumeAction] = []
         events: list[KeypadKeyPressEvent] = []
-        if action.key == Key.UP and len(state.path) == 1:
+        if action.key == Key.UP and len(state.path) == 0:
             actions = [
                 SoundChangeVolumeAction(
                     amount=0.05,
                     device=SoundDevice.OUTPUT,
                 ),
             ]
-        elif action.key == Key.DOWN and len(state.path) == 1:
+        elif action.key == Key.DOWN and len(state.path) == 0:
             actions = [
                 SoundChangeVolumeAction(
                     amount=-0.05,
@@ -114,10 +114,11 @@ def reducer(
             label = item.label() if callable(item.label) else item.label
             return (-(priorities.get(label, 0) or 0), label)
 
+        menu_item = replace(action.menu_item, key=action.service)
         new_items = sorted(
             [
                 *cast(Sequence[Item], cast(Menu, category_menu_item.sub_menu).items),
-                action.menu_item,
+                menu_item,
             ],
             key=sort_key,
         )
@@ -184,10 +185,11 @@ def reducer(
             msg = 'Applications menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
+        menu_item = replace(action.menu_item, key=action.service)
         new_items = sorted(
             [
                 *cast(Sequence[Item], cast(Menu, apps_menu_item.sub_menu).items),
-                action.menu_item,
+                menu_item,
             ],
             key=lambda item: item.label() if callable(item.label) else item.label,
         )

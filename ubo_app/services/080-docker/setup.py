@@ -84,7 +84,7 @@ def stop_docker() -> None:
 
 async def check_docker() -> None:
     """Check if Docker is installed."""
-    from image import update_container
+    from image_ import update_container
 
     process = await asyncio.create_subprocess_exec(
         '/usr/bin/env',
@@ -210,7 +210,7 @@ def docker_menu_items(state: DockerState) -> list[Item]:
     ]
 
     if state.service.status == DockerStatus.RUNNING:
-        from image import IMAGE_MENUS
+        from image_ import IMAGE_MENUS
 
         items.append(
             SubMenuItem(
@@ -235,18 +235,13 @@ def docker_menu_items(state: DockerState) -> list[Item]:
     return items
 
 
-def docker_menu_item_action() -> HeadlessMenu:
-    """Get the menu items for the Docker service."""
-    return HeadlessMenu(
-        title='󰡨Docker',
-        items=docker_menu_items,
-    )
-
-
-docker_main_menu = ActionItem(
+DOCKER_MAIN_MENU = SubMenuItem(
     label='Docker',
     icon='󰡨',
-    action=docker_menu_item_action,
+    sub_menu=HeadlessMenu(
+        title='󰡨Docker',
+        items=docker_menu_items,
+    ),
 )
 
 
@@ -358,7 +353,7 @@ def init_service() -> None:
         'docker_usernames',
         lambda state: state.docker.service.usernames,
     )
-    dispatch(RegisterRegularAppAction(menu_item=docker_main_menu))
+    dispatch(RegisterRegularAppAction(menu_item=DOCKER_MAIN_MENU))
     dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.APPS,

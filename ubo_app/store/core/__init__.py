@@ -36,13 +36,20 @@ if TYPE_CHECKING:
 class MainAction(BaseAction): ...
 
 
-class RegisterAppAction(MainAction):
-    menu_item: Item
-
-
 class UpdateLightDMState(MainAction):
     is_active: bool
     is_enable: bool
+
+
+def service_default_factory() -> str:
+    from ubo_app.service import service_id
+
+    return service_id
+
+
+class RegisterAppAction(MainAction):
+    menu_item: Item
+    service: str = field(default_factory=service_default_factory)
 
 
 class RegisterRegularAppAction(RegisterAppAction): ...

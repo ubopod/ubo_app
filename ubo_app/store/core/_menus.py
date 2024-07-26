@@ -44,6 +44,7 @@ SETTINGS_MENU = HeadlessMenu(
     title='Settings',
     items=[
         SubMenuItem(
+            key=category,
             label=category,
             icon=SETTINGS_ICONS[category],
             sub_menu=HeadlessMenu(
@@ -61,16 +62,19 @@ MAIN_MENU = HeadlessMenu(
     title='󰍜Main',
     items=[
         SubMenuItem(
+            key='home',
             label='Apps',
             icon='󰀻',
             sub_menu=APPS_MENU,
         ),
         SubMenuItem(
+            key='settings',
             label='Settings',
             icon='',
             sub_menu=SETTINGS_MENU,
         ),
         SubMenuItem(
+            key='about',
             label='About',
             icon='',
             sub_menu=HeadedMenu(
@@ -100,6 +104,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
     """Return a list of menu items for the notification manager."""
     return [
         ActionItem(
+            key=str(notification.id),
             label=notification.title,
             icon=notification.icon,
             color='black',
@@ -135,12 +140,14 @@ HOME_MENU = HeadlessMenu(
     title=f'󰋜{socket.gethostname()}.local',
     items=[
         SubMenuItem(
+            key='main',
             label='',
             sub_menu=MAIN_MENU,
             icon='󰍜',
             is_short=True,
         ),
         SubMenuItem(
+            key='notifications',
             label='',
             sub_menu=HeadlessMenu(
                 title=notifications_title,
@@ -152,6 +159,7 @@ HOME_MENU = HeadlessMenu(
             is_short=True,
         ),
         SubMenuItem(
+            key='power',
             label='',
             sub_menu=HeadlessMenu(
                 title='󰐥Power',

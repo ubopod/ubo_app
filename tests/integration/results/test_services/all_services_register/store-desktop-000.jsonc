@@ -90,6 +90,7 @@
           ],
           "icon": "󰍜",
           "is_short": true,
+          "key": "main",
           "label": "",
           "opacity": null,
           "progress": null,
@@ -105,13 +106,13 @@
                 ],
                 "icon": "󰀻",
                 "is_short": false,
+                "key": "home",
                 "label": "Apps",
                 "opacity": null,
                 "progress": null,
                 "sub_menu": {
                   "items": [
                     {
-                      "action": "<function:docker_menu_item_action>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -121,9 +122,32 @@
                       ],
                       "icon": "󰡨",
                       "is_short": false,
+                      "key": "docker",
                       "label": "Docker",
                       "opacity": null,
-                      "progress": null
+                      "progress": null,
+                      "sub_menu": {
+                        "items": [
+                          {
+                            "action": "<function:setup_menu_action>",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": null,
+                            "label": "Setup Docker",
+                            "opacity": null,
+                            "progress": null
+                          }
+                        ],
+                        "placeholder": null,
+                        "title": "󰡨Docker"
+                      }
                     }
                   ],
                   "placeholder": "No apps",
@@ -140,6 +164,7 @@
                 ],
                 "icon": "",
                 "is_short": false,
+                "key": "settings",
                 "label": "Settings",
                 "opacity": null,
                 "progress": null,
@@ -155,6 +180,7 @@
                       ],
                       "icon": "󰛳",
                       "is_short": false,
+                      "key": "Network",
                       "label": "Network",
                       "opacity": null,
                       "progress": null,
@@ -170,6 +196,7 @@
                             ],
                             "icon": "󰖩",
                             "is_short": false,
+                            "key": "wifi",
                             "label": "WiFi",
                             "opacity": null,
                             "progress": null,
@@ -186,6 +213,7 @@
                                   ],
                                   "icon": "󱛃",
                                   "is_short": false,
+                                  "key": null,
                                   "label": "Add",
                                   "opacity": null,
                                   "progress": null
@@ -201,6 +229,7 @@
                                   ],
                                   "icon": "󱖫",
                                   "is_short": false,
+                                  "key": null,
                                   "label": "Select",
                                   "opacity": null,
                                   "progress": null
@@ -220,6 +249,7 @@
                             ],
                             "icon": "󰩟",
                             "is_short": false,
+                            "key": "ip",
                             "label": "IP Addresses",
                             "opacity": null,
                             "progress": null,
@@ -235,6 +265,7 @@
                                   ],
                                   "icon": "󰈀",
                                   "is_short": false,
+                                  "key": null,
                                   "label": "eth0",
                                   "opacity": null,
                                   "progress": null,
@@ -250,6 +281,7 @@
                                         ],
                                         "icon": "󰩠",
                                         "is_short": false,
+                                        "key": null,
                                         "label": "192.168.1.1",
                                         "opacity": null,
                                         "progress": null
@@ -279,6 +311,7 @@
                       ],
                       "icon": "󰖤",
                       "is_short": false,
+                      "key": "Accessibility",
                       "label": "Accessibility",
                       "opacity": null,
                       "progress": null,
@@ -294,6 +327,7 @@
                             ],
                             "icon": "󰔊",
                             "is_short": false,
+                            "key": "voice",
                             "label": "Voice",
                             "opacity": null,
                             "progress": null,
@@ -311,6 +345,7 @@
                                   ],
                                   "icon": "󰐲",
                                   "is_short": false,
+                                  "key": null,
                                   "label": "Set Access Key",
                                   "opacity": null,
                                   "progress": null
@@ -336,6 +371,7 @@
                       ],
                       "icon": "󰟻",
                       "is_short": false,
+                      "key": "Utilities",
                       "label": "Utilities",
                       "opacity": null,
                       "progress": null,
@@ -352,6 +388,7 @@
                             ],
                             "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
+                            "key": "lightdm",
                             "label": "LightDM",
                             "opacity": null,
                             "progress": null
@@ -371,6 +408,7 @@
                       ],
                       "icon": "󰑔",
                       "is_short": false,
+                      "key": "Remote",
                       "label": "Remote",
                       "opacity": null,
                       "progress": null,
@@ -387,6 +425,7 @@
                             ],
                             "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
+                            "key": "ssh",
                             "label": "SSH",
                             "opacity": null,
                             "progress": null
@@ -406,6 +445,7 @@
                       ],
                       "icon": "󰀻",
                       "is_short": false,
+                      "key": "Apps",
                       "label": "Apps",
                       "opacity": null,
                       "progress": null,
@@ -421,6 +461,7 @@
                             ],
                             "icon": "󰡨",
                             "is_short": false,
+                            "key": "docker",
                             "label": "Docker",
                             "opacity": null,
                             "progress": null,
@@ -438,6 +479,7 @@
                                   ],
                                   "icon": "󰌉",
                                   "is_short": false,
+                                  "key": null,
                                   "label": "Add Registry",
                                   "opacity": null,
                                   "progress": null
@@ -468,6 +510,7 @@
                 ],
                 "icon": "",
                 "is_short": false,
+                "key": "about",
                 "label": "About",
                 "opacity": null,
                 "progress": null,
@@ -480,6 +523,7 @@
                       "color": "#000000",
                       "icon": "󰄬",
                       "is_short": false,
+                      "key": null,
                       "label": "Already up to date!",
                       "opacity": null,
                       "progress": null
@@ -500,6 +544,7 @@
           "color": "white",
           "icon": "",
           "is_short": true,
+          "key": "notifications",
           "label": "",
           "opacity": null,
           "progress": null,
@@ -519,6 +564,7 @@
           ],
           "icon": "󰐥",
           "is_short": true,
+          "key": "power",
           "label": "",
           "opacity": null,
           "progress": null,
@@ -535,6 +581,7 @@
                 ],
                 "icon": "󰜉",
                 "is_short": false,
+                "key": null,
                 "label": "Reboot",
                 "opacity": null,
                 "progress": null
@@ -550,6 +597,7 @@
                 ],
                 "icon": "󰤂",
                 "is_short": false,
+                "key": null,
                 "label": "Power off",
                 "opacity": null,
                 "progress": null
@@ -563,9 +611,7 @@
       "placeholder": null,
       "title": "󰋜test-hostname.local"
     },
-    "path": [
-      "󰋜test-hostname.local"
-    ],
+    "path": [],
     "settings_items_priorities": {
       "Docker": null,
       "IP Addresses": 0,

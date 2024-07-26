@@ -166,7 +166,7 @@ def login_actions(*, is_logged_in: bool | None) -> list[ActionItem | Application
 
 def generate_actions(state: VSCodeState) -> list[ActionItem | ApplicationItem]:
     actions = []
-    if not state.is_downloading:
+    if not state.is_pending and not state.is_downloading:
         if state.is_binary_installed:
             if state.is_logged_in and state.status:
                 actions.extend(status_based_actions(state.status))
@@ -186,18 +186,12 @@ def generate_actions(state: VSCodeState) -> list[ActionItem | ApplicationItem]:
 
 @autorun(lambda state: state.vscode)
 def vscode_menu(state: VSCodeState) -> HeadedMenu:
-    if state.is_pending:
-        return HeadedMenu(
-            title='󰨞VSCode',
-            heading='VSCode Remote Tunnel',
-            sub_heading='[size=48dp]󰔟[/size]',
-            items=[],
-        )
-
     actions = generate_actions(state)
 
     status = ''
-    if state.status:
+    if state.is_pending:
+        status = '[size=48dp]󰔟[/size]'
+    elif state.status:
         if state.status.is_running:
             if state.status.name:
                 status = f'Service is running, name:\n{state.status.name}'
@@ -223,6 +217,7 @@ def vscode_menu(state: VSCodeState) -> HeadedMenu:
         heading='VSCode Remote Tunnel',
         sub_heading=status,
         items=actions,
+        placeholder='',
     )
 
 

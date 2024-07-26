@@ -473,6 +473,7 @@ def image_menu(
         items.append(
             ActionItem(
                 label='Stop',
+                key='stop',
                 icon='󰓛',
                 action=lambda: _stop_container(image),
             ),
@@ -480,12 +481,14 @@ def image_menu(
         items.append(
             SubMenuItem(
                 label='Ports',
+                key='ports',
                 icon='󰙜',
                 sub_menu=HeadlessMenu(
                     title='Ports',
                     items=[
                         ActionItem(
                             label=port,
+                            key=port,
                             icon='󰙜',
                             action=open_qrcode(port.split(':')[-1]),
                         )

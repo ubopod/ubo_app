@@ -1845,13 +1845,13 @@ files = [
 
 [[package]]
 name = "sentry-sdk"
-version = "1.45.0"
+version = "1.45.1"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = "*"
 files = [
-    {file = "sentry-sdk-1.45.0.tar.gz", hash = "sha256:509aa9678c0512344ca886281766c2e538682f8acfa50fd8d405f8c417ad0625"},
-    {file = "sentry_sdk-1.45.0-py2.py3-none-any.whl", hash = "sha256:1ce29e30240cc289a027011103a8c83885b15ef2f316a60bcc7c5300afa144f1"},
+    {file = "sentry_sdk-1.45.1-py2.py3-none-any.whl", hash = "sha256:608887855ccfe39032bfd03936e3a1c4f4fc99b3a4ac49ced54a4220de61c9c1"},
+    {file = "sentry_sdk-1.45.1.tar.gz", hash = "sha256:a16c997c0f4e3df63c0fc5e4207ccb1ab37900433e0f72fef88315d317829a26"},
 ]
 
 [package.dependencies]
@@ -1999,13 +1999,13 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.12.3a1"
+version = "0.12.4"
 description = "GUI sdk for Ubo Pod"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.12.3a1-py3-none-any.whl", hash = "sha256:7c114bfdc26ee12da9fd2c5ab9630636b7098b19bd77a4877139d312f35f2f2c"},
-    {file = "ubo_gui-0.12.3a1.tar.gz", hash = "sha256:a8e3d576476ba2775662c7e4b94d391e492784af7ab9a65adac7c5246d44f468"},
+    {file = "ubo_gui-0.12.4-py3-none-any.whl", hash = "sha256:efd45c25c588ec86f387ad979c94117de75522cec690a1f7ef1656652eddf340"},
+    {file = "ubo_gui-0.12.4.tar.gz", hash = "sha256:8eed16a012ced174c67c87b228769b662784b00b0377931fa69c867d2789197c"},
 ]
 
 [package.dependencies]
@@ -2151,4 +2151,4 @@ dev = ["headless-kivy", "headless-kivy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "71cf3d402b019ccd9058b393e7a780992e36ddcdc5142539a4e40bdade7b75de"
+content-hash = "b724049f5d0dbf58de27931cc7380b16c505109490e01da93ac062316501b48b"

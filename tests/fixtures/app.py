@@ -58,9 +58,9 @@ class AppContext:
         PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
 
-        from ubo_app import service
+        from ubo_app.service import start_event_loop
 
-        service.start_event_loop()
+        start_event_loop()
         self.app = app
         loop = asyncio.get_event_loop()
         self.task = loop.create_task(self.app.async_run(async_lib='asyncio'))
