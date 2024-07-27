@@ -18,6 +18,7 @@
 - refactor(core): make `UboModuleLoader` to keep a weakref of the module in its cache instead of an actual reference
 - refactor(core): use the new `key` property of ubo-gui `Item`s to keep opened menus open when something changes in the parent menus - closes #145, closes #146, closes #147
 - fix(core): make sure logs are set up after reading environment variables and before starting the app
+- feat(keypad): add epoch time to keypad actions and events in `time` field
 
 ## Version 0.15.4
 

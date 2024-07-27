@@ -1,6 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import time
+from dataclasses import field
 from enum import StrEnum
 
 from redux import BaseAction, BaseEvent
@@ -18,6 +20,7 @@ class Key(StrEnum):
 
 class KeypadAction(BaseAction):
     key: Key
+    time: float = field(default_factory=time.time)
 
 
 class KeypadKeyUpAction(KeypadAction): ...
@@ -34,6 +37,7 @@ class KeypadKeyReleaseAction(KeypadAction): ...
 
 class KeypadEvent(BaseEvent):
     key: Key
+    time: float
 
 
 class KeypadKeyPressEvent(KeypadEvent): ...

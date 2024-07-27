@@ -74,12 +74,12 @@ def reducer(
                 ),
             ]
         else:
-            events = [KeypadKeyPressEvent(key=action.key)]
+            events = [KeypadKeyPressEvent(key=action.key, time=action.time)]
         return CompleteReducerResult(state=state, actions=actions, events=events)
     if isinstance(action, KeypadKeyReleaseAction):
         return CompleteReducerResult(
             state=state,
-            events=[KeypadKeyReleaseEvent(key=action.key)],
+            events=[KeypadKeyReleaseEvent(key=action.key, time=action.time)],
         )
 
     if isinstance(action, RegisterSettingAppAction):
