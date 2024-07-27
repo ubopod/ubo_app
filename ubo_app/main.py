@@ -11,21 +11,30 @@ from ubo_app.logging import setup_logging
 from ubo_app.setup import setup
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
+dotenv.load_dotenv(Path(__file__).parent / '.env')
 
 
 def main() -> None:
     """Instantiate the `MenuApp` and run it."""
-    # This should be imported early to set the custom loader
-    from ubo_app.load_services import load_services
-
+    # `setup_logging` imports `ubo_gui` which imports `kivy`, so we need to set these
+    # environment variables before calling `setup_logging`
     os.environ['KIVY_NO_CONFIG'] = '1'
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
     os.environ['KCFG_KIVY_EXIT_ON_ESCAPE'] = '0'
 
-    setup()
+    # `setup_logging` needs to be called before anything else to initialize the rotating
+    # log files
     setup_logging()
+
+    # `setup_error_handling` needs to be called before anything else and after
+    # `setup_logging`
     setup_error_handling()
+
+    # This should be imported early to set the custom loader
+    from ubo_app.load_services import load_services
+
+    setup()
 
     from ubo_app.service import start_event_loop
 

@@ -12,6 +12,7 @@ import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+import dotenv
 import platformdirs
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
@@ -252,9 +253,11 @@ async def app_context(
     _monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
+    _ = _monkeypatch
+
     from ubo_app.setup import setup
 
-    _ = _monkeypatch
+    dotenv.load_dotenv(Path(__file__).parent / '.env')
     setup()
     _setup_headless_kivy()
 

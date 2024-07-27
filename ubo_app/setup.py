@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
-import dotenv
 import numpy as np
 from fake import Fake
 
@@ -20,7 +19,6 @@ class _FakeAsyncProcess(Fake):
 
 def setup() -> None:
     """Set up for different environments."""
-    dotenv.load_dotenv(Path(__file__).parent / '.env')
     import sys
 
     # it should be changed to `Fake()` and  moved inside the `if not IS_RPI` when the

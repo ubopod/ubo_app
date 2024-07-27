@@ -17,6 +17,7 @@
 - refactor(core): move `ubo_app.utils.loop` to `ubo_app.service` and add service properties like `service_id`, `name`, `label`, etc as module level variables to it
 - refactor(core): make `UboModuleLoader` to keep a weakref of the module in its cache instead of an actual reference
 - refactor(core): use the new `key` property of ubo-gui `Item`s to keep opened menus open when something changes in the parent menus - closes #145, closes #146, closes #147
+- fix(core): make sure logs are set up after reading environment variables and before starting the app
 
 ## Version 0.15.4
 
