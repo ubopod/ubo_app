@@ -24,6 +24,7 @@
 - refactor(audio): rename sound service to audio service
 - refactor(audio): drop `pyaudio` and use `simpleaudio` for playback
 - feat(core): setting `DEBUG_MODE_MENU` environment variable to truthy values will show a representation of the menu in the logs whenever the current menu is changed
+- fix(ip): close sockets opened for testing the internet connection - closes #126
 
 ## Version 0.15.4
 
