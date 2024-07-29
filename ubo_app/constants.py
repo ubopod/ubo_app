@@ -20,6 +20,8 @@ SERVICES_PATH = (
 SERVER_SOCKET_PATH = Path('/run/ubo').joinpath('system_manager.sock').as_posix()
 DISABLED_SERVICES = os.environ.get('UBO_DISABLED_SERVICES', '').split(',')
 
+DEBUG_MODE_MENU = str_to_bool(os.environ.get('UBO_DEBUG_MENU', 'False')) == 1
+
 SERVICES_LOOP_GRACE_PERIOD = float(
     os.environ.get('UBO_SERVICES_LOOP_GRACE_PERIOD', 0.1),
 )

@@ -10,6 +10,8 @@ from kivy.clock import mainthread
 from ubo_gui.app import UboApp, cached_property
 from ubo_gui.menu import Item, MenuWidget, StackItem, StackMenuItem
 
+from ubo_app.constants import DEBUG_MODE_MENU
+from ubo_app.logging import logger
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core import (
     ChooseMenuItemByIconEvent,
@@ -107,6 +109,10 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.root.title = self.menu_widget.title
         self.menu_widget.bind(title=self.handle_title_change)
         self.menu_widget.bind(stack=set_path)
+
+        if DEBUG_MODE_MENU:
+            menu_representation = 'Menu:\n' + repr(self.menu_widget)
+            self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 
         subscribe_event(
             KeypadKeyPressEvent,
