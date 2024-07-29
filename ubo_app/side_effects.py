@@ -19,8 +19,8 @@ from ubo_app.store.main import (
     store,
     subscribe_event,
 )
+from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
-from ubo_app.store.services.sound import SoundPlayChimeAction
 from ubo_app.store.update_manager import (
     UpdateManagerCheckEvent,
     UpdateManagerSetStatusAction,
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 def power_off() -> None:
     """Power off the device."""
-    dispatch(SoundPlayChimeAction(name=Chime.FAILURE), FinishAction())
+    dispatch(AudioPlayChimeAction(name=Chime.FAILURE), FinishAction())
     if IS_RPI:
 
         def power_off_system(*_: list[object]) -> None:
@@ -51,7 +51,7 @@ def power_off() -> None:
 
 def reboot() -> None:
     """Reboot the device."""
-    dispatch(SoundPlayChimeAction(name=Chime.FAILURE), FinishAction())
+    dispatch(AudioPlayChimeAction(name=Chime.FAILURE), FinishAction())
     if IS_RPI:
 
         def reboot_system(*_: list[object]) -> None:

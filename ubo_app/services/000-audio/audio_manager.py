@@ -4,23 +4,17 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import math
-import struct
 import subprocess
-import time
-import wave
-from typing import TYPE_CHECKING
 
 import alsaaudio
-import pyaudio
+import simpleaudio
 
 from ubo_app.logging import logger
+from ubo_app.store.main import dispatch
+from ubo_app.store.services.audio import AudioPlaybackDoneEvent
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 CHUNK_SIZE = 1024
 
@@ -39,15 +33,9 @@ def _linear_to_logarithmic(volume_linear: float) -> int:
 class AudioManager:
     """Class for managing audio playback and recording."""
 
-    stream: pyaudio.Stream | None = None
-
     def __init__(self: AudioManager) -> None:
         """Initialize the audio manager."""
         # create an audio object
-        self.pyaudio = pyaudio.PyAudio()
-        self.is_playing = False
-        self.should_stop = False
-
         self.cardindex = None
 
         async def initialize_audio() -> None:
@@ -92,71 +80,6 @@ class AudioManager:
         )
         await process.wait()
 
-    def find_respeaker_index(self: AudioManager) -> int:
-        """Find the index of the ReSpeaker device."""
-        for index in range(self.pyaudio.get_device_count()):
-            info = self.pyaudio.get_device_info_by_index(index)
-            if (
-                not isinstance(info['name'], int | float)
-                and 'wm8960' in info['name']
-                or not IS_RPI
-                and isinstance(info['maxOutputChannels'], int)
-                and info['maxOutputChannels'] > 0
-            ):
-                logger.debug('ReSpeaker found at index', extra={'index': index})
-                logger.debug('Device Info', extra={'info': info})
-                return index
-        msg = 'ReSpeaker for default device not found'
-        raise ValueError(msg)
-
-    def __del__(self: AudioManager) -> None:
-        """Clean up the audio manager."""
-        self.close_stream()
-        self.pyaudio.terminate()
-
-    def close_stream(self: AudioManager) -> None:
-        """Clean up the audio manager."""
-        if self.stream:
-            self.should_stop = True
-            while self.is_playing:
-                time.sleep(0.05)
-            self.should_stop = False
-            with contextlib.suppress(Exception):
-                self.stream.close()
-            self.stream = None
-
-    def initialize_playback(
-        self: AudioManager,
-        *,
-        channels: int,
-        rate: int,
-        width: int,
-    ) -> pyaudio.Stream:
-        """Initialize the playback stream.
-
-        Parameters
-        ----------
-        channels: int
-            Number of channels
-
-        rate: int
-            Frame rate of the audio
-
-        width: int
-            Sample width of the audio
-
-        """
-        self.close_stream()
-        self.is_playing = True
-        self.stream = self.pyaudio.open(
-            format=self.pyaudio.get_format_from_width(width),
-            channels=channels,
-            rate=rate,
-            output=True,
-            output_device_index=self.find_respeaker_index(),
-        )
-        return self.stream
-
     def play_file(self: AudioManager, filename: str) -> None:
         """Play a waveform audio file.
 
@@ -168,39 +91,23 @@ class AudioManager:
         """
         # open the file for reading.
         logger.info('Opening audio file for playback', extra={'filename_': filename})
-        try:
-            with wave.open(filename, 'rb') as wf:
-                stream = self.initialize_playback(
-                    channels=wf.getnchannels(),
-                    rate=wf.getframerate(),
-                    width=wf.getsampwidth(),
-                )
-                data = wf.readframes(CHUNK_SIZE)
-                while data and not self.should_stop and stream.is_active():
-                    stream.write(data)
-                    data = wf.readframes(CHUNK_SIZE)
-                stream.stop_stream()
-        except Exception:
-            create_task(self.restart_pulse_audio())
-            logger.exception('Something went wrong while playing an audio file')
-        finally:
-            self.is_playing = False
-            self.close_stream()
+        simpleaudio.WaveObject.from_wave_file(filename).play()
 
     def play_sequence(
         self: AudioManager,
-        sequence: Sequence[int],
+        data: bytes,
         *,
         channels: int,
         rate: int,
         width: int,
+        id: str | None = None,
     ) -> None:
         """Play a sequence of audio.
 
         Parameters
         ----------
-        sequence: Sequence[int]
-            Audio as a sequence of 16-bit linearly-encoded integers.
+        data: bytes
+            Audio as a sequence of bytes
 
         channels: int
             Number of channels
@@ -211,23 +118,19 @@ class AudioManager:
         width: int
             Sample width of the audio
 
+        id: str | None
+            ID of the audio sequence chain
+
         """
-        try:
-            stream = self.initialize_playback(
-                channels=channels,
-                rate=rate,
-                width=width,
-            )
-            data = b''.join(struct.pack('h', sample) for sample in sequence)
-
-            stream.write(data)
-
-        except Exception:
-            create_task(self.restart_pulse_audio())
-            logger.exception('Something went wrong while playing an audio file')
-        finally:
-            self.is_playing = False
-            self.close_stream()
+        if data != b'':
+            simpleaudio.WaveObject(
+                audio_data=data,
+                num_channels=channels,
+                sample_rate=rate,
+                bytes_per_sample=width,
+            ).play().wait_done()
+        if id is not None:
+            dispatch(AudioPlaybackDoneEvent(id=id))
 
     def set_playback_mute(self: AudioManager, *, mute: bool = False) -> None:
         """Set the playback mute of the audio output.

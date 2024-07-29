@@ -7,8 +7,8 @@ from kivy.core.window import Keyboard, Window, WindowBase
 from redux import FinishAction, FinishEvent
 
 from ubo_app.store.main import ScreenshotEvent, SnapshotEvent, subscribe_event
+from ubo_app.store.services.audio import AudioDevice, AudioToggleMuteStatusAction
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
-from ubo_app.store.services.sound import SoundDevice, SoundToggleMuteStatusAction
 
 if TYPE_CHECKING:
     Modifier = Literal['ctrl', 'alt', 'meta', 'shift']
@@ -48,8 +48,8 @@ def on_keyboard(  # noqa: C901
             from ubo_app.store.main import dispatch
 
             dispatch(
-                SoundToggleMuteStatusAction(
-                    device=SoundDevice.INPUT,
+                AudioToggleMuteStatusAction(
+                    device=AudioDevice.INPUT,
                 ),
             )
         elif key == Keyboard.keycodes['p']:

@@ -22,8 +22,8 @@ git clone https://github.com/waveshare/WM8960-Audio-HAT
 cd WM8960-Audio-HAT
 
 apt-get -y update
-apt-get -y install raspberrypi-kernel-headers #raspberrypi-kernel 
-apt-get -y install  dkms git i2c-tools libasound2-plugins
+apt-get -y install raspberrypi-kernel-headers --no-install-recommends --no-install-suggests
+apt-get -y install dkms git i2c-tools libasound2-plugins --no-install-recommends --no-install-suggests
 
 # locate currently installed kernels (may be different to running kernel if
 # it's just been updated)

@@ -41,7 +41,7 @@ class HomePage(PageWidget):
         self.volume_widget = VolumeWidget()
         self.ids.right_column.add_widget(self.volume_widget)
 
-        autorun(lambda state: state.sound.playback_volume)(self._sync_output_volume)
+        autorun(lambda state: state.audio.playback_volume)(self._sync_output_volume)
 
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
         self.volume_widget.value = selector_result * 100

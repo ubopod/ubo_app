@@ -77,6 +77,7 @@ apt-get -y upgrade
 apt-get -y install \
   git \
   i2c-tools \
+  libasound2-dev \
   libcap-dev \
   libegl1 \
   libgl1 \
@@ -88,7 +89,6 @@ apt-get -y install \
   python3-libcamera \
   python3-picamera2 \
   python3-pip \
-  python3-pyaudio \
   python3-virtualenv \
   --no-install-recommends --no-install-suggests
 apt-get -y clean

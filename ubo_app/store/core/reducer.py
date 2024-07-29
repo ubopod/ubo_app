@@ -25,6 +25,7 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     SetMenuPathAction,
 )
+from ubo_app.store.services.audio import AudioChangeVolumeAction, AudioDevice
 from ubo_app.store.services.keypad import (
     Key,
     KeypadEvent,
@@ -33,7 +34,6 @@ from ubo_app.store.services.keypad import (
     KeypadKeyReleaseAction,
     KeypadKeyReleaseEvent,
 )
-from ubo_app.store.services.sound import SoundChangeVolumeAction, SoundDevice
 
 
 def reducer(
@@ -41,7 +41,7 @@ def reducer(
     action: MainAction,
 ) -> ReducerResult[
     MainState,
-    SoundChangeVolumeAction,
+    AudioChangeVolumeAction,
     KeypadEvent | InitEvent | PowerEvent,
 ]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
@@ -57,20 +57,20 @@ def reducer(
         raise InitializationActionError(action)
 
     if isinstance(action, KeypadKeyPressAction):
-        actions: list[SoundChangeVolumeAction] = []
+        actions: list[AudioChangeVolumeAction] = []
         events: list[KeypadKeyPressEvent] = []
         if action.key == Key.UP and len(state.path) == 0:
             actions = [
-                SoundChangeVolumeAction(
+                AudioChangeVolumeAction(
                     amount=0.05,
-                    device=SoundDevice.OUTPUT,
+                    device=AudioDevice.OUTPUT,
                 ),
             ]
         elif action.key == Key.DOWN and len(state.path) == 0:
             actions = [
-                SoundChangeVolumeAction(
+                AudioChangeVolumeAction(
                     amount=-0.05,
-                    device=SoundDevice.OUTPUT,
+                    device=AudioDevice.OUTPUT,
                 ),
             ]
         else:

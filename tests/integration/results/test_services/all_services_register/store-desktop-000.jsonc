@@ -1,6 +1,12 @@
 // store-desktop-000
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
+  "audio": {
+    "capture_volume": 0.5,
+    "is_capture_mute": false,
+    "is_playback_mute": false,
+    "playback_volume": 0.5
+  },
   "camera": {
     "current": null,
     "is_viewfinder_active": false,
@@ -332,10 +338,8 @@
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
-                              "heading": "󰔊 Picovoice",
                               "items": [
                                 {
-                                  "action": "<function:input_access_key>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -343,17 +347,93 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "󰐲",
+                                  "icon": "󰱑",
                                   "is_short": false,
                                   "key": null,
-                                  "label": "Set Access Key",
+                                  "label": "Voice Engine",
                                   "opacity": null,
-                                  "progress": null
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "items": [
+                                      {
+                                        "action": "<function:_engine_selector>",
+                                        "background_color": "#03F7AE",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰱒",
+                                        "is_short": false,
+                                        "key": null,
+                                        "label": "Piper",
+                                        "opacity": null,
+                                        "progress": null
+                                      },
+                                      {
+                                        "action": "<function:_engine_selector>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰄱",
+                                        "is_short": false,
+                                        "key": null,
+                                        "label": "Orca",
+                                        "opacity": null,
+                                        "progress": null
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "title": "󰱑Voice Engine"
+                                  }
+                                },
+                                {
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰔊",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Orca Settings",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "heading": "󰔊 Picovoice",
+                                    "items": [
+                                      {
+                                        "action": "<function:input_access_key>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰐲",
+                                        "is_short": false,
+                                        "key": null,
+                                        "label": "Set Access Key",
+                                        "opacity": null,
+                                        "progress": null
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "sub_heading": "Set the access key\nCurrent value: Fake",
+                                    "title": "Orca Settings"
+                                  }
                                 }
                               ],
                               "placeholder": null,
-                              "sub_heading": "Set the access key\nCurrent value: Fake",
-                              "title": "Voice Settings"
+                              "title": "󰔊Voice"
                             }
                           }
                         ],
@@ -638,12 +718,6 @@
       "value": 0.0
     }
   },
-  "sound": {
-    "capture_volume": 0.5,
-    "is_capture_mute": false,
-    "is_playback_mute": false,
-    "playback_volume": 0.5
-  },
   "ssh": {
     "is_active": true,
     "is_enabled": true
@@ -652,7 +726,7 @@
     "icons": [
       {
         "color": "white",
-        "id": "sound:mic-state",
+        "id": "audio:mic-state",
         "priority": -20,
         "symbol": "󰍭"
       },
@@ -683,7 +757,8 @@
     "update_status": "up_to_date"
   },
   "voice": {
-    "is_access_key_set": false
+    "is_access_key_set": false,
+    "selected_engine": "piper"
   },
   "wifi": {
     "connections": [

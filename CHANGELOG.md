@@ -19,6 +19,10 @@
 - refactor(core): use the new `key` property of ubo-gui `Item`s to keep opened menus open when something changes in the parent menus - closes #145, closes #146, closes #147
 - fix(core): make sure logs are set up after reading environment variables and before starting the app
 - feat(keypad): add epoch time to keypad actions and events in `time` field
+- feat(voice): add piper engine to voice service as the default engine and a menu to select the engine - closes #120
+- refactor(notification): add `NotificationExtraInformation` with `text`, `piper_text`, and `orca_text` to replace the simple strings passed to `extra_information` field of the `Notification` object
+- refactor(audio): rename sound service to audio service
+- refactor(audio): drop `pyaudio` and use `simpleaudio` for playback
 
 ## Version 0.15.4
 

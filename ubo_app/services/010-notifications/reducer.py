@@ -12,6 +12,7 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import (
     Importance,
     NotificationDisplayType,
@@ -24,10 +25,9 @@ from ubo_app.store.services.notifications import (
     NotificationsState,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
-from ubo_app.store.services.sound import SoundPlayChimeAction
 
 Action = InitAction | NotificationsAction
-ResultAction = RgbRingBlinkAction | SoundPlayChimeAction
+ResultAction = RgbRingBlinkAction | AudioPlayChimeAction
 
 
 def reducer(
@@ -105,7 +105,7 @@ def reducer(
                     else []
                 ),
                 *(
-                    [SoundPlayChimeAction(name=action.notification.chime)]
+                    [AudioPlayChimeAction(name=action.notification.chime)]
                     if action.notification.chime
                     else []
                 ),

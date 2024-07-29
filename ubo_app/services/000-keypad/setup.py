@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import board
 
+from ubo_app.store.services.audio import AudioDevice, AudioSetMuteStatusAction
 from ubo_app.store.services.keypad import (
     Key,
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
 )
-from ubo_app.store.services.sound import SoundDevice, SoundSetMuteStatusAction
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
@@ -215,8 +215,8 @@ class Keypad:
                 dispatch(KeypadKeyReleaseAction(key=KEY_INDEX[index]))
         if index == MIC_INDEX:
             dispatch(
-                SoundSetMuteStatusAction(
-                    device=SoundDevice.INPUT,
+                AudioSetMuteStatusAction(
+                    device=AudioDevice.INPUT,
                     mute=status == 'pressed',
                 ),
             )

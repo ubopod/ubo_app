@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import functools
-import re
 from dataclasses import replace
 
 from kivy.clock import Clock, mainthread
@@ -63,25 +62,17 @@ class MenuNotificationHandler(UboApp):
         items = []
 
         if notification.extra_information:
-            processed_voice_text = re.sub(
-                r'\{[^{}|]*\|"(.?((?<!\|").(?!"\}))*.?)"\}',
-                lambda match: match.groups()[0],
-                notification.extra_information or '',
+            text = notification.extra_information.text
+            dispatch(
+                VoiceReadTextAction(
+                    text=notification.extra_information.text,
+                    piper_text=notification.extra_information.piper_text,
+                    orca_text=notification.extra_information.orca_text,
+                ),
             )
-            dispatch(VoiceReadTextAction(text=processed_voice_text))
 
             def open_info() -> None:
-                previous_iteration = notification.extra_information or ''
-                while True:
-                    processed_visual_text = re.sub(
-                        r'\{([^{}|]*)\|[^{}|]*\}',
-                        lambda match: match.groups()[0],
-                        previous_iteration,
-                    ).replace('  ', '')
-                    if processed_visual_text == previous_iteration:
-                        break
-                    previous_iteration = processed_visual_text
-                info_application = NotificationInfo(text=processed_visual_text)
+                info_application = NotificationInfo(text=text)
 
                 dispatch(OpenApplicationEvent(application=info_application))
 

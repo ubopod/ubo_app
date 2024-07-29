@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from constants import SOUND_MIC_STATE_ICON_ID, SOUND_MIC_STATE_ICON_PRIORITY
+from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 from redux import (
     CompleteReducerResult,
     InitAction,
@@ -11,52 +11,52 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.services.notifications import Chime
-from ubo_app.store.services.sound import (
-    SoundAction,
-    SoundChangeVolumeAction,
-    SoundDevice,
-    SoundEvent,
-    SoundPlayAudioAction,
-    SoundPlayAudioEvent,
-    SoundPlayChimeAction,
-    SoundPlayChimeEvent,
-    SoundSetMuteStatusAction,
-    SoundSetVolumeAction,
-    SoundState,
-    SoundToggleMuteStatusAction,
+from ubo_app.store.services.audio import (
+    AudioAction,
+    AudioChangeVolumeAction,
+    AudioDevice,
+    AudioEvent,
+    AudioPlayAudioAction,
+    AudioPlayAudioEvent,
+    AudioPlayChimeAction,
+    AudioPlayChimeEvent,
+    AudioSetMuteStatusAction,
+    AudioSetVolumeAction,
+    AudioState,
+    AudioToggleMuteStatusAction,
 )
+from ubo_app.store.services.notifications import Chime
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 
-Action = InitAction | SoundAction | StatusIconsRegisterAction
+Action = InitAction | AudioAction | StatusIconsRegisterAction
 
 
 def reducer(
-    state: SoundState | None,
+    state: AudioState | None,
     action: Action,
-) -> ReducerResult[SoundState, Action, SoundEvent]:
+) -> ReducerResult[AudioState, Action, AudioEvent]:
     if state is None:
         if isinstance(action, InitAction):
-            return SoundState()
+            return AudioState()
         raise InitializationActionError(action)
 
-    if isinstance(action, SoundSetVolumeAction):
-        if action.device == SoundDevice.OUTPUT:
+    if isinstance(action, AudioSetVolumeAction):
+        if action.device == AudioDevice.OUTPUT:
             return CompleteReducerResult(
                 state=replace(state, playback_volume=action.volume),
                 events=[
-                    SoundPlayChimeEvent(name=Chime.VOLUME_CHANGE),
+                    AudioPlayChimeEvent(name=Chime.VOLUME_CHANGE),
                 ],
             )
-        if action.device == SoundDevice.INPUT:
+        if action.device == AudioDevice.INPUT:
             return replace(state, capture_volume=action.volume)
-    elif isinstance(action, SoundChangeVolumeAction):
-        if action.device == SoundDevice.OUTPUT:
+    elif isinstance(action, AudioChangeVolumeAction):
+        if action.device == AudioDevice.OUTPUT:
             return CompleteReducerResult(
                 state=state,
                 actions=[
-                    SoundSetVolumeAction(
-                        device=SoundDevice.OUTPUT,
+                    AudioSetVolumeAction(
+                        device=AudioDevice.OUTPUT,
                         volume=min(
                             max(state.playback_volume + action.amount, 0),
                             1,
@@ -64,7 +64,7 @@ def reducer(
                     ),
                 ],
             )
-        if action.device == SoundDevice.INPUT:
+        if action.device == AudioDevice.INPUT:
             return replace(
                 state,
                 capture_volume=min(
@@ -72,48 +72,49 @@ def reducer(
                     1,
                 ),
             )
-    elif isinstance(action, SoundSetMuteStatusAction):
-        if action.device == SoundDevice.OUTPUT:
+    elif isinstance(action, AudioSetMuteStatusAction):
+        if action.device == AudioDevice.OUTPUT:
             return replace(state, is_playback_mute=action.mute)
-        if action.device == SoundDevice.INPUT:
+        if action.device == AudioDevice.INPUT:
             return CompleteReducerResult(
                 state=replace(state, is_capture_mute=action.mute),
                 actions=[
                     StatusIconsRegisterAction(
                         icon='󰍭' if action.mute else '󰍬',
-                        priority=SOUND_MIC_STATE_ICON_PRIORITY,
-                        id=SOUND_MIC_STATE_ICON_ID,
+                        priority=AUDIO_MIC_STATE_ICON_PRIORITY,
+                        id=AUDIO_MIC_STATE_ICON_ID,
                     ),
                 ],
             )
-    elif isinstance(action, SoundToggleMuteStatusAction):
+    elif isinstance(action, AudioToggleMuteStatusAction):
         return CompleteReducerResult(
             state=state,
             actions=[
-                SoundSetMuteStatusAction(
+                AudioSetMuteStatusAction(
                     mute=not state.is_playback_mute
-                    if action.device == SoundDevice.OUTPUT
+                    if action.device == AudioDevice.OUTPUT
                     else not state.is_capture_mute,
                     device=action.device,
                 ),
             ],
         )
-    elif isinstance(action, SoundPlayChimeAction):
+    elif isinstance(action, AudioPlayChimeAction):
         return CompleteReducerResult(
             state=state,
             events=[
-                SoundPlayChimeEvent(name=action.name),
+                AudioPlayChimeEvent(name=action.name),
             ],
         )
-    elif isinstance(action, SoundPlayAudioAction):
+    elif isinstance(action, AudioPlayAudioAction):
         return CompleteReducerResult(
             state=state,
             events=[
-                SoundPlayAudioEvent(
+                AudioPlayAudioEvent(
                     sample=action.sample,
                     channels=action.channels,
                     rate=action.rate,
                     width=action.width,
+                    id=action.id,
                 ),
             ],
         )

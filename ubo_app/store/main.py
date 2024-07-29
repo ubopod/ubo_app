@@ -29,6 +29,7 @@ from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logging import logger
 from ubo_app.store.core import MainAction, MainEvent, MainState
 from ubo_app.store.core.reducer import reducer as main_reducer
+from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
 from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
 from ubo_app.store.services.docker import DockerAction, DockerState
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
@@ -41,7 +42,6 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
-from ubo_app.store.services.sound import SoundAction, SoundState
 from ubo_app.store.services.ssh import SSHAction, SSHState
 from ubo_app.store.services.voice import VoiceAction, VoiceState
 from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
@@ -81,7 +81,7 @@ class RootState(BaseCombineReducerState):
     update_manager: UpdateManagerState
     sensors: SensorsState
     ssh: SSHState
-    sound: SoundState
+    audio: AudioState
     wifi: WiFiState
     ip: IpState
     notifications: NotificationsState
@@ -109,7 +109,7 @@ ActionType = (
     | LightDMAction
     | SensorsAction
     | SSHAction
-    | SoundAction
+    | AudioAction
     | CameraAction
     | WiFiAction
     | IpAction
@@ -128,6 +128,7 @@ EventType = (
     | ScreenshotEvent
     | SnapshotEvent
     | NotificationsEvent
+    | AudioEvent
 )
 
 root_reducer, root_reducer_id = combine_reducers(

@@ -6,7 +6,10 @@ authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [{ include = "ubo_app" }]
-include = ["ubo_app/services/*-sound/sounds/*"]
+include = [
+  "ubo_app/services/*-sound/sounds/*",
+  "ubo_app/services/*-voice/models/*",
+]
 
 
 [[tool.poetry.source]]
@@ -17,7 +20,7 @@ priority = "primary"
 [tool.poetry.dependencies]
 python = "^3.11"
 psutil = "^6.0.0"
-ubo-gui = "^0.12.4"
+ubo-gui = "^0.12.5"
 headless-kivy = [
   { version = "^0.9.4", markers = "extra=='default'", extras = [
     "default",
@@ -26,11 +29,9 @@ headless-kivy = [
     "test",
   ] },
 ]
-python-redux = "^0.15.10"
 pyzbar = "^0.1.9"
 sdbus-networkmanager = { version = "^2.0.0", markers = "platform_machine=='aarch64'" }
 rpi_ws281x = { version = "^5.0.0", markers = "platform_machine=='aarch64'" }
-python-debouncer = "^0.1.5"
 pulsectl = "^23.5.2"
 aiohttp = "^3.9.1"
 semver = "^3.0.2"
@@ -40,16 +41,23 @@ sentry-sdk = "^1.43.0"
 pvorca = "^0.2.1"
 platformdirs = "^4.2.0"
 dill = "^0.3.8"
-python-strtobool = "^1.0.0"
+simpleaudio = "^1.0.4"
 
+python-redux = "^0.15.10"
+python-debouncer = "^0.1.5"
+python-strtobool = "^1.0.0"
+python-fake = "^0.1.0"
+
+# Adafruit dependencies
 adafruit-circuitpython-rgb-display = "^3.11.0"
 adafruit-circuitpython-aw9523 = "^1.1.7"
 adafruit-circuitpython-neopixel = "^6.3.11"
 adafruit-circuitpython-pct2075 = "^1.1.21"
 adafruit-circuitpython-veml7700 = "^1.1.22"
 
+# RPi dependencies
 rpi-lgpio = { version = "^0.6", markers = "platform_machine=='aarch64'" }
-python-fake = "^0.1.0"
+piper-tts = { version = "^1.2.0", markers = "sys_platform=='linux'" }
 
 [tool.poetry.group.dev]
 optional = true
@@ -66,7 +74,6 @@ ruff = "^0.5.3"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"
-pyaudio = { version = "^0.2.14", markers = "platform_machine!='aarch64'" }
 ipython = "^8.23.0"
 pyfakefs = { git = "https://github.com/sassanh/pyfakefs.git", branch = "skip_names" }
 
@@ -138,7 +145,7 @@ root = "ubo_app/services/000-keypad"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
-root = "ubo_app/services/000-sound"
+root = "ubo_app/services/000-audio"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

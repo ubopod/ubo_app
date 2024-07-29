@@ -25,6 +25,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
     NotificationDisplayType,
+    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.wifi import (
@@ -99,9 +100,18 @@ def show_onboarding_notification() -> None:
                         dismiss_notification=True,
                     ),
                 ],
-                extra_information="""Press middle button to add {WiFi|W AY F AY} \
-network with {QR|K Y UW AA R} code.\nIf you dismiss this, you can always add \
-{WiFi|W AY F AY} network through Settings → Network → {WiFi|W AY F AY}""",
+                extra_information=NotificationExtraInformation(
+                    text='Press middle button to add WiFi network with QR code.\n'
+                    'If you dismiss this, you can always add WiFi network through '
+                    'Settings → Network → WiFi',
+                    piper_text='Press middle button to add WiFi network with QR code.\n'
+                    'If you dismiss this, you can always add WiFi network through '
+                    'Settings menu, by navigating to Network, and then WiFi',
+                    orca_text='Press middle button to add {WiFi|W AY F AY} '
+                    'network with {QR|K Y UW AA R} code.\n'
+                    'If you dismiss this, you can always add {WiFi|W AY F AY} network '
+                    'through Settings → Network → {WiFi|W AY F AY}',
+                ),
                 color=INFO_COLOR,
             ),
         ),

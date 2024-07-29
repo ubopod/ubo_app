@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 ALL_SERVICES_IDS = [
     'rgb_ring',
-    'sound',
+    'audio',
     'ethernet',
     'ip',
     'wifi',

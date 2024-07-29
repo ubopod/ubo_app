@@ -38,6 +38,7 @@ from ubo_app.store.services.docker import (
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
+    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.utils import secrets
@@ -254,12 +255,24 @@ def input_credentials() -> None:
                 await qrcode_input(
                     r'^[^|]*\|[^|]*\|[^|]*$|^[^|]*|[^|]*$',
                     prompt='Format: [i]SERVICE|USERNAME|PASSWORD[/i]',
-                    extra_information="""To generate your {QR|K Y UW AA R} code for \
-login, format your details by separating your service, username, and password with the \
-pipe symbol. For example, format it as "docker  {.|D AA T}io |{ |P AY P}johndoe \
-|{ |P AY P}password" and then convert this text into a {QR|K Y UW AA R} code. If you \
-omit the service name, "docker  {.|D AA T}io" will automatically be used as the \
+                    extra_information=NotificationExtraInformation(
+                        text="""To generate your QR code for login, format your \
+details by separating your service, username, and password with the pipe symbol. For \
+example, format it as "docker.io|johndoe|password" and then convert this text into a \
+QR code. If you omit the service name, "docker.io" will automatically be used as the \
 default.""",
+                        piper_text="""To generate your QR code for login, format your \
+details by separating your service, username, and password with the pipe symbol. For \
+example, format it as docker.ay o pipe johndoe pipe password and then convert this \
+text into a QR code. If you omit the service name, docker.ay o will automatically be \
+used as the default.""",
+                        orca_text="""To generate your {QR|K Y UW AA R} code for \
+login, format your details by separating your service, username, and password with the \
+pipe symbol. For example, format it as "docker {.|D AA T} io {.|P AY P} johndoe \
+{.|P AY P} password" and then convert this text into a {QR|K Y UW AA R} code. If you \
+omit the service name, "docker {.|D AA T} io" will automatically be used as the \
+default.""",
+                    ),
                 )
             )[0]
             if credentials.count('|') == 1:
@@ -286,16 +299,16 @@ default.""",
         except asyncio.CancelledError:
             pass
         except docker.errors.APIError as exception:
+            explanation = exception.explanation or (
+                exception.response.content.decode('utf8') if exception.response else ''
+            )
             dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='Docker Credentials Error',
                         content='Invalid credentials',
-                        extra_information=exception.explanation
-                        or (
-                            exception.response.content.decode('utf8')
-                            if exception.response
-                            else ''
+                        extra_information=NotificationExtraInformation(
+                            text=explanation,
                         ),
                         importance=Importance.HIGH,
                     ),

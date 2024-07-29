@@ -40,6 +40,9 @@ def setup() -> None:
         sys.modules['alsaaudio'] = Fake()
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()
+        sys.modules['piper.voice'] = Fake(
+            _Fake__props={'synthesize_stream_raw': lambda _: [b'']},
+        )
         sys.modules['pulsectl'] = Fake()
         sys.modules['sdbus'] = Fake()
         sys.modules['sdbus.utils'] = Fake()

@@ -273,7 +273,6 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules['ubo_app.utils.secrets'] = Fake(
         _Fake__props={'read_secret': lambda _: None},
     )
-    sys.modules['pyaudio'] = Fake()
 
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)

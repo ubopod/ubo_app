@@ -28,6 +28,7 @@ from ubo_app.store.services.notifications import (
     Importance,
     Notification,
     NotificationDisplayType,
+    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.ssh import SSHClearEnabledStateAction, SSHUpdateStateAction
@@ -120,10 +121,16 @@ def create_ssh_account() -> None:
                     importance=Importance.MEDIUM,
                     icon='',
                     display_type=NotificationDisplayType.STICKY,
-                    extra_information='Make sure to delete it after use.\n'
-                    'Note that in order to make things work for you, we had to make '
-                    'sure password authentication for {ssh|EH S EH S EY CH} server is '
-                    'enabled, you may want to disable it later.',
+                    extra_information=NotificationExtraInformation(
+                        text='Make sure to delete it after use.\n'
+                        'Note that in order to make things work for you, we had to '
+                        'make sure password authentication for ssh server is enabled, '
+                        'you may want to disable it later.',
+                        orca_text='Make sure to delete it after use.\n'
+                        'Note that in order to make things work for you, we had to '
+                        'make sure password authentication for {ssh|EH S EH S EY CH} '
+                        'server is enabled, you may want to disable it later.',
+                    ),
                     color=SUCCESS_COLOR,
                 ),
             ),

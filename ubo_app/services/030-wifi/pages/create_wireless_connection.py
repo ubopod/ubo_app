@@ -19,6 +19,7 @@ from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
+    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
@@ -57,8 +58,12 @@ class CreateWirelessConnectionPage(PageWidget):
             _, match = await qrcode_input(
                 BARCODE_PATTERN,
                 prompt='Scan WiFi QR-Code With Front Camera',
-                extra_information='Go to your phone settings, choose {QR|K Y UW AA R} '
-                'code and hold it in front of the camera to scan it',
+                extra_information=NotificationExtraInformation(
+                    text='Go to your phone settings, choose QR code and hold it in '
+                    'front of the camera to scan it.',
+                    orca_text='Go to your phone settings, choose {QR|K Y UW AA R} '
+                    'code and hold it in front of the camera to scan it.',
+                ),
             )
         except asyncio.CancelledError:
             dispatch(CloseApplicationEvent(application=self))

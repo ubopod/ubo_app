@@ -31,7 +31,7 @@ def setup_reset_button() -> None:
             import subprocess
 
             subprocess.run(  # noqa: S603
-                ['/usr/bin/env', 'systemctl', 'reboot', '-f'],
+                ['/usr/bin/env', 'killall', '-9', 'ubo'],
                 check=True,
             )
 

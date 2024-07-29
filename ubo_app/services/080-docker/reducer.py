@@ -30,6 +30,7 @@ from ubo_app.store.services.docker import (
     DockerStoreUsernameAction,
     ImageState,
 )
+from ubo_app.store.services.notifications import NotificationExtraInformation
 from ubo_app.utils.qrcode import qrcode_input
 
 if TYPE_CHECKING:
@@ -170,22 +171,35 @@ IMAGES = {
                     r'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
                     resolver=lambda code, _: code,
                     prompt='Enter the Ngrok Auth Token',
-                    extra_information="""\
+                    extra_information=NotificationExtraInformation(
+                        text="""\
+Follow these steps:
+
+1. Login to your ngrok account.
+2. Get the authentication token from the dashboard.
+3. Convert it to QR code.
+4. Scan QR code to input the token.""",
+                        orca_text="""\
 Follow these steps:
 
 1. Login to your {ngrok|EH N G EH R AA K} account
 2. Get the authentication token from the dashboard
 3. Convert it to {QR|K Y UW AA R} code
 4. Scan QR code to input the token""",
+                    ),
                 ),
             },
             command=lambda: qrcode_input(
                 '',
                 resolver=lambda code, _: code,
                 prompt='Enter the command, for example: `http 80` or `tcp 22`',
-                extra_information="""\
+                extra_information=NotificationExtraInformation(
+                    text='This is the command you would enter when running ngrok. '
+                    'Refer to ngrok documentation for further information',
+                    orca_text="""\
 This is the command you would enter when running {ngrok|EH N G EH R AA K}.
 Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
+                ),
             ),
         ),
         *(

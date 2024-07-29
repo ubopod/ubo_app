@@ -82,11 +82,17 @@ class NotificationActionItem(ActionItem):
     dismiss_notification: bool = False
 
 
+class NotificationExtraInformation(Immutable):
+    text: str
+    piper_text: str | None = None
+    orca_text: str | None = None
+
+
 class Notification(Immutable):
     id: str = field(default_factory=lambda: uuid4().hex)
     title: str
     content: str
-    extra_information: str | None = None
+    extra_information: NotificationExtraInformation | None = None
     importance: Importance = Importance.LOW
     chime: Chime | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))

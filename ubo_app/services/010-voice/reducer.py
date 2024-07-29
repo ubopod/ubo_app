@@ -9,6 +9,7 @@ from ubo_app.store.services.voice import (
     VoiceAction,
     VoiceEvent,
     VoiceReadTextAction,
+    VoiceSetEngineAction,
     VoiceState,
     VoiceSynthesizeTextEvent,
     VoiceUpdateAccessKeyStatus,
@@ -27,12 +28,17 @@ def reducer(
     if isinstance(action, VoiceUpdateAccessKeyStatus):
         return replace(state, is_access_key_set=action.is_access_key_set)
 
+    if isinstance(action, VoiceSetEngineAction):
+        return replace(state, selected_engine=action.engine)
+
     if isinstance(action, VoiceReadTextAction):
         return CompleteReducerResult(
             state=state,
             events=[
                 VoiceSynthesizeTextEvent(
                     text=action.text,
+                    piper_text=action.piper_text or action.text,
+                    orca_text=action.orca_text or action.text,
                     speech_rate=action.speech_rate,
                 ),
             ],

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
 from ubo_gui.app import UboApp, cached_property
-from ubo_gui.menu import Item, MenuWidget, StackMenuItem
+from ubo_gui.menu import Item, MenuWidget, StackItem, StackMenuItem
 
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core import (
@@ -48,12 +48,12 @@ class MenuWidgetWithHomePage(MenuWidget):
         return super()._render_menu(menu)
 
 
-def set_path(menu_widget: MenuWidget, _: list[tuple[Menu, int] | PageWidget]) -> None:
+def set_path(_: MenuWidget, stack: list[StackItem]) -> None:
     dispatch(
         SetMenuPathAction(
             path=[
                 stack_item.selection.key
-                for stack_item in menu_widget.stack
+                for stack_item in stack
                 if isinstance(stack_item, StackMenuItem) and stack_item.selection
             ],
         ),
@@ -106,7 +106,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.root.is_fullscreen = True
         self.root.title = self.menu_widget.title
         self.menu_widget.bind(title=self.handle_title_change)
-        self.menu_widget.bind(current_screen=set_path)
+        self.menu_widget.bind(stack=set_path)
 
         subscribe_event(
             KeypadKeyPressEvent,

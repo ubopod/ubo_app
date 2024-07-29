@@ -16,7 +16,7 @@ def setup(service: Service) -> None:
 
 
 register(
-    service_id='sound',
-    label='Sound',
+    service_id='audio',
+    label='Audio',
     setup=setup,
 )

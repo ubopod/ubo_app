@@ -20,6 +20,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
     NotificationDisplayType,
+    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
@@ -38,7 +39,7 @@ async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
-    extra_information: str | None = None,
+    extra_information: NotificationExtraInformation | None = None,
     title: str | None = None,
 ) -> tuple[str, QrCodeGroupDict]: ...
 @overload
@@ -46,7 +47,7 @@ async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
-    extra_information: str | None = None,
+    extra_information: NotificationExtraInformation | None = None,
     title: str | None = None,
     resolver: Callable[[str, QrCodeGroupDict], ReturnType],
 ) -> ReturnType: ...
@@ -54,7 +55,7 @@ async def qrcode_input(
     pattern: str,
     *,
     prompt: str | None = None,
-    extra_information: str | None = None,
+    extra_information: NotificationExtraInformation | None = None,
     title: str | None = None,
     resolver: Callable[[str, QrCodeGroupDict], ReturnType] | None = None,
 ) -> tuple[str, QrCodeGroupDict] | ReturnType:
