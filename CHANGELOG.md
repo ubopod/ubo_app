@@ -3,6 +3,7 @@
 ## Version 0.15.6
 
 - fix(audio): add a recovery mechanism for audio service to rebind the sound card if it is not available - closes #83
+- fix(voice): remove the gap between sentences
 
 ## Version 0.15.5
 

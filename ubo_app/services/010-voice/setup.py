@@ -108,23 +108,26 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
         text = event.piper_text
         if not _context.piper_voice:
             return
+        id = hex(hash(text))
+        queue = Queue(maxsize=1)
+
         if text in piper_cache:
             source = piper_cache[text]
+            is_first_time = False
         else:
             source = _context.piper_voice.synthesize_stream_raw(text)
-
-        queue = Queue(maxsize=1)
-        queue.put(None)
+            piper_cache[text] = []
+            is_first_time = True
 
         unsubscribe = subscribe_event(
             AudioPlaybackDoneEvent,
             lambda event: event.id == id and queue.get(),
         )
 
-        piper_cache[text] = []
-        id = hex(hash(text))
         for sample in source:
-            piper_cache[text].append(sample)
+            if is_first_time:
+                piper_cache[text].append(sample)
+            queue.put(None)
             dispatch(
                 AudioPlayAudioAction(
                     id=id,
@@ -134,7 +137,6 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
                     width=2,
                 ),
             )
-            queue.put(None)
         unsubscribe()
     elif engine == 'orca':
         with _context.orca_lock:

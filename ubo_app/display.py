@@ -64,11 +64,11 @@ def render_on_display(
 
         logger.verbose('Rendering frame', extra={'data_hash': data_hash})
 
-        data = data.astype(np.uint16)
+        data_ = data.astype(np.uint16)
         color = (
-            ((data[:, :, 0] & 0xF8) << 8)
-            | ((data[:, :, 1] & 0xFC) << 3)
-            | (data[:, :, 2] >> 3)
+            ((data_[:, :, 0] & 0xF8) << 8)
+            | ((data_[:, :, 1] & 0xFC) << 3)
+            | (data_[:, :, 2] >> 3)
         )
         data_bytes = bytes(
             np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),

@@ -64,13 +64,13 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.372"
+pyright = "^1.1.374"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.5.0"
-ruff = "^0.5.3"
+ruff = "^0.5.5"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"

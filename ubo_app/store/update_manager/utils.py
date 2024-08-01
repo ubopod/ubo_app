@@ -43,7 +43,7 @@ async def check_version() -> None:
             aiohttp.ClientSession() as session,
             session.get(
                 'https://pypi.org/pypi/ubo-app/json',
-                timeout=5,
+                timeout=aiohttp.ClientTimeout(total=5),
             ) as response,
         ):
             if response.status != requests.codes.ok:
