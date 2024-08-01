@@ -17,6 +17,7 @@ from threading import Thread
 from ubo_app.constants import USERNAME
 from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
+from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.led import LEDManager
 from ubo_app.system.system_manager.reset_button import setup_reset_button
@@ -44,6 +45,8 @@ def handle_command(command: str) -> str | None:
         thread.start()
     elif header == 'service':
         return service_handler(incoming[0], incoming[1])
+    elif header == 'audio':
+        return audio_handler(incoming[0])
     return None
 
 

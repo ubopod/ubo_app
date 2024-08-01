@@ -74,7 +74,7 @@ def load_ip_addresses() -> None:
 async def is_connected() -> bool:
     results = await asyncio.gather(
         *(
-            asyncio.wait_for(asyncio.open_connection(ip, 53), timeout=0.1)
+            asyncio.wait_for(asyncio.open_connection(ip, 53), timeout=1)
             for ip in ('1.1.1.1', '8.8.8.8')
         ),
         return_exceptions=True,
@@ -113,7 +113,7 @@ async def check_connection() -> bool:
                 ),
                 IpSetIsConnectedAction(is_connected=False),
             )
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
 
 
 IpMainMenu = SubMenuItem(

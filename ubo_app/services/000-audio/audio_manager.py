@@ -3,20 +3,21 @@
 
 from __future__ import annotations
 
-import asyncio
 import math
-import subprocess
+import wave
 
 import alsaaudio
 import simpleaudio
+from simpleaudio import _simpleaudio  # pyright: ignore [reportAttributeAccessIssue]
 
 from ubo_app.logging import logger
 from ubo_app.store.main import dispatch
 from ubo_app.store.services.audio import AudioPlaybackDoneEvent
-from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.server import send_command
 
 CHUNK_SIZE = 1024
+TRIALS = 3
 
 
 def _linear_to_logarithmic(volume_linear: float) -> int:
@@ -47,40 +48,12 @@ class AudioManager:
                     )
                 except StopIteration:
                     logger.exception('No audio card found')
-                except OSError:
-                    logger.exception('Error while setting default sink')
-                    logger.info('Restarting pulseaudio')
-
-                    await self.restart_pulse_audio()
-
-                    await asyncio.sleep(5)
                 else:
                     break
 
         create_task(initialize_audio())
 
-    async def restart_pulse_audio(self: AudioManager) -> None:
-        """Restart pulseaudio."""
-        if not IS_RPI:
-            return
-        process = await asyncio.create_subprocess_exec(
-            '/usr/bin/env',
-            'pulseaudio',
-            '--kill',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        await process.wait()
-        process = await asyncio.create_subprocess_exec(
-            '/usr/bin/env',
-            'pulseaudio',
-            '--start',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        await process.wait()
-
-    def play_file(self: AudioManager, filename: str) -> None:
+    async def play_file(self: AudioManager, filename: str) -> None:
         """Play a waveform audio file.
 
         Parameters
@@ -91,9 +64,20 @@ class AudioManager:
         """
         # open the file for reading.
         logger.info('Opening audio file for playback', extra={'filename_': filename})
-        simpleaudio.WaveObject.from_wave_file(filename).play()
+        with wave.open(filename, 'rb') as wave_file:
+            sample_rate = wave_file.getframerate()
+            channels = wave_file.getnchannels()
+            sample_width = wave_file.getsampwidth()
+            audio_data = wave_file.readframes(wave_file.getnframes())
 
-    def play_sequence(
+            await self.play_sequence(
+                audio_data,
+                channels=channels,
+                rate=sample_rate,
+                width=sample_width,
+            )
+
+    async def play_sequence(
         self: AudioManager,
         data: bytes,
         *,
@@ -123,12 +107,33 @@ class AudioManager:
 
         """
         if data != b'':
-            simpleaudio.WaveObject(
-                audio_data=data,
-                num_channels=channels,
-                sample_rate=rate,
-                bytes_per_sample=width,
-            ).play().wait_done()
+            for trial in range(TRIALS):
+                try:
+                    wave_object = simpleaudio.WaveObject(
+                        audio_data=data,
+                        num_channels=channels,
+                        sample_rate=rate,
+                        bytes_per_sample=width,
+                    )
+                    play_object = wave_object.play()
+                    play_object.wait_done()
+                except _simpleaudio.SimpleaudioError:
+                    logger.exception(
+                        'Error while playing audio file',
+                        extra={'trial': trial},
+                    )
+                    logger.info(
+                        'Reporting the playback issue to ubo-system',
+                        extra={'trial': trial},
+                    )
+                    await send_command('audio failure_report', has_output=True)
+                else:
+                    break
+            else:
+                logger.error(
+                    'Failed to play audio file after multiple trials',
+                    extra={'tried_times': TRIALS},
+                )
         if id is not None:
             dispatch(AudioPlaybackDoneEvent(id=id))
 

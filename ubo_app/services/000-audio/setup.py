@@ -1,7 +1,9 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
+from typing import TYPE_CHECKING, ParamSpec
 
 from audio_manager import AudioManager
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
@@ -11,6 +13,23 @@ from ubo_app.store.services.audio import AudioPlayAudioEvent, AudioPlayChimeEven
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.async_ import to_thread
 from ubo_app.utils.persistent_store import register_persistent_store
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
+Args = ParamSpec('Args')
+
+
+def _run_async_in_thread(
+    async_func: Callable[Args, Coroutine],
+    *args: Args.args,
+    **kwargs: Args.kwargs,
+) -> None:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    result = loop.run_until_complete(async_func(*args, **kwargs))
+    loop.close()
+    return result
 
 
 def init_service() -> None:
@@ -51,6 +70,7 @@ def init_service() -> None:
     subscribe_event(
         AudioPlayAudioEvent,
         lambda event: to_thread(
+            _run_async_in_thread,
             audio_manager.play_sequence,
             event.sample,
             id=event.id,
