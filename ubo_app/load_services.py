@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from importlib.machinery import ModuleSpec
     from types import ModuleType
 
-    from ubo_app.services import SetupFunction
+    from ubo_handle import SetupFunction  # pyright: ignore [reportMissingModuleSource]
 
 ROOT_PATH = Path(__file__).parent
 REGISTERED_PATHS: dict[Path, UboServiceThread] = {}

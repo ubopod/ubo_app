@@ -5,6 +5,7 @@
 - fix(audio): add a recovery mechanism for audio service to rebind the sound card if it is not available - closes #83
 - fix(voice): remove the gap between sentences
 - fix(core): change the power-off menu item icon - closes #151
+- refactor(core): migrate `ubo_app/services.py` to `typings/ubo_handle.pyi` as it was only providing types
 
 ## Version 0.15.5
 

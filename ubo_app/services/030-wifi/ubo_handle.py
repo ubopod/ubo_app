@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ubo_app.services import Service, register
+    from ubo_handle import Service, register
 
 
 async def setup(service: Service) -> None:
