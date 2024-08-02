@@ -172,7 +172,7 @@ HOME_MENU = HeadlessMenu(
                     ActionItem(
                         label='Power off',
                         action=lambda: dispatch(PowerOffAction()),
-                        icon='󰤂',
+                        icon='󰐥',
                     ),
                 ],
             ),
