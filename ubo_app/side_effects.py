@@ -8,7 +8,6 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from kivy.clock import Clock
 from redux import FinishAction
 
 from ubo_app.store.core import PowerOffEvent, RebootEvent
@@ -40,12 +39,13 @@ def power_off() -> None:
     if IS_RPI:
 
         def power_off_system(*_: list[object]) -> None:
+            atexit.unregister(power_off_system)
+            atexit._run_exitfuncs()  # noqa: SLF001
             subprocess.run(  # noqa: S603
                 ['/usr/bin/env', 'systemctl', 'poweroff', '-i'],
                 check=True,
             )
 
-        Clock.schedule_once(power_off_system, 5)
         atexit.register(power_off_system)
 
 
@@ -55,12 +55,13 @@ def reboot() -> None:
     if IS_RPI:
 
         def reboot_system(*_: list[object]) -> None:
+            atexit.unregister(reboot_system)
+            atexit._run_exitfuncs()  # noqa: SLF001
             subprocess.run(  # noqa: S603
                 ['/usr/bin/env', 'systemctl', 'reboot', '-i'],
                 check=True,
             )
 
-        Clock.schedule_once(reboot_system, 5)
         atexit.register(reboot_system)
 
 

@@ -83,7 +83,7 @@ class WorkerThread(threading.Thread):
             if not tasks:
                 break
             for task in tasks:
-                with contextlib.suppress(asyncio.TimeoutError):
+                with contextlib.suppress(BaseException):
                     await asyncio.wait_for(task, timeout=MAIN_LOOP_GRACE_PERIOD)
 
         logger.debug('Stopping event loop', extra={'thread_': self})

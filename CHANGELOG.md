@@ -6,6 +6,7 @@
 - fix(voice): remove the gap between sentences
 - fix(core): change the power-off menu item icon - closes #151
 - refactor(core): migrate `ubo_app/services.py` to `typings/ubo_handle.pyi` as it was only providing types
+- fix(core): make sure app exits gracefully before shutdown/reboot and atexit callbacks run - closes #150
 
 ## Version 0.15.5
 
