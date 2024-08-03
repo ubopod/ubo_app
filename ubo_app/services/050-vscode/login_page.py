@@ -6,21 +6,23 @@ import pathlib
 import re
 import subprocess
 
+from _constants import CODE_BINARY_PATH
 from commands import check_status
-from constants import CODE_BINARY_PATH
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import NumericProperty, StringProperty
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.page import PageWidget
 
-from ubo_app.store.main import dispatch
+from ubo_app.store.core import CloseApplicationEvent
+from ubo_app.store.main import dispatch, subscribe_event
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
 )
+from ubo_app.store.services.vscode import VSCodeLoginEvent
 from ubo_app.utils.async_ import create_task
 
 
@@ -35,6 +37,10 @@ class LoginPage(PageWidget):
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=[])
+        subscribe_event(
+            VSCodeLoginEvent,
+            lambda: dispatch(CloseApplicationEvent(application=self)),
+        )
         create_task(self.login())
 
     async def login(self: LoginPage) -> None:

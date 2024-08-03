@@ -20,6 +20,7 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.vscode import (
     VSCodeAction,
     VSCodeDoneDownloadingAction,
+    VSCodeLoginEvent,
     VSCodeSetPendingAction,
     VSCodeSetStatusAction,
     VSCodeStartDownloadingAction,
@@ -49,6 +50,7 @@ def reducer(
 
     if isinstance(action, VSCodeSetStatusAction):
         actions = []
+        events = []
         if state.is_logged_in is False and action.is_logged_in:
             actions.append(
                 NotificationsAddAction(
@@ -62,6 +64,7 @@ def reducer(
                     ),
                 ),
             )
+            events.append(VSCodeLoginEvent())
 
         state = replace(
             state,
@@ -71,6 +74,6 @@ def reducer(
             status=action.status,
         )
 
-        return CompleteReducerResult(state=state, actions=actions)
+        return CompleteReducerResult(state=state, actions=actions, events=events)
 
     return state

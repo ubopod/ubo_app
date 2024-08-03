@@ -7,7 +7,7 @@ import socket
 import subprocess
 from typing import Literal, TypedDict
 
-from constants import CODE_BINARY_PATH
+from _constants import CODE_BINARY_PATH
 from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 

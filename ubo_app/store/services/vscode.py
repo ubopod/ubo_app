@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 from immutable import Immutable
-from redux import BaseAction
+from redux import BaseAction, BaseEvent
 
 
 class VSCodeAction(BaseAction): ...
+
+
+class VSCodeEvent(BaseEvent): ...
 
 
 class VSCodeStartDownloadingAction(VSCodeAction): ...
@@ -27,6 +30,9 @@ class VSCodeSetStatusAction(VSCodeAction):
     is_binary_installed: bool
     is_logged_in: bool
     status: VSCodeStatus | None
+
+
+class VSCodeLoginEvent(VSCodeEvent): ...
 
 
 class VSCodeState(Immutable):

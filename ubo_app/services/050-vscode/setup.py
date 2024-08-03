@@ -6,8 +6,8 @@ import pathlib
 import subprocess
 from typing import TYPE_CHECKING
 
+from _constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
 from commands import check_status, install_service, uninstall_service
-from constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
 from kivy.lang.builder import Builder
 from login_page import LoginPage
 from ubo_gui.constants import DANGER_COLOR
