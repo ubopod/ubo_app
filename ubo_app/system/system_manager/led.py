@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
+import warnings
 from pathlib import Path
 from threading import Thread
 from typing import TYPE_CHECKING, cast
@@ -10,7 +11,6 @@ from typing import TYPE_CHECKING, cast
 import board
 from adafruit_blinka.microcontroller.generic_micropython import Pin
 from fake import Fake
-from ubo_gui.menu import warnings
 
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 

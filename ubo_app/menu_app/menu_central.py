@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
 from ubo_gui.app import UboApp, cached_property
-from ubo_gui.menu import Item, MenuWidget, StackItem, StackMenuItem
+from ubo_gui.menu.menu_widget import MenuWidget
+from ubo_gui.menu.stack_item import StackItem, StackMenuItem
 
 from ubo_app.constants import DEBUG_MODE_MENU
 from ubo_app.logging import logger
@@ -29,7 +30,7 @@ from .home_page import HomePage
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
-    from ubo_gui.menu.types import Menu
+    from ubo_gui.menu.types import Item, Menu
     from ubo_gui.page import PageWidget
 
 

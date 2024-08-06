@@ -6,10 +6,6 @@ authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [{ include = "ubo_app" }]
-include = [
-  "ubo_app/services/*-sound/sounds/*",
-  "ubo_app/services/*-voice/models/*",
-]
 
 
 [[tool.poetry.source]]
@@ -20,7 +16,7 @@ priority = "primary"
 [tool.poetry.dependencies]
 python = "^3.11"
 psutil = "^6.0.0"
-ubo-gui = "^0.12.5"
+ubo-gui = "^0.13.0"
 headless-kivy = [
   { version = "^0.9.4", markers = "extra=='default'", extras = [
     "default",
