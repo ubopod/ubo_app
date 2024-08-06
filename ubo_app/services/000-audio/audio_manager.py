@@ -126,7 +126,7 @@ class AudioManager:
                         'Reporting the playback issue to ubo-system',
                         extra={'trial': trial},
                     )
-                    await send_command('audio failure_report', has_output=True)
+                    await send_command('audio', 'failure_report', has_output=True)
                 else:
                     break
             else:

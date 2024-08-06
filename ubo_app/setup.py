@@ -38,6 +38,7 @@ def setup() -> None:
 
         sys.modules['adafruit_rgb_display.st7789'] = Fake()
         sys.modules['alsaaudio'] = Fake()
+        sys.modules['apt'] = Fake()
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()
         sys.modules['piper.voice'] = Fake(

@@ -185,6 +185,10 @@ root = "ubo_app/services/050-lightdm"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-rpi-connect"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/050-ssh"
 extraPaths = ["."]
 

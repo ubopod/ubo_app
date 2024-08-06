@@ -48,29 +48,31 @@ async def monitor_unit(unit_name: str, callback: Callable[[str], None]) -> None:
         callback(active_state)
 
 
-async def is_unit_active(unit: str) -> bool:
+async def is_unit_active(unit: str, *, is_user_service: bool = False) -> bool:
     """Check if the systemd unit is active."""
     process = await asyncio.create_subprocess_exec(
         '/usr/bin/env',
         'systemctl',
+        *(['--user'] if is_user_service else []),
         'is-active',
         unit,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     )
     stdout, _ = await process.communicate()
-    return stdout.strip() == b'active'
+    return stdout.decode().strip() in ('active', 'activating', 'reloading')
 
 
-async def is_unit_enabled(unit: str) -> bool:
+async def is_unit_enabled(unit: str, *, is_user_service: bool = False) -> bool:
     """Check if the systemd unit is enabled."""
     process = await asyncio.create_subprocess_exec(
         '/usr/bin/env',
         'systemctl',
+        *(['--user'] if is_user_service else []),
         'is-enabled',
         unit,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     )
     stdout, _ = await process.communicate()
-    return stdout.strip() == b'enabled'
+    return stdout.decode().strip() == 'enabled'

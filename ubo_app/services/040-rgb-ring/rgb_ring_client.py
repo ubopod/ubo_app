@@ -29,7 +29,7 @@ class RgbRingClient:
 
     async def send(self: RgbRingClient, cmd: Sequence[str]) -> None:
         try:
-            await send_command(' '.join(['led', *cmd]))
+            await send_command('led', *cmd)
             dispatch(RgbRingSetIsConnectedAction(is_connected=True))
         except Exception:
             dispatch(RgbRingSetIsConnectedAction(is_connected=False))

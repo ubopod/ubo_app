@@ -4,7 +4,9 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+perl -i -pe 's/^(packages = \[.*)$/\1\nexclude = ["ubo_app\/services\/*-voice\/models\/*"]/' pyproject.toml
 poetry build
+perl -i -pe 's/^exclude = .*-voice\/models.*\n//' pyproject.toml
 
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
 deps=${deps:-"False"}
@@ -41,7 +43,9 @@ scp dist/$LATEST_VERSION ubo-development-pod:/tmp/
 
 test "$deps" == "True" && run_on_pod "pip install --upgrade /tmp/$LATEST_VERSION[default]"
 
-run_on_pod "pip install --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION[default]"
+run_on_pod "mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/models /tmp/
+pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION[default]
+mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/"
 
 test "$bootstrap" == "True" &&
   run_on_pod_as_root "/opt/ubo/env/bin/bootstrap; systemctl restart ubo-system.service"

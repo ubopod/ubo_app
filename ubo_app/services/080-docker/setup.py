@@ -57,7 +57,7 @@ def install_docker() -> None:
     if Path(SERVER_SOCKET_PATH).exists():
 
         async def act() -> None:
-            await send_command('docker install')
+            await send_command('docker', 'install')
             dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
 
         create_task(act())
@@ -67,7 +67,7 @@ def run_docker() -> None:
     """Install Docker."""
 
     async def act() -> None:
-        await send_command('docker start')
+        await send_command('docker', 'start')
         dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
 
     create_task(act())
@@ -77,7 +77,7 @@ def stop_docker() -> None:
     """Install Docker."""
 
     async def act() -> None:
-        await send_command('docker stop')
+        await send_command('docker', 'stop')
         dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
 
     create_task(act())

@@ -84,6 +84,7 @@ apt-get -y install \
   libmtdev1 \
   libzbar0 \
   python3-alsaaudio \
+  python3-apt \
   python3-dev \
   python3-gpiozero \
   python3-libcamera \

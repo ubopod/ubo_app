@@ -54,7 +54,7 @@ class ClearTemporaryUsersPrompt(PromptWidget):
         """Close the prompt."""
 
         async def act() -> None:
-            await send_command('service ssh clear_all_temporary_accounts')
+            await send_command('service', 'ssh', 'clear_all_temporary_accounts')
             dispatch(
                 CloseApplicationEvent(application=self),
                 NotificationsAddAction(
@@ -141,20 +141,12 @@ def create_ssh_account() -> None:
 
 def start_ssh_service() -> None:
     """Start the SSH service."""
-
-    async def act() -> None:
-        await send_command('service ssh start')
-
-    create_task(act())
+    create_task(send_command('service', 'ssh', 'start'))
 
 
 def stop_ssh_service() -> None:
     """Stop the SSH service."""
-
-    async def act() -> None:
-        await send_command('service ssh stop')
-
-    create_task(act())
+    create_task(send_command('service', 'ssh', 'stop'))
 
 
 def enable_ssh_service() -> None:
@@ -162,7 +154,7 @@ def enable_ssh_service() -> None:
 
     async def act() -> None:
         dispatch(SSHClearEnabledStateAction())
-        await send_command('service ssh enable')
+        await send_command('service', 'ssh', 'enable')
         await asyncio.sleep(5)
         await check_is_ssh_enabled()
 
@@ -174,7 +166,7 @@ def disable_ssh_service() -> None:
 
     async def act() -> None:
         dispatch(SSHClearEnabledStateAction())
-        await send_command('service ssh disable')
+        await send_command('service', 'ssh', 'disable')
         await asyncio.sleep(5)
         await check_is_ssh_enabled()
 

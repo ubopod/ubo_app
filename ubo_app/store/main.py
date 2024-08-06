@@ -41,6 +41,7 @@ from ubo_app.store.services.notifications import (
     NotificationsState,
 )
 from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
+from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
 from ubo_app.store.services.ssh import SSHAction, SSHState
 from ubo_app.store.services.voice import VoiceAction, VoiceState
@@ -74,20 +75,22 @@ def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
 
 class RootState(BaseCombineReducerState):
     main: MainState
-    camera: CameraState
-    rgb_ring: RgbRingState
-    lightdm: LightDMState
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
+
+    audio: AudioState
+    camera: CameraState
+    docker: DockerState
+    ip: IpState
+    lightdm: LightDMState
+    notifications: NotificationsState
+    rgb_ring: RgbRingState
+    rpi_connect: RPiConnectState
     sensors: SensorsState
     ssh: SSHState
-    audio: AudioState
-    wifi: WiFiState
-    ip: IpState
-    notifications: NotificationsState
-    docker: DockerState
     voice: VoiceState
     vscode: VSCodeState
+    wifi: WiFiState
 
 
 class ScreenshotEvent(BaseEvent): ...
@@ -116,6 +119,7 @@ ActionType = (
     | NotificationsAction
     | DockerAction
     | RgbRingAction
+    | RPiConnectAction
     | VoiceAction
     | VSCodeAction
 )

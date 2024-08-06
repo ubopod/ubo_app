@@ -20,6 +20,7 @@ from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
 from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.led import LEDManager
+from ubo_app.system.system_manager.package import package_handler
 from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
 from ubo_app.utils.eeprom import read_serial_number
@@ -37,17 +38,28 @@ logger.setLevel(logging.DEBUG)
 
 
 def handle_command(command: str) -> str | None:
-    header, *incoming = command.split()
+    header, *arguments = command.split()
     if header == 'led':
-        led_manager.run_command_thread_safe(incoming)
+        led_manager.run_command_thread_safe(arguments)
     elif header == 'docker':
-        thread = Thread(target=docker_handler, args=(incoming[0],))
-        thread.start()
+        docker_handler(arguments[0])
     elif header == 'service':
-        return service_handler(incoming[0], incoming[1])
+        return service_handler(arguments[0], arguments[1])
+    elif header == 'package':
+        return package_handler(arguments[0], arguments[1])
     elif header == 'audio':
-        return audio_handler(incoming[0])
+        return audio_handler(arguments[0])
     return None
+
+
+def process_request(command: bytes, connection: socket.socket) -> None:
+    try:
+        result = handle_command(command.decode('utf-8'))
+    except Exception:
+        logger.exception('Failed to handle command')
+        result = None
+    if result is not None:
+        connection.sendall(result.encode() + b'\0')
 
 
 def setup_hostname() -> None:
@@ -127,9 +139,8 @@ def main() -> None:
             command, remaining = datagram.split(b'\0', 1)
 
             logger.debug('Received command:', extra={'command': command})
-            result = handle_command(command.decode('utf-8'))
-            if result is not None:
-                connection.sendall(result.encode() + b'\0')
+            thread = Thread(target=process_request, args=(command, connection))
+            thread.start()
 
         except KeyboardInterrupt:
             logger.debug('Interrupted')

@@ -1,0 +1,27 @@
+#:kivy 2.3.0
+#:import re re
+
+<RPiConnectQRCodePage>:
+  BoxLayout:
+    id: pager
+    orientation: 'vertical'
+    padding: dp(5), dp(5), dp(5), root.padding_bottom
+    spacing: dp(2)
+
+    BoxLayout:
+      orientation: 'vertical'
+      spacing: dp(2)
+
+      QRCodeWidget:
+        content: root.url
+        size_hint: 1, 1
+        height: self.width
+        pos_hint: {'left': 0.5, 'top': 1}
+
+      Label:
+        text: '\n'.join([i.strip() for i in re.split('(.{15}(?:.{0,10}\s|.{10}))', root.url) if i])
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(18)
+        halign: 'center'
+        valign: 'center'

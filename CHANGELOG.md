@@ -10,6 +10,7 @@
 - refactor(core): kill the app (so that it restarts) when the reset button is pressed for 0.5 seconds or more and reboot the device when it is pressed for 3 seconds or more - closes #116
 - fix(vscode): after login with vscode, the gui now goes back to login code page - closes #143
 - fix(core): updating items of the pages after the first page, not being reflected on the screen - closes #149
+- feat(rpi-connect): implement `rpi-connect` under `Remote` menu - closes #139
 
 ## Version 0.15.5
 

@@ -25,20 +25,12 @@ if TYPE_CHECKING:
 
 def start_lightdm_service() -> None:
     """Start the LightDM service."""
-
-    async def act() -> None:
-        await send_command('service lightdm start')
-
-    create_task(act())
+    create_task(send_command('service', 'lightdm', 'start'))
 
 
 def stop_lightdm_service() -> None:
     """Stop the LightDM service."""
-
-    async def act() -> None:
-        await send_command('service lightdm stop')
-
-    create_task(act())
+    create_task(send_command('service', 'lightdm', 'stop'))
 
 
 def enable_lightdm_service() -> None:
@@ -46,7 +38,7 @@ def enable_lightdm_service() -> None:
 
     async def act() -> None:
         dispatch(LightDMClearEnabledStateAction())
-        await send_command('service lightdm enable')
+        await send_command('service', 'lightdm', 'enable')
         await asyncio.sleep(5)
         await check_is_lightdm_enabled()
 
@@ -58,7 +50,7 @@ def disable_lightdm_service() -> None:
 
     async def act() -> None:
         dispatch(LightDMClearEnabledStateAction())
-        await send_command('service lightdm disable')
+        await send_command('service', 'lightdm', 'disable')
         await asyncio.sleep(5)
         await check_is_lightdm_enabled()
 

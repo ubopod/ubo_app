@@ -1,0 +1,22 @@
+<SignInPage>:
+  BoxLayout:
+    id: pager
+    orientation: 'vertical'
+    padding: dp(5), dp(5), dp(5), root.padding_bottom
+    spacing: dp(2)
+
+    Label:
+      text: 'Logging in...'
+      size_hint: 1, 1 if root.stage == 0 else 0
+      height: pager.height if root.stage == 0 else 0
+      opacity: 1 if root.stage == 0 else 0
+      font_size: dp(32)
+      halign: 'center'
+      valign: 'center'
+
+    QRCodeWidget:
+      content: root.url
+      size_hint: 1, 1 if root.stage == 1 else 0
+      height: self.width if root.stage == 1 else 0
+      pos_hint: {'left': 0.5, 'top': 1}
+      opacity: 1 if root.stage == 1 else 0

@@ -204,7 +204,7 @@ def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
             **cast(
                 Any,
                 selected_engine_parameters
-                if engine is selected_engine
+                if engine == selected_engine
                 else unselected_engine_parameters,
             ),
         )

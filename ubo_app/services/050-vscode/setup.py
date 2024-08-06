@@ -120,10 +120,11 @@ def logout() -> None:
 def status_based_actions(status: VSCodeStatus) -> list[ActionItem | ApplicationItem]:
     actions = []
 
-    class VSCodeQRCodePage(PageWidget):
-        url = f'{CODE_TUNNEL_URL_PREFIX}{status.name}'
-
     if status.is_running:
+
+        class VSCodeQRCodePage(PageWidget):
+            url = f'{CODE_TUNNEL_URL_PREFIX}{status.name}'
+
         actions.append(
             ApplicationItem(label='Show URL', icon='󰐲', application=VSCodeQRCodePage),
         )

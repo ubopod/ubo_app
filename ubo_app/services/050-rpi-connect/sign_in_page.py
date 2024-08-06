@@ -6,7 +6,6 @@ import pathlib
 import re
 import subprocess
 
-from _constants import CODE_BINARY_PATH
 from commands import check_status
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
@@ -23,53 +22,44 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.vscode import VSCodeLoginEvent
+from ubo_app.store.services.rpi_connect import RPiConnectLoginEvent
 from ubo_app.utils.async_ import create_task
 
 
-class LoginPage(PageWidget):
+class SignInPage(PageWidget):
     stage: int = NumericProperty(0)
     url: str | None = StringProperty()
-    code: str | None = StringProperty()
 
     def __init__(
-        self: LoginPage,
+        self: SignInPage,
         *args: object,
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=[])
         subscribe_event(
-            VSCodeLoginEvent,
+            RPiConnectLoginEvent,
             lambda: dispatch(CloseApplicationEvent(application=self)),
         )
         create_task(self.login())
 
-    async def login(self: LoginPage) -> None:
+    async def login(self: SignInPage) -> None:
         try:
             self.process = await asyncio.create_subprocess_exec(
-                CODE_BINARY_PATH.as_posix(),
-                'tunnel',
-                '--accept-server-license-terms',
-                'user',
-                'login',
-                '--provider',
-                'github',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
+                '/usr/bin/env',
+                'rpi-connect',
+                'signin',
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
             )
-            if self.process.stdout is None:
+            if self.process.stderr is None:
                 return
-            output = (await self.process.stdout.readline()).decode()
-            regex = (
-                r'To grant access to the server, please log into (?P<url>[^\s]*) and '
-                r'use code (?P<code>[^\s]*)'
-            )
+            output = (await self.process.stderr.readline()).decode()
+            regex = r'^Complete sign in by visiting (?P<url>[^\n]*)'
             match = re.search(regex, output)
             if match:
 
                 def set_properties() -> None:
                     self.url = match.group('url')
-                    self.code = match.group('code')
                     self.stage = 1
 
                 mainthread(set_properties)()
@@ -78,7 +68,7 @@ class LoginPage(PageWidget):
                 dispatch(
                     NotificationsAddAction(
                         notification=Notification(
-                            title='VSCode',
+                            title='RPi-Connect',
                             content='Failed to login: invalid output',
                             display_type=NotificationDisplayType.STICKY,
                             color=DANGER_COLOR,
@@ -92,7 +82,7 @@ class LoginPage(PageWidget):
             dispatch(
                 NotificationsAddAction(
                     notification=Notification(
-                        title='VSCode',
+                        title='RPi-Connect',
                         content='Failed to login: process error',
                         display_type=NotificationDisplayType.STICKY,
                         color=DANGER_COLOR,
@@ -104,10 +94,10 @@ class LoginPage(PageWidget):
         finally:
             await check_status()
 
-    def on_close(self: LoginPage) -> None:
+    def on_close(self: SignInPage) -> None:
         self.process.kill() if self.process.returncode is None else None
 
 
 Builder.load_file(
-    pathlib.Path(__file__).parent.joinpath('login_page.kv').resolve().as_posix(),
+    pathlib.Path(__file__).parent.joinpath('sign_in_page.kv').resolve().as_posix(),
 )
