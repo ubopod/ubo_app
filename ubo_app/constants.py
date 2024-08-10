@@ -8,6 +8,10 @@ import platformdirs
 from str_to_bool import str_to_bool
 
 USERNAME = os.environ.get('UBO_USERNAME', 'ubo')
+INSTALLER_URL = os.environ.get(
+    'UBO_INSTALLER_URL',
+    'https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh',
+)
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
 DEBUG_MODE = str_to_bool(os.environ.get('UBO_DEBUG', 'False')) == 1
 LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else None)

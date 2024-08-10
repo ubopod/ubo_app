@@ -13,8 +13,9 @@ import requests
 from ubo_gui.constants import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, Item
 
-from ubo_app.constants import INSTALLATION_PATH
+from ubo_app.constants import INSTALLATION_PATH, INSTALLER_URL
 from ubo_app.logging import logger
+from ubo_app.store.core import RebootEvent
 from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Chime,
@@ -71,32 +72,63 @@ async def check_version() -> None:
 async def update() -> None:
     """Update the Ubo app."""
     logger.info('Updating Ubo app...')
-    dispatch(
-        NotificationsAddAction(
-            notification=Notification(
-                id='ubo:update_manager',
-                title='Updating...',
-                content='Fetching the latest version of Ubo app...',
-                display_type=NotificationDisplayType.BACKGROUND,
-                color=INFO_COLOR,
-                icon='󰇚',
-                blink=False,
-                progress=0,
-            ),
-        ),
-    )
 
     async def download_files() -> None:
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='ubo:update_manager',
+                    title='Updating...',
+                    content='Downloading the latest version of the install script...',
+                    display_type=NotificationDisplayType.BACKGROUND,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    blink=False,
+                    progress=0,
+                ),
+            ),
+        )
+
         target_path = Path(f'{INSTALLATION_PATH}/_update/')
         shutil.rmtree(target_path, ignore_errors=True)
         target_path.mkdir(parents=True, exist_ok=True)
 
         packages_count_path = f'{INSTALLATION_PATH}/.packages-count'
-
         try:
             packages_count = int(Path(packages_count_path).read_text(encoding='utf-8'))
         except FileNotFoundError:
             packages_count = 55
+        packages_count *= 2
+        packages_count += 1
+        counter = 0
+
+        process = await asyncio.create_subprocess_exec(
+            '/usr/bin/env',
+            'curl',
+            '-Lk',
+            INSTALLER_URL,
+            '--output',
+            f'{target_path}/install.sh',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        await process.wait()
+        Path(f'{target_path}/install.sh').chmod(0o755)
+
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='ubo:update_manager',
+                    title='Updating...',
+                    content='Fetching the latest version of Ubo app...',
+                    display_type=NotificationDisplayType.BACKGROUND,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    blink=False,
+                    progress=1 / packages_count,
+                ),
+            ),
+        )
 
         process = await asyncio.create_subprocess_exec(
             '/usr/bin/env',
@@ -127,7 +159,7 @@ async def update() -> None:
                 UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
             )
             return
-        counter = 0
+
         while True:
             line = (await process.stdout.readline()).decode()
             if not line:
@@ -144,7 +176,7 @@ async def update() -> None:
                             color=INFO_COLOR,
                             icon='󰇚',
                             blink=False,
-                            progress=min(counter / (packages_count * 2), 1),
+                            progress=min((counter + 1) / packages_count, 1),
                         ),
                     ),
                 )
@@ -177,15 +209,7 @@ async def update() -> None:
 
         await asyncio.sleep(2)
 
-        process = await asyncio.create_subprocess_exec(
-            '/usr/bin/env',
-            'systemctl',
-            'reboot',
-            '-i',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        await process.wait()
+        dispatch(RebootEvent())
     except Exception:
         logger.exception('Failed to update')
         dispatch(

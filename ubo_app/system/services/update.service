@@ -9,6 +9,6 @@ Type=oneshot
 User=root
 Environment=INSTALLATION_PATH={{INSTALLATION_PATH}}
 Environment=USERNAME={{USERNAME}}
-ExecStartPre=/bin/bash -c '[[ $(ls {{INSTALLATION_PATH}}/_update/update_is_ready) ]]'
-ExecStart={{INSTALLATION_PATH}}/env/lib/python3.11/site-packages/ubo_app/system/install.sh --update
+ExecStartPre=/bin/bash -c '[[ -e /opt/ubo/_update/update_is_ready ]]'
+ExecStart={{INSTALLATION_PATH}}/_update/install.sh --update
 RemainAfterExit=no
