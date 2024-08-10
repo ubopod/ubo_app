@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import signal
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 from fake import Fake
+from redux import FinishAction
+
+from ubo_app.store.main import dispatch
 
 
 class _FakeAsyncProcess(Fake):
@@ -98,3 +102,30 @@ def setup() -> None:
         )
 
     import ubo_app.display as _  # noqa: F401
+
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
+
+def signal_handler(signum: int, _: object) -> None:
+    """Handle the signal."""
+    from ubo_app import display
+    from ubo_app.logging import logger
+
+    logger.info('Received signal %s, turning off the display...', signum)
+
+    display.state.turn_off()
+    display.state.pause()
+
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    if signum == signal.SIGINT:
+        logger.info('Exiting gracefully, sending the signal again will force exit!')
+        dispatch(FinishAction())
+    elif signum == signal.SIGTERM:
+        logger.info(
+            'Exiting forcefully, sending the signal again will not be caught!',
+        )
+        import os
+
+        os.kill(os.getpid(), signal.SIGTERM)

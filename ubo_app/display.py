@@ -82,23 +82,13 @@ def render_on_display(
         state.block(rectangle, data_bytes)
 
 
-def pause() -> None:
-    """Pause the display."""
-    state.is_running = False
-
-
-def resume() -> None:
-    """Resume the display."""
-    state.is_running = True
-
-
-class _State:
+class _DisplayState:
     """The state of the display."""
 
     is_running = True
     display = setup_display()
 
-    def __init__(self: _State, splash_screen: bytes | None = None) -> None:
+    def __init__(self: _DisplayState, splash_screen: bytes | None = None) -> None:
         if IS_RPI:
             from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
 
@@ -117,7 +107,15 @@ class _State:
 
         atexit.register(self.turn_off)
 
-    def turn_off(self: _State) -> None:
+    def pause(self: _DisplayState) -> None:
+        """Pause the display."""
+        self.is_running = False
+
+    def resume(self: _DisplayState) -> None:
+        """Resume the display."""
+        self.is_running = True
+
+    def turn_off(self: _DisplayState) -> None:
         """Destroy the display."""
         from ubo_app.constants import HEIGHT, WIDTH
 
@@ -135,7 +133,7 @@ class _State:
             GPIO.cleanup(26)
 
     def block(
-        self: _State,
+        self: _DisplayState,
         rectangle: tuple[int, int, int, int],
         data_bytes: bytes,
         *,
@@ -146,4 +144,4 @@ class _State:
             self.display._block(*rectangle, data_bytes)  # noqa: SLF001
 
 
-state = _State()
+state = _DisplayState()

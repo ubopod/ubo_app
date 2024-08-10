@@ -187,7 +187,7 @@ def start_camera_viewfinder() -> None:
 
     feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder_locked, 0.04)
 
-    display.pause()
+    display.state.pause()
 
     def handle_stop_viewfinder() -> None:
         with fs_lock:
@@ -195,7 +195,7 @@ def start_camera_viewfinder() -> None:
             is_running = False
             feed_viewfinder_scheduler.cancel()
             dispatch(CloseApplicationEvent(application=application))
-            display.resume()
+            display.state.resume()
             cancel_subscription()
             if picamera2:
                 picamera2.stop()

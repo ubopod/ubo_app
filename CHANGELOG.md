@@ -12,6 +12,7 @@
 - fix(core): updating items of the pages after the first page, not being reflected on the screen - closes #149
 - feat(rpi-connect): implement `rpi-connect` under `Remote` menu - closes #139
 - fix(core): update manager downloads the latest `install.sh` and runs it to do the update - closes #152
+- feat(core): add signal management for ubo_app process - closes #156
 
 ## Version 0.15.5
 
