@@ -217,7 +217,7 @@ class Keypad:
             dispatch(
                 AudioSetMuteStatusAction(
                     device=AudioDevice.INPUT,
-                    mute=status == 'pressed',
+                    is_mute=status == 'pressed',
                 ),
             )
 

@@ -126,7 +126,7 @@ def create_ssh_account() -> None:
                         'Note that in order to make things work for you, we had to '
                         'make sure password authentication for ssh server is enabled, '
                         'you may want to disable it later.',
-                        orca_text='Make sure to delete it after use.\n'
+                        picovoice_text='Make sure to delete it after use.\n'
                         'Note that in order to make things work for you, we had to '
                         'make sure password authentication for {ssh|EH S EH S EY CH} '
                         'server is enabled, you may want to disable it later.',
@@ -253,12 +253,8 @@ async def check_is_ssh_enabled() -> None:
 
 def open_ssh_menu() -> Menu:
     """Open the SSH menu."""
-    create_task(
-        asyncio.gather(
-            check_is_ssh_active(),
-            check_is_ssh_enabled(),
-        ),
-    )
+    create_task(check_is_ssh_active())
+    create_task(check_is_ssh_enabled())
 
     return HeadlessMenu(
         title=ssh_title,
@@ -280,16 +276,14 @@ def init_service() -> None:
         ),
     )
 
+    create_task(check_is_ssh_active())
+    create_task(check_is_ssh_enabled())
     create_task(
-        asyncio.gather(
-            check_is_ssh_active(),
-            check_is_ssh_enabled(),
-            monitor_unit(
-                'ssh.service',
-                lambda status: dispatch(
-                    SSHUpdateStateAction(
-                        is_active=status in ('active', 'activating', 'reloading'),
-                    ),
+        monitor_unit(
+            'ssh.service',
+            lambda status: dispatch(
+                SSHUpdateStateAction(
+                    is_active=status in ('active', 'activating', 'reloading'),
                 ),
             ),
         ),

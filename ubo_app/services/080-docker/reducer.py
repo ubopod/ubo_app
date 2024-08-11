@@ -179,7 +179,7 @@ Follow these steps:
 2. Get the authentication token from the dashboard.
 3. Convert it to QR code.
 4. Scan QR code to input the token.""",
-                        orca_text="""\
+                        picovoice_text="""\
 Follow these steps:
 
 1. Login to your {ngrok|EH N G EH R AA K} account
@@ -196,7 +196,7 @@ Follow these steps:
                 extra_information=NotificationExtraInformation(
                     text='This is the command you would enter when running ngrok. '
                     'Refer to ngrok documentation for further information',
-                    orca_text="""\
+                    picovoice_text="""\
 This is the command you would enter when running {ngrok|EH N G EH R AA K}.
 Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
                 ),

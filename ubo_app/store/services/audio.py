@@ -29,7 +29,7 @@ class AudioChangeVolumeAction(AudioAction):
 
 
 class AudioSetMuteStatusAction(AudioAction):
-    mute: bool
+    is_mute: bool
     device: AudioDevice
 
 
@@ -71,37 +71,25 @@ class AudioPlaybackDoneEvent(AudioEvent):
 class AudioState(Immutable):
     playback_volume: float = field(
         default_factory=lambda: read_from_persistent_store(
-            key='audio_state',
-            object_type=AudioState,
-            default=default_audio_state,
-        ).playback_volume,
+            'audio_state:playback_volume',
+            default=0.5,
+        ),
     )
     is_playback_mute: bool = field(
         default_factory=lambda: read_from_persistent_store(
-            key='audio_state',
-            object_type=AudioState,
-            default=default_audio_state,
-        ).is_playback_mute,
+            'audio_state:is_playback_mute',
+            default=False,
+        ),
     )
     capture_volume: float = field(
         default_factory=lambda: read_from_persistent_store(
-            key='audio_state',
-            object_type=AudioState,
-            default=default_audio_state,
-        ).capture_volume,
+            'audio_state:capture_volume',
+            default=0.5,
+        ),
     )
     is_capture_mute: bool = field(
         default_factory=lambda: read_from_persistent_store(
-            key='audio_state',
-            object_type=AudioState,
-            default=default_audio_state,
-        ).is_capture_mute,
+            'audio_state:is_capture_mute',
+            default=False,
+        ),
     )
-
-
-default_audio_state = AudioState(
-    playback_volume=0.5,
-    is_playback_mute=False,
-    capture_volume=0.5,
-    is_capture_mute=False,
-)

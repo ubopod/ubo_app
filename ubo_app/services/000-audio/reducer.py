@@ -42,12 +42,7 @@ def reducer(
 
     if isinstance(action, AudioSetVolumeAction):
         if action.device == AudioDevice.OUTPUT:
-            return CompleteReducerResult(
-                state=replace(state, playback_volume=action.volume),
-                events=[
-                    AudioPlayChimeEvent(name=Chime.VOLUME_CHANGE),
-                ],
-            )
+            return replace(state, playback_volume=action.volume)
         if action.device == AudioDevice.INPUT:
             return replace(state, capture_volume=action.volume)
     elif isinstance(action, AudioChangeVolumeAction):
@@ -63,6 +58,7 @@ def reducer(
                         ),
                     ),
                 ],
+                events=[AudioPlayChimeEvent(name=Chime.VOLUME_CHANGE)],
             )
         if action.device == AudioDevice.INPUT:
             return replace(
@@ -74,13 +70,13 @@ def reducer(
             )
     elif isinstance(action, AudioSetMuteStatusAction):
         if action.device == AudioDevice.OUTPUT:
-            return replace(state, is_playback_mute=action.mute)
+            return replace(state, is_playback_mute=action.is_mute)
         if action.device == AudioDevice.INPUT:
             return CompleteReducerResult(
-                state=replace(state, is_capture_mute=action.mute),
+                state=replace(state, is_capture_mute=action.is_mute),
                 actions=[
                     StatusIconsRegisterAction(
-                        icon='󰍭' if action.mute else '󰍬',
+                        icon='󰍭' if action.is_mute else '󰍬',
                         priority=AUDIO_MIC_STATE_ICON_PRIORITY,
                         id=AUDIO_MIC_STATE_ICON_ID,
                     ),
@@ -91,7 +87,7 @@ def reducer(
             state=state,
             actions=[
                 AudioSetMuteStatusAction(
-                    mute=not state.is_playback_mute
+                    is_mute=not state.is_playback_mute
                     if action.device == AudioDevice.OUTPUT
                     else not state.is_capture_mute,
                     device=action.device,

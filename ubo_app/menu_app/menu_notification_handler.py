@@ -67,7 +67,7 @@ class MenuNotificationHandler(UboApp):
                 VoiceReadTextAction(
                     text=notification.extra_information.text,
                     piper_text=notification.extra_information.piper_text,
-                    orca_text=notification.extra_information.orca_text,
+                    picovoice_text=notification.extra_information.picovoice_text,
                 ),
             )
 

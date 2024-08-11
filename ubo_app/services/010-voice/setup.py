@@ -6,9 +6,9 @@ import pathlib
 import struct
 from asyncio import CancelledError
 from queue import Queue
-from threading import Lock
 from typing import TYPE_CHECKING, Any, cast
 
+import fasteners
 import pvorca
 from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource]
 from redux import FinishEvent
@@ -36,24 +36,24 @@ if TYPE_CHECKING:
 
 
 class _Context:
-    orca_instance: pvorca.Orca | None = None
+    picovoice_instance: pvorca.Orca | None = None
     piper_voice: PiperVoice | None = None
-    orca_lock: Lock = Lock()
+    picovoice_lock = fasteners.ReaderWriterLock()
 
     def cleanup(self: _Context) -> None:
         dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=False))
-        with self.orca_lock:
-            if self.orca_instance:
-                self.orca_instance.delete()
-                self.orca_instance = None
+        with self.picovoice_lock.write_lock():
+            if self.picovoice_instance:
+                self.picovoice_instance.delete()
+                self.picovoice_instance = None
 
     def set_access_key(self: _Context, access_key: str) -> None:
         dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=True))
-        with self.orca_lock:
+        with self.picovoice_lock.write_lock():
             if access_key:
-                if self.orca_instance:
-                    self.orca_instance.delete()
-                self.orca_instance = pvorca.create(access_key)
+                if self.picovoice_instance:
+                    self.picovoice_instance.delete()
+                self.picovoice_instance = pvorca.create(access_key)
 
     def load_piper(self: _Context) -> None:
         self.piper_voice = PiperVoice.load(
@@ -94,7 +94,7 @@ def clear_access_key() -> None:
 
 
 @view(lambda state: state.voice.selected_engine)
-def _engine(engine: str) -> str:
+def _engine(engine: VoiceEngine) -> VoiceEngine:
     return engine
 
 
@@ -104,7 +104,7 @@ piper_cache: dict[str, list[bytes]] = {}
 def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
     """Synthesize the text."""
     engine = _engine()
-    if engine == 'piper':
+    if engine == VoiceEngine.PIPER:
         text = event.piper_text
         if not _context.piper_voice:
             return
@@ -138,25 +138,25 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
                 ),
             )
         unsubscribe()
-    elif engine == 'orca':
-        with _context.orca_lock:
-            if not _context.orca_instance:
+    elif engine == VoiceEngine.PICOVOICE:
+        with _context.picovoice_lock.read_lock():
+            if not _context.picovoice_instance:
                 return
-            rate = _context.orca_instance.sample_rate
+            rate = _context.picovoice_instance.sample_rate
 
-            audio_sequence = _context.orca_instance.synthesize(
-                text=event.orca_text,
+            audio_sequence = _context.picovoice_instance.synthesize(
+                text=event.picovoice_text,
                 speech_rate=event.speech_rate,
             )
-            sample = b''.join(struct.pack('h', sample) for sample in audio_sequence[0])
-            dispatch(
-                AudioPlayAudioAction(
-                    sample=sample,
-                    channels=1,
-                    rate=rate,
-                    width=2,
-                ),
-            )
+        sample = b''.join(struct.pack('h', sample) for sample in audio_sequence[0])
+        dispatch(
+            AudioPlayAudioAction(
+                sample=sample,
+                channels=1,
+                rate=rate,
+                width=2,
+            ),
+        )
 
 
 @autorun(lambda state: state.voice.is_access_key_set)
@@ -186,7 +186,7 @@ Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}"""
 
 ENGINE_LABELS = {
     VoiceEngine.PIPER: 'Piper',
-    VoiceEngine.ORCA: 'Orca',
+    VoiceEngine.PICOVOICE: 'Picovoice',
 }
 
 
@@ -221,7 +221,7 @@ def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
             VoiceReadTextAction(
                 text={
                     VoiceEngine.PIPER: 'Piper voice engine selected',
-                    VoiceEngine.ORCA: 'Orca voice engine selected',
+                    VoiceEngine.PICOVOICE: 'Picovoice voice engine selected',
                 }[engine],
                 engine=engine,
             ),
@@ -269,10 +269,10 @@ def init_service() -> None:
                             ),
                         ),
                         SubMenuItem(
-                            label='Orca Settings',
+                            label='Picovoice Settings',
                             icon='󰔊',
                             sub_menu=HeadedMenu(
-                                title='Orca Settings',
+                                title='Picovoice Settings',
                                 heading='󰔊 Picovoice',
                                 sub_heading=_menu_sub_heading,
                                 items=_menu_items,

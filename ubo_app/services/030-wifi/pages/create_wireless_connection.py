@@ -61,7 +61,7 @@ class CreateWirelessConnectionPage(PageWidget):
                 extra_information=NotificationExtraInformation(
                     text='Go to your phone settings, choose QR code and hold it in '
                     'front of the camera to scan it.',
-                    orca_text='Go to your phone settings, choose {QR|K Y UW AA R} '
+                    picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '
                     'code and hold it in front of the camera to scan it.',
                 ),
             )

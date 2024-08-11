@@ -10,8 +10,6 @@ import numpy as np
 from fake import Fake
 from redux import FinishAction
 
-from ubo_app.store.main import dispatch
-
 
 class _FakeAsyncProcess(Fake):
     def __init__(self: _FakeAsyncProcess, output: bytes = b'') -> None:
@@ -121,6 +119,8 @@ def signal_handler(signum: int, _: object) -> None:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     if signum == signal.SIGINT:
         logger.info('Exiting gracefully, sending the signal again will force exit!')
+        from ubo_app.store.main import dispatch
+
         dispatch(FinishAction())
     elif signum == signal.SIGTERM:
         logger.info(

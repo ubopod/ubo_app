@@ -1,11 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
-import asyncio
-
 from debouncer import DebounceOptions, debounce
 from pages import create_wireless_connection, main
-from redux import ViewOptions
 from ubo_gui.constants import INFO_COLOR
 from wifi_manager import (
     get_connections,
@@ -19,7 +16,7 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.main import dispatch, subscribe_event, view
+from ubo_app.store.main import dispatch, subscribe_event
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -35,7 +32,10 @@ from ubo_app.store.services.wifi import (
     WiFiUpdateRequestEvent,
 )
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.persistent_store import register_persistent_store
+from ubo_app.utils.persistent_store import (
+    read_from_persistent_store,
+    register_persistent_store,
+)
 
 
 @debounce(
@@ -70,17 +70,6 @@ async def setup_listeners() -> None:
         create_task(update_wifi_list())
 
 
-@view(
-    lambda state: (state.ip.is_connected, state.wifi.has_visited_onboarding),
-    options=ViewOptions(default_value=None),
-)
-def should_show_onboarding(state: tuple[bool | None, bool]) -> bool | None:
-    is_connected, has_visited_onboarding = state
-    if is_connected is None:
-        return None
-    return not is_connected and not has_visited_onboarding
-
-
 def show_onboarding_notification() -> None:
     dispatch(
         NotificationsAddAction(
@@ -107,7 +96,7 @@ def show_onboarding_notification() -> None:
                     piper_text='Press middle button to add WiFi network with QR code.\n'
                     'If you dismiss this, you can always add WiFi network through '
                     'Settings menu, by navigating to Network, and then WiFi',
-                    orca_text='Press middle button to add {WiFi|W AY F AY} '
+                    picovoice_text='Press middle button to add {WiFi|W AY F AY} '
                     'network with {QR|K Y UW AA R} code.\n'
                     'If you dismiss this, you can always add {WiFi|W AY F AY} network '
                     'through Settings → Network → {WiFi|W AY F AY}',
@@ -115,7 +104,6 @@ def show_onboarding_notification() -> None:
                 color=INFO_COLOR,
             ),
         ),
-        WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True),
     )
 
 
@@ -138,8 +126,10 @@ async def init_service() -> None:
 
     subscribe_event(WiFiUpdateRequestEvent, lambda: create_task(request_scan()))
 
-    while should_show_onboarding() is None:
-        await asyncio.sleep(1)
-    if should_show_onboarding():
+    if not read_from_persistent_store(
+        key='wifi_has_visited_onboarding',
+        default=False,
+    ):
         logger.info('No internet connection, showing WiFi onboarding.')
         show_onboarding_notification()
+    dispatch(WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True))

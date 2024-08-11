@@ -115,12 +115,8 @@ async def check_is_lightdm_enabled() -> None:
 
 def open_lightdm_menu() -> Menu:
     """Open the LightDM menu."""
-    create_task(
-        asyncio.gather(
-            check_is_lightdm_active(),
-            check_is_lightdm_enabled(),
-        ),
-    )
+    create_task(check_is_lightdm_active())
+    create_task(check_is_lightdm_enabled())
 
     return HeadlessMenu(
         title=lightdm_title,
@@ -142,16 +138,14 @@ def init_service() -> None:
         ),
     )
 
+    create_task(check_is_lightdm_active())
+    create_task(check_is_lightdm_enabled())
     create_task(
-        asyncio.gather(
-            check_is_lightdm_active(),
-            check_is_lightdm_enabled(),
-            monitor_unit(
-                'lightdm.service',
-                lambda status: dispatch(
-                    LightDMUpdateStateAction(
-                        is_active=status in ('active', 'activating', 'reloading'),
-                    ),
+        monitor_unit(
+            'lightdm.service',
+            lambda status: dispatch(
+                LightDMUpdateStateAction(
+                    is_active=status in ('active', 'activating', 'reloading'),
                 ),
             ),
         ),

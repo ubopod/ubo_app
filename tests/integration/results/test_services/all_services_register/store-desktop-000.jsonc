@@ -383,7 +383,7 @@
                                         "icon": "󰄱",
                                         "is_short": false,
                                         "key": null,
-                                        "label": "Orca",
+                                        "label": "Picovoice",
                                         "opacity": null,
                                         "progress": null
                                       }
@@ -403,7 +403,7 @@
                                   "icon": "󰔊",
                                   "is_short": false,
                                   "key": null,
-                                  "label": "Orca Settings",
+                                  "label": "Picovoice Settings",
                                   "opacity": null,
                                   "progress": null,
                                   "sub_menu": {
@@ -428,7 +428,7 @@
                                     ],
                                     "placeholder": null,
                                     "sub_heading": "Set the access key\nCurrent value: Fake",
-                                    "title": "Orca Settings"
+                                    "title": "Picovoice Settings"
                                   }
                                 }
                               ],

@@ -22,7 +22,7 @@ class VoiceUpdateAccessKeyStatus(VoiceAction):
 
 class VoiceEngine(StrEnum):
     PIPER = 'piper'
-    ORCA = 'orca'
+    PICOVOICE = 'picovoice'
 
 
 class VoiceSetEngineAction(VoiceAction):
@@ -32,7 +32,7 @@ class VoiceSetEngineAction(VoiceAction):
 class VoiceReadTextAction(VoiceAction):
     text: str
     piper_text: str | None = None
-    orca_text: str | None = None
+    picovoice_text: str | None = None
     speech_rate: float | None = None
     engine: VoiceEngine | None = None
 
@@ -40,7 +40,7 @@ class VoiceReadTextAction(VoiceAction):
 class VoiceSynthesizeTextEvent(VoiceEvent):
     text: str
     piper_text: str
-    orca_text: str
+    picovoice_text: str
     speech_rate: float | None = None
 
 

@@ -35,11 +35,6 @@ def _run_async_in_thread(
 def init_service() -> None:
     audio_manager = AudioManager()
 
-    register_persistent_store(
-        'audio_state',
-        lambda state: state.audio,
-    )
-
     dispatch(
         StatusIconsRegisterAction(
             icon='󰍭',
@@ -78,4 +73,21 @@ def init_service() -> None:
             rate=event.rate,
             width=event.width,
         ),
+    )
+
+    register_persistent_store(
+        'audio_state:playback_volume',
+        lambda state: state.audio.playback_volume,
+    )
+    register_persistent_store(
+        'audio_state:is_playback_mute',
+        lambda state: state.audio.is_playback_mute,
+    )
+    register_persistent_store(
+        'audio_state:capture_volume',
+        lambda state: state.audio.capture_volume,
+    )
+    register_persistent_store(
+        'audio_state:is_capture_mute',
+        lambda state: state.audio.is_capture_mute,
     )

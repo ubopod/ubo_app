@@ -266,7 +266,7 @@ details by separating your service, username, and password with the pipe symbol.
 example, format it as docker.ay o pipe johndoe pipe password and then convert this \
 text into a QR code. If you omit the service name, docker.ay o will automatically be \
 used as the default.""",
-                        orca_text="""To generate your {QR|K Y UW AA R} code for \
+                        picovoice_text="""To generate your {QR|K Y UW AA R} code for \
 login, format your details by separating your service, username, and password with the \
 pipe symbol. For example, format it as "docker {.|D AA T} io {.|P AY P} johndoe \
 {.|P AY P} password" and then convert this text into a {QR|K Y UW AA R} code. If you \

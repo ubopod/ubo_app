@@ -54,6 +54,7 @@ adafruit-circuitpython-veml7700 = "^1.1.22"
 # RPi dependencies
 rpi-lgpio = { version = "^0.6", markers = "platform_machine=='aarch64'" }
 piper-tts = { version = "^1.2.0", markers = "sys_platform=='linux'" }
+fasteners = "^0.19"
 
 [tool.poetry.group.dev]
 optional = true

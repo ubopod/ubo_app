@@ -85,7 +85,7 @@ class NotificationActionItem(ActionItem):
 class NotificationExtraInformation(Immutable):
     text: str
     piper_text: str | None = None
-    orca_text: str | None = None
+    picovoice_text: str | None = None
 
 
 class Notification(Immutable):

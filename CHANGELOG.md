@@ -13,6 +13,7 @@
 - feat(rpi-connect): implement `rpi-connect` under `Remote` menu - closes #139
 - fix(core): update manager downloads the latest `install.sh` and runs it to do the update - closes #152
 - feat(core): add signal management for ubo_app process - closes #156
+- fix(core): use fasteners read-write lock implementation for the persistent store - closes #158
 
 ## Version 0.15.5
 

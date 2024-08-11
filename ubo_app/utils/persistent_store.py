@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from asyncio import Lock
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast, overload
 
+import fasteners
 from redux import FinishEvent
 
 from ubo_app.constants import PERSISTENT_STORE_PATH
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 T = TypeVar('T')
 
-persistent_store_lock = Lock()
+persistent_store_lock = fasteners.ReaderWriterLock()
 
 
 def register_persistent_store(
@@ -32,7 +32,7 @@ def register_persistent_store(
     async def write(value: T) -> None:
         if value is None:
             return
-        async with persistent_store_lock:
+        with persistent_store_lock.write_lock():
             try:
                 current_state = json.loads(Path(PERSISTENT_STORE_PATH).read_text())
             except FileNotFoundError:
@@ -76,23 +76,12 @@ def read_from_persistent_store(
     """Read a part of the store from the filesystem."""
     from ubo_app.store.main import store
 
-    for _ in range(5):
-        try:
+    try:
+        with persistent_store_lock.read_lock():
             file_content = Path(PERSISTENT_STORE_PATH).read_text()
-            current_state = json.loads(file_content)
-        except FileNotFoundError:
-            return (
-                (None if object_type is None else object_type())
-                if default is None
-                else default
-            )
-        except json.JSONDecodeError:
-            continue
-        else:
-            break
-    else:
-        msg = 'Failed to read from the persistent store'
-        raise RuntimeError(msg)
+        current_state = json.loads(file_content)
+    except FileNotFoundError:
+        current_state = {}
     value = current_state.get(key)
     if value is None:
         return (
