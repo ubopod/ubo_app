@@ -14,6 +14,7 @@
 - fix(core): update manager downloads the latest `install.sh` and runs it to do the update - closes #152
 - feat(core): add signal management for ubo_app process - closes #156
 - fix(core): use fasteners read-write lock implementation for the persistent store - closes #158
+- feat(core): improve the user experience of update-manager by making it more verbose about the current state of the update progress - closes #153
 
 ## Version 0.15.5
 

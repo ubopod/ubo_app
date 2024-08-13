@@ -23,6 +23,10 @@ class UpdateManagerSetStatusAction(UpdateManagerAction):
     status: UpdateStatus
 
 
+class UpdateManagerSetUpdateServiceStatusAction(UpdateManagerAction):
+    is_active: bool
+
+
 class UpdateManagerEvent(BaseEvent): ...
 
 
@@ -49,3 +53,4 @@ class UpdateManagerState(Immutable):
     current_version: str | None = None
     latest_version: str | None = None
     update_status: UpdateStatus = UpdateStatus.CHECKING
+    is_update_service_active: bool = False

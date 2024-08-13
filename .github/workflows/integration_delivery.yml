@@ -249,8 +249,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         name: Checkout
-        # with: TODO: this, it consumes lfs bandwidth and should be used only for releases
-        #   lfs: true
+        with:
+          lfs: true
 
       - uses: actions/setup-python@v5
         name: Setup Python

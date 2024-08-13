@@ -3,12 +3,17 @@ WantedBy=multi-user.target
 
 [Unit]
 Description=Ubo Update Service
+Before=multi-user.target
+
 
 [Service]
-Type=oneshot
+Type=simple
+TimeoutStartSec=1800
 User=root
 Environment=INSTALLATION_PATH={{INSTALLATION_PATH}}
 Environment=USERNAME={{USERNAME}}
-ExecStartPre=/bin/bash -c '[[ -e /opt/ubo/_update/update_is_ready ]]'
+ExecStartPre=/bin/bash -c '[[ -e /opt/ubo/_update/update_is_ready.lock ]]'
 ExecStart={{INSTALLATION_PATH}}/_update/install.sh --update
 RemainAfterExit=no
+Restart=yes
+RestartSec=5

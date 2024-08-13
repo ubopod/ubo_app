@@ -16,6 +16,7 @@ from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
+    NotificationsAction,
     NotificationsAddAction,
 )
 from ubo_app.store.update_manager import (
@@ -24,6 +25,7 @@ from ubo_app.store.update_manager import (
     UpdateManagerCheckEvent,
     UpdateManagerEvent,
     UpdateManagerSetStatusAction,
+    UpdateManagerSetUpdateServiceStatusAction,
     UpdateManagerSetVersionsAction,
     UpdateManagerState,
     UpdateManagerUpdateEvent,
@@ -36,7 +38,7 @@ def reducer(
     action: UpdateManagerAction,
 ) -> ReducerResult[
     UpdateManagerState,
-    UpdateManagerSetStatusAction | NotificationsAddAction,
+    UpdateManagerSetStatusAction | NotificationsAction,
     UpdateManagerEvent,
 ]:
     from ubo_gui.constants import SECONDARY_COLOR
@@ -64,7 +66,7 @@ def reducer(
                 optional_minor_and_patch=True,
             )
             version_comparison = latest_version.compare(current_version)
-        if version_comparison > 0:
+        if version_comparison > 0 and not state.is_update_service_active:
             return CompleteReducerResult(
                 state=state,
                 actions=[
@@ -104,5 +106,8 @@ def reducer(
             ),
             events=events,
         )
+
+    if isinstance(action, UpdateManagerSetUpdateServiceStatusAction):
+        return replace(state, is_update_service_active=action.is_active)
 
     return state

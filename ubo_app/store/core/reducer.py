@@ -59,14 +59,14 @@ def reducer(
     if isinstance(action, KeypadKeyPressAction):
         actions: list[AudioChangeVolumeAction] = []
         events: list[KeypadKeyPressEvent] = []
-        if action.key == Key.UP and len(state.path) == 0:
+        if action.key == Key.UP and state.depth == 1:
             actions = [
                 AudioChangeVolumeAction(
                     amount=0.05,
                     device=AudioDevice.OUTPUT,
                 ),
             ]
-        elif action.key == Key.DOWN and len(state.path) == 0:
+        elif action.key == Key.DOWN and state.depth == 1:
             actions = [
                 AudioChangeVolumeAction(
                     amount=-0.05,
@@ -225,7 +225,7 @@ def reducer(
         )
 
     if isinstance(action, SetMenuPathAction):
-        return replace(state, path=action.path)
+        return replace(state, path=action.path, depth=action.depth)
 
     if isinstance(action, PowerOffAction):
         return CompleteReducerResult(

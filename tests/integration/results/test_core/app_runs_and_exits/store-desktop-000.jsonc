@@ -2,6 +2,7 @@
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "main": {
+    "depth": 1,
     "menu": {
       "items": [
         {
@@ -280,6 +281,7 @@
   },
   "update_manager": {
     "current_version": "0.0.0",
+    "is_update_service_active": false,
     "latest_version": "0.0.0",
     "serial_number": "<not-available>",
     "update_status": "up_to_date"

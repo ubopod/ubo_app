@@ -253,7 +253,6 @@ async def check_is_ssh_enabled() -> None:
 
 def open_ssh_menu() -> Menu:
     """Open the SSH menu."""
-    create_task(check_is_ssh_active())
     create_task(check_is_ssh_enabled())
 
     return HeadlessMenu(
@@ -276,7 +275,6 @@ def init_service() -> None:
         ),
     )
 
-    create_task(check_is_ssh_active())
     create_task(check_is_ssh_enabled())
     create_task(
         monitor_unit(

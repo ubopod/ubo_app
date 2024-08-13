@@ -2,13 +2,13 @@
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.46.1"
+version = "8.47.0"
 description = "CircuitPython APIs for non-CircuitPython versions of Python such as CPython on Linux and MicroPython."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "Adafruit_Blinka-8.46.1-py3-none-any.whl", hash = "sha256:15fc177a2cacea551bb0c342ae55bf2fd041bcf43bb7ced46dadabf5259dbf54"},
-    {file = "adafruit_blinka-8.46.1.tar.gz", hash = "sha256:2236b46cb2a26833ba371f80f539ba655900dfd92983fc57c85a62b5f4ef8f47"},
+    {file = "Adafruit_Blinka-8.47.0-py3-none-any.whl", hash = "sha256:86fb1f831196587b94c62eab1695e5b78a685f54e31c53d70b377a8bd86ac81d"},
+    {file = "adafruit_blinka-8.47.0.tar.gz", hash = "sha256:436a856acc38bf9c5346db8c413ba2ada95e762f6aa97a7dbe238434ccbc8519"},
 ]
 
 [package.dependencies]
@@ -161,13 +161,13 @@ adafruit-circuitpython-busdevice = "*"
 
 [[package]]
 name = "adafruit-circuitpython-typing"
-version = "1.10.3"
+version = "1.11.0"
 description = "Types needed for type annotation that are not in `typing`"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "adafruit-circuitpython-typing-1.10.3.tar.gz", hash = "sha256:4c5c1eeb3ae8a3d2dfa75129654c73690fbdb576d9069542a6ea3355467e1e74"},
-    {file = "adafruit_circuitpython_typing-1.10.3-py3-none-any.whl", hash = "sha256:4e23d6828deafa4dfd554fd7d3f06b8ff8e2cc554b9c7aecba9d778d45970c18"},
+    {file = "adafruit_circuitpython_typing-1.11.0-py3-none-any.whl", hash = "sha256:8855221f5cea28c6cc698d30ea748075c4bd170c42cf213fae09c80f24d8e4d9"},
+    {file = "adafruit_circuitpython_typing-1.11.0.tar.gz", hash = "sha256:840b679aa966899496ff34ece5d7bee0c4bdec3102f41a086569c9788852324e"},
 ]
 
 [package.dependencies]
@@ -805,13 +805,13 @@ files = [
 
 [[package]]
 name = "headless-kivy"
-version = "0.9.5"
+version = "0.9.6"
 description = "Headless renderer for Kivy framework"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "headless_kivy-0.9.5-py3-none-any.whl", hash = "sha256:ac87b8a597e8f5be355c0605f9294df935e7ba5e428001f011f87fdb51225dfb"},
-    {file = "headless_kivy-0.9.5.tar.gz", hash = "sha256:cc56eac859b6cfa9544e66b9709ed8063e7fabad5b84c0961822f063ea6641bb"},
+    {file = "headless_kivy-0.9.6-py3-none-any.whl", hash = "sha256:e731644438334cac370ba0b0015d4008e033829a1c02b1efc2b07b0db605ba6b"},
+    {file = "headless_kivy-0.9.6.tar.gz", hash = "sha256:fe242404e274db1c186601738c2fc4a7b5ea94156c4e39117131fbb9db163315"},
 ]
 
 [package.dependencies]
@@ -1545,7 +1545,7 @@ files = [
 
 [[package]]
 name = "pyfakefs"
-version = "5.6.dev0"
+version = "5.7.dev0"
 description = "pyfakefs implements a fake file system that mocks the Python file system modules."
 optional = false
 python-versions = ">=3.7"
@@ -1556,7 +1556,7 @@ develop = false
 type = "git"
 url = "https://github.com/sassanh/pyfakefs.git"
 reference = "skip_names"
-resolved_reference = "1255f54e2c6a5de8b9a325bd7fb3c4a97e9fbd2f"
+resolved_reference = "2e8fcfb07496cef91483fa939b3f6caf4f5617aa"
 
 [[package]]
 name = "pyftdi"
@@ -2109,13 +2109,13 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
 name = "sympy"
-version = "1.13.1"
+version = "1.13.2"
 description = "Computer algebra system (CAS) in Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "sympy-1.13.1-py3-none-any.whl", hash = "sha256:db36cdc64bf61b9b24578b6f7bab1ecdd2452cf008f34faa33776680c26d66f8"},
-    {file = "sympy-1.13.1.tar.gz", hash = "sha256:9cebf7e04ff162015ce31c9c6c9144daa34a93bd082f54fd8f12deca4f47515f"},
+    {file = "sympy-1.13.2-py3-none-any.whl", hash = "sha256:c51d75517712f1aed280d4ce58506a4a88d635d6b5dd48b39102a7ae1f3fcfe9"},
+    {file = "sympy-1.13.2.tar.gz", hash = "sha256:401449d84d07be9d0c7a46a64bd54fe097667d5e7181bfe67ec777be9e01cb13"},
 ]
 
 [package.dependencies]

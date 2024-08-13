@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import signal
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 from fake import Fake
 from redux import FinishAction
+
+if TYPE_CHECKING:
+    from ubo_gui.menu.types import Callable
 
 
 class _FakeAsyncProcess(Fake):
@@ -99,6 +102,13 @@ def setup() -> None:
             Fake(_Fake__return_value=Fake(_Fake__await_value=(Fake(), Fake()))),
         )
 
+        import ubo_app.utils.monitor_unit
+
+        async def fake_monitor_unit(unit: str, callback: Callable[[str], None]) -> None:
+            callback('inactive' if unit == 'ubo-update.service' else 'active')
+
+        ubo_app.utils.monitor_unit.monitor_unit = fake_monitor_unit
+
     import ubo_app.display as _  # noqa: F401
 
     signal.signal(signal.SIGTERM, signal_handler)
@@ -112,11 +122,12 @@ def signal_handler(signum: int, _: object) -> None:
 
     logger.info('Received signal %s, turning off the display...', signum)
 
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     display.state.turn_off()
     display.state.pause()
 
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
     if signum == signal.SIGINT:
         logger.info('Exiting gracefully, sending the signal again will force exit!')
         from ubo_app.store.main import dispatch

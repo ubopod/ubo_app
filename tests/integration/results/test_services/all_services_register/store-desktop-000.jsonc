@@ -84,6 +84,7 @@
     "is_enabled": true
   },
   "main": {
+    "depth": 1,
     "menu": {
       "items": [
         {
@@ -752,6 +753,7 @@
   },
   "update_manager": {
     "current_version": "0.0.0",
+    "is_update_service_active": false,
     "latest_version": "0.0.0",
     "serial_number": "<not-available>",
     "update_status": "up_to_date"
