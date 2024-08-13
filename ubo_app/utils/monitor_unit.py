@@ -43,6 +43,8 @@ async def monitor_unit(unit_name: str, callback: Callable[[str], None]) -> None:
         object_path=f'/org/freedesktop/systemd1/unit/{to_dbus_string(unit_name)}',
     )
 
+    callback(await system_service.active_state)
+
     async for _ in system_service.properties_changed:
         active_state = await system_service.active_state
         callback(active_state)

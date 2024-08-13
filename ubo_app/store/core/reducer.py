@@ -11,6 +11,7 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
+from ubo_gui.constants import INFO_COLOR
 
 from ubo_app.store.core import (
     InitEvent,
@@ -34,6 +35,30 @@ from ubo_app.store.services.keypad import (
     KeypadKeyReleaseAction,
     KeypadKeyReleaseEvent,
 )
+from ubo_app.store.services.notifications import (
+    Importance,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAction,
+)
+from ubo_app.store.update_manager import UPDATE_MANAGER_NOTIFICATION_ID
+
+BACKGROUND_UPDATE_NOTIFICATION = Notification(
+    id=UPDATE_MANAGER_NOTIFICATION_ID,
+    title='',
+    content="""\
+Update in progress!
+
+Please keep the device powered on.
+
+This may take around 20 minutes to complete.""",
+    importance=Importance.LOW,
+    icon='',
+    display_type=NotificationDisplayType.STICKY,
+    dismissable=False,
+    dismiss_on_close=False,
+    color=INFO_COLOR,
+)
 
 
 def reducer(
@@ -41,7 +66,7 @@ def reducer(
     action: MainAction,
 ) -> ReducerResult[
     MainState,
-    AudioChangeVolumeAction,
+    AudioChangeVolumeAction | NotificationsAction,
     KeypadEvent | InitEvent | PowerEvent,
 ]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
@@ -59,14 +84,14 @@ def reducer(
     if isinstance(action, KeypadKeyPressAction):
         actions: list[AudioChangeVolumeAction] = []
         events: list[KeypadKeyPressEvent] = []
-        if action.key == Key.UP and len(state.path) == 0:
+        if action.key == Key.UP and state.depth == 1:
             actions = [
                 AudioChangeVolumeAction(
                     amount=0.05,
                     device=AudioDevice.OUTPUT,
                 ),
             ]
-        elif action.key == Key.DOWN and len(state.path) == 0:
+        elif action.key == Key.DOWN and state.depth == 1:
             actions = [
                 AudioChangeVolumeAction(
                     amount=-0.05,
@@ -225,7 +250,7 @@ def reducer(
         )
 
     if isinstance(action, SetMenuPathAction):
-        return replace(state, path=action.path)
+        return replace(state, path=action.path, depth=action.depth)
 
     if isinstance(action, PowerOffAction):
         return CompleteReducerResult(

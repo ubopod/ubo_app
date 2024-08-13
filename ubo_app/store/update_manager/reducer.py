@@ -12,11 +12,14 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.core.reducer import BACKGROUND_UPDATE_NOTIFICATION
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
+    NotificationsAction,
     NotificationsAddAction,
+    NotificationsClearAction,
 )
 from ubo_app.store.update_manager import (
     UPDATE_MANAGER_NOTIFICATION_ID,
@@ -24,6 +27,7 @@ from ubo_app.store.update_manager import (
     UpdateManagerCheckEvent,
     UpdateManagerEvent,
     UpdateManagerSetStatusAction,
+    UpdateManagerSetUpdateServiceStatusAction,
     UpdateManagerSetVersionsAction,
     UpdateManagerState,
     UpdateManagerUpdateEvent,
@@ -36,7 +40,7 @@ def reducer(
     action: UpdateManagerAction,
 ) -> ReducerResult[
     UpdateManagerState,
-    UpdateManagerSetStatusAction | NotificationsAddAction,
+    UpdateManagerSetStatusAction | NotificationsAction,
     UpdateManagerEvent,
 ]:
     from ubo_gui.constants import SECONDARY_COLOR
@@ -64,7 +68,7 @@ def reducer(
                 optional_minor_and_patch=True,
             )
             version_comparison = latest_version.compare(current_version)
-        if version_comparison > 0:
+        if version_comparison > 0 and not state.is_update_service_active:
             return CompleteReducerResult(
                 state=state,
                 actions=[
@@ -103,6 +107,20 @@ def reducer(
                 update_status=action.status,
             ),
             events=events,
+        )
+
+    if isinstance(action, UpdateManagerSetUpdateServiceStatusAction):
+        if action.is_active:
+            notification_action = NotificationsAddAction(
+                notification=BACKGROUND_UPDATE_NOTIFICATION,
+            )
+        else:
+            notification_action = NotificationsClearAction(
+                notification=BACKGROUND_UPDATE_NOTIFICATION,
+            )
+        return CompleteReducerResult(
+            state=replace(state, is_update_service_active=action.is_active),
+            actions=[notification_action],
         )
 
     return state

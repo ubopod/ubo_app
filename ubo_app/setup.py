@@ -112,11 +112,12 @@ def signal_handler(signum: int, _: object) -> None:
 
     logger.info('Received signal %s, turning off the display...', signum)
 
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     display.state.turn_off()
     display.state.pause()
 
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
     if signum == signal.SIGINT:
         logger.info('Exiting gracefully, sending the signal again will force exit!')
         from ubo_app.store.main import dispatch

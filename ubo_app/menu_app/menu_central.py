@@ -1,13 +1,13 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import functools
 import weakref
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
-from ubo_gui.app import UboApp, cached_property
+from ubo_gui.app import UboApp
 from ubo_gui.menu.menu_widget import MenuWidget
 from ubo_gui.menu.stack_item import StackItem, StackMenuItem
 
@@ -25,6 +25,9 @@ from ubo_app.store.core import (
 from ubo_app.store.main import autorun, dispatch, subscribe_event
 from ubo_app.store.services.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
+from ubo_app.store.update_manager import UpdateManagerSetUpdateServiceStatusAction
+from ubo_app.utils.async_ import create_task
+from ubo_app.utils.monitor_unit import monitor_unit
 
 from .home_page import HomePage
 
@@ -59,6 +62,7 @@ def set_path(_: MenuWidget, stack: list[StackItem]) -> None:
                 for stack_item in stack
                 if isinstance(stack_item, StackMenuItem) and stack_item.selection
             ],
+            depth=len(stack),
         ),
     )
 
@@ -82,10 +86,19 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 return
             self.menu_widget.set_root_menu(menu)
 
+    def check_update(self: MenuWidgetWithHomePage, status: str) -> None:
+        dispatch(
+            UpdateManagerSetUpdateServiceStatusAction(
+                is_active=status in ('active', 'activating', 'reloading'),
+            ),
+        )
+
     def build(self: UboApp) -> Widget | None:
         root = super().build()
         self.menu_widget.padding_top = root.ids.header_layout.height
         self.menu_widget.padding_bottom = root.ids.footer_layout.height
+
+        create_task(monitor_unit('ubo-update.service', self.check_update))
 
         return root
 
@@ -103,7 +116,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
         self.root.title = title
 
-    @functools.cached_property
+    @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
         self.root.is_fullscreen = True

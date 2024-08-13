@@ -13,17 +13,25 @@ import requests
 from ubo_gui.constants import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, Item
 
-from ubo_app.constants import INSTALLATION_PATH, INSTALLER_URL
+from ubo_app.constants import (
+    INSTALLATION_PATH,
+    INSTALLER_URL,
+    UPDATE_ASSETS_PATH,
+    UPDATE_LOCK_PATH,
+)
 from ubo_app.logging import logger
 from ubo_app.store.core import RebootEvent
 from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
+    NotificationActionItem,
     NotificationDisplayType,
+    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.update_manager import (
+    UPDATE_MANAGER_NOTIFICATION_ID,
     UpdateManagerSetStatusAction,
     UpdateManagerSetVersionsAction,
     UpdateManagerState,
@@ -73,25 +81,34 @@ async def update() -> None:
     """Update the Ubo app."""
     logger.info('Updating Ubo app...')
 
+    extra_information = NotificationExtraInformation(
+        text="""\
+The download progress is shown in the radial progress bar at the top left corner of \
+the screen.
+Once the download is complete, the system will reboot to apply the update.
+Then another reboot will be done to complete the update process.""",
+    )
+
     async def download_files() -> None:
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    id='ubo:update_manager',
-                    title='Updating...',
+                    id=UPDATE_MANAGER_NOTIFICATION_ID,
+                    title='Update in progress',
                     content='Downloading the latest version of the install script...',
-                    display_type=NotificationDisplayType.BACKGROUND,
+                    extra_information=extra_information,
+                    display_type=NotificationDisplayType.STICKY,
                     color=INFO_COLOR,
                     icon='󰇚',
                     blink=False,
                     progress=0,
+                    dismissable=False,
                 ),
             ),
         )
 
-        target_path = Path(f'{INSTALLATION_PATH}/_update/')
-        shutil.rmtree(target_path, ignore_errors=True)
-        target_path.mkdir(parents=True, exist_ok=True)
+        shutil.rmtree(UPDATE_ASSETS_PATH, ignore_errors=True)
+        UPDATE_ASSETS_PATH.mkdir(parents=True, exist_ok=True)
 
         packages_count_path = f'{INSTALLATION_PATH}/.packages-count'
         try:
@@ -108,19 +125,20 @@ async def update() -> None:
             '-Lk',
             INSTALLER_URL,
             '--output',
-            f'{target_path}/install.sh',
+            UPDATE_ASSETS_PATH / 'install.sh',
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
         await process.wait()
-        Path(f'{target_path}/install.sh').chmod(0o755)
+        (UPDATE_ASSETS_PATH / 'install.sh').chmod(0o755)
 
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    id='ubo:update_manager',
-                    title='Updating...',
+                    id=UPDATE_MANAGER_NOTIFICATION_ID,
+                    title='Update in progress',
                     content='Fetching the latest version of Ubo app...',
+                    extra_information=extra_information,
                     display_type=NotificationDisplayType.BACKGROUND,
                     color=INFO_COLOR,
                     icon='󰇚',
@@ -135,7 +153,7 @@ async def update() -> None:
             'pip',
             'download',
             '--dest',
-            target_path,
+            UPDATE_ASSETS_PATH,
             'ubo-app[default]',
             'setuptools',
             'wheel',
@@ -147,7 +165,7 @@ async def update() -> None:
             dispatch(
                 NotificationsAddAction(
                     notification=Notification(
-                        id='ubo:update_manager',
+                        id=UPDATE_MANAGER_NOTIFICATION_ID,
                         title='Failed to update',
                         content='Failed to download packages',
                         display_type=NotificationDisplayType.FLASH,
@@ -164,14 +182,15 @@ async def update() -> None:
             line = (await process.stdout.readline()).decode()
             if not line:
                 break
-            if line.startswith('Collecting'):
+            if line.startswith(('Collecting', 'Requirement already satisfied')):
                 counter += 1
                 dispatch(
                     NotificationsAddAction(
                         notification=Notification(
-                            id='ubo:update_manager',
-                            title='Updating...',
+                            id=UPDATE_MANAGER_NOTIFICATION_ID,
+                            title='Update in progress',
                             content=f'Downloading {line.partition(" ")[2].strip()}',
+                            extra_information=extra_information,
                             display_type=NotificationDisplayType.BACKGROUND,
                             color=INFO_COLOR,
                             icon='󰇚',
@@ -185,31 +204,43 @@ async def update() -> None:
         # Update the packages count estimate for the next update
         Path(packages_count_path).write_text(str(counter), encoding='utf-8')
 
-        dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id='ubo:update_manager',
-                    title='Updating...',
-                    content='All packages downloaded successfully, rebooting...',
-                    display_type=NotificationDisplayType.STICKY,
-                    color=INFO_COLOR,
-                    icon='󰇚',
-                    progress=1,
-                ),
-            ),
-        )
         if process.returncode != 0:
             msg = 'Failed to download packages'
             raise RuntimeError(msg)
 
-        target_path.joinpath('update_is_ready').touch()
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id=UPDATE_MANAGER_NOTIFICATION_ID,
+                    title='Update in progress',
+                    content="""\
+All packages downloaded successfully.
+Press 󰜉 button to reboot now or dismiss this notification to reboot later.""",
+                    extra_information=NotificationExtraInformation(
+                        text="""\
+After the reboot, the system will apply the update.
+This part may take around 20 minutes to complete.
+Then another reboot will be done to complete the update process.""",
+                    ),
+                    actions=[
+                        NotificationActionItem(
+                            icon='󰜉',
+                            action=lambda: dispatch(RebootEvent()),
+                        ),
+                    ],
+                    display_type=NotificationDisplayType.STICKY,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    progress=1,
+                    dismissable=False,
+                ),
+            ),
+        )
+
+        UPDATE_LOCK_PATH.touch()
 
     try:
         await download_files()
-
-        await asyncio.sleep(2)
-
-        dispatch(RebootEvent())
     except Exception:
         logger.exception('Failed to update')
         dispatch(

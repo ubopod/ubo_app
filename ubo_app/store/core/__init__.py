@@ -71,6 +71,7 @@ class RebootAction(PowerAction): ...
 
 class SetMenuPathAction(MainAction):
     path: Sequence[str]
+    depth: int
 
 
 class MainEvent(BaseEvent): ...
@@ -116,4 +117,5 @@ class RebootEvent(PowerEvent): ...
 class MainState(Immutable):
     menu: Menu | None = None
     path: Sequence[str] = field(default_factory=list)
+    depth: int = 0
     settings_items_priorities: dict[str, int] = field(default_factory=dict)

@@ -115,7 +115,6 @@ async def check_is_lightdm_enabled() -> None:
 
 def open_lightdm_menu() -> Menu:
     """Open the LightDM menu."""
-    create_task(check_is_lightdm_active())
     create_task(check_is_lightdm_enabled())
 
     return HeadlessMenu(
@@ -138,7 +137,6 @@ def init_service() -> None:
         ),
     )
 
-    create_task(check_is_lightdm_active())
     create_task(check_is_lightdm_enabled())
     create_task(
         monitor_unit(
