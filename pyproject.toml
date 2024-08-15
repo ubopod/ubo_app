@@ -39,7 +39,7 @@ platformdirs = "^4.2.0"
 dill = "^0.3.8"
 simpleaudio = "^1.0.4"
 
-python-redux = "^0.15.10"
+python-redux = "^0.16.0"
 python-debouncer = "^0.1.5"
 python-strtobool = "^1.0.0"
 python-fake = "^0.1.0"
@@ -93,7 +93,14 @@ typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
-test-on-device = "scripts/test_on_device.sh"
+
+[tool.poe.tasks.test-on-device]
+args = [
+  { name = "copy", type = "boolean" },
+  { name = "deps", type = "boolean" },
+  { name = "run", type = "boolean" },
+]
+cmd = "scripts/test_on_device.sh"
 
 [tool.poe.tasks.deploy-to-device]
 args = [

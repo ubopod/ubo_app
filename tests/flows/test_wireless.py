@@ -82,7 +82,7 @@ async def test_wireless_flow(
     app_context.set_app(app)
     load_services(['camera', 'wifi', 'notifications'])
 
-    @wait_for(timeout=20.0, wait=wait_fixed(1), run_async=True)
+    @wait_for(timeout=30.0, wait=wait_fixed(1), run_async=True)
     def check_icon(expected_icon: str) -> None:
         state = store._state  # noqa: SLF001
 

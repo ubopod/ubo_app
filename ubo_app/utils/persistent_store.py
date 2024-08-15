@@ -30,6 +30,7 @@ def register_persistent_store(
 
     @autorun(selector)
     async def write(value: T) -> None:
+        write.unsubscribe()
         if value is None:
             return
         with persistent_store_lock.write_lock():
@@ -41,7 +42,7 @@ def register_persistent_store(
             current_state[key] = serialized_value
             Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
 
-    subscribe_event(FinishEvent, write.unsubscribe)
+    subscribe_event(FinishEvent, write.unsubscribe, keep_ref=False)
 
 
 @overload

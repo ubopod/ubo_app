@@ -119,6 +119,10 @@ class AppContext:
 
             GPIO.cleanup(17)
 
+        from ubo_app.store.main import store
+
+        store.wait_for_event_handlers()
+
 
 class ConditionalFSWrapper:
     """Conditional wrapper for the fake filesystem."""
@@ -126,10 +130,10 @@ class ConditionalFSWrapper:
     def __init__(
         self: ConditionalFSWrapper,
         *,
-        condition: bool,
+        use_fake_fs: bool,
     ) -> None:
         """Initialize the wrapper."""
-        self.condition = condition
+        self.use_fake_fs = use_fake_fs
 
         # These needs to be imported before setting up fake fs
         import coverage
@@ -161,7 +165,7 @@ class ConditionalFSWrapper:
 
     def __enter__(self: ConditionalFSWrapper) -> Patcher | None:
         """Enter the context."""
-        if self.condition:
+        if self.use_fake_fs:
             import os
 
             real_paths = [
@@ -195,7 +199,7 @@ class ConditionalFSWrapper:
         traceback: TracebackType | None,
     ) -> None:
         """Exit the context."""
-        if self.condition:
+        if self.use_fake_fs:
             return self.patcher.__exit__(exc_type, exc_value, traceback)
         return None
 
@@ -280,7 +284,7 @@ async def app_context(
         is True
     )
 
-    with ConditionalFSWrapper(condition=should_use_fake_fs) as patcher:
+    with ConditionalFSWrapper(use_fake_fs=should_use_fake_fs) as patcher:
         context = AppContext(request)
 
         yield context

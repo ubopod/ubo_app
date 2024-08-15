@@ -4,7 +4,12 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+copy=${copy:-"False"}
+deps=${deps:-"False"}
+run=${run:-"False"}
+
 function run_on_pod() {
+  echo $1
   if [ $# -lt 1 ]; then
     echo "Usage: run_on_pod_out_of_env <command>"
     return 1
@@ -28,21 +33,23 @@ function run_on_pod_as_root() {
   return 1
 }
 
-run_on_pod_as_root "rm -rf /tmp/test-runner"
 
-git ls-files --others --exclude-standard --cached | rsync --info=progress2 -are ssh --files-from=- --ignore-missing-args ./ ubo-development-pod:/tmp/test-runner/
+if [ "$copy" == "True" ]; then
+  # Since rsync is not called with -r, it treats ./scripts as an empty directory and its content are ignored, it could be any other random directory inside "./". It is needed solely to create the root directory with ubo:ubo ownership.
+  (echo './scripts'; git ls-files --others --exclude-standard --cached) | grep -v "\-voice\/models\/" | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ ubo-development-pod:/home/ubo/test-runner/ --chown ubo:ubo
+fi
 
-run_on_pod_as_root "chown -R ubo:ubo /tmp/test-runner"
-run_on_pod "~/.local/bin/poetry --version || curl -L https://install.python-poetry.org | python3 -"
-run_on_pod "killall -9 pytest || true"
-run_on_pod "rm -rf ~/test-runner &&\
-  mv /tmp/test-runner ~/ &&\
+run_on_pod "$(if [ "$copy" == "True" ]; then echo "(~/.local/bin/poetry --version || \
+  curl -L https://install.python-poetry.org | python3 -) &&"; fi)
+  (killall -9 pytest || true) &&\
   cd ~/test-runner &&\
   ~/.local/bin/poetry config virtualenvs.options.system-site-packages true --local &&\
   ~/.local/bin/poetry env use python3.11 &&\
-  ~/.local/bin/poetry install --no-interaction --extras=dev --with=dev &&\
-  ~/.local/bin/poetry run poe test --make-screenshots -n1 $*; \
-  mv ~/test-runner /tmp/"
+  $(if [ "$deps" == "True" ]; then echo "~/.local/bin/poetry install --no-interaction --extras=dev --with=dev &&"; fi)\
+  $(if [ "$run" == "True" ]; then echo "~/.local/bin/poetry run poe test -svv --make-screenshots -n1 $* || true &&"; fi)\
+  true"
 
-rm -rf tests/**/results/
-run_on_pod "find /tmp/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args ubo-development-pod:/tmp/test-runner ./
+if [ "$run" == "True" ]; then
+  rm -rf tests/**/results/
+  run_on_pod "find ~/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --rsync-path="sudo rsync" --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args ubo-development-pod:/home/ubo/test-runner ./
+fi

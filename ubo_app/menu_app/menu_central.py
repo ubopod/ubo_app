@@ -126,19 +126,19 @@ This may take around 20 minutes to complete.""",
                     ),
                 )
 
-    def check_update(self: MenuWidgetWithHomePage, status: str) -> None:
-        dispatch(
-            UpdateManagerSetUpdateServiceStatusAction(
-                is_active=status in ('active', 'activating', 'reloading'),
-            ),
-        )
-
     def build(self: UboApp) -> Widget | None:
         root = super().build()
         self.menu_widget.padding_top = root.ids.header_layout.height
         self.menu_widget.padding_bottom = root.ids.footer_layout.height
 
-        create_task(monitor_unit('ubo-update.service', self.check_update))
+        def check_update(status: str) -> None:
+            dispatch(
+                UpdateManagerSetUpdateServiceStatusAction(
+                    is_active=status in ('active', 'activating', 'reloading'),
+                ),
+            )
+
+        create_task(monitor_unit('ubo-update.service', check_update))
 
         return root
 

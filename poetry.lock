@@ -1556,7 +1556,7 @@ develop = false
 type = "git"
 url = "https://github.com/sassanh/pyfakefs.git"
 reference = "skip_names"
-resolved_reference = "2e8fcfb07496cef91483fa939b3f6caf4f5617aa"
+resolved_reference = "20749959cc84c42e76aaf5a1a3dca43d847ed45b"
 
 [[package]]
 name = "pyftdi"
@@ -1614,13 +1614,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.375"
+version = "1.1.376"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.375-py3-none-any.whl", hash = "sha256:4c5e27eddeaee8b41cc3120736a1dda6ae120edf8523bb2446b6073a52f286e3"},
-    {file = "pyright-1.1.375.tar.gz", hash = "sha256:7765557b0d6782b2fadabff455da2014476404c9e9214f49977a4e49dec19a0f"},
+    {file = "pyright-1.1.376-py3-none-any.whl", hash = "sha256:0f2473b12c15c46b3207f0eec224c3cea2bdc07cd45dd4a037687cbbca0fbeff"},
+    {file = "pyright-1.1.376.tar.gz", hash = "sha256:bffd63b197cd0810395bb3245c06b01f95a85ddf6bfa0e5644ed69c841e954dd"},
 ]
 
 [package.dependencies]
@@ -1806,13 +1806,13 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.15.10"
+version = "0.16.0"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.15.10-py3-none-any.whl", hash = "sha256:dbd4b65a26fe7504f94df5fb55df9b94fe8bef3ff42948cffdb0f7818007cf05"},
-    {file = "python_redux-0.15.10.tar.gz", hash = "sha256:eb72e931896632e2cc1922f704434f6a52cce9133992be655af6d7e3939ee4e4"},
+    {file = "python_redux-0.16.0-py3-none-any.whl", hash = "sha256:9f5bbf1bdf0f8494de809047f056ccbe0f1548ba3125e9d96e90026e0c193390"},
+    {file = "python_redux-0.16.0.tar.gz", hash = "sha256:5165ca8dacaca4ba15d62042b67f6c3f1aeb09c446349cadc5c1969ba3bd3d16"},
 ]
 
 [package.dependencies]
@@ -2355,4 +2355,4 @@ dev = ["headless-kivy", "headless-kivy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "0f5704475e7a2dc1de0bbccc8b1c4bb02b0e001b628b49cd9b4e804a3cfde9ae"
+content-hash = "2ecc16ebdaa8741a096bed11f9a13c07bf403327c472af43e6a6f7829bc40145"
