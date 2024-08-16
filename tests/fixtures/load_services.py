@@ -39,7 +39,7 @@ class LoadServices(Protocol):
     ) -> Coroutine[None, None, None]: ...
 
 
-@pytest.fixture()
+@pytest.fixture
 def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
     """Load services and wait for them to be ready."""
     from ubo_app.load_services import REGISTERED_PATHS

@@ -36,17 +36,17 @@ function run_on_pod_as_root() {
 
 if [ "$copy" == "True" ]; then
   # Since rsync is not called with -r, it treats ./scripts as an empty directory and its content are ignored, it could be any other random directory inside "./". It is needed solely to create the root directory with ubo:ubo ownership.
-  (echo './scripts'; git ls-files --others --exclude-standard --cached) | grep -v "\-voice\/models\/" | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ ubo-development-pod:/home/ubo/test-runner/ --chown ubo:ubo
+  (echo './scripts'; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ ubo-development-pod:/home/ubo/test-runner/ --chown ubo:ubo
 fi
 
 run_on_pod "$(if [ "$copy" == "True" ]; then echo "(~/.local/bin/poetry --version || \
   curl -L https://install.python-poetry.org | python3 -) &&"; fi)
-  (killall -9 pytest || true) &&\
+  $(if [ "$run" == "True" ]; then echo "(killall -9 pytest || true) &&"; fi)\
   cd ~/test-runner &&\
-  ~/.local/bin/poetry config virtualenvs.options.system-site-packages true --local &&\
-  ~/.local/bin/poetry env use python3.11 &&\
+  $(if [ "$run" == "True" ] || [ "$deps" == "True" ]; then echo "~/.local/bin/poetry config virtualenvs.options.system-site-packages true --local &&\
+  ~/.local/bin/poetry env use python3.11 &&"; fi)\
   $(if [ "$deps" == "True" ]; then echo "~/.local/bin/poetry install --no-interaction --extras=dev --with=dev &&"; fi)\
-  $(if [ "$run" == "True" ]; then echo "~/.local/bin/poetry run poe test -svv --make-screenshots -n1 $* || true &&"; fi)\
+  $(if [ "$run" == "True" ]; then echo "~/.local/bin/poetry run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* || true &&"; fi)\
   true"
 
 if [ "$run" == "True" ]; then

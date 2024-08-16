@@ -247,7 +247,7 @@ def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, 'open_connection', Fake())
 
 
-@pytest.fixture()
+@pytest.fixture
 def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
     random.seed(0)

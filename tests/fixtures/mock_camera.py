@@ -19,7 +19,7 @@ class MockCamera:
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def camera() -> MockCamera:
     """Camera mocking tools."""
     return MockCamera()

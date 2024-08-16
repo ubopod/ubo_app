@@ -14,6 +14,27 @@ if TYPE_CHECKING:
 VERBOSE = 5
 
 
+def handle_circular_references(obj: object, seen: set[int] | None = None) -> object:
+    if seen is None:
+        seen = set()
+
+    obj_id = id(obj)
+    if obj_id in seen:
+        return None
+
+    seen.add(obj_id)
+
+    if isinstance(obj, dict):
+        return {
+            key: handle_circular_references(value, seen) for key, value in obj.items()
+        }
+    if isinstance(obj, list):
+        return [handle_circular_references(item, seen) for item in obj]
+    if isinstance(obj, tuple):
+        return tuple(handle_circular_references(item, seen) for item in obj)
+    return str(obj)
+
+
 class UboLogger(logging.getLoggerClass()):
     def __init__(self: UboLogger, name: str, level: int = logging.NOTSET) -> None:
         super().__init__(name, level)
@@ -82,7 +103,7 @@ class ExtraFormatter(logging.Formatter):
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
         if len(extra) > 0:
             string += ' - extra: ' + json.dumps(
-                extra,
+                handle_circular_references(extra),
                 sort_keys=True,
                 indent=2,
                 default=str,

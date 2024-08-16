@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import gc
 import json
 import logging
@@ -18,9 +17,15 @@ import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
 
-# It needs to be included in `modules_snapshot`
-__import__('numpy')
-modules_snapshot = set(sys.modules)
+modules_snapshot = set(sys.modules).union(
+    {
+        'kivy.cache',
+        'numpy',
+        'ubo_app.display',
+        'ubo_app.utils.monitor_unit',
+    },
+)
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -58,28 +63,33 @@ class AppContext:
 
         PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
-
-        from ubo_app.service import start_event_loop
-
-        start_event_loop()
         self.app = app
-        loop = asyncio.get_event_loop()
-        self.task = loop.create_task(self.app.async_run(async_lib='asyncio'))
+        self.loop = asyncio.get_event_loop()
+        self.task = self.loop.create_task(self.app.async_run(async_lib='asyncio'))
+
+        from ubo_app.service import start_event_loop_thread
+
+        start_event_loop_thread(asyncio.new_event_loop())
 
     async def clean_up(self: AppContext) -> None:
         """Clean up the application."""
-        from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD
+        from redux import FinishAction
+
+        import ubo_app.service
+        from ubo_app.store.main import store
+
+        store.dispatch(FinishAction())
 
         assert hasattr(self, 'task'), 'App not set for test'
 
         self.app.stop()
+
         await self.task
 
         app_ref = weakref.ref(self.app)
         self.app.root.clear_widgets()
 
-        with contextlib.suppress(asyncio.CancelledError):
-            await asyncio.sleep(MAIN_LOOP_GRACE_PERIOD + 0.2)
+        ubo_app.service.worker_thread.is_finished.wait()
 
         del self.app
         del self.task
@@ -119,10 +129,6 @@ class AppContext:
 
             GPIO.cleanup(17)
 
-        from ubo_app.store.main import store
-
-        store.wait_for_event_handlers()
-
 
 class ConditionalFSWrapper:
     """Conditional wrapper for the fake filesystem."""
@@ -133,39 +139,40 @@ class ConditionalFSWrapper:
         use_fake_fs: bool,
     ) -> None:
         """Initialize the wrapper."""
-        self.use_fake_fs = use_fake_fs
+        if use_fake_fs:
+            # These needs to be imported before setting up fake fs
+            import coverage
 
-        # These needs to be imported before setting up fake fs
-        import coverage
+            from ubo_app.utils import IS_RPI
 
-        from ubo_app.utils import IS_RPI
+            if IS_RPI:
+                picamera_skip_modules = [
+                    'picamera2',
+                    'picamera2.allocators.dmaallocator',
+                    'picamera2.dma_heap',
+                ]
+            else:
+                picamera_skip_modules = []
+            import headless_kivy_pytest.fixtures.snapshot
+            import pyzbar.pyzbar
+            import redux_pytest.fixtures.snapshot
 
-        if IS_RPI:
-            picamera_skip_modules = [
-                'picamera2',
-                'picamera2.allocators.dmaallocator',
-                'picamera2.dma_heap',
-            ]
+            self.patcher = Patcher(
+                additional_skip_names=[
+                    coverage,
+                    pytest,
+                    pyzbar.pyzbar,
+                    headless_kivy_pytest.fixtures.snapshot,
+                    redux_pytest.fixtures.snapshot,
+                    *picamera_skip_modules,
+                ],
+            )
         else:
-            picamera_skip_modules = []
-        import headless_kivy_pytest.fixtures.snapshot
-        import pyzbar.pyzbar
-        import redux_pytest.fixtures.snapshot
-
-        self.patcher = Patcher(
-            additional_skip_names=[
-                coverage,
-                pytest,
-                pyzbar.pyzbar,
-                headless_kivy_pytest.fixtures.snapshot,
-                redux_pytest.fixtures.snapshot,
-                *picamera_skip_modules,
-            ],
-        )
+            self.patcher = None
 
     def __enter__(self: ConditionalFSWrapper) -> Patcher | None:
         """Enter the context."""
-        if self.use_fake_fs:
+        if self.patcher:
             import os
 
             real_paths = [
@@ -199,7 +206,7 @@ class ConditionalFSWrapper:
         traceback: TracebackType | None,
     ) -> None:
         """Exit the context."""
-        if self.use_fake_fs:
+        if self.patcher:
             return self.patcher.__exit__(exc_type, exc_value, traceback)
         return None
 
@@ -251,7 +258,7 @@ def _setup_headless_kivy() -> None:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 async def app_context(
     request: SubRequest,
     _monkeypatch: pytest.MonkeyPatch,
@@ -274,11 +281,10 @@ async def app_context(
     os.environ['TEST_ROOT_PATH'] = Path().absolute().as_posix()
     should_use_fake_fs = (
         request.config.getoption(
-            '--use-fake-filesystem',
+            '--use-fakefs',
             default=cast(
                 Any,
-                str_to_bool(os.environ.get('UBO_TEST_USE_FAKE_FILESYSTEM', 'false'))
-                == 1,
+                str_to_bool(os.environ.get('UBO_TEST_USE_FAKEFS', 'false')) == 1,
             ),
         )
         is True
@@ -290,19 +296,14 @@ async def app_context(
         yield context
 
         await context.clean_up()
-        del patcher
+    del patcher
 
     assert not hasattr(context, 'app'), 'App not cleaned up'
 
     del context
 
     for module_name in set(sys.modules) - modules_snapshot:
-        if (
-            module_name != 'objc'
-            and 'kivy.cache' not in module_name
-            and 'sdbus' not in module_name
-            and 'ubo_app.display' not in module_name
-        ):
+        if not module_name.startswith('sdbus'):
             del sys.modules[module_name]
 
     gc.collect()

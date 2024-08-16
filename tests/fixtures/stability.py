@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Protocol
 
 import pytest
 from headless_kivy_pytest.fixtures.snapshot import write_image
-from tenacity import RetryError, stop_after_delay, wait_fixed
+from tenacity import RetryError, wait_fixed
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -25,7 +25,6 @@ class Stability(Protocol):
 
     async def __call__(
         self: Stability,
-        timeout: float = 5,
         initial_wait: float = 0.2,
         attempts: int = 1,
         wait: float = 0.5,
@@ -74,7 +73,7 @@ async def _run(
         raise
 
 
-@pytest.fixture()
+@pytest.fixture
 async def stability(
     store_snapshot: StoreSnapshot,
     window_snapshot: WindowSnapshot,
@@ -84,7 +83,6 @@ async def stability(
     """Wait for the screen and store to stabilize."""
 
     async def wrapper(
-        timeout: float = 5,
         initial_wait: float = 0.2,
         attempts: int = 1,
         wait: float = 0.5,
@@ -98,7 +96,6 @@ async def stability(
         @wait_for(
             run_async=True,
             wait=wait_fixed(wait),
-            stop=stop_after_delay(timeout),
         )
         def check() -> None:
             nonlocal latest_window_hash, latest_store_snapshot

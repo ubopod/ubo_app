@@ -208,7 +208,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          poetry run poe test --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ matrix.runner == 'ubo-pod' && '1' || 'auto' }}
+          poetry run poe test --verbosity=2 --capture=no --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ matrix.runner == 'ubo-pod' && '1' || 'auto' }}
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4

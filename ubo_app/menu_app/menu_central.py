@@ -38,7 +38,6 @@ from ubo_app.store.update_manager import (
     UpdateManagerSetUpdateServiceStatusAction,
 )
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.monitor_unit import monitor_unit
 
 from .home_page import HomePage
 
@@ -137,6 +136,8 @@ This may take around 20 minutes to complete.""",
                     is_active=status in ('active', 'activating', 'reloading'),
                 ),
             )
+
+        from ubo_app.utils.monitor_unit import monitor_unit
 
         create_task(monitor_unit('ubo-update.service', check_update))
 

@@ -69,10 +69,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     """Add options to the pytest command line."""
     parser.addoption('--override-window-snapshots', action='store_true')
     parser.addoption('--make-screenshots', action='store_true')
-    parser.addoption('--use-fake-filesystem', action='store_true')
+    parser.addoption('--use-fakefs', action='store_true')
 
 
-@pytest.fixture()
+@pytest.fixture
 def snapshot_prefix() -> str:
     """Return the prefix for the snapshots."""
     from ubo_app.utils import IS_RPI

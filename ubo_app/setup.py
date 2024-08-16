@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 from fake import Fake
-from redux import FinishAction
+from redux import FinishAction, FinishEvent
 
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Callable
@@ -102,17 +102,28 @@ def setup() -> None:
             Fake(_Fake__return_value=Fake(_Fake__await_value=(Fake(), Fake()))),
         )
 
-        import ubo_app.utils.monitor_unit
+        from ubo_app.utils import monitor_unit
 
         async def fake_monitor_unit(unit: str, callback: Callable[[str], None]) -> None:
             callback('inactive' if unit == 'ubo-update.service' else 'active')
 
-        ubo_app.utils.monitor_unit.monitor_unit = fake_monitor_unit
+        monitor_unit.monitor_unit = fake_monitor_unit
+
+    from kivy.clock import mainthread
 
     import ubo_app.display as _  # noqa: F401
+    from ubo_app.store.main import subscribe_event
+
+    subscribe_event(FinishEvent, mainthread(clear_signal_handlers))
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
+
+
+def clear_signal_handlers() -> None:
+    """Clear the signal handlers."""
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def signal_handler(signum: int, _: object) -> None:
@@ -122,8 +133,7 @@ def signal_handler(signum: int, _: object) -> None:
 
     logger.info('Received signal %s, turning off the display...', signum)
 
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    clear_signal_handlers()
 
     display.state.turn_off()
     display.state.pause()
