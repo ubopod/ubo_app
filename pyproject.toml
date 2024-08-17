@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.15.6"
+version = "0.15.7"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -16,12 +16,12 @@ priority = "primary"
 [tool.poetry.dependencies]
 python = "^3.11"
 psutil = "^6.0.0"
-ubo-gui = "^0.13.0"
+ubo-gui = "^0.13.1"
 headless-kivy = [
-  { version = "^0.9.4", markers = "extra=='default'", extras = [
+  { version = "^0.9.7", markers = "extra=='default'", extras = [
     "default",
   ] },
-  { version = "^0.9.4", markers = "extra=='dev'", extras = [
+  { version = "^0.9.7", markers = "extra=='dev'", extras = [
     "test",
   ] },
 ]

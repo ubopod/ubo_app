@@ -216,13 +216,13 @@ files = [
 
 [[package]]
 name = "aiohappyeyeballs"
-version = "2.3.6"
+version = "2.3.7"
 description = "Happy Eyeballs for asyncio"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "aiohappyeyeballs-2.3.6-py3-none-any.whl", hash = "sha256:15dca2611fa78442f1cb54cf07ffb998573f2b4fbeab45ca8554c045665c896b"},
-    {file = "aiohappyeyeballs-2.3.6.tar.gz", hash = "sha256:88211068d2a40e0436033956d7de3926ff36d54776f8b1022d6b21320cadae79"},
+    {file = "aiohappyeyeballs-2.3.7-py3-none-any.whl", hash = "sha256:337ce4dc0e99eb697c3c5a77d6cb3c52925824d9a67ac0dea7c55b8a2d60b222"},
+    {file = "aiohappyeyeballs-2.3.7.tar.gz", hash = "sha256:e794cd29ba6a14078092984e43688212a19081de3a73b6796c2fdeb3706dd6ce"},
 ]
 
 [[package]]
@@ -805,13 +805,13 @@ files = [
 
 [[package]]
 name = "headless-kivy"
-version = "0.9.6"
+version = "0.9.7"
 description = "Headless renderer for Kivy framework"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "headless_kivy-0.9.6-py3-none-any.whl", hash = "sha256:e731644438334cac370ba0b0015d4008e033829a1c02b1efc2b07b0db605ba6b"},
-    {file = "headless_kivy-0.9.6.tar.gz", hash = "sha256:fe242404e274db1c186601738c2fc4a7b5ea94156c4e39117131fbb9db163315"},
+    {file = "headless_kivy-0.9.7-py3-none-any.whl", hash = "sha256:647f012d289a4c64e366e526ad113c85646d5f1cb034fa5d76713b3aaa7c3bf2"},
+    {file = "headless_kivy-0.9.7.tar.gz", hash = "sha256:247534b46f80732621e1336b1ff83d5d05a023042ba16b27c572d04323cd5c37"},
 ]
 
 [package.dependencies]
@@ -2203,17 +2203,17 @@ files = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.13.0"
+version = "0.13.1"
 description = "GUI sdk for Ubo Pod"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "ubo_gui-0.13.0-py3-none-any.whl", hash = "sha256:e6698bd9963655a0a6ca80513f72c76a3f0ad18e8843538466d5e7ef54111fe1"},
-    {file = "ubo_gui-0.13.0.tar.gz", hash = "sha256:c638015076f7be2d8e96355f88048d8d6d90640cd79621c9d08fe9ffed00dc9b"},
+    {file = "ubo_gui-0.13.1-py3-none-any.whl", hash = "sha256:a1062939c651c2508d50af3a2a92a985695c217eb12c7ba163e445556789ecde"},
+    {file = "ubo_gui-0.13.1.tar.gz", hash = "sha256:95cf0a078cd197f593014258242ed8b4eb30bc9ee17a2ec8387ac2e2cf30d4dd"},
 ]
 
 [package.dependencies]
-headless-kivy = ">=0.9.0,<0.10.0"
+headless-kivy = ">=0.9.7,<0.10.0"
 python-immutable = ">=1.0.2,<2.0.0"
 qrcode = ">=7.4.2,<8.0.0"
 
@@ -2355,4 +2355,4 @@ dev = ["headless-kivy", "headless-kivy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "06a5a73099dca4f3d036fb53a91bfef83d72ed04e0908063cda34b71adc30212"
+content-hash = "0c874d16dd396f7c91c6316c505dd645a65349873bb52a3793f227fb8c6048db"

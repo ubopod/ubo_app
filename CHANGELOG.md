@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.15.7
+
+- refactor(core): general housekeeping, improve resource management in runtime and test environment, minor bug fixes
+- build(core): update dependencies to their latest versions
+
 ## Version 0.15.6
 
 - fix(audio): add a recovery mechanism for audio service to rebind the sound card if it is not available - closes #83
@@ -15,7 +20,6 @@
 - feat(core): add signal management for ubo_app process - closes #156
 - fix(core): use fasteners read-write lock implementation for the persistent store - closes #158
 - feat(core): improve the user experience of update-manager by making it more verbose about the current state of the update progress - closes #153
-- refactor(core): general housekeeping, improve resource management in runtime and test environment, minor bug fixes
 
 ## Version 0.15.5
 
