@@ -16,6 +16,7 @@
 - fix(core): use fasteners read-write lock implementation for the persistent store - closes #158
 - feat(core): improve the user experience of update-manager by making it more verbose about the current state of the update progress - closes #153
 - refactor(core): general housekeeping, improve resource management in runtime and test environment, minor bug fixes
+- build(core): update dependencies to their latest versions
 
 ## Version 0.15.5
 
