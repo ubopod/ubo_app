@@ -36,13 +36,11 @@ async def test_wireless_flow(
     load_services: LoadServices,
     stability: Stability,
     wait_for: WaitFor,
-    needs_finish: None,
     camera: MockCamera,
     wait_for_menu_item: WaitForMenuItem,
     wait_for_empty_menu: WaitForEmptyMenu,
 ) -> None:
     """Test the wireless flow."""
-    _ = needs_finish
     from ubo_app.menu_app.menu import MenuApp
     from ubo_app.store.core import ChooseMenuItemByIconEvent, ChooseMenuItemByLabelEvent
     from ubo_app.store.main import dispatch, store
@@ -82,7 +80,7 @@ async def test_wireless_flow(
     app_context.set_app(app)
     load_services(['camera', 'wifi', 'notifications'])
 
-    @wait_for(timeout=20.0, wait=wait_fixed(1), run_async=True)
+    @wait_for(wait=wait_fixed(1), run_async=True)
     def check_icon(expected_icon: str) -> None:
         state = store._state  # noqa: SLF001
 
@@ -149,7 +147,7 @@ async def test_wireless_flow(
     # Select "Select" to open the wireless connection list and see the new connection
     dispatch(ChooseMenuItemByLabelEvent(label='Select'))
 
-    @wait_for(timeout=20.0, wait=wait_fixed(1), run_async=True)
+    @wait_for(wait=wait_fixed(1), run_async=True)
     def check_connections() -> None:
         state = store._state  # noqa: SLF001
 
@@ -157,7 +155,7 @@ async def test_wireless_flow(
         assert state.wifi.connections is not None
 
     await check_connections()
-    await wait_for_menu_item(label='ubo-test-ssid', icon='󱚽', timeout=20)
+    await wait_for_menu_item(label='ubo-test-ssid', icon='󱚽')
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
 
@@ -165,27 +163,27 @@ async def test_wireless_flow(
     dispatch(ChooseMenuItemByLabelEvent(label='ubo-test-ssid'))
 
     # Wait for the "Disconnect" item to show up
-    await wait_for_menu_item(label='Disconnect', timeout=10)
+    await wait_for_menu_item(label='Disconnect')
     await stability()
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Disconnect'))
 
     # Wait for the "Connect" item to show up
-    await wait_for_menu_item(label='Connect', timeout=10)
+    await wait_for_menu_item(label='Connect')
     await check_icon('󰖪')
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Connect'))
 
-    await wait_for_menu_item(label='Disconnect', timeout=10)
+    await wait_for_menu_item(label='Disconnect')
     await check_icon('󰤨')
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
     dispatch(ChooseMenuItemByLabelEvent(label='Delete'))
 
-    @wait_for(timeout=20.0, wait=wait_fixed(1), run_async=True)
+    @wait_for(wait=wait_fixed(1), run_async=True)
     def check_no_connections() -> None:
         state = store._state  # noqa: SLF001
         assert state

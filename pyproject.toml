@@ -39,7 +39,7 @@ platformdirs = "^4.2.0"
 dill = "^0.3.8"
 simpleaudio = "^1.0.4"
 
-python-redux = "^0.15.10"
+python-redux = "^0.16.0"
 python-debouncer = "^0.1.5"
 python-strtobool = "^1.0.0"
 python-fake = "^0.1.0"
@@ -61,18 +61,18 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.24.4"
-pyright = "^1.1.374"
+pyright = "^1.1.376"
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.5.post1"
 pytest-cov = "^4.1.0"
 pytest-timeout = "^2.3.1"
 pytest-xdist = "^3.5.0"
-ruff = "^0.5.5"
+ruff = "^0.6.0"
 tenacity = "^8.2.3"
 toml = "^0.10.2"
 pytest-mock = "^3.14.0"
 ipython = "^8.23.0"
-pyfakefs = { git = "https://github.com/sassanh/pyfakefs.git", branch = "skip_names" }
+pyfakefs = { git = "https://github.com/pytest-dev/pyfakefs.git" }
 
 [tool.poetry.extras]
 default = ["headless-kivy"]
@@ -93,7 +93,14 @@ typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
-test-on-device = "scripts/test_on_device.sh"
+
+[tool.poe.tasks.test-on-device]
+args = [
+  { name = "copy", type = "boolean" },
+  { name = "deps", type = "boolean" },
+  { name = "run", type = "boolean" },
+]
+cmd = "scripts/test_on_device.sh"
 
 [tool.poe.tasks.deploy-to-device]
 args = [
@@ -110,7 +117,7 @@ target-version = 'py311'
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415"]
+ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
 fixable = ["ALL"]
 unfixable = []
 logger-objects = ['ubo_app.logging.logger']
@@ -207,7 +214,7 @@ filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
   "ignore:'imghdr' is deprecated:DeprecationWarning",
 ]
-timeout = 120
+timeout = 40
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:"]

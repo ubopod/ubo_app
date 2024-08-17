@@ -236,6 +236,16 @@ class UboServiceThread(threading.Thread):
             },
         )
 
+        from redux import FinishEvent
+
+        from ubo_app.store.main import store
+
+        def stop() -> None:
+            unsubscribe()
+            self.stop()
+
+        unsubscribe = store.subscribe_event(FinishEvent, stop)
+
         self.start()
 
     def initiate(self: UboServiceThread) -> None:
@@ -293,11 +303,6 @@ class UboServiceThread(threading.Thread):
         if asyncio.iscoroutine(result):
             self.loop.create_task(result, name=f'Setup task for {self.label}')
 
-        from redux import FinishEvent
-
-        from ubo_app.store.main import store
-
-        store.subscribe_event(FinishEvent, self.stop)
         self.loop.run_forever()
 
     def __repr__(self: UboServiceThread) -> str:
@@ -335,6 +340,8 @@ class UboServiceThread(threading.Thread):
                 task
                 for task in asyncio.all_tasks(self.loop)
                 if task is not asyncio.current_task(self.loop)
+                and task.cancelling() == 0
+                and not task.done()
             ]
             logger.debug(
                 'Waiting for tasks to finish',
@@ -345,9 +352,15 @@ class UboServiceThread(threading.Thread):
             )
             if not tasks:
                 break
-            for task in tasks:
-                with contextlib.suppress(BaseException):
-                    await asyncio.wait_for(task, timeout=SERVICES_LOOP_GRACE_PERIOD)
+            with contextlib.suppress(BaseException):
+                await asyncio.wait_for(
+                    asyncio.gather(
+                        *tasks,
+                        return_exceptions=True,
+                    ),
+                    timeout=SERVICES_LOOP_GRACE_PERIOD,
+                )
+            await asyncio.sleep(0.1)
 
         logger.debug('Stopping event loop', extra={'thread_': self})
         self.loop.stop()

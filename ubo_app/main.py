@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 
@@ -36,9 +37,9 @@ def main() -> None:
 
     setup()
 
-    from ubo_app.service import start_event_loop
+    from ubo_app.service import start_event_loop_thread
 
-    start_event_loop()
+    start_event_loop_thread(asyncio.get_event_loop())
 
     import headless_kivy.config
 

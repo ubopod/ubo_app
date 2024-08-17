@@ -80,7 +80,7 @@
     "is_connected": true
   },
   "lightdm": {
-    "is_active": true,
+    "is_active": false,
     "is_enabled": true
   },
   "main": {
@@ -467,7 +467,7 @@
                               1,
                               1
                             ],
-                            "icon": "[color=#008000]󰪥[/color]",
+                            "icon": "[color=#ffff00]󰝦[/color]",
                             "is_short": false,
                             "key": "lightdm",
                             "label": "LightDM",

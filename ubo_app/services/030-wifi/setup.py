@@ -124,7 +124,7 @@ async def init_service() -> None:
         ),
     )
 
-    subscribe_event(WiFiUpdateRequestEvent, lambda: create_task(request_scan()))
+    subscribe_event(WiFiUpdateRequestEvent, request_scan)
 
     if not read_from_persistent_store(
         key='wifi_has_visited_onboarding',

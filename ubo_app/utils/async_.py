@@ -2,74 +2,28 @@
 from __future__ import annotations
 
 import asyncio
-from threading import current_thread
 from typing import TYPE_CHECKING, ParamSpec
 
 from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
     from asyncio import Handle
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Callable, Coroutine
 
     from redux.basic_types import TaskCreatorCallback
 
 
-background_tasks: set[Handle] = set()
-
-
 def create_task(
-    awaitable: Awaitable,
+    task: Coroutine,
     callback: TaskCreatorCallback | None = None,
 ) -> Handle:
-    async def wrapper() -> None:
-        from ubo_app.load_services import UboServiceThread
-        from ubo_app.logging import get_logger
-
-        logger = get_logger('ubo-app')
-
-        try:
-            thread = current_thread()
-            logger.verbose(
-                'Starting task',
-                extra={
-                    'awaitable': awaitable,
-                    'thread_': thread,
-                    **(
-                        {
-                            'ubo_service_path': thread.path.as_posix(),
-                            'ubo_service_label': thread.label,
-                        }
-                        if isinstance(thread, UboServiceThread)
-                        else {}
-                    ),
-                },
-            )
-            await awaitable
-        except Exception:
-            task = asyncio.current_task()
-            thread = current_thread()
-            logger.exception(
-                'Task failed',
-                extra={
-                    'awaitable': awaitable,
-                    'task': task,
-                    'thread_': thread,
-                    **(
-                        {
-                            'ubo_service_path': thread.path.as_posix(),
-                            'ubo_service_label': thread.label,
-                        }
-                        if isinstance(thread, UboServiceThread)
-                        else {}
-                    ),
-                },
-            )
-
     import ubo_app.service
 
-    handle = ubo_app.service._create_task(wrapper(), callback)  # noqa: SLF001
-    background_tasks.add(handle)
-    return handle
+    def callback_(task: asyncio.Task) -> None:
+        if callback:
+            callback(task)
+
+    return ubo_app.service._create_task(task, callback_)  # noqa: SLF001
 
 
 T = TypeVar('T', infer_variance=True)

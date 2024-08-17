@@ -255,6 +255,16 @@ def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
     reload_daemon()
     enable_services()
 
+    # TODO(sassanh): Disable lightdm to disable piwiz to avoid its visual # noqa: FIX002
+    # instructions as ubo by nature doesn't need mouse/keyboard, this is a temporary
+    # solution until we have a better way to handle this.
+    # Also `check` is `False` because this service is not available in the light image
+    # and this same code runs for all images.
+    subprocess.run(  # noqa: S603
+        ['/usr/bin/env', 'systemctl', 'disable', 'lightdm'],
+        check=False,
+    )
+
     setup_polkit()
 
     if with_docker:

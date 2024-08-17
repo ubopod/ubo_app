@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from redux import Store
 
 
-@pytest.fixture()
+@pytest.fixture
 def store() -> Store:
     """Take a snapshot of the store."""
     from ubo_app.store.main import store

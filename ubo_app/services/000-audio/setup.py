@@ -26,7 +26,6 @@ def _run_async_in_thread(
     **kwargs: Args.kwargs,
 ) -> None:
     loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     result = loop.run_until_complete(async_func(*args, **kwargs))
     loop.close()
     return result

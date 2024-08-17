@@ -41,7 +41,11 @@ def register_persistent_store(
             current_state[key] = serialized_value
             Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
 
-    subscribe_event(FinishEvent, write.unsubscribe)
+    def unsubscribe() -> None:
+        unsubscribe_event()
+        write.unsubscribe()
+
+    unsubscribe_event = subscribe_event(FinishEvent, unsubscribe)
 
 
 @overload

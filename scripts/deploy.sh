@@ -4,9 +4,16 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Signal handler
+function cleanup() {
+  perl -i -pe 's/^exclude = .*-voice\/models.*\n//' pyproject.toml
+}
+trap cleanup ERR
+trap cleanup EXIT
+
 perl -i -pe 's/^(packages = \[.*)$/\1\nexclude = ["ubo_app\/services\/*-voice\/models\/*"]/' pyproject.toml
 poetry build
-perl -i -pe 's/^exclude = .*-voice\/models.*\n//' pyproject.toml
+cleanup
 
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
 deps=${deps:-"False"}
@@ -41,22 +48,21 @@ function run_on_pod_as_root() {
 
 scp dist/$LATEST_VERSION ubo-development-pod:/tmp/
 
-test "$deps" == "True" && run_on_pod "pip install --upgrade /tmp/$LATEST_VERSION[default]"
-
-run_on_pod "mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/models /tmp/
+run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION[default] &&"; fi)\
+mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/models /tmp/
 pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION[default]
 mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/"
 
-test "$bootstrap" == "True" &&
-  run_on_pod_as_root "/opt/ubo/env/bin/bootstrap; systemctl restart ubo-system.service"
+if [ "$bootstrap" == "True" ] || [ "$env" == "True" ]; then
+  run_on_pod_as_root "$(if [ "$bootstrap" == "True" ]; then echo "/opt/ubo/env/bin/bootstrap && systemctl daemon-reload && systemctl restart ubo-system.service &&"; fi)\
+$(if [ "$env" == "True" ]; then echo "cat <<'EOF' > /tmp/.dev.env
+$(cat ubo_app/.dev.env)
+EOF &&
+chown ubo:ubo /tmp/.dev.env &&
+mv /tmp/.dev.env /opt/ubo/env/lib/python3.*/site-packages/ubo_app/"; fi)"
+fi
 
-test "$env" == "True" &&
-  scp ubo_app/.dev.env ubo-development-pod:/tmp/ &&
-  run_on_pod_as_root "chown ubo:ubo /tmp/.dev.env" &&
-  run_on_pod "mv /tmp/.dev.env /opt/ubo/env/lib/python3.11/site-packages/ubo_app/"
-
-test "$run" == "True" &&
-  run_on_pod "systemctl --user restart ubo-app.service"
-
-test "$restart" == "True" &&
-  run_on_pod "killall -9 ubo"
+if [ "$run" == "True" ] || [ "$restart" == "True" ]; then
+  run_on_pod "$(if [ "$run" == "True" ]; then echo "systemctl --user restart ubo-app.service &&"; fi)\
+$(if [ "$restart" == "True" ]; then echo "killall -9 ubo"; fi)"
+fi
