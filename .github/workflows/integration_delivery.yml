@@ -11,7 +11,7 @@ env:
 jobs:
   dependencies:
     name: Install Dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -22,7 +22,7 @@ jobs:
           sudo apt-get install -y portaudio19-dev
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: useblacksmith/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
@@ -34,7 +34,7 @@ jobs:
 
       - name: Check Cached Poetry
         id: cached-poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         with:
           lookup-only: true
           path: |
@@ -50,7 +50,7 @@ jobs:
 
       - name: Save Cached Poetry
         if: steps.cached-poetry.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: useblacksmith/cache/save@v5
         with:
           path: |
             ~/.cache
@@ -140,20 +140,20 @@ jobs:
     name: Lint
     needs:
       - dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
         name: Checkout
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: useblacksmith/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
       - name: Load Cached Poetry
         id: cached-poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         with:
           path: |
             ~/.cache
@@ -172,7 +172,7 @@ jobs:
       - ubo-pod-dependencies
     strategy:
       matrix:
-        runner: ['ubo-pod', 'ubuntu-latest']
+        runner: ['ubo-pod', 'blacksmith-4vcpu-ubuntu-2204']
     runs-on: ${{ matrix.runner }}
     environment:
       name: test
@@ -189,14 +189,14 @@ jobs:
 
       - name: Setup Python
         if: matrix.runner != 'ubo-pod'
-        uses: actions/setup-python@v5
+        uses: useblacksmith/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
       - name: Load Cached Poetry
         id: cached-poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         with:
           path: |
             ~/.cache
@@ -242,7 +242,7 @@ jobs:
     name: Build
     needs:
       - dependencies
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     outputs:
       version: ${{ steps.extract-version.outputs.VERSION }}
       name: ${{ steps.extract-version.outputs.NAME }}
@@ -252,7 +252,7 @@ jobs:
         with:
           lfs: true
 
-      - uses: actions/setup-python@v5
+      - uses: useblacksmith/setup-python@v6
         name: Setup Python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -260,7 +260,7 @@ jobs:
 
       - name: Load Cached Poetry
         id: cached-poetry
-        uses: actions/cache/restore@v4
+        uses: useblacksmith/cache/restore@v5
         with:
           path: |
             ~/.cache
@@ -335,7 +335,7 @@ jobs:
       - lint
       - test
       - build
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     container:
       image: mkaczanowski/packer-builder-arm
       volumes:
@@ -429,7 +429,7 @@ jobs:
       - test
       - build
       - images
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     environment:
       name: pypi
       url: https://pypi.org/p/${{ needs.build.outputs.name }}
@@ -462,7 +462,7 @@ jobs:
       - build
       - pypi-publish
       - images
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     environment:
       name: release
       url:
