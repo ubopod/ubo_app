@@ -2,6 +2,8 @@ name: CI/CD
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -41,7 +43,7 @@ jobs:
             ~/.cache
             ~/.local
           key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            poetry-blacksmith-4vcpu-ubuntu-2204-python${{ env.PYTHON_VERSION
             }}-${{hashFiles('poetry.lock') }}
 
       - name: Install dependencies
@@ -56,7 +58,7 @@ jobs:
             ~/.cache
             ~/.local
           key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            poetry-blacksmith-4vcpu-ubuntu-2204-python${{ env.PYTHON_VERSION
             }}-${{hashFiles('poetry.lock') }}
 
   ubo-pod-dependencies:
@@ -159,7 +161,7 @@ jobs:
             ~/.cache
             ~/.local
           key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            poetry-blacksmith-4vcpu-ubuntu-2204-python${{ env.PYTHON_VERSION
             }}-${{hashFiles('poetry.lock') }}
 
       - name: Lint
@@ -172,7 +174,8 @@ jobs:
       - ubo-pod-dependencies
     strategy:
       matrix:
-        runner: ['ubo-pod', 'blacksmith-4vcpu-ubuntu-2204']
+        runner: ['blacksmith-4vcpu-ubuntu-2204']
+        # runner: ['ubo-pod', 'blacksmith-4vcpu-ubuntu-2204'] TODO
     runs-on: ${{ matrix.runner }}
     environment:
       name: test
@@ -266,7 +269,7 @@ jobs:
             ~/.cache
             ~/.local
           key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
+            poetry-blacksmith-4vcpu-ubuntu-2204-python${{ env.PYTHON_VERSION
             }}-${{hashFiles('poetry.lock') }}
 
       - name: Extract Version
