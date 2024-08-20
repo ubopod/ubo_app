@@ -774,7 +774,7 @@
       }
     ],
     "current_connection": null,
-    "has_visited_onboarding": true,
+    "has_visited_onboarding": null,
     "state": "Disconnected"
   }
 }

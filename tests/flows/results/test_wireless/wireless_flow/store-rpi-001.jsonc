@@ -18,6 +18,6 @@
     "state": "Connected",
     "type": null
   },
-  "has_visited_onboarding": true,
+  "has_visited_onboarding": null,
   "state": "Connected"
 }

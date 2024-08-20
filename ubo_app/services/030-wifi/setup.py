@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from debouncer import DebounceOptions, debounce
 from pages import create_wireless_connection, main
+from redux import AutorunOptions
 from ubo_gui.constants import INFO_COLOR
 from wifi_manager import (
     get_connections,
@@ -16,7 +17,7 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.main import dispatch, subscribe_event
+from ubo_app.store.main import autorun, dispatch, subscribe_event
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -70,39 +71,40 @@ async def setup_listeners() -> None:
         create_task(update_wifi_list())
 
 
+ONBOARDING_NOTIFICATION = Notification(
+    title='No internet connection',
+    content='Press middle button "󱚾" to add WiFi network',
+    importance=Importance.MEDIUM,
+    icon='󱚵',
+    display_type=NotificationDisplayType.STICKY,
+    actions=[
+        NotificationActionItem(
+            action=lambda: (create_wireless_connection.CreateWirelessConnectionPage),
+            icon='󱚾',
+            background_color=INFO_COLOR,
+            dismiss_notification=True,
+        ),
+    ],
+    extra_information=NotificationExtraInformation(
+        text='Press middle button to add WiFi network with QR code.\n'
+        'If you dismiss this, you can always add WiFi network through '
+        'Settings → Network → WiFi',
+        piper_text='Press middle button to add WiFi network with QR code.\n'
+        'If you dismiss this, you can always add WiFi network through '
+        'Settings menu, by navigating to Network, and then WiFi',
+        picovoice_text='Press middle button to add {WiFi|W AY F AY} '
+        'network with {QR|K Y UW AA R} code.\n'
+        'If you dismiss this, you can always add {WiFi|W AY F AY} network '
+        'through Settings → Network → {WiFi|W AY F AY}',
+    ),
+    color=INFO_COLOR,
+)
+
+
 def show_onboarding_notification() -> None:
     dispatch(
         NotificationsAddAction(
-            notification=Notification(
-                title='No internet connection',
-                content='Press middle button "󱚾" to add WiFi network',
-                importance=Importance.MEDIUM,
-                icon='󱚵',
-                display_type=NotificationDisplayType.STICKY,
-                actions=[
-                    NotificationActionItem(
-                        action=lambda: (
-                            create_wireless_connection.CreateWirelessConnectionPage
-                        ),
-                        icon='󱚾',
-                        background_color=INFO_COLOR,
-                        dismiss_notification=True,
-                    ),
-                ],
-                extra_information=NotificationExtraInformation(
-                    text='Press middle button to add WiFi network with QR code.\n'
-                    'If you dismiss this, you can always add WiFi network through '
-                    'Settings → Network → WiFi',
-                    piper_text='Press middle button to add WiFi network with QR code.\n'
-                    'If you dismiss this, you can always add WiFi network through '
-                    'Settings menu, by navigating to Network, and then WiFi',
-                    picovoice_text='Press middle button to add {WiFi|W AY F AY} '
-                    'network with {QR|K Y UW AA R} code.\n'
-                    'If you dismiss this, you can always add {WiFi|W AY F AY} network '
-                    'through Settings → Network → {WiFi|W AY F AY}',
-                ),
-                color=INFO_COLOR,
-            ),
+            notification=ONBOARDING_NOTIFICATION,
         ),
     )
 
@@ -126,10 +128,18 @@ async def init_service() -> None:
 
     subscribe_event(WiFiUpdateRequestEvent, request_scan)
 
-    if not read_from_persistent_store(
-        key='wifi_has_visited_onboarding',
-        default=False,
-    ):
-        logger.info('No internet connection, showing WiFi onboarding.')
-        show_onboarding_notification()
-    dispatch(WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True))
+    @autorun(
+        lambda state: state.ip.is_connected,
+        options=AutorunOptions(default_value=None),
+    )
+    def check_onboarding(is_connected: bool | None) -> None:
+        if is_connected is False and not read_from_persistent_store(
+            key='wifi_has_visited_onboarding',
+            default=False,
+        ):
+            logger.info('No internet connection, showing WiFi onboarding.')
+            show_onboarding_notification()
+            dispatch(WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True))
+
+        if is_connected is not None:
+            check_onboarding.unsubscribe()

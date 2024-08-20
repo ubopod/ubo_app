@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.15.8
+
+- fix(wifi): improve the logic of wifi onboarding notification
+
 ## Version 0.15.7
 
 - refactor(core): general housekeeping, improve resource management in runtime and test environment, minor bug fixes
