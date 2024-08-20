@@ -52,6 +52,7 @@ def reducer(
         state = replace(
             state,
             current_version=action.current_version,
+            base_image_variant=action.base_image_variant,
             latest_version=action.latest_version,
             serial_number=action.serial_number,
         )

@@ -37,9 +37,26 @@ from ubo_app.store.update_manager import (
     UpdateManagerState,
     UpdateStatus,
 )
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.eeprom import read_serial_number
 
 CURRENT_VERSION = importlib.metadata.version('ubo_app')
+if IS_RPI:
+    try:
+        BASE_IMAGE = Path('/etc/ubo_base_image').read_text()
+    except FileNotFoundError:
+        BASE_IMAGE = '[unknown]'
+else:
+    BASE_IMAGE = '[unknown]'
+BASE_IMAGE_VARIANT = (
+    BASE_IMAGE == '[unknown]'
+    and '[unknown]'
+    or BASE_IMAGE.endswith('-lite')
+    and 'lite'
+    or BASE_IMAGE.endswith('-full')
+    and 'full'
+    or 'desktop'
+)
 
 
 async def check_version() -> None:
@@ -67,6 +84,7 @@ async def check_version() -> None:
                     flash_notification=state is None
                     or state.main.path[:2] != ['main', 'about'],
                     current_version=CURRENT_VERSION,
+                    base_image_variant=BASE_IMAGE_VARIANT,
                     latest_version=latest_version,
                     serial_number=serial_number,
                 ),

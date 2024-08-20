@@ -3,6 +3,7 @@
 ## Version 0.15.8
 
 - fix(wifi): improve the logic of wifi onboarding notification
+- feat(core): add base image to `/etc/ubo_base_image` and about page
 
 ## Version 0.15.7
 

@@ -6,6 +6,10 @@ variable "image_url" {
   type = string
 }
 
+variable "image_name" {
+  type = string
+}
+
 variable "image_checksum_url" {
   type = string
 }
@@ -69,6 +73,7 @@ build {
 
   provisioner "shell" {
     inline = [
+      "echo \"${var.image_name}\" > /etc/ubo_base_image",
       "chmod +x /install.sh",
       "/install.sh --in-packer --with-docker --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "rm /install.sh /ubo_app-${var.ubo_app_version}-py3-none-any.whl",

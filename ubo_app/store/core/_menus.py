@@ -26,7 +26,11 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsDisplayEvent,
 )
-from ubo_app.store.update_manager.utils import CURRENT_VERSION, about_menu_items
+from ubo_app.store.update_manager.utils import (
+    BASE_IMAGE,
+    CURRENT_VERSION,
+    about_menu_items,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -80,7 +84,7 @@ MAIN_MENU = HeadlessMenu(
             sub_menu=HeadedMenu(
                 title='About',
                 heading=f'Ubo v{CURRENT_VERSION}',
-                sub_heading='A universal dashboard for your Raspberry Pi',
+                sub_heading=f'Base image: {BASE_IMAGE[:11]}\n{BASE_IMAGE[11:]}',
                 items=about_menu_items,
             ),
         ),

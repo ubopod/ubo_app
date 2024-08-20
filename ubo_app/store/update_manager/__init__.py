@@ -14,8 +14,9 @@ class UpdateManagerAction(BaseAction): ...
 
 class UpdateManagerSetVersionsAction(UpdateManagerAction):
     flash_notification: bool
-    latest_version: str
     current_version: str
+    base_image_variant: str
+    latest_version: str
     serial_number: str
 
 
@@ -51,6 +52,7 @@ class UpdateManagerState(Immutable):
 
     serial_number: str | None = None
     current_version: str | None = None
+    base_image_variant: str | None = None
     latest_version: str | None = None
     update_status: UpdateStatus = UpdateStatus.CHECKING
     is_update_service_active: bool = False

@@ -133,6 +133,11 @@ async def init_service() -> None:
         options=AutorunOptions(default_value=None),
     )
     def check_onboarding(is_connected: bool | None) -> None:
+        try:
+            _ = check_onboarding
+        except NameError:
+            return
+
         if is_connected is False and not read_from_persistent_store(
             key='wifi_has_visited_onboarding',
             default=False,

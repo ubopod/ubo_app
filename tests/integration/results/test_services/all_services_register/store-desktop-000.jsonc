@@ -611,7 +611,7 @@
                     }
                   ],
                   "placeholder": null,
-                  "sub_heading": "A universal dashboard for your Raspberry Pi",
+                  "sub_heading": "Base image: [unknown]\n",
                   "title": "About"
                 }
               }
@@ -752,6 +752,7 @@
     ]
   },
   "update_manager": {
+    "base_image_variant": "[unknown]",
     "current_version": "0.0.0",
     "is_update_service_active": false,
     "latest_version": "0.0.0",
