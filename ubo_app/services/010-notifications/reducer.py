@@ -20,6 +20,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
     NotificationsClearAction,
     NotificationsClearAllAction,
+    NotificationsClearByIdAction,
     NotificationsClearEvent,
     NotificationsDisplayEvent,
     NotificationsState,
@@ -113,19 +114,47 @@ def reducer(
             events=events,
         )
     if isinstance(action, NotificationsClearAction):
+        new_notifications = [
+            notification
+            for notification in state.notifications
+            if notification is not action.notification
+        ]
         return CompleteReducerResult(
             state=replace(
                 state,
-                notifications=[
-                    notification
-                    for notification in state.notifications
-                    if notification is not action.notification
-                ],
-                unread_count=state.unread_count - 1
-                if action.notification in state.notifications
-                else state.unread_count,
+                notifications=new_notifications,
+                unread_count=sum(
+                    1 for notification in new_notifications if not notification.is_read
+                ),
             ),
             events=[NotificationsClearEvent(notification=action.notification)],
+        )
+    if isinstance(action, NotificationsClearByIdAction):
+        to_be_removed = next(
+            (
+                notification
+                for notification in state.notifications
+                if notification.id == action.id
+            ),
+            None,
+        )
+        if to_be_removed is None:
+            return state
+
+        new_notifications = [
+            notification
+            for notification in state.notifications
+            if notification.id != action.id
+        ]
+        return CompleteReducerResult(
+            state=replace(
+                state,
+                notifications=new_notifications,
+                unread_count=sum(
+                    1 for notification in new_notifications if not notification.is_read
+                ),
+            ),
+            events=[NotificationsClearEvent(notification=to_be_removed)],
         )
     if isinstance(action, NotificationsClearAllAction):
         return replace(state, notifications=[], unread_count=0)

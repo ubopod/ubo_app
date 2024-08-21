@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
 from ubo_gui.app import UboApp
-from ubo_gui.constants import INFO_COLOR
 from ubo_gui.menu.menu_widget import MenuWidget
 from ubo_gui.menu.stack_item import StackItem, StackMenuItem
 
@@ -25,18 +24,8 @@ from ubo_app.store.core import (
 )
 from ubo_app.store.main import autorun, dispatch, subscribe_event
 from ubo_app.store.services.keypad import Key, KeypadKeyPressEvent
-from ubo_app.store.services.notifications import (
-    Importance,
-    Notification,
-    NotificationDisplayType,
-    NotificationsAddAction,
-    NotificationsClearAction,
-    NotificationsDisplayEvent,
-)
-from ubo_app.store.update_manager import (
-    UPDATE_MANAGER_NOTIFICATION_ID,
-    UpdateManagerSetUpdateServiceStatusAction,
-)
+from ubo_app.store.services.notifications import NotificationsDisplayEvent
+from ubo_app.store.update_manager import UpdateManagerSetUpdateServiceStatusAction
 from ubo_app.utils.async_ import create_task
 
 from .home_page import HomePage
@@ -95,35 +84,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             if not self or not menu:
                 return
             self.menu_widget.set_root_menu(menu)
-
-        background_update_notification = Notification(
-            id=UPDATE_MANAGER_NOTIFICATION_ID,
-            title='Update in progress',
-            content="""\
-Please keep the device powered on.
-This may take around 20 minutes to complete.""",
-            importance=Importance.LOW,
-            icon='󰚰',
-            display_type=NotificationDisplayType.STICKY,
-            dismissable=False,
-            dismiss_on_close=False,
-            color=INFO_COLOR,
-        )
-
-        @autorun(lambda state: state.update_manager.is_update_service_active)
-        def _(is_active: bool) -> None:  # noqa: FBT001
-            if is_active:
-                dispatch(
-                    NotificationsAddAction(
-                        notification=background_update_notification,
-                    ),
-                )
-            else:
-                dispatch(
-                    NotificationsClearAction(
-                        notification=background_update_notification,
-                    ),
-                )
 
     def build(self: UboApp) -> Widget | None:
         root = super().build()

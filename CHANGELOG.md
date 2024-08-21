@@ -3,6 +3,7 @@
 ## Version 0.15.9
 
 - build(packer): set `autologin-user` to `ubo` in `/etc/lightdm/lightdm.conf`
+- feat(core): improve update notification for phase-2 of the update process and add a spinner on top-left
 
 ## Version 0.15.8
 

@@ -6,7 +6,9 @@ import asyncio
 import importlib.metadata
 import shutil
 import subprocess
+import time
 from pathlib import Path
+from typing import TypedDict
 
 import aiohttp
 import requests
@@ -24,11 +26,13 @@ from ubo_app.store.core import RebootEvent
 from ubo_app.store.main import autorun, dispatch
 from ubo_app.store.services.notifications import (
     Chime,
+    Importance,
     Notification,
     NotificationActionItem,
     NotificationDisplayType,
     NotificationExtraInformation,
     NotificationsAddAction,
+    NotificationsClearByIdAction,
 )
 from ubo_app.store.update_manager import (
     UPDATE_MANAGER_NOTIFICATION_ID,
@@ -330,3 +334,50 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ),
         ]
     return []
+
+
+class _UpdateManagerServiceState(TypedDict):
+    is_running: bool
+    is_presented: bool
+    progress: int
+
+
+@autorun(
+    lambda state: _UpdateManagerServiceState(
+        is_running=state.update_manager.is_update_service_active,
+        is_presented=any(
+            notification.id == UPDATE_MANAGER_NOTIFICATION_ID
+            for notification in state.notifications.notifications
+        ),
+        progress=int(time.time() / 2),
+    ),
+)
+def _(state: _UpdateManagerServiceState) -> None:
+    if state['is_running']:
+        dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id=UPDATE_MANAGER_NOTIFICATION_ID,
+                    title='Update in progress',
+                    content="""\
+                Please keep the device powered on.
+                This may take around 20 minutes to complete.""",
+                    importance=Importance.LOW,
+                    icon='󰚰',
+                    display_type=NotificationDisplayType.BACKGROUND
+                    if state['is_presented']
+                    else NotificationDisplayType.STICKY,
+                    dismissable=False,
+                    dismiss_on_close=False,
+                    color=INFO_COLOR,
+                    progress=(state['progress'] % 4 + 1) / 4,
+                    blink=not state['is_presented'],
+                ),
+            ),
+        )
+    else:
+        dispatch(
+            NotificationsClearByIdAction(
+                id=UPDATE_MANAGER_NOTIFICATION_ID,
+            ),
+        )

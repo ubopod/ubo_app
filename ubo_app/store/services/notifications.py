@@ -123,6 +123,10 @@ class NotificationsClearAction(NotificationsAction):
     notification: Notification
 
 
+class NotificationsClearByIdAction(NotificationsAction):
+    id: str
+
+
 class NotificationsClearAllAction(NotificationsAction): ...
 
 
