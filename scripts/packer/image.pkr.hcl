@@ -74,6 +74,7 @@ build {
   provisioner "shell" {
     inline = [
       "echo \"${var.image_name}\" > /etc/ubo_base_image",
+      "sed -i /etc/lightdm/lightdm.conf -e 's|#\\?autologin-user=.*|autologin-user=ubo|' || true",
       "chmod +x /install.sh",
       "/install.sh --in-packer --with-docker --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
       "rm /install.sh /ubo_app-${var.ubo_app_version}-py3-none-any.whl",

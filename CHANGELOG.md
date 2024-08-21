@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.15.9
+
+- build(packer): set `autologin-user` to `ubo` in `/etc/lightdm/lightdm.conf`
+
 ## Version 0.15.8
 
 - fix(wifi): improve the logic of wifi onboarding notification
