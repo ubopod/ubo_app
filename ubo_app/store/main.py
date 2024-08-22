@@ -7,7 +7,7 @@ import sys
 from asyncio import Handle
 from datetime import datetime
 from pathlib import Path
-from threading import current_thread, main_thread
+from threading import Event, current_thread, main_thread
 from types import GenericAlias
 from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin, overload
 
@@ -20,6 +20,7 @@ from redux import (
     CombineReducerAction,
     CreateStoreOptions,
     FinishAction,
+    FinishEvent,
     InitAction,
     Store,
     combine_reducers,
@@ -259,7 +260,9 @@ def action_middleware(action: ActionType) -> ActionType:
     return action
 
 
-def event_middleware(event: EventType) -> EventType:
+def event_middleware(event: EventType) -> EventType | None:
+    if is_finalizing.is_set():
+        return None
     logger.debug(
         'Event dispatched',
         extra={'event': event},
@@ -285,6 +288,11 @@ dispatch = store.dispatch
 subscribe = store.subscribe
 subscribe_event = store.subscribe_event
 view = store.view
+
+
+is_finalizing = Event()
+
+subscribe_event(FinishEvent, lambda: is_finalizing.set())
 
 dispatch(InitAction())
 

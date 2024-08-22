@@ -4,6 +4,7 @@
 
 - build(packer): set `autologin-user` to `ubo` in `/etc/lightdm/lightdm.conf`
 - feat(core): improve update notification for phase-2 of the update process and add a spinner on top-left
+- fix(core): avoid side-effects after `FinishEvent` is dispatched.
 
 ## Version 0.15.8
 
