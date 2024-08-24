@@ -19,6 +19,7 @@ def ssh_handler(command: str) -> str | None:
         )
         result.check_returncode()
         return result.stdout
+
     if command == 'clear_all_temporary_accounts':
         subprocess.run(  # noqa: S603
             Path(__file__).parent.joinpath('clear_all_temporary_accounts.sh'),
@@ -47,10 +48,10 @@ def ssh_handler(command: str) -> str | None:
     else:
         msg = f'Invalid ssh command "{command}"'
         raise ValueError(msg)
-    return None
+    return 'done'
 
 
-def lightdm_handler(command: str) -> None:
+def lightdm_handler(command: str) -> str | None:
     """Handle LightDM commands."""
     if command == 'start':
         subprocess.run(  # noqa: S603
@@ -73,8 +74,9 @@ def lightdm_handler(command: str) -> None:
             check=True,
         )
     else:
-        msg = f'Invalid ssh command "{command}"'
+        msg = f'Invalid LightDM command "{command}"'
         raise ValueError(msg)
+    return 'done'
 
 
 def service_handler(service: str, command: str) -> str | None:

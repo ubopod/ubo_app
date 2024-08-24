@@ -3,6 +3,7 @@
 ## Version 0.15.10
 
 - refactor(core): use `dpkg-query` instead of `apt` python api as loading `Cache` in `apt` is slow and use it in docker service
+- refactor(system): add response for docker commands and service commands
 
 ## Version 0.15.9
 

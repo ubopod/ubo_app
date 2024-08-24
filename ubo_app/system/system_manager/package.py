@@ -5,6 +5,7 @@ from __future__ import annotations
 from ubo_app.utils.apt import install_package, uninstall_package
 
 PACKAGE_WHITELIST = [
+    'lightdm',
     'rpi-connect',
 ]
 

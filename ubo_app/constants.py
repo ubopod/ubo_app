@@ -40,11 +40,10 @@ STORE_GRACE_PERIOD = int(os.environ.get('UBO_STORE_GRACE_PERIOD', 1))
 DEBUG_MODE_TEST_UUID = str_to_bool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False')) == 1
 
 PICOVOICE_ACCESS_KEY = 'PICOVOICE_ACCESS_KEY'
-DOCKER_CREDENTIALS_TEMPLATE = 'DOCKER_CREDENTIALS_{}'
 
 DEBUG_MODE_DOCKER = str_to_bool(os.environ.get('UBO_DEBUG_DOCKER', 'False')) == 1
+DOCKER_CREDENTIALS_TEMPLATE = 'DOCKER_CREDENTIALS_{}'
 DOCKER_PREFIX = os.environ.get('UBO_DOCKER_PREFIX', '')
-DOCKER_INSTALLATION_LOCK_FILE = Path('/var/run/ubo/docker_installation.lock')
 
 CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)
 SECRETS_PATH = CONFIG_PATH / '.secrets.env'

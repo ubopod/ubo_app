@@ -360,8 +360,8 @@ def _(state: _UpdateManagerServiceState) -> None:
                     id=UPDATE_MANAGER_NOTIFICATION_ID,
                     title='Update in progress',
                     content="""\
-                Please keep the device powered on.
-                This may take around 20 minutes to complete.""",
+Please keep the device powered on.
+This may take around 20 minutes to complete.""",
                     importance=Importance.LOW,
                     icon='󰚰',
                     display_type=NotificationDisplayType.BACKGROUND
@@ -376,8 +376,4 @@ def _(state: _UpdateManagerServiceState) -> None:
             ),
         )
     else:
-        dispatch(
-            NotificationsClearByIdAction(
-                id=UPDATE_MANAGER_NOTIFICATION_ID,
-            ),
-        )
+        dispatch(NotificationsClearByIdAction(id=UPDATE_MANAGER_NOTIFICATION_ID))

@@ -42,7 +42,7 @@ def handle_command(command: str) -> str | None:
     if header == 'led':
         led_manager.run_command_thread_safe(arguments)
     elif header == 'docker':
-        docker_handler(arguments[0])
+        return docker_handler(arguments[0])
     elif header == 'service':
         return service_handler(arguments[0], arguments[1])
     elif header == 'package':
