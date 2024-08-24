@@ -6,7 +6,6 @@ import asyncio
 import contextlib
 import functools
 from dataclasses import fields
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import docker
@@ -17,11 +16,7 @@ from reducer import IMAGES
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.constants import (
-    DOCKER_CREDENTIALS_TEMPLATE,
-    DOCKER_INSTALLATION_LOCK_FILE,
-    SERVER_SOCKET_PATH,
-)
+from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.store.core import (
     RegisterRegularAppAction,
     RegisterSettingAppAction,
@@ -36,12 +31,15 @@ from ubo_app.store.services.docker import (
     DockerStoreUsernameAction,
 )
 from ubo_app.store.services.notifications import (
+    Chime,
     Importance,
     Notification,
+    NotificationDisplayType,
     NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.utils import secrets
+from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import monitor_unit
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -54,13 +52,30 @@ if TYPE_CHECKING:
 
 def install_docker() -> None:
     """Install Docker."""
-    if Path(SERVER_SOCKET_PATH).exists():
 
-        async def act() -> None:
-            await send_command('docker', 'install')
-            dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
+    async def act() -> None:
+        dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
+        result = await send_command(
+            'docker',
+            'install',
+            has_output=True,
+        )
+        if result != 'installed':
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Docker',
+                        content='Failed to install',
+                        display_type=NotificationDisplayType.STICKY,
+                        color=DANGER_COLOR,
+                        icon='󰜺',
+                        chime=Chime.FAILURE,
+                    ),
+                ),
+            )
+        await check_docker()
 
-        create_task(act())
+    create_task(act())
 
 
 def run_docker() -> None:
@@ -87,15 +102,7 @@ async def check_docker() -> None:
     """Check if Docker is installed."""
     from image_ import update_container
 
-    process = await asyncio.create_subprocess_exec(
-        '/usr/bin/env',
-        'which',
-        'docker',
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.DEVNULL,
-    )
-    await process.wait()
-    is_installed = process.returncode == 0
+    is_installed = await is_package_installed('docker')
 
     is_running = False
     with contextlib.suppress(Exception):
@@ -121,8 +128,6 @@ async def check_docker() -> None:
         dispatch(DockerSetStatusAction(status=DockerStatus.RUNNING))
     elif is_installed:
         dispatch(DockerSetStatusAction(status=DockerStatus.NOT_RUNNING))
-    elif Path(DOCKER_INSTALLATION_LOCK_FILE).exists():
-        dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
     else:
         dispatch(DockerSetStatusAction(status=DockerStatus.NOT_INSTALLED))
 

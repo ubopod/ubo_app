@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.15.10
+
+- refactor(core): use `dpkg-query` instead of `apt` python api as loading `Cache` in `apt` is slow and use it in docker service
+
 ## Version 0.15.9
 
 - build(packer): set `autologin-user` to `ubo` in `/etc/lightdm/lightdm.conf`

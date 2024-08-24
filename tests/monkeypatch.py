@@ -228,8 +228,8 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
                 return FakeAsyncProcess(output=b'enabled')
             if args[0] == 'is-active':
                 return FakeAsyncProcess(output=b'active')
-        if command == 'which' and args[0] == 'docker':
-            return FakeAsyncProcess(output=b'/bin/docker')
+        if command == 'dpkg-query' and args[-1] in ('docker', 'lightdm', 'rpi-connect'):
+            return FakeAsyncProcess(output=b'install ok installed')
         if command == 'pulseaudio':
             return FakeAsyncProcess()
 
