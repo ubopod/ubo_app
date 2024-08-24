@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
+from ubo_gui.constants import DANGER_COLOR
+from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, Menu
 
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import autorun, dispatch
@@ -13,14 +14,50 @@ from ubo_app.store.services.lightdm import (
     LightDMClearEnabledStateAction,
     LightDMUpdateStateAction,
 )
+from ubo_app.store.services.notifications import (
+    Chime,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
+from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import is_unit_active, is_unit_enabled, monitor_unit
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable
 
     from ubo_app.store.services.lightdm import LightDMState
+
+
+def install_lightdm() -> None:
+    """Install LightDM."""
+
+    async def act() -> None:
+        dispatch(LightDMUpdateStateAction(is_installing=True))
+        result = await send_command(
+            'package',
+            'install',
+            'lightdm',
+            has_output=True,
+        )
+        if result != 'installed':
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='LightDM',
+                        content='Failed to install',
+                        display_type=NotificationDisplayType.STICKY,
+                        color=DANGER_COLOR,
+                        icon='󰜺',
+                        chime=Chime.FAILURE,
+                    ),
+                ),
+            )
+        await check_lightdm()
+
+    create_task(act())
 
 
 def start_lightdm_service() -> None:
@@ -40,7 +77,7 @@ def enable_lightdm_service() -> None:
         dispatch(LightDMClearEnabledStateAction())
         await send_command('service', 'lightdm', 'enable')
         await asyncio.sleep(5)
-        await check_is_lightdm_enabled()
+        await check_lightdm()
 
     create_task(act())
 
@@ -52,37 +89,62 @@ def disable_lightdm_service() -> None:
         dispatch(LightDMClearEnabledStateAction())
         await send_command('service', 'lightdm', 'disable')
         await asyncio.sleep(5)
-        await check_is_lightdm_enabled()
+        await check_lightdm()
 
     create_task(act())
 
 
 @autorun(lambda state: state.lightdm)
-def lightdm_items(state: LightDMState) -> Sequence[Item]:
+def lightdm_menu(state: LightDMState) -> Menu:
     """Get the LightDM menu items."""
-    return [
-        ActionItem(
-            label='Stop' if state.is_active else 'Start',
-            icon='󰓛' if state.is_active else '󰐊',
-            action=stop_lightdm_service if state.is_active else start_lightdm_service,
-        ),
-        Item(
-            label='...',
-            icon='',
+    if state.is_installing:
+        return HeadedMenu(
+            title=lightdm_title,
+            heading='Installing LightDM',
+            sub_heading='This may take a few minutes',
+            items=[],
         )
-        if state.is_enabled is None
-        else ActionItem(
-            label='Disable',
-            icon='[color=#008000]󰯄[/color]',
-            action=disable_lightdm_service,
+    if not state.is_installed:
+        return HeadedMenu(
+            title=lightdm_title,
+            heading='LightDM is not Installed',
+            sub_heading='Install it to enable desktop access on your Ubo pod',
+            items=[
+                ActionItem(
+                    label='Install LightDM',
+                    icon='󰶮',
+                    action=install_lightdm,
+                ),
+            ],
         )
-        if state.is_enabled
-        else ActionItem(
-            label='Enable',
-            icon='[color=#ffff00]󰯅[/color]',
-            action=enable_lightdm_service,
-        ),
-    ]
+    return HeadlessMenu(
+        title=lightdm_title,
+        items=[
+            ActionItem(
+                label='Stop' if state.is_active else 'Start',
+                icon='󰓛' if state.is_active else '󰐊',
+                action=stop_lightdm_service
+                if state.is_active
+                else start_lightdm_service,
+            ),
+            Item(
+                label='...',
+                icon='',
+            )
+            if state.is_enabled is None
+            else ActionItem(
+                label='Disable',
+                icon='[color=#008000]󰯄[/color]',
+                action=disable_lightdm_service,
+            )
+            if state.is_enabled
+            else ActionItem(
+                label='Enable',
+                icon='[color=#ffff00]󰯅[/color]',
+                action=enable_lightdm_service,
+            ),
+        ],
+    )
 
 
 @autorun(lambda state: state.lightdm)
@@ -97,30 +159,28 @@ def lightdm_title(_: LightDMState) -> str:
     return lightdm_icon() + ' LightDM'
 
 
-async def check_is_lightdm_active() -> None:
-    """Check if the LightDM service is active."""
-    if await is_unit_active('lightdm'):
-        dispatch(LightDMUpdateStateAction(is_active=True))
-    else:
-        dispatch(LightDMUpdateStateAction(is_active=False))
-
-
-async def check_is_lightdm_enabled() -> None:
+async def check_lightdm() -> None:
     """Check if the LightDM service is enabled."""
-    if await is_unit_enabled('lightdm'):
-        dispatch(LightDMUpdateStateAction(is_enabled=True))
-    else:
-        dispatch(LightDMUpdateStateAction(is_enabled=False))
-
-
-def open_lightdm_menu() -> Menu:
-    """Open the LightDM menu."""
-    create_task(check_is_lightdm_enabled())
-
-    return HeadlessMenu(
-        title=lightdm_title,
-        items=lightdm_items,
+    is_active, is_enabled, is_installed = await asyncio.gather(
+        is_unit_active('lightdm'),
+        is_unit_enabled('lightdm'),
+        is_package_installed('lightdm'),
     )
+
+    dispatch(
+        LightDMUpdateStateAction(
+            is_active=is_installed and is_active,
+            is_enabled=is_installed and is_enabled,
+            is_installed=is_installed,
+        ),
+    )
+
+
+def open_lightdm_menu() -> Callable[[], Menu]:
+    """Open the LightDM menu."""
+    create_task(check_lightdm())
+
+    return lightdm_menu
 
 
 def init_service() -> None:
@@ -137,7 +197,7 @@ def init_service() -> None:
         ),
     )
 
-    create_task(check_is_lightdm_enabled())
+    create_task(check_lightdm())
     create_task(
         monitor_unit(
             'lightdm.service',

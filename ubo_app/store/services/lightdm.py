@@ -11,6 +11,8 @@ class LightDMAction(BaseAction): ...
 class LightDMUpdateStateAction(LightDMAction):
     is_active: bool | None = None
     is_enabled: bool | None = None
+    is_installed: bool | None = None
+    is_installing: bool | None = None
 
 
 class LightDMClearEnabledStateAction(LightDMAction): ...
@@ -18,4 +20,6 @@ class LightDMClearEnabledStateAction(LightDMAction): ...
 
 class LightDMState(Immutable):
     is_active: bool = False
-    is_enabled: bool | None = None
+    is_enabled: bool = False
+    is_installed: bool = False
+    is_installing: bool = False
