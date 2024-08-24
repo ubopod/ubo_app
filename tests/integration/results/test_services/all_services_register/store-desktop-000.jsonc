@@ -64,7 +64,7 @@
       "status": "not_available"
     },
     "service": {
-      "status": "not_running",
+      "status": "not_installed",
       "usernames": {}
     }
   },
@@ -80,9 +80,9 @@
     "is_connected": true
   },
   "lightdm": {
-    "is_active": true,
-    "is_enabled": true,
-    "is_installed": true,
+    "is_active": false,
+    "is_enabled": false,
+    "is_installed": false,
     "is_installing": false
   },
   "main": {
@@ -469,7 +469,7 @@
                               1,
                               1
                             ],
-                            "icon": "[color=#008000]󰪥[/color]",
+                            "icon": "[color=#ffff00]󰝦[/color]",
                             "is_short": false,
                             "key": "lightdm",
                             "label": "LightDM",

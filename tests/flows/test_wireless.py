@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 import pytest
 from tenacity import wait_fixed
 
-from ubo_app.store.services.wifi import (
-    WiFiConnection,
-    WiFiState,
-)
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
@@ -26,6 +21,7 @@ if TYPE_CHECKING:
     )
     from tests.fixtures.menu import WaitForEmptyMenu, WaitForMenuItem
     from ubo_app.store.main import RootState
+    from ubo_app.store.services.wifi import WiFiState
 
 
 @pytest.mark.skipif(not IS_RPI, reason='Only runs on Raspberry Pi')
@@ -39,42 +35,29 @@ async def test_wireless_flow(
     camera: MockCamera,
     wait_for_menu_item: WaitForMenuItem,
     wait_for_empty_menu: WaitForEmptyMenu,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test the wireless flow."""
+    from sdbus_async.networkmanager import (  # pyright: ignore [reportMissingModuleSource]
+        AccessPoint,
+    )
+
+    async def strength() -> int:
+        return 100
+
+    monkeypatch.setattr(
+        AccessPoint,
+        'strength',
+        property(lambda self: (self, strength())[1]),
+    )
+
     from ubo_app.menu_app.menu import MenuApp
     from ubo_app.store.core import ChooseMenuItemByIconEvent, ChooseMenuItemByLabelEvent
     from ubo_app.store.main import dispatch, store
     from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 
-    def store_snapshot_selector(state: RootState) -> WiFiState | None:
-        """Select the store snapshot."""
-        wifi_state = state.wifi
-
-        return WiFiState(
-            connections=[
-                WiFiConnection(
-                    **dict(
-                        asdict(connection),
-                        signal_strength=100 if connection.signal_strength > 0 else 0,
-                    ),
-                )
-                for connection in wifi_state.connections
-            ]
-            if wifi_state.connections is not None
-            else None,
-            state=wifi_state.state,
-            current_connection=WiFiConnection(
-                **dict(
-                    asdict(wifi_state.current_connection),
-                    signal_strength=100
-                    if wifi_state.current_connection.signal_strength > 0
-                    else 0,
-                ),
-            )
-            if wifi_state.current_connection is not None
-            else None,
-            has_visited_onboarding=wifi_state.has_visited_onboarding,
-        )
+    def store_snapshot_selector(state: RootState) -> WiFiState:
+        return state.wifi
 
     app = MenuApp()
     app_context.set_app(app)

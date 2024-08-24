@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import signal
+import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -22,6 +24,44 @@ class _FakeAsyncProcess(Fake):
         return cast(bytes, self.output), b''
 
 
+original_subprocess_run = subprocess.run
+
+
+def _fake_subprocess_run(
+    command: list[str],
+    *args: Any,  # noqa: ANN401
+    **kwargs: Any,  # noqa: ANN401
+) -> object:
+    if any(i in command[0] for i in ('reboot', 'poweroff')):
+        return Fake()
+    return original_subprocess_run(command, *args, **kwargs)
+
+
+original_asyncio_create_subprocess_exec = asyncio.create_subprocess_exec
+
+
+async def _fake_create_subprocess_exec(
+    *_args: str,
+    **kwargs: Any,  # noqa: ANN401
+) -> object:
+    command = _args[0]
+    args = _args[1:]
+
+    if command == '/usr/bin/env':
+        command = args[0]
+        args = args[1:]
+    if isinstance(command, Path):
+        command = command.as_posix()
+    if any(i in command for i in ('reboot', 'poweroff')):
+        return Fake()
+    if command in {'curl', 'tar'} or command.endswith('/code'):
+        return original_asyncio_create_subprocess_exec(*args, **kwargs)
+    if command == 'dpkg-query':
+        return Fake(_Fake__return_value=Fake(_Fake__await_value=(b'', b'')))
+
+    return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
+
+
 def setup() -> None:
     """Set up for different environments."""
     import sys
@@ -38,9 +78,6 @@ def setup() -> None:
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
-        import asyncio
-        import subprocess
-
         sys.modules['adafruit_rgb_display.st7789'] = Fake()
         sys.modules['alsaaudio'] = Fake()
         sys.modules['apt'] = Fake()
@@ -62,41 +99,9 @@ def setup() -> None:
                 ),
             },
         )
-        original_subprocess_run = subprocess.run
+        subprocess.run = _fake_subprocess_run
 
-        def fake_subprocess_run(
-            command: list[str],
-            *args: Any,  # noqa: ANN401
-            **kwargs: Any,  # noqa: ANN401
-        ) -> object:
-            if any(i in command[0] for i in ('reboot', 'poweroff')):
-                return Fake()
-            return original_subprocess_run(command, *args, **kwargs)
-
-        subprocess.run = fake_subprocess_run
-
-        async def fake_create_subprocess_exec(
-            *_args: str,
-            **kwargs: Any,  # noqa: ANN401
-        ) -> object:
-            command = _args[0]
-            args = _args[1:]
-
-            if command == '/usr/bin/env':
-                command = args[0]
-                args = args[1:]
-            if isinstance(command, Path):
-                command = command.as_posix()
-            if any(i in command for i in ('reboot', 'poweroff')):
-                return Fake()
-            if command in {'curl', 'tar'} or command.endswith('/code'):
-                return original_asyncio_create_subprocess_exec(*args, **kwargs)
-
-            return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
-
-        original_asyncio_create_subprocess_exec = asyncio.create_subprocess_exec
-
-        asyncio.create_subprocess_exec = fake_create_subprocess_exec
+        asyncio.create_subprocess_exec = _fake_create_subprocess_exec
 
         asyncio.open_unix_connection = (
             Fake(_Fake__return_value=Fake(_Fake__await_value=(Fake(), Fake()))),

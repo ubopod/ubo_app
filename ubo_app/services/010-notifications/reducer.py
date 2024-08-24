@@ -15,7 +15,6 @@ from redux import (
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import (
     Importance,
-    NotificationDisplayType,
     NotificationsAction,
     NotificationsAddAction,
     NotificationsClearAction,
@@ -45,11 +44,7 @@ def reducer(
 
     if isinstance(action, NotificationsAddAction):
         events = []
-        if action.notification.display_type in (
-            NotificationDisplayType.FLASH,
-            NotificationDisplayType.STICKY,
-        ):
-            events.append(NotificationsDisplayEvent(notification=action.notification))
+        events.append(NotificationsDisplayEvent(notification=action.notification))
         if action.notification in state.notifications:
             return CompleteReducerResult(state=state, events=events)
         kivy_color = get_color_from_hex(action.notification.color)
@@ -130,17 +125,11 @@ def reducer(
             events=[NotificationsClearEvent(notification=action.notification)],
         )
     if isinstance(action, NotificationsClearByIdAction):
-        to_be_removed = next(
-            (
-                notification
-                for notification in state.notifications
-                if notification.id == action.id
-            ),
-            None,
-        )
-        if to_be_removed is None:
-            return state
-
+        to_be_removed = [
+            notification
+            for notification in state.notifications
+            if notification.id == action.id
+        ]
         new_notifications = [
             notification
             for notification in state.notifications
@@ -154,7 +143,10 @@ def reducer(
                     1 for notification in new_notifications if not notification.is_read
                 ),
             ),
-            events=[NotificationsClearEvent(notification=to_be_removed)],
+            events=[
+                NotificationsClearEvent(notification=notification)
+                for notification in to_be_removed
+            ],
         )
     if isinstance(action, NotificationsClearAllAction):
         return replace(state, notifications=[], unread_count=0)

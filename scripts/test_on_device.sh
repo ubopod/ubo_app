@@ -4,6 +4,13 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Signal handler
+function cleanup() {
+  run_on_pod "killall -9 pytest"
+}
+trap cleanup ERR
+trap cleanup EXIT
+
 copy=${copy:-"False"}
 deps=${deps:-"False"}
 run=${run:-"False"}

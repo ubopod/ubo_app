@@ -5,6 +5,7 @@
 - refactor(core): use `dpkg-query` instead of `apt` python api as loading `Cache` in `apt` is slow and use it in docker service
 - refactor(system): add response for docker commands and service commands
 - feat(lightdm): add installation options for lightdm package
+- refactor(notifications): update the `NotificationWidget` when it is visible and a new notification with the same id is dispatched
 
 ## Version 0.15.9
 

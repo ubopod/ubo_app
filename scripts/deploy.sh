@@ -11,16 +11,16 @@ function cleanup() {
 trap cleanup ERR
 trap cleanup EXIT
 
-perl -i -pe 's/^(packages = \[.*)$/\1\nexclude = ["ubo_app\/services\/*-voice\/models\/*"]/' pyproject.toml
-poetry build
-cleanup
-
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
 deps=${deps:-"False"}
 bootstrap=${bootstrap:-"False"}
 run=${run:-"False"}
 restart=${restart:-"False"}
 env=${env:-"False"}
+
+perl -i -pe 's/^(packages = \[.*)$/\1\nexclude = ["ubo_app\/services\/*-voice\/models\/*"]/' pyproject.toml
+poetry build
+cleanup
 
 function run_on_pod() {
   if [ $# -lt 1 ]; then

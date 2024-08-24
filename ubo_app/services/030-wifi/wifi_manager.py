@@ -402,7 +402,7 @@ async def get_connections() -> list[WiFiConnection]:
             active_connection_state = await get_active_connection_state()
             active_connection_ssid = await get_active_connection_ssid()
             saved_ssids = await get_saved_ssids()
-            access_point_ssids = {
+            access_point_by_ssids = {
                 (
                     await wait_for(
                         i.ssid,
@@ -415,9 +415,9 @@ async def get_connections() -> list[WiFiConnection]:
                 WiFiConnection(
                     ssid=ssid,
                     signal_strength=await wait_for(
-                        access_point_ssids[ssid].strength,
+                        access_point_by_ssids[ssid].strength,
                     )
-                    if ssid in access_point_ssids
+                    if ssid in access_point_by_ssids
                     else 0,
                     state=active_connection_state
                     if active_connection_ssid == ssid
