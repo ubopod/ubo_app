@@ -7,6 +7,7 @@ from kivy.utils import get_color_from_hex
 from redux import (
     BaseEvent,
     CompleteReducerResult,
+    FinishAction,
     InitAction,
     InitializationActionError,
     ReducerResult,
@@ -148,6 +149,12 @@ def reducer(
                 for notification in to_be_removed
             ],
         )
-    if isinstance(action, NotificationsClearAllAction):
-        return replace(state, notifications=[], unread_count=0)
+    if isinstance(action, NotificationsClearAllAction | FinishAction):
+        return CompleteReducerResult(
+            state=replace(state, notifications=[], unread_count=0),
+            events=[
+                NotificationsClearEvent(notification=notification)
+                for notification in state.notifications
+            ],
+        )
     return state

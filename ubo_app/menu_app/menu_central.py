@@ -71,10 +71,10 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         super().__init__(**kwargs)
         self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)
 
-        _self = weakref.ref(self)
-
         self.menu_widget.bind(page_index=self.handle_page_index_change)
         self.menu_widget.bind(current_menu=self.handle_page_index_change)
+
+        _self = weakref.ref(self)
 
         @autorun(lambda state: state.main.menu)
         @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))

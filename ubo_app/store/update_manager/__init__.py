@@ -7,6 +7,7 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 UPDATE_MANAGER_NOTIFICATION_ID = 'ubo:update_manager'
+UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID = 'ubo:update_manager:phase-2'
 
 
 class UpdateManagerAction(BaseAction): ...

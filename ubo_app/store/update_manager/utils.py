@@ -36,6 +36,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.update_manager import (
     UPDATE_MANAGER_NOTIFICATION_ID,
+    UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
     UpdateManagerSetStatusAction,
     UpdateManagerSetVersionsAction,
     UpdateManagerState,
@@ -166,6 +167,7 @@ Then another reboot will be done to complete the update process.""",
                     icon='󰇚',
                     blink=False,
                     progress=1 / packages_count,
+                    dismissable=False,
                 ),
             ),
         )
@@ -176,18 +178,17 @@ Then another reboot will be done to complete the update process.""",
             'download',
             '--dest',
             UPDATE_ASSETS_PATH,
-            'ubo-app[default]',
             'setuptools',
             'wheel',
+            'ubo-app[default]',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
         if process.stdout is None:
-            logger.exception('Failed to update (pip has no stdout)')
+            logger.info('Failed to update (pip has no stdout)')
             dispatch(
                 NotificationsAddAction(
                     notification=Notification(
-                        id=UPDATE_MANAGER_NOTIFICATION_ID,
                         title='Failed to update',
                         content='Failed to download packages',
                         display_type=NotificationDisplayType.FLASH,
@@ -218,17 +219,18 @@ Then another reboot will be done to complete the update process.""",
                             icon='󰇚',
                             blink=False,
                             progress=min((counter + 1) / packages_count, 1),
+                            dismissable=False,
                         ),
                     ),
                 )
         await process.wait()
 
-        # Update the packages count estimate for the next update
-        Path(packages_count_path).write_text(str(counter), encoding='utf-8')
-
         if process.returncode != 0:
             msg = 'Failed to download packages'
             raise RuntimeError(msg)
+
+        # Update the packages count estimate for the next update
+        Path(packages_count_path).write_text(str(counter), encoding='utf-8')
 
         dispatch(
             NotificationsAddAction(
@@ -357,7 +359,7 @@ def _(state: _UpdateManagerServiceState) -> None:
         dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    id=UPDATE_MANAGER_NOTIFICATION_ID,
+                    id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
                     title='Update in progress',
                     content="""\
 Please keep the device powered on.
@@ -376,4 +378,8 @@ This may take around 20 minutes to complete.""",
             ),
         )
     else:
-        dispatch(NotificationsClearByIdAction(id=UPDATE_MANAGER_NOTIFICATION_ID))
+        dispatch(
+            NotificationsClearByIdAction(
+                id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
+            ),
+        )

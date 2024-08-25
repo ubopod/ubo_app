@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import functools
+import weakref
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
@@ -31,6 +32,12 @@ if TYPE_CHECKING:
     from ubo_gui.menu.menu_widget import MenuWidget
 
 
+class NotificationReference:
+    def __init__(self: NotificationReference, notification: Notification) -> None:
+        self.value = notification
+        self.is_initialized = False
+
+
 class MenuNotificationHandler(UboApp):
     menu_widget: MenuWidget
 
@@ -47,12 +54,15 @@ class MenuNotificationHandler(UboApp):
                 and stack_item.application.notification_id == event.notification.id
                 for stack_item in self.menu_widget.stack
             )
-        ) or event.notification.display_type is NotificationDisplayType.BACKGROUND:
+        ) or (
+            event.notification.display_type is NotificationDisplayType.BACKGROUND
+            and event.index is None
+        ):
             return
 
         subscriptions = []
 
-        notification = event.notification
+        notification = NotificationReference(event.notification)
         is_closed = False
 
         @mainthread
@@ -65,40 +75,57 @@ class MenuNotificationHandler(UboApp):
                 unsubscribe()
             notification_application.unbind(on_close=close)
             dispatch(CloseApplicationEvent(application=notification_application))
-            if notification.dismiss_on_close:
-                dispatch(NotificationsClearAction(notification=notification))
-            if notification.on_close:
-                notification.on_close()
+            if notification.value.dismiss_on_close:
+                dispatch(NotificationsClearAction(notification=notification.value))
+            if notification.value.on_close:
+                notification.value.on_close()
 
-        notification_application = NotificationWidget(
-            notification_title=notification.title,
-            content=notification.content,
-            icon=notification.icon,
-            color=notification.color,
-            items=self._notification_items(notification, close),
-            title=f'Notification ({event.index + 1}/{event.count})'
-            if event.index is not None
-            else ' ',
-        )
-        notification_application.notification_id = notification.id
-
-        dispatch(OpenApplicationEvent(application=notification_application))
-
-        if notification.display_type is NotificationDisplayType.FLASH:
-            Clock.schedule_once(close, notification.flash_time)
-
-        notification_application.bind(on_close=close)
-
-        @mainthread
         def clear_notification(event: NotificationsClearEvent) -> None:
             if event.notification == notification:
                 close()
 
+        _self = weakref.ref(self)
+
         def renew_notification(event: NotificationsDisplayEvent) -> None:
-            nonlocal notification
-            if event.notification.id == notification.id:
-                notification = event.notification
-                self._update_notification_widget(notification_application, event, close)
+            self = _self()
+            if self is None:
+                return
+            if event.notification.id == notification.value.id:
+                notification.value = event.notification
+                self._update_notification_widget(
+                    notification_application,
+                    event,
+                    notification,
+                    close,
+                )
+
+            if event.notification.extra_information and (
+                not notification.is_initialized
+                or event.notification.id is None
+                or event.notification.id != notification.value.id
+                or not notification.value.extra_information
+                or event.notification.extra_information
+                != notification.value.extra_information
+            ):
+                notification.is_initialized = True
+                dispatch(
+                    VoiceReadTextAction(
+                        text=event.notification.extra_information.text,
+                        piper_text=event.notification.extra_information.piper_text,
+                        picovoice_text=event.notification.extra_information.picovoice_text,
+                    ),
+                )
+
+        notification_application = NotificationWidget(items=[None] * PAGE_MAX_ITEMS)
+        notification_application.notification_id = notification.value.id
+
+        if (
+            notification.value.display_type is NotificationDisplayType.FLASH
+            and event.index is None
+        ):
+            Clock.schedule_once(close, notification.value.flash_time)
+
+        notification_application.bind(on_close=close)
 
         subscriptions.append(
             subscribe_event(
@@ -106,24 +133,27 @@ class MenuNotificationHandler(UboApp):
                 clear_notification,
             ),
         )
-        if notification.id is not None:
+        if notification.value.id is not None:
             subscriptions.append(
                 subscribe_event(
                     NotificationsDisplayEvent,
                     renew_notification,
-                    keep_ref=False,
                 ),
             )
 
+        renew_notification(event)
+
+        dispatch(OpenApplicationEvent(application=notification_application))
+
     def _notification_items(
         self: MenuNotificationHandler,
-        notification: Notification,
+        notification: NotificationReference,
         close: Callable[[], None],
     ) -> list[NotificationActionItem | None]:
         def dismiss(_: object = None) -> None:
             close()
-            if not notification.dismiss_on_close:
-                dispatch(NotificationsClearAction(notification=notification))
+            if not notification.value.dismiss_on_close:
+                dispatch(NotificationsClearAction(notification=notification.value))
 
         def run_notification_action(action: NotificationActionItem) -> None:
             result = action.action()
@@ -135,15 +165,8 @@ class MenuNotificationHandler(UboApp):
 
         items: list[NotificationActionItem | None] = []
 
-        if notification.extra_information:
-            text = notification.extra_information.text
-            dispatch(
-                VoiceReadTextAction(
-                    text=notification.extra_information.text,
-                    piper_text=notification.extra_information.piper_text,
-                    picovoice_text=notification.extra_information.picovoice_text,
-                ),
-            )
+        if notification.value.extra_information:
+            text = notification.value.extra_information.text
 
             def open_info() -> None:
                 info_application = NotificationInfo(text=text)
@@ -166,10 +189,10 @@ class MenuNotificationHandler(UboApp):
                 is_short=True,
                 action=functools.partial(run_notification_action, action),
             )
-            for action in notification.actions
+            for action in notification.value.actions
         ]
 
-        if notification.dismissable:
+        if notification.value.dismissable:
             items.append(
                 NotificationActionItem(
                     icon='󰆴',
@@ -187,14 +210,15 @@ class MenuNotificationHandler(UboApp):
         self: MenuNotificationHandler,
         notification_application: NotificationWidget,
         event: NotificationsDisplayEvent,
+        notification: NotificationReference,
         close: Callable[[], None],
     ) -> None:
-        notification_application.notification_title = event.notification.title
-        notification_application.content = event.notification.content
-        notification_application.icon = event.notification.icon
-        notification_application.color = event.notification.color
+        notification_application.notification_title = notification.value.title
+        notification_application.content = notification.value.content
+        notification_application.icon = notification.value.icon
+        notification_application.color = notification.value.color
         notification_application.items = self._notification_items(
-            event.notification,
+            notification,
             close,
         )
         notification_application.title = (

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.15.11
+
+- fix(notifications): notifications not getting closed nor updated
+
 ## Version 0.15.10
 
 - refactor(core): use `dpkg-query` instead of `apt` python api as loading `Cache` in `apt` is slow and use it in docker service
