@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.15.12
+
+- build(packer): remove /etc/xdg/autostart/piwiz.desktop to avoid running piwiz as we already set ubo user
+
 ## Version 0.15.11
 
 - fix(notifications): notifications not getting closed nor updated
