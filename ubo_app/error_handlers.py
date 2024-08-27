@@ -5,6 +5,7 @@ import asyncio
 import sys
 import threading
 import traceback
+import weakref
 from typing import TYPE_CHECKING, cast
 
 from ubo_app.utils.eeprom import read_serial_number
@@ -89,15 +90,25 @@ def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
     )
 
 
+STACKS = weakref.WeakKeyDictionary(dict[asyncio.Task, str]())
+
+
 def loop_exception_handler(
     loop: asyncio.AbstractEventLoop,
     context: dict[str, object],
 ) -> None:
+    from ubo_app.constants import DEBUG_MODE_TASKS
     from ubo_app.logging import logger
 
     threads_info = get_all_thread_stacks()
 
     exception = context.get('exception')
+
+    if DEBUG_MODE_TASKS:
+        task = cast(asyncio.Task, context.get('future') or context.get('task'))
+        parent_stack = STACKS.get(task, '<unavailable>') if task else '<unavailable>'
+    else:
+        parent_stack = None
 
     if exception and not isinstance(exception, asyncio.CancelledError):
         logger.exception(
@@ -106,6 +117,7 @@ def loop_exception_handler(
                 'loop': loop,
                 'error_message': context.get('message'),
                 'future': context.get('future'),
+                'parent_stack': parent_stack,
             },
             exc_info=cast(Exception, exception),
         )
@@ -116,6 +128,7 @@ def loop_exception_handler(
                 'error_message': context.get('message'),
                 'future': context.get('future'),
                 'threads': threads_info,
+                'parent_stack': parent_stack,
             },
             exc_info=cast(Exception, exception),
         )
@@ -125,6 +138,7 @@ def loop_exception_handler(
             extra={
                 'loop': loop,
                 'context': context,
+                'parent_stack': parent_stack,
             },
         )
 

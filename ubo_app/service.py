@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import threading
+import traceback
 from typing import TYPE_CHECKING, TypeVarTuple
 
 from typing_extensions import TypeVar
@@ -40,15 +41,24 @@ class WorkerThread(threading.Thread):
 
     def run_task(
         self: WorkerThread,
-        task: Coroutine,
+        coroutine: Coroutine,
         callback: Callable[[Task], None] | None = None,
     ) -> Handle:
-        def task_wrapper() -> None:
-            result = self.loop.create_task(task)
-            if callback:
-                callback(result)
+        from ubo_app.constants import DEBUG_MODE_TASKS
 
-        return self.loop.call_soon_threadsafe(task_wrapper)
+        def task_wrapper(stack: str) -> None:
+            task = self.loop.create_task(coroutine)
+            if DEBUG_MODE_TASKS:
+                from ubo_app.error_handlers import STACKS
+
+                STACKS[task] = stack
+            if callback:
+                callback(task)
+
+        return self.loop.call_soon_threadsafe(
+            task_wrapper,
+            ''.join(traceback.format_stack()[:-3]) if DEBUG_MODE_TASKS else '',
+        )
 
     async def shutdown(self: WorkerThread) -> None:
         from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD
@@ -95,12 +105,9 @@ worker_thread = WorkerThread()
 
 
 def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
-    from ubo_app.constants import DEBUG_MODE
     from ubo_app.error_handlers import loop_exception_handler
 
     loop.set_exception_handler(loop_exception_handler)
-    if DEBUG_MODE:
-        loop.set_debug(enabled=True)
 
     worker_thread.loop = loop
     worker_thread.start()

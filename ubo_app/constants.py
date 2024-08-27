@@ -14,6 +14,7 @@ INSTALLER_URL = os.environ.get(
 )
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
 DEBUG_MODE = str_to_bool(os.environ.get('UBO_DEBUG', 'False')) == 1
+DEBUG_MODE_TASKS = str_to_bool(os.environ.get('UBO_DEBUG_TASKS', 'False')) == 1
 LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else None)
 GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else None)
 SERVICES_PATH = (

@@ -21,12 +21,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from redux import CombineReducerRegisterAction, ReducerType
 
 from ubo_app.constants import (
-    DEBUG_MODE,
+    DEBUG_MODE_TASKS,
     DISABLED_SERVICES,
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
 )
-from ubo_app.error_handlers import loop_exception_handler
+from ubo_app.error_handlers import STACKS, loop_exception_handler
 from ubo_app.logging import logger
 
 if TYPE_CHECKING:
@@ -290,8 +290,6 @@ class UboServiceThread(threading.Thread):
             },
         )
         asyncio.set_event_loop(self.loop)
-        if DEBUG_MODE:
-            self.loop.set_debug(enabled=True)
 
         REGISTERED_PATHS[self.path] = self
         result = None
@@ -313,15 +311,20 @@ class UboServiceThread(threading.Thread):
 
     def run_task(
         self: UboServiceThread,
-        task: Coroutine,
+        coroutine: Coroutine,
         callback: Callable[[Task], None] | None = None,
     ) -> asyncio.Handle:
-        def task_wrapper() -> None:
-            result = self.loop.create_task(task)
+        def task_wrapper(stack: str) -> None:
+            task = self.loop.create_task(coroutine)
+            if DEBUG_MODE_TASKS:
+                STACKS[task] = stack
             if callback:
-                callback(result)
+                callback(task)
 
-        return self.loop.call_soon_threadsafe(task_wrapper)
+        return self.loop.call_soon_threadsafe(
+            task_wrapper,
+            ''.join(traceback.format_stack()[:-3]) if DEBUG_MODE_TASKS else '',
+        )
 
     async def shutdown(self: UboServiceThread) -> None:
         from ubo_app.logging import logger

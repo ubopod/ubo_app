@@ -13,6 +13,9 @@ if TYPE_CHECKING:
     from redux.basic_types import TaskCreatorCallback
 
 
+background_tasks = []
+
+
 def create_task(
     task: Coroutine,
     callback: TaskCreatorCallback | None = None,
@@ -23,7 +26,9 @@ def create_task(
         if callback:
             callback(task)
 
-    return ubo_app.service._create_task(task, callback_)  # noqa: SLF001
+    handle = ubo_app.service._create_task(task, callback_)  # noqa: SLF001
+    background_tasks.append(handle)
+    return handle
 
 
 T = TypeVar('T', infer_variance=True)
