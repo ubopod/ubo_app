@@ -42,6 +42,7 @@ def install_lightdm() -> None:
             'lightdm',
             has_output=True,
         )
+        dispatch(LightDMUpdateStateAction(is_installing=False))
         if result != 'installed':
             dispatch(
                 NotificationsAddAction(

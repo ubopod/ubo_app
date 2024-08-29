@@ -59,7 +59,8 @@ $(if [ "$env" == "True" ]; then echo "cat <<'EOF' > /tmp/.dev.env
 $(cat ubo_app/.dev.env)
 EOF &&
 chown ubo:ubo /tmp/.dev.env &&
-mv /tmp/.dev.env /opt/ubo/env/lib/python3.*/site-packages/ubo_app/"; fi)"
+mv /tmp/.dev.env /opt/ubo/env/lib/python3.*/site-packages/ubo_app/ &&"; fi)\
+true"
 fi
 
 if [ "$run" == "True" ] || [ "$restart" == "True" ]; then
