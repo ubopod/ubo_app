@@ -85,46 +85,6 @@
                         1,
                         1
                       ],
-                      "icon": "󰖤",
-                      "is_short": false,
-                      "key": "Accessibility",
-                      "label": "Accessibility",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "󰖤Accessibility"
-                      }
-                    },
-                    {
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰟻",
-                      "is_short": false,
-                      "key": "Utilities",
-                      "label": "Utilities",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "󰟻Utilities"
-                      }
-                    },
-                    {
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
                       "icon": "󰑔",
                       "is_short": false,
                       "key": "Remote",
@@ -135,6 +95,46 @@
                         "items": [],
                         "placeholder": "No settings in this category",
                         "title": "󰑔Remote"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰇄",
+                      "is_short": false,
+                      "key": "Desktop",
+                      "label": "Desktop",
+                      "opacity": null,
+                      "progress": null,
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "󰇄Desktop"
+                      }
+                    },
+                    {
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰖤",
+                      "is_short": false,
+                      "key": "Accessibility",
+                      "label": "Accessibility",
+                      "opacity": null,
+                      "progress": null,
+                      "sub_menu": {
+                        "items": [],
+                        "placeholder": "No settings in this category",
+                        "title": "󰖤Accessibility"
                       }
                     },
                     {

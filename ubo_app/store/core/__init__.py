@@ -11,17 +11,17 @@ from redux import BaseAction, BaseEvent
 
 class SettingsCategory(StrEnum):
     NETWORK = 'Network'
-    ACCESSIBILITY = 'Accessibility'
-    UTILITIES = 'Utilities'
     REMOTE = 'Remote'
+    DESKTOP = 'Desktop'
+    ACCESSIBILITY = 'Accessibility'
     APPS = 'Apps'
 
 
 SETTINGS_ICONS = {
     SettingsCategory.NETWORK: '󰛳',
-    SettingsCategory.ACCESSIBILITY: '󰖤',
-    SettingsCategory.UTILITIES: '󰟻',
     SettingsCategory.REMOTE: '󰑔',
+    SettingsCategory.DESKTOP: '󰇄',
+    SettingsCategory.ACCESSIBILITY: '󰖤',
     SettingsCategory.APPS: '󰀻',
 }
 

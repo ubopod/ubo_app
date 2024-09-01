@@ -189,7 +189,7 @@ def init_service() -> None:
     dispatch(
         RegisterSettingAppAction(
             priority=0,
-            category=SettingsCategory.UTILITIES,
+            category=SettingsCategory.DESKTOP,
             menu_item=ActionItem(
                 label='LightDM',
                 icon=lightdm_icon,

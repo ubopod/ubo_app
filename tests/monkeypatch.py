@@ -9,6 +9,8 @@ from typing import Any, cast
 
 import pytest
 
+originals = {}
+
 
 def _monkeypatch_socket(monkeypatch: pytest.MonkeyPatch) -> None:
     import socket
@@ -199,9 +201,10 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(subprocess, 'run', fake_subprocess_run)
 
 
-def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
-    import asyncio
-
+async def _fake_create_subprocess_exec(
+    *_args: str,
+    **kwargs: Any,  # noqa: ANN401
+) -> object:
     from fake import Fake
 
     class FakeAsyncProcess(Fake):
@@ -211,32 +214,32 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
         async def communicate(self: FakeAsyncProcess) -> tuple[bytes, bytes]:
             return cast(bytes, self.output), b''
 
-    async def fake_create_subprocess_exec(
-        *_args: str,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> object:
-        _ = kwargs
-        command = _args[0]
-        args = _args[1:]
+    _ = kwargs
+    command, *args = _args
 
-        if command == '/usr/bin/env':
-            command = args[0]
+    if command == '/usr/bin/env':
+        command, *args = args
+
+    if command == 'systemctl':
+        if args[0] == '--user':
             args = args[1:]
+        if args[0] == 'is-enabled':
+            return FakeAsyncProcess(output=b'enabled')
+        if args[0] == 'is-active':
+            return FakeAsyncProcess(output=b'active')
+    if command == 'dpkg-query' and args[-1] in ('docker', 'lightdm', 'rpi-connect'):
+        return FakeAsyncProcess(output=b'install ok installed')
+    if command == 'pulseaudio':
+        return FakeAsyncProcess()
 
-        if command == 'systemctl':
-            if args[0] == 'is-enabled':
-                return FakeAsyncProcess(output=b'enabled')
-            if args[0] == 'is-active':
-                return FakeAsyncProcess(output=b'active')
-        if command == 'dpkg-query' and args[-1] in ('docker', 'lightdm', 'rpi-connect'):
-            return FakeAsyncProcess(output=b'install ok installed')
-        if command == 'pulseaudio':
-            return FakeAsyncProcess()
+    return await originals['_fake_create_subprocess_exec'](*_args, **kwargs)
 
-        return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
 
-    original_asyncio_create_subprocess_exec = asyncio.create_subprocess_exec
-    monkeypatch.setattr(asyncio, 'create_subprocess_exec', fake_create_subprocess_exec)
+def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    originals['_fake_create_subprocess_exec'] = _fake_create_subprocess_exec
+    monkeypatch.setattr(asyncio, 'create_subprocess_exec', _fake_create_subprocess_exec)
 
 
 def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:

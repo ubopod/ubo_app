@@ -5,6 +5,7 @@
 - build(packer): remove /etc/xdg/autostart/piwiz.desktop to avoid running piwiz as we already set ubo user
 - fix(core): keep a reference for background tasks created with `async_.create_task` to avoid them getting garbage collected and cancelled
 - fix(lightdm): update the menu when installation is done
+- refactor(lightdm): reorder settings menu and replace "utilities" with "desktop"
 
 ## Version 0.15.11
 
