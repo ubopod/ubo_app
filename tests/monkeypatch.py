@@ -262,6 +262,7 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     from fake import Fake
 
     import ubo_app.constants
+    import ubo_app.utils.monitor_unit
     import ubo_app.utils.serializer
 
     tracemalloc.start()
@@ -272,6 +273,7 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ubo_app.constants, 'STORE_GRACE_PERIOD', 0.1)
     monkeypatch.setattr(ubo_app.constants, 'NOTIFICATIONS_FLASH_TIME', 1000)
     monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', lambda _, obj: obj)
+    monkeypatch.setattr(ubo_app.utils.monitor_unit, 'monitor_unit', Fake())
 
     sys.modules['ubo_app.utils.secrets'] = Fake(
         _Fake__props={'read_secret': lambda _: None},

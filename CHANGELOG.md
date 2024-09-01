@@ -7,6 +7,7 @@
 - fix(lightdm): update the menu when installation is done
 - refactor(lightdm): reorder settings menu and replace "utilities" with "desktop"
 - feat(lightdm): show a notification when rpi-connect is started to inform user desktop should be installed for the screen sharing to work
+- fix(lightdm): install raspberrypi-ui-mods instead of lightdm to activate wayland and enable rpi-connect screen sharing
 
 ## Version 0.15.11
 

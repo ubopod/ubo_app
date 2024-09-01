@@ -165,7 +165,7 @@ async def check_lightdm() -> None:
     is_active, is_enabled, is_installed = await asyncio.gather(
         is_unit_active('lightdm'),
         is_unit_enabled('lightdm'),
-        is_package_installed('lightdm'),
+        is_package_installed('raspberrypi-ui-mods'),
     )
 
     dispatch(
