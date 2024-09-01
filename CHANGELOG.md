@@ -6,6 +6,7 @@
 - fix(core): keep a reference for background tasks created with `async_.create_task` to avoid them getting garbage collected and cancelled
 - fix(lightdm): update the menu when installation is done
 - refactor(lightdm): reorder settings menu and replace "utilities" with "desktop"
+- feat(lightdm): show a notification when rpi-connect is started to inform user desktop should be installed for the screen sharing to work
 
 ## Version 0.15.11
 

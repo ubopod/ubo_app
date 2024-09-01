@@ -10,11 +10,13 @@ from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
 from ubo_app.logging import logger
-from ubo_app.store.main import dispatch
+from ubo_app.store.main import dispatch, view
 from ubo_app.store.services.notifications import (
     Chime,
+    Importance,
     Notification,
     NotificationDisplayType,
+    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.rpi_connect import (
@@ -195,10 +197,39 @@ def sign_out() -> None:
     create_task(act())
 
 
-def start_service() -> None:
+@view(lambda state: state.lightdm.is_active)
+def start_service(is_lightdm_active: bool) -> None:  # noqa: FBT001
     """Start the RPi Connect service."""
 
     async def act() -> None:
+        if not is_lightdm_active:
+            dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='RPi-Connect',
+                        content='LightDM is not running',
+                        extra_information=NotificationExtraInformation(
+                            text="""\
+LightDM is not running so RPi-Connect will run without screen sharing and you can only \
+use the remote shell feature. To enable screen sharing, start LightDM service in \
+Settings → Desktop → LightDM menu, then come back here to stop and start RPi-Connect \
+again.""",
+                            piper_text="""\
+LightDM is not running so RPi-Connect will run without screen sharing and you can only \
+use the remote shell feature. To enable screen sharing, start LightDM service in \
+LightDM item under Desktop menu under Settings menu, then come back here to stop and \
+start RPi-Connect again.""",
+                            picovoice_text="""\
+LightDM is not running so RPi-Connect will run without screen sharing and you can only \
+use the remote shell feature. To enable screen sharing, start LightDM service in \
+LightDM item under Desktop menu under Settings menu, then come back here to stop and \
+start RPi-Connect again.""",
+                        ),
+                        display_type=NotificationDisplayType.STICKY,
+                        importance=Importance.LOW,
+                    ),
+                ),
+            )
         process = await asyncio.create_subprocess_exec(
             '/usr/bin/env',
             'systemctl',
