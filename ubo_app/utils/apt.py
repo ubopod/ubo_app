@@ -15,7 +15,7 @@ def install_package(packages: str | list[str], /, *, force: bool = False) -> Non
     package_names = packages if isinstance(packages, list) else [packages]
 
     cache = apt.Cache()
-    logger.debug('Installing packages...', extra={'packages': package_names})
+    logger.info('Installing packages...', extra={'packages': package_names})
     for package_name in package_names:
         if package_name in cache:
             pkg = cache[package_name]
@@ -39,7 +39,7 @@ def uninstall_package(package_name: str) -> None:
     import apt  # pyright: ignore [reportMissingModuleSource]
 
     cache = apt.Cache()
-    logger.debug('Uninstalling package...', extra={'package': package_name})
+    logger.info('Uninstalling package...', extra={'package': package_name})
     if package_name in cache:
         pkg = cache[package_name]
         if pkg.is_installed:
@@ -61,6 +61,7 @@ async def is_package_installed(package_name: str) -> bool:
     """Asynchronously check if a package is installed using the APT package manager."""
     try:
         process = await asyncio.create_subprocess_exec(
+            '/usr/bin/env',
             'dpkg-query',
             '-W',
             '-f=${Status}',

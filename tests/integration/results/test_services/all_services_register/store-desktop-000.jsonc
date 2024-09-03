@@ -64,7 +64,7 @@
       "status": "not_available"
     },
     "service": {
-      "status": "not_installed",
+      "status": "not_running",
       "usernames": {}
     }
   },
@@ -80,9 +80,9 @@
     "is_connected": true
   },
   "lightdm": {
-    "is_active": false,
-    "is_enabled": false,
-    "is_installed": false,
+    "is_active": true,
+    "is_enabled": true,
+    "is_installed": true,
     "is_installing": false
   },
   "main": {
@@ -372,7 +372,7 @@
                               1,
                               1
                             ],
-                            "icon": "[color=#ffff00]󰝦[/color]",
+                            "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
                             "key": "lightdm",
                             "label": "LightDM",
@@ -737,13 +737,13 @@
         "color": "white",
         "id": "ethernet:state",
         "priority": -13,
-        "symbol": "󰌙"
+        "symbol": "󰈅"
       },
       {
         "color": "white",
         "id": "wifi:state",
         "priority": -12,
-        "symbol": "󰖪"
+        "symbol": "󰈅"
       },
       {
         "color": "white",
@@ -778,6 +778,6 @@
     ],
     "current_connection": null,
     "has_visited_onboarding": null,
-    "state": "Disconnected"
+    "state": "Unknown"
   }
 }

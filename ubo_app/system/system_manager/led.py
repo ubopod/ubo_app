@@ -38,7 +38,7 @@ class LEDManager:
         add_file_handler(self.logger, logging.DEBUG)
         add_stdout_handler(self.logger, logging.DEBUG)
         self.logger.setLevel(logging.DEBUG)
-        self.logger.debug('Initialising LEDManager...')
+        self.logger.info('Initialising LEDManager...')
 
         self.led_ring_present = True
         self.current_color = None
@@ -288,7 +288,7 @@ class LEDManager:
             self.stop()
             self._last_thread.join()
 
-        self.logger.debug('---starting led new thread--', extra={'incoming': incoming})
+        self.logger.info('---starting led new thread--', extra={'incoming': incoming})
         self._last_thread = Thread(target=self.run_command, args=(incoming,))
         self._last_thread.start()
 

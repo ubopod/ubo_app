@@ -9,8 +9,6 @@ from typing import cast
 import dotenv
 import pytest
 
-from tests.monkeypatch import _monkeypatch
-
 dotenv.load_dotenv(Path(__file__).parent / '.env')
 
 pytest.register_assert_rewrite('tests.fixtures')
@@ -22,8 +20,9 @@ from tests.fixtures import (  # noqa: E402, I001
     Stability,
     WaitForEmptyMenu,
     app_context as original_app_context,
-    load_services,
     camera,
+    load_services,
+    mock_environment,
     stability,
     store,
     wait_for_empty_menu,
@@ -53,6 +52,7 @@ fixtures = (
     original_app_context,
     load_services,
     camera,
+    mock_environment,
     needs_finish,
     stability,
     store,
@@ -124,4 +124,4 @@ def _setup_script(request: pytest.FixtureRequest) -> None:
         test_dir = test_dir.parent
 
 
-_ = fixtures, _logger, _monkeypatch, _setup_script
+_ = fixtures, _logger, _setup_script

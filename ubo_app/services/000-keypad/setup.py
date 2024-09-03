@@ -56,7 +56,7 @@ class Keypad:
         """
         self.logger = logging.getLogger('keypad')
         self.logger.setLevel(logging.WARNING)
-        self.logger.debug('Initialising keypad...')
+        self.logger.info('Initialising keypad...')
         self.previous_inputs = 0
         self.aw = None
         self.bus_address = 0x58

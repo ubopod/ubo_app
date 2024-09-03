@@ -64,7 +64,7 @@ class WorkerThread(threading.Thread):
         from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD
         from ubo_app.logging import logger
 
-        logger.debug('Shutting down worker thread')
+        logger.info('Shutting down worker thread')
 
         while True:
             tasks = [
@@ -93,7 +93,7 @@ class WorkerThread(threading.Thread):
                 )
             await asyncio.sleep(0.1)
 
-        logger.debug('Stopping event loop', extra={'thread_': self})
+        logger.info('Stopping event loop', extra={'thread_': self})
         self.loop.stop()
         self.is_finished.set()
 

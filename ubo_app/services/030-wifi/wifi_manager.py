@@ -60,9 +60,7 @@ def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
 
 async def get_wifi_device() -> NetworkDeviceWireless | None:
     network_manager = NetworkManager(get_system_bus())
-    devices_paths = await wait_for(
-        network_manager.get_devices(),
-    )
+    devices_paths = await wait_for(network_manager.get_devices())
     for device_path in devices_paths:
         generic_device = NetworkDeviceGeneric(device_path, get_system_bus())
         if (

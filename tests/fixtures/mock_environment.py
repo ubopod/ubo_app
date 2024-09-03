@@ -69,7 +69,7 @@ def _monkeypatch_docker(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(
         'docker.from_env',
-        lambda: Fake(_Fake__props={'ping': Fake(_Fake__return_value=False)}),
+        lambda: Fake(_Fake__attrs={'ping': Fake(_Fake__return_value=False)}),
     )
 
 
@@ -160,7 +160,7 @@ def _monkeypatch_aiohttp() -> None:
             parent = super()
             return parent.get(url, **kwargs)
 
-    sys.modules['aiohttp'] = Fake(_Fake__props={'ClientSession': FakeClientSession})
+    sys.modules['aiohttp'] = Fake(_Fake__attrs={'ClientSession': FakeClientSession})
 
 
 def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -209,7 +209,7 @@ async def _fake_create_subprocess_exec(
 
     class FakeAsyncProcess(Fake):
         def __init__(self: FakeAsyncProcess, output: bytes = b'') -> None:
-            super().__init__(_Fake__props={'output': output})
+            super().__init__(_Fake__attrs={'output': output})
 
         async def communicate(self: FakeAsyncProcess) -> tuple[bytes, bytes]:
             return cast(bytes, self.output), b''
@@ -223,22 +223,38 @@ async def _fake_create_subprocess_exec(
     if command == 'systemctl':
         if args[0] == '--user':
             args = args[1:]
+
         if args[0] == 'is-enabled':
             return FakeAsyncProcess(output=b'enabled')
         if args[0] == 'is-active':
             return FakeAsyncProcess(output=b'active')
-    if command == 'dpkg-query' and args[-1] in ('docker', 'lightdm', 'rpi-connect'):
+    if command == 'dpkg-query' and args[-1] in (
+        'docker',
+        'raspberrypi-ui-mods',
+        'rpi-connect',
+    ):
         return FakeAsyncProcess(output=b'install ok installed')
     if command == 'pulseaudio':
         return FakeAsyncProcess()
 
-    return await originals['_fake_create_subprocess_exec'](*_args, **kwargs)
+    import logging
+
+    logging.info(
+        'Unexpected `async_create_subprocess_exec` command in test environment:',
+        extra={
+            'args_': args,
+            'kwargs': kwargs,
+        },
+    )
+
+    return await originals['async_create_subprocess_exec'](*_args, **kwargs)
 
 
 def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
 
-    originals['_fake_create_subprocess_exec'] = _fake_create_subprocess_exec
+    if '_fake_create_subprocess_exec' not in originals:
+        originals['async_create_subprocess_exec'] = asyncio.create_subprocess_exec
     monkeypatch.setattr(asyncio, 'create_subprocess_exec', _fake_create_subprocess_exec)
 
 
@@ -251,7 +267,7 @@ def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
     random.seed(0)
     _monkeypatch_datetime(monkeypatch)
@@ -262,7 +278,6 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     from fake import Fake
 
     import ubo_app.constants
-    import ubo_app.utils.monitor_unit
     import ubo_app.utils.serializer
 
     tracemalloc.start()
@@ -273,10 +288,9 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ubo_app.constants, 'STORE_GRACE_PERIOD', 0.1)
     monkeypatch.setattr(ubo_app.constants, 'NOTIFICATIONS_FLASH_TIME', 1000)
     monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', lambda _, obj: obj)
-    monkeypatch.setattr(ubo_app.utils.monitor_unit, 'monitor_unit', Fake())
 
     sys.modules['ubo_app.utils.secrets'] = Fake(
-        _Fake__props={'read_secret': lambda _: None},
+        _Fake__attrs={'read_secret': lambda _: None},
     )
 
     _monkeypatch_socket(monkeypatch)
@@ -288,6 +302,3 @@ def _monkeypatch(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_subprocess(monkeypatch)
     _monkeypatch_asyncio_subprocess(monkeypatch)
     _monkeypatch_asyncio_socket(monkeypatch)
-
-
-_ = _monkeypatch

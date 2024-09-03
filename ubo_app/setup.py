@@ -6,7 +6,7 @@ import asyncio
 import signal
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from fake import Fake
@@ -14,14 +14,6 @@ from redux import FinishAction, FinishEvent
 
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Callable
-
-
-class _FakeAsyncProcess(Fake):
-    def __init__(self: _FakeAsyncProcess, output: bytes = b'') -> None:
-        super().__init__(_Fake__props={'output': output})
-
-    async def communicate(self: _FakeAsyncProcess) -> tuple[bytes, bytes]:
-        return cast(bytes, self.output), b''
 
 
 original_subprocess_run = subprocess.run
@@ -48,8 +40,7 @@ async def _fake_create_subprocess_exec(
     args = _args[1:]
 
     if command == '/usr/bin/env':
-        command = args[0]
-        args = args[1:]
+        command, *args = args
     if isinstance(command, Path):
         command = command.as_posix()
     if any(i in command for i in ('reboot', 'poweroff')):
@@ -57,7 +48,9 @@ async def _fake_create_subprocess_exec(
     if command in {'curl', 'tar'} or command.endswith('/code'):
         return original_asyncio_create_subprocess_exec(*args, **kwargs)
     if command == 'dpkg-query':
-        return Fake(_Fake__return_value=Fake(_Fake__await_value=(b'', b'')))
+        return Fake(
+            _Fake__return_value=Fake(_Fake__await_value=(b'install ok installed', b'')),
+        )
 
     return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
 
@@ -69,7 +62,7 @@ def setup() -> None:
     # it should be changed to `Fake()` and  moved inside the `if not IS_RPI` when the
     # new sdbus is released {-
     sys.modules['sdbus.utils.inspect'] = Fake(
-        _Fake__props={
+        _Fake__attrs={
             'inspect_dbus_path': lambda obj: obj._dbus.object_path,  # noqa: SLF001
         },
     )
@@ -84,16 +77,15 @@ def setup() -> None:
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()
         sys.modules['piper.voice'] = Fake(
-            _Fake__props={'synthesize_stream_raw': lambda _: [b'']},
+            _Fake__attrs={'synthesize_stream_raw': lambda _: [b'']},
         )
         sys.modules['pulsectl'] = Fake()
         sys.modules['sdbus'] = Fake()
-        sys.modules['sdbus.utils'] = Fake()
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()
         sys.modules['sdbus_async.networkmanager.enums'] = Fake()
         sys.modules['picamera2.picamera2'] = Fake(
-            _Fake__props={
+            _Fake__attrs={
                 'capture_array': Fake(
                     _Fake__return_value=np.zeros((1, 1, 3), dtype=np.uint8),
                 ),

@@ -102,7 +102,7 @@ async def _check_status() -> None:
                     ),
                 ),
             )
-    logger.debug(
+    logger.info(
         'Checked VSCode Tunnel Status',
         extra={
             'status': status_data,

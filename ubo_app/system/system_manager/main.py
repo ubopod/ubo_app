@@ -64,7 +64,7 @@ def process_request(command: bytes, connection: socket.socket) -> None:
 
 def setup_hostname() -> None:
     """Set the hostname to 'ubo'."""
-    logger.debug('Setting hostname...')
+    logger.info('Setting hostname...')
     from ubo_app.constants import INSTALLATION_PATH
 
     available_letters = list(
@@ -92,13 +92,13 @@ def setup_hostname() -> None:
         ],
         check=True,
     )
-    logger.debug('Hostname set to %s', id)
+    logger.info('Hostname set to %s', id)
 
 
 def main() -> None:
     """Initialise the System-Manager."""
     setup_error_handling()
-    logger.debug('Initialising System-Manager...')
+    logger.info('Initialising System-Manager...')
 
     setup_hostname()
     setup_reset_button()
@@ -128,7 +128,7 @@ def main() -> None:
     while True:
         try:
             connection, client_address = server.accept()
-            logger.debug('New connection:', extra={'client_address': client_address})
+            logger.info('New connection:', extra={'client_address': client_address})
             datagram = remaining + connection.recv(1024)
             if not datagram:
                 break
@@ -138,12 +138,12 @@ def main() -> None:
 
             command, remaining = datagram.split(b'\0', 1)
 
-            logger.debug('Received command:', extra={'command': command})
+            logger.info('Received command:', extra={'command': command})
             thread = Thread(target=process_request, args=(command, connection))
             thread.start()
 
         except KeyboardInterrupt:
-            logger.debug('Interrupted')
+            logger.info('Interrupted')
             server.close()
             try:
                 sys.exit(0)

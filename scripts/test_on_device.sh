@@ -9,11 +9,11 @@ function cleanup() {
   run_on_pod "killall -9 pytest"
 }
 trap cleanup ERR
-trap cleanup EXIT
 
 copy=${copy:-"False"}
 deps=${deps:-"False"}
 run=${run:-"False"}
+results=${results:-"False"}
 
 function run_on_pod() {
   echo $1
@@ -46,17 +46,19 @@ if [ "$copy" == "True" ]; then
   (echo './scripts'; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ ubo-development-pod:/home/ubo/test-runner/ --chown ubo:ubo
 fi
 
-run_on_pod "$(if [ "$copy" == "True" ]; then echo "(~/.local/bin/poetry --version || \
-  curl -L https://install.python-poetry.org | python3 -) &&"; fi)
-  $(if [ "$run" == "True" ]; then echo "(killall -9 pytest || true) &&"; fi)\
-  cd ~/test-runner &&\
-  $(if [ "$run" == "True" ] || [ "$deps" == "True" ]; then echo "~/.local/bin/poetry config virtualenvs.options.system-site-packages true --local &&\
-  ~/.local/bin/poetry env use python3.11 &&"; fi)\
-  $(if [ "$deps" == "True" ]; then echo "~/.local/bin/poetry install --no-interaction --extras=dev --with=dev &&"; fi)\
-  $(if [ "$run" == "True" ]; then echo "~/.local/bin/poetry run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* || true &&"; fi)\
-  true"
+if [ "$run" == "True" ] || [ "$deps" == "True" ]; then
+  run_on_pod "$(if [ "$deps" == "True" ]; then echo "(~/.local/bin/poetry --version ||
+curl -L https://install.python-poetry.org | python3 -) &&"; fi)
+  $(if [ "$run" == "True" ]; then echo "killall -9 pytest || true && systemctl --user stop ubo-app || true &&"; fi)
+cd ~/test-runner &&
+~/.local/bin/poetry config virtualenvs.options.system-site-packages true --local &&
+~/.local/bin/poetry env use python3.11 &&
+  $(if [ "$deps" == "True" ]; then echo "~/.local/bin/poetry install --no-interaction --extras=dev --with=dev &&"; fi)
+  $(if [ "$run" == "True" ]; then echo "~/.local/bin/poetry run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* || true &&"; fi)
+true"
+fi
 
-if [ "$run" == "True" ]; then
+if [ "$run" == "True" ] || [ "$results" == True ]; then
   rm -rf tests/**/results/
   run_on_pod "find ~/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --rsync-path="sudo rsync" --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args ubo-development-pod:/home/ubo/test-runner ./
 fi

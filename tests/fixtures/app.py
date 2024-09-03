@@ -98,7 +98,7 @@ class AppContext:
         app = app_ref()
 
         if app is not None and self.request.session.testsfailed == 0:
-            logging.debug(
+            logging.info(
                 'Memory leak: failed to release app for test.',
                 extra={
                     'refcount': sys.getrefcount(app),
@@ -261,10 +261,10 @@ def _setup_headless_kivy() -> None:
 @pytest.fixture
 async def app_context(
     request: SubRequest,
-    _monkeypatch: pytest.MonkeyPatch,
+    mock_environment: None,
 ) -> AsyncGenerator[AppContext, None]:
     """Create the application."""
-    _ = _monkeypatch
+    _ = mock_environment
 
     from ubo_app.setup import setup
 

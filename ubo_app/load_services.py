@@ -178,7 +178,7 @@ class UboServiceThread(threading.Thread):
     def register_reducer(self: UboServiceThread, reducer: ReducerType) -> None:
         from ubo_app.store.main import dispatch, root_reducer_id
 
-        logger.debug(
+        logger.info(
             'Registering ubo service reducer',
             extra={
                 'service_id': self.service_id,
@@ -228,7 +228,7 @@ class UboServiceThread(threading.Thread):
         self.service_id = service_id
         self.setup = setup
 
-        logger.debug(
+        logger.info(
             'Ubo service registered!',
             extra={
                 'service_id': self.service_id,
@@ -281,7 +281,7 @@ class UboServiceThread(threading.Thread):
         self.loop = asyncio.new_event_loop()
         self.loop.set_exception_handler(loop_exception_handler)
 
-        logger.debug(
+        logger.info(
             'Starting service thread',
             extra={
                 'thread_native_id': self.native_id,
@@ -329,7 +329,7 @@ class UboServiceThread(threading.Thread):
     async def shutdown(self: UboServiceThread) -> None:
         from ubo_app.logging import logger
 
-        logger.debug(
+        logger.info(
             'Shutting down service thread',
             extra={
                 'thread_native_id': self.native_id,
@@ -365,7 +365,7 @@ class UboServiceThread(threading.Thread):
                 )
             await asyncio.sleep(0.1)
 
-        logger.debug('Stopping event loop', extra={'thread_': self})
+        logger.info('Stopping event loop', extra={'thread_': self})
         self.loop.stop()
 
     def stop(self: UboServiceThread) -> None:

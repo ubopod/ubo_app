@@ -91,7 +91,7 @@ Remote shell: (allowed|unavailable)(?: \((\d+) sessions active\))?)?""",
                 ),
             ),
         )
-    logger.debug(
+    logger.info(
         'Checked VSCode Tunnel Status',
         extra=status_data,
     )

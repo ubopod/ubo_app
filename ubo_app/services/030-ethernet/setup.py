@@ -13,7 +13,7 @@ from ubo_app.utils.async_ import create_task
 
 @debounce(
     wait=0.5,
-    options=DebounceOptions(leading=True, trailing=False, time_window=2),
+    options=DebounceOptions(leading=True, trailing=True, time_window=1),
 )
 async def update_ethernet_icon() -> None:
     state = await get_ethernet_device_state()

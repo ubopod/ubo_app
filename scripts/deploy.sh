@@ -48,22 +48,22 @@ function run_on_pod_as_root() {
 
 scp dist/$LATEST_VERSION ubo-development-pod:/tmp/
 
-run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION[default] &&"; fi)\
+run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION[default] &&"; fi)
 mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/models /tmp/
 pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION[default]
 mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/"
 
 if [ "$bootstrap" == "True" ] || [ "$env" == "True" ]; then
-  run_on_pod_as_root "$(if [ "$bootstrap" == "True" ]; then echo "/opt/ubo/env/bin/bootstrap && systemctl daemon-reload && systemctl restart ubo-system.service &&"; fi)\
+  run_on_pod_as_root "$(if [ "$bootstrap" == "True" ]; then echo "/opt/ubo/env/bin/bootstrap && systemctl daemon-reload && systemctl restart ubo-system.service &&"; fi)
 $(if [ "$env" == "True" ]; then echo "cat <<'EOF' > /tmp/.dev.env
 $(cat ubo_app/.dev.env)
 EOF &&
 chown ubo:ubo /tmp/.dev.env &&
-mv /tmp/.dev.env /opt/ubo/env/lib/python3.*/site-packages/ubo_app/ &&"; fi)\
+mv /tmp/.dev.env /opt/ubo/env/lib/python3.*/site-packages/ubo_app/ &&"; fi)
 true"
 fi
 
 if [ "$run" == "True" ] || [ "$restart" == "True" ]; then
-  run_on_pod "$(if [ "$run" == "True" ]; then echo "systemctl --user restart ubo-app.service &&"; fi)\
+  run_on_pod "$(if [ "$run" == "True" ]; then echo "systemctl --user restart ubo-app.service &&"; fi)
 $(if [ "$restart" == "True" ]; then echo "killall -9 ubo"; fi)"
 fi

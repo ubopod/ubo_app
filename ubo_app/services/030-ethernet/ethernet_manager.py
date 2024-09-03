@@ -32,17 +32,10 @@ system_buses = {}
 
 async def get_ethernet_device() -> NetworkDeviceGeneric | None:
     network_manager = NetworkManager(get_system_bus())
-    devices_paths = await wait_for(
-        network_manager.get_devices(),
-    )
+    devices_paths = await wait_for(network_manager.get_devices())
     for device_path in devices_paths:
         generic_device = NetworkDeviceGeneric(device_path, get_system_bus())
-        if (
-            await wait_for(
-                generic_device.device_type,
-            )
-            == DeviceType.ETHERNET
-        ):
+        if await wait_for(generic_device.device_type) == DeviceType.ETHERNET:
             return generic_device
     return None
 

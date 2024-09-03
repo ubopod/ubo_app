@@ -24,7 +24,7 @@ async def send_command(*command_: str, has_output: bool = False) -> str | None:
     try:
         reader, writer = await asyncio.open_unix_connection(SERVER_SOCKET_PATH)
 
-        logger.debug('Sending command:', extra={'command': command})
+        logger.info('Sending command:', extra={'command': command})
 
         response = None
         writer.write(command.encode() + b'\0')
@@ -32,7 +32,7 @@ async def send_command(*command_: str, has_output: bool = False) -> str | None:
             datagram = (await reader.readuntil(b'\0'))[:-1]
             if datagram:
                 response = datagram.decode('utf-8')
-                logger.debug('Server response:', extra={'response': response})
+                logger.info('Server response:', extra={'response': response})
         writer.close()
 
     except Exception:
