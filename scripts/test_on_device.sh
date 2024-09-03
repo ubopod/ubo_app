@@ -9,6 +9,7 @@ function cleanup() {
   run_on_pod "killall -9 pytest"
 }
 trap cleanup ERR
+trap cleanup SIGINT
 
 copy=${copy:-"False"}
 deps=${deps:-"False"}

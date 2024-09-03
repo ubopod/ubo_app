@@ -9,6 +9,7 @@
 - feat(lightdm): show a notification when rpi-connect is started to inform user desktop should be installed for the screen sharing to work
 - fix(lightdm): install raspberrypi-ui-mods instead of lightdm to activate wayland and enable rpi-connect screen sharing
 - test: fix an issue in tests which caused minor random store state changes, ruining snapshot assertions
+- test: add vscode and rpi-connect services to `test_all_services` test
 
 ## Version 0.15.11
 

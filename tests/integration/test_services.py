@@ -24,6 +24,8 @@ ALL_SERVICES_IDS = [
     'sensors',
     'docker',
     'ssh',
+    'vscode',
+    'rpi_connect',
     'voice',
 ]
 

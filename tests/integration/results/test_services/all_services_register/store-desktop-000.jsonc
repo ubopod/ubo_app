@@ -341,6 +341,38 @@
                             "label": "SSH",
                             "opacity": null,
                             "progress": null
+                          },
+                          {
+                            "action": "<function:generate_rpi_connect_menu>",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": "rpi_connect",
+                            "label": "RPi Connect",
+                            "opacity": null,
+                            "progress": null
+                          },
+                          {
+                            "action": "<function:generate_vscode_menu>",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰨞",
+                            "is_short": false,
+                            "key": "vscode",
+                            "label": "VSCode",
+                            "opacity": null,
+                            "progress": null
                           }
                         ],
                         "placeholder": "No settings in this category",
@@ -699,7 +731,9 @@
       "Docker": null,
       "IP Addresses": 0,
       "LightDM": 0,
+      "RPi Connect": null,
       "SSH": 1,
+      "VSCode": null,
       "Voice": 0,
       "WiFi": 2
     }
@@ -712,6 +746,13 @@
   "rgb_ring": {
     "is_busy": false,
     "is_connected": true
+  },
+  "rpi_connect": {
+    "is_active": true,
+    "is_downloading": false,
+    "is_installed": null,
+    "is_signed_in": null,
+    "status": null
   },
   "sensors": {
     "light": {
@@ -764,6 +805,13 @@
   "voice": {
     "is_access_key_set": false,
     "selected_engine": "piper"
+  },
+  "vscode": {
+    "is_binary_installed": false,
+    "is_downloading": false,
+    "is_logged_in": null,
+    "is_pending": true,
+    "status": null
   },
   "wifi": {
     "connections": [

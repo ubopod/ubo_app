@@ -19,7 +19,7 @@
         pos_hint: {'left': 0.5, 'top': 1}
 
       Label:
-        text: '\n'.join([i.strip() for i in re.split('(.{15}(?:.{0,10}\s|.{10}))', root.url) if i])
+        text: '\n'.join([i.strip() for i in re.split(r'(.{15}(?:.{0,10}\s|.{10}))', root.url) if i])
         size_hint: 1, None
         height: self.texture_size[1]
         font_size: dp(18)
