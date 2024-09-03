@@ -206,15 +206,15 @@ class Keypad:
 
     @staticmethod
     def on_button_event(*, index: int, status: ButtonStatus) -> None:
-        from ubo_app.store.main import dispatch
+        from ubo_app.store.main import store
 
         if index in KEY_INDEX:
             if status == 'pressed':
-                dispatch(KeypadKeyPressAction(key=KEY_INDEX[index]))
+                store.dispatch(KeypadKeyPressAction(key=KEY_INDEX[index]))
             elif status == 'released':
-                dispatch(KeypadKeyReleaseAction(key=KEY_INDEX[index]))
+                store.dispatch(KeypadKeyReleaseAction(key=KEY_INDEX[index]))
         if index == MIC_INDEX:
-            dispatch(
+            store.dispatch(
                 AudioSetMuteStatusAction(
                     device=AudioDevice.INPUT,
                     is_mute=status == 'pressed',

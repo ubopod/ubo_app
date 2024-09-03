@@ -114,13 +114,13 @@ def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
 
     from redux.basic_types import FinishEvent
 
-    from ubo_app.store.main import subscribe_event
+    from ubo_app.store.main import store
 
     def stop() -> None:
         unsubscribe()
         worker_thread.stop()
 
-    unsubscribe = subscribe_event(FinishEvent, stop)
+    unsubscribe = store.subscribe_event(FinishEvent, stop)
 
 
 def _create_task(

@@ -12,7 +12,7 @@ from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.ip import (
     IpNetworkInterface,
     IpSetIsConnectedAction,
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-@autorun(lambda state: state.ip.interfaces)
+@store.autorun(lambda state: state.ip.interfaces)
 def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuItem]:
     if not interfaces:
         return []
@@ -61,7 +61,7 @@ def load_ip_addresses() -> None:
             if address.family == socket.AddressFamily.AF_INET:
                 ip_addresses_by_interface[interface_name].append(address.address)
 
-    dispatch(
+    store.dispatch(
         IpUpdateInterfacesAction(
             interfaces=[
                 IpNetworkInterface(name=interface_name, ip_addresses=ip_addresses)
@@ -96,7 +96,7 @@ async def check_connection() -> bool:
     while True:
         load_ip_addresses()
         if await is_connected():
-            dispatch(
+            store.dispatch(
                 StatusIconsRegisterAction(
                     icon='󰖟',
                     priority=INTERNET_STATE_ICON_PRIORITY,
@@ -105,7 +105,7 @@ async def check_connection() -> bool:
                 IpSetIsConnectedAction(is_connected=True),
             )
         else:
-            dispatch(
+            store.dispatch(
                 StatusIconsRegisterAction(
                     icon=f'[color={DANGER_COLOR}]󰪎[/color]',
                     priority=INTERNET_STATE_ICON_PRIORITY,
@@ -128,7 +128,7 @@ IpMainMenu = SubMenuItem(
 
 
 async def init_service() -> None:
-    dispatch(
+    store.dispatch(
         RegisterSettingAppAction(
             priority=0,
             category=SettingsCategory.NETWORK,

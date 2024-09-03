@@ -5,7 +5,7 @@ from constants import ETHERNET_STATE_ICON_ID, ETHERNET_STATE_ICON_PRIORITY
 from debouncer import DebounceOptions, debounce
 from ethernet_manager import get_ethernet_device, get_ethernet_device_state
 
-from ubo_app.store.main import dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import GlobalEthernetState
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.async_ import create_task
@@ -17,7 +17,7 @@ from ubo_app.utils.async_ import create_task
 )
 async def update_ethernet_icon() -> None:
     state = await get_ethernet_device_state()
-    dispatch(
+    store.dispatch(
         StatusIconsRegisterAction(
             icon={
                 GlobalEthernetState.CONNECTED: '󱊪',

@@ -70,9 +70,9 @@ def main() -> None:
         logger.exception('An error occurred while running the app.')
         from redux import FinishAction
 
-        from ubo_app.store.main import dispatch
+        from ubo_app.store.main import store
 
-        dispatch(FinishAction())
+        store.dispatch(FinishAction())
 
 
 if __name__ == '__main__':

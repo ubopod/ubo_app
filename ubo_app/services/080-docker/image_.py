@@ -20,7 +20,7 @@ from ubo_gui.page import PageWidget
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.logging import logger
-from ubo_app.store.main import autorun, dispatch, subscribe_event, view
+from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
@@ -62,7 +62,7 @@ def update_container(image_id: str, container: Container) -> None:
             'Container running image found',
             extra={'image': image_id, 'path': IMAGES[image_id].path},
         )
-        dispatch(
+        store.dispatch(
             DockerImageSetStatusAction(
                 image=image_id,
                 status=ImageStatus.RUNNING,
@@ -82,7 +82,7 @@ def update_container(image_id: str, container: Container) -> None:
         "Container for the image found, but it's not running",
         extra={'image': image_id, 'path': IMAGES[image_id].path},
     )
-    dispatch(
+    store.dispatch(
         DockerImageSetStatusAction(
             image=image_id,
             status=ImageStatus.CREATED,
@@ -97,35 +97,35 @@ def _monitor_events(image_id: str, get_docker_id: Callable[[], str]) -> None:  #
         decode=True,
         filters={'type': ['image', 'container']},
     )
-    subscribe_event(FinishEvent, events.close)
+    store.subscribe_event(FinishEvent, events.close)
     for event in events:
         logger.verbose('Docker image event', extra={'event': event})
         if event['Type'] == 'image':
             if event['status'] == 'pull' and event['id'] == path:
                 try:
                     image = docker_client.images.get(path)
-                    dispatch(
+                    store.dispatch(
                         DockerImageSetStatusAction(
                             image=image_id,
                             status=ImageStatus.AVAILABLE,
                         ),
                     )
                     if isinstance(image, Image) and image.id:
-                        dispatch(
+                        store.dispatch(
                             DockerImageSetDockerIdAction(
                                 image=image_id,
                                 docker_id=image.id,
                             ),
                         )
                 except docker.errors.DockerException:
-                    dispatch(
+                    store.dispatch(
                         DockerImageSetStatusAction(
                             image=image_id,
                             status=ImageStatus.NOT_AVAILABLE,
                         ),
                     )
             elif event['status'] == 'delete' and event['id'] == get_docker_id():
-                dispatch(
+                store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
                         status=ImageStatus.NOT_AVAILABLE,
@@ -137,14 +137,14 @@ def _monitor_events(image_id: str, get_docker_id: Callable[[], str]) -> None:  #
                 if container:
                     update_container(image_id, container)
             elif event['status'] == 'die' and event['from'] == path:
-                dispatch(
+                store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
                         status=ImageStatus.CREATED,
                     ),
                 )
             elif event['status'] == 'destroy' and event['from'] == path:
-                dispatch(
+                store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
                         status=ImageStatus.AVAILABLE,
@@ -165,7 +165,7 @@ def check_container(image_id: str) -> None:
                 raise docker.errors.ImageNotFound(path)  # noqa: TRY301
 
             if image.id:
-                dispatch(
+                store.dispatch(
                     DockerImageSetDockerIdAction(
                         image=image_id,
                         docker_id=image.id,
@@ -182,7 +182,7 @@ def check_container(image_id: str) -> None:
                 'Container running image not found',
                 extra={'image': image_id, 'path': path},
             )
-            dispatch(
+            store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
                     status=ImageStatus.AVAILABLE,
@@ -193,7 +193,7 @@ def check_container(image_id: str) -> None:
                 'Image not found',
                 extra={'image': image_id, 'path': path},
             )
-            dispatch(
+            store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
                     status=ImageStatus.NOT_AVAILABLE,
@@ -204,7 +204,7 @@ def check_container(image_id: str) -> None:
                 'Image error',
                 extra={'image': image_id, 'path': path},
             )
-            dispatch(
+            store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
                     status=ImageStatus.ERROR,
@@ -213,7 +213,7 @@ def check_container(image_id: str) -> None:
         finally:
             docker_client.close()
 
-            @autorun(lambda state: getattr(state.docker, image_id).docker_id)
+            @store.autorun(lambda state: getattr(state.docker, image_id).docker_id)
             def get_docker_id(docker_id: str) -> str:
                 return docker_id
 
@@ -222,11 +222,11 @@ def check_container(image_id: str) -> None:
     to_thread(act)
 
 
-@autorun(lambda state: state.docker.service.usernames)
+@store.autorun(lambda state: state.docker.service.usernames)
 def _reactive_fetch_image(usernames: dict[str, str]) -> Callable[[ImageState], None]:
     def fetch_image(image: ImageState) -> None:
         def act() -> None:
-            dispatch(
+            store.dispatch(
                 DockerImageSetStatusAction(
                     image=image.id,
                     status=ImageStatus.FETCHING,
@@ -251,7 +251,7 @@ def _reactive_fetch_image(usernames: dict[str, str]) -> Callable[[ImageState], N
                     'Image error',
                     extra={'image': IMAGES[image.id].path},
                 )
-                dispatch(
+                store.dispatch(
                     DockerImageSetStatusAction(
                         image=image.id,
                         status=ImageStatus.ERROR,
@@ -312,7 +312,7 @@ async def _process_environment_variables(image_id: str) -> dict[str, str]:
     return result
 
 
-@autorun(lambda state: state.docker)
+@store.autorun(lambda state: state.docker)
 def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState], None]:
     def run_container(image: ImageState) -> None:
         async def act() -> None:
@@ -325,7 +325,7 @@ def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState]
                 hosts = {}
                 for key, value in IMAGES[image.id].hosts.items():
                     if not hasattr(docker_state, value):
-                        dispatch(
+                        store.dispatch(
                             NotificationsAddAction(
                                 notification=Notification(
                                     title='Dependency error',
@@ -336,7 +336,7 @@ def _run_container_generator(docker_state: DockerState) -> Callable[[ImageState]
                         )
                         return
                     if not getattr(docker_state, value).container_ip:
-                        dispatch(
+                        store.dispatch(
                             NotificationsAddAction(
                                 notification=Notification(
                                     title='Dependency error',
@@ -412,7 +412,7 @@ class DockerQRCodePage(PageWidget):
         self.ids.slider.animated_value = len(self.ips) - 1 - self.index
 
 
-@view(lambda state: state.ip.interfaces)
+@store.view(lambda state: state.ip.interfaces)
 def image_menu(
     interfaces: Sequence[IpNetworkInterface],
     image: ImageState,
@@ -519,7 +519,9 @@ def image_menu(
 
 def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]]:
     """Get the menu items for the Docker service."""
-    _image_menu = autorun(lambda state: getattr(state.docker, image_id))(image_menu)
+    _image_menu = store.autorun(lambda state: getattr(state.docker, image_id))(
+        image_menu,
+    )
 
     def open_image_menu() -> Callable[[], HeadedMenu]:
         check_container(image_id)

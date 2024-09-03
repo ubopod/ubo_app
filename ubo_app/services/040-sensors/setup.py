@@ -9,7 +9,7 @@ import adafruit_veml7700
 import board
 from redux import FinishEvent
 
-from ubo_app.store.main import dispatch, subscribe_event
+from ubo_app.store.main import store
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
 
 temperature_sensor: adafruit_pct2075.PCT2075
@@ -20,7 +20,7 @@ def read_sensors(_: float | None = None) -> None:
     """Read the sensor."""
     temperature = temperature_sensor.temperature
     light = light_sensor.lux
-    dispatch(
+    store.dispatch(
         SensorsReportReadingAction(
             sensor=Sensor.TEMPERATURE,
             reading=temperature,
@@ -45,5 +45,5 @@ def init_service() -> None:
     light_sensor = adafruit_veml7700.VEML7700(i2c, address=0x10)
 
     clock_event = Clock.schedule_interval(read_sensors, 1)
-    subscribe_event(FinishEvent, clock_event.cancel)
+    store.subscribe_event(FinishEvent, clock_event.cancel)
     read_sensors()

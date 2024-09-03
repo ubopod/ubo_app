@@ -14,7 +14,7 @@ from kivy.uix.widget import Widget
 from redux import AutorunOptions
 from ubo_gui.app import UboApp
 
-from ubo_app.store.main import autorun
+from ubo_app.store.main import store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -48,7 +48,7 @@ class MenuAppFooter(UboApp):
             or setattr(layout, 'width', temperature.width + dp(12)),
         )
 
-        autorun(
+        store.autorun(
             lambda state: state.sensors.temperature.value,
             options=AutorunOptions(keep_ref=False),
         )(self.set_temperature_value)
@@ -91,7 +91,7 @@ class MenuAppFooter(UboApp):
             ),
         )
 
-        autorun(
+        store.autorun(
             lambda state: state.sensors.light.value,
             options=AutorunOptions(keep_ref=False),
         )(self.set_light_value)
@@ -216,12 +216,12 @@ class MenuAppFooter(UboApp):
             x=self.set_icons_layout_x,
         )
 
-        autorun(
+        store.autorun(
             lambda state: state.status_icons.icons,
             options=AutorunOptions(keep_ref=False),
         )(self.render_icons)
 
-        autorun(
+        store.autorun(
             lambda state: state.main.path,
             options=AutorunOptions(keep_ref=False),
         )(self.handle_depth_change)

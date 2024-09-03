@@ -26,9 +26,9 @@ def register_persistent_store(
     selector: Callable[[RootState], T],
 ) -> None:
     """Register a part of the store to be persistent in the filesystem."""
-    from ubo_app.store.main import autorun, store, subscribe_event
+    from ubo_app.store.main import store
 
-    @autorun(selector)
+    @store.autorun(selector)
     async def write(value: T) -> None:
         if value is None:
             return
@@ -45,7 +45,7 @@ def register_persistent_store(
         unsubscribe_event()
         write.unsubscribe()
 
-    unsubscribe_event = subscribe_event(FinishEvent, unsubscribe)
+    unsubscribe_event = store.subscribe_event(FinishEvent, unsubscribe)
 
 
 @overload

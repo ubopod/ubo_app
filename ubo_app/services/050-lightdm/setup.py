@@ -9,7 +9,7 @@ from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, Menu
 
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.lightdm import (
     LightDMClearEnabledStateAction,
     LightDMUpdateStateAction,
@@ -35,16 +35,16 @@ def install_lightdm() -> None:
     """Install LightDM."""
 
     async def act() -> None:
-        dispatch(LightDMUpdateStateAction(is_installing=True))
+        store.dispatch(LightDMUpdateStateAction(is_installing=True))
         result = await send_command(
             'package',
             'install',
             'lightdm',
             has_output=True,
         )
-        dispatch(LightDMUpdateStateAction(is_installing=False))
+        store.dispatch(LightDMUpdateStateAction(is_installing=False))
         if result != 'installed':
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='LightDM',
@@ -75,7 +75,7 @@ def enable_lightdm_service() -> None:
     """Enable the LightDM service."""
 
     async def act() -> None:
-        dispatch(LightDMClearEnabledStateAction())
+        store.dispatch(LightDMClearEnabledStateAction())
         await send_command('service', 'lightdm', 'enable')
         await asyncio.sleep(5)
         await check_lightdm()
@@ -87,7 +87,7 @@ def disable_lightdm_service() -> None:
     """Disable the LightDM service."""
 
     async def act() -> None:
-        dispatch(LightDMClearEnabledStateAction())
+        store.dispatch(LightDMClearEnabledStateAction())
         await send_command('service', 'lightdm', 'disable')
         await asyncio.sleep(5)
         await check_lightdm()
@@ -95,7 +95,7 @@ def disable_lightdm_service() -> None:
     create_task(act())
 
 
-@autorun(lambda state: state.lightdm)
+@store.autorun(lambda state: state.lightdm)
 def lightdm_menu(state: LightDMState) -> Menu:
     """Get the LightDM menu items."""
     if state.is_installing:
@@ -148,13 +148,13 @@ def lightdm_menu(state: LightDMState) -> Menu:
     )
 
 
-@autorun(lambda state: state.lightdm)
+@store.autorun(lambda state: state.lightdm)
 def lightdm_icon(state: LightDMState) -> str:
     """Get the LightDM icon."""
     return '[color=#008000]󰪥[/color]' if state.is_active else '[color=#ffff00]󰝦[/color]'
 
 
-@autorun(lambda state: state.lightdm)
+@store.autorun(lambda state: state.lightdm)
 def lightdm_title(_: LightDMState) -> str:
     """Get the LightDM title."""
     return lightdm_icon() + ' LightDM'
@@ -168,7 +168,7 @@ async def check_lightdm() -> None:
         is_package_installed('raspberrypi-ui-mods'),
     )
 
-    dispatch(
+    store.dispatch(
         LightDMUpdateStateAction(
             is_active=is_installed and is_active,
             is_enabled=is_installed and is_enabled,
@@ -186,7 +186,7 @@ def open_lightdm_menu() -> Callable[[], Menu]:
 
 def init_service() -> None:
     """Initialize the LightDM service."""
-    dispatch(
+    store.dispatch(
         RegisterSettingAppAction(
             priority=0,
             category=SettingsCategory.DESKTOP,
@@ -202,7 +202,7 @@ def init_service() -> None:
     create_task(
         monitor_unit(
             'lightdm.service',
-            lambda status: dispatch(
+            lambda status: store.dispatch(
                 LightDMUpdateStateAction(
                     is_active=status in ('active', 'activating', 'reloading'),
                 ),

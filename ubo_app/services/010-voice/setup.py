@@ -17,7 +17,7 @@ from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
 from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.main import autorun, dispatch, subscribe_event, view
+from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
 from ubo_app.store.services.voice import (
     VoiceEngine,
@@ -41,14 +41,14 @@ class _Context:
     picovoice_lock = fasteners.ReaderWriterLock()
 
     def cleanup(self: _Context) -> None:
-        dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=False))
+        store.dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=False))
         with self.picovoice_lock.write_lock():
             if self.picovoice_instance:
                 self.picovoice_instance.delete()
                 self.picovoice_instance = None
 
     def set_access_key(self: _Context, access_key: str) -> None:
-        dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=True))
+        store.dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=True))
         with self.picovoice_lock.write_lock():
             if access_key:
                 if self.picovoice_instance:
@@ -93,7 +93,7 @@ def clear_access_key() -> None:
     to_thread(_context.cleanup)
 
 
-@view(lambda state: state.voice.selected_engine)
+@store.view(lambda state: state.voice.selected_engine)
 def _engine(engine: VoiceEngine) -> VoiceEngine:
     return engine
 
@@ -119,7 +119,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
             piper_cache[text] = []
             is_first_time = True
 
-        unsubscribe = subscribe_event(
+        unsubscribe = store.subscribe_event(
             AudioPlaybackDoneEvent,
             lambda event: event.id == id and queue.get(),
         )
@@ -128,7 +128,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
             if is_first_time:
                 piper_cache[text].append(sample)
             queue.put(None)
-            dispatch(
+            store.dispatch(
                 AudioPlayAudioAction(
                     id=id,
                     sample=sample,
@@ -149,7 +149,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
                 speech_rate=event.speech_rate,
             )
         sample = b''.join(struct.pack('h', sample) for sample in audio_sequence[0])
-        dispatch(
+        store.dispatch(
             AudioPlayAudioAction(
                 sample=sample,
                 channels=1,
@@ -159,7 +159,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
         )
 
 
-@autorun(lambda state: state.voice.is_access_key_set)
+@store.autorun(lambda state: state.voice.is_access_key_set)
 def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
     if is_access_key_set:
         return [
@@ -178,7 +178,7 @@ def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
     ]
 
 
-@autorun(lambda state: state.voice.is_access_key_set)
+@store.autorun(lambda state: state.voice.is_access_key_set)
 def _menu_sub_heading(_: bool | None) -> str:
     return f"""Set the access key
 Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}"""
@@ -190,7 +190,7 @@ ENGINE_LABELS = {
 }
 
 
-@autorun(lambda state: state.voice.selected_engine)
+@store.autorun(lambda state: state.voice.selected_engine)
 def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
     selected_engine_parameters = {
         'background_color': SUCCESS_COLOR,
@@ -216,7 +216,7 @@ def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
     """Select the voice engine."""
 
     def _engine_selector() -> None:
-        dispatch(
+        store.dispatch(
             VoiceSetEngineAction(engine=engine),
             VoiceReadTextAction(
                 text={
@@ -245,12 +245,12 @@ def init_service() -> None:
 
     to_thread(_context.load_piper)
 
-    subscribe_event(
+    store.subscribe_event(
         VoiceSynthesizeTextEvent,
         lambda event: to_thread(synthesize_and_play, event),
     )
 
-    dispatch(
+    store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.ACCESSIBILITY,
             priority=0,
@@ -284,4 +284,4 @@ def init_service() -> None:
         ),
     )
 
-    subscribe_event(FinishEvent, _context.cleanup)
+    store.subscribe_event(FinishEvent, _context.cleanup)

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, ParamSpec
 from audio_manager import AudioManager
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 
-from ubo_app.store.main import autorun, dispatch, subscribe_event
+from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioEvent, AudioPlayChimeEvent
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.async_ import to_thread
@@ -34,7 +34,7 @@ def _run_async_in_thread(
 def init_service() -> None:
     audio_manager = AudioManager()
 
-    dispatch(
+    store.dispatch(
         StatusIconsRegisterAction(
             icon='󰍭',
             priority=AUDIO_MIC_STATE_ICON_PRIORITY,
@@ -42,26 +42,26 @@ def init_service() -> None:
         ),
     )
 
-    @autorun(lambda state: state.audio.playback_volume)
+    @store.autorun(lambda state: state.audio.playback_volume)
     def _(volume: float) -> None:
         audio_manager.set_playback_volume(volume)
 
-    @autorun(lambda state: state.audio.capture_volume)
+    @store.autorun(lambda state: state.audio.capture_volume)
     def _(volume: float) -> None:
         audio_manager.set_capture_volume(volume)
 
-    @autorun(lambda state: state.audio.is_playback_mute)
+    @store.autorun(lambda state: state.audio.is_playback_mute)
     def _(is_mute: bool) -> None:  # noqa: FBT001
         audio_manager.set_playback_mute(mute=is_mute)
 
-    subscribe_event(
+    store.subscribe_event(
         AudioPlayChimeEvent,
         lambda event: audio_manager.play_file(
             Path(__file__).parent.joinpath(f'sounds/{event.name}.wav').as_posix(),
         ),
     )
 
-    subscribe_event(
+    store.subscribe_event(
         AudioPlayAudioEvent,
         lambda event: to_thread(
             _run_async_in_thread,

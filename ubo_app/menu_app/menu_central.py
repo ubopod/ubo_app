@@ -22,7 +22,7 @@ from ubo_app.store.core import (
     OpenApplicationEvent,
     SetMenuPathAction,
 )
-from ubo_app.store.main import autorun, dispatch, subscribe_event
+from ubo_app.store.main import store
 from ubo_app.store.services.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
 from ubo_app.store.update_manager import UpdateManagerSetUpdateServiceStatusAction
@@ -54,7 +54,7 @@ class MenuWidgetWithHomePage(MenuWidget):
 
 
 def set_path(_: MenuWidget, stack: list[StackItem]) -> None:
-    dispatch(
+    store.dispatch(
         SetMenuPathAction(
             path=[
                 stack_item.selection.key
@@ -76,7 +76,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         _self = weakref.ref(self)
 
-        @autorun(lambda state: state.main.menu)
+        @store.autorun(lambda state: state.main.menu)
         @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
         @mainthread
         def _(menu: Menu | None) -> None:
@@ -91,7 +91,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.menu_widget.padding_bottom = root.ids.footer_layout.height
 
         def check_update(status: str) -> None:
-            dispatch(
+            store.dispatch(
                 UpdateManagerSetUpdateServiceStatusAction(
                     is_active=status in ('active', 'activating', 'reloading'),
                 ),
@@ -129,27 +129,39 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             menu_representation = 'Menu:\n' + repr(self.menu_widget)
             self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 
-        subscribe_event(
+        store.subscribe_event(
             KeypadKeyPressEvent,
             self.handle_key_press_event,
             keep_ref=False,
         )
 
-        subscribe_event(
+        store.subscribe_event(
             NotificationsDisplayEvent,
             self.display_notification,
             keep_ref=False,
         )
 
-        subscribe_event(OpenApplicationEvent, self.open_application, keep_ref=False)
-        subscribe_event(CloseApplicationEvent, self.close_application, keep_ref=False)
-        subscribe_event(ChooseMenuItemByIconEvent, self.select_by_icon, keep_ref=False)
-        subscribe_event(
+        store.subscribe_event(
+            OpenApplicationEvent,
+            self.open_application,
+            keep_ref=False,
+        )
+        store.subscribe_event(
+            CloseApplicationEvent,
+            self.close_application,
+            keep_ref=False,
+        )
+        store.subscribe_event(
+            ChooseMenuItemByIconEvent,
+            self.select_by_icon,
+            keep_ref=False,
+        )
+        store.subscribe_event(
             ChooseMenuItemByLabelEvent,
             self.select_by_label,
             keep_ref=False,
         )
-        subscribe_event(
+        store.subscribe_event(
             ChooseMenuItemByIndexEvent,
             self.select_by_index,
             keep_ref=False,

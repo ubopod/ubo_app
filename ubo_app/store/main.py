@@ -101,6 +101,7 @@ class SnapshotEvent(BaseEvent): ...
 
 
 ActionType = (
+    # Core Actions
     CombineReducerAction
     | StatusIconsAction
     | UpdateManagerAction
@@ -108,32 +109,34 @@ ActionType = (
     | InitAction
     | FinishAction
     | StatusIconsAction
-    | KeypadAction
-    | MainAction
-    | LightDMAction
-    | SensorsAction
-    | SSHAction
+    # Services Actions
     | AudioAction
     | CameraAction
-    | WiFiAction
-    | IpAction
-    | NotificationsAction
     | DockerAction
+    | IpAction
+    | KeypadAction
+    | LightDMAction
+    | NotificationsAction
     | RgbRingAction
     | RPiConnectAction
+    | SensorsAction
+    | SSHAction
     | VoiceAction
     | VSCodeAction
+    | WiFiAction
 )
 EventType = (
+    # Core Events
     MainEvent
-    | KeypadEvent
-    | CameraEvent
-    | WiFiEvent
-    | IpEvent
     | ScreenshotEvent
-    | SnapshotEvent
-    | NotificationsEvent
+    # Services Events
     | AudioEvent
+    | CameraEvent
+    | IpEvent
+    | KeypadEvent
+    | NotificationsEvent
+    | SnapshotEvent
+    | WiFiEvent
 )
 
 root_reducer, root_reducer_id = combine_reducers(
@@ -261,7 +264,7 @@ def action_middleware(action: ActionType) -> ActionType:
 
 
 def event_middleware(event: EventType) -> EventType | None:
-    if is_finalizing.is_set():
+    if _is_finalizing.is_set():
         return None
     logger.debug(
         'Event dispatched',
@@ -283,22 +286,13 @@ store = UboStore(
     ),
 )
 
-autorun = store.autorun
-dispatch = store.dispatch
-subscribe = store.subscribe
-subscribe_event = store.subscribe_event
-view = store.view
+_is_finalizing = Event()
 
+store.subscribe_event(FinishEvent, lambda: _is_finalizing.set())
 
-is_finalizing = Event()
-
-subscribe_event(FinishEvent, lambda: is_finalizing.set())
-
-dispatch(InitAction())
+store.dispatch(InitAction())
 
 if DEBUG_MODE:
-    subscribe(
+    store.subscribe(
         lambda state: logger.verbose('State updated', extra={'state': state}),
     )
-
-__all__ = ('autorun', 'dispatch', 'subscribe', 'subscribe_event')

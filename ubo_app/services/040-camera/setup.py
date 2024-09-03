@@ -18,7 +18,7 @@ from ubo_gui.page import PageWidget
 
 from ubo_app import display
 from ubo_app.store.core import CloseApplicationEvent, OpenApplicationEvent
-from ubo_app.store.main import dispatch, subscribe_event
+from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraReportBarcodeAction,
     CameraStartViewfinderEvent,
@@ -55,7 +55,7 @@ def resize_image(
     options=DebounceOptions(leading=True, trailing=False, time_window=THROTTL_TIME),
 )
 def check_codes(codes: list[str]) -> None:
-    dispatch(CameraReportBarcodeAction(codes=codes))
+    store.dispatch(CameraReportBarcodeAction(codes=codes))
 
 
 class CameraApplication(PageWidget):
@@ -177,7 +177,7 @@ def start_camera_viewfinder() -> None:
 
     fs_lock = Lock()
     application = CameraApplication()
-    dispatch(OpenApplicationEvent(application=application))
+    store.dispatch(OpenApplicationEvent(application=application))
 
     def feed_viewfinder_locked(_: object) -> None:
         with fs_lock:
@@ -194,21 +194,21 @@ def start_camera_viewfinder() -> None:
             nonlocal is_running
             is_running = False
             feed_viewfinder_scheduler.cancel()
-            dispatch(CloseApplicationEvent(application=application))
+            store.dispatch(CloseApplicationEvent(application=application))
             display.state.resume()
             cancel_subscription()
             if picamera2:
                 picamera2.stop()
                 picamera2.close()
 
-    cancel_subscription = subscribe_event(
+    cancel_subscription = store.subscribe_event(
         CameraStopViewfinderEvent,
         handle_stop_viewfinder,
     )
 
 
 def init_service() -> None:
-    subscribe_event(
+    store.subscribe_event(
         CameraStartViewfinderEvent,
         start_camera_viewfinder,
     )

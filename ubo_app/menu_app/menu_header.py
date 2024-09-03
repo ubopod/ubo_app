@@ -10,7 +10,7 @@ from kivy.uix.relativelayout import RelativeLayout
 from ubo_gui.app import UboApp
 from ubo_gui.progress_ring import ProgressRingWidget
 
-from ubo_app.store.main import autorun
+from ubo_app.store.main import store
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
@@ -37,7 +37,7 @@ class MenuAppHeader(UboApp):
         )
         self.header_layout.add_widget(progress_layout)
 
-        @autorun(
+        @store.autorun(
             lambda state: [
                 notification
                 for notification in state.notifications.notifications

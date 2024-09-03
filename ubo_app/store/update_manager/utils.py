@@ -23,7 +23,7 @@ from ubo_app.constants import (
 )
 from ubo_app.logging import logger
 from ubo_app.store.core import RebootEvent
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Importance,
@@ -84,7 +84,7 @@ async def check_version() -> None:
             latest_version = data['info']['version']
 
             serial_number = read_serial_number()
-            dispatch(
+            store.dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
                     flash_notification=state is None
                     or state.main.path[:2] != ['main', 'about'],
@@ -96,7 +96,7 @@ async def check_version() -> None:
             )
     except Exception:
         logger.exception('Failed to check for updates')
-        dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.FAILED_TO_CHECK))
+        store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.FAILED_TO_CHECK))
         return
 
 
@@ -113,7 +113,7 @@ Then another reboot will be done to complete the update process.""",
     )
 
     async def download_files() -> None:
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     id=UPDATE_MANAGER_NOTIFICATION_ID,
@@ -155,7 +155,7 @@ Then another reboot will be done to complete the update process.""",
         await process.wait()
         (UPDATE_ASSETS_PATH / 'install.sh').chmod(0o755)
 
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     id=UPDATE_MANAGER_NOTIFICATION_ID,
@@ -186,7 +186,7 @@ Then another reboot will be done to complete the update process.""",
         )
         if process.stdout is None:
             logger.info('Failed to update (pip has no stdout)')
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='Failed to update',
@@ -207,7 +207,7 @@ Then another reboot will be done to complete the update process.""",
                 break
             if line.startswith(('Collecting', 'Requirement already satisfied')):
                 counter += 1
-                dispatch(
+                store.dispatch(
                     NotificationsAddAction(
                         notification=Notification(
                             id=UPDATE_MANAGER_NOTIFICATION_ID,
@@ -232,7 +232,7 @@ Then another reboot will be done to complete the update process.""",
         # Update the packages count estimate for the next update
         Path(packages_count_path).write_text(str(counter), encoding='utf-8')
 
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     id=UPDATE_MANAGER_NOTIFICATION_ID,
@@ -249,7 +249,7 @@ Then another reboot will be done to complete the update process.""",
                     actions=[
                         NotificationActionItem(
                             icon='󰜉',
-                            action=lambda: dispatch(RebootEvent()),
+                            action=lambda: store.dispatch(RebootEvent()),
                         ),
                     ],
                     display_type=NotificationDisplayType.STICKY,
@@ -267,7 +267,7 @@ Then another reboot will be done to complete the update process.""",
         await download_files()
     except Exception:
         logger.exception('Failed to update')
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='Failed to update',
@@ -283,7 +283,7 @@ Then another reboot will be done to complete the update process.""",
         return
 
 
-@autorun(lambda state: state.update_manager)
+@store.autorun(lambda state: state.update_manager)
 def about_menu_items(state: UpdateManagerState) -> list[Item]:
     """Get the update menu items."""
     if state.update_status is UpdateStatus.CHECKING:
@@ -298,7 +298,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         return [
             ActionItem(
                 label='Failed to check for updates',
-                action=lambda: dispatch(
+                action=lambda: store.dispatch(
                     UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 ),
                 icon='󰜺',
@@ -310,7 +310,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ActionItem(
                 label='Already up to date!',
                 icon='󰄬',
-                action=lambda: dispatch(
+                action=lambda: store.dispatch(
                     UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 ),
                 background_color=SUCCESS_COLOR,
@@ -321,7 +321,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         return [
             ActionItem(
                 label=f'Update to v{state.latest_version}',
-                action=lambda: dispatch(
+                action=lambda: store.dispatch(
                     UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
                 ),
                 icon='󰬬',
@@ -344,7 +344,7 @@ class _UpdateManagerServiceState(TypedDict):
     progress: int
 
 
-@autorun(
+@store.autorun(
     lambda state: _UpdateManagerServiceState(
         is_running=state.update_manager.is_update_service_active,
         is_presented=any(
@@ -356,7 +356,7 @@ class _UpdateManagerServiceState(TypedDict):
 )
 def _(state: _UpdateManagerServiceState) -> None:
     if state['is_running']:
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
@@ -378,7 +378,7 @@ This may take around 20 minutes to complete.""",
             ),
         )
     else:
-        dispatch(
+        store.dispatch(
             NotificationsClearByIdAction(
                 id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
             ),

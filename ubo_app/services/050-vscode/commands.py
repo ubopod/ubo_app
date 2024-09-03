@@ -12,7 +12,7 @@ from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
 from ubo_app.logging import logger
-from ubo_app.store.main import dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -61,7 +61,7 @@ async def _check_status() -> None:
                 output = await process.stdout.read()
                 status_data = json.loads(output)
     except (subprocess.CalledProcessError, TimeoutError):
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='VSCode',
@@ -90,7 +90,7 @@ async def _check_status() -> None:
                     process.kill()
                 is_logged_in = process.returncode == 0
         except (subprocess.CalledProcessError, TimeoutError):
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='VSCode',
@@ -110,7 +110,7 @@ async def _check_status() -> None:
             'is_binary_installed': is_binary_installed,
         },
     )
-    dispatch(
+    store.dispatch(
         VSCodeSetStatusAction(
             is_binary_installed=is_binary_installed,
             is_logged_in=is_logged_in,
@@ -137,7 +137,7 @@ async def check_status() -> None:
 
 
 async def set_name() -> None:
-    dispatch(VSCodeSetPendingAction())
+    store.dispatch(VSCodeSetPendingAction())
     try:
         hostname = socket.gethostname()
         process = await asyncio.create_subprocess_exec(
@@ -153,7 +153,7 @@ async def set_name() -> None:
         if process.returncode is None:
             process.kill()
     except (subprocess.CalledProcessError, TimeoutError):
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='VSCode',
@@ -170,7 +170,7 @@ async def set_name() -> None:
 
 
 async def install_service() -> None:
-    dispatch(VSCodeSetPendingAction())
+    store.dispatch(VSCodeSetPendingAction())
     try:
         process = await asyncio.create_subprocess_exec(
             CODE_BINARY_PATH,
@@ -183,7 +183,7 @@ async def install_service() -> None:
         if process.returncode is None:
             process.kill()
     except (subprocess.CalledProcessError, TimeoutError):
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='VSCode',
@@ -200,7 +200,7 @@ async def install_service() -> None:
 
 
 async def uninstall_service() -> None:
-    dispatch(VSCodeSetPendingAction())
+    store.dispatch(VSCodeSetPendingAction())
     try:
         process = await asyncio.create_subprocess_exec(
             CODE_BINARY_PATH,
@@ -215,7 +215,7 @@ async def uninstall_service() -> None:
         if process.returncode is None:
             process.kill()
     except (subprocess.CalledProcessError, TimeoutError):
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='VSCode',

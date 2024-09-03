@@ -10,7 +10,7 @@ from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
 from ubo_app.logging import logger
-from ubo_app.store.main import dispatch, view
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Importance,
@@ -79,7 +79,7 @@ Remote shell: (allowed|unavailable)(?: \((\d+) sessions active\))?)?""",
                     else None,
                 }
     except (subprocess.CalledProcessError, TimeoutError):
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='RPi-Connect',
@@ -95,7 +95,7 @@ Remote shell: (allowed|unavailable)(?: \((\d+) sessions active\))?)?""",
         'Checked VSCode Tunnel Status',
         extra=status_data,
     )
-    dispatch(
+    store.dispatch(
         RPiConnectSetStatusAction(
             is_installed=is_installed,
             is_signed_in=is_signed_in,
@@ -110,7 +110,7 @@ Remote shell: (allowed|unavailable)(?: \((\d+) sessions active\))?)?""",
 
 
 def install_rpi_connect() -> None:
-    dispatch(RPiConnectStartDownloadingAction())
+    store.dispatch(RPiConnectStartDownloadingAction())
 
     async def act() -> None:
         result = await send_command(
@@ -120,9 +120,9 @@ def install_rpi_connect() -> None:
             has_output=True,
         )
 
-        dispatch(RPiConnectDoneDownloadingAction())
+        store.dispatch(RPiConnectDoneDownloadingAction())
         if result != 'installed':
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='RPi-Connect',
@@ -140,7 +140,7 @@ def install_rpi_connect() -> None:
 
 
 def uninstall_rpi_connect() -> None:
-    dispatch(RPiConnectSetPendingAction())
+    store.dispatch(RPiConnectSetPendingAction())
 
     async def act() -> None:
         result = await send_command(
@@ -151,7 +151,7 @@ def uninstall_rpi_connect() -> None:
         )
 
         if result != 'uninstalled':
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='RPi-Connect',
@@ -181,7 +181,7 @@ def sign_out() -> None:
             await process.wait()
             await check_status()
         except subprocess.CalledProcessError:
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='RPi-Connect',
@@ -197,13 +197,13 @@ def sign_out() -> None:
     create_task(act())
 
 
-@view(lambda state: state.lightdm.is_active)
+@store.view(lambda state: state.lightdm.is_active)
 def start_service(is_lightdm_active: bool) -> None:  # noqa: FBT001
     """Start the RPi Connect service."""
 
     async def act() -> None:
         if not is_lightdm_active:
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='RPi-Connect',
@@ -263,9 +263,9 @@ def stop_service() -> None:
 async def check_is_active() -> None:
     """Check if the SSH service is active."""
     if await is_unit_active('rpi-connect', is_user_service=True):
-        dispatch(RPiConnectUpdateServiceStateAction(is_active=True))
+        store.dispatch(RPiConnectUpdateServiceStateAction(is_active=True))
     else:
-        dispatch(RPiConnectUpdateServiceStateAction(is_active=False))
+        store.dispatch(RPiConnectUpdateServiceStateAction(is_active=False))
 
 
 async def check_status() -> None:

@@ -53,7 +53,7 @@ async def test_wireless_flow(
 
     from ubo_app.menu_app.menu import MenuApp
     from ubo_app.store.core import ChooseMenuItemByIconEvent, ChooseMenuItemByLabelEvent
-    from ubo_app.store.main import dispatch, store
+    from ubo_app.store.main import store
     from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 
     def store_snapshot_selector(state: RootState) -> WiFiState:
@@ -83,32 +83,32 @@ async def test_wireless_flow(
     store_snapshot.take(selector=store_snapshot_selector)
 
     # Select the main menu
-    dispatch(ChooseMenuItemByIconEvent(icon='󰍜'))
+    store.dispatch(ChooseMenuItemByIconEvent(icon='󰍜'))
     await stability()
 
     # Select the settings menu
-    dispatch(ChooseMenuItemByLabelEvent(label='Settings'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Settings'))
     await stability()
 
     # Go to network category
-    dispatch(ChooseMenuItemByLabelEvent(label='Network'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Network'))
     await stability()
 
     # Open the wireless menu
-    dispatch(ChooseMenuItemByLabelEvent(label='WiFi'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='WiFi'))
     await stability()
     window_snapshot.take()
 
     # Select "Select" to open the wireless connection list
-    dispatch(ChooseMenuItemByLabelEvent(label='Select'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Select'))
     await stability()
 
     # Back to the wireless menu
-    dispatch(KeypadKeyPressAction(key=Key.BACK))
+    store.dispatch(KeypadKeyPressAction(key=Key.BACK))
     await stability()
 
     # Select "Add" to add a new connection
-    dispatch(ChooseMenuItemByLabelEvent(label='Add'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Add'))
     await stability()
     window_snapshot.take()
 
@@ -116,7 +116,7 @@ async def test_wireless_flow(
     camera.set_image('qrcode/wifi')
 
     # Select "QR code" to scan a QR code for credentials
-    dispatch(ChooseMenuItemByIconEvent(icon='󰄀'))
+    store.dispatch(ChooseMenuItemByIconEvent(icon='󰄀'))
 
     # Success notification should be shown
     window_snapshot.take()
@@ -124,11 +124,11 @@ async def test_wireless_flow(
     # Dismiss the notification informing the user that the connection was added
     await check_icon('󰤨')
     await wait_for_menu_item(label='', icon='󰆴')
-    dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
+    store.dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
     await stability()
 
     # Select "Select" to open the wireless connection list and see the new connection
-    dispatch(ChooseMenuItemByLabelEvent(label='Select'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Select'))
 
     @wait_for(wait=wait_fixed(1), run_async=True)
     def check_connections() -> None:
@@ -143,13 +143,13 @@ async def test_wireless_flow(
     window_snapshot.take()
 
     # Select the connection
-    dispatch(ChooseMenuItemByLabelEvent(label='ubo-test-ssid'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='ubo-test-ssid'))
 
     # Wait for the "Disconnect" item to show up
     await wait_for_menu_item(label='Disconnect')
     await stability()
     window_snapshot.take()
-    dispatch(ChooseMenuItemByLabelEvent(label='Disconnect'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Disconnect'))
 
     # Wait for the "Connect" item to show up
     await wait_for_menu_item(label='Connect')
@@ -157,14 +157,14 @@ async def test_wireless_flow(
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
-    dispatch(ChooseMenuItemByLabelEvent(label='Connect'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Connect'))
 
     await wait_for_menu_item(label='Disconnect')
     await check_icon('󰤨')
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
-    dispatch(ChooseMenuItemByLabelEvent(label='Delete'))
+    store.dispatch(ChooseMenuItemByLabelEvent(label='Delete'))
 
     @wait_for(wait=wait_fixed(1), run_async=True)
     def check_no_connections() -> None:
@@ -179,7 +179,7 @@ async def test_wireless_flow(
     # Dismiss the notification informing the user that the connection was deleted
     await wait_for_menu_item(label='', icon='󰆴')
     window_snapshot.take()
-    dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
+    store.dispatch(ChooseMenuItemByIconEvent(icon='󰆴'))
 
     await wait_for_empty_menu(placeholder='No Wi-Fi connections found')
     window_snapshot.take()

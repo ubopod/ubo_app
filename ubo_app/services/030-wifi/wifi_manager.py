@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
-from ubo_app.store.main import dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -377,7 +377,7 @@ async def forget_wireless_connection(ssid: str) -> None:
             and settings['802-11-wireless']['ssid'][1].decode('utf-8') == ssid
         ):
             await wait_for(network_connection_settings.delete())
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title=f'"{ssid}" Deleted',

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from redux import FinishEvent
 from sdbus import SdBus, sd_bus_open_system, sd_bus_open_user, set_default_bus
 
-from ubo_app.store.main import subscribe_event
+from ubo_app.store.main import store
 
 if TYPE_CHECKING:
     from headless_kivy.config import Thread
@@ -45,4 +45,4 @@ def get_user_bus() -> SdBus:
     return user_buses[thread]
 
 
-subscribe_event(FinishEvent, clean_up, keep_ref=False)
+store.subscribe_event(FinishEvent, clean_up, keep_ref=False)

@@ -19,7 +19,7 @@ from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
 
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ def login_actions(*, is_signed_in: bool | None) -> list[ActionItem | Application
     return actions
 
 
-@autorun(lambda state: state.rpi_connect)
+@store.autorun(lambda state: state.rpi_connect)
 def actions(state: RPiConnectState) -> list[ActionItem | ApplicationItem]:
     actions = []
     if not state.is_downloading:
@@ -96,7 +96,7 @@ def actions(state: RPiConnectState) -> list[ActionItem | ApplicationItem]:
     return actions
 
 
-@autorun(lambda state: state.rpi_connect)
+@store.autorun(lambda state: state.rpi_connect)
 def status(state: RPiConnectState) -> str:
     if state.status:
         status = 'Screen sharing: '
@@ -139,7 +139,7 @@ def generate_rpi_connect_menu() -> HeadedMenu:
 
 
 def init_service() -> None:
-    dispatch(
+    store.dispatch(
         RegisterSettingAppAction(
             menu_item=ActionItem(
                 label='RPi Connect',

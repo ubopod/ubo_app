@@ -23,7 +23,7 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -48,14 +48,14 @@ class ClearTemporaryUsersPrompt(PromptWidget):
 
     def first_option_callback(self: ClearTemporaryUsersPrompt) -> None:
         """Clear all temporary users."""
-        dispatch(CloseApplicationEvent(application=self))
+        store.dispatch(CloseApplicationEvent(application=self))
 
     def second_option_callback(self: ClearTemporaryUsersPrompt) -> None:
         """Close the prompt."""
 
         async def act() -> None:
             await send_command('service', 'ssh', 'clear_all_temporary_accounts')
-            dispatch(
+            store.dispatch(
                 CloseApplicationEvent(application=self),
                 NotificationsAddAction(
                     notification=Notification(
@@ -95,7 +95,7 @@ def create_ssh_account() -> None:
         else:
             result = 'username:password'
         if not result:
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='Failed to create temporary SSH account',
@@ -112,7 +112,7 @@ def create_ssh_account() -> None:
             return
         username, password = result.split(':')
         hostname = socket.gethostname()
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='Account Info',
@@ -153,7 +153,7 @@ def enable_ssh_service() -> None:
     """Enable the SSH service."""
 
     async def act() -> None:
-        dispatch(SSHClearEnabledStateAction())
+        store.dispatch(SSHClearEnabledStateAction())
         await send_command('service', 'ssh', 'enable')
         await asyncio.sleep(5)
         await check_is_ssh_enabled()
@@ -165,7 +165,7 @@ def disable_ssh_service() -> None:
     """Disable the SSH service."""
 
     async def act() -> None:
-        dispatch(SSHClearEnabledStateAction())
+        store.dispatch(SSHClearEnabledStateAction())
         await send_command('service', 'ssh', 'disable')
         await asyncio.sleep(5)
         await check_is_ssh_enabled()
@@ -173,7 +173,7 @@ def disable_ssh_service() -> None:
     create_task(act())
 
 
-@autorun(lambda state: state.ssh)
+@store.autorun(lambda state: state.ssh)
 def ssh_items(state: SSHState) -> Sequence[Item]:
     """Get the SSH menu items."""
     return [
@@ -223,13 +223,13 @@ def ssh_items(state: SSHState) -> Sequence[Item]:
     ]
 
 
-@autorun(lambda state: state.ssh)
+@store.autorun(lambda state: state.ssh)
 def ssh_icon(state: SSHState) -> str:
     """Get the SSH icon."""
     return '[color=#008000]󰪥[/color]' if state.is_active else '[color=#ffff00]󰝦[/color]'
 
 
-@autorun(lambda state: state.ssh)
+@store.autorun(lambda state: state.ssh)
 def ssh_title(_: SSHState) -> str:
     """Get the SSH title."""
     return ssh_icon() + ' SSH'
@@ -238,17 +238,17 @@ def ssh_title(_: SSHState) -> str:
 async def check_is_ssh_active() -> None:
     """Check if the SSH service is active."""
     if await is_unit_active('ssh'):
-        dispatch(SSHUpdateStateAction(is_active=True))
+        store.dispatch(SSHUpdateStateAction(is_active=True))
     else:
-        dispatch(SSHUpdateStateAction(is_active=False))
+        store.dispatch(SSHUpdateStateAction(is_active=False))
 
 
 async def check_is_ssh_enabled() -> None:
     """Check if the SSH service is enabled."""
     if await is_unit_enabled('ssh'):
-        dispatch(SSHUpdateStateAction(is_enabled=True))
+        store.dispatch(SSHUpdateStateAction(is_enabled=True))
     else:
-        dispatch(SSHUpdateStateAction(is_enabled=False))
+        store.dispatch(SSHUpdateStateAction(is_enabled=False))
 
 
 def open_ssh_menu() -> Menu:
@@ -263,7 +263,7 @@ def open_ssh_menu() -> Menu:
 
 def init_service() -> None:
     """Initialize the SSH service."""
-    dispatch(
+    store.dispatch(
         RegisterSettingAppAction(
             priority=1,
             category=SettingsCategory.REMOTE,
@@ -279,7 +279,7 @@ def init_service() -> None:
     create_task(
         monitor_unit(
             'ssh.service',
-            lambda status: dispatch(
+            lambda status: store.dispatch(
                 SSHUpdateStateAction(
                     is_active=status in ('active', 'activating', 'reloading'),
                 ),

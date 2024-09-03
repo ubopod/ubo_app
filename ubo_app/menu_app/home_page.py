@@ -12,7 +12,7 @@ from ubo_gui.menu.constants import PAGE_SIZE
 from ubo_gui.page import PageWidget
 from ubo_gui.volume import VolumeWidget
 
-from ubo_app.store.main import autorun
+from ubo_app.store.main import store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -41,7 +41,9 @@ class HomePage(PageWidget):
         self.volume_widget = VolumeWidget()
         self.ids.right_column.add_widget(self.volume_widget)
 
-        autorun(lambda state: state.audio.playback_volume)(self._sync_output_volume)
+        store.autorun(lambda state: state.audio.playback_volume)(
+            self._sync_output_volume,
+        )
 
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
         self.volume_widget.value = selector_result * 100

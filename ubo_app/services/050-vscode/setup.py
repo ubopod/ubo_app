@@ -16,7 +16,7 @@ from ubo_gui.page import PageWidget
 
 from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 def download_code() -> None:
     CODE_BINARY_PATH.unlink(missing_ok=True)
-    dispatch(VSCodeStartDownloadingAction())
+    store.dispatch(VSCodeStartDownloadingAction())
 
     async def act() -> None:
         try:
@@ -66,7 +66,7 @@ def download_code() -> None:
             )
             await process.wait()
         except subprocess.CalledProcessError:
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='VSCode',
@@ -80,7 +80,7 @@ def download_code() -> None:
             )
             CODE_BINARY_PATH.unlink(missing_ok=True)
             raise
-        dispatch(VSCodeDoneDownloadingAction())
+        store.dispatch(VSCodeDoneDownloadingAction())
         await check_status()
 
     create_task(act())
@@ -101,7 +101,7 @@ def logout() -> None:
             await process.wait()
             await check_status()
         except subprocess.CalledProcessError:
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='VSCode',
@@ -185,7 +185,7 @@ def generate_actions(state: VSCodeState) -> list[ActionItem | ApplicationItem]:
     return actions
 
 
-@autorun(lambda state: state.vscode)
+@store.autorun(lambda state: state.vscode)
 def vscode_menu(state: VSCodeState) -> HeadedMenu:
     actions = generate_actions(state)
 
@@ -228,7 +228,7 @@ def generate_vscode_menu() -> Callable[[], HeadedMenu]:
 
 
 def init_service() -> None:
-    dispatch(
+    store.dispatch(
         RegisterSettingAppAction(
             menu_item=ActionItem(label='VSCode', icon='󰨞', action=generate_vscode_menu),
             category=SettingsCategory.REMOTE,

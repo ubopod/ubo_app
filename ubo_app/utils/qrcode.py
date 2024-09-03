@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, TypeAlias, overload
 
 from typing_extensions import TypeVar
 
-from ubo_app.store.main import dispatch, subscribe_event
+from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraBarcodeEvent,
     CameraStartViewfinderAction,
@@ -65,7 +65,7 @@ async def qrcode_input(
 
     if prompt:
         notification_future: Future[None] = loop.create_future()
-        dispatch(
+        store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     id='qrcode',
@@ -107,7 +107,7 @@ async def qrcode_input(
 
             loop.call_soon_threadsafe(future.set_result, (event.code, event.group_dict))
             kivy_color = get_color_from_hex('#21E693')
-            dispatch(
+            store.dispatch(
                 RgbRingBlinkAction(
                     color=(
                         round(kivy_color[0] * 255),
@@ -123,16 +123,16 @@ async def qrcode_input(
         if event.id == prompt_id:
             loop.call_soon_threadsafe(future.cancel)
 
-    subscribe_event(
+    store.subscribe_event(
         CameraBarcodeEvent,
         handle_barcode_event,
         keep_ref=False,
     )
-    subscribe_event(
+    store.subscribe_event(
         CameraStopViewfinderEvent,
         handle_cancel,
     )
-    dispatch(CameraStartViewfinderAction(id=prompt_id, pattern=pattern))
+    store.dispatch(CameraStartViewfinderAction(id=prompt_id, pattern=pattern))
 
     result = await future
 

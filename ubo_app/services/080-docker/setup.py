@@ -22,7 +22,7 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
@@ -54,14 +54,14 @@ def install_docker() -> None:
     """Install Docker."""
 
     async def act() -> None:
-        dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
+        store.dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
         result = await send_command(
             'docker',
             'install',
             has_output=True,
         )
         if result != 'installed':
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='Docker',
@@ -83,7 +83,7 @@ def run_docker() -> None:
 
     async def act() -> None:
         await send_command('docker', 'start')
-        dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
+        store.dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
 
     create_task(act())
 
@@ -93,7 +93,7 @@ def stop_docker() -> None:
 
     async def act() -> None:
         await send_command('docker', 'stop')
-        dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
+        store.dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
 
     create_task(act())
 
@@ -125,14 +125,14 @@ async def check_docker() -> None:
         docker_client.close()
 
     if is_running:
-        dispatch(DockerSetStatusAction(status=DockerStatus.RUNNING))
+        store.dispatch(DockerSetStatusAction(status=DockerStatus.RUNNING))
     elif is_installed:
-        dispatch(DockerSetStatusAction(status=DockerStatus.NOT_RUNNING))
+        store.dispatch(DockerSetStatusAction(status=DockerStatus.NOT_RUNNING))
     else:
-        dispatch(DockerSetStatusAction(status=DockerStatus.NOT_INSTALLED))
+        store.dispatch(DockerSetStatusAction(status=DockerStatus.NOT_INSTALLED))
 
 
-@autorun(lambda state: state.docker.service.status)
+@store.autorun(lambda state: state.docker.service.status)
 def setup_menu(status: DockerStatus) -> HeadedMenu:
     """Get the menu items for the Docker service."""
     title = 'Setup Docker'
@@ -203,7 +203,7 @@ def setup_menu_action() -> Callable[[], HeadedMenu]:
     return setup_menu
 
 
-@autorun(lambda state: state.docker)
+@store.autorun(lambda state: state.docker)
 def docker_menu_items(state: DockerState) -> list[Item]:
     """Get the menu items for the Docker service."""
     create_task(check_docker())
@@ -298,7 +298,7 @@ default.""",
                 key=DOCKER_CREDENTIALS_TEMPLATE.format(registry),
                 value=password,
             )
-            dispatch(
+            store.dispatch(
                 DockerStoreUsernameAction(registry=registry, username=username),
             )
         except asyncio.CancelledError:
@@ -307,7 +307,7 @@ default.""",
             explanation = exception.explanation or (
                 exception.response.content.decode('utf8') if exception.response else ''
             )
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='Docker Credentials Error',
@@ -326,10 +326,10 @@ default.""",
 def clear_credentials(registry: str) -> None:
     """Clear an entry in docker credentials."""
     secrets.clear_secret(DOCKER_CREDENTIALS_TEMPLATE.format(registry))
-    dispatch(DockerRemoveUsernameAction(registry=registry))
+    store.dispatch(DockerRemoveUsernameAction(registry=registry))
 
 
-@autorun(lambda state: state.docker.service.usernames)
+@store.autorun(lambda state: state.docker.service.usernames)
 def settings_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     """Get the settings menu items for the Docker service."""
     return [
@@ -371,8 +371,8 @@ def init_service() -> None:
         'docker_usernames',
         lambda state: state.docker.service.usernames,
     )
-    dispatch(RegisterRegularAppAction(menu_item=DOCKER_MAIN_MENU))
-    dispatch(
+    store.dispatch(RegisterRegularAppAction(menu_item=DOCKER_MAIN_MENU))
+    store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.APPS,
             menu_item=SubMenuItem(
@@ -390,7 +390,7 @@ def init_service() -> None:
     create_task(
         monitor_unit(
             'docker.socket',
-            lambda status: dispatch(
+            lambda status: store.dispatch(
                 DockerSetStatusAction(
                     status=DockerStatus.RUNNING
                     if status in ('active', 'activating', 'reloading')

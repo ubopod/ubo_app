@@ -109,9 +109,9 @@ def setup() -> None:
     from kivy.clock import mainthread
 
     import ubo_app.display as _  # noqa: F401
-    from ubo_app.store.main import subscribe_event
+    from ubo_app.store.main import store
 
-    subscribe_event(FinishEvent, mainthread(clear_signal_handlers))
+    store.subscribe_event(FinishEvent, mainthread(clear_signal_handlers))
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -137,9 +137,9 @@ def signal_handler(signum: int, _: object) -> None:
 
     if signum == signal.SIGINT:
         logger.info('Exiting gracefully, sending the signal again will force exit!')
-        from ubo_app.store.main import dispatch
+        from ubo_app.store.main import store
 
-        dispatch(FinishAction())
+        store.dispatch(FinishAction())
     elif signum == signal.SIGTERM:
         logger.info(
             'Exiting forcefully, sending the signal again will not be caught!',

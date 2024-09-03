@@ -19,7 +19,7 @@ from ubo_app.store.core import (
     RebootAction,
     SettingsCategory,
 )
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import Notification, NotificationsDisplayEvent
 from ubo_app.store.update_manager.utils import (
     BASE_IMAGE,
@@ -87,7 +87,7 @@ MAIN_MENU = HeadlessMenu(
 )
 
 
-@autorun(
+@store.autorun(
     lambda state: state.notifications.unread_count,
     options=AutorunOptions(default_value='Notifications (not loaded)'),
 )
@@ -95,7 +95,7 @@ def notifications_title(unread_count: int) -> str:
     return f'Notifications ({unread_count})'
 
 
-@autorun(
+@store.autorun(
     lambda state: state.notifications.notifications,
     options=AutorunOptions(default_value=[]),
 )
@@ -109,7 +109,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
             color='black',
             background_color=notification.color,
             action=functools.partial(
-                dispatch,
+                store.dispatch,
                 NotificationsDisplayEvent(
                     notification=notification,
                     index=index,
@@ -124,7 +124,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
     ]
 
 
-@autorun(
+@store.autorun(
     lambda state: len(state.notifications.notifications),
     options=AutorunOptions(default_value='white'),
 )
@@ -162,12 +162,12 @@ HOME_MENU = HeadlessMenu(
                 items=[
                     ActionItem(
                         label='Reboot',
-                        action=lambda: dispatch(RebootAction()),
+                        action=lambda: store.dispatch(RebootAction()),
                         icon='󰜉',
                     ),
                     ActionItem(
                         label='Power off',
-                        action=lambda: dispatch(PowerOffAction()),
+                        action=lambda: store.dispatch(PowerOffAction()),
                         icon='󰐥',
                     ),
                 ],

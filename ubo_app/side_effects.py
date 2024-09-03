@@ -11,13 +11,7 @@ from typing import TYPE_CHECKING
 from redux import FinishAction
 
 from ubo_app.store.core import PowerOffEvent, RebootEvent
-from ubo_app.store.main import (
-    ScreenshotEvent,
-    SnapshotEvent,
-    dispatch,
-    store,
-    subscribe_event,
-)
+from ubo_app.store.main import ScreenshotEvent, SnapshotEvent, store
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
 from ubo_app.store.update_manager import (
@@ -35,7 +29,7 @@ if TYPE_CHECKING:
 
 def power_off() -> None:
     """Power off the device."""
-    dispatch(AudioPlayChimeAction(name=Chime.FAILURE), FinishAction())
+    store.dispatch(AudioPlayChimeAction(name=Chime.FAILURE), FinishAction())
     if IS_RPI:
 
         def power_off_system(*_: list[object]) -> None:
@@ -51,7 +45,7 @@ def power_off() -> None:
 
 def reboot() -> None:
     """Reboot the device."""
-    dispatch(AudioPlayChimeAction(name=Chime.FAILURE), FinishAction())
+    store.dispatch(AudioPlayChimeAction(name=Chime.FAILURE), FinishAction())
     if IS_RPI:
 
         def reboot_system(*_: list[object]) -> None:
@@ -102,11 +96,11 @@ def setup_side_effects() -> None:
     """Set up the application."""
     initialize_board()
 
-    subscribe_event(PowerOffEvent, power_off)
-    subscribe_event(RebootEvent, reboot)
-    subscribe_event(UpdateManagerUpdateEvent, update)
-    subscribe_event(UpdateManagerCheckEvent, check_version)
-    subscribe_event(ScreenshotEvent, take_screenshot)
-    subscribe_event(SnapshotEvent, take_snapshot)
+    store.subscribe_event(PowerOffEvent, power_off)
+    store.subscribe_event(RebootEvent, reboot)
+    store.subscribe_event(UpdateManagerUpdateEvent, update)
+    store.subscribe_event(UpdateManagerCheckEvent, check_version)
+    store.subscribe_event(ScreenshotEvent, take_screenshot)
+    store.subscribe_event(SnapshotEvent, take_snapshot)
 
-    dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
+    store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))

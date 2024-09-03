@@ -24,7 +24,7 @@ from wifi_manager import (
 )
 
 from ubo_app.store.core import CloseApplicationEvent
-from ubo_app.store.main import autorun, dispatch
+from ubo_app.store.main import store
 from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiConnection,
@@ -47,11 +47,11 @@ class WiFiConnectionPage(PromptWidget):
             create_task(disconnect_wireless_connection())
         elif self.state is ConnectionState.DISCONNECTED:
             create_task(connect_wireless_connection(self.ssid))
-        dispatch(WiFiUpdateRequestAction(reset=True))
+        store.dispatch(WiFiUpdateRequestAction(reset=True))
 
     def second_option_callback(self: WiFiConnectionPage) -> None:
         create_task(forget_wireless_connection(self.ssid))
-        dispatch(
+        store.dispatch(
             CloseApplicationEvent(application=self),
             WiFiUpdateRequestAction(reset=True),
         )
@@ -121,7 +121,7 @@ class WiFiConnectionPage(PromptWidget):
         create_task(listener())
 
 
-@autorun(lambda state: state.wifi.connections)
+@store.autorun(lambda state: state.wifi.connections)
 def wireless_connections_menu(
     connections: Sequence[WiFiConnection] | None,
 ) -> HeadlessMenu:
@@ -172,7 +172,7 @@ def wireless_connections_menu(
 
 
 def list_connections() -> Callable[[], HeadlessMenu]:
-    dispatch(WiFiUpdateRequestAction())
+    store.dispatch(WiFiUpdateRequestAction())
     return wireless_connections_menu
 
 

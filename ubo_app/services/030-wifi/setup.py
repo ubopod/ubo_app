@@ -17,7 +17,7 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.main import autorun, dispatch, subscribe_event
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -46,7 +46,7 @@ from ubo_app.utils.persistent_store import (
 async def update_wifi_list(_: WiFiUpdateRequestEvent | None = None) -> None:
     connections = await get_connections()
 
-    dispatch(
+    store.dispatch(
         WiFiUpdateAction(
             connections=connections,
             state=await get_wifi_device_state(),
@@ -102,7 +102,7 @@ ONBOARDING_NOTIFICATION = Notification(
 
 
 def show_onboarding_notification() -> None:
-    dispatch(
+    store.dispatch(
         NotificationsAddAction(
             notification=ONBOARDING_NOTIFICATION,
         ),
@@ -118,7 +118,7 @@ async def init_service() -> None:
         lambda state: state.wifi.has_visited_onboarding,
     )
 
-    dispatch(
+    store.dispatch(
         RegisterSettingAppAction(
             priority=2,
             category=SettingsCategory.NETWORK,
@@ -126,9 +126,9 @@ async def init_service() -> None:
         ),
     )
 
-    subscribe_event(WiFiUpdateRequestEvent, request_scan)
+    store.subscribe_event(WiFiUpdateRequestEvent, request_scan)
 
-    @autorun(
+    @store.autorun(
         lambda state: state.ip.is_connected,
         options=AutorunOptions(default_value=None),
     )
@@ -144,7 +144,7 @@ async def init_service() -> None:
         ):
             logger.info('No internet connection, showing WiFi onboarding.')
             show_onboarding_notification()
-            dispatch(WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True))
+            store.dispatch(WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True))
 
         if is_connected is not None:
             check_onboarding.unsubscribe()

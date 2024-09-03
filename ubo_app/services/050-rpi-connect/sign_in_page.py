@@ -15,7 +15,7 @@ from ubo_gui.page import PageWidget
 
 from ubo_app.logging import logger
 from ubo_app.store.core import CloseApplicationEvent
-from ubo_app.store.main import dispatch, subscribe_event
+from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -36,9 +36,9 @@ class SignInPage(PageWidget):
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=[])
-        subscribe_event(
+        store.subscribe_event(
             RPiConnectLoginEvent,
-            lambda: dispatch(CloseApplicationEvent(application=self)),
+            lambda: store.dispatch(CloseApplicationEvent(application=self)),
         )
         create_task(self.login())
 
@@ -65,7 +65,7 @@ class SignInPage(PageWidget):
                 mainthread(set_properties)()
                 await self.process.wait()
             else:
-                dispatch(
+                store.dispatch(
                     NotificationsAddAction(
                         notification=Notification(
                             title='RPi-Connect',
@@ -79,7 +79,7 @@ class SignInPage(PageWidget):
                 )
         except subprocess.CalledProcessError:
             logger.exception('Failed to login')
-            dispatch(
+            store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
                         title='RPi-Connect',
