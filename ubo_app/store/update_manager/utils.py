@@ -13,7 +13,7 @@ from typing import TypedDict
 import aiohttp
 import requests
 from ubo_gui.constants import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
-from ubo_gui.menu.types import ActionItem, Item
+from ubo_gui.menu.types import Item
 
 from ubo_app.constants import (
     INSTALLATION_PATH,
@@ -23,12 +23,13 @@ from ubo_app.constants import (
 )
 from ubo_app.logging import logger
 from ubo_app.store.core import RebootEvent
+from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Importance,
     Notification,
-    NotificationActionItem,
+    NotificationDispatchItem,
     NotificationDisplayType,
     NotificationExtraInformation,
     NotificationsAddAction,
@@ -96,7 +97,9 @@ async def check_version() -> None:
             )
     except Exception:
         logger.exception('Failed to check for updates')
-        store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.FAILED_TO_CHECK))
+        store.dispatch(
+            UpdateManagerSetStatusAction(status=UpdateStatus.FAILED_TO_CHECK),
+        )
         return
 
 
@@ -247,9 +250,9 @@ This part may take around 20 minutes to complete.
 Then another reboot will be done to complete the update process.""",
                     ),
                     actions=[
-                        NotificationActionItem(
+                        NotificationDispatchItem(
                             icon='󰜉',
-                            action=lambda: store.dispatch(RebootEvent()),
+                            operation=RebootEvent(),
                         ),
                     ],
                     display_type=NotificationDisplayType.STICKY,
@@ -296,34 +299,28 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         ]
     if state.update_status is UpdateStatus.FAILED_TO_CHECK:
         return [
-            ActionItem(
+            DispatchItem(
                 label='Failed to check for updates',
-                action=lambda: store.dispatch(
-                    UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
-                ),
+                operation=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 icon='󰜺',
                 background_color=DANGER_COLOR,
             ),
         ]
     if state.update_status is UpdateStatus.UP_TO_DATE:
         return [
-            ActionItem(
+            DispatchItem(
                 label='Already up to date!',
                 icon='󰄬',
-                action=lambda: store.dispatch(
-                    UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
-                ),
+                operation=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 background_color=SUCCESS_COLOR,
                 color='#000000',
             ),
         ]
     if state.update_status is UpdateStatus.OUTDATED:
         return [
-            ActionItem(
+            DispatchItem(
                 label=f'Update to v{state.latest_version}',
-                action=lambda: store.dispatch(
-                    UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
-                ),
+                operation=UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
                 icon='󰬬',
             ),
         ]

@@ -641,6 +641,9 @@
                       "key": null,
                       "label": "Already up to date!",
                       "opacity": null,
+                      "operation": {
+                        "status": "checking"
+                      },
                       "progress": null
                     }
                   ],
@@ -699,6 +702,7 @@
                 "key": null,
                 "label": "Reboot",
                 "opacity": null,
+                "operation": {},
                 "progress": null
               },
               {
@@ -715,6 +719,7 @@
                 "key": null,
                 "label": "Power off",
                 "opacity": null,
+                "operation": {},
                 "progress": null
               }
             ],

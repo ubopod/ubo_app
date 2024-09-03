@@ -11,6 +11,7 @@
 - test: fix an issue in tests which caused minor random store state changes, ruining snapshot assertions
 - test: add vscode and rpi-connect services to `test_all_services` test
 - refactor(housekeeping): improve store imports
+- feat(store): add `DispatchItem` and `NotificationDispatchItem` as convenience `ActionItem` subclasses to dispatch actions and events
 
 ## Version 0.15.11
 

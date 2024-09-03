@@ -14,6 +14,7 @@ from ubo_gui.constants import SECONDARY_COLOR_LIGHT
 from ubo_gui.menu.types import ActionItem
 
 from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
+from ubo_app.store.dispatch_action import DispatchItem
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -50,7 +51,7 @@ class NotificationDisplayType(StrEnum):
     STICKY = auto()
 
 
-def default_icon() -> str:
+def _default_icon() -> str:
     # WARNING: Dirty hack ahead
     # This is to set the default value of `icon` based on the provided/default value of
     # `importance`
@@ -60,7 +61,7 @@ def default_icon() -> str:
     return IMPORTANCE_ICONS[parent_frame.f_locals.get('importance', Importance.LOW)]
 
 
-def default_color() -> str:
+def _default_color() -> str:
     # WARNING: Dirty hack ahead
     # This is to set the default value of `color` based on the provided/default value of
     # `importance`
@@ -82,6 +83,9 @@ class NotificationActionItem(ActionItem):
     dismiss_notification: bool = False
 
 
+class NotificationDispatchItem(DispatchItem, NotificationActionItem): ...
+
+
 class NotificationExtraInformation(Immutable):
     text: str
     piper_text: str | None = None
@@ -99,8 +103,8 @@ class Notification(Immutable):
     is_read: bool = False
     sender: str | None = None
     actions: list[NotificationActionItem] = field(default_factory=list)
-    icon: str = field(default_factory=default_icon)
-    color: str = field(default_factory=default_color)
+    icon: str = field(default_factory=_default_icon)
+    color: str = field(default_factory=_default_color)
     expiry_date: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = NOTIFICATIONS_FLASH_TIME

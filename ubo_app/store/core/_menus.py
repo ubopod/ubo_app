@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import functools
 import socket
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
 from ubo_gui.menu.types import (
-    ActionItem,
     HeadedMenu,
     HeadlessMenu,
     SubMenuItem,
@@ -19,6 +17,7 @@ from ubo_app.store.core import (
     RebootAction,
     SettingsCategory,
 )
+from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import Notification, NotificationsDisplayEvent
 from ubo_app.store.update_manager.utils import (
@@ -102,19 +101,16 @@ def notifications_title(unread_count: int) -> str:
 def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item]:
     """Return a list of menu items for the notification manager."""
     return [
-        ActionItem(
+        DispatchItem(
             key=str(notification.id),
             label=notification.title,
             icon=notification.icon,
             color='black',
             background_color=notification.color,
-            action=functools.partial(
-                store.dispatch,
-                NotificationsDisplayEvent(
-                    notification=notification,
-                    index=index,
-                    count=len(notifications),
-                ),
+            operation=NotificationsDisplayEvent(
+                notification=notification,
+                index=index,
+                count=len(notifications),
             ),
             progress=notification.progress,
         )
@@ -160,14 +156,14 @@ HOME_MENU = HeadlessMenu(
             sub_menu=HeadlessMenu(
                 title='󰐥Power',
                 items=[
-                    ActionItem(
+                    DispatchItem(
                         label='Reboot',
-                        action=lambda: store.dispatch(RebootAction()),
+                        operation=RebootAction(),
                         icon='󰜉',
                     ),
-                    ActionItem(
+                    DispatchItem(
                         label='Power off',
-                        action=lambda: store.dispatch(PowerOffAction()),
+                        operation=PowerOffAction(),
                         icon='󰐥',
                     ),
                 ],
