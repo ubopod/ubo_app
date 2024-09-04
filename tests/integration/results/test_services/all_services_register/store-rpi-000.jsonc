@@ -76,7 +76,7 @@
     },
     "service": {
       "_type": "DockerServiceState",
-      "status": "not_running",
+      "status": "not_installed",
       "usernames": {}
     }
   },
@@ -96,8 +96,8 @@
   "lightdm": {
     "_type": "LightDMState",
     "is_active": false,
-    "is_enabled": true,
-    "is_installed": true,
+    "is_enabled": false,
+    "is_installed": false,
     "is_installing": false
   },
   "main": {
@@ -1005,7 +1005,7 @@
   },
   "rpi_connect": {
     "_type": "RPiConnectState",
-    "is_active": true,
+    "is_active": false,
     "is_downloading": false,
     "is_installed": null,
     "is_signed_in": null,

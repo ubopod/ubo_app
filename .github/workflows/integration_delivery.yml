@@ -61,7 +61,7 @@ jobs:
 
   ubo-pod-dependencies:
     name: Install Ubo Pod Dependencies
-    runs-on: ubo-pod
+    runs-on: ubo-pod-pi5
     outputs:
       python-version: ${{ steps.get-python-version.outputs.PYTHON_VERSION }}
     steps:
@@ -111,7 +111,7 @@ jobs:
     name: Type Check
     needs:
       - ubo-pod-dependencies
-    runs-on: ubo-pod
+    runs-on: ubo-pod-pi5
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -125,7 +125,7 @@ jobs:
             ~/.local
           key:
             poetry-ubo-pod-python${{
-            steps.get-python-version.outputs.PYTHON_VERSION }}-${{
+            needs.ubo-pod-dependencies.outputs.python-version }}-${{
             hashFiles('poetry.lock') }}
 
       - name: Create stub files
@@ -172,14 +172,14 @@ jobs:
       - ubo-pod-dependencies
     strategy:
       matrix:
-        runner: ['ubo-pod', 'ubuntu-latest']
+        runner: ['ubo-pod', 'ubo-pod-pi5', 'ubuntu-latest']
     runs-on: ${{ matrix.runner }}
     environment:
       name: test
       url: https://app.codecov.io/gh/${{ github.repository }}/
     steps:
       - name: System Dependencies
-        if: matrix.runner != 'ubo-pod'
+        if: matrix.runner == 'ubuntu-latest'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0
@@ -188,7 +188,7 @@ jobs:
         name: Checkout
 
       - name: Setup Python
-        if: matrix.runner != 'ubo-pod'
+        if: matrix.runner == 'ubuntu-latest'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -202,13 +202,13 @@ jobs:
             ~/.cache
             ~/.local
           key:
-            poetry-${{ matrix.runner }}-python${{ matrix.runner == 'ubo-pod' &&
-            needs.dependencies.outputs.python-version || env.PYTHON_VERSION
-            }}-${{hashFiles('poetry.lock') }}
+            poetry-${{ matrix.runner }}-python${{ startsWith(matrix.runner,
+            'ubo-pod') && needs.dependencies.outputs.python-version ||
+            env.PYTHON_VERSION }}-${{hashFiles('poetry.lock') }}
 
       - name: Run Tests
         run: |
-          poetry run poe test --verbosity=2 --capture=no --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ matrix.runner == 'ubo-pod' && '1' || 'auto' }}
+          poetry run poe test --verbosity=2 --capture=no --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
@@ -377,7 +377,7 @@ jobs:
           echo "image_url=$IMAGE_URL" >> "$GITHUB_OUTPUT"
           echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
           echo "image_checksum_url=$CHECKSUM_URL" >> "$GITHUB_OUTPUT"
-          IMAGE_SIZE_GB=${{ matrix.suffix == 'lite' && '4.25' || matrix.suffix == '' && '6.5' || '13' }}
+          IMAGE_SIZE_GB=${{ matrix.suffix == 'lite' && '4.5' || matrix.suffix == '' && '6.75' || '13' }}
           IMAGE_SIZE=$(awk -v IMAGE_SIZE_GB=$IMAGE_SIZE_GB 'BEGIN {printf "%.0f", IMAGE_SIZE_GB * 1024 ^ 3}')
           echo "image_size=$IMAGE_SIZE" >> "$GITHUB_OUTPUT"
 

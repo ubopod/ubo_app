@@ -47,7 +47,20 @@ async def _fake_create_subprocess_exec(
         return Fake()
     if command in {'curl', 'tar'} or command.endswith('/code'):
         return original_asyncio_create_subprocess_exec(*args, **kwargs)
-    if command == 'dpkg-query':
+    if command == 'systemctl':
+        if args[0] in 'is-enabled':
+            return Fake(
+                _Fake__return_value=Fake(_Fake__await_value=(b'enabled', b'')),
+            )
+        if args[0] == 'is-active':
+            return Fake(
+                _Fake__return_value=Fake(_Fake__await_value=(b'active', b'')),
+            )
+    if command == 'dpkg-query' and args[-1] in (
+        'docker',
+        'raspberrypi-ui-mods',
+        'rpi-connect',
+    ):
         return Fake(
             _Fake__return_value=Fake(_Fake__await_value=(b'install ok installed', b'')),
         )
@@ -102,7 +115,9 @@ def setup() -> None:
         from ubo_app.utils import monitor_unit
 
         async def fake_monitor_unit(unit: str, callback: Callable[[str], None]) -> None:
-            callback('inactive' if unit == 'ubo-update.service' else 'active')
+            callback(
+                'inactive' if unit in ('ubo-update.service') else 'active',
+            )
 
         monitor_unit.monitor_unit = fake_monitor_unit
 

@@ -22,7 +22,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.monitor_unit import is_unit_active, is_unit_enabled, monitor_unit
+from ubo_app.utils.monitor_unit import is_unit_enabled, monitor_unit
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -162,15 +162,13 @@ def lightdm_title(_: LightDMState) -> str:
 
 async def check_lightdm() -> None:
     """Check if the LightDM service is enabled."""
-    is_active, is_enabled, is_installed = await asyncio.gather(
-        is_unit_active('lightdm'),
+    is_enabled, is_installed = await asyncio.gather(
         is_unit_enabled('lightdm'),
         is_package_installed('raspberrypi-ui-mods'),
     )
 
     store.dispatch(
         LightDMUpdateStateAction(
-            is_active=is_installed and is_active,
             is_enabled=is_installed and is_enabled,
             is_installed=is_installed,
         ),

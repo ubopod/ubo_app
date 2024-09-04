@@ -940,7 +940,7 @@
   },
   "rpi_connect": {
     "_type": "RPiConnectState",
-    "is_active": true,
+    "is_active": false,
     "is_downloading": false,
     "is_installed": null,
     "is_signed_in": null,

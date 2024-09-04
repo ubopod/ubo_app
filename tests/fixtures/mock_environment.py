@@ -216,6 +216,7 @@ async def _fake_create_subprocess_exec(
 
     _ = kwargs
     command, *args = _args
+    expected = False
 
     if command == '/usr/bin/env':
         command, *args = args
@@ -224,28 +225,29 @@ async def _fake_create_subprocess_exec(
         if args[0] == '--user':
             args = args[1:]
 
-        if args[0] == 'is-enabled':
-            return FakeAsyncProcess(output=b'enabled')
-        if args[0] == 'is-active':
-            return FakeAsyncProcess(output=b'active')
+        if args[0] in ('is-active', 'is-enabled'):
+            expected = True
+
     if command == 'dpkg-query' and args[-1] in (
         'docker',
         'raspberrypi-ui-mods',
         'rpi-connect',
     ):
-        return FakeAsyncProcess(output=b'install ok installed')
+        expected = True
+
     if command == 'pulseaudio':
         return FakeAsyncProcess()
 
     import logging
 
-    logging.info(
-        'Unexpected `async_create_subprocess_exec` command in test environment:',
-        extra={
-            'args_': args,
-            'kwargs': kwargs,
-        },
-    )
+    if not expected:
+        logging.info(
+            'Unexpected `async_create_subprocess_exec` command in test environment:',
+            extra={
+                'args_': _args,
+                'kwargs': kwargs,
+            },
+        )
 
     return await originals['async_create_subprocess_exec'](*_args, **kwargs)
 
