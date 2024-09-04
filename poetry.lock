@@ -1571,7 +1571,7 @@ develop = false
 type = "git"
 url = "https://github.com/pytest-dev/pyfakefs.git"
 reference = "HEAD"
-resolved_reference = "29a94e542f3067b1a4c998f06f56af5888b351ae"
+resolved_reference = "092555646bdd4a9988494bff89c61d387546a5a4"
 
 [[package]]
 name = "pyftdi"
@@ -1821,18 +1821,20 @@ typing-extensions = ">=4.10.0,<5.0.0"
 
 [[package]]
 name = "python-redux"
-version = "0.16.0"
+version = "0.16.1"
 description = "Redux implementation for Python"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "python_redux-0.16.0-py3-none-any.whl", hash = "sha256:9f5bbf1bdf0f8494de809047f056ccbe0f1548ba3125e9d96e90026e0c193390"},
-    {file = "python_redux-0.16.0.tar.gz", hash = "sha256:5165ca8dacaca4ba15d62042b67f6c3f1aeb09c446349cadc5c1969ba3bd3d16"},
+    {file = "python_redux-0.16.1-py3-none-any.whl", hash = "sha256:b4c58e0a3ed1105112b01e7f0272bd0b39ad9a465933cb77365e3582d1070137"},
+    {file = "python_redux-0.16.1.tar.gz", hash = "sha256:4c67286260d9091d4a70e458396cf96f9bd39dd07c95148e4038397493726e52"},
 ]
 
 [package.dependencies]
+pyright = ">=1.1.378,<2.0.0"
 python-immutable = ">=1.1.1,<2.0.0"
 python-strtobool = ">=1.0.0,<2.0.0"
+ruff = ">=0.6.3,<0.7.0"
 
 [[package]]
 name = "python-strtobool"
@@ -2372,4 +2374,4 @@ dev = ["headless-kivy", "headless-kivy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "052519db50e8305f6e75ed5e8ed92b154ff1b4bb91859bb193644e42af20974d"
+content-hash = "7448873461b27c6978aa57375e745df1e2098130af9c880e7dd166edffd06dc7"

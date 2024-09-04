@@ -1,11 +1,15 @@
 // store-rpi-000
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
+  "_type": "RootState",
   "main": {
+    "_type": "MainState",
     "depth": 1,
     "menu": {
+      "_type": "HeadlessMenu",
       "items": [
         {
+          "_type": "SubMenuItem",
           "background_color": "#68B7FF",
           "color": [
             1,
@@ -20,8 +24,10 @@
           "opacity": null,
           "progress": null,
           "sub_menu": {
+            "_type": "HeadlessMenu",
             "items": [
               {
+                "_type": "SubMenuItem",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -36,12 +42,14 @@
                 "opacity": null,
                 "progress": null,
                 "sub_menu": {
+                  "_type": "HeadlessMenu",
                   "items": [],
                   "placeholder": "No apps",
                   "title": "󰀻Apps"
                 }
               },
               {
+                "_type": "SubMenuItem",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -56,8 +64,10 @@
                 "opacity": null,
                 "progress": null,
                 "sub_menu": {
+                  "_type": "HeadlessMenu",
                   "items": [
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -72,12 +82,14 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
                         "title": "󰛳Network"
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -92,12 +104,14 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
                         "title": "󰑔Remote"
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -112,12 +126,14 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
                         "title": "󰇄Desktop"
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -132,12 +148,14 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
                         "title": "󰖤Accessibility"
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -152,6 +170,7 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
                         "title": "󰀻Apps"
@@ -163,6 +182,7 @@
                 }
               },
               {
+                "_type": "SubMenuItem",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -177,9 +197,11 @@
                 "opacity": null,
                 "progress": null,
                 "sub_menu": {
+                  "_type": "HeadedMenu",
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
+                      "_type": "DispatchItem",
                       "action": "<function:<lambda>>",
                       "background_color": "#03F7AE",
                       "color": "#000000",
@@ -189,6 +211,7 @@
                       "label": "Already up to date!",
                       "opacity": null,
                       "operation": {
+                        "_type": "UpdateManagerSetStatusAction",
                         "status": "checking"
                       },
                       "progress": null
@@ -205,6 +228,7 @@
           }
         },
         {
+          "_type": "SubMenuItem",
           "background_color": "#68B7FF",
           "color": "white",
           "icon": "",
@@ -214,12 +238,14 @@
           "opacity": null,
           "progress": null,
           "sub_menu": {
+            "_type": "HeadlessMenu",
             "items": [],
             "placeholder": "No notifications",
             "title": "Notifications (not loaded)"
           }
         },
         {
+          "_type": "SubMenuItem",
           "background_color": "#68B7FF",
           "color": [
             1,
@@ -234,8 +260,10 @@
           "opacity": null,
           "progress": null,
           "sub_menu": {
+            "_type": "HeadlessMenu",
             "items": [
               {
+                "_type": "DispatchItem",
                 "action": "<function:<lambda>>",
                 "background_color": "#68B7FF",
                 "color": [
@@ -249,10 +277,13 @@
                 "key": null,
                 "label": "Reboot",
                 "opacity": null,
-                "operation": {},
+                "operation": {
+                  "_type": "RebootAction"
+                },
                 "progress": null
               },
               {
+                "_type": "DispatchItem",
                 "action": "<function:<lambda>>",
                 "background_color": "#68B7FF",
                 "color": [
@@ -266,7 +297,9 @@
                 "key": null,
                 "label": "Power off",
                 "opacity": null,
-                "operation": {},
+                "operation": {
+                  "_type": "PowerOffAction"
+                },
                 "progress": null
               }
             ],
@@ -282,9 +315,11 @@
     "settings_items_priorities": {}
   },
   "status_icons": {
+    "_type": "StatusIconsState",
     "icons": []
   },
   "update_manager": {
+    "_type": "UpdateManagerState",
     "base_image_variant": "[unknown]",
     "current_version": "0.0.0",
     "is_update_service_active": false,

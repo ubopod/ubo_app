@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.15.12
+## Version 0.16.0
 
 - build(packer): remove /etc/xdg/autostart/piwiz.desktop to avoid running piwiz as we already set ubo user
 - fix(core): keep a reference for background tasks created with `async_.create_task` to avoid them getting garbage collected and cancelled
@@ -12,6 +12,7 @@
 - test: add vscode and rpi-connect services to `test_all_services` test
 - refactor(housekeeping): improve store imports
 - feat(store): add `DispatchItem` and `NotificationDispatchItem` as convenience `ActionItem` subclasses to dispatch actions and events
+- feat(users): add `users` service to create, list, delete and change password of system users
 
 ## Version 0.15.11
 

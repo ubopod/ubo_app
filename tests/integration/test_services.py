@@ -11,22 +11,23 @@ if TYPE_CHECKING:
     from tests.fixtures import AppContext, LoadServices, Stability
 
 ALL_SERVICES_IDS = [
-    'rgb_ring',
     'audio',
+    'camera',
+    'docker',
     'ethernet',
     'ip',
-    'wifi',
     'keyboard',
     'keypad',
     'lightdm',
     'notifications',
-    'camera',
-    'sensors',
-    'docker',
-    'ssh',
-    'vscode',
+    'rgb_ring',
     'rpi_connect',
+    'sensors',
+    'ssh',
+    'users',
     'voice',
+    'vscode',
+    'wifi',
 ]
 
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.15.12"
+version = "0.16.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -39,7 +39,7 @@ platformdirs = "^4.2.0"
 dill = "^0.3.8"
 simpleaudio = "^1.0.4"
 
-python-redux = "^0.16.0"
+python-redux = "^0.16.1"
 python-debouncer = "^0.1.5"
 python-strtobool = "^1.0.0"
 python-fake = "0.1.3"
@@ -106,7 +106,7 @@ cmd = "scripts/test_on_device.sh"
 [tool.poe.tasks.deploy-to-device]
 args = [
   { name = "deps", type = "boolean" },
-  { name = "run", type = "boolean" },
+  { name = "kill", type = "boolean" },
   { name = "restart", type = "boolean" },
   { name = "bootstrap", type = "boolean" },
   { name = "env", type = "boolean" },
@@ -199,6 +199,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/050-ssh"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-users"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

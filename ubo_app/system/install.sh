@@ -75,6 +75,7 @@ echo "export XDG_RUNTIME_DIR=/run/user/$(id -u $USERNAME)" >> /home/$USERNAME/.b
 apt-get -y update
 apt-get -y upgrade
 apt-get -y install \
+  accountsservice \
   git \
   i2c-tools \
   libasound2-dev \

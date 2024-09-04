@@ -1,7 +1,9 @@
 // store-rpi-001
 {
+  "_type": "WiFiState",
   "connections": [
     {
+      "_type": "WiFiConnection",
       "hidden": false,
       "password": null,
       "signal_strength": 100,
@@ -11,6 +13,7 @@
     }
   ],
   "current_connection": {
+    "_type": "WiFiConnection",
     "hidden": false,
     "password": null,
     "signal_strength": 100,

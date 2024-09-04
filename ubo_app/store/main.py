@@ -45,6 +45,7 @@ from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
 from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
 from ubo_app.store.services.ssh import SSHAction, SSHState
+from ubo_app.store.services.users import UsersAction, UsersEvent, UsersState
 from ubo_app.store.services.voice import VoiceAction, VoiceState
 from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
 from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
@@ -89,6 +90,7 @@ class RootState(BaseCombineReducerState):
     rpi_connect: RPiConnectState
     sensors: SensorsState
     ssh: SSHState
+    users: UsersState
     voice: VoiceState
     vscode: VSCodeState
     wifi: WiFiState
@@ -121,6 +123,7 @@ ActionType = (
     | RPiConnectAction
     | SensorsAction
     | SSHAction
+    | UsersAction
     | VoiceAction
     | VSCodeAction
     | WiFiAction
@@ -136,6 +139,7 @@ EventType = (
     | KeypadEvent
     | NotificationsEvent
     | SnapshotEvent
+    | UsersEvent
     | WiFiEvent
 )
 

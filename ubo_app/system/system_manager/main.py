@@ -23,6 +23,7 @@ from ubo_app.system.system_manager.led import LEDManager
 from ubo_app.system.system_manager.package import package_handler
 from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
+from ubo_app.system.system_manager.users import users_handler
 from ubo_app.utils.eeprom import read_serial_number
 
 SOCKET_PATH = Path(os.environ.get('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
@@ -41,14 +42,17 @@ def handle_command(command: str) -> str | None:
     header, *arguments = command.split()
     if header == 'led':
         led_manager.run_command_thread_safe(arguments)
-    elif header == 'docker':
-        return docker_handler(arguments[0])
-    elif header == 'service':
-        return service_handler(arguments[0], arguments[1])
-    elif header == 'package':
-        return package_handler(arguments[0], arguments[1])
-    elif header == 'audio':
-        return audio_handler(arguments[0])
+    else:
+        handlers = {
+            'docker': docker_handler,
+            'service': service_handler,
+            'users': users_handler,
+            'package': package_handler,
+            'audio': audio_handler,
+        }
+        if header in handlers:
+            return handlers[header](*arguments)
+
     return None
 
 

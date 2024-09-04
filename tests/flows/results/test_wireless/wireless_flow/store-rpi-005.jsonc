@@ -1,5 +1,6 @@
 // store-rpi-005
 {
+  "_type": "WiFiState",
   "connections": [],
   "current_connection": null,
   "has_visited_onboarding": null,

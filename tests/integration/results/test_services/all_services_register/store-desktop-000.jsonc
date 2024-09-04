@@ -1,20 +1,25 @@
 // store-desktop-000
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
+  "_type": "RootState",
   "audio": {
+    "_type": "AudioState",
     "capture_volume": 0.5,
     "is_capture_mute": false,
     "is_playback_mute": false,
     "playback_volume": 0.5
   },
   "camera": {
+    "_type": "CameraState",
     "current": null,
     "is_viewfinder_active": false,
     "queue": []
   },
   "docker": {
-    "_id": "17e0aa3c03983ca8ea7e9d498c778ea6",
+    "_id": "b5d32b1666194cb1d71037d1b83e90ec",
+    "_type": "DockerState",
     "home_assistant": {
+      "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "home_assistant",
@@ -22,6 +27,7 @@
       "status": "not_available"
     },
     "home_bridge": {
+      "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "home_bridge",
@@ -29,6 +35,7 @@
       "status": "not_available"
     },
     "ngrok": {
+      "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "ngrok",
@@ -36,6 +43,7 @@
       "status": "not_available"
     },
     "ollama": {
+      "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "ollama",
@@ -43,6 +51,7 @@
       "status": "not_available"
     },
     "open_webui": {
+      "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "open_webui",
@@ -50,6 +59,7 @@
       "status": "not_available"
     },
     "pi_hole": {
+      "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "pi_hole",
@@ -57,6 +67,7 @@
       "status": "not_available"
     },
     "portainer": {
+      "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "portainer",
@@ -64,13 +75,16 @@
       "status": "not_available"
     },
     "service": {
+      "_type": "DockerServiceState",
       "status": "not_running",
       "usernames": {}
     }
   },
   "ip": {
+    "_type": "IpState",
     "interfaces": [
       {
+        "_type": "IpNetworkInterface",
         "ip_addresses": [
           "192.168.1.1"
         ],
@@ -80,16 +94,20 @@
     "is_connected": true
   },
   "lightdm": {
+    "_type": "LightDMState",
     "is_active": true,
     "is_enabled": true,
     "is_installed": true,
     "is_installing": false
   },
   "main": {
+    "_type": "MainState",
     "depth": 1,
     "menu": {
+      "_type": "HeadlessMenu",
       "items": [
         {
+          "_type": "SubMenuItem",
           "background_color": "#68B7FF",
           "color": [
             1,
@@ -104,8 +122,10 @@
           "opacity": null,
           "progress": null,
           "sub_menu": {
+            "_type": "HeadlessMenu",
             "items": [
               {
+                "_type": "SubMenuItem",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -120,8 +140,10 @@
                 "opacity": null,
                 "progress": null,
                 "sub_menu": {
+                  "_type": "HeadlessMenu",
                   "items": [
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -136,8 +158,10 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [
                           {
+                            "_type": "ActionItem",
                             "action": "<function:setup_menu_action>",
                             "background_color": "#68B7FF",
                             "color": [
@@ -164,6 +188,7 @@
                 }
               },
               {
+                "_type": "SubMenuItem",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -178,8 +203,10 @@
                 "opacity": null,
                 "progress": null,
                 "sub_menu": {
+                  "_type": "HeadlessMenu",
                   "items": [
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -194,8 +221,10 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [
                           {
+                            "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -210,8 +239,10 @@
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
+                              "_type": "HeadlessMenu",
                               "items": [
                                 {
+                                  "_type": "ApplicationItem",
                                   "application": "services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -228,6 +259,7 @@
                                   "progress": null
                                 },
                                 {
+                                  "_type": "ActionItem",
                                   "action": "<function:list_connections>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -249,6 +281,7 @@
                             }
                           },
                           {
+                            "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -263,8 +296,10 @@
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
+                              "_type": "HeadlessMenu",
                               "items": [
                                 {
+                                  "_type": "SubMenuItem",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -279,8 +314,10 @@
                                   "opacity": null,
                                   "progress": null,
                                   "sub_menu": {
+                                    "_type": "HeadlessMenu",
                                     "items": [
                                       {
+                                        "_type": "Item",
                                         "background_color": "#68B7FF",
                                         "color": [
                                           1,
@@ -311,6 +348,7 @@
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -325,8 +363,10 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [
                           {
+                            "_type": "ActionItem",
                             "action": "<function:open_ssh_menu>",
                             "background_color": "#68B7FF",
                             "color": [
@@ -343,6 +383,7 @@
                             "progress": null
                           },
                           {
+                            "_type": "ActionItem",
                             "action": "<function:generate_rpi_connect_menu>",
                             "background_color": "#68B7FF",
                             "color": [
@@ -359,6 +400,7 @@
                             "progress": null
                           },
                           {
+                            "_type": "ActionItem",
                             "action": "<function:generate_vscode_menu>",
                             "background_color": "#68B7FF",
                             "color": [
@@ -380,6 +422,7 @@
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -394,8 +437,118 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [
                           {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰡉",
+                            "is_short": false,
+                            "key": "users",
+                            "label": "Users",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadlessMenu",
+                              "items": [
+                                {
+                                  "_type": "DispatchItem",
+                                  "action": "<function:<lambda>>",
+                                  "background_color": "#FFC107",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰀔",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Add",
+                                  "opacity": null,
+                                  "operation": {
+                                    "_type": "UsersCreateUserAction"
+                                  },
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "SubMenuItem",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰀄",
+                                  "is_short": false,
+                                  "key": "<function:>",
+                                  "label": "<function:>",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "_type": "HeadlessMenu",
+                                    "items": [
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#FF3F51",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰯄",
+                                        "is_short": false,
+                                        "key": null,
+                                        "label": "Reset Password",
+                                        "opacity": null,
+                                        "operation": {
+                                          "_type": "UsersResetPasswordAction",
+                                          "id": "<function:>"
+                                        },
+                                        "progress": null
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#FF3F51",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰀕",
+                                        "is_short": false,
+                                        "key": null,
+                                        "label": "Delete",
+                                        "opacity": null,
+                                        "operation": {
+                                          "_type": "UsersDeleteUserAction",
+                                          "id": "<function:>"
+                                        },
+                                        "progress": null
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "title": "<function:>"
+                                  }
+                                }
+                              ],
+                              "placeholder": null,
+                              "title": "󰡉Users"
+                            }
+                          },
+                          {
+                            "_type": "ActionItem",
                             "action": "<function:open_lightdm_menu>",
                             "background_color": "#68B7FF",
                             "color": [
@@ -417,6 +570,7 @@
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -431,8 +585,10 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [
                           {
+                            "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -447,8 +603,10 @@
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
+                              "_type": "HeadlessMenu",
                               "items": [
                                 {
+                                  "_type": "SubMenuItem",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -463,8 +621,10 @@
                                   "opacity": null,
                                   "progress": null,
                                   "sub_menu": {
+                                    "_type": "HeadlessMenu",
                                     "items": [
                                       {
+                                        "_type": "ActionItem",
                                         "action": "<function:_engine_selector>",
                                         "background_color": "#03F7AE",
                                         "color": [
@@ -481,6 +641,7 @@
                                         "progress": null
                                       },
                                       {
+                                        "_type": "ActionItem",
                                         "action": "<function:_engine_selector>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -502,6 +663,7 @@
                                   }
                                 },
                                 {
+                                  "_type": "SubMenuItem",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -516,9 +678,11 @@
                                   "opacity": null,
                                   "progress": null,
                                   "sub_menu": {
+                                    "_type": "HeadedMenu",
                                     "heading": "󰔊 Picovoice",
                                     "items": [
                                       {
+                                        "_type": "ActionItem",
                                         "action": "<function:input_access_key>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -551,6 +715,7 @@
                       }
                     },
                     {
+                      "_type": "SubMenuItem",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -565,8 +730,10 @@
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
+                        "_type": "HeadlessMenu",
                         "items": [
                           {
+                            "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
                             "color": [
                               1,
@@ -581,9 +748,11 @@
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
+                              "_type": "HeadedMenu",
                               "heading": "󰡨 Docker",
                               "items": [
                                 {
+                                  "_type": "ActionItem",
                                   "action": "<function:input_credentials>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -616,6 +785,7 @@
                 }
               },
               {
+                "_type": "SubMenuItem",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -630,9 +800,11 @@
                 "opacity": null,
                 "progress": null,
                 "sub_menu": {
+                  "_type": "HeadedMenu",
                   "heading": "Ubo v0.0.0",
                   "items": [
                     {
+                      "_type": "DispatchItem",
                       "action": "<function:<lambda>>",
                       "background_color": "#03F7AE",
                       "color": "#000000",
@@ -642,6 +814,7 @@
                       "label": "Already up to date!",
                       "opacity": null,
                       "operation": {
+                        "_type": "UpdateManagerSetStatusAction",
                         "status": "checking"
                       },
                       "progress": null
@@ -658,6 +831,7 @@
           }
         },
         {
+          "_type": "SubMenuItem",
           "background_color": "#68B7FF",
           "color": "white",
           "icon": "",
@@ -667,12 +841,14 @@
           "opacity": null,
           "progress": null,
           "sub_menu": {
+            "_type": "HeadlessMenu",
             "items": [],
             "placeholder": "No notifications",
             "title": "Notifications (0)"
           }
         },
         {
+          "_type": "SubMenuItem",
           "background_color": "#68B7FF",
           "color": [
             1,
@@ -687,8 +863,10 @@
           "opacity": null,
           "progress": null,
           "sub_menu": {
+            "_type": "HeadlessMenu",
             "items": [
               {
+                "_type": "DispatchItem",
                 "action": "<function:<lambda>>",
                 "background_color": "#68B7FF",
                 "color": [
@@ -702,10 +880,13 @@
                 "key": null,
                 "label": "Reboot",
                 "opacity": null,
-                "operation": {},
+                "operation": {
+                  "_type": "RebootAction"
+                },
                 "progress": null
               },
               {
+                "_type": "DispatchItem",
                 "action": "<function:<lambda>>",
                 "background_color": "#68B7FF",
                 "color": [
@@ -719,7 +900,9 @@
                 "key": null,
                 "label": "Power off",
                 "opacity": null,
-                "operation": {},
+                "operation": {
+                  "_type": "PowerOffAction"
+                },
                 "progress": null
               }
             ],
@@ -738,21 +921,25 @@
       "LightDM": 0,
       "RPi Connect": null,
       "SSH": 1,
+      "Users": 1,
       "VSCode": null,
       "Voice": 0,
       "WiFi": 2
     }
   },
   "notifications": {
+    "_type": "NotificationsState",
     "notifications": [],
     "progress": null,
     "unread_count": 0
   },
   "rgb_ring": {
+    "_type": "RgbRingState",
     "is_busy": false,
     "is_connected": true
   },
   "rpi_connect": {
+    "_type": "RPiConnectState",
     "is_active": true,
     "is_downloading": false,
     "is_installed": null,
@@ -760,38 +947,47 @@
     "status": null
   },
   "sensors": {
+    "_type": "SensorsState",
     "light": {
+      "_type": "SensorState",
       "value": 0.0
     },
     "temperature": {
+      "_type": "SensorState",
       "value": 0.0
     }
   },
   "ssh": {
+    "_type": "SSHState",
     "is_active": true,
     "is_enabled": true
   },
   "status_icons": {
+    "_type": "StatusIconsState",
     "icons": [
       {
+        "_type": "IconState",
         "color": "white",
         "id": "audio:mic-state",
         "priority": -20,
         "symbol": "󰍭"
       },
       {
+        "_type": "IconState",
         "color": "white",
         "id": "ethernet:state",
         "priority": -13,
         "symbol": "󰈅"
       },
       {
+        "_type": "IconState",
         "color": "white",
         "id": "wifi:state",
         "priority": -12,
         "symbol": "󰈅"
       },
       {
+        "_type": "IconState",
         "color": "white",
         "id": "ip:internet-state",
         "priority": -11,
@@ -800,6 +996,7 @@
     ]
   },
   "update_manager": {
+    "_type": "UpdateManagerState",
     "base_image_variant": "[unknown]",
     "current_version": "0.0.0",
     "is_update_service_active": false,
@@ -807,11 +1004,23 @@
     "serial_number": "<not-available>",
     "update_status": "up_to_date"
   },
+  "users": {
+    "_type": "UsersState",
+    "users": [
+      {
+        "_type": "UserState",
+        "id": "<function:>",
+        "is_removable": false
+      }
+    ]
+  },
   "voice": {
+    "_type": "VoiceState",
     "is_access_key_set": false,
     "selected_engine": "piper"
   },
   "vscode": {
+    "_type": "VSCodeState",
     "is_binary_installed": false,
     "is_downloading": false,
     "is_logged_in": null,
@@ -819,8 +1028,10 @@
     "status": null
   },
   "wifi": {
+    "_type": "WiFiState",
     "connections": [
       {
+        "_type": "WiFiConnection",
         "hidden": false,
         "password": null,
         "signal_strength": "<function:>",

@@ -90,6 +90,7 @@ curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/i
 
 Note that as part of the installation process, these debian packages are installed:
 
+- accountsservice
 - git
 - i2c-tools
 - libasound2-dev
