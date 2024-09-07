@@ -93,10 +93,21 @@ typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
+
+"device:deploy" = "poe deploy-to-device"
+"device:deploy:deps" = "poe deploy-to-device --deps"
+"device:deploy:kill" = "poe deploy-to-device --kill"
+"device:deploy:restart" = "poe deploy-to-device --restart"
+"device:deploy:bootstrap" = "poe deploy-to-device --bootstrap --restart"
+"device:deploy:complete" = "poe deploy-to-device --deps --bootstrap --restart"
+"device:deploy:env" = "poe deploy-to-device --env"
+
+"device:test" = "poe test-on-device --copy --run --results"
 "device:test:deps" = "poe test-on-device --deps"
 "device:test:copy" = "poe test-on-device --copy"
 "device:test:run" = "poe test-on-device --run"
 "device:test:results" = "poe test-on-device --results"
+"device:test:complete" = "poe test-on-device --deps --copy --run --results"
 
 [tool.poe.tasks.test-on-device]
 args = [

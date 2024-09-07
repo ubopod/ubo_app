@@ -83,7 +83,7 @@ class MenuNotificationHandler(UboApp):
                 notification.value.on_close()
 
         def clear_notification(event: NotificationsClearEvent) -> None:
-            if event.notification == notification:
+            if event.notification == notification.value:
                 close()
 
         _self = weakref.ref(self)

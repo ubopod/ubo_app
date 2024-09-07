@@ -8,10 +8,11 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import TypedDict
 
 import aiohttp
 import requests
+from kivy.clock import Clock
+from redux import FinishEvent
 from ubo_gui.constants import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.types import Item
 
@@ -335,46 +336,56 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
     return []
 
 
-class _UpdateManagerServiceState(TypedDict):
-    is_running: bool
-    is_presented: bool
-    progress: int
+@store.view(
+    lambda state: any(
+        notification.id == UPDATE_MANAGER_NOTIFICATION_ID
+        for notification in state.notifications.notifications
+    ),
+)
+def dispatch_notification(is_presented: bool, _: float = 0) -> None:  # noqa: FBT001
+    """Dispatch the notification."""
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
+                title='Update in progress',
+                content="""\
+Please keep the device powered on.
+This may take around 20 minutes to complete.""",
+                importance=Importance.LOW,
+                icon='󰚰',
+                display_type=NotificationDisplayType.BACKGROUND
+                if is_presented
+                else NotificationDisplayType.STICKY,
+                dismissable=False,
+                dismiss_on_close=False,
+                color=INFO_COLOR,
+                progress=(int(time.time() / 2) % 4 + 1) / 4,
+                blink=not is_presented,
+            ),
+        ),
+    )
+
+
+update_clock_event = Clock.create_trigger(
+    dispatch_notification,
+    timeout=2,
+    interval=True,
+)
+
+store.subscribe_event(FinishEvent, update_clock_event.cancel)
 
 
 @store.autorun(
-    lambda state: _UpdateManagerServiceState(
-        is_running=state.update_manager.is_update_service_active,
-        is_presented=any(
-            notification.id == UPDATE_MANAGER_NOTIFICATION_ID
-            for notification in state.notifications.notifications
-        ),
-        progress=int(time.time() / 2),
-    ),
+    lambda state: state.update_manager.is_update_service_active,
 )
-def _(state: _UpdateManagerServiceState) -> None:
-    if state['is_running']:
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
-                    title='Update in progress',
-                    content="""\
-Please keep the device powered on.
-This may take around 20 minutes to complete.""",
-                    importance=Importance.LOW,
-                    icon='󰚰',
-                    display_type=NotificationDisplayType.BACKGROUND
-                    if state['is_presented']
-                    else NotificationDisplayType.STICKY,
-                    dismissable=False,
-                    dismiss_on_close=False,
-                    color=INFO_COLOR,
-                    progress=(state['progress'] % 4 + 1) / 4,
-                    blink=not state['is_presented'],
-                ),
-            ),
-        )
+async def _(is_running: bool) -> None:  # noqa: FBT001
+    if is_running:
+        dispatch_notification()
+        update_clock_event()
     else:
+        update_clock_event.cancel()
+        await asyncio.sleep(0.2)
         store.dispatch(
             NotificationsClearByIdAction(
                 id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
