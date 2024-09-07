@@ -1093,8 +1093,8 @@
     "_type": "VSCodeState",
     "is_binary_installed": false,
     "is_downloading": false,
-    "is_logged_in": null,
-    "is_pending": true,
+    "is_logged_in": false,
+    "is_pending": false,
     "status": null
   },
   "wifi": {

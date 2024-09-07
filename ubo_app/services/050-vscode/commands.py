@@ -40,7 +40,7 @@ class TunnelServiceStatus(TypedDict):
     wait=1,
     options=DebounceOptions(leading=True, trailing=False, time_window=1),
 )
-async def _check_status() -> None:
+async def check_status() -> None:
     is_binary_installed = CODE_BINARY_PATH.exists()
     status_data: TunnelServiceStatus | None = None
     is_logged_in = False
@@ -126,14 +126,6 @@ async def _check_status() -> None:
             ),
         ),
     )
-
-
-async def check_status() -> None:
-    await _check_status()
-    await asyncio.sleep(1)
-    await _check_status()
-    await asyncio.sleep(4)
-    await _check_status()
 
 
 async def set_name() -> None:
