@@ -15,6 +15,7 @@
 - feat(users): add `users` service to create, list, delete and change password of system users
 - feat(ci): add `ubo-pod-pi5` to the list of github runners for `test`, also use it for `dependencies` and `type-check` jobs
 - refactor(core): improve update-manager to be event driven
+- feat(core): add `UBO_ENABLED_SERVICES` to complement `UBO_DISABLED_SERVICES` in controlling which services should load
 
 ## Version 0.15.11
 

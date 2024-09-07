@@ -23,6 +23,7 @@ from redux import CombineReducerRegisterAction, ReducerType
 from ubo_app.constants import (
     DEBUG_MODE_TASKS,
     DISABLED_SERVICES,
+    ENABLED_SERVICES,
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
 )
@@ -38,7 +39,7 @@ if TYPE_CHECKING:
 
 ROOT_PATH = Path(__file__).parent
 REGISTERED_PATHS: dict[Path, UboServiceThread] = {}
-WHITE_LIST = []
+WHITE_LIST = [*ENABLED_SERVICES]
 
 
 # Customized module finder and module loader for ubo services to avoid mistakenly

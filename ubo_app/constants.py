@@ -23,7 +23,10 @@ SERVICES_PATH = (
     else []
 )
 SERVER_SOCKET_PATH = Path('/run/ubo').joinpath('system_manager.sock').as_posix()
-DISABLED_SERVICES = os.environ.get('UBO_DISABLED_SERVICES', '').split(',')
+DISABLED_SERVICES = os.environ.get('UBO_DISABLED_SERVICES', '')
+DISABLED_SERVICES = DISABLED_SERVICES.split(',') if DISABLED_SERVICES else []
+ENABLED_SERVICES = os.environ.get('UBO_ENABLED_SERVICES', '')
+ENABLED_SERVICES = ENABLED_SERVICES.split(',') if ENABLED_SERVICES else []
 
 UPDATE_ASSETS_PATH = Path(f'{INSTALLATION_PATH}/_update/')
 UPDATE_LOCK_PATH = UPDATE_ASSETS_PATH / 'update_is_ready.lock'
