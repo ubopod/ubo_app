@@ -97,8 +97,8 @@ apt-get -y clean
 
 # Enable I2C and SPI
 set +o errexit
-sudo raspi-config nonint do_i2c 0
-sudo raspi-config nonint do_spi 0
+raspi-config nonint do_i2c 0
+raspi-config nonint do_spi 0
 set -o errexit
 
 # Define the installation path

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.16.1
+
+- feat(lightdm): set wayland as the default session for lightdm after installing raspberrypi-ui-mods
+
 ## Version 0.16.0
 
 - build(packer): remove /etc/xdg/autostart/piwiz.desktop to avoid running piwiz as we already set ubo user

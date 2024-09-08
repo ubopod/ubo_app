@@ -338,7 +338,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
 
 @store.view(
     lambda state: any(
-        notification.id == UPDATE_MANAGER_NOTIFICATION_ID
+        notification.id == UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID
         for notification in state.notifications.notifications
     ),
 )

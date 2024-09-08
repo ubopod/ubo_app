@@ -35,6 +35,16 @@ def package_handler(action: str, package: str) -> str:
                     ],
                     check=False,
                 )
+                subprocess.run(  # noqa: S603
+                    [
+                        '/usr/bin/env',
+                        'raspi-config',
+                        'nonint',
+                        'do_wayland',
+                        'W2',
+                    ],
+                    check=False,
+                )
             else:
                 install_package(package)
             return 'installed'

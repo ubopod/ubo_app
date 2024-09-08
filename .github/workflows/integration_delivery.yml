@@ -202,9 +202,10 @@ jobs:
             ~/.cache
             ~/.local
           key:
-            poetry-${{ matrix.runner }}-python${{ startsWith(matrix.runner,
-            'ubo-pod') && needs.dependencies.outputs.python-version ||
-            env.PYTHON_VERSION }}-${{hashFiles('poetry.lock') }}
+            poetry-${{ startsWith(matrix.runner, 'ubo-pod') && 'ubo-pod' ||
+            'ubuntu-latest' }}-python${{ startsWith(matrix.runner, 'ubo-pod') &&
+            needs.dependencies.outputs.python-version || env.PYTHON_VERSION
+            }}-${{hashFiles('poetry.lock') }}
 
       - name: Run Tests
         run: |
