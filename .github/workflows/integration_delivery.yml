@@ -280,7 +280,7 @@ jobs:
 
       - name: Extract Version from CHANGELOG.md
         run: |
-          VERSION_CHANGELOG=$(sed -n '3 s/## Version //p' CHANGELOG.md) 
+          VERSION_CHANGELOG=$(sed -n '/## Version /s/## Version //p' CHANGELOG.md | head -n 1) 
           echo "VERSION_CHANGELOG=$VERSION_CHANGELOG"
           if [ "${{ steps.extract-version.outputs.VERSION }}" != "$VERSION_CHANGELOG" ]; then
             echo "Error: Version extracted from CHANGELOG.md does not match the version in pyproject.toml"

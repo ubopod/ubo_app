@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ubo-app"
-version = "0.16.1"
+version = "0.16.0"
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 authors = ["Sassan Haradji <sassanh@gmail.com>"]
 license = "Apache-2.0"
@@ -94,20 +94,20 @@ test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
 
-"device:deploy" = "poe deploy-to-device"
-"device:deploy:deps" = "poe deploy-to-device --deps"
-"device:deploy:kill" = "poe deploy-to-device --kill"
-"device:deploy:restart" = "poe deploy-to-device --restart"
-"device:deploy:bootstrap" = "poe deploy-to-device --bootstrap --restart"
-"device:deploy:complete" = "poe deploy-to-device --deps --bootstrap --restart"
-"device:deploy:env" = "poe deploy-to-device --env"
+"device:deploy" = "scripts/deploy.sh"
+"device:deploy:deps" = "scripts/deploy.sh --deps"
+"device:deploy:kill" = "scripts/deploy.sh --kill"
+"device:deploy:restart" = "scripts/deploy.sh --restart"
+"device:deploy:bootstrap" = "scripts/deploy.sh --bootstrap --restart"
+"device:deploy:complete" = "scripts/deploy.sh --deps --bootstrap --restart"
+"device:deploy:env" = "scripts/deploy.sh --env"
 
-"device:test" = "poe test-on-device --copy --run --results"
-"device:test:deps" = "poe test-on-device --deps"
-"device:test:copy" = "poe test-on-device --copy"
-"device:test:run" = "poe test-on-device --run"
-"device:test:results" = "poe test-on-device --results"
-"device:test:complete" = "poe test-on-device --deps --copy --run --results"
+"device:test" = "scripts/test_on_device.sh --copy --run --results"
+"device:test:deps" = "scripts/test_on_device.sh --deps"
+"device:test:copy" = "scripts/test_on_device.sh --copy"
+"device:test:run" = "scripts/test_on_device.sh --run"
+"device:test:results" = "scripts/test_on_device.sh --results"
+"device:test:complete" = "scripts/test_on_device.sh --deps --copy --run --results"
 
 [tool.poe.tasks.test-on-device]
 args = [

@@ -47,7 +47,7 @@ def install_lightdm() -> None:
             store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
-                        title='LightDM',
+                        title='Desktop',
                         content='Failed to install',
                         display_type=NotificationDisplayType.STICKY,
                         color=DANGER_COLOR,
@@ -101,18 +101,18 @@ def lightdm_menu(state: LightDMState) -> Menu:
     if state.is_installing:
         return HeadedMenu(
             title=lightdm_title,
-            heading='Installing LightDM',
+            heading='Installing Desktop',
             sub_heading='This may take a few minutes',
             items=[],
         )
     if not state.is_installed:
         return HeadedMenu(
             title=lightdm_title,
-            heading='LightDM is not Installed',
+            heading='Desktop is not Installed',
             sub_heading='Install it to enable desktop access on your Ubo pod',
             items=[
                 ActionItem(
-                    label='Install LightDM',
+                    label='Install Desktop',
                     icon='󰶮',
                     action=install_lightdm,
                 ),
@@ -157,7 +157,7 @@ def lightdm_icon(state: LightDMState) -> str:
 @store.autorun(lambda state: state.lightdm)
 def lightdm_title(_: LightDMState) -> str:
     """Get the LightDM title."""
-    return lightdm_icon() + ' LightDM'
+    return lightdm_icon() + ' Desktop'
 
 
 async def check_lightdm() -> None:
@@ -187,9 +187,9 @@ def init_service() -> None:
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
-            category=SettingsCategory.DESKTOP,
+            category=SettingsCategory.OS,
             menu_item=ActionItem(
-                label='LightDM',
+                label='Desktop',
                 icon=lightdm_icon,
                 action=open_lightdm_menu,
             ),

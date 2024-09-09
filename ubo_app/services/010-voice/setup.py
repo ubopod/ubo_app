@@ -252,33 +252,31 @@ def init_service() -> None:
 
     store.dispatch(
         RegisterSettingAppAction(
-            category=SettingsCategory.ACCESSIBILITY,
+            category=SettingsCategory.SPEECH,
+            priority=1,
+            menu_item=SubMenuItem(
+                label='Voice Engine',
+                icon='󰱑',
+                sub_menu=HeadlessMenu(
+                    title='󰱑Voice Engine',
+                    items=_voice_engine_items,
+                ),
+            ),
+        ),
+    )
+
+    store.dispatch(
+        RegisterSettingAppAction(
+            category=SettingsCategory.SPEECH,
             priority=0,
             menu_item=SubMenuItem(
-                label='Voice',
+                label='Picovoice Settings',
                 icon='󰔊',
-                sub_menu=HeadlessMenu(
-                    title='󰔊Voice',
-                    items=[
-                        SubMenuItem(
-                            label='Voice Engine',
-                            icon='󰱑',
-                            sub_menu=HeadlessMenu(
-                                title='󰱑Voice Engine',
-                                items=_voice_engine_items,
-                            ),
-                        ),
-                        SubMenuItem(
-                            label='Picovoice Settings',
-                            icon='󰔊',
-                            sub_menu=HeadedMenu(
-                                title='Picovoice Settings',
-                                heading='󰔊 Picovoice',
-                                sub_heading=_menu_sub_heading,
-                                items=_menu_items,
-                            ),
-                        ),
-                    ],
+                sub_menu=HeadedMenu(
+                    title='Picovoice Settings',
+                    heading='󰔊 Picovoice',
+                    sub_heading=_menu_sub_heading,
+                    items=_menu_items,
                 ),
             ),
         ),

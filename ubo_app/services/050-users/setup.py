@@ -285,7 +285,7 @@ async def init_service() -> None:
     store.dispatch(
         RegisterSettingAppAction(
             priority=1,
-            category=SettingsCategory.DESKTOP,
+            category=SettingsCategory.OS,
             menu_item=SubMenuItem(
                 label='Users',
                 icon='󰡉',

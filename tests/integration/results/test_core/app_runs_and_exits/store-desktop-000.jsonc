@@ -119,17 +119,17 @@
                         1,
                         1
                       ],
-                      "icon": "󰇄",
+                      "icon": "󰕈",
                       "is_short": false,
-                      "key": "Desktop",
-                      "label": "Desktop",
+                      "key": "OS",
+                      "label": "OS",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
                         "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
-                        "title": "󰇄Desktop"
+                        "title": "󰕈OS"
                       }
                     },
                     {
@@ -141,17 +141,17 @@
                         1,
                         1
                       ],
-                      "icon": "󰖤",
+                      "icon": "󰔊",
                       "is_short": false,
-                      "key": "Accessibility",
-                      "label": "Accessibility",
+                      "key": "Speech",
+                      "label": "Speech",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
                         "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
-                        "title": "󰖤Accessibility"
+                        "title": "󰔊Speech"
                       }
                     },
                     {

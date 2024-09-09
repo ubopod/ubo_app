@@ -430,10 +430,10 @@
                         1,
                         1
                       ],
-                      "icon": "󰇄",
+                      "icon": "󰕈",
                       "is_short": false,
-                      "key": "Desktop",
-                      "label": "Desktop",
+                      "key": "OS",
+                      "label": "OS",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
@@ -560,13 +560,13 @@
                             "icon": "[color=#008000]󰪥[/color]",
                             "is_short": false,
                             "key": "lightdm",
-                            "label": "LightDM",
+                            "label": "Desktop",
                             "opacity": null,
                             "progress": null
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "󰇄Desktop"
+                        "title": "󰕈OS"
                       }
                     },
                     {
@@ -578,10 +578,10 @@
                         1,
                         1
                       ],
-                      "icon": "󰖤",
+                      "icon": "󰔊",
                       "is_short": false,
-                      "key": "Accessibility",
-                      "label": "Accessibility",
+                      "key": "Speech",
+                      "label": "Speech",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
@@ -596,74 +596,35 @@
                               1,
                               1
                             ],
-                            "icon": "󰔊",
+                            "icon": "󰱑",
                             "is_short": false,
                             "key": "voice",
-                            "label": "Voice",
+                            "label": "Voice Engine",
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
                               "_type": "HeadlessMenu",
                               "items": [
                                 {
-                                  "_type": "SubMenuItem",
-                                  "background_color": "#68B7FF",
+                                  "_type": "ActionItem",
+                                  "action": "<function:_engine_selector>",
+                                  "background_color": "#03F7AE",
                                   "color": [
                                     1,
                                     1,
                                     1,
                                     1
                                   ],
-                                  "icon": "󰱑",
+                                  "icon": "󰱒",
                                   "is_short": false,
                                   "key": null,
-                                  "label": "Voice Engine",
+                                  "label": "Piper",
                                   "opacity": null,
-                                  "progress": null,
-                                  "sub_menu": {
-                                    "_type": "HeadlessMenu",
-                                    "items": [
-                                      {
-                                        "_type": "ActionItem",
-                                        "action": "<function:_engine_selector>",
-                                        "background_color": "#03F7AE",
-                                        "color": [
-                                          1,
-                                          1,
-                                          1,
-                                          1
-                                        ],
-                                        "icon": "󰱒",
-                                        "is_short": false,
-                                        "key": null,
-                                        "label": "Piper",
-                                        "opacity": null,
-                                        "progress": null
-                                      },
-                                      {
-                                        "_type": "ActionItem",
-                                        "action": "<function:_engine_selector>",
-                                        "background_color": "#68B7FF",
-                                        "color": [
-                                          1,
-                                          1,
-                                          1,
-                                          1
-                                        ],
-                                        "icon": "󰄱",
-                                        "is_short": false,
-                                        "key": null,
-                                        "label": "Picovoice",
-                                        "opacity": null,
-                                        "progress": null
-                                      }
-                                    ],
-                                    "placeholder": null,
-                                    "title": "󰱑Voice Engine"
-                                  }
+                                  "progress": null
                                 },
                                 {
-                                  "_type": "SubMenuItem",
+                                  "_type": "ActionItem",
+                                  "action": "<function:_engine_selector>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -671,47 +632,63 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "󰔊",
+                                  "icon": "󰄱",
                                   "is_short": false,
                                   "key": null,
-                                  "label": "Picovoice Settings",
+                                  "label": "Picovoice",
                                   "opacity": null,
-                                  "progress": null,
-                                  "sub_menu": {
-                                    "_type": "HeadedMenu",
-                                    "heading": "󰔊 Picovoice",
-                                    "items": [
-                                      {
-                                        "_type": "ActionItem",
-                                        "action": "<function:input_access_key>",
-                                        "background_color": "#68B7FF",
-                                        "color": [
-                                          1,
-                                          1,
-                                          1,
-                                          1
-                                        ],
-                                        "icon": "󰐲",
-                                        "is_short": false,
-                                        "key": null,
-                                        "label": "Set Access Key",
-                                        "opacity": null,
-                                        "progress": null
-                                      }
-                                    ],
-                                    "placeholder": null,
-                                    "sub_heading": "Set the access key\nCurrent value: Fake",
-                                    "title": "Picovoice Settings"
-                                  }
+                                  "progress": null
                                 }
                               ],
                               "placeholder": null,
-                              "title": "󰔊Voice"
+                              "title": "󰱑Voice Engine"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰔊",
+                            "is_short": false,
+                            "key": "voice",
+                            "label": "Picovoice Settings",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "󰔊 Picovoice",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:input_access_key>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰐲",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Set Access Key",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Set the access key\nCurrent value: Fake",
+                              "title": "Picovoice Settings"
                             }
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "󰖤Accessibility"
+                        "title": "󰔊Speech"
                       }
                     },
                     {
@@ -916,14 +893,15 @@
     },
     "path": [],
     "settings_items_priorities": {
+      "Desktop": 0,
       "Docker": null,
       "IP Addresses": 0,
-      "LightDM": 0,
+      "Picovoice Settings": 0,
       "RPi Connect": null,
       "SSH": 1,
       "Users": 1,
       "VSCode": null,
-      "Voice": 0,
+      "Voice Engine": 1,
       "WiFi": 2
     }
   },
