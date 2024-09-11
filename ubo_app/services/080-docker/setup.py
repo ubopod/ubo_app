@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
-from dataclasses import fields
 from typing import TYPE_CHECKING
 
 import docker
@@ -14,11 +13,10 @@ from docker.models.containers import Container
 from docker.models.images import Image
 from reducer import IMAGES
 from ubo_gui.constants import DANGER_COLOR
-from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
+from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.store.core import (
-    RegisterRegularAppAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
@@ -26,7 +24,6 @@ from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
-    DockerState,
     DockerStatus,
     DockerStoreUsernameAction,
 )
@@ -203,54 +200,6 @@ def setup_menu_action() -> Callable[[], HeadedMenu]:
     return setup_menu
 
 
-@store.autorun(lambda state: state.docker)
-def docker_menu_items(state: DockerState) -> list[Item]:
-    """Get the menu items for the Docker service."""
-    create_task(check_docker())
-    items: list[Item] = [
-        ActionItem(
-            label='Setup Docker',
-            icon='',
-            action=setup_menu_action,
-        ),
-    ]
-
-    if state.service.status == DockerStatus.RUNNING:
-        from image_ import IMAGE_MENUS
-
-        items.append(
-            SubMenuItem(
-                label='Docker Containers',
-                icon='󱣘',
-                sub_menu=HeadlessMenu(
-                    title='Docker Containers',
-                    items=[
-                        ActionItem(
-                            label=IMAGES[image_id].label,
-                            icon=IMAGES[image_id].icon,
-                            action=IMAGE_MENUS[image_id],
-                        )
-                        for image_id in (field.name for field in fields(state))
-                        if image_id not in (field.name for field in fields(DockerState))
-                    ],
-                    placeholder='No Docker containers',
-                ),
-            ),
-        )
-
-    return items
-
-
-DOCKER_MAIN_MENU = SubMenuItem(
-    label='Docker',
-    icon='󰡨',
-    sub_menu=HeadlessMenu(
-        title='󰡨Docker',
-        items=docker_menu_items,
-    ),
-)
-
-
 def input_credentials() -> None:
     """Input the Docker credentials."""
 
@@ -330,7 +279,7 @@ def clear_credentials(registry: str) -> None:
 
 
 @store.autorun(lambda state: state.docker.service.usernames)
-def settings_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
+def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     """Get the settings menu items for the Docker service."""
     return [
         ActionItem(
@@ -371,22 +320,33 @@ def init_service() -> None:
         'docker_usernames',
         lambda state: state.docker.service.usernames,
     )
-    store.dispatch(RegisterRegularAppAction(menu_item=DOCKER_MAIN_MENU))
     store.dispatch(
         RegisterSettingAppAction(
-            category=SettingsCategory.APPS,
+            priority=1,
+            category=SettingsCategory.DOCKER,
+            menu_item=ActionItem(
+                label='Service',
+                icon='',
+                action=setup_menu_action,
+            ),
+        ),
+    )
+    store.dispatch(
+        RegisterSettingAppAction(
+            category=SettingsCategory.DOCKER,
             menu_item=SubMenuItem(
-                label='Docker',
-                icon='󰡨',
+                label='Registries',
+                icon='󱥉',
                 sub_menu=HeadedMenu(
-                    title='󰡨Docker Settings',
+                    title='󱥉Docker Registries',
                     heading='󰡨 Docker',
-                    sub_heading='Login a registry:',
-                    items=settings_menu_items,
+                    sub_heading='Log in to a registry:',
+                    items=registries_menu_items,
                 ),
             ),
         ),
     )
+
     create_task(
         monitor_unit(
             'docker.socket',

@@ -45,7 +45,7 @@
                   "_type": "HeadlessMenu",
                   "items": [],
                   "placeholder": "No apps",
-                  "title": "󰀻Apps"
+                  "title": "󰀻Docker Apps"
                 }
               },
               {
@@ -163,17 +163,17 @@
                         1,
                         1
                       ],
-                      "icon": "󰀻",
+                      "icon": "󰡨",
                       "is_short": false,
-                      "key": "Apps",
-                      "label": "Apps",
+                      "key": "Docker",
+                      "label": "Docker",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
                         "_type": "HeadlessMenu",
                         "items": [],
                         "placeholder": "No settings in this category",
-                        "title": "󰀻Apps"
+                        "title": "󰡨Docker"
                       }
                     }
                   ],

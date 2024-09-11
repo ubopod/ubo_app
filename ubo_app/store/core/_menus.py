@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 
 APPS_MENU = HeadlessMenu(
-    title='󰀻Apps',
+    title='󰀻Docker Apps',
     items=[],
     placeholder='No apps',
 )

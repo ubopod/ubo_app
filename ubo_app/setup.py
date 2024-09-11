@@ -46,7 +46,7 @@ async def _fake_create_subprocess_exec(
     if any(i in command for i in ('reboot', 'poweroff')):
         return Fake()
     if command in {'curl', 'tar'} or command.endswith('/code'):
-        return original_asyncio_create_subprocess_exec(*args, **kwargs)
+        return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
     if command == 'systemctl':
         if args[0] in 'is-enabled':
             return Fake(

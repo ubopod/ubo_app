@@ -14,7 +14,7 @@ class SettingsCategory(StrEnum):
     REMOTE = 'Remote'
     OS = 'OS'
     SPEECH = 'Speech'
-    APPS = 'Apps'
+    DOCKER = 'Docker'
 
 
 SETTINGS_ICONS = {
@@ -22,7 +22,7 @@ SETTINGS_ICONS = {
     SettingsCategory.REMOTE: '󰑔',
     SettingsCategory.OS: '󰕈',
     SettingsCategory.SPEECH: '󰔊',
-    SettingsCategory.APPS: '󰀻',
+    SettingsCategory.DOCKER: '󰡨',
 }
 
 

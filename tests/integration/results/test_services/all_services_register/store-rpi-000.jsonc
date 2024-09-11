@@ -76,7 +76,7 @@
     },
     "service": {
       "_type": "DockerServiceState",
-      "status": "not_installed",
+      "status": "running",
       "usernames": {}
     }
   },
@@ -143,7 +143,8 @@
                   "_type": "HeadlessMenu",
                   "items": [
                     {
-                      "_type": "SubMenuItem",
+                      "_type": "ActionItem",
+                      "action": "<function:open_image_menu>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -151,40 +152,118 @@
                         1,
                         1
                       ],
-                      "icon": "󰡨",
+                      "icon": "󰟐",
                       "is_short": false,
                       "key": "docker",
-                      "label": "Docker",
+                      "label": "Home Assistant",
                       "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [
-                          {
-                            "_type": "ActionItem",
-                            "action": "<function:setup_menu_action>",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "",
-                            "is_short": false,
-                            "key": null,
-                            "label": "Setup Docker",
-                            "opacity": null,
-                            "progress": null
-                          }
-                        ],
-                        "placeholder": null,
-                        "title": "󰡨Docker"
-                      }
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<function:open_image_menu>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰘘",
+                      "is_short": false,
+                      "key": "docker",
+                      "label": "Home Bridge",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<function:open_image_menu>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰛶",
+                      "is_short": false,
+                      "key": "docker",
+                      "label": "Ngrok",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<function:open_image_menu>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰳆",
+                      "is_short": false,
+                      "key": "docker",
+                      "label": "Ollama",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<function:open_image_menu>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰾔",
+                      "is_short": false,
+                      "key": "docker",
+                      "label": "Open WebUI",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<function:open_image_menu>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰇖",
+                      "is_short": false,
+                      "key": "docker",
+                      "label": "Pi-hole",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<function:open_image_menu>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "",
+                      "is_short": false,
+                      "key": "docker",
+                      "label": "Portainer",
+                      "opacity": null,
+                      "progress": null
                     }
                   ],
                   "placeholder": "No apps",
-                  "title": "󰀻Apps"
+                  "title": "󰀻Docker Apps"
                 }
               },
               {
@@ -765,15 +844,32 @@
                         1,
                         1
                       ],
-                      "icon": "󰀻",
+                      "icon": "󰡨",
                       "is_short": false,
-                      "key": "Apps",
-                      "label": "Apps",
+                      "key": "Docker",
+                      "label": "Docker",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
                         "_type": "HeadlessMenu",
                         "items": [
+                          {
+                            "_type": "ActionItem",
+                            "action": "<function:setup_menu_action>",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": "docker",
+                            "label": "Service",
+                            "opacity": null,
+                            "progress": null
+                          },
                           {
                             "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
@@ -783,10 +879,10 @@
                               1,
                               1
                             ],
-                            "icon": "󰡨",
+                            "icon": "󱥉",
                             "is_short": false,
                             "key": "docker",
-                            "label": "Docker",
+                            "label": "Registries",
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
@@ -812,13 +908,13 @@
                                 }
                               ],
                               "placeholder": null,
-                              "sub_heading": "Login a registry:",
-                              "title": "󰡨Docker Settings"
+                              "sub_heading": "Log in to a registry:",
+                              "title": "󱥉Docker Registries"
                             }
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "󰀻Apps"
+                        "title": "󰡨Docker"
                       }
                     }
                   ],
@@ -959,11 +1055,12 @@
     "path": [],
     "settings_items_priorities": {
       "Desktop": 0,
-      "Docker": null,
       "IP Addresses": 0,
       "Picovoice Settings": 0,
       "RPi Connect": null,
+      "Registries": null,
       "SSH": 1,
+      "Service": 1,
       "Users": 1,
       "VSCode": null,
       "Voice Engine": 1,
