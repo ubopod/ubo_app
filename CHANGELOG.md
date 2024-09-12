@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 0.16.1
 
 - feat(lightdm): set wayland as the default session for lightdm after installing raspberrypi-ui-mods
 - refactor(core): rearange menus
