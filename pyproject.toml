@@ -161,11 +161,15 @@ profile = "black"
 exclude = ["typings"]
 
 [[tool.pyright.executionEnvironments]]
-root = "ubo_app/services/000-keypad"
+root = "ubo_app/services/000-audio"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
-root = "ubo_app/services/000-audio"
+root = "ubo_app/services/000-display"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/000-keypad"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

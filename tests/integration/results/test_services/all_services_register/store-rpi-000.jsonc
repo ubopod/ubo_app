@@ -7,7 +7,7 @@
     "capture_volume": 0.5,
     "is_capture_mute": true,
     "is_playback_mute": false,
-    "playback_volume": 0.5
+    "playback_volume": 0.15
   },
   "camera": {
     "_type": "CameraState",
@@ -15,8 +15,12 @@
     "is_viewfinder_active": false,
     "queue": []
   },
+  "display": {
+    "_type": "DisplayState",
+    "is_paused": false
+  },
   "docker": {
-    "_id": "b5d32b1666194cb1d71037d1b83e90ec",
+    "_id": "a0116be5ab0c1681c8f8e3d0d3290a4c",
     "_type": "DockerState",
     "home_assistant": {
       "_type": "ImageState",
@@ -577,7 +581,7 @@
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#FF3F51",
+                                        "background_color": "#FFC107",
                                         "color": [
                                           1,
                                           1,
@@ -642,7 +646,7 @@
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#FF3F51",
+                                        "background_color": "#FFC107",
                                         "color": [
                                           1,
                                           1,

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 ALL_SERVICES_IDS = [
     'audio',
     'camera',
+    'display',
     'docker',
     'ethernet',
     'ip',

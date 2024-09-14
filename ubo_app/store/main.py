@@ -32,6 +32,7 @@ from ubo_app.store.core import MainAction, MainEvent, MainState
 from ubo_app.store.core.reducer import reducer as main_reducer
 from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
 from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
+from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
 from ubo_app.store.services.docker import DockerAction, DockerState
 from ubo_app.store.services.ip import IpAction, IpEvent, IpState
 from ubo_app.store.services.keypad import KeypadAction, KeypadEvent
@@ -82,6 +83,7 @@ class RootState(BaseCombineReducerState):
 
     audio: AudioState
     camera: CameraState
+    display: DisplayState
     docker: DockerState
     ip: IpState
     lightdm: LightDMState
@@ -114,6 +116,7 @@ ActionType = (
     # Services Actions
     | AudioAction
     | CameraAction
+    | DisplayAction
     | DockerAction
     | IpAction
     | KeypadAction
@@ -135,6 +138,7 @@ EventType = (
     # Services Events
     | AudioEvent
     | CameraEvent
+    | DisplayEvent
     | IpEvent
     | KeypadEvent
     | NotificationsEvent

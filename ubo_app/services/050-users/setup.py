@@ -237,7 +237,7 @@ def users_menu(state: UsersState) -> Menu:
                                 label='Reset Password',
                                 icon='󰯄',
                                 operation=UsersResetPasswordAction(id=user.id),
-                                background_color=DANGER_COLOR,
+                                background_color=WARNING_COLOR,
                             ),
                             DispatchItem(
                                 label='Delete',

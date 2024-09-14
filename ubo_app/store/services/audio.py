@@ -72,7 +72,7 @@ class AudioState(Immutable):
     playback_volume: float = field(
         default_factory=lambda: read_from_persistent_store(
             'audio_state:playback_volume',
-            default=0.5,
+            default=0.15,
         ),
     )
     is_playback_mute: bool = field(

@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- feat(display): add display service and put display content in the bus via `DisplayRenderEvent`
+
 ## Version 0.16.1
 
 - feat(lightdm): set wayland as the default session for lightdm after installing raspberrypi-ui-mods

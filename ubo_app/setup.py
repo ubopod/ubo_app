@@ -147,8 +147,7 @@ def signal_handler(signum: int, _: object) -> None:
 
     clear_signal_handlers()
 
-    display.state.turn_off()
-    display.state.pause()
+    display.turn_off()
 
     if signum == signal.SIGINT:
         logger.info('Exiting gracefully, sending the signal again will force exit!')

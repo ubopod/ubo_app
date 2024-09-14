@@ -24,6 +24,7 @@ from ubo_app.store.services.camera import (
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
 )
+from ubo_app.store.services.display import DisplayPauseAction, DisplayResumeAction
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 
@@ -163,7 +164,7 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
             np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
         )
 
-        display.state.block(
+        display.render_block(
             (0, 0, width - 1, height - 1),
             data_bytes,
             bypass_pause=True,
@@ -187,15 +188,17 @@ def start_camera_viewfinder() -> None:
 
     feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder_locked, 0.04)
 
-    display.state.pause()
+    store.dispatch(DisplayPauseAction())
 
     def handle_stop_viewfinder() -> None:
         with fs_lock:
             nonlocal is_running
             is_running = False
             feed_viewfinder_scheduler.cancel()
-            store.dispatch(CloseApplicationEvent(application=application))
-            display.state.resume()
+            store.dispatch(
+                CloseApplicationEvent(application=application),
+                DisplayResumeAction(),
+            )
             cancel_subscription()
             if picamera2:
                 picamera2.stop()
