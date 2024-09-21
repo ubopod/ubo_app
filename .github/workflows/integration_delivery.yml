@@ -46,7 +46,8 @@ jobs:
 
       - name: Install dependencies
         if: steps.cached-poetry.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root --extras=dev --with dev
+        run: |
+          poetry install --no-interaction --no-root --extras=dev --with dev
 
       - name: Save Cached Poetry
         if: steps.cached-poetry.outputs.cache-hit != 'true'
@@ -73,6 +74,11 @@ jobs:
         run: |
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
 
       - name: Check Cached Poetry
         id: cached-poetry
@@ -204,12 +210,12 @@ jobs:
           key:
             poetry-${{ startsWith(matrix.runner, 'ubo-pod') && 'ubo-pod' ||
             'ubuntu-latest' }}-python${{ startsWith(matrix.runner, 'ubo-pod') &&
-            needs.dependencies.outputs.python-version || env.PYTHON_VERSION
-            }}-${{hashFiles('poetry.lock') }}
+            needs.ubo-pod-dependencies.outputs.python-version ||
+            env.PYTHON_VERSION }}-${{hashFiles('poetry.lock') }}
 
       - name: Run Tests
         run: |
-          poetry run poe test --verbosity=2 --capture=no --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
+          poetry run poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4

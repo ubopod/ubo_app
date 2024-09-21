@@ -131,6 +131,10 @@ def setup() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
+    from ubo_gui import setup as setup_ubo_gui
+
+    setup_ubo_gui()
+
 
 def clear_signal_handlers() -> None:
     """Clear the signal handlers."""

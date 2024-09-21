@@ -21,6 +21,7 @@ from ubo_app.store.services.vscode import (
     VSCodeAction,
     VSCodeDoneDownloadingAction,
     VSCodeLoginEvent,
+    VSCodeRestartEvent,
     VSCodeSetPendingAction,
     VSCodeSetStatusAction,
     VSCodeStartDownloadingAction,
@@ -64,7 +65,12 @@ def reducer(
                     ),
                 ),
             )
-            events.append(VSCodeLoginEvent())
+            events.extend(
+                [
+                    VSCodeLoginEvent(),
+                    VSCodeRestartEvent(),
+                ],
+            )
 
         state = replace(
             state,

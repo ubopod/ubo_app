@@ -35,6 +35,9 @@ class VSCodeSetStatusAction(VSCodeAction):
 class VSCodeLoginEvent(VSCodeEvent): ...
 
 
+class VSCodeRestartEvent(VSCodeEvent): ...
+
+
 class VSCodeState(Immutable):
     is_pending: bool = True
     is_downloading: bool = False

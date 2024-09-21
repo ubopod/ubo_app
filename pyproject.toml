@@ -16,7 +16,7 @@ priority = "primary"
 [tool.poetry.dependencies]
 python = "^3.11"
 psutil = "^6.0.0"
-ubo-gui = "^0.13.1"
+ubo-gui = "^0.13.3"
 headless-kivy = [
   { version = "^0.9.7", markers = "extra=='default'", extras = [
     "default",

@@ -7,7 +7,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 from _constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
-from commands import check_status, install_service, uninstall_service
+from commands import check_status, install_service, restart, uninstall_service
 from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
@@ -27,6 +27,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.vscode import (
     VSCodeDoneDownloadingAction,
+    VSCodeRestartEvent,
     VSCodeStartDownloadingAction,
     VSCodeState,
     VSCodeStatus,
@@ -101,7 +102,7 @@ def logout() -> None:
                 stderr=subprocess.DEVNULL,
             )
             await process.wait()
-            await check_status()
+            await restart()
         except subprocess.CalledProcessError:
             store.dispatch(
                 NotificationsAddAction(
@@ -239,6 +240,7 @@ async def init_service() -> None:
 
     clock_event = Clock.schedule_interval(lambda _: create_task(check_status()), 1)
     store.subscribe_event(FinishEvent, clock_event.cancel)
+    store.subscribe_event(VSCodeRestartEvent, restart)
     await check_status()
 
 

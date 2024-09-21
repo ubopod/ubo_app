@@ -3,6 +3,7 @@
 ## Upcoming
 
 - feat(display): add display service and put display content in the bus via `DisplayRenderEvent`
+- fix(vscode): restart vscode process whenever a login/logout occurs
 
 ## Version 0.16.1
 

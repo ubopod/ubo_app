@@ -221,3 +221,34 @@ async def uninstall_service() -> None:
         )
     finally:
         await check_status()
+
+
+async def restart() -> None:
+    store.dispatch(VSCodeSetPendingAction())
+    try:
+        process = await asyncio.create_subprocess_exec(
+            CODE_BINARY_PATH,
+            'tunnel',
+            '--accept-server-license-terms',
+            'restart',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(process.wait(), timeout=3)
+        if process.returncode is None:
+            process.kill()
+    except (subprocess.CalledProcessError, TimeoutError):
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='VSCode',
+                    content='Failed to restart process',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+    finally:
+        await check_status()
