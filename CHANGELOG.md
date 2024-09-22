@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 0.16.2
 
 - feat(display): add display service and put display content in the bus via `DisplayRenderEvent`
 - fix(vscode): restart vscode process whenever a login/logout occurs
