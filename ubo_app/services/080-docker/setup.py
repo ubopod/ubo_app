@@ -11,17 +11,20 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
+from image_menus import IMAGE_MENUS
 from reducer import IMAGES
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.store.core import (
+    RegisterRegularAppAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
+    DockerImageRegisterAppEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
     DockerStatus,
@@ -314,6 +317,19 @@ def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     ]
 
 
+def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
+    image = IMAGES[event.image]
+    store.dispatch(
+        RegisterRegularAppAction(
+            menu_item=ActionItem(
+                label=image.label,
+                icon=image.icon,
+                action=IMAGE_MENUS[image.id],
+            ),
+        ),
+    )
+
+
 def init_service() -> None:
     """Initialize the service."""
     register_persistent_store(
@@ -346,6 +362,8 @@ def init_service() -> None:
             ),
         ),
     )
+
+    store.subscribe_event(DockerImageRegisterAppEvent, _register_image_app_entry)
 
     create_task(
         monitor_unit(

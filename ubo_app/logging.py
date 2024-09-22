@@ -130,8 +130,8 @@ def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     file_handler = logging.handlers.RotatingFileHandler(
         f'{logger.name}.log',
         backupCount=3,
+        maxBytes=1000000,
     )
-    file_handler.doRollover()
     file_handler.setLevel(level)
     file_handler.setFormatter(
         ExtraFormatter(

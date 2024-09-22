@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from image_menus import IMAGE_MENUS
 from images_ import IMAGE_IDS, IMAGES
 from redux import (
     BaseAction,
@@ -18,13 +17,12 @@ from redux import (
     ReducerResult,
     combine_reducers,
 )
-from ubo_gui.menu.types import ActionItem
 
-from ubo_app.store.core import RegisterRegularAppAction
 from ubo_app.store.services.docker import (
     DockerAction,
     DockerImageAction,
     DockerImageEvent,
+    DockerImageRegisterAppEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
     DockerRemoveUsernameAction,
@@ -83,15 +81,7 @@ def image_reducer(
             image = IMAGES[action.key]
             return CompleteReducerResult(
                 state=ImageState(id=image.id),
-                actions=[
-                    RegisterRegularAppAction(
-                        menu_item=ActionItem(
-                            label=image.label,
-                            icon=image.icon,
-                            action=IMAGE_MENUS[image.id],
-                        ),
-                    ),
-                ],
+                events=[DockerImageRegisterAppEvent(image=image.id)],
             )
         raise InitializationActionError(action)
 

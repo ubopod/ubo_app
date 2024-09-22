@@ -100,6 +100,10 @@ class DockerImageEvent(DockerEvent):
     image: str
 
 
+class DockerImageRegisterAppEvent(DockerImageEvent):
+    """Register image entry in apps in store."""
+
+
 class ImageState(Immutable):
     """Image state."""
 

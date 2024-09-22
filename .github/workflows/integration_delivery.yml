@@ -75,11 +75,6 @@ jobs:
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)"
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-
       - name: Check Cached Poetry
         id: cached-poetry
         uses: actions/cache/restore@v4
@@ -92,6 +87,12 @@ jobs:
             poetry-ubo-pod-python${{
             steps.get-python-version.outputs.PYTHON_VERSION }}-${{
             hashFiles('poetry.lock') }}
+
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
 
       - name: Install dependencies
         if: steps.cached-poetry.outputs.cache-hit != 'true'
@@ -133,6 +134,7 @@ jobs:
             poetry-ubo-pod-python${{
             needs.ubo-pod-dependencies.outputs.python-version }}-${{
             hashFiles('poetry.lock') }}
+          fail-on-cache-miss: true
 
       - name: Create stub files
         run: |
@@ -167,6 +169,7 @@ jobs:
           key:
             poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
             }}-${{hashFiles('poetry.lock') }}
+          fail-on-cache-miss: true
 
       - name: Lint
         run: poetry run poe lint
@@ -212,10 +215,11 @@ jobs:
             'ubuntu-latest' }}-python${{ startsWith(matrix.runner, 'ubo-pod') &&
             needs.ubo-pod-dependencies.outputs.python-version ||
             env.PYTHON_VERSION }}-${{hashFiles('poetry.lock') }}
+          fail-on-cache-miss: true
 
       - name: Run Tests
         run: |
-          poetry run poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
+          poetry run poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
@@ -275,6 +279,7 @@ jobs:
           key:
             poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
             }}-${{hashFiles('poetry.lock') }}
+          fail-on-cache-miss: true
 
       - name: Extract Version
         id: extract-version

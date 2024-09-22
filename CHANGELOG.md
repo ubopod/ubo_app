@@ -4,6 +4,7 @@
 
 - feat(display): add display service and put display content in the bus via `DisplayRenderEvent`
 - fix(vscode): restart vscode process whenever a login/logout occurs
+- fix(docker): avoid instantiating `RegisterRegularAppAction` in the reducer before service is loaded as it needs service to be registered
 
 ## Version 0.16.1
 

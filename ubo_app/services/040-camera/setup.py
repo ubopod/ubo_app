@@ -16,7 +16,6 @@ from pyzbar.pyzbar import decode
 from typing_extensions import override
 from ubo_gui.page import PageWidget
 
-from ubo_app import display
 from ubo_app.store.core import CloseApplicationEvent, OpenApplicationEvent
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
@@ -163,6 +162,8 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
         data_bytes = bytes(
             np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
         )
+
+        from ubo_app import display
 
         display.render_block(
             (0, 0, width - 1, height - 1),
