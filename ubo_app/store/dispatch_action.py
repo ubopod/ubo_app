@@ -11,7 +11,7 @@ from ubo_gui.menu.types import ActionItem
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_app.store.main import ActionType, EventType
+    from ubo_app.store.operations import UboAction, UboEvent
 
 
 def _default_action() -> Callable[[], None]:
@@ -30,5 +30,5 @@ def _default_action() -> Callable[[], None]:
 class DispatchItem(ActionItem):
     """Menu item that dispatches an action or an event."""
 
-    operation: ActionType | EventType
+    operation: UboAction | UboEvent
     action: Callable[[], None] = field(default_factory=_default_action)

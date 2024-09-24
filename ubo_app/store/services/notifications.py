@@ -102,10 +102,12 @@ class Notification(Immutable):
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     is_read: bool = False
     sender: str | None = None
-    actions: list[NotificationActionItem] = field(default_factory=list)
+    actions: list[NotificationActionItem | NotificationDispatchItem] = field(
+        default_factory=list,
+    )
     icon: str = field(default_factory=_default_icon)
     color: str = field(default_factory=_default_color)
-    expiry_date: datetime | None = None
+    expiration_timestamp: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = NOTIFICATIONS_FLASH_TIME
     dismissable: bool = True

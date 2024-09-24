@@ -78,7 +78,10 @@ class CreateWirelessConnectionPage(PageWidget):
             return
 
         password = match.get('Password') or match.get('Password_')
-        type = cast(WiFiType, match.get('Type') or match.get('Type_'))
+        type = match.get('Type') or match.get('Type_')
+        if type:
+            type = type.upper()
+        type = cast(WiFiType, type)
         hidden = (
             str_to_bool(match.get('Hidden') or match.get('Hidden_') or 'false') == 1
         )
@@ -93,7 +96,7 @@ class CreateWirelessConnectionPage(PageWidget):
         await add_wireless_connection(
             ssid=ssid,
             password=password,
-            type=type or WiFiType.nopass,
+            type=type or WiFiType.NOPASS,
             hidden=hidden,
         )
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- feat(rpc): add a proto generator which parses actions and events files and generates proto files for them
+
 ## Version 0.16.2
 
 - feat(display): add display service and put display content in the bus via `DisplayRenderEvent`

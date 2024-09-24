@@ -251,7 +251,7 @@ async def add_wireless_connection(
         None,
     )
 
-    if type == WiFiType.nopass:
+    if type == WiFiType.NOPASS:
         security = {
             'key-mgmt': ('s', 'none'),
             'auth-alg': ('s', 'open'),

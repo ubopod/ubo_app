@@ -6,9 +6,10 @@ from typing import TypeAlias
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
-Color: TypeAlias = (
-    tuple[float | int, float | int, float | int]
-    | tuple[float | int, float | int, float | int, float | int]
+RgbColorElement: TypeAlias = float | int
+RgbColor: TypeAlias = (
+    tuple[RgbColorElement, RgbColorElement, RgbColorElement]
+    | tuple[RgbColorElement, RgbColorElement, RgbColorElement, RgbColorElement]
 )
 
 
@@ -34,7 +35,7 @@ class RgbRingWaitableCommandAction(RgbRingCommandAction):
 
 
 class RgbRingColorfulCommandAction(RgbRingCommandAction):
-    color: Color = (255, 255, 255)
+    color: RgbColor = (255, 255, 255)
 
 
 class RgbRingSetEnabledAction(RgbRingCommandAction):

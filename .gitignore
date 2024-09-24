@@ -83,9 +83,12 @@ venv.bak/
 headless_kivy_pi_buffer.raw
 
 # packer
-*/packer/packer_cache/
-*/packer/output-*
+scripts/packer/packer_cache/
+scripts/packer/output-*
 
 /screenshots
 /snapshot.json
 /snapshot.bin
+
+# rpc
+/ubo_app/rpc/proto/ubo/v1/ubo.proto

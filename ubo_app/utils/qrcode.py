@@ -75,7 +75,7 @@ async def qrcode_input(
                     display_type=NotificationDisplayType.STICKY,
                     is_read=True,
                     extra_information=extra_information,
-                    expiry_date=datetime.datetime.now(tz=datetime.UTC),
+                    expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
                     color='#ffffff',
                     actions=[
                         NotificationActionItem(

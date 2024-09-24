@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package package_info.v1;
+
+import "google/protobuf/descriptor.proto";
+
+// Declare a custom option for attaching metadata to messages
+extend google.protobuf.MessageOptions {
+  string package_name = 51234;
+}

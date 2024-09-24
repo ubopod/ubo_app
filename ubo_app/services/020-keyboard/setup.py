@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Literal
 from kivy.core.window import Keyboard, Window, WindowBase
 from redux import FinishAction, FinishEvent
 
-from ubo_app.store.main import ScreenshotEvent, SnapshotEvent, store
+from ubo_app.store.main import store
+from ubo_app.store.operations import ScreenshotEvent, SnapshotEvent
 from ubo_app.store.services.audio import AudioDevice, AudioToggleMuteStatusAction
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 

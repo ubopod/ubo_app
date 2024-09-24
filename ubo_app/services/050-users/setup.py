@@ -117,7 +117,7 @@ async def delete_account(event: UsersDeleteUserEvent) -> None:
                     text='This will delete the system user account and its home '
                     'directory.',
                 ),
-                expiry_date=datetime.datetime.now(tz=datetime.UTC),
+                expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
                 actions=[
                     NotificationActionItem(
                         action=lambda: loop.call_soon_threadsafe(

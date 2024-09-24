@@ -1,9 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from collections.abc import Sequence
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction
@@ -15,25 +14,21 @@ if TYPE_CHECKING:
 class SensorsAction(BaseAction): ...
 
 
-Primitive = int | float | str | bool
-SensorType = TypeVar('SensorType', bound=Primitive | Sequence[Primitive])
-
-
 class Sensor(StrEnum):
     TEMPERATURE = auto()
     LIGHT = auto()
 
 
-class SensorsReportReadingAction(SensorsAction, Generic[SensorType]):
+class SensorsReportReadingAction(SensorsAction):
     sensor: Sensor
-    reading: SensorType
+    reading: float
     timestamp: datetime
 
 
-class SensorState(Immutable, Generic[SensorType]):
-    value: SensorType | None = None
+class SensorState(Immutable):
+    value: float | None = None
 
 
 class SensorsState(Immutable):
-    temperature: SensorState[float] = SensorState(value=None)
-    light: SensorState[float] = SensorState(value=None)
+    temperature: SensorState = SensorState(value=None)
+    light: SensorState = SensorState(value=None)

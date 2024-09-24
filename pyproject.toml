@@ -73,6 +73,7 @@ toml = "^0.10.2"
 pytest-mock = "^3.14.0"
 ipython = "^8.23.0"
 pyfakefs = { git = "https://github.com/pytest-dev/pyfakefs.git" }
+betterproto = { extras = ["compiler"], version = "^2.0.0b7" }
 
 [tool.poetry.extras]
 default = ["headless-kivy"]

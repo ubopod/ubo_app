@@ -15,7 +15,7 @@ class WiFiType(StrEnum):
     WEP = 'WEP'
     WPA = 'WPA'
     WPA2 = 'WPA2'
-    nopass = 'NOPASS'
+    NOPASS = 'NOPASS'
 
 
 class ConnectionState(StrEnum):

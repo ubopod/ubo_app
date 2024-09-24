@@ -24,7 +24,7 @@ import neopixel
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ubo_app.store.services.rgb_ring import Color
+    from ubo_app.store.services.rgb_ring import RgbColor
 
 BRIGHTNESS = 1.0
 NUM_LEDS = 27
@@ -69,8 +69,8 @@ class LEDManager:
 
     def adjust_brightness(
         self: LEDManager,
-        color: Color,
-    ) -> Color:
+        color: RgbColor,
+    ) -> RgbColor:
         b = self.brightness
         return (color[0] * b, color[1] * b, color[2] * b)
 
@@ -82,7 +82,7 @@ class LEDManager:
             self.blank()
         self.led_ring_present = enabled
 
-    def set_all(self: LEDManager, color: Color) -> None:
+    def set_all(self: LEDManager, color: RgbColor) -> None:
         if not self.led_ring_present:
             return
         color = self.adjust_brightness(color)
@@ -96,7 +96,7 @@ class LEDManager:
 
     def fill_upto(
         self: LEDManager,
-        color: Color,
+        color: RgbColor,
         percentage: float,
         wait: float,
     ) -> None:
@@ -113,7 +113,7 @@ class LEDManager:
 
     def fill_downfrom(
         self: LEDManager,
-        color: Color,
+        color: RgbColor,
         percentage: float,
         wait: float,
     ) -> None:
@@ -133,7 +133,7 @@ class LEDManager:
             time.sleep(wait / 1000)
             self.pixels.show()
 
-    def progress_wheel_step(self: LEDManager, color: Color) -> None:
+    def progress_wheel_step(self: LEDManager, color: RgbColor) -> None:
         if not self.led_ring_present:
             return
         dim_factor = 20
@@ -152,7 +152,7 @@ class LEDManager:
         self.pixels[self.current_bright_one] = color
         self.pixels.show()
 
-    def wheel(self: LEDManager, pos: int) -> Color:
+    def wheel(self: LEDManager, pos: int) -> RgbColor:
         # Input a value 0 to 255 to get a color value.
         # The colours are a transition r - g - b - back to r.
         if pos < 0 or pos > 0b11111111:
@@ -198,7 +198,7 @@ class LEDManager:
                 time.sleep(wait / 1000)
         self.blank()
 
-    def pulse(self: LEDManager, color: Color, wait: float, repetitions: int) -> None:
+    def pulse(self: LEDManager, color: RgbColor, wait: float, repetitions: int) -> None:
         # wait is in milliseconds
         # repetitions is the number of retepting pluses
         if not self.led_ring_present:
@@ -224,7 +224,7 @@ class LEDManager:
                 time.sleep(wait / 10000)
         self.blank()
 
-    def blink(self: LEDManager, color: Color, wait: float, repetitions: int) -> None:
+    def blink(self: LEDManager, color: RgbColor, wait: float, repetitions: int) -> None:
         # wait is in milliseconds
         # repetitions is the number of blinks
         if not self.led_ring_present:
@@ -242,7 +242,7 @@ class LEDManager:
 
     def spinning_wheel(
         self: LEDManager,
-        color: Color,
+        color: RgbColor,
         wait: float = 1,
         length: int = 5,
         repetitions: int = 5,
@@ -250,7 +250,7 @@ class LEDManager:
         if not self.led_ring_present:
             return
         color = self.adjust_brightness(color)
-        ring: list[Color] = [(0, 0, 0)] * self.num_leds
+        ring: list[RgbColor] = [(0, 0, 0)] * self.num_leds
         ring[0:length] = [color] * (length)
         if length > self.num_leds:
             warnings.warn(
@@ -271,12 +271,12 @@ class LEDManager:
                 time.sleep(wait / 1000)
         self.blank()
 
-    def progress_wheel(self: LEDManager, color: Color, percentage: float) -> None:
+    def progress_wheel(self: LEDManager, color: RgbColor, percentage: float) -> None:
         # percentage is a float value between 0 and 1
         if not self.led_ring_present:
             return
         color = self.adjust_brightness(color)
-        ring: list[Color] = [(0, 0, 0)] * self.num_leds
+        ring: list[RgbColor] = [(0, 0, 0)] * self.num_leds
         ring[0 : int(self.num_leds * percentage)] = [color] * (
             int(self.num_leds * percentage)
         )

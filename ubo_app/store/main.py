@@ -4,10 +4,10 @@ from __future__ import annotations
 import base64
 import functools
 import sys
+import threading
 from asyncio import Handle
 from datetime import datetime
 from pathlib import Path
-from threading import Event, current_thread, main_thread
 from types import GenericAlias
 from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin, overload
 
@@ -16,10 +16,7 @@ from fake import Fake
 from immutable import Immutable
 from redux import (
     BaseCombineReducerState,
-    BaseEvent,
-    CombineReducerAction,
     CreateStoreOptions,
-    FinishAction,
     FinishEvent,
     InitAction,
     Store,
@@ -28,31 +25,9 @@ from redux import (
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logging import logger
-from ubo_app.store.core import MainAction, MainEvent, MainState
 from ubo_app.store.core.reducer import reducer as main_reducer
-from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
-from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
-from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
-from ubo_app.store.services.docker import DockerAction, DockerState
-from ubo_app.store.services.ip import IpAction, IpEvent, IpState
-from ubo_app.store.services.keypad import KeypadAction, KeypadEvent
-from ubo_app.store.services.lightdm import LightDMAction, LightDMState
-from ubo_app.store.services.notifications import (
-    NotificationsAction,
-    NotificationsEvent,
-    NotificationsState,
-)
-from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
-from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
-from ubo_app.store.services.sensors import SensorsAction, SensorsState
-from ubo_app.store.services.ssh import SSHAction, SSHState
-from ubo_app.store.services.users import UsersAction, UsersEvent, UsersState
-from ubo_app.store.services.voice import VoiceAction, VoiceState
-from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
-from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
-from ubo_app.store.status_icons import StatusIconsAction, StatusIconsState
+from ubo_app.store.operations import UboAction, UboEvent
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
-from ubo_app.store.update_manager import UpdateManagerAction, UpdateManagerState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 from ubo_app.utils.serializer import add_type_field
 
@@ -61,7 +36,26 @@ if TYPE_CHECKING:
 
     from redux.basic_types import SnapshotAtom, TaskCreatorCallback
 
-if current_thread() is not main_thread():
+    from ubo_app.store.core import MainState
+    from ubo_app.store.services.audio import AudioState
+    from ubo_app.store.services.camera import CameraState
+    from ubo_app.store.services.display import DisplayState
+    from ubo_app.store.services.docker import DockerState
+    from ubo_app.store.services.ip import IpState
+    from ubo_app.store.services.lightdm import LightDMState
+    from ubo_app.store.services.notifications import NotificationsState
+    from ubo_app.store.services.rgb_ring import RgbRingState
+    from ubo_app.store.services.rpi_connect import RPiConnectState
+    from ubo_app.store.services.sensors import SensorsState
+    from ubo_app.store.services.ssh import SSHState
+    from ubo_app.store.services.users import UsersState
+    from ubo_app.store.services.voice import VoiceState
+    from ubo_app.store.services.vscode import VSCodeState
+    from ubo_app.store.services.wifi import WiFiState
+    from ubo_app.store.status_icons import StatusIconsState
+    from ubo_app.store.update_manager import UpdateManagerState
+
+if threading.current_thread() is not threading.main_thread():
     msg = 'Store should be created in the main thread'
     raise RuntimeError(msg)
 
@@ -98,59 +92,10 @@ class RootState(BaseCombineReducerState):
     wifi: WiFiState
 
 
-class ScreenshotEvent(BaseEvent): ...
-
-
-class SnapshotEvent(BaseEvent): ...
-
-
-ActionType = (
-    # Core Actions
-    CombineReducerAction
-    | StatusIconsAction
-    | UpdateManagerAction
-    | MainAction
-    | InitAction
-    | FinishAction
-    | StatusIconsAction
-    # Services Actions
-    | AudioAction
-    | CameraAction
-    | DisplayAction
-    | DockerAction
-    | IpAction
-    | KeypadAction
-    | LightDMAction
-    | NotificationsAction
-    | RgbRingAction
-    | RPiConnectAction
-    | SensorsAction
-    | SSHAction
-    | UsersAction
-    | VoiceAction
-    | VSCodeAction
-    | WiFiAction
-)
-EventType = (
-    # Core Events
-    MainEvent
-    | ScreenshotEvent
-    # Services Events
-    | AudioEvent
-    | CameraEvent
-    | DisplayEvent
-    | IpEvent
-    | KeypadEvent
-    | NotificationsEvent
-    | SnapshotEvent
-    | UsersEvent
-    | WiFiEvent
-)
-
 root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,
-    action_type=ActionType,  # pyright: ignore [reportArgumentType]
-    event_type=EventType,  # pyright: ignore [reportArgumentType]
+    action_type=UboAction,  # pyright: ignore [reportArgumentType]
+    event_type=UboEvent,  # pyright: ignore [reportArgumentType]
     main=main_reducer,
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
@@ -160,7 +105,7 @@ T = TypeVar('T')
 LoadedObject = int | float | str | bool | None | Immutable | list['LoadedObject']
 
 
-class UboStore(Store[RootState, ActionType, EventType]):
+class UboStore(Store[RootState, UboAction, UboEvent]):
     @classmethod
     def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
         from redux.autorun import Autorun
@@ -227,7 +172,14 @@ class UboStore(Store[RootState, ActionType, EventType]):
             and '_type' in data
             and isinstance(type_ := data.pop('_type'), str)
         ):
-            class_ = dill.loads(base64.b64decode(type_.encode('utf-8')))  # noqa: S301
+            if isinstance(type_, type):
+                class_ = type_
+            elif isinstance(type_, str):
+                class_ = dill.loads(base64.b64decode(type_.encode('utf-8')))  # noqa: S301
+            else:
+                msg = f'Invalid type {type(type_)}'
+                raise TypeError(msg)
+
             parameters = {key: self.load_object(value) for key, value in data.items()}
 
             return class_(**parameters)
@@ -263,7 +215,7 @@ def stop_app() -> None:
         mainthread(App.get_running_app().stop)()
 
 
-def action_middleware(action: ActionType) -> ActionType:
+def action_middleware(action: UboAction) -> UboAction:
     logger.debug(
         'Action dispatched',
         extra={'action': action},
@@ -271,7 +223,7 @@ def action_middleware(action: ActionType) -> ActionType:
     return action
 
 
-def event_middleware(event: EventType) -> EventType | None:
+def event_middleware(event: UboEvent) -> UboEvent | None:
     if _is_finalizing.is_set():
         return None
     logger.debug(
@@ -294,7 +246,7 @@ store = UboStore(
     ),
 )
 
-_is_finalizing = Event()
+_is_finalizing = threading.Event()
 
 store.subscribe_event(FinishEvent, lambda: _is_finalizing.set())
 
