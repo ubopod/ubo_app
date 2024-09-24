@@ -89,6 +89,3 @@ scripts/packer/output-*
 /screenshots
 /snapshot.json
 /snapshot.bin
-
-# rpc
-/ubo_app/rpc/proto/ubo/v1/ubo.proto

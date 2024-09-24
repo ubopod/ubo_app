@@ -37,13 +37,19 @@ def main() -> None:
 
     setup()
 
-    from ubo_app.service import start_event_loop_thread
+    from ubo_app.service import start_event_loop_thread, worker_thread
 
     start_event_loop_thread(asyncio.get_event_loop())
 
+    from ubo_app.constants import DISABLE_GRPC, HEIGHT, WIDTH
+
+    if not DISABLE_GRPC:
+        from ubo_app.rpc.server import serve as grpc_serve
+
+        worker_thread.run_task(grpc_serve())
+
     import headless_kivy.config
 
-    from ubo_app.constants import HEIGHT, WIDTH
     from ubo_app.display import render_on_display
 
     headless_kivy.config.setup_headless_kivy(

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package store.v1;
+
+import "ubo/v1/ubo.proto";
+
+message DispatchActionRequest {
+  ubo.v1.Action action = 1;
+}
+
+message DispatchEventRequest {
+  ubo.v1.Event event = 1;
+}
+
+message DispatchActionResponse {}
+message DispatchEventResponse {}
+
+message SubscribeEventRequest {
+  ubo.v1.Event event = 1;
+}
+
+message SubscribeEventResponse {
+  ubo.v1.Event event = 1;
+}
+
+service StoreService {
+  rpc DispatchAction(DispatchActionRequest) returns (DispatchActionResponse);
+  rpc DispatchEvent(DispatchEventRequest) returns (DispatchEventResponse);
+  rpc SubscribeEvent(SubscribeEventRequest) returns (stream SubscribeEventResponse);
+}

@@ -73,6 +73,7 @@ toml = "^0.10.2"
 pytest-mock = "^3.14.0"
 ipython = "^8.23.0"
 pyfakefs = { git = "https://github.com/pytest-dev/pyfakefs.git" }
+grpcio-tools = "^1.66.1"
 betterproto = { extras = ["compiler"], version = "^2.0.0b7" }
 
 [tool.poetry.extras]
@@ -89,11 +90,19 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
-lint = "ruff check . --unsafe-fixes"
+lint = "ruff check ."
+"lint:fix" = "ruff check . --unsafe-fixes --fix"
 typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
+
+"proto:generate:raw" = "python ubo_app/rpc/generate_proto.py"
+"proto:generate" = ["proto:generate:raw", "proto:lint"]
+"proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/generated && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/generated/ ubo_app/rpc/proto/store/v1/store.proto'"
+"proto:compile" = ["proto:compile:raw", "lint:fix"]
+"proto:lint" = "buf format -w ubo_app/rpc/proto/"
+"proto" = ["proto:generate", "proto:compile"]
 
 "device:deploy" = "poe deploy-to-device"
 "device:deploy:deps" = "poe deploy-to-device --deps"
@@ -151,6 +160,14 @@ multiline-quotes = "double"
 "tests/*" = ["S101", "PLR0913", "PLR0915"]
 "**/reducer.py" = ["C901", "PLR0912", "PLR0915"]
 "ubo_app/services/*/ubo_handle.py" = ["TCH004"]
+"ubo_app/rpc/generated/*" = [
+  "ARG002",
+  "ASYNC109",
+  "D",
+  "ERA001",
+  "F401",
+  "RUF009",
+]
 
 [tool.ruff.format]
 quote-style = "single"
@@ -159,7 +176,7 @@ quote-style = "single"
 profile = "black"
 
 [tool.pyright]
-exclude = ["typings"]
+exclude = ["typings", "ubo_app/rpc/generated"]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/000-audio"
