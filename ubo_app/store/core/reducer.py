@@ -114,7 +114,22 @@ def reducer(
             label = item.label() if callable(item.label) else item.label
             return (-(priorities.get(label, 0) or 0), label)
 
-        menu_item = replace(action.menu_item, key=action.service)
+        key = action.service
+        if action.key is not None:
+            key += f':{action.key}'
+        if any(
+            item.key == key
+            for item in cast(
+                Sequence[Item],
+                cast(Menu, category_menu_item.sub_menu).items,
+            )
+        ):
+            msg = f"""Settings application with key "{key}", in category \
+"{category_menu_item.label}", already exists. Consider providing a unique `key` field \
+for the `RegisterSettingAppAction` instance."""
+            raise ValueError(msg)
+
+        menu_item = replace(action.menu_item, key=key)
         new_items = sorted(
             [
                 *cast(Sequence[Item], cast(Menu, category_menu_item.sub_menu).items),
@@ -185,7 +200,21 @@ def reducer(
             msg = 'Applications menu item is not a `SubMenuItem`'
             raise TypeError(msg)
 
-        menu_item = replace(action.menu_item, key=action.service)
+        key = action.service
+        if action.key is not None:
+            key += f':{action.key}'
+        if any(
+            item.key == key
+            for item in cast(
+                Sequence[Item],
+                cast(Menu, apps_menu_item.sub_menu).items,
+            )
+        ):
+            msg = f"""Regular application with key "{key}", already exists. Consider \
+providing a unique `key` field for the `RegisterRegularAppAction` instance."""
+            raise ValueError(msg)
+
+        menu_item = replace(action.menu_item, key=key)
         new_items = sorted(
             [
                 *cast(Sequence[Item], cast(Menu, apps_menu_item.sub_menu).items),

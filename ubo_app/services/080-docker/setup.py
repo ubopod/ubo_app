@@ -326,6 +326,7 @@ def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
                 icon=image.icon,
                 action=IMAGE_MENUS[image.id],
             ),
+            key=image.id,
         ),
     )
 
@@ -345,6 +346,7 @@ def init_service() -> None:
                 icon='',
                 action=setup_menu_action,
             ),
+            key='service',
         ),
     )
     store.dispatch(
@@ -360,6 +362,7 @@ def init_service() -> None:
                     items=registries_menu_items,
                 ),
             ),
+            key='registries',
         ),
     )
 

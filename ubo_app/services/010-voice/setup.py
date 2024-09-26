@@ -262,6 +262,7 @@ def init_service() -> None:
                     items=_voice_engine_items,
                 ),
             ),
+            key='engines',
         ),
     )
 
@@ -279,6 +280,7 @@ def init_service() -> None:
                     items=_menu_items,
                 ),
             ),
+            key='settings',
         ),
     )
 

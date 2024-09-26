@@ -50,6 +50,7 @@ def service_default_factory() -> str:
 class RegisterAppAction(MainAction):
     menu_item: Item
     service: str = field(default_factory=service_default_factory)
+    key: str | None = None
 
 
 class RegisterRegularAppAction(RegisterAppAction): ...

@@ -4,6 +4,7 @@
 
 - feat(rpc): add a proto generator which parses actions and events files and generates proto files for them
 - feat(rpc): add `rpc` service with `dispatch` method to let external services dispatch actions and events to the redux bus
+- fix(core): check if items added by `RegisterRegularAppAction` or `RegisterSettingsAppAction` cause duplicate keys and raise an informative error if so
 
 ## Version 0.16.2
 

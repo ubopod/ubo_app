@@ -158,7 +158,7 @@
                       ],
                       "icon": "󰟐",
                       "is_short": false,
-                      "key": "docker",
+                      "key": "docker:home_assistant",
                       "label": "Home Assistant",
                       "opacity": null,
                       "progress": null
@@ -175,7 +175,7 @@
                       ],
                       "icon": "󰘘",
                       "is_short": false,
-                      "key": "docker",
+                      "key": "docker:home_bridge",
                       "label": "Home Bridge",
                       "opacity": null,
                       "progress": null
@@ -192,7 +192,7 @@
                       ],
                       "icon": "󰛶",
                       "is_short": false,
-                      "key": "docker",
+                      "key": "docker:ngrok",
                       "label": "Ngrok",
                       "opacity": null,
                       "progress": null
@@ -209,7 +209,7 @@
                       ],
                       "icon": "󰳆",
                       "is_short": false,
-                      "key": "docker",
+                      "key": "docker:ollama",
                       "label": "Ollama",
                       "opacity": null,
                       "progress": null
@@ -226,7 +226,7 @@
                       ],
                       "icon": "󰾔",
                       "is_short": false,
-                      "key": "docker",
+                      "key": "docker:open_webui",
                       "label": "Open WebUI",
                       "opacity": null,
                       "progress": null
@@ -243,7 +243,7 @@
                       ],
                       "icon": "󰇖",
                       "is_short": false,
-                      "key": "docker",
+                      "key": "docker:pi_hole",
                       "label": "Pi-hole",
                       "opacity": null,
                       "progress": null
@@ -260,7 +260,7 @@
                       ],
                       "icon": "",
                       "is_short": false,
-                      "key": "docker",
+                      "key": "docker:portainer",
                       "label": "Portainer",
                       "opacity": null,
                       "progress": null
@@ -681,7 +681,7 @@
                             ],
                             "icon": "󰱑",
                             "is_short": false,
-                            "key": "voice",
+                            "key": "voice:engines",
                             "label": "Voice Engine",
                             "opacity": null,
                             "progress": null,
@@ -738,7 +738,7 @@
                             ],
                             "icon": "󰔊",
                             "is_short": false,
-                            "key": "voice",
+                            "key": "voice:settings",
                             "label": "Picovoice Settings",
                             "opacity": null,
                             "progress": null,
@@ -804,7 +804,7 @@
                             ],
                             "icon": "",
                             "is_short": false,
-                            "key": "docker",
+                            "key": "docker:service",
                             "label": "Service",
                             "opacity": null,
                             "progress": null
@@ -820,7 +820,7 @@
                             ],
                             "icon": "󱥉",
                             "is_short": false,
-                            "key": "docker",
+                            "key": "docker:registries",
                             "label": "Registries",
                             "opacity": null,
                             "progress": null,
