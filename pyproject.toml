@@ -56,6 +56,9 @@ rpi-lgpio = { version = "^0.6", markers = "platform_machine=='aarch64'" }
 piper-tts = { version = "^1.2.0", markers = "sys_platform=='linux'" }
 fasteners = "^0.19"
 
+# gRPC
+betterproto = { extras = ["compiler"], version = "^2.0.0b7" }
+
 [tool.poetry.group.dev]
 optional = true
 
@@ -74,7 +77,6 @@ pytest-mock = "^3.14.0"
 ipython = "^8.23.0"
 pyfakefs = { git = "https://github.com/pytest-dev/pyfakefs.git" }
 grpcio-tools = "^1.66.1"
-betterproto = { extras = ["compiler"], version = "^2.0.0b7" }
 
 [tool.poetry.extras]
 default = ["headless-kivy"]
@@ -91,7 +93,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
 lint = "ruff check ."
-"lint:fix" = "ruff check . --unsafe-fixes --fix"
+"lint:fix" = "ruff check . --fix --unsafe-fixes"
 typecheck = "pyright -p pyproject.toml ."
 test = "pytest --cov=ubo_app"
 sanity = ["typecheck", "lint", "test"]
@@ -167,6 +169,8 @@ multiline-quotes = "double"
   "ERA001",
   "F401",
   "RUF009",
+  "TCH001",
+  "TID252",
 ]
 
 [tool.ruff.format]

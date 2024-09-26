@@ -9,7 +9,7 @@ import betterproto
 
 
 class WiFiType(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0
     WEP = 1
     WPA = 2
     WPA2 = 3
@@ -17,7 +17,7 @@ class WiFiType(betterproto.Enum):
 
 
 class ConnectionState(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0
     CONNECTED = 1
     CONNECTING = 2
     DISCONNECTED = 3
@@ -25,7 +25,7 @@ class ConnectionState(betterproto.Enum):
 
 
 class GlobalWiFiState(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0
     CONNECTED = 1
     DISCONNECTED = 2
     PENDING = 3
@@ -34,13 +34,13 @@ class GlobalWiFiState(betterproto.Enum):
 
 
 class Sensor(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_SENSORS_UNSPECIFIED = 0
     TEMPERATURE = 1
     LIGHT = 2
 
 
 class DockerStatus(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_DOCKER_UNSPECIFIED = 0
     UNKNOWN = 1
     NOT_INSTALLED = 2
     INSTALLING = 3
@@ -50,7 +50,7 @@ class DockerStatus(betterproto.Enum):
 
 
 class ImageStatus(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_DOCKER_UNSPECIFIED = 0
     NOT_AVAILABLE = 1
     FETCHING = 2
     AVAILABLE = 3
@@ -60,7 +60,7 @@ class ImageStatus(betterproto.Enum):
 
 
 class Key(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_KEYPAD_UNSPECIFIED = 0
     BACK = 1
     HOME = 2
     UP = 3
@@ -71,13 +71,13 @@ class Key(betterproto.Enum):
 
 
 class VoiceEngine(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_VOICE_UNSPECIFIED = 0
     PIPER = 1
     PICOVOICE = 2
 
 
 class GlobalEthernetState(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_ETHERNET_UNSPECIFIED = 0
     CONNECTED = 1
     DISCONNECTED = 2
     PENDING = 3
@@ -86,7 +86,7 @@ class GlobalEthernetState(betterproto.Enum):
 
 
 class Importance(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0
     CRITICAL = 1
     HIGH = 2
     MEDIUM = 3
@@ -94,7 +94,7 @@ class Importance(betterproto.Enum):
 
 
 class NotificationDisplayType(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0
     NOT_SET = 1
     BACKGROUND = 2
     FLASH = 3
@@ -102,7 +102,7 @@ class NotificationDisplayType(betterproto.Enum):
 
 
 class Chime(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0
     ADD = 1
     DONE = 2
     FAILURE = 3
@@ -110,15 +110,15 @@ class Chime(betterproto.Enum):
 
 
 class AudioDevice(betterproto.Enum):
-    UNSPECIFIED = 0
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_AUDIO_UNSPECIFIED = 0
     INPUT = 1
     OUTPUT = 2
 
 
 @dataclass(eq=False, repr=False)
 class BaseMenu(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     title: str = betterproto.string_field(2)
     items: 'list[Item]' = betterproto.message_field(3)
@@ -127,8 +127,8 @@ class BaseMenu(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class HeadedMenu(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     heading: str = betterproto.string_field(2)
     sub_heading: str = betterproto.string_field(3)
@@ -139,8 +139,8 @@ class HeadedMenu(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class HeadlessMenu(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     title: str = betterproto.string_field(2)
     items: 'list[Item]' = betterproto.message_field(3)
@@ -149,8 +149,8 @@ class HeadlessMenu(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class Item(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'str | None' = betterproto.string_field(2, optional=True)
     label: 'str | None' = betterproto.string_field(3, optional=True)
@@ -164,8 +164,8 @@ class Item(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class ActionItem(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'str | None' = betterproto.string_field(2, optional=True)
     label: 'str | None' = betterproto.string_field(3, optional=True)
@@ -179,8 +179,8 @@ class ActionItem(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class ApplicationItem(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     application: str = betterproto.string_field(2)
     key: 'str | None' = betterproto.string_field(3, optional=True)
@@ -195,8 +195,8 @@ class ApplicationItem(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class SubMenuItem(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     sub_menu: 'Menu' = betterproto.message_field(2)
     key: 'str | None' = betterproto.string_field(3, optional=True)
@@ -211,77 +211,77 @@ class SubMenuItem(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class Subscribable(betterproto.Message):
-    meta_field_package_name_menu: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_gui_dot_menu_dot_types: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class Menu(betterproto.Message):
-    headed_menu: 'HeadedMenu' = betterproto.message_field(1, group='menu')
-    headless_menu: 'HeadlessMenu' = betterproto.message_field(2, group='menu')
+    headless_menu: 'HeadlessMenu' = betterproto.message_field(1, group='menu')
+    headed_menu: 'HeadedMenu' = betterproto.message_field(2, group='menu')
 
 
 @dataclass(eq=False, repr=False)
 class ScreenshotEvent(betterproto.Message):
-    meta_field_package_name_operations: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class SnapshotEvent(betterproto.Message):
-    meta_field_package_name_operations: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class UboAction(betterproto.Message):
-    voice_action: 'VoiceAction' = betterproto.message_field(1, group='ubo_action')
-    ssh_action: 'SshAction' = betterproto.message_field(2, group='ubo_action')
-    rgb_ring_action: 'RgbRingAction' = betterproto.message_field(3, group='ubo_action')
+    wi_fi_action: 'WiFiAction' = betterproto.message_field(1, group='ubo_action')
+    sensors_action: 'SensorsAction' = betterproto.message_field(2, group='ubo_action')
     notifications_action: 'NotificationsAction' = betterproto.message_field(
-        4, group='ubo_action',
+        3, group='ubo_action',
     )
-    light_dm_action: 'LightDmAction' = betterproto.message_field(5, group='ubo_action')
-    ip_action: 'IpAction' = betterproto.message_field(6, group='ubo_action')
+    keypad_action: 'KeypadAction' = betterproto.message_field(4, group='ubo_action')
+    camera_action: 'CameraAction' = betterproto.message_field(5, group='ubo_action')
+    audio_action: 'AudioAction' = betterproto.message_field(6, group='ubo_action')
     display_action: 'DisplayAction' = betterproto.message_field(7, group='ubo_action')
-    camera_action: 'CameraAction' = betterproto.message_field(8, group='ubo_action')
-    audio_action: 'AudioAction' = betterproto.message_field(9, group='ubo_action')
-    docker_action: 'DockerAction' = betterproto.message_field(10, group='ubo_action')
-    keypad_action: 'KeypadAction' = betterproto.message_field(11, group='ubo_action')
+    docker_action: 'DockerAction' = betterproto.message_field(8, group='ubo_action')
+    ip_action: 'IpAction' = betterproto.message_field(9, group='ubo_action')
+    light_dm_action: 'LightDmAction' = betterproto.message_field(10, group='ubo_action')
+    rgb_ring_action: 'RgbRingAction' = betterproto.message_field(11, group='ubo_action')
     r_pi_connect_action: 'RPiConnectAction' = betterproto.message_field(
         12, group='ubo_action',
     )
-    sensors_action: 'SensorsAction' = betterproto.message_field(13, group='ubo_action')
+    ssh_action: 'SshAction' = betterproto.message_field(13, group='ubo_action')
     users_action: 'UsersAction' = betterproto.message_field(14, group='ubo_action')
-    vs_code_action: 'VsCodeAction' = betterproto.message_field(15, group='ubo_action')
-    wi_fi_action: 'WiFiAction' = betterproto.message_field(16, group='ubo_action')
+    voice_action: 'VoiceAction' = betterproto.message_field(15, group='ubo_action')
+    vs_code_action: 'VsCodeAction' = betterproto.message_field(16, group='ubo_action')
 
 
 @dataclass(eq=False, repr=False)
 class UboEvent(betterproto.Message):
-    users_event: 'UsersEvent' = betterproto.message_field(1, group='ubo_event')
-    notifications_event: 'NotificationsEvent' = betterproto.message_field(
-        2, group='ubo_event',
-    )
-    ip_event: 'IpEvent' = betterproto.message_field(3, group='ubo_event')
-    display_event: 'DisplayEvent' = betterproto.message_field(4, group='ubo_event')
+    wi_fi_event: 'WiFiEvent' = betterproto.message_field(1, group='ubo_event')
+    users_event: 'UsersEvent' = betterproto.message_field(2, group='ubo_event')
+    keypad_event: 'KeypadEvent' = betterproto.message_field(3, group='ubo_event')
+    ip_event: 'IpEvent' = betterproto.message_field(4, group='ubo_event')
     audio_event: 'AudioEvent' = betterproto.message_field(5, group='ubo_event')
     screenshot_event: 'ScreenshotEvent' = betterproto.message_field(
         6, group='ubo_event',
     )
     camera_event: 'CameraEvent' = betterproto.message_field(7, group='ubo_event')
-    keypad_event: 'KeypadEvent' = betterproto.message_field(8, group='ubo_event')
-    snapshot_event: 'SnapshotEvent' = betterproto.message_field(9, group='ubo_event')
-    wi_fi_event: 'WiFiEvent' = betterproto.message_field(10, group='ubo_event')
+    display_event: 'DisplayEvent' = betterproto.message_field(8, group='ubo_event')
+    notifications_event: 'NotificationsEvent' = betterproto.message_field(
+        9, group='ubo_event',
+    )
+    snapshot_event: 'SnapshotEvent' = betterproto.message_field(10, group='ubo_event')
 
 
 @dataclass(eq=False, repr=False)
 class DispatchItem(betterproto.Message):
-    meta_field_package_name_dispatch_action: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_dispatch_action: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     operation: 'DispatchItemOperation' = betterproto.message_field(2)
     key: 'str | None' = betterproto.string_field(3, optional=True)
@@ -302,15 +302,15 @@ class DispatchItemOperation(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class LightDmAction(betterproto.Message):
-    meta_field_package_name_lightdm: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class LightDmUpdateStateAction(betterproto.Message):
-    meta_field_package_name_lightdm: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_active: 'bool | None' = betterproto.bool_field(2, optional=True)
     is_enabled: 'bool | None' = betterproto.bool_field(3, optional=True)
@@ -320,15 +320,15 @@ class LightDmUpdateStateAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class LightDmClearEnabledStateAction(betterproto.Message):
-    meta_field_package_name_lightdm: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class LightDmState(betterproto.Message):
-    meta_field_package_name_lightdm: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_active: 'bool | None' = betterproto.bool_field(2, optional=True)
     is_enabled: 'bool | None' = betterproto.bool_field(3, optional=True)
@@ -338,8 +338,8 @@ class LightDmState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class WiFiConnection(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     ssid: str = betterproto.string_field(2)
     state: 'ConnectionState | None' = betterproto.enum_field(3, optional=True)
@@ -351,23 +351,23 @@ class WiFiConnection(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class WiFiAction(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class WiFiSetHasVisitedOnboardingAction(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     has_visited_onboarding: bool = betterproto.bool_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class WiFiUpdateAction(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     connections: 'list[WiFiConnection]' = betterproto.message_field(2)
     state: 'GlobalWiFiState' = betterproto.enum_field(3)
@@ -376,30 +376,30 @@ class WiFiUpdateAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class WiFiUpdateRequestAction(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     reset: 'bool | None' = betterproto.bool_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class WiFiEvent(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class WiFiUpdateRequestEvent(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class WiFiState(betterproto.Message):
-    meta_field_package_name_wifi: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     connections: 'list[WiFiConnection]' = betterproto.message_field(2)
     state: 'GlobalWiFiState' = betterproto.enum_field(3)
@@ -409,15 +409,15 @@ class WiFiState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class SensorsAction(betterproto.Message):
-    meta_field_package_name_sensors: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class SensorsReportReadingAction(betterproto.Message):
-    meta_field_package_name_sensors: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     sensor: 'Sensor' = betterproto.enum_field(2)
     reading: float = betterproto.float_field(3)
@@ -426,16 +426,16 @@ class SensorsReportReadingAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class SensorState(betterproto.Message):
-    meta_field_package_name_sensors: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     value: 'float | None' = betterproto.float_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class SensorsState(betterproto.Message):
-    meta_field_package_name_sensors: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     temperature: 'SensorState | None' = betterproto.message_field(2, optional=True)
     light: 'SensorState | None' = betterproto.message_field(3, optional=True)
@@ -443,76 +443,76 @@ class SensorsState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class UsersAction(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class UsersSetUsersAction(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     users: 'list[UserState]' = betterproto.message_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class UsersCreateUserAction(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class UsersDeleteUserAction(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class UsersResetPasswordAction(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class UsersEvent(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class UsersCreateUserEvent(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class UsersDeleteUserEvent(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class UsersResetPasswordEvent(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class UserState(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
     is_removable: bool = betterproto.bool_field(3)
@@ -520,8 +520,8 @@ class UserState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class UsersState(betterproto.Message):
-    meta_field_package_name_users: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_users: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     users: 'UsersStateUsers | None' = betterproto.message_field(2, optional=True)
 
@@ -533,53 +533,53 @@ class UsersStateUsers(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RPiConnectAction(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectEvent(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectStartDownloadingAction(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectDoneDownloadingAction(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectSetPendingAction(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectStatus(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     screen_sharing_sessions: int = betterproto.int64_field(2)
     remote_shell_sessions: int = betterproto.int64_field(3)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectSetStatusAction(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     is_installed: bool = betterproto.bool_field(2)
     is_signed_in: bool = betterproto.bool_field(3)
     status: 'RPiConnectStatus' = betterproto.message_field(4)
@@ -587,24 +587,24 @@ class RPiConnectSetStatusAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RPiConnectLoginEvent(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectUpdateServiceStateAction(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     is_active: 'bool | None' = betterproto.bool_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RPiConnectState(betterproto.Message):
-    meta_field_package_name_rpi_connect: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     is_downloading: 'bool | None' = betterproto.bool_field(2, optional=True)
     is_active: 'bool | None' = betterproto.bool_field(3, optional=True)
     is_installed: 'bool | None' = betterproto.bool_field(4, optional=True)
@@ -614,43 +614,43 @@ class RPiConnectState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class VsCodeAction(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VsCodeEvent(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VsCodeStartDownloadingAction(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VsCodeDoneDownloadingAction(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VsCodeSetPendingAction(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VsCodeStatus(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_service_installed: bool = betterproto.bool_field(2)
     is_running: bool = betterproto.bool_field(3)
@@ -659,8 +659,8 @@ class VsCodeStatus(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class VsCodeSetStatusAction(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_binary_installed: bool = betterproto.bool_field(2)
     is_logged_in: bool = betterproto.bool_field(3)
@@ -669,22 +669,22 @@ class VsCodeSetStatusAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class VsCodeLoginEvent(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VsCodeRestartEvent(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VsCodeState(betterproto.Message):
-    meta_field_package_name_vscode: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_pending: 'bool | None' = betterproto.bool_field(2, optional=True)
     is_downloading: 'bool | None' = betterproto.bool_field(3, optional=True)
@@ -695,23 +695,23 @@ class VsCodeState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class DockerAction(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class DockerSetStatusAction(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     status: 'DockerStatus' = betterproto.enum_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class DockerStoreUsernameAction(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     registry: str = betterproto.string_field(2)
     username: str = betterproto.string_field(3)
@@ -719,24 +719,24 @@ class DockerStoreUsernameAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class DockerRemoveUsernameAction(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     registry: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class DockerImageAction(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     image: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class DockerImageSetStatusAction(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     status: 'ImageStatus' = betterproto.enum_field(2)
     ports: 'DockerImageSetStatusActionPorts | None' = betterproto.message_field(
@@ -753,8 +753,8 @@ class DockerImageSetStatusActionPorts(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class DockerImageSetDockerIdAction(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     docker_id: str = betterproto.string_field(2)
     image: str = betterproto.string_field(3)
@@ -762,15 +762,15 @@ class DockerImageSetDockerIdAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class DockerEvent(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class DockerServiceState(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     status: 'DockerStatus | None' = betterproto.enum_field(2, optional=True)
     usernames: 'DockerServiceStateUsernamesDict | None' = betterproto.message_field(
@@ -787,24 +787,24 @@ class DockerServiceStateUsernamesDict(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class DockerImageEvent(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     image: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class DockerImageRegisterAppEvent(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     image: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class ImageState(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
     status: 'ImageStatus | None' = betterproto.enum_field(3, optional=True)
@@ -820,44 +820,44 @@ class ImageStatePorts(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class DockerState(betterproto.Message):
-    meta_field_package_name_docker: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     service: 'DockerServiceState' = betterproto.message_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class DisplayAction(betterproto.Message):
-    meta_field_package_name_display: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_display: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class DisplayEvent(betterproto.Message):
-    meta_field_package_name_display: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_display: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class DisplayPauseAction(betterproto.Message):
-    meta_field_package_name_display: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_display: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class DisplayResumeAction(betterproto.Message):
-    meta_field_package_name_display: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_display: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class DisplayRenderEvent(betterproto.Message):
-    meta_field_package_name_display: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_display: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     data: bytes = betterproto.bytes_field(2)
     data_hash: int = betterproto.int64_field(3)
@@ -866,16 +866,16 @@ class DisplayRenderEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class DisplayState(betterproto.Message):
-    meta_field_package_name_display: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_display: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_paused: 'bool | None' = betterproto.bool_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class KeypadAction(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: 'float | None' = betterproto.float_field(3, optional=True)
@@ -883,8 +883,8 @@ class KeypadAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class KeypadKeyUpAction(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: 'float | None' = betterproto.float_field(3, optional=True)
@@ -892,8 +892,8 @@ class KeypadKeyUpAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class KeypadKeyDownAction(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: 'float | None' = betterproto.float_field(3, optional=True)
@@ -901,8 +901,8 @@ class KeypadKeyDownAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class KeypadKeyPressAction(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: 'float | None' = betterproto.float_field(3, optional=True)
@@ -910,8 +910,8 @@ class KeypadKeyPressAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class KeypadKeyReleaseAction(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: 'float | None' = betterproto.float_field(3, optional=True)
@@ -919,8 +919,8 @@ class KeypadKeyReleaseAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class KeypadEvent(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: float = betterproto.float_field(3)
@@ -928,8 +928,8 @@ class KeypadEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class KeypadKeyPressEvent(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: float = betterproto.float_field(3)
@@ -937,8 +937,8 @@ class KeypadKeyPressEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class KeypadKeyReleaseEvent(betterproto.Message):
-    meta_field_package_name_keypad: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     key: 'Key' = betterproto.enum_field(2)
     time: float = betterproto.float_field(3)
@@ -946,38 +946,38 @@ class KeypadKeyReleaseEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class VoiceAction(betterproto.Message):
-    meta_field_package_name_voice: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VoiceEvent(betterproto.Message):
-    meta_field_package_name_voice: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class VoiceUpdateAccessKeyStatus(betterproto.Message):
-    meta_field_package_name_voice: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_access_key_set: bool = betterproto.bool_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class VoiceSetEngineAction(betterproto.Message):
-    meta_field_package_name_voice: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     engine: 'VoiceEngine' = betterproto.enum_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class VoiceReadTextAction(betterproto.Message):
-    meta_field_package_name_voice: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     text: str = betterproto.string_field(2)
     piper_text: 'str | None' = betterproto.string_field(3, optional=True)
@@ -988,8 +988,8 @@ class VoiceReadTextAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class VoiceSynthesizeTextEvent(betterproto.Message):
-    meta_field_package_name_voice: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     text: str = betterproto.string_field(2)
     piper_text: str = betterproto.string_field(3)
@@ -999,8 +999,8 @@ class VoiceSynthesizeTextEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class VoiceState(betterproto.Message):
-    meta_field_package_name_voice: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_access_key_set: 'bool | None' = betterproto.bool_field(2, optional=True)
     selected_engine: 'VoiceEngine | None' = betterproto.enum_field(3, optional=True)
@@ -1008,110 +1008,110 @@ class VoiceState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RgbRingAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingEvent(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingSetIsConnectedAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     is_connected: 'bool | None' = betterproto.bool_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingSetIsBusyAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     is_busy: 'bool | None' = betterproto.bool_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingCommandAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingWaitableCommandAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     wait: 'int | None' = betterproto.int64_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingColorfulCommandAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingSetEnabledAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     enabled: 'bool | None' = betterproto.bool_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingSetAllAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingSetBrightnessAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     brightness: 'float | None' = betterproto.float_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingBlankAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingRainbowAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     rounds: int = betterproto.int64_field(2)
     wait: 'int | None' = betterproto.int64_field(3, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingProgressWheelStepAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(2, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingPulseAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     repetitions: 'int | None' = betterproto.int64_field(2, optional=True)
     wait: 'int | None' = betterproto.int64_field(3, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(4, optional=True)
@@ -1119,9 +1119,9 @@ class RgbRingPulseAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RgbRingBlinkAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     repetitions: 'int | None' = betterproto.int64_field(2, optional=True)
     wait: 'int | None' = betterproto.int64_field(3, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(4, optional=True)
@@ -1129,9 +1129,9 @@ class RgbRingBlinkAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RgbRingSpinningWheelAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     length: 'int | None' = betterproto.int64_field(2, optional=True)
     repetitions: 'int | None' = betterproto.int64_field(3, optional=True)
     wait: 'int | None' = betterproto.int64_field(4, optional=True)
@@ -1140,18 +1140,18 @@ class RgbRingSpinningWheelAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RgbRingProgressWheelAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     percentage: 'float | None' = betterproto.float_field(2, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(3, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingFillUptoAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     percentage: 'float | None' = betterproto.float_field(2, optional=True)
     wait: 'int | None' = betterproto.int64_field(3, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(4, optional=True)
@@ -1159,9 +1159,9 @@ class RgbRingFillUptoAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RgbRingFillDownfromAction(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     percentage: 'float | None' = betterproto.float_field(2, optional=True)
     wait: 'int | None' = betterproto.int64_field(3, optional=True)
     color: 'RgbColor | None' = betterproto.message_field(4, optional=True)
@@ -1169,25 +1169,25 @@ class RgbRingFillDownfromAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class RgbRingCommandEvent(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     command: 'list[str]' = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class RgbRingState(betterproto.Message):
-    meta_field_package_name_rgb_ring: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     is_connected: bool = betterproto.bool_field(2)
     is_busy: bool = betterproto.bool_field(3)
 
 
 @dataclass(eq=False, repr=False)
 class RgbColorElement(betterproto.Message):
-    float: builtins.float = betterproto.float_field(1, group='rgb_color_element')
-    int64: int = betterproto.int64_field(2, group='rgb_color_element')
+    int64: int = betterproto.int64_field(1, group='rgb_color_element')
+    float: builtins.float = betterproto.float_field(2, group='rgb_color_element')
 
 
 @dataclass(eq=False, repr=False)
@@ -1197,15 +1197,15 @@ class RgbColor(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class CameraAction(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class CameraStartViewfinderAction(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
     pattern: str = betterproto.string_field(3)
@@ -1213,39 +1213,39 @@ class CameraStartViewfinderAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class CameraEvent(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class CameraStartViewfinderEvent(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     pattern: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class CameraStopViewfinderEvent(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class CameraReportBarcodeAction(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     codes: 'list[str]' = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class CameraBarcodeEvent(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
     code: str = betterproto.string_field(3)
@@ -1256,8 +1256,8 @@ class CameraBarcodeEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class InputDescription(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
     pattern: str = betterproto.string_field(3)
@@ -1265,8 +1265,8 @@ class InputDescription(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class CameraState(betterproto.Message):
-    meta_field_package_name_camera: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     current: 'InputDescription | None' = betterproto.message_field(2, optional=True)
     is_viewfinder_active: bool = betterproto.bool_field(3)
@@ -1275,38 +1275,38 @@ class CameraState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class IpAction(betterproto.Message):
-    meta_field_package_name_ip: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class IpEvent(betterproto.Message):
-    meta_field_package_name_ip: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class IpUpdateInterfacesAction(betterproto.Message):
-    meta_field_package_name_ip: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     interfaces: 'list[IpNetworkInterface]' = betterproto.message_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class IpSetIsConnectedAction(betterproto.Message):
-    meta_field_package_name_ip: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_connected: bool = betterproto.bool_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class IpNetworkInterface(betterproto.Message):
-    meta_field_package_name_ip: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     name: str = betterproto.string_field(2)
     ip_addresses: 'list[str]' = betterproto.string_field(3)
@@ -1314,8 +1314,8 @@ class IpNetworkInterface(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class IpState(betterproto.Message):
-    meta_field_package_name_ip: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     interfaces: 'list[IpNetworkInterface]' = betterproto.message_field(2)
     is_connected: 'bool | None' = betterproto.bool_field(3, optional=True)
@@ -1323,9 +1323,9 @@ class IpState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class NotificationActionItem(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     background_color: 'str | None' = betterproto.string_field(2, optional=True)
     dismiss_notification: 'bool | None' = betterproto.bool_field(3, optional=True)
     key: 'str | None' = betterproto.string_field(4, optional=True)
@@ -1339,9 +1339,9 @@ class NotificationActionItem(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class NotificationDispatchItem(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     operation: 'NotificationDispatchItemOperation' = betterproto.message_field(2)
     key: 'str | None' = betterproto.string_field(3, optional=True)
     label: 'str | None' = betterproto.string_field(4, optional=True)
@@ -1362,9 +1362,9 @@ class NotificationDispatchItemOperation(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class NotificationExtraInformation(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     text: str = betterproto.string_field(2)
     piper_text: 'str | None' = betterproto.string_field(3, optional=True)
     picovoice_text: 'str | None' = betterproto.string_field(4, optional=True)
@@ -1372,9 +1372,9 @@ class NotificationExtraInformation(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class Notification(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     id: 'str | None' = betterproto.string_field(2, optional=True)
     title: str = betterproto.string_field(3)
     content: str = betterproto.string_field(4)
@@ -1406,10 +1406,10 @@ class Notification(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class NotificationActionsItem(betterproto.Message):
-    notification_action_item: 'NotificationActionItem' = betterproto.message_field(
+    notification_dispatch_item: 'NotificationDispatchItem' = betterproto.message_field(
         1, group='actions_item',
     )
-    notification_dispatch_item: 'NotificationDispatchItem' = betterproto.message_field(
+    notification_action_item: 'NotificationActionItem' = betterproto.message_field(
         2, group='actions_item',
     )
 
@@ -1426,62 +1426,62 @@ class NotificationOnClose(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class NotificationsAction(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class NotificationsAddAction(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     notification: 'Notification' = betterproto.message_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class NotificationsClearAction(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     notification: 'Notification' = betterproto.message_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class NotificationsClearByIdAction(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     id: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class NotificationsClearAllAction(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class NotificationsEvent(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
 
 
 @dataclass(eq=False, repr=False)
 class NotificationsClearEvent(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     notification: 'Notification' = betterproto.message_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class NotificationsDisplayEvent(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     notification: 'Notification' = betterproto.message_field(2)
     index: 'int | None' = betterproto.int64_field(3, optional=True)
     count: 'int | None' = betterproto.int64_field(4, optional=True)
@@ -1489,9 +1489,9 @@ class NotificationsDisplayEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class NotificationsState(betterproto.Message):
-    meta_field_package_name_notifications: 'str | None' = betterproto.string_field(
-        1, optional=True,
-    )
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications: (
+        'str | None'
+    ) = betterproto.string_field(1, optional=True)
     notifications: 'list[Notification]' = betterproto.message_field(2)
     unread_count: int = betterproto.int64_field(3)
     progress: 'float | None' = betterproto.float_field(4, optional=True)
@@ -1499,15 +1499,15 @@ class NotificationsState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class AudioAction(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class AudioSetVolumeAction(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     volume: float = betterproto.float_field(2)
     device: 'AudioDevice' = betterproto.enum_field(3)
@@ -1515,8 +1515,8 @@ class AudioSetVolumeAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class AudioChangeVolumeAction(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     amount: float = betterproto.float_field(2)
     device: 'AudioDevice' = betterproto.enum_field(3)
@@ -1524,8 +1524,8 @@ class AudioChangeVolumeAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class AudioSetMuteStatusAction(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_mute: bool = betterproto.bool_field(2)
     device: 'AudioDevice' = betterproto.enum_field(3)
@@ -1533,24 +1533,24 @@ class AudioSetMuteStatusAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class AudioToggleMuteStatusAction(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     device: 'AudioDevice' = betterproto.enum_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class AudioPlayChimeAction(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     name: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class AudioPlayAudioAction(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: 'str | None' = betterproto.string_field(2, optional=True)
     sample: bytes = betterproto.bytes_field(3)
@@ -1561,23 +1561,23 @@ class AudioPlayAudioAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class AudioEvent(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class AudioPlayChimeEvent(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     name: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class AudioPlayAudioEvent(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: 'str | None' = betterproto.string_field(2, optional=True)
     sample: bytes = betterproto.bytes_field(3)
@@ -1588,16 +1588,16 @@ class AudioPlayAudioEvent(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class AudioPlaybackDoneEvent(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     id: str = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
 class AudioState(betterproto.Message):
-    meta_field_package_name_audio: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     playback_volume: 'float | None' = betterproto.float_field(2, optional=True)
     is_playback_mute: 'bool | None' = betterproto.bool_field(3, optional=True)
@@ -1607,15 +1607,15 @@ class AudioState(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class SshAction(betterproto.Message):
-    meta_field_package_name_ssh: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class SshUpdateStateAction(betterproto.Message):
-    meta_field_package_name_ssh: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_active: 'bool | None' = betterproto.bool_field(2, optional=True)
     is_enabled: 'bool | None' = betterproto.bool_field(3, optional=True)
@@ -1623,15 +1623,15 @@ class SshUpdateStateAction(betterproto.Message):
 
 @dataclass(eq=False, repr=False)
 class SshClearEnabledStateAction(betterproto.Message):
-    meta_field_package_name_ssh: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
 
 
 @dataclass(eq=False, repr=False)
 class SshState(betterproto.Message):
-    meta_field_package_name_ssh: 'str | None' = betterproto.string_field(
-        1, optional=True,
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh: 'str | None' = (
+        betterproto.string_field(1, optional=True)
     )
     is_active: 'bool | None' = betterproto.bool_field(2, optional=True)
     is_enabled: 'bool | None' = betterproto.bool_field(3, optional=True)

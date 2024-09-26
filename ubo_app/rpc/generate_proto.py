@@ -5,15 +5,24 @@ from __future__ import annotations
 
 import ast
 import functools
+import importlib
 import operator
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Literal, Self, get_args
+from typing import TYPE_CHECKING, Any, Literal, Self, get_args
 
 import betterproto.casing
 from immutable import Immutable
+
+from ubo_app.rpc.message_to_object import (
+    META_FIELD_PREFIX_PACKAGE_NAME,
+    META_FIELD_PREFIX_PACKAGE_NAME_INDEX,
+)
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 actions = []
 events = []
@@ -353,12 +362,12 @@ message {betterproto.casing.pascal_case(name)}Dict {{
 
 
 class _ProtoGenerator(ast.NodeVisitor):
-    def __init__(self: _ProtoGenerator, path: Path, package_name: str) -> None:
+    def __init__(self: _ProtoGenerator, module: ModuleType) -> None:
         self.messages: dict[str, list[tuple[str, _Type]]] = {}
         self.enums: dict[str, list[tuple[str, Any]]] = {}
         self.types: dict[str, _Type] = {}
-        self.path = path
-        self.package_name = package_name
+        self.module = module
+        self.package_name = module.__name__
 
     def visit_ClassDef(self: _ProtoGenerator, node: ast.ClassDef) -> None:
         if any(
@@ -537,13 +546,13 @@ class _ProtoGenerator(ast.NodeVisitor):
 
                 msg = (
                     f'Unsupported subscript type: {value.value.id} '
-                    f'- file: {self.path} - line: {value.lineno}'
+                    f'- file: {self.module} - line: {value.lineno}'
                 )
                 raise TypeError(msg)
 
             msg = (
                 f'Unsupported subscript type: {value.value} {value.slice} '
-                f'- file: {self.path} - line: {value.lineno}'
+                f'- file: {self.module} - line: {value.lineno}'
             )
             raise TypeError(msg)
 
@@ -572,6 +581,7 @@ class _ProtoGenerator(ast.NodeVisitor):
             for enum_name, values in self.enums.items():
                 proto += f'enum {enum_name} {{\n'
                 proto += f"""  {betterproto.casing.snake_case(enum_name).upper()
+                }_{self.package_name.replace('.', '_dot_').upper()
                 }_UNSPECIFIED = 0;\n"""
                 for i, (value_name, _) in enumerate(values, 0):
                     proto += f"""  {
@@ -583,8 +593,9 @@ class _ProtoGenerator(ast.NodeVisitor):
                 proto += f'message {message_name} {{\n'
                 proto += f"""  option (package_info.v1.package_name) = "{
                 self.package_name}";\n"""
-                proto += '  optional string meta_field_package_name_'
-                proto += f'{self.package_name} = 1;\n'
+                proto += f'  optional string {META_FIELD_PREFIX_PACKAGE_NAME}'
+                proto += f"""{self.package_name.replace(".", "_dot_")} = {
+                META_FIELD_PREFIX_PACKAGE_NAME_INDEX};\n"""
                 for field_name, field_type in fields:
                     dependencies |= field_type.dependencies
                     proto += re.sub(
@@ -647,12 +658,15 @@ def _generate_operations_proto(output_directory: Path) -> None:
         file.write(proto)
 
 
-def parse(input_file: Path, package_name: str) -> _ProtoGenerator:
+def parse(input_module: ModuleType) -> _ProtoGenerator:
     """Generate proto files from actions, events and states defined in Python files."""
-    with input_file.open() as file:
+    if not input_module.__file__:
+        msg = 'Module must be a file'
+        raise ValueError(msg)
+    with Path(input_module.__file__).open() as file:
         tree = ast.parse(file.read())
 
-    generator = _ProtoGenerator(path=input_file, package_name=package_name)
+    generator = _ProtoGenerator(module=input_module)
     generator.visit(tree)
 
     return generator
@@ -660,7 +674,6 @@ def parse(input_file: Path, package_name: str) -> _ProtoGenerator:
 
 if __name__ == '__main__':
     print('🚀 Generating proto files...')
-    input_directory = Path('ubo_app/store/services/')
     output_directory = Path('ubo_app/rpc/proto/')
 
     import ubo_gui.menu.types
@@ -670,12 +683,15 @@ if __name__ == '__main__':
 
     generators: list[_ProtoGenerator] = []
 
-    generators.append(parse(Path(ubo_gui.menu.types.__file__), 'menu'))
-    generators.append(parse(Path(ubo_app.store.operations.__file__), 'operations'))
+    generators.append(parse(ubo_gui.menu.types))
+    generators.append(parse(ubo_app.store.operations))
     generators.append(
-        parse(Path(ubo_app.store.dispatch_action.__file__), 'dispatch_action'),
+        parse(ubo_app.store.dispatch_action),
     )
-    generators.extend(parse(file, file.stem) for file in input_directory.glob('*.py'))
+    generators.extend(
+        parse(importlib.import_module(f'ubo_app.store.services.{file.stem}'))
+        for file in Path('ubo_app/store/services/').glob('*.py')
+    )
 
     (output_directory / 'ubo' / 'v1').mkdir(
         exist_ok=True,

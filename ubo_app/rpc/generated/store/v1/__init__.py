@@ -11,13 +11,13 @@ import grpclib
 import grpclib.server
 from betterproto.grpc.grpclib_server import ServiceBase
 
+from ...ubo import v1 as __ubo_v1__
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from betterproto.grpc.grpclib_client import MetadataLike
     from grpclib.metadata import Deadline
-
-    from generated.ubo import v1 as __ubo_v1__
 
 
 @dataclass(eq=False, repr=False)

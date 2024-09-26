@@ -7,6 +7,7 @@
 - fix(core): check if items added by `RegisterRegularAppAction` or `RegisterSettingsAppAction` cause duplicate keys and raise an informative error if so
 - refactor(core): truncate long log items for log level `DEBUG` or lower to avoid cluttering the logs
 - refactor(tests): add a delay between initializing different services to make sure they always run in the same order
+- feat(rpc): add `subscribe_event` to the rpc service to let external services subscribe to events - closes #1
 
 ## Version 0.16.2
 
