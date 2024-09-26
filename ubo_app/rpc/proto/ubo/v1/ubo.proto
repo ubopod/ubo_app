@@ -6,7 +6,7 @@ import "package_info/v1/package_info.proto";
 
 message BaseMenu {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
   string title = 2;
   repeated Item items = 3;
   optional string placeholder = 4;
@@ -14,7 +14,7 @@ message BaseMenu {
 
 message HeadedMenu {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
   string heading = 2;
   string sub_heading = 3;
   string title = 4;
@@ -24,7 +24,7 @@ message HeadedMenu {
 
 message HeadlessMenu {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
   string title = 2;
   repeated Item items = 3;
   optional string placeholder = 4;
@@ -32,7 +32,7 @@ message HeadlessMenu {
 
 message Item {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
   optional string key = 2;
   optional string label = 3;
   optional string color = 4;
@@ -45,7 +45,7 @@ message Item {
 
 message ActionItem {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
   optional string key = 2;
   optional string label = 3;
   optional string color = 4;
@@ -58,7 +58,7 @@ message ActionItem {
 
 message ApplicationItem {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
   string application = 2;
   optional string key = 3;
   optional string label = 4;
@@ -72,7 +72,7 @@ message ApplicationItem {
 
 message SubMenuItem {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
   Menu sub_menu = 2;
   optional string key = 3;
   optional string label = 4;
@@ -86,43 +86,43 @@ message SubMenuItem {
 
 message Subscribable {
   option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1;
+  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
 }
 
 message Menu {
   oneof menu {
-    HeadlessMenu headless_menu = 1;
-    HeadedMenu headed_menu = 2;
+    HeadedMenu headed_menu = 1;
+    HeadlessMenu headless_menu = 2;
   }
 }
 message ScreenshotEvent {
   option (package_info.v1.package_name) = "ubo_app.store.operations";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_operations = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_operations = 1000;
 }
 
 message SnapshotEvent {
   option (package_info.v1.package_name) = "ubo_app.store.operations";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_operations = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_operations = 1000;
 }
 
 message UboAction {
   oneof ubo_action {
     WiFiAction wi_fi_action = 1;
-    SensorsAction sensors_action = 2;
-    NotificationsAction notifications_action = 3;
-    KeypadAction keypad_action = 4;
-    CameraAction camera_action = 5;
-    AudioAction audio_action = 6;
-    DisplayAction display_action = 7;
-    DockerAction docker_action = 8;
-    IpAction ip_action = 9;
-    LightDMAction light_dm_action = 10;
-    RgbRingAction rgb_ring_action = 11;
-    RPiConnectAction r_pi_connect_action = 12;
-    SSHAction ssh_action = 13;
-    UsersAction users_action = 14;
-    VoiceAction voice_action = 15;
-    VSCodeAction vs_code_action = 16;
+    VSCodeAction vs_code_action = 2;
+    VoiceAction voice_action = 3;
+    UsersAction users_action = 4;
+    SSHAction ssh_action = 5;
+    SensorsAction sensors_action = 6;
+    RPiConnectAction r_pi_connect_action = 7;
+    RgbRingAction rgb_ring_action = 8;
+    NotificationsAction notifications_action = 9;
+    IpAction ip_action = 10;
+    DisplayAction display_action = 11;
+    CameraAction camera_action = 12;
+    AudioAction audio_action = 13;
+    DockerAction docker_action = 14;
+    KeypadAction keypad_action = 15;
+    LightDMAction light_dm_action = 16;
   }
 }
 
@@ -131,18 +131,18 @@ message UboEvent {
     WiFiEvent wi_fi_event = 1;
     UsersEvent users_event = 2;
     KeypadEvent keypad_event = 3;
-    IpEvent ip_event = 4;
-    AudioEvent audio_event = 5;
-    ScreenshotEvent screenshot_event = 6;
-    CameraEvent camera_event = 7;
-    DisplayEvent display_event = 8;
+    AudioEvent audio_event = 4;
+    ScreenshotEvent screenshot_event = 5;
+    CameraEvent camera_event = 6;
+    DisplayEvent display_event = 7;
+    IpEvent ip_event = 8;
     NotificationsEvent notifications_event = 9;
     SnapshotEvent snapshot_event = 10;
   }
 }
 message DispatchItem {
   option (package_info.v1.package_name) = "ubo_app.store.dispatch_action";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_dispatch_action = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_dispatch_action = 1000;
 
   message Operation {
     oneof operation {
@@ -163,12 +163,12 @@ message DispatchItem {
 
 message LightDMAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
 }
 
 message LightDMUpdateStateAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
   optional bool is_active = 2;
   optional bool is_enabled = 3;
   optional bool is_installed = 4;
@@ -177,12 +177,12 @@ message LightDMUpdateStateAction {
 
 message LightDMClearEnabledStateAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
 }
 
 message LightDMState {
   option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
   optional bool is_active = 2;
   optional bool is_enabled = 3;
   optional bool is_installed = 4;
@@ -216,7 +216,7 @@ enum GlobalWiFiState {
 
 message WiFiConnection {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
   string ssid = 2;
   optional ConnectionState state = 3;
   optional int64 signal_strength = 4;
@@ -227,18 +227,18 @@ message WiFiConnection {
 
 message WiFiAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
 }
 
 message WiFiSetHasVisitedOnboardingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
   bool has_visited_onboarding = 2;
 }
 
 message WiFiUpdateAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
   repeated WiFiConnection connections = 2;
   GlobalWiFiState state = 3;
   WiFiConnection current_connection = 4;
@@ -246,23 +246,23 @@ message WiFiUpdateAction {
 
 message WiFiUpdateRequestAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
   optional bool reset = 2;
 }
 
 message WiFiEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
 }
 
 message WiFiUpdateRequestEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
 }
 
 message WiFiState {
   option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
   repeated WiFiConnection connections = 2;
   GlobalWiFiState state = 3;
   WiFiConnection current_connection = 4;
@@ -277,12 +277,12 @@ enum Sensor {
 
 message SensorsAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
 }
 
 message SensorsReportReadingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
   Sensor sensor = 2;
   float reading = 3;
   int64 timestamp = 4;
@@ -290,77 +290,77 @@ message SensorsReportReadingAction {
 
 message SensorState {
   option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
   optional float value = 2;
 }
 
 message SensorsState {
   option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
   optional SensorState temperature = 2;
   optional SensorState light = 3;
 }
 
 message UsersAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
 }
 
 message UsersSetUsersAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
   repeated UserState users = 2;
 }
 
 message UsersCreateUserAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
 }
 
 message UsersDeleteUserAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
   string id = 2;
 }
 
 message UsersResetPasswordAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
   string id = 2;
 }
 
 message UsersEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
 }
 
 message UsersCreateUserEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
 }
 
 message UsersDeleteUserEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
   string id = 2;
 }
 
 message UsersResetPasswordEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
   string id = 2;
 }
 
 message UserState {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
   string id = 2;
   bool is_removable = 3;
 }
 
 message UsersState {
   option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
 
   message Users {
     repeated UserState items = 1;
@@ -370,39 +370,39 @@ message UsersState {
 
 message RPiConnectAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
 message RPiConnectEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
 message RPiConnectStartDownloadingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
 message RPiConnectDoneDownloadingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
 message RPiConnectSetPendingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
 message RPiConnectStatus {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
   int64 screen_sharing_sessions = 2;
   int64 remote_shell_sessions = 3;
 }
 
 message RPiConnectSetStatusAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
   bool is_installed = 2;
   bool is_signed_in = 3;
   RPiConnectStatus status = 4;
@@ -410,18 +410,18 @@ message RPiConnectSetStatusAction {
 
 message RPiConnectLoginEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
 message RPiConnectUpdateServiceStateAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
   optional bool is_active = 2;
 }
 
 message RPiConnectState {
   option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
   optional bool is_downloading = 2;
   optional bool is_active = 3;
   optional bool is_installed = 4;
@@ -431,32 +431,32 @@ message RPiConnectState {
 
 message VSCodeAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
 }
 
 message VSCodeEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
 }
 
 message VSCodeStartDownloadingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
 }
 
 message VSCodeDoneDownloadingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
 }
 
 message VSCodeSetPendingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
 }
 
 message VSCodeStatus {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
   bool is_service_installed = 2;
   bool is_running = 3;
   string name = 4;
@@ -464,7 +464,7 @@ message VSCodeStatus {
 
 message VSCodeSetStatusAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
   bool is_binary_installed = 2;
   bool is_logged_in = 3;
   VSCodeStatus status = 4;
@@ -472,17 +472,17 @@ message VSCodeSetStatusAction {
 
 message VSCodeLoginEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
 }
 
 message VSCodeRestartEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
 }
 
 message VSCodeState {
   option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
   optional bool is_pending = 2;
   optional bool is_downloading = 3;
   optional bool is_binary_installed = 4;
@@ -512,37 +512,37 @@ enum ImageStatus {
 
 message DockerAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 }
 
 message DockerSetStatusAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   DockerStatus status = 2;
 }
 
 message DockerStoreUsernameAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   string registry = 2;
   string username = 3;
 }
 
 message DockerRemoveUsernameAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   string registry = 2;
 }
 
 message DockerImageAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   string image = 2;
 }
 
 message DockerImageSetStatusAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 
   message Ports {
     repeated string items = 1;
@@ -555,19 +555,19 @@ message DockerImageSetStatusAction {
 
 message DockerImageSetDockerIdAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   string docker_id = 2;
   string image = 3;
 }
 
 message DockerEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 }
 
 message DockerServiceState {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 
   message UsernamesDict {
     map<string, string> items = 1;
@@ -578,19 +578,19 @@ message DockerServiceState {
 
 message DockerImageEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   string image = 2;
 }
 
 message DockerImageRegisterAppEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   string image = 2;
 }
 
 message ImageState {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 
   message Ports {
     repeated string items = 1;
@@ -604,33 +604,33 @@ message ImageState {
 
 message DockerState {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
   DockerServiceState service = 2;
 }
 
 message DisplayAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
 message DisplayEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
 message DisplayPauseAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
 message DisplayResumeAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
 message DisplayRenderEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
   bytes data = 2;
   int64 data_hash = 3;
   repeated int64 rectangle = 4;
@@ -638,7 +638,7 @@ message DisplayRenderEvent {
 
 message DisplayState {
   option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
   optional bool is_paused = 2;
 }
 
@@ -655,56 +655,56 @@ enum Key {
 
 message KeypadAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   optional float time = 3;
 }
 
 message KeypadKeyUpAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   optional float time = 3;
 }
 
 message KeypadKeyDownAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   optional float time = 3;
 }
 
 message KeypadKeyPressAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   optional float time = 3;
 }
 
 message KeypadKeyReleaseAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   optional float time = 3;
 }
 
 message KeypadEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   float time = 3;
 }
 
 message KeypadKeyPressEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   float time = 3;
 }
 
 message KeypadKeyReleaseEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.keypad";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_keypad = 1000;
   Key key = 2;
   float time = 3;
 }
@@ -717,29 +717,29 @@ enum VoiceEngine {
 
 message VoiceAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
 }
 
 message VoiceEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
 }
 
 message VoiceUpdateAccessKeyStatus {
   option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
   bool is_access_key_set = 2;
 }
 
 message VoiceSetEngineAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
   VoiceEngine engine = 2;
 }
 
 message VoiceReadTextAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
   string text = 2;
   optional string piper_text = 3;
   optional string picovoice_text = 4;
@@ -749,7 +749,7 @@ message VoiceReadTextAction {
 
 message VoiceSynthesizeTextEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
   string text = 2;
   string piper_text = 3;
   string picovoice_text = 4;
@@ -758,7 +758,7 @@ message VoiceSynthesizeTextEvent {
 
 message VoiceState {
   option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
   optional bool is_access_key_set = 2;
   optional VoiceEngine selected_engine = 3;
 }
@@ -774,82 +774,82 @@ enum GlobalEthernetState {
 
 message RgbRingAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
 }
 
 message RgbRingEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
 }
 
 message RgbRingSetIsConnectedAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional bool is_connected = 2;
 }
 
 message RgbRingSetIsBusyAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional bool is_busy = 2;
 }
 
 message RgbRingCommandAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
 }
 
 message RgbRingWaitableCommandAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional int64 wait = 2;
 }
 
 message RgbRingColorfulCommandAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional RgbColor color = 2;
 }
 
 message RgbRingSetEnabledAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional bool enabled = 2;
 }
 
 message RgbRingSetAllAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional RgbColor color = 2;
 }
 
 message RgbRingSetBrightnessAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional float brightness = 2;
 }
 
 message RgbRingBlankAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
 }
 
 message RgbRingRainbowAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   int64 rounds = 2;
   optional int64 wait = 3;
 }
 
 message RgbRingProgressWheelStepAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional RgbColor color = 2;
 }
 
 message RgbRingPulseAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional int64 repetitions = 2;
   optional int64 wait = 3;
   optional RgbColor color = 4;
@@ -857,7 +857,7 @@ message RgbRingPulseAction {
 
 message RgbRingBlinkAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional int64 repetitions = 2;
   optional int64 wait = 3;
   optional RgbColor color = 4;
@@ -865,7 +865,7 @@ message RgbRingBlinkAction {
 
 message RgbRingSpinningWheelAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional int64 length = 2;
   optional int64 repetitions = 3;
   optional int64 wait = 4;
@@ -874,14 +874,14 @@ message RgbRingSpinningWheelAction {
 
 message RgbRingProgressWheelAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional float percentage = 2;
   optional RgbColor color = 3;
 }
 
 message RgbRingFillUptoAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional float percentage = 2;
   optional int64 wait = 3;
   optional RgbColor color = 4;
@@ -889,7 +889,7 @@ message RgbRingFillUptoAction {
 
 message RgbRingFillDownfromAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   optional float percentage = 2;
   optional int64 wait = 3;
   optional RgbColor color = 4;
@@ -897,13 +897,13 @@ message RgbRingFillDownfromAction {
 
 message RgbRingCommandEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   repeated string command = 2;
 }
 
 message RgbRingState {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
   bool is_connected = 2;
   bool is_busy = 3;
 }
@@ -920,42 +920,42 @@ message RgbColor {
 }
 message CameraAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
 }
 
 message CameraStartViewfinderAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   string id = 2;
   string pattern = 3;
 }
 
 message CameraEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
 }
 
 message CameraStartViewfinderEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   string pattern = 2;
 }
 
 message CameraStopViewfinderEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   string id = 2;
 }
 
 message CameraReportBarcodeAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   repeated string codes = 2;
 }
 
 message CameraBarcodeEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
 
   string id = 2;
   string code = 3;
@@ -964,14 +964,14 @@ message CameraBarcodeEvent {
 
 message InputDescription {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   string id = 2;
   string pattern = 3;
 }
 
 message CameraState {
   option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   optional InputDescription current = 2;
   bool is_viewfinder_active = 3;
   repeated InputDescription queue = 4;
@@ -979,36 +979,36 @@ message CameraState {
 
 message IpAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
 }
 
 message IpEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
 }
 
 message IpUpdateInterfacesAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
   repeated IpNetworkInterface interfaces = 2;
 }
 
 message IpSetIsConnectedAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
   bool is_connected = 2;
 }
 
 message IpNetworkInterface {
   option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
   string name = 2;
   repeated string ip_addresses = 3;
 }
 
 message IpState {
   option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
   repeated IpNetworkInterface interfaces = 2;
   optional bool is_connected = 3;
 }
@@ -1039,7 +1039,7 @@ enum Chime {
 
 message NotificationActionItem {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   optional string background_color = 2;
   optional bool dismiss_notification = 3;
   optional string key = 4;
@@ -1053,7 +1053,7 @@ message NotificationActionItem {
 
 message NotificationDispatchItem {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
 
   message Operation {
     oneof operation {
@@ -1075,7 +1075,7 @@ message NotificationDispatchItem {
 
 message NotificationExtraInformation {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   string text = 2;
   optional string piper_text = 3;
   optional string picovoice_text = 4;
@@ -1083,7 +1083,7 @@ message NotificationExtraInformation {
 
 message Notification {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
 
   message ActionsItem {
     oneof actions_item {
@@ -1122,46 +1122,46 @@ message Notification {
 
 message NotificationsAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
 }
 
 message NotificationsAddAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   Notification notification = 2;
 }
 
 message NotificationsClearAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   Notification notification = 2;
 }
 
 message NotificationsClearByIdAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   string id = 2;
 }
 
 message NotificationsClearAllAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
 }
 
 message NotificationsEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
 }
 
 message NotificationsClearEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   Notification notification = 2;
 }
 
 message NotificationsDisplayEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   Notification notification = 2;
   optional int64 index = 3;
   optional int64 count = 4;
@@ -1169,7 +1169,7 @@ message NotificationsDisplayEvent {
 
 message NotificationsState {
   option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   repeated Notification notifications = 2;
   int64 unread_count = 3;
   optional float progress = 4;
@@ -1183,45 +1183,45 @@ enum AudioDevice {
 
 message AudioAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
 }
 
 message AudioSetVolumeAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   float volume = 2;
   AudioDevice device = 3;
 }
 
 message AudioChangeVolumeAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   float amount = 2;
   AudioDevice device = 3;
 }
 
 message AudioSetMuteStatusAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   bool is_mute = 2;
   AudioDevice device = 3;
 }
 
 message AudioToggleMuteStatusAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   AudioDevice device = 2;
 }
 
 message AudioPlayChimeAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   string name = 2;
 }
 
 message AudioPlayAudioAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   optional string id = 2;
   bytes sample = 3;
   int64 channels = 4;
@@ -1231,18 +1231,18 @@ message AudioPlayAudioAction {
 
 message AudioEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
 }
 
 message AudioPlayChimeEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   string name = 2;
 }
 
 message AudioPlayAudioEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   optional string id = 2;
   bytes sample = 3;
   int64 channels = 4;
@@ -1252,13 +1252,13 @@ message AudioPlayAudioEvent {
 
 message AudioPlaybackDoneEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   string id = 2;
 }
 
 message AudioState {
   option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   optional float playback_volume = 2;
   optional bool is_playback_mute = 3;
   optional float capture_volume = 4;
@@ -1267,24 +1267,24 @@ message AudioState {
 
 message SSHAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.ssh";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1000;
 }
 
 message SSHUpdateStateAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.ssh";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1000;
   optional bool is_active = 2;
   optional bool is_enabled = 3;
 }
 
 message SSHClearEnabledStateAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.ssh";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1000;
 }
 
 message SSHState {
   option (package_info.v1.package_name) = "ubo_app.store.services.ssh";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1;
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh = 1000;
   optional bool is_active = 2;
   optional bool is_enabled = 3;
 }

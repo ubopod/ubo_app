@@ -9,6 +9,7 @@
 - refactor(tests): add a delay between initializing different services to make sure they always run in the same order
 - feat(rpc): add `subscribe_event` to the rpc service to let external services subscribe to events - closes #1
 - test: better tooling for debugging uuid generation in tests
+- fix(rpc): deal with messages with no prefix_package meta field
 
 ## Version 0.16.2
 

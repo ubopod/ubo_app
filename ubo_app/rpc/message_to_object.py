@@ -33,7 +33,10 @@ def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
         destination_module_path = (
             unspecified_member[: -len('_UNSPECIFIED')].lower().replace('_dot_', '.')
         )
-    else:
+    elif (
+        META_FIELD_PREFIX_PACKAGE_NAME_INDEX
+        in type(message)._betterproto.field_name_by_number
+    ):
         field_name = type(message)._betterproto.field_name_by_number[
             META_FIELD_PREFIX_PACKAGE_NAME_INDEX
         ]
@@ -43,6 +46,8 @@ def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
             ].replace('_dot_', '.')
         else:
             return None
+    else:
+        return None
 
     destination_module = importlib.import_module(destination_module_path)
 
