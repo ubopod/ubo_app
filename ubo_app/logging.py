@@ -74,6 +74,8 @@ logger.propagate = False
 
 
 class ExtraFormatter(logging.Formatter):
+    max_length: int | None = None
+
     def_keys = (
         'name',
         'msg',
@@ -109,18 +111,22 @@ class ExtraFormatter(logging.Formatter):
                 default=str,
             ).replace('\\n', '\n')
 
+        if self.max_length and len(string) > self.max_length:
+            string = string[: self.max_length - 3] + '...'
+
         return string
 
 
 def add_stdout_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setLevel(level)
-    stdout_handler.setFormatter(
-        ExtraFormatter(
-            '%(created)f [%(levelname)s] %(message)s',
-            '%Y-%m-%d %H:%M:%S',
-        ),
+    formatter = ExtraFormatter(
+        '%(created)f [%(levelname)s] %(message)s',
+        '%Y-%m-%d %H:%M:%S',
     )
+    if level <= logging.DEBUG:
+        formatter.max_length = 400
+    stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
     atexit.register(stdout_handler.flush)
