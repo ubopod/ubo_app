@@ -274,9 +274,11 @@ class UboServiceThread(threading.Thread):
 
         if self.module and self.spec and self.spec.loader:
             try:
+                REGISTERED_PATHS[self.path] = self
                 cast(UboServiceThread, self.module).register = self.register
                 self.spec.loader.exec_module(self.module)
             except Exception:
+                del REGISTERED_PATHS[self.path]
                 logger.exception('Error loading service', extra={'path': self.path})
 
     def run(self: UboServiceThread) -> None:
@@ -293,7 +295,6 @@ class UboServiceThread(threading.Thread):
         )
         asyncio.set_event_loop(self.loop)
 
-        REGISTERED_PATHS[self.path] = self
         result = None
         if len(inspect.signature(self.setup).parameters) == 0:
             result = cast(Callable[[], None], self.setup)()
@@ -382,8 +383,9 @@ def load_services(service_ids: Sequence[str] | None = None, delay: float = 0) ->
         ROOT_PATH.joinpath('services').as_posix(),
         *SERVICES_PATH,
     ]:
-        if Path(services_directory_path).is_dir():
-            for service_path in sorted(Path(services_directory_path).iterdir()):
+        directory_path = Path(services_directory_path).absolute()
+        if directory_path.is_dir():
+            for service_path in sorted(directory_path.iterdir()):
                 if not service_path.is_dir() or service_path in REGISTERED_PATHS:
                     continue
                 current_path = Path().absolute()
