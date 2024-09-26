@@ -10,6 +10,7 @@ import inspect
 import os
 import sys
 import threading
+import time
 import traceback
 import uuid
 import weakref
@@ -373,7 +374,7 @@ class UboServiceThread(threading.Thread):
         self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
 
-def load_services(service_ids: Sequence[str] | None = None) -> None:
+def load_services(service_ids: Sequence[str] | None = None, delay: float = 0) -> None:
     WHITE_LIST.extend(service_ids or [])
 
     services: list[UboServiceThread] = []
@@ -382,7 +383,7 @@ def load_services(service_ids: Sequence[str] | None = None) -> None:
         *SERVICES_PATH,
     ]:
         if Path(services_directory_path).is_dir():
-            for service_path in Path(services_directory_path).iterdir():
+            for service_path in sorted(Path(services_directory_path).iterdir()):
                 if not service_path.is_dir() or service_path in REGISTERED_PATHS:
                     continue
                 current_path = Path().absolute()
@@ -394,3 +395,5 @@ def load_services(service_ids: Sequence[str] | None = None) -> None:
 
     for service in services:
         service.initiate()
+        if delay:
+            time.sleep(delay)

@@ -27,6 +27,7 @@ class LoadServices(Protocol):
         service_ids: Sequence[str],
         *,
         timeout: float | None = None,
+        delay: float = 0.4,
     ) -> None: ...
 
     @overload
@@ -36,6 +37,7 @@ class LoadServices(Protocol):
         *,
         run_async: Literal[True],
         timeout: float | None = None,
+        delay: float = 0.4,
     ) -> Coroutine[None, None, None]: ...
 
 
@@ -49,10 +51,11 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
         *,
         run_async: bool = False,
         timeout: float | None = None,
+        delay: float = 0.4,
     ) -> Coroutine[None, None, None] | None:
         from ubo_app.load_services import load_services
 
-        load_services(service_ids)
+        load_services(service_ids, delay=delay)
 
         @wait_for(run_async=cast(Literal[True], run_async), timeout=timeout)
         def check() -> None:

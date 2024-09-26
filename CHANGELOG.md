@@ -6,6 +6,7 @@
 - feat(rpc): add `rpc` service with `dispatch` method to let external services dispatch actions and events to the redux bus
 - fix(core): check if items added by `RegisterRegularAppAction` or `RegisterSettingsAppAction` cause duplicate keys and raise an informative error if so
 - refactor(core): truncate long log items for log level `DEBUG` or lower to avoid cluttering the logs
+- refactor(tests): add a delay between initializing different services to make sure they always run in the same order
 
 ## Version 0.16.2
 

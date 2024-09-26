@@ -144,7 +144,9 @@ async def init_service() -> None:
         ):
             logger.info('No internet connection, showing WiFi onboarding.')
             show_onboarding_notification()
-            store.dispatch(WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True))
+            store.dispatch(
+                WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True),
+            )
 
         if is_connected is not None:
             check_onboarding.unsubscribe()
