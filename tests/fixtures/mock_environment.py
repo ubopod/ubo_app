@@ -86,35 +86,34 @@ def _monkeypatch_datetime(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
-    from fake import Fake
+    import uuid
 
     counter = 0
 
-    def debug_uuid4() -> Fake:
+    def debug_uuid4() -> uuid.UUID:
         nonlocal counter
         counter += 1
         import logging
         import traceback
+
+        generated_uuid = uuid.UUID(int=random.getrandbits(128))
 
         logging.debug(
             '`uuid.uuid4` is being called',
             extra={
                 'traceback': '\n'.join(traceback.format_stack()[:-1]),
                 'counter': counter,
+                'generated_uuid': generated_uuid.hex,
             },
         )
 
-        result = Fake()
-        result.hex = f'{counter}'
-        return result
+        return generated_uuid
 
     from ubo_app.constants import DEBUG_MODE_TEST_UUID
 
     if DEBUG_MODE_TEST_UUID:
         monkeypatch.setattr('uuid.uuid4', debug_uuid4)
     else:
-        import uuid
-
         monkeypatch.setattr(
             uuid,
             'uuid4',

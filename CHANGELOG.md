@@ -8,6 +8,7 @@
 - refactor(core): truncate long log items for log level `DEBUG` or lower to avoid cluttering the logs
 - refactor(tests): add a delay between initializing different services to make sure they always run in the same order
 - feat(rpc): add `subscribe_event` to the rpc service to let external services subscribe to events - closes #1
+- test: better tooling for debugging uuid generation in tests
 
 ## Version 0.16.2
 
