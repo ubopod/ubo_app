@@ -7,7 +7,7 @@ import re
 import subprocess
 
 from _constants import CODE_BINARY_PATH
-from commands import check_status
+from commands import install_service
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import NumericProperty, StringProperty
@@ -102,7 +102,7 @@ class LoginPage(PageWidget):
                 ),
             )
         finally:
-            await check_status()
+            await install_service()
 
     def on_close(self: LoginPage) -> None:
         self.process.kill() if self.process.returncode is None else None

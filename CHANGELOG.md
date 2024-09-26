@@ -11,6 +11,7 @@
 - test: better tooling for debugging uuid generation in tests
 - fix(rpc): deal with messages with no prefix_package meta field
 - refactor(core): prepare `REGISTERED_PATHS` earlier for each service, so that import error messages are more meaningful
+- fix(vscode): stop and uninstall vscode service when logged out and install and start it when logged in - fixes #114
 
 ## Version 0.16.2
 

@@ -7,7 +7,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 from _constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
-from commands import check_status, install_service, restart, uninstall_service
+from commands import check_status, restart, uninstall_service
 from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
@@ -102,7 +102,7 @@ def logout() -> None:
                 stderr=subprocess.DEVNULL,
             )
             await process.wait()
-            await restart()
+            await uninstall_service()
         except subprocess.CalledProcessError:
             store.dispatch(
                 NotificationsAddAction(
@@ -131,17 +131,6 @@ def status_based_actions(status: VSCodeStatus) -> list[ActionItem | ApplicationI
         actions.append(
             ApplicationItem(label='Show URL', icon='󰐲', application=VSCodeQRCodePage),
         )
-    actions.append(
-        ActionItem(
-            label='Uninstall Service'
-            if status.is_service_installed
-            else 'Install Service',
-            icon='󰫜' if status.is_service_installed else '󰫚',
-            action=(lambda: create_task(uninstall_service()) and None)
-            if status.is_service_installed
-            else (lambda: create_task(install_service()) and None),
-        ),
-    )
     return actions
 
 

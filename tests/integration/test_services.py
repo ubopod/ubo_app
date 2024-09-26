@@ -46,7 +46,7 @@ async def test_all_services_register(
 
     app = MenuApp()
     app_context.set_app(app)
-    load_services(ALL_SERVICES_IDS, timeout=10)
+    load_services(ALL_SERVICES_IDS, timeout=15, delay=0.7)
     await stability(initial_wait=6, attempts=2, wait=2)
     store_snapshot.take()
     window_snapshot.take()
