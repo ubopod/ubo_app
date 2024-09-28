@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from grpclib.reflection.service import ServerReflection
 from grpclib.server import Server
 
 from ubo_app.logging import logger
@@ -14,7 +15,10 @@ LISTEN_PORT = 50051
 
 async def serve() -> None:
     """Serve the gRPC server."""
-    server = Server([StoreService()])
+    services = [StoreService()]
+    services = ServerReflection.extend(services)
+
+    server = Server(services)
 
     logger.error(
         'Starting gRPC server',
