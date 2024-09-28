@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- feat(display): add `DisplayCompressedRenderEvent` as a compressed version of `DisplayRenderEvent`
+
 ## Version 0.17.0
 
 - feat(rpc): add a proto generator which parses actions and events files and generates proto files for them

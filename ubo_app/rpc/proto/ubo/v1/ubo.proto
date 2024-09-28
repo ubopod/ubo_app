@@ -107,37 +107,37 @@ message SnapshotEvent {
 
 message UboAction {
   oneof ubo_action {
-    WiFiAction wi_fi_action = 1;
-    VSCodeAction vs_code_action = 2;
-    VoiceAction voice_action = 3;
-    UsersAction users_action = 4;
-    SSHAction ssh_action = 5;
-    SensorsAction sensors_action = 6;
-    RPiConnectAction r_pi_connect_action = 7;
-    RgbRingAction rgb_ring_action = 8;
-    NotificationsAction notifications_action = 9;
-    IpAction ip_action = 10;
-    DisplayAction display_action = 11;
-    CameraAction camera_action = 12;
-    AudioAction audio_action = 13;
-    DockerAction docker_action = 14;
-    KeypadAction keypad_action = 15;
-    LightDMAction light_dm_action = 16;
+    AudioAction audio_action = 1;
+    CameraAction camera_action = 2;
+    DisplayAction display_action = 3;
+    DockerAction docker_action = 4;
+    IpAction ip_action = 5;
+    KeypadAction keypad_action = 6;
+    LightDMAction light_dm_action = 7;
+    NotificationsAction notifications_action = 8;
+    RgbRingAction rgb_ring_action = 9;
+    RPiConnectAction r_pi_connect_action = 10;
+    SensorsAction sensors_action = 11;
+    SSHAction ssh_action = 12;
+    UsersAction users_action = 13;
+    VoiceAction voice_action = 14;
+    VSCodeAction vs_code_action = 15;
+    WiFiAction wi_fi_action = 16;
   }
 }
 
 message UboEvent {
   oneof ubo_event {
-    WiFiEvent wi_fi_event = 1;
-    UsersEvent users_event = 2;
-    KeypadEvent keypad_event = 3;
-    AudioEvent audio_event = 4;
-    ScreenshotEvent screenshot_event = 5;
-    CameraEvent camera_event = 6;
-    DisplayEvent display_event = 7;
-    IpEvent ip_event = 8;
-    NotificationsEvent notifications_event = 9;
-    SnapshotEvent snapshot_event = 10;
+    ScreenshotEvent screenshot_event = 1;
+    AudioEvent audio_event = 2;
+    CameraEvent camera_event = 3;
+    DisplayEvent display_event = 4;
+    IpEvent ip_event = 5;
+    KeypadEvent keypad_event = 6;
+    NotificationsEvent notifications_event = 7;
+    SnapshotEvent snapshot_event = 8;
+    UsersEvent users_event = 9;
+    WiFiEvent wi_fi_event = 10;
   }
 }
 message DispatchItem {
@@ -146,8 +146,8 @@ message DispatchItem {
 
   message Operation {
     oneof operation {
-      Event ubo_event = 1;
-      Action ubo_action = 2;
+      Action ubo_action = 1;
+      Event ubo_event = 2;
     }
   }
   Operation operation = 2;
@@ -161,333 +161,195 @@ message DispatchItem {
   optional float progress = 10;
 }
 
-message LightDMAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
+enum AudioDevice {
+  AUDIO_DEVICE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_AUDIO_UNSPECIFIED = 0;
+  AUDIO_DEVICE_INPUT = 1;
+  AUDIO_DEVICE_OUTPUT = 2;
 }
 
-message LightDMUpdateStateAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
-  optional bool is_active = 2;
-  optional bool is_enabled = 3;
-  optional bool is_installed = 4;
-  optional bool is_installing = 5;
+message AudioAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
 }
 
-message LightDMClearEnabledStateAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
+message AudioSetVolumeAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  float volume = 2;
+  AudioDevice device = 3;
 }
 
-message LightDMState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
-  optional bool is_active = 2;
-  optional bool is_enabled = 3;
-  optional bool is_installed = 4;
-  optional bool is_installing = 5;
+message AudioChangeVolumeAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  float amount = 2;
+  AudioDevice device = 3;
 }
 
-enum WiFiType {
-  WI_FI_TYPE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0;
-  WI_FI_TYPE_WEP = 1;
-  WI_FI_TYPE_WPA = 2;
-  WI_FI_TYPE_WPA2 = 3;
-  WI_FI_TYPE_NOPASS = 4;
+message AudioSetMuteStatusAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  bool is_mute = 2;
+  AudioDevice device = 3;
 }
 
-enum ConnectionState {
-  CONNECTION_STATE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0;
-  CONNECTION_STATE_CONNECTED = 1;
-  CONNECTION_STATE_CONNECTING = 2;
-  CONNECTION_STATE_DISCONNECTED = 3;
-  CONNECTION_STATE_UNKNOWN = 4;
+message AudioToggleMuteStatusAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  AudioDevice device = 2;
 }
 
-enum GlobalWiFiState {
-  GLOBAL_WI_FI_STATE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0;
-  GLOBAL_WI_FI_STATE_CONNECTED = 1;
-  GLOBAL_WI_FI_STATE_DISCONNECTED = 2;
-  GLOBAL_WI_FI_STATE_PENDING = 3;
-  GLOBAL_WI_FI_STATE_NEEDS_ATTENTION = 4;
-  GLOBAL_WI_FI_STATE_UNKNOWN = 5;
+message AudioPlayChimeAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  string name = 2;
 }
 
-message WiFiConnection {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
-  string ssid = 2;
-  optional ConnectionState state = 3;
-  optional int64 signal_strength = 4;
-  optional string password = 5;
-  optional WiFiType type = 6;
-  optional bool hidden = 7;
+message AudioPlayAudioAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  optional string id = 2;
+  bytes sample = 3;
+  int64 channels = 4;
+  int64 rate = 5;
+  int64 width = 6;
 }
 
-message WiFiAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+message AudioEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
 }
 
-message WiFiSetHasVisitedOnboardingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
-  bool has_visited_onboarding = 2;
+message AudioPlayChimeEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  string name = 2;
 }
 
-message WiFiUpdateAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
-  repeated WiFiConnection connections = 2;
-  GlobalWiFiState state = 3;
-  WiFiConnection current_connection = 4;
+message AudioPlayAudioEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  optional string id = 2;
+  bytes sample = 3;
+  int64 channels = 4;
+  int64 rate = 5;
+  int64 width = 6;
 }
 
-message WiFiUpdateRequestAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
-  optional bool reset = 2;
-}
-
-message WiFiEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
-}
-
-message WiFiUpdateRequestEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
-}
-
-message WiFiState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
-  repeated WiFiConnection connections = 2;
-  GlobalWiFiState state = 3;
-  WiFiConnection current_connection = 4;
-  optional bool has_visited_onboarding = 5;
-}
-
-enum Sensor {
-  SENSOR_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_SENSORS_UNSPECIFIED = 0;
-  SENSOR_TEMPERATURE = 1;
-  SENSOR_LIGHT = 2;
-}
-
-message SensorsAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
-}
-
-message SensorsReportReadingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
-  Sensor sensor = 2;
-  float reading = 3;
-  int64 timestamp = 4;
-}
-
-message SensorState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
-  optional float value = 2;
-}
-
-message SensorsState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
-  optional SensorState temperature = 2;
-  optional SensorState light = 3;
-}
-
-message UsersAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
-}
-
-message UsersSetUsersAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
-  repeated UserState users = 2;
-}
-
-message UsersCreateUserAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
-}
-
-message UsersDeleteUserAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+message AudioPlaybackDoneEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
   string id = 2;
 }
 
-message UsersResetPasswordAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+message AudioState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
+  optional float playback_volume = 2;
+  optional bool is_playback_mute = 3;
+  optional float capture_volume = 4;
+  optional bool is_capture_mute = 5;
+}
+
+message CameraAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+}
+
+message CameraStartViewfinderAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+  string id = 2;
+  string pattern = 3;
+}
+
+message CameraEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+}
+
+message CameraStartViewfinderEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+  string pattern = 2;
+}
+
+message CameraStopViewfinderEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   string id = 2;
 }
 
-message UsersEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+message CameraReportBarcodeAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+  repeated string codes = 2;
 }
 
-message UsersCreateUserEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
-}
+message CameraBarcodeEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
 
-message UsersDeleteUserEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
   string id = 2;
+  string code = 3;
+  map<string, string> group_dict = 4;
 }
 
-message UsersResetPasswordEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+message InputDescription {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
   string id = 2;
+  string pattern = 3;
 }
 
-message UserState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
-  string id = 2;
-  bool is_removable = 3;
+message CameraState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+  optional InputDescription current = 2;
+  bool is_viewfinder_active = 3;
+  repeated InputDescription queue = 4;
 }
 
-message UsersState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.users";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
-
-  message Users {
-    repeated UserState items = 1;
-  }
-  optional Users users = 2;
+message DisplayAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.display";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
-message RPiConnectAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+message DisplayEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.display";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
-message RPiConnectEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+message DisplayPauseAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.display";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
-message RPiConnectStartDownloadingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+message DisplayResumeAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.display";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
 }
 
-message RPiConnectDoneDownloadingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+message DisplayRenderEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.display";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
+  bytes data = 2;
+  int64 data_hash = 3;
+  repeated int64 rectangle = 4;
 }
 
-message RPiConnectSetPendingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+message DisplayCompressedRenderEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.display";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
+  bytes compressed_data = 2;
+  int64 data_hash = 3;
+  repeated int64 rectangle = 4;
 }
 
-message RPiConnectStatus {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
-  int64 screen_sharing_sessions = 2;
-  int64 remote_shell_sessions = 3;
-}
-
-message RPiConnectSetStatusAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
-  bool is_installed = 2;
-  bool is_signed_in = 3;
-  RPiConnectStatus status = 4;
-}
-
-message RPiConnectLoginEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
-}
-
-message RPiConnectUpdateServiceStateAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
-  optional bool is_active = 2;
-}
-
-message RPiConnectState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
-  optional bool is_downloading = 2;
-  optional bool is_active = 3;
-  optional bool is_installed = 4;
-  optional bool is_signed_in = 5;
-  optional RPiConnectStatus status = 6;
-}
-
-message VSCodeAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-}
-
-message VSCodeEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-}
-
-message VSCodeStartDownloadingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-}
-
-message VSCodeDoneDownloadingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-}
-
-message VSCodeSetPendingAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-}
-
-message VSCodeStatus {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-  bool is_service_installed = 2;
-  bool is_running = 3;
-  string name = 4;
-}
-
-message VSCodeSetStatusAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-  bool is_binary_installed = 2;
-  bool is_logged_in = 3;
-  VSCodeStatus status = 4;
-}
-
-message VSCodeLoginEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-}
-
-message VSCodeRestartEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-}
-
-message VSCodeState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
-  optional bool is_pending = 2;
-  optional bool is_downloading = 3;
-  optional bool is_binary_installed = 4;
-  optional bool is_logged_in = 5;
-  optional VSCodeStatus status = 6;
+message DisplayState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.display";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
+  optional bool is_paused = 2;
 }
 
 enum DockerStatus {
@@ -608,38 +470,49 @@ message DockerState {
   DockerServiceState service = 2;
 }
 
-message DisplayAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
+enum GlobalEthernetState {
+  GLOBAL_ETHERNET_STATE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_ETHERNET_UNSPECIFIED = 0;
+  GLOBAL_ETHERNET_STATE_CONNECTED = 1;
+  GLOBAL_ETHERNET_STATE_DISCONNECTED = 2;
+  GLOBAL_ETHERNET_STATE_PENDING = 3;
+  GLOBAL_ETHERNET_STATE_NEEDS_ATTENTION = 4;
+  GLOBAL_ETHERNET_STATE_UNKNOWN = 5;
 }
 
-message DisplayEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
+message IpAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
 }
 
-message DisplayPauseAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
+message IpEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
 }
 
-message DisplayResumeAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
+message IpUpdateInterfacesAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
+  repeated IpNetworkInterface interfaces = 2;
 }
 
-message DisplayRenderEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
-  bytes data = 2;
-  int64 data_hash = 3;
-  repeated int64 rectangle = 4;
+message IpSetIsConnectedAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
+  bool is_connected = 2;
 }
 
-message DisplayState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.display";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_display = 1000;
-  optional bool is_paused = 2;
+message IpNetworkInterface {
+  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
+  string name = 2;
+  repeated string ip_addresses = 3;
+}
+
+message IpState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
+  repeated IpNetworkInterface interfaces = 2;
+  optional bool is_connected = 3;
 }
 
 enum Key {
@@ -709,67 +582,194 @@ message KeypadKeyReleaseEvent {
   float time = 3;
 }
 
-enum VoiceEngine {
-  VOICE_ENGINE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_VOICE_UNSPECIFIED = 0;
-  VOICE_ENGINE_PIPER = 1;
-  VOICE_ENGINE_PICOVOICE = 2;
+message LightDMAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
 }
 
-message VoiceAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+message LightDMUpdateStateAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
+  optional bool is_active = 2;
+  optional bool is_enabled = 3;
+  optional bool is_installed = 4;
+  optional bool is_installing = 5;
 }
 
-message VoiceEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+message LightDMClearEnabledStateAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
 }
 
-message VoiceUpdateAccessKeyStatus {
-  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
-  bool is_access_key_set = 2;
+message LightDMState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.lightdm";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_lightdm = 1000;
+  optional bool is_active = 2;
+  optional bool is_enabled = 3;
+  optional bool is_installed = 4;
+  optional bool is_installing = 5;
 }
 
-message VoiceSetEngineAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
-  VoiceEngine engine = 2;
+enum Importance {
+  IMPORTANCE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0;
+  IMPORTANCE_CRITICAL = 1;
+  IMPORTANCE_HIGH = 2;
+  IMPORTANCE_MEDIUM = 3;
+  IMPORTANCE_LOW = 4;
 }
 
-message VoiceReadTextAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+enum NotificationDisplayType {
+  NOTIFICATION_DISPLAY_TYPE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0;
+  NOTIFICATION_DISPLAY_TYPE_NOT_SET = 1;
+  NOTIFICATION_DISPLAY_TYPE_BACKGROUND = 2;
+  NOTIFICATION_DISPLAY_TYPE_FLASH = 3;
+  NOTIFICATION_DISPLAY_TYPE_STICKY = 4;
+}
+
+enum Chime {
+  CHIME_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0;
+  CHIME_ADD = 1;
+  CHIME_DONE = 2;
+  CHIME_FAILURE = 3;
+  CHIME_VOLUME_CHANGE = 4;
+}
+
+message NotificationActionItem {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+  optional string background_color = 2;
+  optional bool dismiss_notification = 3;
+  optional string key = 4;
+  optional string label = 5;
+  optional string color = 6;
+  optional string icon = 7;
+  optional bool is_short = 8;
+  optional float opacity = 9;
+  optional float progress = 10;
+}
+
+message NotificationDispatchItem {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+
+  message Operation {
+    oneof operation {
+      Action ubo_action = 1;
+      Event ubo_event = 2;
+    }
+  }
+  Operation operation = 2;
+  optional string key = 3;
+  optional string label = 4;
+  optional string color = 5;
+  optional string background_color = 6;
+  optional string icon = 7;
+  optional bool is_short = 8;
+  optional float opacity = 9;
+  optional float progress = 10;
+  optional bool dismiss_notification = 11;
+}
+
+message NotificationExtraInformation {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
   string text = 2;
   optional string piper_text = 3;
   optional string picovoice_text = 4;
-  optional float speech_rate = 5;
-  optional VoiceEngine engine = 6;
 }
 
-message VoiceSynthesizeTextEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
-  string text = 2;
-  string piper_text = 3;
-  string picovoice_text = 4;
-  optional float speech_rate = 5;
+message Notification {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+
+  message ActionsItem {
+    oneof actions_item {
+      NotificationActionItem notification_action_item = 1;
+      NotificationDispatchItem notification_dispatch_item = 2;
+    }
+  }
+
+  message Actions {
+    repeated ActionsItem items = 1;
+  }
+
+  message OnClose {}
+  optional string id = 2;
+  string title = 3;
+  string content = 4;
+  optional NotificationExtraInformation extra_information = 5;
+  optional Importance importance = 6;
+  optional Chime chime = 7;
+  optional int64 timestamp = 8;
+  optional bool is_read = 9;
+  optional string sender = 10;
+  optional Actions actions = 11;
+  optional string icon = 12;
+  optional string color = 13;
+  optional int64 expiration_timestamp = 14;
+  optional NotificationDisplayType display_type = 15;
+  optional float flash_time = 16;
+  optional bool dismissable = 17;
+  optional bool dismiss_on_close = 18;
+  optional OnClose on_close = 19;
+  optional bool blink = 20;
+  optional float progress = 21;
+  optional float progress_weight = 22;
 }
 
-message VoiceState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
-  optional bool is_access_key_set = 2;
-  optional VoiceEngine selected_engine = 3;
+message NotificationsAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
 }
 
-enum GlobalEthernetState {
-  GLOBAL_ETHERNET_STATE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_ETHERNET_UNSPECIFIED = 0;
-  GLOBAL_ETHERNET_STATE_CONNECTED = 1;
-  GLOBAL_ETHERNET_STATE_DISCONNECTED = 2;
-  GLOBAL_ETHERNET_STATE_PENDING = 3;
-  GLOBAL_ETHERNET_STATE_NEEDS_ATTENTION = 4;
-  GLOBAL_ETHERNET_STATE_UNKNOWN = 5;
+message NotificationsAddAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+  Notification notification = 2;
+}
+
+message NotificationsClearAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+  Notification notification = 2;
+}
+
+message NotificationsClearByIdAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+  string id = 2;
+}
+
+message NotificationsClearAllAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+}
+
+message NotificationsEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+}
+
+message NotificationsClearEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+  Notification notification = 2;
+}
+
+message NotificationsDisplayEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+  Notification notification = 2;
+  optional int64 index = 3;
+  optional int64 count = 4;
+}
+
+message NotificationsState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
+  repeated Notification notifications = 2;
+  int64 unread_count = 3;
+  optional float progress = 4;
 }
 
 message RgbRingAction {
@@ -910,359 +910,105 @@ message RgbRingState {
 
 message RgbColorElement {
   oneof rgb_color_element {
-    int64 int64 = 1;
-    float float = 2;
+    float float = 1;
+    int64 int64 = 2;
   }
 }
 
 message RgbColor {
   repeated RgbColorElement items = 1;
 }
-message CameraAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+message RPiConnectAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
-message CameraStartViewfinderAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
-  string id = 2;
-  string pattern = 3;
+message RPiConnectEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
-message CameraEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
+message RPiConnectStartDownloadingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
-message CameraStartViewfinderEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
-  string pattern = 2;
+message RPiConnectDoneDownloadingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
-message CameraStopViewfinderEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
-  string id = 2;
+message RPiConnectSetPendingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
-message CameraReportBarcodeAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
-  repeated string codes = 2;
+message RPiConnectStatus {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+  int64 screen_sharing_sessions = 2;
+  int64 remote_shell_sessions = 3;
 }
 
-message CameraBarcodeEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
-
-  string id = 2;
-  string code = 3;
-  map<string, string> group_dict = 4;
+message RPiConnectSetStatusAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+  bool is_installed = 2;
+  bool is_signed_in = 3;
+  RPiConnectStatus status = 4;
 }
 
-message InputDescription {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
-  string id = 2;
-  string pattern = 3;
+message RPiConnectLoginEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
 }
 
-message CameraState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.camera";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera = 1000;
-  optional InputDescription current = 2;
-  bool is_viewfinder_active = 3;
-  repeated InputDescription queue = 4;
+message RPiConnectUpdateServiceStateAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+  optional bool is_active = 2;
 }
 
-message IpAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
+message RPiConnectState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rpi_connect";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rpi_connect = 1000;
+  optional bool is_downloading = 2;
+  optional bool is_active = 3;
+  optional bool is_installed = 4;
+  optional bool is_signed_in = 5;
+  optional RPiConnectStatus status = 6;
 }
 
-message IpEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
+enum Sensor {
+  SENSOR_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_SENSORS_UNSPECIFIED = 0;
+  SENSOR_TEMPERATURE = 1;
+  SENSOR_LIGHT = 2;
 }
 
-message IpUpdateInterfacesAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
-  repeated IpNetworkInterface interfaces = 2;
+message SensorsAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
 }
 
-message IpSetIsConnectedAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
-  bool is_connected = 2;
+message SensorsReportReadingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
+  Sensor sensor = 2;
+  float reading = 3;
+  int64 timestamp = 4;
 }
 
-message IpNetworkInterface {
-  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
-  string name = 2;
-  repeated string ip_addresses = 3;
+message SensorState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
+  optional float value = 2;
 }
 
-message IpState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.ip";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_ip = 1000;
-  repeated IpNetworkInterface interfaces = 2;
-  optional bool is_connected = 3;
-}
-
-enum Importance {
-  IMPORTANCE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0;
-  IMPORTANCE_CRITICAL = 1;
-  IMPORTANCE_HIGH = 2;
-  IMPORTANCE_MEDIUM = 3;
-  IMPORTANCE_LOW = 4;
-}
-
-enum NotificationDisplayType {
-  NOTIFICATION_DISPLAY_TYPE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0;
-  NOTIFICATION_DISPLAY_TYPE_NOT_SET = 1;
-  NOTIFICATION_DISPLAY_TYPE_BACKGROUND = 2;
-  NOTIFICATION_DISPLAY_TYPE_FLASH = 3;
-  NOTIFICATION_DISPLAY_TYPE_STICKY = 4;
-}
-
-enum Chime {
-  CHIME_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_NOTIFICATIONS_UNSPECIFIED = 0;
-  CHIME_ADD = 1;
-  CHIME_DONE = 2;
-  CHIME_FAILURE = 3;
-  CHIME_VOLUME_CHANGE = 4;
-}
-
-message NotificationActionItem {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  optional string background_color = 2;
-  optional bool dismiss_notification = 3;
-  optional string key = 4;
-  optional string label = 5;
-  optional string color = 6;
-  optional string icon = 7;
-  optional bool is_short = 8;
-  optional float opacity = 9;
-  optional float progress = 10;
-}
-
-message NotificationDispatchItem {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-
-  message Operation {
-    oneof operation {
-      Event ubo_event = 1;
-      Action ubo_action = 2;
-    }
-  }
-  Operation operation = 2;
-  optional string key = 3;
-  optional string label = 4;
-  optional string color = 5;
-  optional string background_color = 6;
-  optional string icon = 7;
-  optional bool is_short = 8;
-  optional float opacity = 9;
-  optional float progress = 10;
-  optional bool dismiss_notification = 11;
-}
-
-message NotificationExtraInformation {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  string text = 2;
-  optional string piper_text = 3;
-  optional string picovoice_text = 4;
-}
-
-message Notification {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-
-  message ActionsItem {
-    oneof actions_item {
-      NotificationDispatchItem notification_dispatch_item = 1;
-      NotificationActionItem notification_action_item = 2;
-    }
-  }
-
-  message Actions {
-    repeated ActionsItem items = 1;
-  }
-
-  message OnClose {}
-  optional string id = 2;
-  string title = 3;
-  string content = 4;
-  optional NotificationExtraInformation extra_information = 5;
-  optional Importance importance = 6;
-  optional Chime chime = 7;
-  optional int64 timestamp = 8;
-  optional bool is_read = 9;
-  optional string sender = 10;
-  optional Actions actions = 11;
-  optional string icon = 12;
-  optional string color = 13;
-  optional int64 expiration_timestamp = 14;
-  optional NotificationDisplayType display_type = 15;
-  optional float flash_time = 16;
-  optional bool dismissable = 17;
-  optional bool dismiss_on_close = 18;
-  optional OnClose on_close = 19;
-  optional bool blink = 20;
-  optional float progress = 21;
-  optional float progress_weight = 22;
-}
-
-message NotificationsAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-}
-
-message NotificationsAddAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  Notification notification = 2;
-}
-
-message NotificationsClearAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  Notification notification = 2;
-}
-
-message NotificationsClearByIdAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  string id = 2;
-}
-
-message NotificationsClearAllAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-}
-
-message NotificationsEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-}
-
-message NotificationsClearEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  Notification notification = 2;
-}
-
-message NotificationsDisplayEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  Notification notification = 2;
-  optional int64 index = 3;
-  optional int64 count = 4;
-}
-
-message NotificationsState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.notifications";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_notifications = 1000;
-  repeated Notification notifications = 2;
-  int64 unread_count = 3;
-  optional float progress = 4;
-}
-
-enum AudioDevice {
-  AUDIO_DEVICE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_AUDIO_UNSPECIFIED = 0;
-  AUDIO_DEVICE_INPUT = 1;
-  AUDIO_DEVICE_OUTPUT = 2;
-}
-
-message AudioAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-}
-
-message AudioSetVolumeAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  float volume = 2;
-  AudioDevice device = 3;
-}
-
-message AudioChangeVolumeAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  float amount = 2;
-  AudioDevice device = 3;
-}
-
-message AudioSetMuteStatusAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  bool is_mute = 2;
-  AudioDevice device = 3;
-}
-
-message AudioToggleMuteStatusAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  AudioDevice device = 2;
-}
-
-message AudioPlayChimeAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  string name = 2;
-}
-
-message AudioPlayAudioAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  optional string id = 2;
-  bytes sample = 3;
-  int64 channels = 4;
-  int64 rate = 5;
-  int64 width = 6;
-}
-
-message AudioEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-}
-
-message AudioPlayChimeEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  string name = 2;
-}
-
-message AudioPlayAudioEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  optional string id = 2;
-  bytes sample = 3;
-  int64 channels = 4;
-  int64 rate = 5;
-  int64 width = 6;
-}
-
-message AudioPlaybackDoneEvent {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  string id = 2;
-}
-
-message AudioState {
-  option (package_info.v1.package_name) = "ubo_app.store.services.audio";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_audio = 1000;
-  optional float playback_volume = 2;
-  optional bool is_playback_mute = 3;
-  optional float capture_volume = 4;
-  optional bool is_capture_mute = 5;
+message SensorsState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.sensors";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_sensors = 1000;
+  optional SensorState temperature = 2;
+  optional SensorState light = 3;
 }
 
 message SSHAction {
@@ -1289,90 +1035,352 @@ message SSHState {
   optional bool is_enabled = 3;
 }
 
+message UsersAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+}
+
+message UsersSetUsersAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+  repeated UserState users = 2;
+}
+
+message UsersCreateUserAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+}
+
+message UsersDeleteUserAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+  string id = 2;
+}
+
+message UsersResetPasswordAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+  string id = 2;
+}
+
+message UsersEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+}
+
+message UsersCreateUserEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+}
+
+message UsersDeleteUserEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+  string id = 2;
+}
+
+message UsersResetPasswordEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+  string id = 2;
+}
+
+message UserState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+  string id = 2;
+  bool is_removable = 3;
+}
+
+message UsersState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.users";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_users = 1000;
+
+  message Users {
+    repeated UserState items = 1;
+  }
+  optional Users users = 2;
+}
+
+enum VoiceEngine {
+  VOICE_ENGINE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_VOICE_UNSPECIFIED = 0;
+  VOICE_ENGINE_PIPER = 1;
+  VOICE_ENGINE_PICOVOICE = 2;
+}
+
+message VoiceAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+}
+
+message VoiceEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+}
+
+message VoiceUpdateAccessKeyStatus {
+  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+  bool is_access_key_set = 2;
+}
+
+message VoiceSetEngineAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+  VoiceEngine engine = 2;
+}
+
+message VoiceReadTextAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+  string text = 2;
+  optional string piper_text = 3;
+  optional string picovoice_text = 4;
+  optional float speech_rate = 5;
+  optional VoiceEngine engine = 6;
+}
+
+message VoiceSynthesizeTextEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+  string text = 2;
+  string piper_text = 3;
+  string picovoice_text = 4;
+  optional float speech_rate = 5;
+}
+
+message VoiceState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.voice";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice = 1000;
+  optional bool is_access_key_set = 2;
+  optional VoiceEngine selected_engine = 3;
+}
+
+message VSCodeAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+}
+
+message VSCodeEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+}
+
+message VSCodeStartDownloadingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+}
+
+message VSCodeDoneDownloadingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+}
+
+message VSCodeSetPendingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+}
+
+message VSCodeStatus {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+  bool is_service_installed = 2;
+  bool is_running = 3;
+  string name = 4;
+}
+
+message VSCodeSetStatusAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+  bool is_binary_installed = 2;
+  bool is_logged_in = 3;
+  VSCodeStatus status = 4;
+}
+
+message VSCodeLoginEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+}
+
+message VSCodeRestartEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+}
+
+message VSCodeState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.vscode";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_vscode = 1000;
+  optional bool is_pending = 2;
+  optional bool is_downloading = 3;
+  optional bool is_binary_installed = 4;
+  optional bool is_logged_in = 5;
+  optional VSCodeStatus status = 6;
+}
+
+enum WiFiType {
+  WI_FI_TYPE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0;
+  WI_FI_TYPE_WEP = 1;
+  WI_FI_TYPE_WPA = 2;
+  WI_FI_TYPE_WPA2 = 3;
+  WI_FI_TYPE_NOPASS = 4;
+}
+
+enum ConnectionState {
+  CONNECTION_STATE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0;
+  CONNECTION_STATE_CONNECTED = 1;
+  CONNECTION_STATE_CONNECTING = 2;
+  CONNECTION_STATE_DISCONNECTED = 3;
+  CONNECTION_STATE_UNKNOWN = 4;
+}
+
+enum GlobalWiFiState {
+  GLOBAL_WI_FI_STATE_UBO_APP_DOT_STORE_DOT_SERVICES_DOT_WIFI_UNSPECIFIED = 0;
+  GLOBAL_WI_FI_STATE_CONNECTED = 1;
+  GLOBAL_WI_FI_STATE_DISCONNECTED = 2;
+  GLOBAL_WI_FI_STATE_PENDING = 3;
+  GLOBAL_WI_FI_STATE_NEEDS_ATTENTION = 4;
+  GLOBAL_WI_FI_STATE_UNKNOWN = 5;
+}
+
+message WiFiConnection {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+  string ssid = 2;
+  optional ConnectionState state = 3;
+  optional int64 signal_strength = 4;
+  optional string password = 5;
+  optional WiFiType type = 6;
+  optional bool hidden = 7;
+}
+
+message WiFiAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+}
+
+message WiFiSetHasVisitedOnboardingAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+  bool has_visited_onboarding = 2;
+}
+
+message WiFiUpdateAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+  repeated WiFiConnection connections = 2;
+  GlobalWiFiState state = 3;
+  WiFiConnection current_connection = 4;
+}
+
+message WiFiUpdateRequestAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+  optional bool reset = 2;
+}
+
+message WiFiEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+}
+
+message WiFiUpdateRequestEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+}
+
+message WiFiState {
+  option (package_info.v1.package_name) = "ubo_app.store.services.wifi";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi = 1000;
+  repeated WiFiConnection connections = 2;
+  GlobalWiFiState state = 3;
+  WiFiConnection current_connection = 4;
+  optional bool has_visited_onboarding = 5;
+}
+
 message Action {
   oneof action {
-    LightDMAction light_dm_action = 1;
-    LightDMUpdateStateAction light_dm_update_state_action = 2;
-    LightDMClearEnabledStateAction light_dm_clear_enabled_state_action = 3;
-    WiFiAction wi_fi_action = 4;
-    WiFiSetHasVisitedOnboardingAction wi_fi_set_has_visited_onboarding_action = 5;
-    WiFiUpdateAction wi_fi_update_action = 6;
-    WiFiUpdateRequestAction wi_fi_update_request_action = 7;
-    SensorsAction sensors_action = 8;
-    SensorsReportReadingAction sensors_report_reading_action = 9;
-    UsersAction users_action = 10;
-    UsersSetUsersAction users_set_users_action = 11;
-    UsersCreateUserAction users_create_user_action = 12;
-    UsersDeleteUserAction users_delete_user_action = 13;
-    UsersResetPasswordAction users_reset_password_action = 14;
-    RPiConnectAction r_pi_connect_action = 15;
-    RPiConnectStartDownloadingAction r_pi_connect_start_downloading_action = 16;
-    RPiConnectDoneDownloadingAction r_pi_connect_done_downloading_action = 17;
-    RPiConnectSetPendingAction r_pi_connect_set_pending_action = 18;
-    RPiConnectSetStatusAction r_pi_connect_set_status_action = 19;
-    RPiConnectUpdateServiceStateAction r_pi_connect_update_service_state_action = 20;
-    VSCodeAction vs_code_action = 21;
-    VSCodeStartDownloadingAction vs_code_start_downloading_action = 22;
-    VSCodeDoneDownloadingAction vs_code_done_downloading_action = 23;
-    VSCodeSetPendingAction vs_code_set_pending_action = 24;
-    VSCodeSetStatusAction vs_code_set_status_action = 25;
-    DockerAction docker_action = 26;
-    DockerSetStatusAction docker_set_status_action = 27;
-    DockerStoreUsernameAction docker_store_username_action = 28;
-    DockerRemoveUsernameAction docker_remove_username_action = 29;
-    DockerImageAction docker_image_action = 30;
-    DockerImageSetStatusAction docker_image_set_status_action = 31;
-    DockerImageSetDockerIdAction docker_image_set_docker_id_action = 32;
-    DisplayAction display_action = 33;
-    DisplayPauseAction display_pause_action = 34;
-    DisplayResumeAction display_resume_action = 35;
-    KeypadAction keypad_action = 36;
-    KeypadKeyUpAction keypad_key_up_action = 37;
-    KeypadKeyDownAction keypad_key_down_action = 38;
-    KeypadKeyPressAction keypad_key_press_action = 39;
-    KeypadKeyReleaseAction keypad_key_release_action = 40;
-    VoiceAction voice_action = 41;
-    VoiceSetEngineAction voice_set_engine_action = 42;
-    VoiceReadTextAction voice_read_text_action = 43;
-    RgbRingAction rgb_ring_action = 44;
-    RgbRingSetIsConnectedAction rgb_ring_set_is_connected_action = 45;
-    RgbRingSetIsBusyAction rgb_ring_set_is_busy_action = 46;
-    RgbRingCommandAction rgb_ring_command_action = 47;
-    RgbRingWaitableCommandAction rgb_ring_waitable_command_action = 48;
-    RgbRingColorfulCommandAction rgb_ring_colorful_command_action = 49;
-    RgbRingSetEnabledAction rgb_ring_set_enabled_action = 50;
-    RgbRingSetAllAction rgb_ring_set_all_action = 51;
-    RgbRingSetBrightnessAction rgb_ring_set_brightness_action = 52;
-    RgbRingBlankAction rgb_ring_blank_action = 53;
-    RgbRingRainbowAction rgb_ring_rainbow_action = 54;
-    RgbRingProgressWheelStepAction rgb_ring_progress_wheel_step_action = 55;
-    RgbRingPulseAction rgb_ring_pulse_action = 56;
-    RgbRingBlinkAction rgb_ring_blink_action = 57;
-    RgbRingSpinningWheelAction rgb_ring_spinning_wheel_action = 58;
-    RgbRingProgressWheelAction rgb_ring_progress_wheel_action = 59;
-    RgbRingFillUptoAction rgb_ring_fill_upto_action = 60;
-    RgbRingFillDownfromAction rgb_ring_fill_downfrom_action = 61;
-    CameraAction camera_action = 62;
-    CameraStartViewfinderAction camera_start_viewfinder_action = 63;
-    CameraReportBarcodeAction camera_report_barcode_action = 64;
-    IpAction ip_action = 65;
-    IpUpdateInterfacesAction ip_update_interfaces_action = 66;
-    IpSetIsConnectedAction ip_set_is_connected_action = 67;
-    NotificationsAction notifications_action = 68;
-    NotificationsAddAction notifications_add_action = 69;
-    NotificationsClearAction notifications_clear_action = 70;
-    NotificationsClearByIdAction notifications_clear_by_id_action = 71;
-    NotificationsClearAllAction notifications_clear_all_action = 72;
-    AudioAction audio_action = 73;
-    AudioSetVolumeAction audio_set_volume_action = 74;
-    AudioChangeVolumeAction audio_change_volume_action = 75;
-    AudioSetMuteStatusAction audio_set_mute_status_action = 76;
-    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 77;
-    AudioPlayChimeAction audio_play_chime_action = 78;
-    AudioPlayAudioAction audio_play_audio_action = 79;
-    SSHAction ssh_action = 80;
-    SSHUpdateStateAction ssh_update_state_action = 81;
-    SSHClearEnabledStateAction ssh_clear_enabled_state_action = 82;
+    AudioAction audio_action = 1;
+    AudioSetVolumeAction audio_set_volume_action = 2;
+    AudioChangeVolumeAction audio_change_volume_action = 3;
+    AudioSetMuteStatusAction audio_set_mute_status_action = 4;
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 5;
+    AudioPlayChimeAction audio_play_chime_action = 6;
+    AudioPlayAudioAction audio_play_audio_action = 7;
+    CameraAction camera_action = 8;
+    CameraStartViewfinderAction camera_start_viewfinder_action = 9;
+    CameraReportBarcodeAction camera_report_barcode_action = 10;
+    DisplayAction display_action = 11;
+    DisplayPauseAction display_pause_action = 12;
+    DisplayResumeAction display_resume_action = 13;
+    DockerAction docker_action = 14;
+    DockerSetStatusAction docker_set_status_action = 15;
+    DockerStoreUsernameAction docker_store_username_action = 16;
+    DockerRemoveUsernameAction docker_remove_username_action = 17;
+    DockerImageAction docker_image_action = 18;
+    DockerImageSetStatusAction docker_image_set_status_action = 19;
+    DockerImageSetDockerIdAction docker_image_set_docker_id_action = 20;
+    IpAction ip_action = 21;
+    IpUpdateInterfacesAction ip_update_interfaces_action = 22;
+    IpSetIsConnectedAction ip_set_is_connected_action = 23;
+    KeypadAction keypad_action = 24;
+    KeypadKeyUpAction keypad_key_up_action = 25;
+    KeypadKeyDownAction keypad_key_down_action = 26;
+    KeypadKeyPressAction keypad_key_press_action = 27;
+    KeypadKeyReleaseAction keypad_key_release_action = 28;
+    LightDMAction light_dm_action = 29;
+    LightDMUpdateStateAction light_dm_update_state_action = 30;
+    LightDMClearEnabledStateAction light_dm_clear_enabled_state_action = 31;
+    NotificationsAction notifications_action = 32;
+    NotificationsAddAction notifications_add_action = 33;
+    NotificationsClearAction notifications_clear_action = 34;
+    NotificationsClearByIdAction notifications_clear_by_id_action = 35;
+    NotificationsClearAllAction notifications_clear_all_action = 36;
+    RgbRingAction rgb_ring_action = 37;
+    RgbRingSetIsConnectedAction rgb_ring_set_is_connected_action = 38;
+    RgbRingSetIsBusyAction rgb_ring_set_is_busy_action = 39;
+    RgbRingCommandAction rgb_ring_command_action = 40;
+    RgbRingWaitableCommandAction rgb_ring_waitable_command_action = 41;
+    RgbRingColorfulCommandAction rgb_ring_colorful_command_action = 42;
+    RgbRingSetEnabledAction rgb_ring_set_enabled_action = 43;
+    RgbRingSetAllAction rgb_ring_set_all_action = 44;
+    RgbRingSetBrightnessAction rgb_ring_set_brightness_action = 45;
+    RgbRingBlankAction rgb_ring_blank_action = 46;
+    RgbRingRainbowAction rgb_ring_rainbow_action = 47;
+    RgbRingProgressWheelStepAction rgb_ring_progress_wheel_step_action = 48;
+    RgbRingPulseAction rgb_ring_pulse_action = 49;
+    RgbRingBlinkAction rgb_ring_blink_action = 50;
+    RgbRingSpinningWheelAction rgb_ring_spinning_wheel_action = 51;
+    RgbRingProgressWheelAction rgb_ring_progress_wheel_action = 52;
+    RgbRingFillUptoAction rgb_ring_fill_upto_action = 53;
+    RgbRingFillDownfromAction rgb_ring_fill_downfrom_action = 54;
+    RPiConnectAction r_pi_connect_action = 55;
+    RPiConnectStartDownloadingAction r_pi_connect_start_downloading_action = 56;
+    RPiConnectDoneDownloadingAction r_pi_connect_done_downloading_action = 57;
+    RPiConnectSetPendingAction r_pi_connect_set_pending_action = 58;
+    RPiConnectSetStatusAction r_pi_connect_set_status_action = 59;
+    RPiConnectUpdateServiceStateAction r_pi_connect_update_service_state_action = 60;
+    SensorsAction sensors_action = 61;
+    SensorsReportReadingAction sensors_report_reading_action = 62;
+    SSHAction ssh_action = 63;
+    SSHUpdateStateAction ssh_update_state_action = 64;
+    SSHClearEnabledStateAction ssh_clear_enabled_state_action = 65;
+    UsersAction users_action = 66;
+    UsersSetUsersAction users_set_users_action = 67;
+    UsersCreateUserAction users_create_user_action = 68;
+    UsersDeleteUserAction users_delete_user_action = 69;
+    UsersResetPasswordAction users_reset_password_action = 70;
+    VoiceAction voice_action = 71;
+    VoiceSetEngineAction voice_set_engine_action = 72;
+    VoiceReadTextAction voice_read_text_action = 73;
+    VSCodeAction vs_code_action = 74;
+    VSCodeStartDownloadingAction vs_code_start_downloading_action = 75;
+    VSCodeDoneDownloadingAction vs_code_done_downloading_action = 76;
+    VSCodeSetPendingAction vs_code_set_pending_action = 77;
+    VSCodeSetStatusAction vs_code_set_status_action = 78;
+    WiFiAction wi_fi_action = 79;
+    WiFiSetHasVisitedOnboardingAction wi_fi_set_has_visited_onboarding_action = 80;
+    WiFiUpdateAction wi_fi_update_action = 81;
+    WiFiUpdateRequestAction wi_fi_update_request_action = 82;
   }
 }
 
@@ -1380,40 +1388,41 @@ message Event {
   oneof event {
     ScreenshotEvent screenshot_event = 1;
     SnapshotEvent snapshot_event = 2;
-    WiFiEvent wi_fi_event = 3;
-    WiFiUpdateRequestEvent wi_fi_update_request_event = 4;
-    UsersEvent users_event = 5;
-    UsersCreateUserEvent users_create_user_event = 6;
-    UsersDeleteUserEvent users_delete_user_event = 7;
-    UsersResetPasswordEvent users_reset_password_event = 8;
-    RPiConnectEvent r_pi_connect_event = 9;
-    RPiConnectLoginEvent r_pi_connect_login_event = 10;
-    VSCodeEvent vs_code_event = 11;
-    VSCodeLoginEvent vs_code_login_event = 12;
-    VSCodeRestartEvent vs_code_restart_event = 13;
+    AudioEvent audio_event = 3;
+    AudioPlayChimeEvent audio_play_chime_event = 4;
+    AudioPlayAudioEvent audio_play_audio_event = 5;
+    AudioPlaybackDoneEvent audio_playback_done_event = 6;
+    CameraEvent camera_event = 7;
+    CameraStartViewfinderEvent camera_start_viewfinder_event = 8;
+    CameraStopViewfinderEvent camera_stop_viewfinder_event = 9;
+    CameraBarcodeEvent camera_barcode_event = 10;
+    DisplayEvent display_event = 11;
+    DisplayRenderEvent display_render_event = 12;
+    DisplayCompressedRenderEvent display_compressed_render_event = 13;
     DockerEvent docker_event = 14;
     DockerImageEvent docker_image_event = 15;
     DockerImageRegisterAppEvent docker_image_register_app_event = 16;
-    DisplayEvent display_event = 17;
-    DisplayRenderEvent display_render_event = 18;
-    KeypadEvent keypad_event = 19;
-    KeypadKeyPressEvent keypad_key_press_event = 20;
-    KeypadKeyReleaseEvent keypad_key_release_event = 21;
-    VoiceEvent voice_event = 22;
-    VoiceSynthesizeTextEvent voice_synthesize_text_event = 23;
+    IpEvent ip_event = 17;
+    KeypadEvent keypad_event = 18;
+    KeypadKeyPressEvent keypad_key_press_event = 19;
+    KeypadKeyReleaseEvent keypad_key_release_event = 20;
+    NotificationsEvent notifications_event = 21;
+    NotificationsClearEvent notifications_clear_event = 22;
+    NotificationsDisplayEvent notifications_display_event = 23;
     RgbRingEvent rgb_ring_event = 24;
     RgbRingCommandEvent rgb_ring_command_event = 25;
-    CameraEvent camera_event = 26;
-    CameraStartViewfinderEvent camera_start_viewfinder_event = 27;
-    CameraStopViewfinderEvent camera_stop_viewfinder_event = 28;
-    CameraBarcodeEvent camera_barcode_event = 29;
-    IpEvent ip_event = 30;
-    NotificationsEvent notifications_event = 31;
-    NotificationsClearEvent notifications_clear_event = 32;
-    NotificationsDisplayEvent notifications_display_event = 33;
-    AudioEvent audio_event = 34;
-    AudioPlayChimeEvent audio_play_chime_event = 35;
-    AudioPlayAudioEvent audio_play_audio_event = 36;
-    AudioPlaybackDoneEvent audio_playback_done_event = 37;
+    RPiConnectEvent r_pi_connect_event = 26;
+    RPiConnectLoginEvent r_pi_connect_login_event = 27;
+    UsersEvent users_event = 28;
+    UsersCreateUserEvent users_create_user_event = 29;
+    UsersDeleteUserEvent users_delete_user_event = 30;
+    UsersResetPasswordEvent users_reset_password_event = 31;
+    VoiceEvent voice_event = 32;
+    VoiceSynthesizeTextEvent voice_synthesize_text_event = 33;
+    VSCodeEvent vs_code_event = 34;
+    VSCodeLoginEvent vs_code_login_event = 35;
+    VSCodeRestartEvent vs_code_restart_event = 36;
+    WiFiEvent wi_fi_event = 37;
+    WiFiUpdateRequestEvent wi_fi_update_request_event = 38;
   }
 }

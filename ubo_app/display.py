@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import zlib
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -9,7 +10,10 @@ from adafruit_rgb_display.st7789 import ST7789
 from fake import Fake
 
 from ubo_app.store.main import store
-from ubo_app.store.services.display import DisplayRenderEvent
+from ubo_app.store.services.display import (
+    DisplayCompressedRenderEvent,
+    DisplayRenderEvent,
+)
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
@@ -66,6 +70,14 @@ def render_on_display(
     store.dispatch(
         DisplayRenderEvent(
             data=data.tobytes(),
+            data_hash=data_hash,
+            rectangle=rectangle,
+        ),
+    )
+    compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+    store.dispatch(
+        DisplayCompressedRenderEvent(
+            compressed_data=compressor.compress(data.tobytes()) + compressor.flush(),
             data_hash=data_hash,
             rectangle=rectangle,
         ),

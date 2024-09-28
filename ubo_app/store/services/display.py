@@ -23,5 +23,11 @@ class DisplayRenderEvent(DisplayEvent):
     rectangle: tuple[int, int, int, int]
 
 
+class DisplayCompressedRenderEvent(DisplayEvent):
+    compressed_data: bytes
+    data_hash: int
+    rectangle: tuple[int, int, int, int]
+
+
 class DisplayState(Immutable):
     is_paused: bool = False

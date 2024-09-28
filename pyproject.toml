@@ -166,9 +166,12 @@ multiline-quotes = "double"
   "ARG002",
   "ASYNC109",
   "D",
+  "E402",
+  "E501",
   "ERA001",
   "F401",
   "RUF009",
+  "SLF001",
   "TCH001",
   "TID252",
 ]
