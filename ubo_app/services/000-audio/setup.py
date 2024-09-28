@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import wave
 from pathlib import Path
 from typing import TYPE_CHECKING, ParamSpec
 
@@ -54,12 +55,24 @@ def init_service() -> None:
     def _(is_mute: bool) -> None:  # noqa: FBT001
         audio_manager.set_playback_mute(mute=is_mute)
 
-    store.subscribe_event(
-        AudioPlayChimeEvent,
-        lambda event: audio_manager.play_file(
-            Path(__file__).parent.joinpath(f'sounds/{event.name}.wav').as_posix(),
-        ),
-    )
+    def play_file(event: AudioPlayChimeEvent) -> None:
+        filename = Path(__file__).parent.joinpath(f'sounds/{event.name}.wav').as_posix()
+        with wave.open(filename, 'rb') as wave_file:
+            sample_rate = wave_file.getframerate()
+            channels = wave_file.getnchannels()
+            sample_width = wave_file.getsampwidth()
+            audio_data = wave_file.readframes(wave_file.getnframes())
+
+            store.dispatch(
+                AudioPlayAudioEvent(
+                    rate=sample_rate,
+                    channels=channels,
+                    width=sample_width,
+                    sample=audio_data,
+                ),
+            )
+
+    store.subscribe_event(AudioPlayChimeEvent, play_file)
 
     store.subscribe_event(
         AudioPlayAudioEvent,
