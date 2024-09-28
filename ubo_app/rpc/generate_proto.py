@@ -6,10 +6,8 @@ from __future__ import annotations
 import ast
 import functools
 import importlib
-import operator
 import re
 import sys
-from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, get_args
 
@@ -27,7 +25,6 @@ if TYPE_CHECKING:
 actions = []
 events = []
 states = {}
-dataclass_fields = defaultdict(set)
 
 global_messages: dict[str, tuple[str, list[tuple[str, _Type]]]] = {}
 global_enums: dict[str, str] = {}
@@ -64,10 +61,6 @@ class _Type(Immutable):
         current_package: str | None,
     ) -> str:
         return self.get_definitions(name, current_package=current_package)
-
-    @property
-    def dependencies(self: Self) -> set[str]:
-        return set()
 
     @property
     def package(self: Self) -> str | None:
@@ -119,18 +112,6 @@ class _BasicType(_Type):
     def get_definitions(self: Self, name: str, *, current_package: str | None) -> str:
         _ = name, current_package
         return ''
-
-    @property
-    def dependencies(self: Self) -> set[str]:
-        try:
-            if self.package is None:
-                return set()
-        except TypeError as exception:
-            if 'Unknown type' in str(exception):
-                return set()
-            raise
-        else:
-            return {self.package}
 
     @property
     def package(self: Self) -> str | None:
@@ -187,10 +168,6 @@ message {betterproto.casing.pascal_case(name)} {{
 }}
 """
 
-    @property
-    def dependencies(self: Self) -> set[str]:
-        return self.type.dependencies
-
 
 class _ListType(_Type):
     type: _Type
@@ -230,10 +207,6 @@ message {betterproto.casing.pascal_case(name)} {{
     )} items = 1;
 }}
 """
-
-    @property
-    def dependencies(self: Self) -> set[str]:
-        return self.type.dependencies
 
 
 class _UnionType(_Type):
@@ -298,14 +271,6 @@ class _UnionType(_Type):
 
         return f'{sub_definitions}\n{definitions}'
 
-    @property
-    def dependencies(self: Self) -> set[str]:
-        return functools.reduce(
-            operator.or_,
-            (item.dependencies for item in self.types),
-            set(),
-        )
-
 
 class _DictType(_Type):
     key_type: _Type
@@ -355,10 +320,6 @@ class _DictType(_Type):
 message {betterproto.casing.pascal_case(name)}Dict {{
   {self.get_proto(name, current_package=current_package)} items = 1;
 }}"""
-
-    @property
-    def dependencies(self: Self) -> set[str]:
-        return self.key_type.dependencies | self.value_type.dependencies
 
 
 class _ProtoGenerator(ast.NodeVisitor):
@@ -469,7 +430,6 @@ class _ProtoGenerator(ast.NodeVisitor):
                     )
         self.messages[message_name] = fields
         global_messages[message_name] = (self.package_name, fields)
-        dataclass_fields[self.package_name].add(message_name)
         if message_name.endswith('Action'):
             actions.append((message_name, self.package_name))
         if message_name.endswith('Event'):
@@ -557,14 +517,18 @@ class _ProtoGenerator(ast.NodeVisitor):
             raise TypeError(msg)
 
         if isinstance(value, ast.BinOp) and isinstance(value.op, ast.BitOr):
-            types: set[_Type] = set()
+            types: list[_Type] = []
             try:
-                types.add(self.get_field_type(value=value.left))
+                type = self.get_field_type(value=value.left)
+                if type not in types:
+                    types.append(type)
             except TypeError as e:
                 if 'Callable types are not supported' not in str(e):
                     raise
             try:
-                types.add(self.get_field_type(value=value.right))
+                type = self.get_field_type(value=value.right)
+                if type not in types:
+                    types.append(type)
             except TypeError as e:
                 if 'Callable types are not supported' not in str(e):
                     raise
@@ -575,7 +539,7 @@ class _ProtoGenerator(ast.NodeVisitor):
         msg = f'Unsupported field type: {value}'
         raise TypeError(msg)
 
-    def generate_proto(self: _ProtoGenerator) -> tuple[str, set[str]]:  # noqa: C901
+    def generate_proto(self: _ProtoGenerator) -> str:  # noqa: C901
         try:
             proto = ''
             for enum_name, values in self.enums.items():
@@ -588,7 +552,6 @@ class _ProtoGenerator(ast.NodeVisitor):
                     betterproto.casing.snake_case(enum_name).upper()}_{
                     value_name} = {i + 1};\n"""
                 proto += '}\n\n'
-            dependencies: set[str] = set()
             for message_name, fields in self.messages.items():
                 proto += f'message {message_name} {{\n'
                 proto += f"""  option (package_info.v1.package_name) = "{
@@ -597,7 +560,6 @@ class _ProtoGenerator(ast.NodeVisitor):
                 proto += f"""{self.package_name.replace(".", "_dot_")} = {
                 META_FIELD_PREFIX_PACKAGE_NAME_INDEX};\n"""
                 for field_name, field_type in fields:
-                    dependencies |= field_type.dependencies
                     proto += re.sub(
                         r'\n(?=.)',
                         '\n',
@@ -625,12 +587,11 @@ class _ProtoGenerator(ast.NodeVisitor):
                     name,
                     current_package=self.package_name,
                 )
-                dependencies |= field_type.dependencies
         except TypeError as e:
             msg = f'Error in {self.package_name}'
             raise TypeError(msg) from e
         else:
-            return proto, dependencies - {self.package_name}
+            return proto
 
 
 def _generate_operations_proto(output_directory: Path) -> None:
@@ -690,7 +651,7 @@ if __name__ == '__main__':
     )
     generators.extend(
         parse(importlib.import_module(f'ubo_app.store.services.{file.stem}'))
-        for file in Path('ubo_app/store/services/').glob('*.py')
+        for file in sorted(Path('ubo_app/store/services/').glob('*.py'))
     )
 
     (output_directory / 'ubo' / 'v1').mkdir(
@@ -703,11 +664,8 @@ if __name__ == '__main__':
         file.write('import "package_info/v1/package_info.proto";\n\n')
         for generator in generators:
             sys.stdout.write(f'⚡ Generating proto for {generator.package_name} .')
-            proto_definitions, _ = generator.generate_proto()
 
-            sys.stdout.write('.')
-
-            file.write(proto_definitions)
+            file.write(generator.generate_proto())
 
             print(' Done')
 
