@@ -6,6 +6,7 @@
 - feat(rpc): add reflection to rpc server, limited to root service, but good enough for health checking purposes
 - refactor(rpc): preserve the order of fields of `oneof` declarations generated for `Union` types
 - refactor(audio): convert `AudioPlayChimeEvent`s to `AudioPlayAudioEvent`s instead of directly playing the chime
+- feat(rpc): add `UBO_GRPC_LISTEN_HOST` and `UBO_GRPC_LISTEN_PORT` environment variables
 
 ## Version 0.17.0
 

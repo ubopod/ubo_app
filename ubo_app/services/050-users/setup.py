@@ -208,7 +208,6 @@ later.""",
 @store.autorun(lambda state: state.users)
 def users_menu(state: UsersState) -> Menu:
     """Get the SSH menu items."""
-    logger.info(state.users)
     if state.users is None:
         return HeadedMenu(
             title='󰡉Users',
@@ -307,13 +306,6 @@ async def init_service() -> None:
 
     async def get_users() -> list[UserState]:
         paths = await accounts_service.list_cached_users()
-        logger.info(paths)
-        q = await _UserInterface.new_proxy(
-            bus=bus,
-            service_name='org.freedesktop.Accounts',
-            object_path=paths[0],
-        ).user_name
-        logger.info(q)
         return [
             UserState(
                 id=(
@@ -332,12 +324,12 @@ async def init_service() -> None:
 
     async def monitor_user_added() -> None:
         async for path in accounts_service.user_added:
-            logger.info('Users added', extra={'path': path})
+            logger.info('User added', extra={'path': path})
             store.dispatch(UsersSetUsersAction(users=await get_users()))
 
     async def monitor_user_deleted() -> None:
         async for path in accounts_service.user_deleted:
-            logger.info('Users deleted', extra={'path': path})
+            logger.info('User deleted', extra={'path': path})
             store.dispatch(UsersSetUsersAction(users=await get_users()))
 
     create_task(monitor_user_added())

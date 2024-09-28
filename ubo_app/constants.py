@@ -29,6 +29,8 @@ ENABLED_SERVICES = os.environ.get('UBO_ENABLED_SERVICES', '')
 ENABLED_SERVICES = ENABLED_SERVICES.split(',') if ENABLED_SERVICES else []
 
 DISABLE_GRPC = str_to_bool(os.environ.get('UBO_DISABLE_GRPC', 'False')) == 1
+GRPC_LISTEN_HOST = os.environ.get('UBO_GRPC_LISTEN_HOST', '127.0.0.1')
+GRPC_LISTEN_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 
 UPDATE_ASSETS_PATH = Path(f'{INSTALLATION_PATH}/_update/')
 UPDATE_LOCK_PATH = UPDATE_ASSETS_PATH / 'update_is_ready.lock'
