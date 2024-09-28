@@ -327,9 +327,10 @@ def image_menu(
 
 def image_menu_generator(image_id: str) -> Callable[[], Callable[[], HeadedMenu]]:
     """Get the menu items for the Docker service."""
-    _image_menu = store.autorun(lambda state: getattr(state.docker, image_id))(
-        image_menu,
-    )
+    _image_menu = store.autorun(
+        lambda state: getattr(state.docker, image_id),
+        lambda state: (getattr(state.docker, image_id), state.ip.interfaces),
+    )(image_menu)
 
     def open_image_menu() -> Callable[[], HeadedMenu]:
         check_container(image_id)

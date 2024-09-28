@@ -7,6 +7,7 @@
 - refactor(rpc): preserve the order of fields of `oneof` declarations generated for `Union` types
 - refactor(audio): convert `AudioPlayChimeEvent`s to `AudioPlayAudioEvent`s instead of directly playing the chime
 - feat(rpc): add `UBO_GRPC_LISTEN_HOST` and `UBO_GRPC_LISTEN_PORT` environment variables
+- fix(docker): make sure the `image_menu` view - used nested in an autorun - is re-called when ip addresses are provided
 
 ## Version 0.17.0
 
