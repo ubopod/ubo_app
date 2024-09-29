@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 0.17.1
 
 - feat(display): add `DisplayCompressedRenderEvent` as a compressed version of `DisplayRenderEvent`
 - feat(rpc): add reflection to rpc server, limited to root service, but good enough for health checking purposes
