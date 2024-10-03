@@ -27,38 +27,18 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          virtualenvs-create: true
+          enable-cache: true
+          cache-suffix: ubuntu-latest
 
-      - name: Check Cached Poetry
-        id: cached-poetry
-        uses: actions/cache/restore@v4
-        with:
-          lookup-only: true
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
-            }}-${{hashFiles('poetry.lock') }}
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
 
       - name: Install dependencies
-        if: steps.cached-poetry.outputs.cache-hit != 'true'
-        run: |
-          poetry install --no-interaction --no-root --extras=dev --with dev
-
-      - name: Save Cached Poetry
-        if: steps.cached-poetry.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
-            }}-${{hashFiles('poetry.lock') }}
+        run: uv sync --frozen
 
   ubo-pod-dependencies:
     name: Install Ubo Pod Dependencies
@@ -75,44 +55,19 @@ jobs:
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
           echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)"
 
-      - name: Check Cached Poetry
-        id: cached-poetry
-        uses: actions/cache/restore@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          lookup-only: true
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-ubo-pod-python${{
-            steps.get-python-version.outputs.PYTHON_VERSION }}-${{
-            hashFiles('poetry.lock') }}
+          enable-cache: true
+          cache-suffix: ubo-pod
 
-      - name: Install Poetry
-        if: steps.cached-poetry.outputs.cache-hit != 'true'
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
 
       - name: Install dependencies
-        if: steps.cached-poetry.outputs.cache-hit != 'true'
         run: |
-          poetry env remove 3.11 || true
-          poetry config virtualenvs.options.system-site-packages true --local
-          poetry env use 3.11
-          poetry install --no-interaction --no-root --extras=dev --with dev
-
-      - name: Save Cached Poetry
-        if: steps.cached-poetry.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-ubo-pod-python${{
-            steps.get-python-version.outputs.PYTHON_VERSION }}-${{
-            hashFiles('poetry.lock') }}
+          uv sync --frozen
 
   type-check:
     name: Type Check
@@ -123,26 +78,23 @@ jobs:
       - uses: actions/checkout@v4
         name: Checkout
 
-      - name: Load Cached Poetry
-        id: cached-poetry
-        uses: actions/cache/restore@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-ubo-pod-python${{
-            needs.ubo-pod-dependencies.outputs.python-version }}-${{
-            hashFiles('poetry.lock') }}
-          fail-on-cache-miss: true
+          enable-cache: true
+          cache-suffix: ubo-pod
+
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
 
       - name: Create stub files
         run: |
-          poetry run pyright --createstub kivy
+          uv run --frozen pyright --createstub kivy
 
       - name: Type Check
         run: |
-          poetry run poe typecheck
+          uv run --frozen poe typecheck
 
   lint:
     name: Lint
@@ -159,20 +111,18 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
-      - name: Load Cached Poetry
-        id: cached-poetry
-        uses: actions/cache/restore@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
-            }}-${{hashFiles('poetry.lock') }}
-          fail-on-cache-miss: true
+          enable-cache: true
+          cache-suffix: ubuntu-latest
+
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
 
       - name: Lint
-        run: poetry run poe lint
+        run: uv run --frozen poe lint
 
   test:
     name: Test
@@ -203,23 +153,21 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
-      - name: Load Cached Poetry
-        id: cached-poetry
-        uses: actions/cache/restore@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-${{ startsWith(matrix.runner, 'ubo-pod') && 'ubo-pod' ||
-            'ubuntu-latest' }}-python${{ startsWith(matrix.runner, 'ubo-pod') &&
-            needs.ubo-pod-dependencies.outputs.python-version ||
-            env.PYTHON_VERSION }}-${{hashFiles('poetry.lock') }}
-          fail-on-cache-miss: true
+          enable-cache: true
+          cache-suffix:
+            ${{ startsWith(matrix.runner, 'ubo-pod') && 'ubo-pod' ||
+            'ubuntu-latest' }}
+
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
 
       - name: Run Tests
         run: |
-          poetry run poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
+          uv run --frozen poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
@@ -269,25 +217,23 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
 
-      - name: Load Cached Poetry
-        id: cached-poetry
-        uses: actions/cache/restore@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          path: |
-            ~/.cache
-            ~/.local
-          key:
-            poetry-ubuntu-latest-python${{ env.PYTHON_VERSION
-            }}-${{hashFiles('poetry.lock') }}
-          fail-on-cache-miss: true
+          enable-cache: true
+          cache-suffix: ubuntu-latest
+
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
 
       - name: Extract Version
         id: extract-version
         run: |
-          echo "VERSION=$(poetry version --short)" >> "$GITHUB_OUTPUT"
-          echo "VERSION=$(poetry version --short)"
-          echo "NAME=$(poetry version | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-          echo "NAME=$(poetry version | cut -d' ' -f1)"
+          echo "VERSION=$(uv run --frozen python -c 'from importlib.metadata import version; print(version("ubo_app"))')" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$(uv run --frozen python -c 'from importlib.metadata import version; print(version("ubo_app"))')"
+          echo "NAME=$(uv run --frozen python -c 'from importlib.metadata import metadata; print(metadata("ubo_app")["Name"])')" >> "$GITHUB_OUTPUT"
+          echo "NAME=$(uv run --frozen python -c 'from importlib.metadata import metadata; print(metadata("ubo_app")["Name"])')"
 
       - name: Extract Version from CHANGELOG.md
         run: |
@@ -324,7 +270,7 @@ jobs:
           cat ubo_app/.env
 
       - name: Build
-        run: poetry build
+        run: uv build
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4

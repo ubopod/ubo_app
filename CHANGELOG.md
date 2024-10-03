@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- chore: migrate from poetry to uv for the sake of improving performance and dealing with conflicting sub-dependencies
+
 ## Version 0.17.1
 
 - feat(display): add `DisplayCompressedRenderEvent` as a compressed version of `DisplayRenderEvent`

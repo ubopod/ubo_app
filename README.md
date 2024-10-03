@@ -26,6 +26,7 @@ Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will
 - Easy headless remote access with SSH and VS Code tunnel
 - Install and run Docker apps headlessly
 - Access and control basic RPi utilities and settings
+- gRPC API for remote control - find sample clients [here](https://github.com/ubopod/ubo-grpc-clients)
 
 ## 📋 Requirements
 
@@ -126,18 +127,18 @@ Contributions following Python best practices are welcome.
 
 #### Setting up the development environment
 
-To set up the development environment, you need to have Python 3.11+ and [`poetry`](https://python-poetry.org) installed.
+To set up the development environment, you need to have Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) installed.
 
 First, clone the repository, then install the dependencies:
 
 ```bash
-poetry install --with dev --extras=dev
+uv install --with dev --extras=dev
 ```
 
 Now you can run the app with:
 
 ```bash
-poetry run ubo
+uv run ubo
 ```
 
 #### Running tests
@@ -145,31 +146,31 @@ poetry run ubo
 Easiest way to run tests is to use the provided `Dockerfile`s. To run the tests in a container, you first need to create the development images by running:
 
 ```bash
-poetry run poe build-docker-images
+uv run poe build-docker-images
 ```
 
 Then you can run the tests with:
 
 ```bash
-docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-pypoetry-cache:/root/.cache/pypoetry ubo-app-test
+docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test
 ```
 
 You can add arguments to the `pytest` command to run specific tests like this:
 
 ```bash
-docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-pypoetry-cache:/root/.cache/pypoetry ubo-app-test -- <pytest-args>
+docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test -- <pytest-args>
 ```
 
-For example, to run only the tests in the `tests/test_app.py` file, you can run:
+For example, to run only the tests in the `tests/integration/test_core.py` file, you can run:
 
 ```bash
-docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-pypoetry-cache:/root/.cache/pypoetry ubo-app-test -- -n3 tests/test_some_test.py
+docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test -- -n3 tests/integration/test_core.py
 ```
 
 You can also run the tests in your local environment by running:
 
 ```bash
-poetry run poe test
+uv run poe test
 ```
 
 ⚠️**Note:** When running the tests in your local environment, the window snapshots produced by tests may mismatch the expected snapshots. This is because the snapshots are taken with a certain DPI and some environments may have different DPI settings. For example, we are aware that the snapshots taken in macOS have different DPI settings. If you encounter this issue, you should run the tests in a Docker container as described above.
