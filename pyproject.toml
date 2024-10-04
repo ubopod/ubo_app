@@ -1,6 +1,6 @@
 [project]
 name = "ubo-app"
-version = "0.17.1"
+dynamic = ["version"]
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 license = { text = "Apache-2.0" }
 readme = "README.md"
@@ -42,8 +42,17 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "ubo_app/_version.py"
+
+[tool.hatch.version.raw-options]
+local_scheme = "setup_scm_schemes:local_scheme"
 
 [tool.uv]
 dev-dependencies = [
@@ -128,6 +137,7 @@ cmd = "scripts/deploy.sh"
 
 [tool.ruff]
 target-version = 'py311'
+extend-exclude = ["setup_scm_schemes.py"]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -169,7 +179,7 @@ quote-style = "single"
 profile = "black"
 
 [tool.pyright]
-exclude = ["typings", "ubo_app/rpc/generated", ".venv"]
+exclude = ["typings", "ubo_app/rpc/generated", ".venv", "setup_scm_schemes.py"]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/000-audio"

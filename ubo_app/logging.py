@@ -5,8 +5,9 @@ import atexit
 import json
 import logging
 import logging.handlers
+import os
 import sys
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -69,6 +70,12 @@ def get_logger(name: str) -> UboLogger:
     return cast(UboLogger, logging.getLogger(name))
 
 
+def supports_truecolor() -> bool:
+    """Check if the terminal supports truecolor (24-bit)."""
+    color_term = os.environ.get('COLORTERM', '')
+    return color_term == 'truecolor'
+
+
 logger = get_logger('ubo-app')
 logger.propagate = False
 
@@ -100,9 +107,28 @@ class ExtraFormatter(logging.Formatter):
         'message',
     )
 
+    COLORS: ClassVar[dict[int, str]] = {
+        VERBOSE: '\033[38;2;100;100;100m',  # Dark Gray (RGB)
+        logging.DEBUG: '\033[38;2;150;150;150m',  # Light Gray (RGB)
+        logging.INFO: '\033[38;2;100;200;100m',  # Green (RGB)
+        logging.WARNING: '\033[38;2;255;165;0m',  # Orange (RGB)
+        logging.ERROR: '\033[38;2;255;0;0m',  # Red (RGB)
+        logging.CRITICAL: '\033[38;2;255;0;255m',  # Magenta (RGB)
+    }
+    ANSI_COLORS: ClassVar[dict[int, str]] = {
+        VERBOSE: '\033[90m',  # Gray (ANSI)
+        logging.DEBUG: '\033[94m',  # Blue (ANSI)
+        logging.INFO: '\033[92m',  # Green (ANSI)
+        logging.WARNING: '\033[93m',  # Yellow (ANSI)
+        logging.ERROR: '\033[91m',  # Red (ANSI)
+        logging.CRITICAL: '\033[95m',  # Magenta (ANSI)
+    }
+    RESET = '\033[0m'  # Reset color
+
     def format(self: ExtraFormatter, record: logging.LogRecord) -> str:
         string = super().format(record)
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
+
         if len(extra) > 0:
             string += ' - extra: ' + json.dumps(
                 handle_circular_references(extra),
@@ -114,7 +140,12 @@ class ExtraFormatter(logging.Formatter):
         if self.max_length and len(string) > self.max_length:
             string = string[: self.max_length - 3] + '...'
 
-        return string
+        # Get the color for the log level and apply it
+        color = (self.COLORS if supports_truecolor() else self.ANSI_COLORS).get(
+            record.levelno,
+            self.RESET,
+        )
+        return f'{color}{string}{self.RESET}'
 
 
 def add_stdout_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:

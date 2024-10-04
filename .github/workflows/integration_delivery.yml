@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -109,7 +108,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -117,12 +115,8 @@ jobs:
           enable-cache: true
           cache-suffix: ubuntu-latest
 
-      - name: Create virtualenv
-        run: |
-          uv venv --system-site-packages
-
       - name: Lint
-        run: uv run --frozen poe lint
+        run: uvx ruff check
 
   test:
     name: Test
@@ -151,7 +145,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -215,7 +208,6 @@ jobs:
         name: Setup Python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -223,39 +215,35 @@ jobs:
           enable-cache: true
           cache-suffix: ubuntu-latest
 
-      - name: Create virtualenv
-        run: |
-          uv venv --system-site-packages
-
       - name: Extract Version
         id: extract-version
         run: |
-          echo "VERSION=$(uv run --frozen python -c 'from importlib.metadata import version; print(version("ubo_app"))')" >> "$GITHUB_OUTPUT"
-          echo "VERSION=$(uv run --frozen python -c 'from importlib.metadata import version; print(version("ubo_app"))')"
-          echo "NAME=$(uv run --frozen python -c 'from importlib.metadata import metadata; print(metadata("ubo_app")["Name"])')" >> "$GITHUB_OUTPUT"
-          echo "NAME=$(uv run --frozen python -c 'from importlib.metadata import metadata; print(metadata("ubo_app")["Name"])')"
+          git fetch --prune --unshallow
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          echo "VERSION=$(uvx hatch version)" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$(uvx hatch version)"
+          echo "NAME=$(uvx hatch project metadata | jq -r .name)" >> "$GITHUB_OUTPUT"
+          echo "NAME=$(uvx hatch project metadata | jq -r .name)"
 
       - name: Extract Version from CHANGELOG.md
         run: |
-          VERSION_CHANGELOG=$(sed -n '/## Version /s/## Version //p' CHANGELOG.md | head -n 1) 
-          echo "VERSION_CHANGELOG=$VERSION_CHANGELOG"
-          if [ "${{ steps.extract-version.outputs.VERSION }}" != "$VERSION_CHANGELOG" ]; then
-            echo "Error: Version extracted from CHANGELOG.md does not match the version in pyproject.toml"
-            exit 1 
+          FIRST_HEADER=$(sed -n '/## /s/## //p' CHANGELOG.md | head -n 1) 
+          if [ "$FIRST_HEADER" == "Upcoming" ]; then
+            # Check the version coming from extract-version starts with of x.y.z.devn
+            if [[ "${{ steps.extract-version.outputs.VERSION }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+ ]]; then
+              VERSION_CHANGELOG="This is a development version."
+            else
+              echo "Error: First header in CHANGELOG.md is 'Upcoming' but the version in pyproject.toml is not a development version."
+              exit 1
+            fi
           else
-            echo "Versions are consistent."
-          fi
-
-      - name: Extract Version from Tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          VERSION_TAG=$(sed 's/^v//' <<< ${{ github.ref_name }})
-          echo "VERSION_TAG=$VERSION_TAG"
-          if [ "${{ steps.extract-version.outputs.VERSION }}" != "$VERSION_TAG" ]; then
-            echo "Error: Version extracted from tag does not match the version in pyproject.toml"
-            exit 1 
-          else
-            echo "Versions are consistent."
+            VERSION_CHANGELOG=$(echo $FIRST_HEADER | sed 's/Version //')
+            if [ "${{ steps.extract-version.outputs.VERSION }}" != "$VERSION_CHANGELOG" ]; then
+              echo "Error: Version extracted from CHANGELOG.md does not match the version in pyproject.toml"
+              exit 1 
+            else
+              echo "Versions are consistent."
+            fi
           fi
 
       - name: Configure Sentry
@@ -270,7 +258,9 @@ jobs:
           cat ubo_app/.env
 
       - name: Build
-        run: uv build
+        run:
+          SETUPTOOLS_SCM_PRETEND_VERSION=${{
+          steps.extract-version.outputs.VERSION }} uv build
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
@@ -379,10 +369,11 @@ jobs:
             steps.generate-image-url.outputs.dashed_suffix }}.img.gz
           if-no-files-found: error
 
-  pypi-publish:
-    name: Publish to PyPI
+  publish:
+    name: Publish
     if: >-
-      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      github.event_name == 'pull_request' && github.head_ref == 'main'
     needs:
       - type-check
       - lint
@@ -406,11 +397,10 @@ jobs:
           name: binary
           path: dist
 
-      - name: Publish package distributions to PyPI
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
-          verbose: true
 
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -420,7 +410,7 @@ jobs:
       - lint
       - test
       - build
-      - pypi-publish
+      - publish
       - images
     runs-on: ubuntu-latest
     environment:

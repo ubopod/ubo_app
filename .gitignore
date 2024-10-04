@@ -86,6 +86,9 @@ headless_kivy_pi_buffer.raw
 scripts/packer/packer_cache/
 scripts/packer/output-*
 
+# hatch
+ubo_app/_version.py
+
 /screenshots
 /snapshot.json
 /snapshot.bin
