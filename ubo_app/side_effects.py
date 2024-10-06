@@ -8,8 +8,9 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from redux import FinishAction
+from redux import FinishAction, FinishEvent
 
+from ubo_app import display
 from ubo_app.store.core import PowerOffEvent, RebootEvent
 from ubo_app.store.main import store
 from ubo_app.store.operations import ScreenshotEvent, SnapshotEvent
@@ -97,6 +98,7 @@ def setup_side_effects() -> None:
     """Set up the application."""
     initialize_board()
 
+    store.subscribe_event(FinishEvent, display.turn_off)
     store.subscribe_event(PowerOffEvent, power_off)
     store.subscribe_event(RebootEvent, reboot)
     store.subscribe_event(UpdateManagerUpdateEvent, update)
