@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- hotfix(users): do not mark the generated password as expired as it will cause boot failures as the os can't autologin into the ubo user when its password is expired
+
 ## Version 0.17.1
 
 - feat(display): add `DisplayCompressedRenderEvent` as a compressed version of `DisplayRenderEvent`

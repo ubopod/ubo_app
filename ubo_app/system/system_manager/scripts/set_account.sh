@@ -37,7 +37,6 @@ if [ -z ${PASSWORD+set} ]; then
   done
 fi
 echo "${USERNAME}:${PASSWORD}" | chpasswd
-passwd --expire $USERNAME > /dev/null
 printf "${USERNAME}:${PASSWORD}"
 
 # Add the user to the sudo group
