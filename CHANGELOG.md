@@ -7,6 +7,11 @@
 - chore: use dynamic version field in `pyproject.toml` based on `hatch.build.hooks.vcs` and publish dev packages on pypi for all pushes to the main branch and all pull requests targeting the main branch
 - chore: remove what has remained from poetry in the codebase
 
+## Version 1.0.0
+
+- hotfix(users): do not mark the generated password as expired as it will cause boot failures as the os can't autologin into the ubo user when its password is expired
+- hotfix(core): render blank screen on the display when `FinishEvent` is dispatched (makes sure display is clean after powering off)
+
 ## Version 0.17.1
 
 - feat(display): add `DisplayCompressedRenderEvent` as a compressed version of `DisplayRenderEvent`
