@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 1.0.0
 
 - hotfix(users): do not mark the generated password as expired as it will cause boot failures as the os can't autologin into the ubo user when its password is expired
 - hotfix(core): render blank screen on the display when `FinishEvent` is dispatched (makes sure display is clean after powering off)
