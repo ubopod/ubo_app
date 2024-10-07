@@ -111,7 +111,7 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
             (
                 registered_path
                 for frame in stack[-2::-1]
-                for registered_path in REGISTERED_PATHS
+                for registered_path in REGISTERED_PATHS.copy()
                 if frame.filename.startswith(registered_path.as_posix())
             ),
             None,
@@ -386,7 +386,7 @@ def load_services(service_ids: Sequence[str] | None = None, delay: float = 0) ->
         directory_path = Path(services_directory_path).absolute()
         if directory_path.is_dir():
             for service_path in sorted(directory_path.iterdir()):
-                if not service_path.is_dir() or service_path in REGISTERED_PATHS:
+                if not service_path.is_dir() or service_path in REGISTERED_PATHS.copy():
                     continue
                 current_path = Path().absolute()
                 os.chdir(service_path.as_posix())

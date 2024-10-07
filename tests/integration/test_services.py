@@ -28,6 +28,7 @@ ALL_SERVICES_IDS = [
     'users',
     'voice',
     'vscode',
+    'web_ui',
     'wifi',
 ]
 

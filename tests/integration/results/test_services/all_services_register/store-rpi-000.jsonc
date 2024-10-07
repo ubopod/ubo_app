@@ -20,7 +20,7 @@
     "is_paused": false
   },
   "docker": {
-    "_id": "d3fbf47a7e5b1e7f9ca5499d004ae545",
+    "_id": "baf3897a3e70f16a55485822de1b372a",
     "_type": "DockerState",
     "home_assistant": {
       "_type": "ImageState",
@@ -1176,6 +1176,7 @@
     "is_pending": false,
     "status": null
   },
+  "web_ui": null,
   "wifi": {
     "_type": "WiFiState",
     "connections": [],

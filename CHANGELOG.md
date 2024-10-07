@@ -7,6 +7,7 @@
 - chore: use dynamic version field in `pyproject.toml` based on `hatch.build.hooks.vcs` and publish dev packages on pypi for all pushes to the main branch and all pull requests targeting the main branch
 - chore: remove what has remained from poetry in the codebase
 - refactor(core): avoid truncating or coloring logs in log files
+- feat(web-ui): add web-ui service
 
 ## Version 1.0.0
 
