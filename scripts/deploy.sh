@@ -18,7 +18,7 @@ restart=${restart:-"False"}
 env=${env:-"False"}
 
 perl -i -pe 's/^(packages = \[.*)$/\1\nexclude = ["ubo_app\/services\/*-voice\/models\/*"]/' pyproject.toml
-poetry build
+uv build
 cleanup
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
 

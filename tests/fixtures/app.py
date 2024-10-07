@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import dotenv
-import platformdirs
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
@@ -187,7 +186,7 @@ class ConditionalFSWrapper:
                 [
                     os.environ['TEST_ROOT_PATH'] + '/ubo_app',
                     os.environ['TEST_ROOT_PATH'] + '/tests/data',
-                    platformdirs.user_cache_dir('pypoetry'),
+                    '.venv',
                     *real_paths,
                 ],
             )

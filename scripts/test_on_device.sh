@@ -48,14 +48,14 @@ if [ "$copy" == "True" ]; then
 fi
 
 if [ "$run" == "True" ] || [ "$deps" == "True" ]; then
-  run_on_pod "$(if [ "$deps" == "True" ]; then echo "(~/.local/bin/poetry --version ||
-curl -L https://install.python-poetry.org | python3 -) &&"; fi)
+  run_on_pod "$(if [ "$deps" == "True" ]; then echo "(uv --version ||
+curl -LsSf https://astral.sh/uv/install.sh | sh) &&"; fi)
   $(if [ "$run" == "True" ]; then echo "killall -9 pytest || true && systemctl --user stop ubo-app || true &&"; fi)
 cd ~/test-runner &&
-~/.local/bin/poetry config virtualenvs.options.system-site-packages true --local &&
-~/.local/bin/poetry env use python3.11 &&
-  $(if [ "$deps" == "True" ]; then echo "~/.local/bin/poetry install --no-interaction --extras=dev --with=dev &&"; fi)
-  $(if [ "$run" == "True" ]; then echo "~/.local/bin/poetry run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* || true &&"; fi)
+uv config virtualenvs.options.system-site-packages true --local &&
+uv env use python3.11 &&
+  $(if [ "$deps" == "True" ]; then echo "uv install --no-interaction --extras=dev --with=dev &&"; fi)
+  $(if [ "$run" == "True" ]; then echo "uv run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* || true &&"; fi)
 true"
 fi
 
