@@ -18,7 +18,7 @@ async def serve() -> None:
 
     server = Server(services)
 
-    logger.error(
+    logger.info(
         'Starting gRPC server',
         extra={'host': GRPC_LISTEN_HOST, 'port': GRPC_LISTEN_PORT},
     )

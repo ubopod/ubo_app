@@ -81,8 +81,6 @@ logger.propagate = False
 
 
 class ExtraFormatter(logging.Formatter):
-    max_length: int | None = None
-
     def_keys = (
         'name',
         'msg',
@@ -107,12 +105,30 @@ class ExtraFormatter(logging.Formatter):
         'message',
     )
 
+    def format(self: ExtraFormatter, record: logging.LogRecord) -> str:
+        string = super().format(record)
+        extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
+
+        if len(extra) > 0:
+            string += ' - extra: ' + json.dumps(
+                handle_circular_references(extra),
+                sort_keys=True,
+                indent=2,
+                default=str,
+            ).replace('\\n', '\n')
+
+        return string
+
+
+class StdOutExtraFormatter(ExtraFormatter):
+    max_length: int | None = None
+
     COLORS: ClassVar[dict[int, str]] = {
         VERBOSE: '\033[38;2;100;100;100m',  # Dark Gray (RGB)
         logging.DEBUG: '\033[38;2;150;150;150m',  # Light Gray (RGB)
         logging.INFO: '\033[38;2;100;200;100m',  # Green (RGB)
         logging.WARNING: '\033[38;2;255;165;0m',  # Orange (RGB)
-        logging.ERROR: '\033[38;2;255;0;0m',  # Red (RGB)
+        logging.ERROR: '\033[38;2;255;150;150m',  # Red (RGB)
         logging.CRITICAL: '\033[38;2;255;0;255m',  # Magenta (RGB)
     }
     ANSI_COLORS: ClassVar[dict[int, str]] = {
@@ -125,17 +141,8 @@ class ExtraFormatter(logging.Formatter):
     }
     RESET = '\033[0m'  # Reset color
 
-    def format(self: ExtraFormatter, record: logging.LogRecord) -> str:
+    def format(self: StdOutExtraFormatter, record: logging.LogRecord) -> str:
         string = super().format(record)
-        extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
-
-        if len(extra) > 0:
-            string += ' - extra: ' + json.dumps(
-                handle_circular_references(extra),
-                sort_keys=True,
-                indent=2,
-                default=str,
-            ).replace('\\n', '\n')
 
         if self.max_length and len(string) > self.max_length:
             string = string[: self.max_length - 3] + '...'
@@ -151,7 +158,7 @@ class ExtraFormatter(logging.Formatter):
 def add_stdout_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setLevel(level)
-    formatter = ExtraFormatter(
+    formatter = StdOutExtraFormatter(
         '%(created)f [%(levelname)s] %(message)s',
         '%Y-%m-%d %H:%M:%S',
     )
