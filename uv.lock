@@ -938,6 +938,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/b1/d1ca22a7b18e7b2b90152a78a0c2d09a96fdb924f87be1914d70d9bee543/kivy_deps.angle-0.4.0-cp311-cp311-win_amd64.whl", hash = "sha256:574381d4e66f3198bc48aa10f238e7a3816ad56b80ec939f5d56fb33a378d0b1", size = 5130936 },
     { url = "https://files.pythonhosted.org/packages/c1/89/bb8b9a0fee422972fcf38a406ee9d0b1636968d7d2b5e97aafea8fdec251/kivy_deps.angle-0.4.0-cp312-cp312-win32.whl", hash = "sha256:4fa7a6366899fba13f7624baf4645787165f45731db08d14557da29c12ee48f0", size = 4588969 },
     { url = "https://files.pythonhosted.org/packages/c7/f2/d1500b880d3079454af0f935408ddd37cfce4fd11f53d0917e169d478869/kivy_deps.angle-0.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:668e670d4afd2551af0af2c627ceb0feac884bd799fb6a3dff78fdbfa2ea0451", size = 5130935 },
+    { url = "https://files.pythonhosted.org/packages/47/7e/ad805773fb76f07cb1bdf5147e66ba264a94f5ac54553cd9dee809a161bb/kivy_deps.angle-0.4.0-cp313-cp313-win_amd64.whl", hash = "sha256:9afbf702f8bb9a993c48f39c018ca3b4d2ec381a5d3f82fe65bdaa6af0bba29b", size = 5133260 },
 ]
 
 [[package]]
@@ -949,6 +950,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d6/37/884034260818569547347cc2ba89780ff3f83a9ce6b9a894360c1d86e82c/kivy_deps.glew-0.3.1-cp311-cp311-win_amd64.whl", hash = "sha256:22e155ec59ce717387f5d8804811206d200a023ba3d0bc9bbf1393ee28d0053e", size = 123574 },
     { url = "https://files.pythonhosted.org/packages/2b/3b/a960053dccd627e4483db4765fa84318a831cbf3af648aee20297ae56815/kivy_deps.glew-0.3.1-cp312-cp312-win32.whl", hash = "sha256:b64ee4e445a04bc7c848c0261a6045fc2f0944cc05d7f953e3860b49f2703424", size = 126458 },
     { url = "https://files.pythonhosted.org/packages/ad/3a/37a0a051dd3c7298d9e149a489457a6196665444c1a1473ad4fa617e05af/kivy_deps.glew-0.3.1-cp312-cp312-win_amd64.whl", hash = "sha256:3acbbd30da05fc10c185b5d4bb75fbbc882a6ef2192963050c1c94d60a6e795a", size = 123573 },
+    { url = "https://files.pythonhosted.org/packages/21/99/e3478c34afed7a820b3348ce7fefc53f2034fa340348dca57162695e69d9/kivy_deps.glew-0.3.1-cp313-cp313-win_amd64.whl", hash = "sha256:f4aa8322078359862ccd9e16e5cea61976d75fb43125d87922e20c916fa31a11", size = 123595 },
 ]
 
 [[package]]
@@ -1542,7 +1544,7 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.17.1"
+version = "0.17.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyright" },
@@ -1550,9 +1552,9 @@ dependencies = [
     { name = "python-strtobool" },
     { name = "ruff" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/80/f8f508233455dad8edc239dd37fc65d0587f3a8203d4147e7c03119c90a9/python_redux-0.17.1.tar.gz", hash = "sha256:e16aaa434f09a1b0e064958458a0f7376f2e0c306718d8f79df38cb8286db5b3", size = 22677 }
+sdist = { url = "https://files.pythonhosted.org/packages/26/e0/476b776d5410d97bf57d069240385b4ce0ec9e6e1c972ef6946cd3a46b27/python_redux-0.17.2.tar.gz", hash = "sha256:185e491390c6ae4eecf1e6f3c34cab25bed21667bc4ca49e02a94494ae497bf3", size = 22940 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/ff/305aaeb1ef73cf25861a16428db9e83112886193d174806dc55e16d21298/python_redux-0.17.1-py3-none-any.whl", hash = "sha256:f98f9c483172786f7a8e762f98f63d0afaa7466025a8f7aab7762d76f174eedd", size = 25059 },
+    { url = "https://files.pythonhosted.org/packages/49/47/a9de36c30dfc0aa8e30d5fbd58aa9152fba47dd0a49f17193068fa1bf50f/python_redux-0.17.2-py3-none-any.whl", hash = "sha256:c10d505ac1861e0e221cf694268f207f7fd15f1d0d73d1d2b25e31425f7fe880", size = 25390 },
 ]
 
 [[package]]
@@ -1873,7 +1875,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "0.17.2.dev4+unknown"
+version = "1.0.1.dev6+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
@@ -1950,7 +1952,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.1.3" },
-    { name = "python-redux", specifier = ">=0.17.1" },
+    { name = "python-redux", specifier = ">=0.17.2" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
     { name = "pyzbar", specifier = ">=0.1.9" },
     { name = "quart", specifier = ">=0.19.6" },

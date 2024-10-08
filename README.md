@@ -59,11 +59,11 @@ This is the fastest, easiest, and recommended way to get started with Ubo App.
 
 If you want to install the image on an existing operating system, then read on. Otherwise, skip this section.
 
----
+______________________________________________________________________
 
 ⚠️ **Executing scripts directly from the internet with root privileges poses a significant security risk. It's generally a good practice to ensure you understand the script's content before running it. You can check the content of this particular script [here](https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh) before running it.**
 
----
+______________________________________________________________________
 
 To install ubo, run this command in a terminal shell:
 
@@ -177,9 +177,11 @@ uv run poe test
 
 #### QR code
 
-In development environment, the camera is probably not working as it is relying, on `picamera2`, so it may become challenging to test the flows relying on QR code input.
+In development environment, the camera is probably not working, as it is relying on `picamera2`, so it may become challenging to test the flows relying on QR code input.
 
-To address this, the `qrcode_input` method, in not-RPi environments, will try to get its input from `/tmp/qrcode_input.txt`. So, whenever you encounter a QR code input, you can write the content of the QR code in that file and the application will read it from there and continue the flow.
+To address this, the camera module, in not-RPi environments, will try reading from `/tmp/qrcode_input.txt` and `/tmp/qrcode_input.png` too. So, whenever you encounter a QR code input, you can write the content of the QR code in the text file path or put the qrcode image itself in the image file path and the application will read it from there and continue the flow.
+
+Alternatively you may be able to provide the input in the web-ui (needs refresh at the moment) or provide it by `InputProvideAction` in grpc channel.
 
 ## 🔒 License
 

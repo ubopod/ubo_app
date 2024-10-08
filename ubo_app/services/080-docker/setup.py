@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import docker
 import docker.errors
@@ -41,9 +41,9 @@ from ubo_app.store.services.notifications import (
 from ubo_app.utils import secrets
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.monitor_unit import monitor_unit
 from ubo_app.utils.persistent_store import register_persistent_store
-from ubo_app.utils.qrcode import qrcode_input
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -209,9 +209,11 @@ def input_credentials() -> None:
     async def act() -> None:
         try:
             credentials = (
-                await qrcode_input(
-                    r'^[^|]*\|[^|]*\|[^|]*$|^[^|]*|[^|]*$',
+                await ubo_input(
+                    r'^(?P<Service>[^|]*)\|(?P<Username>[^|]*)\|(?P<Password>[^|]*)$|'
+                    r'(?P<Username_>^[^|]*)|(?P<Password_>[^|]*)$',
                     prompt='Format: [i]SERVICE|USERNAME|PASSWORD[/i]',
+                    title='Enter Docker Credentials',
                     extra_information=NotificationExtraInformation(
                         text="""To generate your QR code for login, format your \
 details by separating your service, username, and password with the pipe symbol. For \
@@ -231,15 +233,15 @@ omit the service name, "docker {.|D AA T} io" will automatically be used as the 
 default.""",
                     ),
                 )
-            )[0]
-            if credentials.count('|') == 1:
-                username, password = credentials.split('|')
-                registry = 'docker.io'
-            else:
-                registry, username, password = credentials.split('|')
-            registry = registry.strip()
-            username = username.strip()
-            password = password.strip()
+            )[1]
+            if not credentials:
+                return
+            username = credentials.get('Username', credentials.get('Username_', ''))
+            password = credentials.get('Password', credentials.get('Password_', ''))
+            registry = credentials.get('Service', 'docker.io')
+            username = cast(str, username).strip()
+            password = cast(str, password).strip()
+            registry = cast(str, registry).strip()
             docker_client = docker.from_env()
             docker_client.login(
                 username=username,
