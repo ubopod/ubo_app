@@ -28,8 +28,8 @@ from ubo_app.store.services.voice import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
-from ubo_app.utils.qrcode import qrcode_input
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -73,10 +73,11 @@ def input_access_key() -> None:
     async def act() -> None:
         try:
             access_key = (
-                await qrcode_input(
+                await ubo_input(
                     '.*',
                     prompt='Convert the Picovoice access key to a QR code and '
                     'scan it.',
+                    title='Picovoice Access Key',
                 )
             )[0]
             secrets.write_secret(key=PICOVOICE_ACCESS_KEY, value=access_key)

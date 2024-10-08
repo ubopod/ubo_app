@@ -12,7 +12,6 @@ import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
-from pyzbar.pyzbar import decode
 from typing_extensions import override
 from ubo_gui.page import PageWidget
 
@@ -115,6 +114,8 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
         data = None
 
     if data is not None:
+        from pyzbar.pyzbar import decode
+
         barcodes = decode(data)
         if len(barcodes) > 0:
             create_task(
@@ -192,6 +193,7 @@ def start_camera_viewfinder() -> None:
     store.dispatch(DisplayPauseAction())
 
     def handle_stop_viewfinder() -> None:
+        unsubscribe()
         with fs_lock:
             nonlocal is_running
             is_running = False
@@ -200,12 +202,11 @@ def start_camera_viewfinder() -> None:
                 CloseApplicationEvent(application=application),
                 DisplayResumeAction(),
             )
-            cancel_subscription()
             if picamera2:
                 picamera2.stop()
                 picamera2.close()
 
-    cancel_subscription = store.subscribe_event(
+    unsubscribe = store.subscribe_event(
         CameraStopViewfinderEvent,
         handle_stop_viewfinder,
     )

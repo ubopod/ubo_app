@@ -2,6 +2,7 @@
 {
   "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "_type": "RootState",
+  "input": null,
   "main": {
     "_type": "MainState",
     "depth": 1,

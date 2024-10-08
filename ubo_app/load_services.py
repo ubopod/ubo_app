@@ -180,7 +180,7 @@ class UboServiceThread(threading.Thread):
     def register_reducer(self: UboServiceThread, reducer: ReducerType) -> None:
         from ubo_app.store.main import root_reducer_id, store
 
-        logger.info(
+        logger.debug(
             'Registering ubo service reducer',
             extra={
                 'service_id': self.service_id,
@@ -205,7 +205,7 @@ class UboServiceThread(threading.Thread):
         setup: SetupFunction,
     ) -> None:
         if service_id in DISABLED_SERVICES:
-            logger.info(
+            logger.debug(
                 'Skipping disabled ubo service',
                 extra={
                     'service_id': service_id,
@@ -216,7 +216,7 @@ class UboServiceThread(threading.Thread):
             return
 
         if WHITE_LIST and service_id not in WHITE_LIST:
-            logger.info(
+            logger.debug(
                 'Service is not in services white list',
                 extra={
                     'service_id': service_id,
@@ -230,7 +230,7 @@ class UboServiceThread(threading.Thread):
         self.service_id = service_id
         self.setup = setup
 
-        logger.info(
+        logger.debug(
             'Ubo service registered!',
             extra={
                 'service_id': self.service_id,
@@ -306,6 +306,15 @@ class UboServiceThread(threading.Thread):
 
         self.loop.run_forever()
 
+        logger.info(
+            'Ubo service thread stopped',
+            extra={
+                'thread_native_id': self.native_id,
+                'service_label': self.label,
+                'service_id': self.service_id,
+            },
+        )
+
     def __repr__(self: UboServiceThread) -> str:
         return (
             f'<UboServiceThread id='
@@ -332,8 +341,8 @@ class UboServiceThread(threading.Thread):
     async def shutdown(self: UboServiceThread) -> None:
         from ubo_app.logging import logger
 
-        logger.info(
-            'Shutting down service thread',
+        logger.debug(
+            'Stopping service thread',
             extra={
                 'thread_native_id': self.native_id,
                 'service_label': self.label,
@@ -368,7 +377,6 @@ class UboServiceThread(threading.Thread):
                 )
             await asyncio.sleep(0.1)
 
-        logger.info('Stopping event loop', extra={'thread_': self})
         self.loop.stop()
 
     def stop(self: UboServiceThread) -> None:

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ubo - web-ui</title>
+  </head>
+
+  <body>
+    {% for input in inputs %}
+      <form method="POST">
+        <input name="id" type="hidden" value="{{ input.id }}" />
+        <p>
+          <label>
+            {{ input.title }}:
+          {% if re.compile(input.pattern).groupindex.keys() | length > 0 %}
+              {%
+                for group_name in
+                re.compile(input.pattern).groupindex.keys() | map('replace', '_', '')|list|unique
+              %}
+                <p>
+                  <label>
+                    {{ group_name }}:
+                    <input type="text" name="{{ group_name }}" value="" />
+                  </label>
+                </p>
+              {% endfor %}
+            {% else %}
+              <input type="text" name="value" value="" />
+            {% endif %}
+          </label>
+        </p>
+        <input type="submit" value="provide" name='action' />
+        <input type="submit" value="cancel" name='action' />
+        {% if not loop.last %}
+          <hr />
+        {% endif %}
+      </form>
+    {% endfor %}
+  </body>
+</html>

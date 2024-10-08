@@ -9,6 +9,7 @@
 - refactor(core): avoid truncating or coloring logs in log files
 - feat(web-ui): add web-ui service
 - fix(users): avoid setting user as sudoer when it performs a password reset
+- feat(web-ui): process input demands, dispatched on the bus
 
 ## Version 1.0.0
 

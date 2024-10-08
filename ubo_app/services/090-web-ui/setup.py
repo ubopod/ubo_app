@@ -1,24 +1,60 @@
 """Implementation of the web-ui service."""
 
 import asyncio
+import re
 from pathlib import Path
 
-from quart import Quart
+from quart import Quart, render_template, request
 from redux import FinishEvent
 
 from ubo_app.constants import WEB_UI_DEBUG_MODE, WEB_UI_LISTEN_HOST, WEB_UI_LISTEN_PORT
 from ubo_app.store.main import store
+from ubo_app.store.operations import (
+    InputCancelAction,
+    InputDescription,
+    InputProvideAction,
+)
 
 
 async def init_service() -> None:
     """Initialize the web-ui service."""
-    app = Quart('ubo-app')
-    app.debug = False
+    app = Quart(
+        'ubo-app',
+        template_folder=(Path(__file__).parent / 'templates').absolute().as_posix(),
+    )
+    app.debug = WEB_UI_DEBUG_MODE
     shutdown_event: asyncio.Event = asyncio.Event()
 
-    @app.get('/')
-    async def hello_world() -> str:
-        return (Path(__file__).parent / 'static' / 'index.html').read_text()
+    @store.view(lambda state: state.web_ui.active_inputs)
+    def inputs(inputs: list[InputDescription]) -> list[InputDescription]:
+        return inputs
+
+    @app.route('/', methods=['GET', 'POST'])
+    async def inputs_form() -> str:
+        if request.method == 'POST':
+            data = dict(await request.form)
+            if data['action'] == 'cancel':
+                store.dispatch(InputCancelAction(id=data['id']))
+            elif data['action'] == 'provide':
+                id = data.pop('id')
+                value = data.pop('value', '')
+                store.dispatch(
+                    InputProvideAction(
+                        id=id,
+                        value=value,
+                        data=data,
+                    ),
+                )
+            await asyncio.sleep(0.2)
+        return await render_template('index.jinja2', inputs=inputs(), re=re)
+
+    if WEB_UI_DEBUG_MODE:
+
+        @app.errorhandler(Exception)
+        async def handle_error(_: Exception) -> str:
+            import traceback
+
+            return f'<pre>{traceback.format_exc()}</pre>'
 
     store.subscribe_event(FinishEvent, shutdown_event.set)
 
