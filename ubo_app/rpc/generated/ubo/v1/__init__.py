@@ -237,45 +237,88 @@ class SnapshotEvent(betterproto.Message):
 
 
 @dataclass(eq=False, repr=False)
-class UboAction(betterproto.Message):
-    audio_action: 'AudioAction' = betterproto.message_field(1, group='ubo_action')
-    camera_action: 'CameraAction' = betterproto.message_field(2, group='ubo_action')
-    display_action: 'DisplayAction' = betterproto.message_field(3, group='ubo_action')
-    docker_action: 'DockerAction' = betterproto.message_field(4, group='ubo_action')
-    ip_action: 'IpAction' = betterproto.message_field(5, group='ubo_action')
-    keypad_action: 'KeypadAction' = betterproto.message_field(6, group='ubo_action')
-    light_dm_action: 'LightDmAction' = betterproto.message_field(7, group='ubo_action')
-    notifications_action: 'NotificationsAction' = betterproto.message_field(
-        8, group='ubo_action',
+class InputDescription(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
     )
-    rgb_ring_action: 'RgbRingAction' = betterproto.message_field(9, group='ubo_action')
-    r_pi_connect_action: 'RPiConnectAction' = betterproto.message_field(
-        10, group='ubo_action',
+    title: str = betterproto.string_field(2)
+    prompt: str = betterproto.string_field(3)
+    extra_information: 'NotificationExtraInformation | None' = (
+        betterproto.message_field(4, optional=True)
     )
-    sensors_action: 'SensorsAction' = betterproto.message_field(11, group='ubo_action')
-    ssh_action: 'SshAction' = betterproto.message_field(12, group='ubo_action')
-    users_action: 'UsersAction' = betterproto.message_field(13, group='ubo_action')
-    voice_action: 'VoiceAction' = betterproto.message_field(14, group='ubo_action')
-    vs_code_action: 'VsCodeAction' = betterproto.message_field(15, group='ubo_action')
-    wi_fi_action: 'WiFiAction' = betterproto.message_field(16, group='ubo_action')
+    id: str = betterproto.string_field(5)
+    pattern: str = betterproto.string_field(6)
 
 
 @dataclass(eq=False, repr=False)
-class UboEvent(betterproto.Message):
-    screenshot_event: 'ScreenshotEvent' = betterproto.message_field(
-        1, group='ubo_event',
+class InputAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
     )
-    audio_event: 'AudioEvent' = betterproto.message_field(2, group='ubo_event')
-    camera_event: 'CameraEvent' = betterproto.message_field(3, group='ubo_event')
-    display_event: 'DisplayEvent' = betterproto.message_field(4, group='ubo_event')
-    ip_event: 'IpEvent' = betterproto.message_field(5, group='ubo_event')
-    keypad_event: 'KeypadEvent' = betterproto.message_field(6, group='ubo_event')
-    notifications_event: 'NotificationsEvent' = betterproto.message_field(
-        7, group='ubo_event',
+
+
+@dataclass(eq=False, repr=False)
+class InputDemandAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
     )
-    snapshot_event: 'SnapshotEvent' = betterproto.message_field(8, group='ubo_event')
-    users_event: 'UsersEvent' = betterproto.message_field(9, group='ubo_event')
-    wi_fi_event: 'WiFiEvent' = betterproto.message_field(10, group='ubo_event')
+    description: 'InputDescription' = betterproto.message_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class InputResolveAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    id: str = betterproto.string_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class InputCancelAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    id: str = betterproto.string_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class InputProvideAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    value: str = betterproto.string_field(2)
+    data: 'dict[str, str]' = betterproto.map_field(
+        3, betterproto.TYPE_STRING, betterproto.TYPE_STRING,
+    )
+    id: str = betterproto.string_field(4)
+
+
+@dataclass(eq=False, repr=False)
+class InputResolveEvent(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    id: str = betterproto.string_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class InputCancelEvent(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    id: str = betterproto.string_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class InputProvideEvent(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_operations: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    value: str = betterproto.string_field(2)
+    data: 'dict[str, str]' = betterproto.map_field(
+        3, betterproto.TYPE_STRING, betterproto.TYPE_STRING,
+    )
+    id: str = betterproto.string_field(4)
 
 
 @dataclass(eq=False, repr=False)
@@ -420,8 +463,15 @@ class CameraStartViewfinderAction(betterproto.Message):
     meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
         betterproto.string_field(1000, optional=True)
     )
-    id: str = betterproto.string_field(2)
-    pattern: str = betterproto.string_field(3)
+    pattern: str = betterproto.string_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class CameraReportBarcodeAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    codes: 'list[str]' = betterproto.string_field(2)
 
 
 @dataclass(eq=False, repr=False)
@@ -445,35 +495,6 @@ class CameraStopViewfinderEvent(betterproto.Message):
         betterproto.string_field(1000, optional=True)
     )
     id: str = betterproto.string_field(2)
-
-
-@dataclass(eq=False, repr=False)
-class CameraReportBarcodeAction(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    codes: 'list[str]' = betterproto.string_field(2)
-
-
-@dataclass(eq=False, repr=False)
-class CameraBarcodeEvent(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    id: str = betterproto.string_field(2)
-    code: str = betterproto.string_field(3)
-    group_dict: 'dict[str, str]' = betterproto.map_field(
-        4, betterproto.TYPE_STRING, betterproto.TYPE_STRING,
-    )
-
-
-@dataclass(eq=False, repr=False)
-class InputDescription(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    id: str = betterproto.string_field(2)
-    pattern: str = betterproto.string_field(3)
 
 
 @dataclass(eq=False, repr=False)
@@ -1577,6 +1598,14 @@ class VsCodeState(betterproto.Message):
 
 
 @dataclass(eq=False, repr=False)
+class WebUiState(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_web_ui: 'str | None' = (
+        betterproto.string_field(1000, optional=True)
+    )
+    active_inputs: 'list[InputDescription]' = betterproto.message_field(2)
+
+
+@dataclass(eq=False, repr=False)
 class WiFiConnection(betterproto.Message):
     meta_field_package_name_ubo_app_dot_store_dot_services_dot_wifi: 'str | None' = (
         betterproto.string_field(1000, optional=True)
@@ -1650,29 +1679,29 @@ class WiFiState(betterproto.Message):
 @dataclass(eq=False, repr=False)
 class Action(betterproto.Message):
     audio_action: 'AudioAction' = betterproto.message_field(1, group='action')
-    audio_set_volume_action: 'AudioSetVolumeAction' = betterproto.message_field(
+    audio_change_volume_action: 'AudioChangeVolumeAction' = betterproto.message_field(
         2, group='action',
     )
-    audio_change_volume_action: 'AudioChangeVolumeAction' = betterproto.message_field(
+    audio_play_audio_action: 'AudioPlayAudioAction' = betterproto.message_field(
         3, group='action',
     )
-    audio_set_mute_status_action: 'AudioSetMuteStatusAction' = (
-        betterproto.message_field(4, group='action')
+    audio_play_chime_action: 'AudioPlayChimeAction' = betterproto.message_field(
+        4, group='action',
     )
-    audio_toggle_mute_status_action: 'AudioToggleMuteStatusAction' = (
+    audio_set_mute_status_action: 'AudioSetMuteStatusAction' = (
         betterproto.message_field(5, group='action')
     )
-    audio_play_chime_action: 'AudioPlayChimeAction' = betterproto.message_field(
+    audio_set_volume_action: 'AudioSetVolumeAction' = betterproto.message_field(
         6, group='action',
     )
-    audio_play_audio_action: 'AudioPlayAudioAction' = betterproto.message_field(
-        7, group='action',
+    audio_toggle_mute_status_action: 'AudioToggleMuteStatusAction' = (
+        betterproto.message_field(7, group='action')
     )
     camera_action: 'CameraAction' = betterproto.message_field(8, group='action')
-    camera_start_viewfinder_action: 'CameraStartViewfinderAction' = (
+    camera_report_barcode_action: 'CameraReportBarcodeAction' = (
         betterproto.message_field(9, group='action')
     )
-    camera_report_barcode_action: 'CameraReportBarcodeAction' = (
+    camera_start_viewfinder_action: 'CameraStartViewfinderAction' = (
         betterproto.message_field(10, group='action')
     )
     display_action: 'DisplayAction' = betterproto.message_field(11, group='action')
@@ -1683,229 +1712,246 @@ class Action(betterproto.Message):
         13, group='action',
     )
     docker_action: 'DockerAction' = betterproto.message_field(14, group='action')
-    docker_set_status_action: 'DockerSetStatusAction' = betterproto.message_field(
+    docker_image_action: 'DockerImageAction' = betterproto.message_field(
         15, group='action',
     )
-    docker_store_username_action: 'DockerStoreUsernameAction' = (
+    docker_image_set_docker_id_action: 'DockerImageSetDockerIdAction' = (
         betterproto.message_field(16, group='action')
     )
-    docker_remove_username_action: 'DockerRemoveUsernameAction' = (
+    docker_image_set_status_action: 'DockerImageSetStatusAction' = (
         betterproto.message_field(17, group='action')
     )
-    docker_image_action: 'DockerImageAction' = betterproto.message_field(
-        18, group='action',
+    docker_remove_username_action: 'DockerRemoveUsernameAction' = (
+        betterproto.message_field(18, group='action')
     )
-    docker_image_set_status_action: 'DockerImageSetStatusAction' = (
-        betterproto.message_field(19, group='action')
+    docker_set_status_action: 'DockerSetStatusAction' = betterproto.message_field(
+        19, group='action',
     )
-    docker_image_set_docker_id_action: 'DockerImageSetDockerIdAction' = (
+    docker_store_username_action: 'DockerStoreUsernameAction' = (
         betterproto.message_field(20, group='action')
     )
-    ip_action: 'IpAction' = betterproto.message_field(21, group='action')
-    ip_update_interfaces_action: 'IpUpdateInterfacesAction' = betterproto.message_field(
+    input_action: 'InputAction' = betterproto.message_field(21, group='action')
+    input_cancel_action: 'InputCancelAction' = betterproto.message_field(
         22, group='action',
     )
-    ip_set_is_connected_action: 'IpSetIsConnectedAction' = betterproto.message_field(
+    input_demand_action: 'InputDemandAction' = betterproto.message_field(
         23, group='action',
     )
-    keypad_action: 'KeypadAction' = betterproto.message_field(24, group='action')
-    keypad_key_up_action: 'KeypadKeyUpAction' = betterproto.message_field(
+    input_provide_action: 'InputProvideAction' = betterproto.message_field(
+        24, group='action',
+    )
+    input_resolve_action: 'InputResolveAction' = betterproto.message_field(
         25, group='action',
     )
-    keypad_key_down_action: 'KeypadKeyDownAction' = betterproto.message_field(
-        26, group='action',
-    )
-    keypad_key_press_action: 'KeypadKeyPressAction' = betterproto.message_field(
+    ip_action: 'IpAction' = betterproto.message_field(26, group='action')
+    ip_set_is_connected_action: 'IpSetIsConnectedAction' = betterproto.message_field(
         27, group='action',
     )
-    keypad_key_release_action: 'KeypadKeyReleaseAction' = betterproto.message_field(
+    ip_update_interfaces_action: 'IpUpdateInterfacesAction' = betterproto.message_field(
         28, group='action',
     )
-    light_dm_action: 'LightDmAction' = betterproto.message_field(29, group='action')
-    light_dm_update_state_action: 'LightDmUpdateStateAction' = (
-        betterproto.message_field(30, group='action')
+    keypad_action: 'KeypadAction' = betterproto.message_field(29, group='action')
+    keypad_key_down_action: 'KeypadKeyDownAction' = betterproto.message_field(
+        30, group='action',
     )
-    light_dm_clear_enabled_state_action: 'LightDmClearEnabledStateAction' = (
-        betterproto.message_field(31, group='action')
+    keypad_key_press_action: 'KeypadKeyPressAction' = betterproto.message_field(
+        31, group='action',
     )
-    notifications_action: 'NotificationsAction' = betterproto.message_field(
+    keypad_key_release_action: 'KeypadKeyReleaseAction' = betterproto.message_field(
         32, group='action',
     )
-    notifications_add_action: 'NotificationsAddAction' = betterproto.message_field(
+    keypad_key_up_action: 'KeypadKeyUpAction' = betterproto.message_field(
         33, group='action',
     )
-    notifications_clear_action: 'NotificationsClearAction' = betterproto.message_field(
-        34, group='action',
-    )
-    notifications_clear_by_id_action: 'NotificationsClearByIdAction' = (
+    light_dm_action: 'LightDmAction' = betterproto.message_field(34, group='action')
+    light_dm_clear_enabled_state_action: 'LightDmClearEnabledStateAction' = (
         betterproto.message_field(35, group='action')
     )
-    notifications_clear_all_action: 'NotificationsClearAllAction' = (
+    light_dm_update_state_action: 'LightDmUpdateStateAction' = (
         betterproto.message_field(36, group='action')
     )
-    rgb_ring_action: 'RgbRingAction' = betterproto.message_field(37, group='action')
-    rgb_ring_set_is_connected_action: 'RgbRingSetIsConnectedAction' = (
-        betterproto.message_field(38, group='action')
+    notifications_action: 'NotificationsAction' = betterproto.message_field(
+        37, group='action',
     )
-    rgb_ring_set_is_busy_action: 'RgbRingSetIsBusyAction' = betterproto.message_field(
+    notifications_add_action: 'NotificationsAddAction' = betterproto.message_field(
+        38, group='action',
+    )
+    notifications_clear_action: 'NotificationsClearAction' = betterproto.message_field(
         39, group='action',
     )
-    rgb_ring_command_action: 'RgbRingCommandAction' = betterproto.message_field(
-        40, group='action',
+    notifications_clear_all_action: 'NotificationsClearAllAction' = (
+        betterproto.message_field(40, group='action')
     )
-    rgb_ring_waitable_command_action: 'RgbRingWaitableCommandAction' = (
+    notifications_clear_by_id_action: 'NotificationsClearByIdAction' = (
         betterproto.message_field(41, group='action')
     )
-    rgb_ring_colorful_command_action: 'RgbRingColorfulCommandAction' = (
-        betterproto.message_field(42, group='action')
+    r_pi_connect_action: 'RPiConnectAction' = betterproto.message_field(
+        42, group='action',
     )
-    rgb_ring_set_enabled_action: 'RgbRingSetEnabledAction' = betterproto.message_field(
-        43, group='action',
+    r_pi_connect_done_downloading_action: 'RPiConnectDoneDownloadingAction' = (
+        betterproto.message_field(43, group='action')
     )
-    rgb_ring_set_all_action: 'RgbRingSetAllAction' = betterproto.message_field(
-        44, group='action',
+    r_pi_connect_set_pending_action: 'RPiConnectSetPendingAction' = (
+        betterproto.message_field(44, group='action')
     )
-    rgb_ring_set_brightness_action: 'RgbRingSetBrightnessAction' = (
+    r_pi_connect_set_status_action: 'RPiConnectSetStatusAction' = (
         betterproto.message_field(45, group='action')
     )
+    r_pi_connect_start_downloading_action: 'RPiConnectStartDownloadingAction' = (
+        betterproto.message_field(46, group='action')
+    )
+    r_pi_connect_update_service_state_action: 'RPiConnectUpdateServiceStateAction' = (
+        betterproto.message_field(47, group='action')
+    )
+    rgb_ring_action: 'RgbRingAction' = betterproto.message_field(48, group='action')
     rgb_ring_blank_action: 'RgbRingBlankAction' = betterproto.message_field(
-        46, group='action',
-    )
-    rgb_ring_rainbow_action: 'RgbRingRainbowAction' = betterproto.message_field(
-        47, group='action',
-    )
-    rgb_ring_progress_wheel_step_action: 'RgbRingProgressWheelStepAction' = (
-        betterproto.message_field(48, group='action')
-    )
-    rgb_ring_pulse_action: 'RgbRingPulseAction' = betterproto.message_field(
         49, group='action',
     )
     rgb_ring_blink_action: 'RgbRingBlinkAction' = betterproto.message_field(
         50, group='action',
     )
-    rgb_ring_spinning_wheel_action: 'RgbRingSpinningWheelAction' = (
+    rgb_ring_colorful_command_action: 'RgbRingColorfulCommandAction' = (
         betterproto.message_field(51, group='action')
     )
-    rgb_ring_progress_wheel_action: 'RgbRingProgressWheelAction' = (
-        betterproto.message_field(52, group='action')
-    )
-    rgb_ring_fill_upto_action: 'RgbRingFillUptoAction' = betterproto.message_field(
-        53, group='action',
+    rgb_ring_command_action: 'RgbRingCommandAction' = betterproto.message_field(
+        52, group='action',
     )
     rgb_ring_fill_downfrom_action: 'RgbRingFillDownfromAction' = (
-        betterproto.message_field(54, group='action')
+        betterproto.message_field(53, group='action')
     )
-    r_pi_connect_action: 'RPiConnectAction' = betterproto.message_field(
-        55, group='action',
+    rgb_ring_fill_upto_action: 'RgbRingFillUptoAction' = betterproto.message_field(
+        54, group='action',
     )
-    r_pi_connect_start_downloading_action: 'RPiConnectStartDownloadingAction' = (
+    rgb_ring_progress_wheel_action: 'RgbRingProgressWheelAction' = (
+        betterproto.message_field(55, group='action')
+    )
+    rgb_ring_progress_wheel_step_action: 'RgbRingProgressWheelStepAction' = (
         betterproto.message_field(56, group='action')
     )
-    r_pi_connect_done_downloading_action: 'RPiConnectDoneDownloadingAction' = (
-        betterproto.message_field(57, group='action')
+    rgb_ring_pulse_action: 'RgbRingPulseAction' = betterproto.message_field(
+        57, group='action',
     )
-    r_pi_connect_set_pending_action: 'RPiConnectSetPendingAction' = (
-        betterproto.message_field(58, group='action')
+    rgb_ring_rainbow_action: 'RgbRingRainbowAction' = betterproto.message_field(
+        58, group='action',
     )
-    r_pi_connect_set_status_action: 'RPiConnectSetStatusAction' = (
-        betterproto.message_field(59, group='action')
+    rgb_ring_set_all_action: 'RgbRingSetAllAction' = betterproto.message_field(
+        59, group='action',
     )
-    r_pi_connect_update_service_state_action: 'RPiConnectUpdateServiceStateAction' = (
+    rgb_ring_set_brightness_action: 'RgbRingSetBrightnessAction' = (
         betterproto.message_field(60, group='action')
     )
-    sensors_action: 'SensorsAction' = betterproto.message_field(61, group='action')
-    sensors_report_reading_action: 'SensorsReportReadingAction' = (
-        betterproto.message_field(62, group='action')
+    rgb_ring_set_enabled_action: 'RgbRingSetEnabledAction' = betterproto.message_field(
+        61, group='action',
     )
-    ssh_action: 'SshAction' = betterproto.message_field(63, group='action')
-    ssh_update_state_action: 'SshUpdateStateAction' = betterproto.message_field(
-        64, group='action',
+    rgb_ring_set_is_busy_action: 'RgbRingSetIsBusyAction' = betterproto.message_field(
+        62, group='action',
     )
-    ssh_clear_enabled_state_action: 'SshClearEnabledStateAction' = (
+    rgb_ring_set_is_connected_action: 'RgbRingSetIsConnectedAction' = (
+        betterproto.message_field(63, group='action')
+    )
+    rgb_ring_spinning_wheel_action: 'RgbRingSpinningWheelAction' = (
+        betterproto.message_field(64, group='action')
+    )
+    rgb_ring_waitable_command_action: 'RgbRingWaitableCommandAction' = (
         betterproto.message_field(65, group='action')
     )
-    users_action: 'UsersAction' = betterproto.message_field(66, group='action')
-    users_set_users_action: 'UsersSetUsersAction' = betterproto.message_field(
-        67, group='action',
+    ssh_action: 'SshAction' = betterproto.message_field(66, group='action')
+    ssh_clear_enabled_state_action: 'SshClearEnabledStateAction' = (
+        betterproto.message_field(67, group='action')
     )
-    users_create_user_action: 'UsersCreateUserAction' = betterproto.message_field(
+    ssh_update_state_action: 'SshUpdateStateAction' = betterproto.message_field(
         68, group='action',
     )
-    users_delete_user_action: 'UsersDeleteUserAction' = betterproto.message_field(
-        69, group='action',
+    sensors_action: 'SensorsAction' = betterproto.message_field(69, group='action')
+    sensors_report_reading_action: 'SensorsReportReadingAction' = (
+        betterproto.message_field(70, group='action')
     )
-    users_reset_password_action: 'UsersResetPasswordAction' = betterproto.message_field(
-        70, group='action',
-    )
-    voice_action: 'VoiceAction' = betterproto.message_field(71, group='action')
-    voice_set_engine_action: 'VoiceSetEngineAction' = betterproto.message_field(
+    users_action: 'UsersAction' = betterproto.message_field(71, group='action')
+    users_create_user_action: 'UsersCreateUserAction' = betterproto.message_field(
         72, group='action',
     )
-    voice_read_text_action: 'VoiceReadTextAction' = betterproto.message_field(
+    users_delete_user_action: 'UsersDeleteUserAction' = betterproto.message_field(
         73, group='action',
     )
-    vs_code_action: 'VsCodeAction' = betterproto.message_field(74, group='action')
-    vs_code_start_downloading_action: 'VsCodeStartDownloadingAction' = (
-        betterproto.message_field(75, group='action')
+    users_reset_password_action: 'UsersResetPasswordAction' = betterproto.message_field(
+        74, group='action',
     )
+    users_set_users_action: 'UsersSetUsersAction' = betterproto.message_field(
+        75, group='action',
+    )
+    vs_code_action: 'VsCodeAction' = betterproto.message_field(76, group='action')
     vs_code_done_downloading_action: 'VsCodeDoneDownloadingAction' = (
-        betterproto.message_field(76, group='action')
+        betterproto.message_field(77, group='action')
     )
     vs_code_set_pending_action: 'VsCodeSetPendingAction' = betterproto.message_field(
-        77, group='action',
-    )
-    vs_code_set_status_action: 'VsCodeSetStatusAction' = betterproto.message_field(
         78, group='action',
     )
-    wi_fi_action: 'WiFiAction' = betterproto.message_field(79, group='action')
-    wi_fi_set_has_visited_onboarding_action: 'WiFiSetHasVisitedOnboardingAction' = (
+    vs_code_set_status_action: 'VsCodeSetStatusAction' = betterproto.message_field(
+        79, group='action',
+    )
+    vs_code_start_downloading_action: 'VsCodeStartDownloadingAction' = (
         betterproto.message_field(80, group='action')
     )
+    voice_action: 'VoiceAction' = betterproto.message_field(81, group='action')
+    voice_read_text_action: 'VoiceReadTextAction' = betterproto.message_field(
+        82, group='action',
+    )
+    voice_set_engine_action: 'VoiceSetEngineAction' = betterproto.message_field(
+        83, group='action',
+    )
+    wi_fi_action: 'WiFiAction' = betterproto.message_field(84, group='action')
+    wi_fi_set_has_visited_onboarding_action: 'WiFiSetHasVisitedOnboardingAction' = (
+        betterproto.message_field(85, group='action')
+    )
     wi_fi_update_action: 'WiFiUpdateAction' = betterproto.message_field(
-        81, group='action',
+        86, group='action',
     )
     wi_fi_update_request_action: 'WiFiUpdateRequestAction' = betterproto.message_field(
-        82, group='action',
+        87, group='action',
     )
 
 
 @dataclass(eq=False, repr=False)
 class Event(betterproto.Message):
-    screenshot_event: 'ScreenshotEvent' = betterproto.message_field(1, group='event')
-    snapshot_event: 'SnapshotEvent' = betterproto.message_field(2, group='event')
-    audio_event: 'AudioEvent' = betterproto.message_field(3, group='event')
-    audio_play_chime_event: 'AudioPlayChimeEvent' = betterproto.message_field(
-        4, group='event',
-    )
+    audio_event: 'AudioEvent' = betterproto.message_field(1, group='event')
     audio_play_audio_event: 'AudioPlayAudioEvent' = betterproto.message_field(
-        5, group='event',
+        2, group='event',
+    )
+    audio_play_chime_event: 'AudioPlayChimeEvent' = betterproto.message_field(
+        3, group='event',
     )
     audio_playback_done_event: 'AudioPlaybackDoneEvent' = betterproto.message_field(
-        6, group='event',
+        4, group='event',
     )
-    camera_event: 'CameraEvent' = betterproto.message_field(7, group='event')
+    camera_event: 'CameraEvent' = betterproto.message_field(5, group='event')
     camera_start_viewfinder_event: 'CameraStartViewfinderEvent' = (
-        betterproto.message_field(8, group='event')
+        betterproto.message_field(6, group='event')
     )
     camera_stop_viewfinder_event: 'CameraStopViewfinderEvent' = (
-        betterproto.message_field(9, group='event')
-    )
-    camera_barcode_event: 'CameraBarcodeEvent' = betterproto.message_field(
-        10, group='event',
-    )
-    display_event: 'DisplayEvent' = betterproto.message_field(11, group='event')
-    display_render_event: 'DisplayRenderEvent' = betterproto.message_field(
-        12, group='event',
+        betterproto.message_field(7, group='event')
     )
     display_compressed_render_event: 'DisplayCompressedRenderEvent' = (
-        betterproto.message_field(13, group='event')
+        betterproto.message_field(8, group='event')
     )
-    docker_event: 'DockerEvent' = betterproto.message_field(14, group='event')
+    display_event: 'DisplayEvent' = betterproto.message_field(9, group='event')
+    display_render_event: 'DisplayRenderEvent' = betterproto.message_field(
+        10, group='event',
+    )
+    docker_event: 'DockerEvent' = betterproto.message_field(11, group='event')
     docker_image_event: 'DockerImageEvent' = betterproto.message_field(
-        15, group='event',
+        12, group='event',
     )
     docker_image_register_app_event: 'DockerImageRegisterAppEvent' = (
-        betterproto.message_field(16, group='event')
+        betterproto.message_field(13, group='event')
+    )
+    input_cancel_event: 'InputCancelEvent' = betterproto.message_field(
+        14, group='event',
+    )
+    input_provide_event: 'InputProvideEvent' = betterproto.message_field(
+        15, group='event',
+    )
+    input_resolve_event: 'InputResolveEvent' = betterproto.message_field(
+        16, group='event',
     )
     ip_event: 'IpEvent' = betterproto.message_field(17, group='event')
     keypad_event: 'KeypadEvent' = betterproto.message_field(18, group='event')
@@ -1915,35 +1961,33 @@ class Event(betterproto.Message):
     keypad_key_release_event: 'KeypadKeyReleaseEvent' = betterproto.message_field(
         20, group='event',
     )
-    notifications_event: 'NotificationsEvent' = betterproto.message_field(
+    notifications_clear_event: 'NotificationsClearEvent' = betterproto.message_field(
         21, group='event',
     )
-    notifications_clear_event: 'NotificationsClearEvent' = betterproto.message_field(
-        22, group='event',
-    )
     notifications_display_event: 'NotificationsDisplayEvent' = (
-        betterproto.message_field(23, group='event')
+        betterproto.message_field(22, group='event')
     )
-    rgb_ring_event: 'RgbRingEvent' = betterproto.message_field(24, group='event')
-    rgb_ring_command_event: 'RgbRingCommandEvent' = betterproto.message_field(
+    notifications_event: 'NotificationsEvent' = betterproto.message_field(
+        23, group='event',
+    )
+    r_pi_connect_event: 'RPiConnectEvent' = betterproto.message_field(24, group='event')
+    r_pi_connect_login_event: 'RPiConnectLoginEvent' = betterproto.message_field(
         25, group='event',
     )
-    r_pi_connect_event: 'RPiConnectEvent' = betterproto.message_field(26, group='event')
-    r_pi_connect_login_event: 'RPiConnectLoginEvent' = betterproto.message_field(
-        27, group='event',
+    rgb_ring_command_event: 'RgbRingCommandEvent' = betterproto.message_field(
+        26, group='event',
     )
-    users_event: 'UsersEvent' = betterproto.message_field(28, group='event')
+    rgb_ring_event: 'RgbRingEvent' = betterproto.message_field(27, group='event')
+    screenshot_event: 'ScreenshotEvent' = betterproto.message_field(28, group='event')
+    snapshot_event: 'SnapshotEvent' = betterproto.message_field(29, group='event')
     users_create_user_event: 'UsersCreateUserEvent' = betterproto.message_field(
-        29, group='event',
-    )
-    users_delete_user_event: 'UsersDeleteUserEvent' = betterproto.message_field(
         30, group='event',
     )
-    users_reset_password_event: 'UsersResetPasswordEvent' = betterproto.message_field(
+    users_delete_user_event: 'UsersDeleteUserEvent' = betterproto.message_field(
         31, group='event',
     )
-    voice_event: 'VoiceEvent' = betterproto.message_field(32, group='event')
-    voice_synthesize_text_event: 'VoiceSynthesizeTextEvent' = betterproto.message_field(
+    users_event: 'UsersEvent' = betterproto.message_field(32, group='event')
+    users_reset_password_event: 'UsersResetPasswordEvent' = betterproto.message_field(
         33, group='event',
     )
     vs_code_event: 'VsCodeEvent' = betterproto.message_field(34, group='event')
@@ -1953,7 +1997,11 @@ class Event(betterproto.Message):
     vs_code_restart_event: 'VsCodeRestartEvent' = betterproto.message_field(
         36, group='event',
     )
-    wi_fi_event: 'WiFiEvent' = betterproto.message_field(37, group='event')
-    wi_fi_update_request_event: 'WiFiUpdateRequestEvent' = betterproto.message_field(
+    voice_event: 'VoiceEvent' = betterproto.message_field(37, group='event')
+    voice_synthesize_text_event: 'VoiceSynthesizeTextEvent' = betterproto.message_field(
         38, group='event',
+    )
+    wi_fi_event: 'WiFiEvent' = betterproto.message_field(39, group='event')
+    wi_fi_update_request_event: 'WiFiUpdateRequestEvent' = betterproto.message_field(
+        40, group='event',
     )

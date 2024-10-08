@@ -32,7 +32,7 @@ DISABLE_GRPC = str_to_bool(os.environ.get('UBO_DISABLE_GRPC', 'False')) == 1
 GRPC_LISTEN_HOST = os.environ.get('UBO_GRPC_LISTEN_HOST', '127.0.0.1')
 GRPC_LISTEN_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 
-WEB_UI_LISTEN_HOST = os.environ.get('UBO_WEB_UI_LISTEN_HOST', '127.0.0.1')
+WEB_UI_LISTEN_HOST = os.environ.get('UBO_WEB_UI_LISTEN_HOST', '0.0.0.0')  # noqa: S104
 WEB_UI_LISTEN_PORT = int(os.environ.get('UBO_WEB_UI_LISTEN_PORT', '21215'))
 WEB_UI_DEBUG_MODE = str_to_bool(os.environ.get('UBO_WEB_UI_DEBUG_MODE', 'False')) == 1
 

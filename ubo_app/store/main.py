@@ -9,14 +9,16 @@ from asyncio import Handle
 from datetime import datetime
 from pathlib import Path
 from types import GenericAlias
-from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin, overload
+from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar, cast, get_origin, overload
 
 import dill
 from fake import Fake
 from immutable import Immutable
 from redux import (
     BaseCombineReducerState,
+    CombineReducerAction,
     CreateStoreOptions,
+    FinishAction,
     FinishEvent,
     InitAction,
     Store,
@@ -25,9 +27,37 @@ from redux import (
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logging import logger
+from ubo_app.store.core import MainAction, MainEvent
 from ubo_app.store.core.reducer import reducer as main_reducer
-from ubo_app.store.operations import UboAction, UboEvent
+from ubo_app.store.input.reducer import reducer as input_reducer
+from ubo_app.store.operations import (
+    InputAction,
+    InputProvideEvent,
+    ScreenshotEvent,
+    SnapshotEvent,
+)
+from ubo_app.store.services.audio import AudioAction, AudioEvent
+from ubo_app.store.services.camera import CameraAction, CameraEvent
+from ubo_app.store.services.display import DisplayAction, DisplayEvent
+from ubo_app.store.services.docker import DockerAction
+from ubo_app.store.services.ip import IpAction, IpEvent
+from ubo_app.store.services.keypad import KeypadAction, KeypadEvent
+from ubo_app.store.services.lightdm import LightDMAction
+from ubo_app.store.services.notifications import (
+    NotificationsAction,
+    NotificationsEvent,
+)
+from ubo_app.store.services.rgb_ring import RgbRingAction
+from ubo_app.store.services.rpi_connect import RPiConnectAction
+from ubo_app.store.services.sensors import SensorsAction
+from ubo_app.store.services.ssh import SSHAction
+from ubo_app.store.services.users import UsersAction, UsersEvent
+from ubo_app.store.services.voice import VoiceAction
+from ubo_app.store.services.vscode import VSCodeAction
+from ubo_app.store.services.wifi import WiFiAction, WiFiEvent
+from ubo_app.store.status_icons import StatusIconsAction
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
+from ubo_app.store.update_manager import UpdateManagerAction
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 from ubo_app.utils.serializer import add_type_field
 
@@ -51,9 +81,54 @@ if TYPE_CHECKING:
     from ubo_app.store.services.users import UsersState
     from ubo_app.store.services.voice import VoiceState
     from ubo_app.store.services.vscode import VSCodeState
+    from ubo_app.store.services.web_ui import WebUIState
     from ubo_app.store.services.wifi import WiFiState
     from ubo_app.store.status_icons import StatusIconsState
     from ubo_app.store.update_manager import UpdateManagerState
+
+UboAction: TypeAlias = (
+    # Core Actions
+    CombineReducerAction
+    | StatusIconsAction
+    | UpdateManagerAction
+    | MainAction
+    | InputAction
+    | InitAction
+    | FinishAction
+    # Services Actions
+    | AudioAction
+    | CameraAction
+    | DisplayAction
+    | DockerAction
+    | IpAction
+    | KeypadAction
+    | LightDMAction
+    | NotificationsAction
+    | RgbRingAction
+    | RPiConnectAction
+    | SensorsAction
+    | SSHAction
+    | UsersAction
+    | VoiceAction
+    | VSCodeAction
+    | WiFiAction
+)
+UboEvent: TypeAlias = (
+    # Core Events
+    MainEvent
+    | ScreenshotEvent
+    | InputProvideEvent
+    # Services Events
+    | AudioEvent
+    | CameraEvent
+    | DisplayEvent
+    | IpEvent
+    | KeypadEvent
+    | NotificationsEvent
+    | SnapshotEvent
+    | UsersEvent
+    | WiFiEvent
+)
 
 if threading.current_thread() is not threading.main_thread():
     msg = 'Store should be created in the main thread'
@@ -89,6 +164,7 @@ class RootState(BaseCombineReducerState):
     users: UsersState
     voice: VoiceState
     vscode: VSCodeState
+    web_ui: WebUIState
     wifi: WiFiState
 
 
@@ -99,6 +175,7 @@ root_reducer, root_reducer_id = combine_reducers(
     main=main_reducer,
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
+    input=input_reducer,
 )
 
 T = TypeVar('T')

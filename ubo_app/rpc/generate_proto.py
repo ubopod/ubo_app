@@ -77,9 +77,9 @@ class _BasicType(_Type):
         current_package: str | None,
     ) -> str:
         _ = name, current_package
-        if self.type == 'UboAction':  # Assuming it is kivy color
+        if self.type == 'UboAction':
             return 'Action'
-        if self.type == 'UboEvent':  # Assuming it is kivy color
+        if self.type == 'UboEvent':
             return 'Event'
         if self.type == 'Color':  # Assuming it is kivy color
             return 'string'
@@ -122,7 +122,7 @@ class _BasicType(_Type):
                 return global_enums[self.type]
             if self.type in global_types:
                 return global_types[self.type]
-            if self.type == 'Color':
+            if self.type in ('Color', 'UboAction', 'UboEvent'):
                 return None
             msg = f'Unknown type "{self.type}"'
             raise TypeError(msg)
@@ -250,7 +250,7 @@ class _UnionType(_Type):
         if len(self.types) > 0:
             definitions += f'  oneof {betterproto.casing.snake_case(name)} {{\n'
             index = 1
-            for item in self.types:
+            for item in sorted(self.types, key=lambda x: x.local_name):
                 try:
                     definitions += f"""  {
                     item.get_embedded_proto(f"{name}_{index}")} {
@@ -599,7 +599,7 @@ def _generate_operations_proto(output_directory: Path) -> None:
     if actions:
         proto += 'message Action {\n'
         proto += '  oneof action {\n'
-        for i, (action, _) in enumerate(actions, 1):
+        for i, (action, _) in enumerate(sorted(actions), 1):
             # proto += f"""    {package_name}.v1.{action} {
             proto += f"""    {action} {
             betterproto.casing.snake_case(action)} = {i};\n"""
@@ -608,7 +608,7 @@ def _generate_operations_proto(output_directory: Path) -> None:
     if events:
         proto += 'message Event {\n'
         proto += '  oneof event {\n'
-        for i, (event, _) in enumerate(events, 1):
+        for i, (event, _) in enumerate(sorted(events), 1):
             # proto += f"""    {package_name}.v1.{event} {
             proto += f"""    {event} {
             betterproto.casing.snake_case(event)} = {i};\n"""

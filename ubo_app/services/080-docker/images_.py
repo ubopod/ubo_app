@@ -15,7 +15,7 @@ from immutable import Immutable
 
 from ubo_app.constants import DEBUG_MODE_DOCKER, DOCKER_PREFIX
 from ubo_app.store.services.notifications import NotificationExtraInformation
-from ubo_app.utils.qrcode import qrcode_input
+from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -115,7 +115,7 @@ IMAGES = {
             path=DOCKER_PREFIX + 'ngrok/ngrok:latest',
             registry='docker.io',
             environment_vairables={
-                'NGROK_AUTHTOKEN': lambda: qrcode_input(
+                'NGROK_AUTHTOKEN': lambda: ubo_input(
                     r'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
                     resolver=lambda code, _: code,
                     prompt='Enter the Ngrok Auth Token',
@@ -137,7 +137,7 @@ Follow these steps:
                     ),
                 ),
             },
-            command=lambda: qrcode_input(
+            command=lambda: ubo_input(
                 '',
                 resolver=lambda code, _: code,
                 prompt='Enter the command, for example: `http 80` or `tcp 22`',

@@ -20,8 +20,7 @@ from ubo_app.rpc.generated.store.v1 import (
 from ubo_app.rpc.generated.ubo.v1 import Event
 from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_group
 from ubo_app.rpc.object_to_message import build_message
-from ubo_app.store.main import store
-from ubo_app.store.operations import UboAction, UboEvent
+from ubo_app.store.main import UboAction, UboEvent, store
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

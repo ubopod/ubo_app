@@ -2,6 +2,10 @@ name: CI/CD
 
 on:
   push:
+    branches:
+      - main
+    tags:
+      - 'v*'
   pull_request:
   workflow_dispatch:
 
@@ -373,17 +377,19 @@ jobs:
     name: Publish
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
-      github.event_name == 'pull_request' && github.head_ref == 'main'
+      github.event_name == 'pull_request' && github.event.pull_request.base.ref
+      == 'main'
     needs:
       - type-check
       - lint
       - test
       - build
-      - images
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/${{ needs.build.outputs.name }}
+      url:
+        https://pypi.org/project/${{ needs.build.outputs.name }}/${{
+        needs.build.outputs.version }}
     permissions:
       id-token: write
     steps:
