@@ -84,6 +84,7 @@
       "usernames": {}
     }
   },
+  "input": null,
   "ip": {
     "_type": "IpState",
     "interfaces": [
@@ -1176,7 +1177,10 @@
     "is_pending": false,
     "status": null
   },
-  "web_ui": null,
+  "web_ui": {
+    "_type": "WebUIState",
+    "active_inputs": []
+  },
   "wifi": {
     "_type": "WiFiState",
     "connections": [],

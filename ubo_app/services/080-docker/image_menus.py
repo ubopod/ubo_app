@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from asyncio import iscoroutine
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import docker
 import docker.errors
@@ -75,7 +75,7 @@ def _reactive_fetch_image(usernames: dict[str, str]) -> Callable[[ImageState], N
             except docker.errors.DockerException:
                 logger.exception(
                     'Image error',
-                    extra={'image': IMAGES[image.id].path},
+                    extra={'image': image.id, 'path': IMAGES[image.id].path},
                 )
                 store.dispatch(
                     DockerImageSetStatusAction(
@@ -104,8 +104,6 @@ async def _process_str(
     | Callable[[], str | Coroutine[Any, Any, str]]
     | Coroutine[Any, Any, str],
 ) -> str: ...
-
-
 @overload
 async def _process_str(
     value: str
@@ -113,8 +111,6 @@ async def _process_str(
     | Coroutine[Any, Any, str | None]
     | None,
 ) -> str | None: ...
-
-
 async def _process_str(
     value: str
     | Callable[[], str | Coroutine[Any, Any, str | None] | None]
@@ -124,7 +120,7 @@ async def _process_str(
     if callable(value):
         value = value()
     if iscoroutine(value):
-        value = cast(str, await value)
+        value = await value
     return value
 
 
@@ -309,17 +305,19 @@ def image_menu(
             ),
         )
 
+    messages = {
+        ImageStatus.NOT_AVAILABLE: 'Image needs to be fetched',
+        ImageStatus.FETCHING: 'Image is being fetched',
+        ImageStatus.AVAILABLE: 'Image is ready but container is not running',
+        ImageStatus.CREATED: 'Container is created but not running',
+        ImageStatus.RUNNING: IMAGES[image.id].note or 'Container is running',
+        ImageStatus.ERROR: 'Image has an error, please check the logs',
+    }
+
     return HeadedMenu(
         title=f'Docker - {IMAGES[image.id].label}',
         heading=IMAGES[image.id].label,
-        sub_heading={
-            ImageStatus.NOT_AVAILABLE: 'Image needs to be fetched',
-            ImageStatus.FETCHING: 'Image is being fetched',
-            ImageStatus.AVAILABLE: 'Image is ready but container is not running',
-            ImageStatus.CREATED: 'Container is created but not running',
-            ImageStatus.RUNNING: IMAGES[image.id].note or 'Container is running',
-            ImageStatus.ERROR: 'Image has an error, please check the logs',
-        }[image.status],
+        sub_heading=messages[image.status],
         items=items,
         placeholder='Waiting...',
     )

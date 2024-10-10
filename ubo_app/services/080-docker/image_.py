@@ -41,7 +41,7 @@ def find_container(client: docker.DockerClient, *, image: str) -> Container | No
 def update_container(image_id: str, container: Container) -> None:
     """Update a container's state in store based on its real state."""
     if container.status == 'running':
-        logger.info(
+        logger.debug(
             'Container running image found',
             extra={'image': image_id, 'path': IMAGES[image_id].path},
         )
@@ -61,7 +61,7 @@ def update_container(image_id: str, container: Container) -> None:
             ),
         )
         return
-    logger.info(
+    logger.debug(
         "Container for the image found, but it's not running",
         extra={'image': image_id, 'path': IMAGES[image_id].path},
     )
@@ -140,7 +140,7 @@ def check_container(image_id: str) -> None:
     path = IMAGES[image_id].path
 
     def act() -> None:
-        logger.info('Checking image', extra={'image': image_id, 'path': path})
+        logger.debug('Checking image', extra={'image': image_id, 'path': path})
         docker_client = docker.from_env()
         try:
             image = docker_client.images.get(path)
@@ -154,14 +154,14 @@ def check_container(image_id: str) -> None:
                         docker_id=image.id,
                     ),
                 )
-            logger.info('Image found', extra={'image': image_id, 'path': path})
+            logger.debug('Image found', extra={'image': image_id, 'path': path})
 
             container = find_container(docker_client, image=path)
             if container:
                 update_container(image_id, container)
                 return
 
-            logger.info(
+            logger.debug(
                 'Container running image not found',
                 extra={'image': image_id, 'path': path},
             )
@@ -172,9 +172,10 @@ def check_container(image_id: str) -> None:
                 ),
             )
         except docker.errors.ImageNotFound:
-            logger.exception(
+            logger.debug(
                 'Image not found',
                 extra={'image': image_id, 'path': path},
+                exc_info=True,
             )
             store.dispatch(
                 DockerImageSetStatusAction(

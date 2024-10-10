@@ -11,7 +11,7 @@ from ubo_gui.menu.types import ActionItem
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_app.store.operations import UboAction, UboEvent
+    from ubo_app.store.main import UboAction, UboEvent
 
 
 def _default_action() -> Callable[[], None]:

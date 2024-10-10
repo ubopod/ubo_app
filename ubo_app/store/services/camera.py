@@ -1,16 +1,24 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+
+if TYPE_CHECKING:
+    from ubo_app.store.operations import InputDescription
 
 
 class CameraAction(BaseAction): ...
 
 
 class CameraStartViewfinderAction(CameraAction):
-    id: str
     pattern: str | None
+
+
+class CameraReportBarcodeAction(CameraAction):
+    codes: list[str]
 
 
 class CameraEvent(BaseEvent): ...
@@ -22,21 +30,6 @@ class CameraStartViewfinderEvent(CameraEvent):
 
 class CameraStopViewfinderEvent(CameraEvent):
     id: str | None
-
-
-class CameraReportBarcodeAction(CameraAction):
-    codes: list[str]
-
-
-class CameraBarcodeEvent(CameraEvent):
-    id: str | None
-    code: str
-    group_dict: dict[str, str | None] | None
-
-
-class InputDescription(Immutable):
-    id: str
-    pattern: str | None
 
 
 class CameraState(Immutable):
