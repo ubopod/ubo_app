@@ -3,6 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <title>ubo - web-ui</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      form {
+        margin: 1em auto;
+        padding: 1em;
+        width: 50%;
+        border: 1px solid #ccc;
+      }
+      input, select {
+        font-size: 1em;
+      }
+      input[type="text"], input[type="password"], select {
+        margin-top: .5em;
+        width: 100%;
+      }
+      small {
+        display: block;
+        margin-top: .5em;
+        font-size: .75em;
+        color: #666;
+      }
+      button[type="submit"] {
+        margin-top: 1em;
+        border: none;
+        padding: .75em;
+        font-size: 1em;
+      }
+    </style>
   </head>
 
   <body>
@@ -11,11 +43,43 @@
         <input name="id" type="hidden" value="{{ input.id }}" />
         <p>
           <label>
-            {{ input.title }}:
-          {% if re.compile(input.pattern).groupindex.keys() | length > 0 %}
+            {{ input.prompt }}:
+            {% if input.fields %}
+              {% for field in input.fields %}
+                <p>
+                  <label>
+                    {{ field.label }}:
+                    {% if field.type == 'select' %}
+                      <select name="{{ field.name }}">
+                        {% for option in field.options %}
+                          <option
+                            value="{{ option }}"
+                            {{ ' selected="selected"' if option == field.default else '' }}
+                          >
+                            {{ option }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    {% else %}
+                      <input
+                        type="{{ field.type }}"
+                        name="{{ field.name }}"
+                        {{ 'value="' ~ field.default ~ '"' if field.default else '' }}
+                        {{ 'title="' ~ field.title ~ '"' if field.title else '' }}
+                        {{ 'pattern="' ~ field.pattern ~ '"' if field.pattern else '' }}
+                        {{ 'required' if field.required else '' }}
+                      />
+                    {% endif %}
+                    {% if field.description %}
+                      <small>{{ field.description }}</small>
+                    {% endif %}
+                  </label>
+                </p>
+              {% endfor %}
+            {% elif input.pattern and re.compile(input.pattern).groupindex.keys() | length > 0 %}
               {%
                 for group_name in
-                re.compile(input.pattern).groupindex.keys() | map('replace', '_', '')|list|unique
+                re.compile(input.pattern).groupindex.keys() | map('regex_replace', '_+$', '') | list | unique
               %}
                 <p>
                   <label>
@@ -29,8 +93,8 @@
             {% endif %}
           </label>
         </p>
-        <input type="submit" value="provide" name='action' />
-        <input type="submit" value="cancel" name='action' />
+        <button type="submit" name="action" value="provide">Provide</button>
+        <button type="submit" name="action" value="cancel">Cancel</button>
         {% if not loop.last %}
           <hr />
         {% endif %}

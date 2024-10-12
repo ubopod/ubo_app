@@ -19,6 +19,7 @@ from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
+from ubo_app.store.services.notifications import NotificationExtraInformation
 from ubo_app.store.services.voice import (
     VoiceEngine,
     VoiceReadTextAction,
@@ -74,10 +75,13 @@ def input_access_key() -> None:
         try:
             access_key = (
                 await ubo_input(
-                    '.*',
-                    prompt='Convert the Picovoice access key to a QR code and '
-                    'scan it.',
                     title='Picovoice Access Key',
+                    extra_information=NotificationExtraInformation(
+                        text='Convert the Picovoice access key to a QR code and scan '
+                        'it',
+                    ),
+                    prompt='Enter Picovoice Access Key',
+                    fields=[],
                 )
             )[0]
             secrets.write_secret(key=PICOVOICE_ACCESS_KEY, value=access_key)

@@ -144,7 +144,10 @@ def reducer(
                             InputProvideAction(
                                 id=state.current.id,
                                 value=code,
-                                data=match.groupdict(),
+                                data={
+                                    key.rstrip('_'): value
+                                    for key, value in match.groupdict().items()
+                                },
                             ),
                         ],
                         events=[

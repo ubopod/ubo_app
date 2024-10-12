@@ -14,6 +14,7 @@ from ubo_app.store.operations import (
     InputCancelEvent,
     InputDemandAction,
     InputDescription,
+    InputFieldDescription,
     InputProvideEvent,
 )
 from ubo_app.store.services.camera import CameraStopViewfinderEvent
@@ -32,27 +33,47 @@ ReturnType = TypeVar('ReturnType', infer_variance=True)
 
 @overload
 async def ubo_input(
-    pattern: str,
     *,
     prompt: str | None = None,
     extra_information: NotificationExtraInformation | None = None,
     title: str | None = None,
+    pattern: str,
+    fields: list[InputFieldDescription] | None = None,
 ) -> tuple[str, InputResultGroupDict]: ...
 @overload
 async def ubo_input(
-    pattern: str,
     *,
     prompt: str | None = None,
     extra_information: NotificationExtraInformation | None = None,
     title: str | None = None,
+    fields: list[InputFieldDescription],
+) -> tuple[str, InputResultGroupDict]: ...
+@overload
+async def ubo_input(
+    *,
+    prompt: str | None = None,
+    extra_information: NotificationExtraInformation | None = None,
+    title: str | None = None,
+    pattern: str,
+    fields: list[InputFieldDescription] | None = None,
     resolver: Callable[[str, InputResultGroupDict], ReturnType],
 ) -> ReturnType: ...
+@overload
 async def ubo_input(
-    pattern: str,
     *,
     prompt: str | None = None,
     extra_information: NotificationExtraInformation | None = None,
     title: str | None = None,
+    fields: list[InputFieldDescription],
+    resolver: Callable[[str, InputResultGroupDict], ReturnType],
+) -> ReturnType: ...
+async def ubo_input(  # noqa: PLR0913
+    *,
+    prompt: str | None = None,
+    extra_information: NotificationExtraInformation | None = None,
+    title: str | None = None,
+    pattern: str | None = None,
+    fields: list[InputFieldDescription] | None = None,
     resolver: Callable[[str, InputResultGroupDict], ReturnType] | None = None,
 ) -> tuple[str, InputResultGroupDict] | ReturnType:
     """Input the user in an imperative way."""
@@ -131,6 +152,7 @@ async def ubo_input(
                 extra_information=extra_information,
                 id=prompt_id,
                 pattern=pattern,
+                fields=fields,
             ),
         ),
     )

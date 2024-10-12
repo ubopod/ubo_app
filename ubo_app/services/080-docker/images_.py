@@ -116,7 +116,6 @@ IMAGES = {
             registry='docker.io',
             environment_vairables={
                 'NGROK_AUTHTOKEN': lambda: ubo_input(
-                    r'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
                     resolver=lambda code, _: code,
                     prompt='Enter the Ngrok Auth Token',
                     extra_information=NotificationExtraInformation(
@@ -135,10 +134,10 @@ Follow these steps:
 3. Convert it to {QR|K Y UW AA R} code
 4. Scan QR code to input the token""",
                     ),
+                    pattern=rf'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
                 ),
             },
             command=lambda: ubo_input(
-                '',
                 resolver=lambda code, _: code,
                 prompt='Enter the command, for example: `http 80` or `tcp 22`',
                 extra_information=NotificationExtraInformation(
@@ -148,6 +147,7 @@ Follow these steps:
 This is the command you would enter when running {ngrok|EH N G EH R AA K}.
 Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
                 ),
+                fields=[],
             ),
         ),
         *(
