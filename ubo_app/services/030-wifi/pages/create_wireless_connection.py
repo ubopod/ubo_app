@@ -15,6 +15,7 @@ from wifi_manager import add_wireless_connection
 from ubo_app.logging import logger
 from ubo_app.store.core import CloseApplicationEvent
 from ubo_app.store.main import store
+from ubo_app.store.operations import InputFieldDescription, InputFieldType
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -55,8 +56,7 @@ class CreateWirelessConnectionPage(PageWidget):
 
     async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
         try:
-            _, match = await ubo_input(
-                BARCODE_PATTERN,
+            _, data = await ubo_input(
                 prompt='Enter WiFi connection',
                 extra_information=NotificationExtraInformation(
                     text='Go to your phone settings, choose QR code and hold it in '
@@ -64,27 +64,59 @@ class CreateWirelessConnectionPage(PageWidget):
                     picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '
                     'code and hold it in front of the camera to scan it.',
                 ),
+                pattern=BARCODE_PATTERN,
+                fields=[
+                    InputFieldDescription(
+                        name='SSID',
+                        label='SSID',
+                        type=InputFieldType.TEXT,
+                        description='The name of the WiFi network',
+                        required=True,
+                    ),
+                    InputFieldDescription(
+                        name='Password',
+                        label='Password',
+                        type=InputFieldType.PASSWORD,
+                        description='The password of the WiFi network',
+                        required=False,
+                    ),
+                    InputFieldDescription(
+                        name='Type',
+                        label='Type',
+                        type=InputFieldType.SELECT,
+                        description='The type of the WiFi network',
+                        default='WPA2',
+                        options=['WEP', 'WPA', 'WPA2', 'nopass'],
+                        required=False,
+                    ),
+                    InputFieldDescription(
+                        name='Hidden',
+                        label='Hidden',
+                        type=InputFieldType.CHECKBOX,
+                        description='Is the WiFi network hidden?',
+                        default='false',
+                        required=False,
+                    ),
+                ],
             )
         except asyncio.CancelledError:
             store.dispatch(CloseApplicationEvent(application=self))
             return
 
-        if not match:
+        if not data:
             store.dispatch(CloseApplicationEvent(application=self))
             return
-        ssid = match.get('SSID') or match.get('SSID_')
+        ssid = data.get('SSID') or data.get('SSID_')
         if ssid is None:
             store.dispatch(CloseApplicationEvent(application=self))
             return
 
-        password = match.get('Password') or match.get('Password_')
-        type = match.get('Type') or match.get('Type_')
+        password = data.get('Password') or data.get('Password_')
+        type = data.get('Type') or data.get('Type_')
         if type:
             type = type.upper()
         type = cast(WiFiType, type)
-        hidden = (
-            str_to_bool(match.get('Hidden') or match.get('Hidden_') or 'false') == 1
-        )
+        hidden = str_to_bool(data.get('Hidden') or data.get('Hidden_') or 'false') == 1
 
         if not password:
             logger.warning('Password is required')
