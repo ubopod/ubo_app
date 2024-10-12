@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
@@ -19,6 +20,35 @@ class SnapshotEvent(BaseEvent):
     """Event for taking a snapshot of the store."""
 
 
+class InputFieldType(StrEnum):
+    """Enumeration of input field types."""
+
+    LONG = 'long'
+    TEXT = 'text'
+    PASSWORD = 'password'  # noqa: S105
+    NUMBER = 'number'
+    CHECKBOX = 'checkbox'
+    COLOR = 'color'
+    SELECT = 'select'
+    FILE = 'file'
+    DATE = 'date'
+    TIME = 'time'
+
+
+class InputFieldDescription(Immutable):
+    """Description of an input field in an input demand."""
+
+    name: str
+    label: str
+    type: InputFieldType
+    description: str | None = None
+    title: str | None = None
+    pattern: str | None = None
+    default: str | None = None
+    options: list[str] | None = None
+    required: bool = False
+
+
 class InputDescription(Immutable):
     """Description of an input demand."""
 
@@ -27,6 +57,7 @@ class InputDescription(Immutable):
     extra_information: NotificationExtraInformation | None = None
     id: str
     pattern: str | None
+    fields: list[InputFieldDescription] | None = None
 
 
 class InputAction(BaseAction):

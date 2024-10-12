@@ -9,6 +9,7 @@
 - refactor(core): avoid truncating or coloring logs in log files
 - feat(web-ui): add web-ui service
 - feat(web-ui): process input demands, dispatched on the bus
+- feat(web-ui): add `fields` in `InputDescription` with `InputFieldDescription` data structures to describe the fields of an input demand in detail
 - fix(users): avoid setting user as sudoer when it performs a password reset
 
 ## Version 1.0.0
