@@ -8,6 +8,7 @@
 - chore: remove what has remained from poetry in the codebase
 - refactor(core): avoid truncating or coloring logs in log files
 - feat(web-ui): add web-ui service
+- fix(users): avoid setting user as sudoer when it performs a password reset
 
 ## Version 1.0.0
 
