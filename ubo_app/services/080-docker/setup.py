@@ -23,6 +23,7 @@ from ubo_app.store.core import (
     SettingsCategory,
 )
 from ubo_app.store.main import store
+from ubo_app.store.operations import InputFieldDescription, InputFieldType
 from ubo_app.store.services.docker import (
     DockerImageRegisterAppEvent,
     DockerRemoveUsernameAction,
@@ -210,10 +211,7 @@ def input_credentials() -> None:
         try:
             credentials = (
                 await ubo_input(
-                    r'^(?P<Service>[^|]*)\|(?P<Username>[^|]*)\|(?P<Password>[^|]*)$|'
-                    r'(?P<Username_>^[^|]*)|(?P<Password_>[^|]*)$',
-                    prompt='Format: [i]SERVICE|USERNAME|PASSWORD[/i]',
-                    title='Enter Docker Credentials',
+                    prompt='Enter Docker Credentials',
                     extra_information=NotificationExtraInformation(
                         text="""To generate your QR code for login, format your \
 details by separating your service, username, and password with the pipe symbol. For \
@@ -232,6 +230,30 @@ pipe symbol. For example, format it as "docker {.|D AA T} io {.|P AY P} johndoe 
 omit the service name, "docker {.|D AA T} io" will automatically be used as the \
 default.""",
                     ),
+                    pattern=r'^(?P<Service>[^|]*)\|(?P<Username>[^|]*)\|(?P<Password>[^|]*)$|'
+                    r'(?P<Username_>^[^|]*)|(?P<Password_>[^|]*)$',
+                    fields=[
+                        InputFieldDescription(
+                            name='Service',
+                            label='Service',
+                            type=InputFieldType.TEXT,
+                            description='The service name',
+                            default='docker.io',
+                            required=False,
+                        ),
+                        InputFieldDescription(
+                            name='Username',
+                            label='Username',
+                            type=InputFieldType.TEXT,
+                            required=True,
+                        ),
+                        InputFieldDescription(
+                            name='Password',
+                            label='Password',
+                            type=InputFieldType.PASSWORD,
+                            required=True,
+                        ),
+                    ],
                 )
             )[1]
             if not credentials:
