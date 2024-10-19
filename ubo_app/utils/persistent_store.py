@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import json.decoder
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast, overload
 
@@ -35,7 +36,7 @@ def register_persistent_store(
         with persistent_store_lock.write_lock():
             try:
                 current_state = json.loads(Path(PERSISTENT_STORE_PATH).read_text())
-            except FileNotFoundError:
+            except (FileNotFoundError, json.decoder.JSONDecodeError):
                 current_state = {}
             serialized_value = store.serialize_value(value)
             current_state[key] = serialized_value
@@ -84,7 +85,7 @@ def read_from_persistent_store(
         with persistent_store_lock.read_lock():
             file_content = Path(PERSISTENT_STORE_PATH).read_text()
         current_state = json.loads(file_content)
-    except FileNotFoundError:
+    except (FileNotFoundError, json.decoder.JSONDecodeError):
         current_state = {}
     value = current_state.get(key)
     if value is None:

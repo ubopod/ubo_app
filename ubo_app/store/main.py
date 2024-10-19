@@ -41,7 +41,7 @@ from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.display import DisplayAction, DisplayEvent
 from ubo_app.store.services.docker import DockerAction
 from ubo_app.store.services.ip import IpAction, IpEvent
-from ubo_app.store.services.keypad import KeypadAction, KeypadEvent
+from ubo_app.store.services.keypad import KeypadAction
 from ubo_app.store.services.lightdm import LightDMAction
 from ubo_app.store.services.notifications import (
     NotificationsAction,
@@ -123,7 +123,6 @@ UboEvent: TypeAlias = (
     | CameraEvent
     | DisplayEvent
     | IpEvent
-    | KeypadEvent
     | NotificationsEvent
     | SnapshotEvent
     | UsersEvent

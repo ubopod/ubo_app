@@ -10,6 +10,7 @@
 - feat(web-ui): add web-ui service
 - fix(users): avoid setting user as sudoer when it performs a password reset
 - feat(web-ui): process input demands, dispatched on the bus
+- feat(keypad): ability to use key-combinations, set key combinations for screenshot, snapshot and quit
 
 ## Version 1.0.0
 

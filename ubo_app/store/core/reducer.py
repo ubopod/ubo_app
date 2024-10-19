@@ -7,6 +7,7 @@ from typing import cast
 
 from redux import (
     CompleteReducerResult,
+    FinishEvent,
     InitAction,
     InitializationActionError,
     ReducerResult,
@@ -16,6 +17,12 @@ from ubo_app.store.core import (
     InitEvent,
     MainAction,
     MainState,
+    MenuChooseByIndexEvent,
+    MenuEvent,
+    MenuGoBackEvent,
+    MenuGoHomeEvent,
+    MenuScrollDirection,
+    MenuScrollEvent,
     PowerEvent,
     PowerOffAction,
     PowerOffEvent,
@@ -25,14 +32,12 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     SetMenuPathAction,
 )
+from ubo_app.store.operations import ScreenshotEvent, SnapshotEvent
 from ubo_app.store.services.audio import AudioChangeVolumeAction, AudioDevice
 from ubo_app.store.services.keypad import (
     Key,
-    KeypadEvent,
     KeypadKeyPressAction,
-    KeypadKeyPressEvent,
     KeypadKeyReleaseAction,
-    KeypadKeyReleaseEvent,
 )
 
 
@@ -42,7 +47,7 @@ def reducer(
 ) -> ReducerResult[
     MainState,
     AudioChangeVolumeAction,
-    KeypadEvent | InitEvent | PowerEvent,
+    InitEvent | MenuEvent | ScreenshotEvent | SnapshotEvent | FinishEvent | PowerEvent,
 ]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
@@ -57,30 +62,85 @@ def reducer(
         raise InitializationActionError(action)
 
     if isinstance(action, KeypadKeyPressAction):
-        actions: list[AudioChangeVolumeAction] = []
-        events: list[KeypadKeyPressEvent] = []
-        if action.key == Key.UP and state.depth == 1:
-            actions = [
-                AudioChangeVolumeAction(
-                    amount=0.05,
-                    device=AudioDevice.OUTPUT,
-                ),
-            ]
-        elif action.key == Key.DOWN and state.depth == 1:
-            actions = [
-                AudioChangeVolumeAction(
-                    amount=-0.05,
-                    device=AudioDevice.OUTPUT,
-                ),
-            ]
+        if action.pressed_keys == {action.key}:
+            if action.key == Key.UP and state.depth == 1:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        AudioChangeVolumeAction(
+                            amount=0.05,
+                            device=AudioDevice.OUTPUT,
+                        ),
+                    ],
+                )
+            if action.key == Key.DOWN and state.depth == 1:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        AudioChangeVolumeAction(
+                            amount=-0.05,
+                            device=AudioDevice.OUTPUT,
+                        ),
+                    ],
+                )
+
+            if action.key == Key.L1:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[MenuChooseByIndexEvent(index=0)],
+                )
+            if action.key == Key.L2:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[MenuChooseByIndexEvent(index=1)],
+                )
+            if action.key == Key.L3:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[MenuChooseByIndexEvent(index=2)],
+                )
+            if action.key == Key.UP:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
+                )
+            if action.key == Key.DOWN:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[MenuScrollEvent(direction=MenuScrollDirection.DOWN)],
+                )
         else:
-            events = [KeypadKeyPressEvent(key=action.key, time=action.time)]
-        return CompleteReducerResult(state=state, actions=actions, events=events)
+            if action.pressed_keys == {Key.HOME, Key.L1} and action.key == Key.L1:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[ScreenshotEvent()],
+                )
+            if action.pressed_keys == {Key.HOME, Key.L2} and action.key == Key.L2:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[SnapshotEvent()],
+                )
+            if action.pressed_keys == {Key.HOME, Key.BACK} and action.key == Key.BACK:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[FinishEvent()],
+                )
+        return state
+
     if isinstance(action, KeypadKeyReleaseAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[KeypadKeyReleaseEvent(key=action.key, time=action.time)],
-        )
+        if len(action.pressed_keys) == 0:
+            if action.key == Key.BACK:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[MenuGoBackEvent()],
+                )
+            if action.key == Key.HOME:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[MenuGoHomeEvent()],
+                )
+
+        return state
 
     if isinstance(action, RegisterSettingAppAction):
         parent_index = 1

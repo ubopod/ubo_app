@@ -66,13 +66,14 @@ def write_image(image_path: Path, array: NDArray) -> None:
     import png
 
     png.Writer(
+        alpha=True,
         width=array.shape[0],
         height=array.shape[1],
         greyscale=False,  # pyright: ignore [reportArgumentType]
         bitdepth=8,
     ).write(
         image_path.open('wb'),
-        array.reshape(-1, array.shape[0] * 3).tolist(),
+        array.reshape(-1, array.shape[1] * 4).tolist(),
     )
 
 
@@ -90,7 +91,11 @@ def take_screenshot() -> None:
 
 def take_snapshot() -> None:
     """Take a snapshot of the store."""
-    path = Path('snapshot.json')
+    counter = 0
+    while (path := Path(f'snapshots/ubo-screenshot-{counter:03d}.png')).exists():
+        counter += 1
+
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(store.snapshot, indent=2))
 
 

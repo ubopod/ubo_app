@@ -143,6 +143,7 @@ class Keypad:
         self.on_button_event(
             index=MIC_INDEX,
             status='released' if is_mic_active else 'pressed',
+            pressed_buttons=[],
         )
 
         # This should always be the last line of this method
@@ -188,31 +189,66 @@ class Keypad:
         # or risign (0->1) indicating a release action
         index = (int)(math.log2(change_mask))
         self.logger.info('button index', extra={'button_index': index})
+
+        # Check for multiple button presses
+        pressed_buttons = [
+            i for i in range(8) if i in KEY_INDEX and inputs & 1 << i == 0
+        ]
+
         # Check for rising edge or falling edge action (press or release)
         if (self.previous_inputs & change_mask) == 0:
             self.logger.info(
                 'Button pressed',
-                extra={'button': str(index)},
+                extra={
+                    'button': str(index),
+                    'pressed_buttons': pressed_buttons,
+                },
             )
-            self.on_button_event(index=index, status='released')
+            self.on_button_event(
+                index=index,
+                status='released',
+                pressed_buttons=pressed_buttons,
+            )
         else:
             self.logger.info(
                 'Button released',
-                extra={'button': str(index)},
+                extra={
+                    'button': str(index),
+                    'pressed_buttons': pressed_buttons,
+                },
             )
-            self.on_button_event(index=index, status='pressed')
+            self.on_button_event(
+                index=index,
+                status='pressed',
+                pressed_buttons=pressed_buttons,
+            )
 
         self.previous_inputs = inputs
 
     @staticmethod
-    def on_button_event(*, index: int, status: ButtonStatus) -> None:
+    def on_button_event(
+        *,
+        index: int,
+        status: ButtonStatus,
+        pressed_buttons: list[int],
+    ) -> None:
         from ubo_app.store.main import store
 
         if index in KEY_INDEX:
             if status == 'pressed':
-                store.dispatch(KeypadKeyPressAction(key=KEY_INDEX[index]))
+                store.dispatch(
+                    KeypadKeyPressAction(
+                        key=KEY_INDEX[index],
+                        pressed_keys={KEY_INDEX[i] for i in pressed_buttons},
+                    ),
+                )
             elif status == 'released':
-                store.dispatch(KeypadKeyReleaseAction(key=KEY_INDEX[index]))
+                store.dispatch(
+                    KeypadKeyReleaseAction(
+                        key=KEY_INDEX[index],
+                        pressed_keys={KEY_INDEX[i] for i in pressed_buttons},
+                    ),
+                )
         if index == MIC_INDEX:
             store.dispatch(
                 AudioSetMuteStatusAction(

@@ -15,15 +15,16 @@ from ubo_app.constants import DEBUG_MODE_MENU
 from ubo_app.logging import logger
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core import (
-    ChooseMenuItemByIconEvent,
-    ChooseMenuItemByIndexEvent,
-    ChooseMenuItemByLabelEvent,
     CloseApplicationEvent,
+    MenuChooseByIconEvent,
+    MenuChooseByIndexEvent,
+    MenuChooseByLabelEvent,
+    MenuGoBackEvent,
+    MenuGoHomeEvent,
     OpenApplicationEvent,
     SetMenuPathAction,
 )
 from ubo_app.store.main import store
-from ubo_app.store.services.keypad import Key, KeypadKeyPressEvent
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
 from ubo_app.store.update_manager import UpdateManagerSetUpdateServiceStatusAction
 from ubo_app.utils.async_ import create_task
@@ -130,12 +131,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 
         store.subscribe_event(
-            KeypadKeyPressEvent,
-            self.handle_key_press_event,
-            keep_ref=False,
-        )
-
-        store.subscribe_event(
             NotificationsDisplayEvent,
             self.display_notification,
             keep_ref=False,
@@ -152,42 +147,32 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             keep_ref=False,
         )
         store.subscribe_event(
-            ChooseMenuItemByIconEvent,
+            MenuGoHomeEvent,
+            self.go_home,
+            keep_ref=False,
+        )
+        store.subscribe_event(
+            MenuGoBackEvent,
+            self.go_back,
+            keep_ref=False,
+        )
+        store.subscribe_event(
+            MenuChooseByIconEvent,
             self.select_by_icon,
             keep_ref=False,
         )
         store.subscribe_event(
-            ChooseMenuItemByLabelEvent,
+            MenuChooseByLabelEvent,
             self.select_by_label,
             keep_ref=False,
         )
         store.subscribe_event(
-            ChooseMenuItemByIndexEvent,
+            MenuChooseByIndexEvent,
             self.select_by_index,
             keep_ref=False,
         )
 
         return self.menu_widget
-
-    @mainthread
-    def handle_key_press_event(
-        self: MenuAppCentral,
-        key_press_event: KeypadKeyPressEvent,
-    ) -> None:
-        if key_press_event.key == Key.L1:
-            self.menu_widget.select(0)
-        if key_press_event.key == Key.L2:
-            self.menu_widget.select(1)
-        if key_press_event.key == Key.L3:
-            self.menu_widget.select(2)
-        if key_press_event.key == Key.UP:
-            self.menu_widget.go_up()
-        if key_press_event.key == Key.DOWN:
-            self.menu_widget.go_down()
-        if key_press_event.key == Key.BACK:
-            self.menu_widget.go_back()
-        if key_press_event.key == Key.HOME:
-            self.menu_widget.go_home()
 
     @mainthread
     def open_application(self: MenuAppCentral, event: OpenApplicationEvent) -> None:
@@ -198,7 +183,15 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.menu_widget.close_application(event.application)
 
     @mainthread
-    def select_by_icon(self: MenuAppCentral, event: ChooseMenuItemByIconEvent) -> None:
+    def go_home(self: MenuAppCentral, _: MenuGoHomeEvent) -> None:
+        self.menu_widget.go_home()
+
+    @mainthread
+    def go_back(self: MenuAppCentral, _: MenuGoBackEvent) -> None:
+        self.menu_widget.go_back()
+
+    @mainthread
+    def select_by_icon(self: MenuAppCentral, event: MenuChooseByIconEvent) -> None:
         current_page = self.menu_widget.current_screen
         if current_page is None:
             msg = 'No current page'
@@ -219,7 +212,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     @mainthread
     def select_by_label(
         self: MenuAppCentral,
-        event: ChooseMenuItemByLabelEvent,
+        event: MenuChooseByLabelEvent,
     ) -> None:
         current_page = self.menu_widget.current_screen
         if current_page is None:
@@ -241,6 +234,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     @mainthread
     def select_by_index(
         self: MenuAppCentral,
-        event: ChooseMenuItemByIndexEvent,
+        event: MenuChooseByIndexEvent,
     ) -> None:
         self.menu_widget.select(event.index)

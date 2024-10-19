@@ -5,7 +5,7 @@ import time
 from dataclasses import field
 from enum import StrEnum
 
-from redux import BaseAction, BaseEvent
+from redux import BaseAction
 
 
 class Key(StrEnum):
@@ -20,6 +20,7 @@ class Key(StrEnum):
 
 class KeypadAction(BaseAction):
     key: Key
+    pressed_keys: set[Key]
     time: float = field(default_factory=time.time)
 
 
@@ -33,14 +34,3 @@ class KeypadKeyPressAction(KeypadAction): ...
 
 
 class KeypadKeyReleaseAction(KeypadAction): ...
-
-
-class KeypadEvent(BaseEvent):
-    key: Key
-    time: float
-
-
-class KeypadKeyPressEvent(KeypadEvent): ...
-
-
-class KeypadKeyReleaseEvent(KeypadEvent): ...

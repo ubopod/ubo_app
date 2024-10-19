@@ -17,6 +17,11 @@ class SettingsCategory(StrEnum):
     DOCKER = 'Docker'
 
 
+class MenuScrollDirection(StrEnum):
+    UP = 'up'
+    DOWN = 'down'
+
+
 SETTINGS_ICONS = {
     SettingsCategory.NETWORK: '󰛳',
     SettingsCategory.REMOTE: '󰑔',
@@ -81,21 +86,29 @@ class MainEvent(BaseEvent): ...
 class InitEvent(MainEvent): ...
 
 
-class ChooseMenuItemByIconEvent(MainEvent):
+class MenuEvent(MainEvent): ...
+
+
+class MenuGoBackEvent(MenuEvent): ...
+
+
+class MenuGoHomeEvent(MenuEvent): ...
+
+
+class MenuChooseByIconEvent(MenuEvent):
     icon: str
 
 
-class ChooseMenuItemByLabelEvent(MainEvent):
+class MenuChooseByLabelEvent(MenuEvent):
     label: str
 
 
-class ChooseMenuItemByIndexEvent(MainEvent):
+class MenuChooseByIndexEvent(MenuEvent):
     index: int
 
 
-ChooseMenuItemEvent = (
-    ChooseMenuItemByIconEvent | ChooseMenuItemByLabelEvent | ChooseMenuItemByIndexEvent
-)
+class MenuScrollEvent(MenuEvent):
+    direction: MenuScrollDirection
 
 
 class OpenApplicationEvent(MainEvent):

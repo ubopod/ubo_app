@@ -55,6 +55,12 @@ version-file = "ubo_app/_version.py"
 [tool.hatch.version.raw-options]
 local_scheme = "setup_scm_schemes:local_scheme"
 
+[tool.hatch.build]
+packages = ["ubo_app"]
+
+[tool.hatch.build.targets.sdist]
+packages = ["ubo_app"]
+
 [tool.uv]
 dev-dependencies = [
   "headless-kivy [test] >=0.9.8",
@@ -182,6 +188,7 @@ profile = "black"
 
 [tool.pyright]
 exclude = ["typings", "ubo_app/rpc/generated", ".venv", "setup_scm_schemes.py"]
+disableTaggedHints = true
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/000-audio"

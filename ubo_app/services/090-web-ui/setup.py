@@ -18,6 +18,7 @@ from ubo_app.store.operations import (
 
 async def init_service() -> None:
     """Initialize the web-ui service."""
+    _ = []
     app = Quart(
         'ubo-app',
         template_folder=(Path(__file__).parent / 'templates').absolute().as_posix(),
@@ -48,6 +49,8 @@ async def init_service() -> None:
             await asyncio.sleep(0.2)
         return await render_template('index.jinja2', inputs=inputs(), re=re)
 
+    _.append(inputs_form)
+
     if WEB_UI_DEBUG_MODE:
 
         @app.errorhandler(Exception)
@@ -55,6 +58,8 @@ async def init_service() -> None:
             import traceback
 
             return f'<pre>{traceback.format_exc()}</pre>'
+
+        _.append(handle_error)
 
     store.subscribe_event(FinishEvent, shutdown_event.set)
 
