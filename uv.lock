@@ -1567,6 +1567,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pythonping"
+version = "1.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/e5/6c12081f6be60648e6432dca495c3c048a096c9e719283270158256af69c/pythonping-1.1.4.tar.gz", hash = "sha256:acef84640fee6f20b725f2a1d2392771f2845554cfabcef30b1fdea5030161af", size = 21482 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/d7/ac061f5010ae44604a091820c75e78edb8153214caf4519007cff812cd72/pythonping-1.1.4-py3-none-any.whl", hash = "sha256:dedd690e36cb8c69703175610cf6ce01ff0c2070b447cc64c31a82951c9a53f6", size = 16328 },
+]
+
+[[package]]
 name = "pyusb"
 version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1875,7 +1884,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "1.0.1.dev6+unknown"
+version = "1.0.1.dev9+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
@@ -1900,6 +1909,7 @@ dependencies = [
     { name = "python-fake" },
     { name = "python-redux" },
     { name = "python-strtobool" },
+    { name = "pythonping" },
     { name = "pyzbar" },
     { name = "quart" },
     { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'" },
@@ -1954,6 +1964,7 @@ requires-dist = [
     { name = "python-fake", specifier = ">=0.1.3" },
     { name = "python-redux", specifier = ">=0.17.2" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
+    { name = "pythonping", specifier = ">=1.1.4" },
     { name = "pyzbar", specifier = ">=0.1.9" },
     { name = "quart", specifier = ">=0.19.6" },
     { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'", specifier = ">=0.6" },

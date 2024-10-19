@@ -11,18 +11,14 @@ from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
 from ubo_app.store.main import store
+from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.wifi import (
-    ConnectionState,
-    GlobalWiFiState,
-    WiFiConnection,
-    WiFiType,
-)
+from ubo_app.store.services.wifi import ConnectionState, WiFiConnection, WiFiType
 from ubo_app.utils.bus_provider import get_system_bus
 
 if TYPE_CHECKING:
@@ -73,23 +69,23 @@ async def get_wifi_device() -> NetworkDeviceWireless | None:
     return None
 
 
-async def get_wifi_device_state() -> GlobalWiFiState:
+async def get_wifi_device_state() -> NetState:
     wifi_device = await get_wifi_device()
     if wifi_device is None:
-        return GlobalWiFiState.UNKNOWN
+        return NetState.UNKNOWN
 
     state = await wifi_device.state
     if state is DeviceState.UNKNOWN:
-        return GlobalWiFiState.UNKNOWN
+        return NetState.UNKNOWN
     if state in (
         DeviceState.DISCONNECTED,
         DeviceState.UNMANAGED,
         DeviceState.UNAVAILABLE,
         DeviceState.FAILED,
     ):
-        return GlobalWiFiState.DISCONNECTED
+        return NetState.DISCONNECTED
     if state in (DeviceState.NEED_AUTH,):
-        return GlobalWiFiState.NEEDS_ATTENTION
+        return NetState.NEEDS_ATTENTION
     if state in (
         DeviceState.DEACTIVATING,
         DeviceState.PREPARE,
@@ -98,11 +94,11 @@ async def get_wifi_device_state() -> GlobalWiFiState:
         DeviceState.IP_CHECK,
         DeviceState.SECONDARIES,
     ):
-        return GlobalWiFiState.PENDING
+        return NetState.PENDING
     if state == DeviceState.ACTIVATED:
-        return GlobalWiFiState.CONNECTED
+        return NetState.CONNECTED
 
-    return GlobalWiFiState.UNKNOWN
+    return NetState.UNKNOWN
 
 
 @debounce(wait=0.5, options=DebounceOptions(trailing=True, time_window=2))

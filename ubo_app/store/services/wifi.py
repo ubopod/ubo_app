@@ -10,6 +10,8 @@ from redux import BaseAction, BaseEvent
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from ubo_app.store.services.ethernet import NetState
+
 
 class WiFiType(StrEnum):
     WEP = 'WEP'
@@ -22,14 +24,6 @@ class ConnectionState(StrEnum):
     CONNECTED = 'Connected'
     CONNECTING = 'Connecting'
     DISCONNECTED = 'Disconnected'
-    UNKNOWN = 'Unknown'
-
-
-class GlobalWiFiState(StrEnum):
-    CONNECTED = 'Connected'
-    DISCONNECTED = 'Disconnected'
-    PENDING = 'Pending'
-    NEEDS_ATTENTION = 'Needs Attention'
     UNKNOWN = 'Unknown'
 
 
@@ -51,7 +45,7 @@ class WiFiSetHasVisitedOnboardingAction(WiFiAction):
 
 class WiFiUpdateAction(WiFiAction):
     connections: Sequence[WiFiConnection]
-    state: GlobalWiFiState
+    state: NetState
     current_connection: WiFiConnection | None
 
 
@@ -67,6 +61,6 @@ class WiFiUpdateRequestEvent(WiFiEvent): ...
 
 class WiFiState(Immutable):
     connections: Sequence[WiFiConnection] | None
-    state: GlobalWiFiState
+    state: NetState
     current_connection: WiFiConnection | None
     has_visited_onboarding: bool | None = None

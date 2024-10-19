@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from ubo_app.store.services.ethernet import GlobalEthernetState
+from ubo_app.store.services.ethernet import NetState
 from ubo_app.utils.bus_provider import get_system_bus
 
 if TYPE_CHECKING:
@@ -40,23 +40,23 @@ async def get_ethernet_device() -> NetworkDeviceGeneric | None:
     return None
 
 
-async def get_ethernet_device_state() -> GlobalEthernetState:
+async def get_ethernet_device_state() -> NetState:
     ethernet_device = await get_ethernet_device()
     if ethernet_device is None:
-        return GlobalEthernetState.UNKNOWN
+        return NetState.UNKNOWN
 
     state = await ethernet_device.state
     if state is DeviceState.UNKNOWN:
-        return GlobalEthernetState.UNKNOWN
+        return NetState.UNKNOWN
     if state in (
         DeviceState.DISCONNECTED,
         DeviceState.UNMANAGED,
         DeviceState.UNAVAILABLE,
         DeviceState.FAILED,
     ):
-        return GlobalEthernetState.DISCONNECTED
+        return NetState.DISCONNECTED
     if state in (DeviceState.NEED_AUTH,):
-        return GlobalEthernetState.NEEDS_ATTENTION
+        return NetState.NEEDS_ATTENTION
     if state in (
         DeviceState.DEACTIVATING,
         DeviceState.PREPARE,
@@ -65,8 +65,8 @@ async def get_ethernet_device_state() -> GlobalEthernetState:
         DeviceState.IP_CHECK,
         DeviceState.SECONDARIES,
     ):
-        return GlobalEthernetState.PENDING
+        return NetState.PENDING
     if state == DeviceState.ACTIVATED:
-        return GlobalEthernetState.CONNECTED
+        return NetState.CONNECTED
 
-    return GlobalEthernetState.UNKNOWN
+    return NetState.UNKNOWN
