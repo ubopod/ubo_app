@@ -12,8 +12,8 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.wifi import (
-    GlobalWiFiState,
     WiFiAction,
     WiFiEvent,
     WiFiSetHasVisitedOnboardingAction,
@@ -34,7 +34,7 @@ def reducer(
             return CompleteReducerResult(
                 state=WiFiState(
                     connections=[],
-                    state=GlobalWiFiState.UNKNOWN,
+                    state=NetState.UNKNOWN,
                     current_connection=None,
                 ),
                 actions=[WiFiUpdateRequestAction()],
@@ -64,15 +64,15 @@ def reducer(
             actions=[
                 StatusIconsRegisterAction(
                     icon={
-                        GlobalWiFiState.CONNECTED: get_signal_icon(
+                        NetState.CONNECTED: get_signal_icon(
                             action.current_connection.signal_strength
                             if action.current_connection
                             else 0,
                         ),
-                        GlobalWiFiState.DISCONNECTED: '󰖪',
-                        GlobalWiFiState.PENDING: '󱛇',
-                        GlobalWiFiState.NEEDS_ATTENTION: '󱚵',
-                        GlobalWiFiState.UNKNOWN: '󰈅',
+                        NetState.DISCONNECTED: '󰖪',
+                        NetState.PENDING: '󱛇',
+                        NetState.NEEDS_ATTENTION: '󱚵',
+                        NetState.UNKNOWN: '󰈅',
                     }[action.state],
                     priority=WIFI_STATE_ICON_PRIORITY,
                     id=WIFI_STATE_ICON_ID,

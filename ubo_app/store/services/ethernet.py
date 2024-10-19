@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 
-class GlobalEthernetState(StrEnum):
+class NetState(StrEnum):
     CONNECTED = 'Connected'
     DISCONNECTED = 'Disconnected'
     PENDING = 'Pending'

@@ -12,6 +12,7 @@
 - feat(keypad): ability to use key-combinations, set key combinations for screenshot, snapshot and quit
 - feat(web-ui): add `fields` in `InputDescription` with `InputFieldDescription` data structures to describe the fields of an input demand in detail
 - fix(users): avoid setting user as sudoer when it performs a password reset
+- feat(ip): use pythonping to perform a real ping test instead to determine the internet connection status instead of opening a socket
 
 ## Version 1.0.0
 

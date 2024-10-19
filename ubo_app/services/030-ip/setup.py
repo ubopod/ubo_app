@@ -13,12 +13,14 @@ from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
+from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.ip import (
     IpNetworkInterface,
     IpSetIsConnectedAction,
     IpUpdateInterfacesAction,
 )
 from ubo_app.store.status_icons import StatusIconsRegisterAction
+from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -71,31 +73,10 @@ def load_ip_addresses() -> None:
     )
 
 
-async def is_connected() -> bool:
-    results = await asyncio.gather(
-        *(
-            asyncio.wait_for(asyncio.open_connection(ip, 53), timeout=1)
-            for ip in ('1.1.1.1', '8.8.8.8')
-        ),
-        return_exceptions=True,
-    )
-    is_connected = any(not isinstance(result, Exception) for result in results)
-
-    close_tasks = []
-    for result in results:
-        if isinstance(result, tuple):
-            _, writer = result
-            writer.close()
-            close_tasks.append(writer.wait_closed())
-    await asyncio.gather(*close_tasks)
-
-    return is_connected
-
-
 async def check_connection() -> bool:
     while True:
         load_ip_addresses()
-        if await is_connected():
+        if await send_command('connection', has_output=True) == NetState.CONNECTED:
             store.dispatch(
                 StatusIconsRegisterAction(
                     icon='󰖟',

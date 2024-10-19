@@ -40,6 +40,7 @@ dependencies = [
   "betterproto [compiler] >=2.0.0b7",
   "gpiozero >=2.0.1 ; platform_machine != 'aarch64'",
   "quart >=0.19.6",
+  "pythonping>=1.1.4",
 ]
 
 [build-system]
@@ -187,7 +188,13 @@ quote-style = "single"
 profile = "black"
 
 [tool.pyright]
-exclude = ["typings", "ubo_app/rpc/generated", ".venv", "setup_scm_schemes.py"]
+exclude = [
+  "typings",
+  "ubo_app/rpc/generated",
+  ".venv",
+  "setup_scm_schemes.py",
+  "dist/",
+]
 disableTaggedHints = true
 
 [[tool.pyright.executionEnvironments]]

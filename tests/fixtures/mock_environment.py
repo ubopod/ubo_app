@@ -9,6 +9,8 @@ from typing import Any, cast
 
 import pytest
 
+from ubo_app.store.services.ethernet import NetState
+
 originals = {}
 
 
@@ -259,14 +261,6 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, 'create_subprocess_exec', _fake_create_subprocess_exec)
 
 
-def _monkeypatch_asyncio_socket(monkeypatch: pytest.MonkeyPatch) -> None:
-    import asyncio
-
-    from fake import Fake
-
-    monkeypatch.setattr(asyncio, 'open_connection', Fake())
-
-
 @pytest.fixture
 def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
@@ -280,6 +274,7 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 
     import ubo_app.constants
     import ubo_app.utils.serializer
+    import ubo_app.utils.server
 
     tracemalloc.start()
 
@@ -289,6 +284,11 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ubo_app.constants, 'STORE_GRACE_PERIOD', 0.1)
     monkeypatch.setattr(ubo_app.constants, 'NOTIFICATIONS_FLASH_TIME', 1000)
     monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', lambda _, obj: obj)
+    monkeypatch.setattr(
+        ubo_app.utils.server,
+        'send_command',
+        Fake(_Fake__return_value=Fake(_Fake__await_value=NetState.CONNECTED)),
+    )
 
     sys.modules['ubo_app.utils.secrets'] = Fake(
         _Fake__attrs={'read_secret': lambda _: None},
@@ -302,4 +302,3 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_rpi_modules()
     _monkeypatch_subprocess(monkeypatch)
     _monkeypatch_asyncio_subprocess(monkeypatch)
-    _monkeypatch_asyncio_socket(monkeypatch)

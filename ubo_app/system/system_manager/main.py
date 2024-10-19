@@ -11,12 +11,16 @@ import stat
 import string
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from threading import Thread
+
+from pythonping import ping
 
 from ubo_app.constants import USERNAME
 from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
+from ubo_app.store.services.ethernet import NetState
 from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.led import LEDManager
@@ -38,6 +42,25 @@ add_stdout_handler(logger, logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 
 
+@dataclass(kw_only=True)
+class ConnectionState:
+    state: NetState = NetState.UNKNOWN
+
+
+connection_state = ConnectionState()
+
+
+def check_connection() -> None:
+    while True:
+        try:
+            response = ping('1.1.1.1', count=1, timeout=1)
+            connection_state.state = (
+                NetState.CONNECTED if response.success() else NetState.DISCONNECTED
+            )
+        except OSError:
+            connection_state.state = NetState.DISCONNECTED
+
+
 def handle_command(command: str) -> str | None:
     header, *arguments = command.split()
     if header == 'led':
@@ -52,6 +75,8 @@ def handle_command(command: str) -> str | None:
         }
         if header in handlers:
             return handlers[header](*arguments)
+        if header == 'connection':
+            return connection_state.state
 
     return None
 
@@ -70,6 +95,9 @@ def setup_hostname() -> None:
     """Set the hostname to 'ubo'."""
     logger.info('Setting hostname...')
     from ubo_app.constants import INSTALLATION_PATH
+
+    thread = Thread(target=check_connection)
+    thread.start()
 
     available_letters = list(
         set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
