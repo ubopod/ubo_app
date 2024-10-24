@@ -12,14 +12,6 @@ if TYPE_CHECKING:
     from ubo_app.store.services.notifications import NotificationExtraInformation
 
 
-class ScreenshotEvent(BaseEvent):
-    """Event for taking a screenshot."""
-
-
-class SnapshotEvent(BaseEvent):
-    """Event for taking a snapshot of the store."""
-
-
 class InputFieldType(StrEnum):
     """Enumeration of input field types."""
 

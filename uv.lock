@@ -1391,15 +1391,15 @@ wheels = [
 
 [[package]]
 name = "pyright"
-version = "1.1.383"
+version = "1.1.386"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodeenv" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/a9/4654d15f4125d8dca6318d7be36a3283a8b3039661291c59bbdd1e576dcf/pyright-1.1.383.tar.gz", hash = "sha256:1df7f12407f3710c9c6df938d98ec53f70053e6c6bbf71ce7bcb038d42f10070", size = 21971 }
+sdist = { url = "https://files.pythonhosted.org/packages/92/50/1a57054b5585fa72a93a6244c1b4b5639f8f7a1cc60b2e807cc67da8f0bc/pyright-1.1.386.tar.gz", hash = "sha256:8e9975e34948ba5f8e07792a9c9d2bdceb2c6c0b61742b068d2229ca2bc4a9d9", size = 21949 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1c/55/40a6559cea209b551c81dcd31cb351a6ffdb5876e7865ee242e269af72d8/pyright-1.1.383-py3-none-any.whl", hash = "sha256:d864d1182a313f45aaf99e9bfc7d2668eeabc99b29a556b5344894fd73cb1959", size = 18577 },
+    { url = "https://files.pythonhosted.org/packages/cc/68/47fd6b3ffa27c99d7e0c866c618f07784b8806712059049daa492ca7e526/pyright-1.1.386-py3-none-any.whl", hash = "sha256:7071ac495593b2258ccdbbf495f1a5c0e5f27951f6b429bed4e8b296eb5cd21d", size = 18577 },
 ]
 
 [[package]]
@@ -1544,17 +1544,15 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.17.2"
+version = "0.18.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyright" },
     { name = "python-immutable" },
     { name = "python-strtobool" },
-    { name = "ruff" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/26/e0/476b776d5410d97bf57d069240385b4ce0ec9e6e1c972ef6946cd3a46b27/python_redux-0.17.2.tar.gz", hash = "sha256:185e491390c6ae4eecf1e6f3c34cab25bed21667bc4ca49e02a94494ae497bf3", size = 22940 }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/e2/84eba40af9d0011811d2a6c026f4a2f6433faf9dbebddb9a116eb5e8189e/python_redux-0.18.2.tar.gz", hash = "sha256:131d4c5f9c9d4e37c470631f58bdbb1f79809ea6eb26c2f8fd84c65f13b8d825", size = 20247 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/47/a9de36c30dfc0aa8e30d5fbd58aa9152fba47dd0a49f17193068fa1bf50f/python_redux-0.17.2-py3-none-any.whl", hash = "sha256:c10d505ac1861e0e221cf694268f207f7fd15f1d0d73d1d2b25e31425f7fe880", size = 25390 },
+    { url = "https://files.pythonhosted.org/packages/11/4a/2a7e28f37dc6ea96ec3020c63a0d00fc84c321b00a26363c8f6be14c881b/python_redux-0.18.2-py3-none-any.whl", hash = "sha256:fa7a256c321891dd16cb735844f7579de404f6fc0fdd272998fc656a5f1030ee", size = 25823 },
 ]
 
 [[package]]
@@ -1884,7 +1882,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "1.0.1.dev9+unknown"
+version = "1.0.1.dev11+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
@@ -1962,7 +1960,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.1.3" },
-    { name = "python-redux", specifier = ">=0.17.2" },
+    { name = "python-redux", specifier = ">=0.18.2" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
     { name = "pythonping", specifier = ">=1.1.4" },
     { name = "pyzbar", specifier = ">=0.1.9" },

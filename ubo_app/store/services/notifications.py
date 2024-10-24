@@ -125,6 +125,12 @@ class NotificationsAddAction(NotificationsAction):
     notification: Notification
 
 
+class NotificationsDisplayAction(NotificationsAction):
+    notification: Notification
+    index: int | None = None
+    count: int | None = None
+
+
 class NotificationsClearAction(NotificationsAction):
     notification: Notification
 

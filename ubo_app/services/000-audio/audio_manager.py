@@ -12,7 +12,7 @@ from simpleaudio import _simpleaudio  # pyright: ignore [reportAttributeAccessIs
 
 from ubo_app.logging import logger
 from ubo_app.store.main import store
-from ubo_app.store.services.audio import AudioPlaybackDoneEvent
+from ubo_app.store.services.audio import AudioPlaybackDoneAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.server import send_command
 
@@ -135,7 +135,7 @@ class AudioManager:
                     extra={'tried_times': TRIALS},
                 )
         if id is not None:
-            store.dispatch(AudioPlaybackDoneEvent(id=id))
+            store.dispatch(AudioPlaybackDoneAction(id=id))
 
     def set_playback_mute(self: AudioManager, *, mute: bool = False) -> None:
         """Set the playback mute of the audio output.

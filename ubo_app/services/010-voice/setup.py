@@ -195,6 +195,24 @@ ENGINE_LABELS = {
 }
 
 
+def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
+    """Select the voice engine."""
+
+    def _engine_selector() -> None:
+        store.dispatch(
+            VoiceSetEngineAction(engine=engine),
+            VoiceReadTextAction(
+                text={
+                    VoiceEngine.PIPER: 'Piper voice engine selected',
+                    VoiceEngine.PICOVOICE: 'Picovoice voice engine selected',
+                }[engine],
+                engine=engine,
+            ),
+        )
+
+    return _engine_selector
+
+
 @store.autorun(lambda state: state.voice.selected_engine)
 def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
     selected_engine_parameters = {
@@ -215,24 +233,6 @@ def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
         )
         for engine in VoiceEngine
     ]
-
-
-def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
-    """Select the voice engine."""
-
-    def _engine_selector() -> None:
-        store.dispatch(
-            VoiceSetEngineAction(engine=engine),
-            VoiceReadTextAction(
-                text={
-                    VoiceEngine.PIPER: 'Piper voice engine selected',
-                    VoiceEngine.PICOVOICE: 'Picovoice voice engine selected',
-                }[engine],
-                engine=engine,
-            ),
-        )
-
-    return _engine_selector
 
 
 def init_service() -> None:

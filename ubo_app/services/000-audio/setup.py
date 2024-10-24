@@ -10,7 +10,11 @@ from audio_manager import AudioManager
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 
 from ubo_app.store.main import store
-from ubo_app.store.services.audio import AudioPlayAudioEvent, AudioPlayChimeEvent
+from ubo_app.store.services.audio import (
+    AudioPlayAudioAction,
+    AudioPlayAudioEvent,
+    AudioPlayChimeEvent,
+)
 from ubo_app.store.status_icons import StatusIconsRegisterAction
 from ubo_app.utils.async_ import to_thread
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -64,7 +68,7 @@ def init_service() -> None:
             audio_data = wave_file.readframes(wave_file.getnframes())
 
             store.dispatch(
-                AudioPlayAudioEvent(
+                AudioPlayAudioAction(
                     rate=sample_rate,
                     channels=channels,
                     width=sample_width,

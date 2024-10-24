@@ -13,7 +13,7 @@ from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
-from ubo_app.store.core import CloseApplicationEvent
+from ubo_app.store.core import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.operations import InputFieldDescription, InputFieldType
 from ubo_app.store.services.notifications import (
@@ -100,15 +100,15 @@ class CreateWirelessConnectionPage(PageWidget):
                 ],
             )
         except asyncio.CancelledError:
-            store.dispatch(CloseApplicationEvent(application=self))
+            store.dispatch(CloseApplicationAction(application=self))
             return
 
         if not data:
-            store.dispatch(CloseApplicationEvent(application=self))
+            store.dispatch(CloseApplicationAction(application=self))
             return
         ssid = data.get('SSID') or data.get('SSID_')
         if ssid is None:
-            store.dispatch(CloseApplicationEvent(application=self))
+            store.dispatch(CloseApplicationAction(application=self))
             return
 
         password = data.get('Password') or data.get('Password_')
@@ -120,7 +120,7 @@ class CreateWirelessConnectionPage(PageWidget):
 
         if not password:
             logger.warning('Password is required')
-            store.dispatch(CloseApplicationEvent(application=self))
+            store.dispatch(CloseApplicationAction(application=self))
             return
 
         self.creating = True
@@ -154,7 +154,7 @@ class CreateWirelessConnectionPage(PageWidget):
                     chime=Chime.ADD,
                 ),
             ),
-            CloseApplicationEvent(application=self),
+            CloseApplicationAction(application=self),
         )
 
 

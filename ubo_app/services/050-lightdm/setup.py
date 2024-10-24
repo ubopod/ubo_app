@@ -83,6 +83,18 @@ def enable_lightdm_service() -> None:
     create_task(act())
 
 
+@store.autorun(lambda state: state.lightdm)
+def lightdm_icon(state: LightDMState) -> str:
+    """Get the LightDM icon."""
+    return '[color=#008000]󰪥[/color]' if state.is_active else '[color=#ffff00]󰝦[/color]'
+
+
+@store.autorun(lambda state: state.lightdm)
+def lightdm_title(_: LightDMState) -> str:
+    """Get the LightDM title."""
+    return lightdm_icon() + ' Desktop'
+
+
 def disable_lightdm_service() -> None:
     """Disable the LightDM service."""
 
@@ -146,18 +158,6 @@ def lightdm_menu(state: LightDMState) -> Menu:
             ),
         ],
     )
-
-
-@store.autorun(lambda state: state.lightdm)
-def lightdm_icon(state: LightDMState) -> str:
-    """Get the LightDM icon."""
-    return '[color=#008000]󰪥[/color]' if state.is_active else '[color=#ffff00]󰝦[/color]'
-
-
-@store.autorun(lambda state: state.lightdm)
-def lightdm_title(_: LightDMState) -> str:
-    """Get the LightDM title."""
-    return lightdm_icon() + ' Desktop'
 
 
 async def check_lightdm() -> None:

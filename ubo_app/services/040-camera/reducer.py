@@ -94,7 +94,7 @@ def reducer(
                         color='#ffffff',
                         actions=[
                             NotificationDispatchItem(
-                                operation=CameraStartViewfinderAction(
+                                store_action=CameraStartViewfinderAction(
                                     pattern=action.description.pattern,
                                 ),
                                 icon='󰄀',
