@@ -49,6 +49,10 @@ class AudioPlayAudioAction(AudioAction):
     width: int
 
 
+class AudioPlaybackDoneAction(AudioAction):
+    id: str
+
+
 class AudioEvent(BaseEvent): ...
 
 

@@ -15,7 +15,7 @@ from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.page import PageWidget
 
 from ubo_app.logging import logger
-from ubo_app.store.core import CloseApplicationEvent
+from ubo_app.store.core import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
@@ -40,7 +40,7 @@ class LoginPage(PageWidget):
         super().__init__(*args, **kwargs, items=[])
         store.subscribe_event(
             VSCodeLoginEvent,
-            lambda: store.dispatch(CloseApplicationEvent(application=self)),
+            lambda: store.dispatch(CloseApplicationAction(application=self)),
         )
         create_task(self.login())
 

@@ -90,5 +90,5 @@ scripts/packer/output-*
 ubo_app/_version.py
 
 /screenshots
-/snapshot.json
-/snapshot.bin
+/snapshots
+/recordings

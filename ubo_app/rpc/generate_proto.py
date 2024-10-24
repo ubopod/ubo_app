@@ -478,7 +478,7 @@ class _ProtoGenerator(ast.NodeVisitor):
                     value_type = self.get_field_type(value=value.slice.elts[1])
                     return _DictType(key_type=key_type, value_type=value_type)
 
-                if value.value.id in ('Sequence', 'list'):
+                if value.value.id in ('Sequence', 'list', 'set'):
                     return _ListType(type=self.get_field_type(value=value.slice))
 
                 if value.value.id == 'tuple' and isinstance(value.slice, ast.Tuple):

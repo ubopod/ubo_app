@@ -22,6 +22,7 @@ from ubo_app.store.services.notifications import (
     NotificationsClearAllAction,
     NotificationsClearByIdAction,
     NotificationsClearEvent,
+    NotificationsDisplayAction,
     NotificationsDisplayEvent,
     NotificationsState,
 )
@@ -108,6 +109,17 @@ def reducer(
                 ),
             ],
             events=events,
+        )
+    if isinstance(action, NotificationsDisplayAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[
+                NotificationsDisplayEvent(
+                    notification=action.notification,
+                    index=action.index,
+                    count=action.count,
+                ),
+            ],
         )
     if isinstance(action, NotificationsClearAction):
         new_notifications = [

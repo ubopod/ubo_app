@@ -15,7 +15,7 @@ from kivy.clock import Clock, mainthread
 from typing_extensions import override
 from ubo_gui.page import PageWidget
 
-from ubo_app.store.core import CloseApplicationEvent, OpenApplicationEvent
+from ubo_app.store.core import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraReportBarcodeAction,
@@ -180,7 +180,7 @@ def start_camera_viewfinder() -> None:
 
     fs_lock = Lock()
     application = CameraApplication()
-    store.dispatch(OpenApplicationEvent(application=application))
+    store.dispatch(OpenApplicationAction(application=application))
 
     def feed_viewfinder_locked(_: object) -> None:
         with fs_lock:
@@ -199,7 +199,7 @@ def start_camera_viewfinder() -> None:
             is_running = False
             feed_viewfinder_scheduler.cancel()
             store.dispatch(
-                CloseApplicationEvent(application=application),
+                CloseApplicationAction(application=application),
                 DisplayResumeAction(),
             )
             if picamera2:

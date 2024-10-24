@@ -14,25 +14,40 @@ from redux import (
 )
 
 from ubo_app.store.core import (
+    CloseApplicationAction,
+    CloseApplicationEvent,
     InitEvent,
     MainAction,
+    MainEvent,
     MainState,
+    MenuChooseByIconAction,
+    MenuChooseByIconEvent,
+    MenuChooseByIndexAction,
     MenuChooseByIndexEvent,
+    MenuChooseByLabelAction,
+    MenuChooseByLabelEvent,
     MenuEvent,
+    MenuGoBackAction,
     MenuGoBackEvent,
+    MenuGoHomeAction,
     MenuGoHomeEvent,
+    MenuScrollAction,
     MenuScrollDirection,
     MenuScrollEvent,
-    PowerEvent,
+    OpenApplicationAction,
+    OpenApplicationEvent,
     PowerOffAction,
     PowerOffEvent,
     RebootAction,
     RebootEvent,
     RegisterRegularAppAction,
     RegisterSettingAppAction,
+    ReplayRecordedSequenceEvent,
+    ScreenshotEvent,
     SetMenuPathAction,
+    SnapshotEvent,
+    StoreRecordedSequenceEvent,
 )
-from ubo_app.store.operations import ScreenshotEvent, SnapshotEvent
 from ubo_app.store.services.audio import AudioChangeVolumeAction, AudioDevice
 from ubo_app.store.services.keypad import (
     Key,
@@ -47,7 +62,7 @@ def reducer(
 ) -> ReducerResult[
     MainState,
     AudioChangeVolumeAction,
-    InitEvent | MenuEvent | ScreenshotEvent | SnapshotEvent | FinishEvent | PowerEvent,
+    InitEvent | MenuEvent | FinishEvent | MainEvent,
 ]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
@@ -60,6 +75,62 @@ def reducer(
                 events=[InitEvent()],
             )
         raise InitializationActionError(action)
+
+    if state.is_recording:
+        state = replace(
+            state,
+            recorded_sequence=[
+                *state.recorded_sequence,
+                action,
+            ],
+        )
+
+    if isinstance(action, MenuGoBackAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[MenuGoBackEvent()],
+        )
+
+    if isinstance(action, MenuGoHomeAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[MenuGoHomeEvent()],
+        )
+
+    if isinstance(action, MenuChooseByIconAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[MenuChooseByIconEvent(icon=action.icon)],
+        )
+
+    if isinstance(action, MenuChooseByLabelAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[MenuChooseByLabelEvent(label=action.label)],
+        )
+
+    if isinstance(action, MenuChooseByIndexAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[MenuChooseByIndexEvent(index=action.index)],
+        )
+    if isinstance(action, MenuScrollAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[MenuScrollEvent(direction=action.direction)],
+        )
+
+    if isinstance(action, OpenApplicationAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[OpenApplicationEvent(application=action.application)],
+        )
+
+    if isinstance(action, CloseApplicationAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[CloseApplicationEvent(application=action.application)],
+        )
 
     if isinstance(action, KeypadKeyPressAction):
         if action.pressed_keys == {action.key}:
@@ -119,6 +190,26 @@ def reducer(
                 return CompleteReducerResult(
                     state=state,
                     events=[SnapshotEvent()],
+                )
+            if action.pressed_keys == {Key.HOME, Key.L3} and action.key == Key.L3:
+                return CompleteReducerResult(
+                    state=replace(
+                        state,
+                        is_recording=not state.is_recording,
+                        recorded_sequence=[],
+                    ),
+                    events=[
+                        StoreRecordedSequenceEvent(
+                            recorded_sequence=state.recorded_sequence,
+                        ),
+                    ]
+                    if state.is_recording
+                    else [],
+                )
+            if action.pressed_keys == {Key.BACK, Key.L3} and action.key == Key.L3:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[ReplayRecordedSequenceEvent()],
                 )
             if action.pressed_keys == {Key.HOME, Key.BACK} and action.key == Key.BACK:
                 return CompleteReducerResult(
@@ -187,6 +278,7 @@ def reducer(
             msg = f"""Settings application with key "{key}", in category \
 "{category_menu_item.label}", already exists. Consider providing a unique `key` field \
 for the `RegisterSettingAppAction` instance."""
+            return state
             raise ValueError(msg)
 
         menu_item = replace(action.menu_item, key=key)
@@ -272,6 +364,7 @@ for the `RegisterSettingAppAction` instance."""
         ):
             msg = f"""Regular application with key "{key}", already exists. Consider \
 providing a unique `key` field for the `RegisterRegularAppAction` instance."""
+            return state
             raise ValueError(msg)
 
         menu_item = replace(action.menu_item, key=key)

@@ -221,7 +221,7 @@ def users_menu(state: UsersState) -> Menu:
             DispatchItem(
                 label='Add',
                 icon='󰀔',
-                operation=UsersCreateUserAction(),
+                store_action=UsersCreateUserAction(),
                 background_color=WARNING_COLOR,
             ),
             *[
@@ -235,13 +235,13 @@ def users_menu(state: UsersState) -> Menu:
                             DispatchItem(
                                 label='Reset Password',
                                 icon='󰯄',
-                                operation=UsersResetPasswordAction(id=user.id),
+                                store_action=UsersResetPasswordAction(id=user.id),
                                 background_color=WARNING_COLOR,
                             ),
                             DispatchItem(
                                 label='Delete',
                                 icon='󰀕',
-                                operation=UsersDeleteUserAction(id=user.id),
+                                store_action=UsersDeleteUserAction(id=user.id),
                                 background_color=DANGER_COLOR,
                             ),
                         ],

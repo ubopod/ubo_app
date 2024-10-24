@@ -32,9 +32,7 @@ from ubo_app.store.core.reducer import reducer as main_reducer
 from ubo_app.store.input.reducer import reducer as input_reducer
 from ubo_app.store.operations import (
     InputAction,
-    InputProvideEvent,
-    ScreenshotEvent,
-    SnapshotEvent,
+    InputResolveEvent,
 )
 from ubo_app.store.services.audio import AudioAction, AudioEvent
 from ubo_app.store.services.camera import CameraAction, CameraEvent
@@ -116,15 +114,13 @@ UboAction: TypeAlias = (
 UboEvent: TypeAlias = (
     # Core Events
     MainEvent
-    | ScreenshotEvent
-    | InputProvideEvent
+    | InputResolveEvent
     # Services Events
     | AudioEvent
     | CameraEvent
     | DisplayEvent
     | IpEvent
     | NotificationsEvent
-    | SnapshotEvent
     | UsersEvent
     | WiFiEvent
 )
@@ -178,17 +174,33 @@ root_reducer, root_reducer_id = combine_reducers(
 )
 
 T = TypeVar('T')
-LoadedObject = int | float | str | bool | None | Immutable | list['LoadedObject']
+LoadedObject = (
+    int
+    | float
+    | str
+    | bytes
+    | bool
+    | None
+    | Immutable
+    | list['LoadedObject']
+    | set['LoadedObject']
+)
 
 
 class UboStore(Store[RootState, UboAction, UboEvent]):
     @classmethod
-    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
+    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:  # noqa: C901
         from redux.autorun import Autorun
         from ubo_gui.page import PageWidget
 
         if isinstance(obj, Autorun):
             obj = obj()
+        if isinstance(obj, set):
+            return {'_type': 'set', 'value': [cls.serialize_value(i) for i in obj]}
+        if isinstance(obj, bytes):
+            return {'_type': 'bytes', 'value': base64.b64encode(obj).decode('utf-8')}
+        if isinstance(obj, datetime):
+            return {'_type': 'datetime', 'value': obj.isoformat()}
         if isinstance(obj, type) and issubclass(obj, PageWidget):
             import ubo_app
 
@@ -197,8 +209,10 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             ubo_app_path = sys.modules['ubo_app'].__file__
             if file_path and ubo_app_path:
                 root_path = Path(ubo_app_path).parent
-                return f"""{Path(file_path).relative_to(root_path).as_posix()}:{
-                obj.__name__}"""
+                path = Path(file_path)
+                return f"""{(path.relative_to(root_path)
+                             if file_path.startswith(root_path.as_posix())
+                             else path.absolute()).as_posix()}:{obj.__name__}"""
             return f'{obj.__module__}:{obj.__name__}'
         if isinstance(obj, functools.partial):
             return f'<functools.partial:{cls.serialize_value(obj.func)}>'
@@ -206,8 +220,6 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             return f'<function:{obj.__name__}>'
         if isinstance(obj, dict):
             return {k: cls.serialize_value(v) for k, v in obj.items()}
-        if isinstance(obj, datetime):
-            return obj.isoformat()
         if isinstance(obj, Handle | Fake | PageWidget):
             return f'<{type(obj).__name__}>'
         return super().serialize_value(obj)
@@ -233,7 +245,7 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         object_type: type[T],
     ) -> T: ...
 
-    def load_object(
+    def load_object(  # noqa: C901
         self: UboStore,
         data: Any,
         *,
@@ -248,6 +260,11 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             and '_type' in data
             and isinstance(type_ := data.pop('_type'), str)
         ):
+            if type_ == 'set':
+                return {self.load_object(i) for i in data['value']}
+            if type_ == 'bytes':
+                return base64.b64decode(data['value'].encode('utf-8'))
+
             if isinstance(type_, type):
                 class_ = type_
             elif isinstance(type_, str):
