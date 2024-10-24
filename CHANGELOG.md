@@ -13,6 +13,7 @@
 - feat(web-ui): add `fields` in `InputDescription` with `InputFieldDescription` data structures to describe the fields of an input demand in detail
 - fix(users): avoid setting user as sudoer when it performs a password reset
 - feat(ip): use pythonping to perform a real ping test instead to determine the internet connection status instead of opening a socket
+- feat(core): user can start/end recording actioning by hitting r, actions will be recorded in `recordings/` directory and the last recording can be replayed by hitting `ctrl+r` - closes #187
 
 ## Version 1.0.0
 

@@ -11,8 +11,6 @@ from ubo_app.logging import logger
 from ubo_app.rpc.generated.store.v1 import (
     DispatchActionRequest,
     DispatchActionResponse,
-    DispatchEventRequest,
-    DispatchEventResponse,
     StoreServiceBase,
     SubscribeEventRequest,
     SubscribeEventResponse,
@@ -49,27 +47,6 @@ class StoreService(StoreServiceBase):
         else:
             store.dispatch(cast(UboAction, action))
         return DispatchActionResponse()
-
-    async def dispatch_event(
-        self: StoreService,
-        dispatch_event_request: DispatchEventRequest,
-    ) -> DispatchEventResponse:
-        """Dispatch an event to the store."""
-        logger.info(
-            'Received event to be dispatched over gRPC',
-            extra={
-                'request': dispatch_event_request,
-            },
-        )
-        if not dispatch_event_request.event:
-            return DispatchEventResponse()
-        try:
-            event = rebuild_object(dispatch_event_request.event)
-        except Exception:
-            logger.exception('Failed to build object from dispatch event request')
-        else:
-            store.dispatch(cast(UboEvent, event))
-        return DispatchEventResponse()
 
     async def subscribe_event(
         self: StoreService,

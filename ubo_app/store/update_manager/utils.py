@@ -23,7 +23,7 @@ from ubo_app.constants import (
     UPDATE_LOCK_PATH,
 )
 from ubo_app.logging import logger
-from ubo_app.store.core import RebootEvent
+from ubo_app.store.core import RebootAction
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -253,7 +253,7 @@ Then another reboot will be done to complete the update process.""",
                     actions=[
                         NotificationDispatchItem(
                             icon='󰜉',
-                            operation=RebootEvent(),
+                            store_action=RebootAction(),
                         ),
                     ],
                     display_type=NotificationDisplayType.STICKY,
@@ -302,7 +302,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         return [
             DispatchItem(
                 label='Failed to check for updates',
-                operation=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
+                store_action=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 icon='󰜺',
                 background_color=DANGER_COLOR,
             ),
@@ -312,7 +312,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             DispatchItem(
                 label='Already up to date!',
                 icon='󰄬',
-                operation=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
+                store_action=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
                 background_color=SUCCESS_COLOR,
                 color='#000000',
             ),
@@ -321,7 +321,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         return [
             DispatchItem(
                 label=f'Update to v{state.latest_version}',
-                operation=UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
+                store_action=UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
                 icon='󰬬',
             ),
         ]

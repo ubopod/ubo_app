@@ -80,6 +80,39 @@ class SetMenuPathAction(MainAction):
     depth: int
 
 
+class MenuAction(MainAction): ...
+
+
+class MenuGoBackAction(MenuAction): ...
+
+
+class MenuGoHomeAction(MenuAction): ...
+
+
+class MenuChooseByIconAction(MenuAction):
+    icon: str
+
+
+class MenuChooseByLabelAction(MenuAction):
+    label: str
+
+
+class MenuChooseByIndexAction(MenuAction):
+    index: int
+
+
+class MenuScrollAction(MenuAction):
+    direction: MenuScrollDirection
+
+
+class OpenApplicationAction(MainAction):
+    application: PageWidget
+
+
+class CloseApplicationAction(MainAction):
+    application: PageWidget
+
+
 class MainEvent(BaseEvent): ...
 
 
@@ -128,8 +161,28 @@ class PowerOffEvent(PowerEvent): ...
 class RebootEvent(PowerEvent): ...
 
 
+class ScreenshotEvent(MainEvent):
+    """Event for taking a screenshot."""
+
+
+class SnapshotEvent(MainEvent):
+    """Event for taking a snapshot of the store."""
+
+
+class StoreRecordedSequenceEvent(MainEvent):
+    """Event for storing a recorded sequence."""
+
+    recorded_sequence: list[BaseAction]
+
+
+class ReplayRecordedSequenceEvent(MainEvent):
+    """Event for replaying a recorded sequence."""
+
+
 class MainState(Immutable):
     menu: Menu | None = None
     path: Sequence[str] = field(default_factory=list)
     depth: int = 0
     settings_items_priorities: dict[str, int] = field(default_factory=dict)
+    is_recording: bool = False
+    recorded_sequence: list[BaseAction] = field(default_factory=list)

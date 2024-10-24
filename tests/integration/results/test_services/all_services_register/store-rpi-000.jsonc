@@ -108,6 +108,7 @@
   "main": {
     "_type": "MainState",
     "depth": 1,
+    "is_recording": false,
     "menu": {
       "_type": "HeadlessMenu",
       "items": [
@@ -556,10 +557,10 @@
                                   "key": null,
                                   "label": "Add",
                                   "opacity": null,
-                                  "operation": {
+                                  "progress": null,
+                                  "store_action": {
                                     "_type": "UsersCreateUserAction"
-                                  },
-                                  "progress": null
+                                  }
                                 },
                                 {
                                   "_type": "SubMenuItem",
@@ -594,11 +595,11 @@
                                         "key": null,
                                         "label": "Reset Password",
                                         "opacity": null,
-                                        "operation": {
+                                        "progress": null,
+                                        "store_action": {
                                           "_type": "UsersResetPasswordAction",
                                           "id": "ubo"
-                                        },
-                                        "progress": null
+                                        }
                                       },
                                       {
                                         "_type": "DispatchItem",
@@ -615,11 +616,11 @@
                                         "key": null,
                                         "label": "Delete",
                                         "opacity": null,
-                                        "operation": {
+                                        "progress": null,
+                                        "store_action": {
                                           "_type": "UsersDeleteUserAction",
                                           "id": "ubo"
-                                        },
-                                        "progress": null
+                                        }
                                       }
                                     ],
                                     "placeholder": null,
@@ -659,11 +660,11 @@
                                         "key": null,
                                         "label": "Reset Password",
                                         "opacity": null,
-                                        "operation": {
+                                        "progress": null,
+                                        "store_action": {
                                           "_type": "UsersResetPasswordAction",
                                           "id": "pi"
-                                        },
-                                        "progress": null
+                                        }
                                       },
                                       {
                                         "_type": "DispatchItem",
@@ -680,11 +681,11 @@
                                         "key": null,
                                         "label": "Delete",
                                         "opacity": null,
-                                        "operation": {
+                                        "progress": null,
+                                        "store_action": {
                                           "_type": "UsersDeleteUserAction",
                                           "id": "pi"
-                                        },
-                                        "progress": null
+                                        }
                                       }
                                     ],
                                     "placeholder": null,
@@ -956,11 +957,11 @@
                       "key": null,
                       "label": "Already up to date!",
                       "opacity": null,
-                      "operation": {
+                      "progress": null,
+                      "store_action": {
                         "_type": "UpdateManagerSetStatusAction",
                         "status": "checking"
-                      },
-                      "progress": null
+                      }
                     }
                   ],
                   "placeholder": null,
@@ -1023,10 +1024,10 @@
                 "key": null,
                 "label": "Reboot",
                 "opacity": null,
-                "operation": {
+                "progress": null,
+                "store_action": {
                   "_type": "RebootAction"
-                },
-                "progress": null
+                }
               },
               {
                 "_type": "DispatchItem",
@@ -1043,10 +1044,10 @@
                 "key": null,
                 "label": "Power off",
                 "opacity": null,
-                "operation": {
+                "progress": null,
+                "store_action": {
                   "_type": "PowerOffAction"
-                },
-                "progress": null
+                }
               }
             ],
             "placeholder": null,
@@ -1058,6 +1059,7 @@
       "title": "󰋜test-hostname.local"
     },
     "path": [],
+    "recorded_sequence": [],
     "settings_items_priorities": {
       "Desktop": 0,
       "IP Addresses": 0,

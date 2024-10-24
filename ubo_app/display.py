@@ -67,20 +67,21 @@ def render_on_display(
     if last_render_thread:
         last_render_thread.join()
     render_block(rectangle, data_bytes)
-    store.dispatch(
-        DisplayRenderEvent(
-            data=data.tobytes(),
-            data_hash=data_hash,
-            rectangle=rectangle,
-        ),
-    )
     compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
-    store.dispatch(
-        DisplayCompressedRenderEvent(
-            compressed_data=compressor.compress(data.tobytes()) + compressor.flush(),
-            data_hash=data_hash,
-            rectangle=rectangle,
-        ),
+    store._dispatch(  # noqa: SLF001
+        [
+            DisplayRenderEvent(
+                data=data.tobytes(),
+                data_hash=data_hash,
+                rectangle=rectangle,
+            ),
+            DisplayCompressedRenderEvent(
+                compressed_data=compressor.compress(data.tobytes())
+                + compressor.flush(),
+                data_hash=data_hash,
+                rectangle=rectangle,
+            ),
+        ],
     )
 
 

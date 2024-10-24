@@ -11,9 +11,15 @@ from typing import TYPE_CHECKING
 from redux import FinishAction, FinishEvent
 
 from ubo_app import display
-from ubo_app.store.core import PowerOffEvent, RebootEvent
+from ubo_app.store.core import (
+    PowerOffEvent,
+    RebootEvent,
+    ReplayRecordedSequenceEvent,
+    ScreenshotEvent,
+    SnapshotEvent,
+    StoreRecordedSequenceEvent,
+)
 from ubo_app.store.main import store
-from ubo_app.store.operations import ScreenshotEvent, SnapshotEvent
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
 from ubo_app.store.update_manager import (
@@ -24,6 +30,7 @@ from ubo_app.store.update_manager import (
 )
 from ubo_app.store.update_manager.utils import check_version, update
 from ubo_app.utils.hardware import IS_RPI, initialize_board
+from ubo_app.utils.store import replay_actions
 
 if TYPE_CHECKING:
     from numpy._typing import NDArray
@@ -92,11 +99,39 @@ def take_screenshot() -> None:
 def take_snapshot() -> None:
     """Take a snapshot of the store."""
     counter = 0
-    while (path := Path(f'snapshots/ubo-screenshot-{counter:03d}.png')).exists():
+    while (path := Path(f'snapshots/ubo-screenshot-{counter:03d}.json')).exists():
         counter += 1
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(store.snapshot, indent=2))
+    with path.open('w') as file:
+        json.dump(store.snapshot, file, indent=2)
+
+
+def store_recorded_sequence(event: StoreRecordedSequenceEvent) -> None:
+    """Store the recorded sequence."""
+    counter = 0
+    while (path := Path(f'recordings/ubo-recording-{counter:03d}.json')).exists():
+        counter += 1
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    json_dump = json.dumps(
+        [
+            store.serialize_value(action)
+            for action in event.recorded_sequence
+            if type(action).__name__.startswith('Keypad')
+        ],
+        indent=2,
+    )
+
+    with path.open('w') as file:
+        file.write(json_dump)
+    with Path('recordings/active.json').open('w') as file:
+        file.write(json_dump)
+
+
+def replay_recorded_sequence() -> None:
+    """Replay the recorded sequence."""
+    replay_actions(store, Path('recordings/active.json'))
 
 
 def setup_side_effects() -> None:
@@ -110,5 +145,7 @@ def setup_side_effects() -> None:
     store.subscribe_event(UpdateManagerCheckEvent, check_version)
     store.subscribe_event(ScreenshotEvent, take_screenshot)
     store.subscribe_event(SnapshotEvent, take_snapshot)
+    store.subscribe_event(StoreRecordedSequenceEvent, store_recorded_sequence)
+    store.subscribe_event(ReplayRecordedSequenceEvent, replay_recorded_sequence)
 
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))

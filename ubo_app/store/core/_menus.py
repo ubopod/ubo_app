@@ -19,7 +19,10 @@ from ubo_app.store.core import (
 )
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
-from ubo_app.store.services.notifications import Notification, NotificationsDisplayEvent
+from ubo_app.store.services.notifications import (
+    Notification,
+    NotificationsDisplayAction,
+)
 from ubo_app.store.update_manager.utils import (
     BASE_IMAGE,
     CURRENT_VERSION,
@@ -107,7 +110,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
             icon=notification.icon,
             color='black',
             background_color=notification.color,
-            operation=NotificationsDisplayEvent(
+            store_action=NotificationsDisplayAction(
                 notification=notification,
                 index=index,
                 count=len(notifications),
@@ -158,12 +161,12 @@ HOME_MENU = HeadlessMenu(
                 items=[
                     DispatchItem(
                         label='Reboot',
-                        operation=RebootAction(),
+                        store_action=RebootAction(),
                         icon='󰜉',
                     ),
                     DispatchItem(
                         label='Power off',
-                        operation=PowerOffAction(),
+                        store_action=PowerOffAction(),
                         icon='󰐥',
                     ),
                 ],

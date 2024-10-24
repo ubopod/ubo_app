@@ -1,4 +1,4 @@
-"""Implement a menu item that dispatches an action or an event."""
+"""Implement a menu item that dispatches an action."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from ubo_gui.menu.types import ActionItem
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_app.store.main import UboAction, UboEvent
+    from ubo_app.store.main import UboAction
 
 
 def _default_action() -> Callable[[], None]:
@@ -21,14 +21,16 @@ def _default_action() -> Callable[[], None]:
     from ubo_app.store.main import store
 
     parent_frame = sys._getframe().f_back  # noqa: SLF001
-    if not parent_frame or not (operation := parent_frame.f_locals.get('operation')):
-        msg = 'No operation provided for `DispatchItem`'
+    if not parent_frame or not (
+        store_action := parent_frame.f_locals.get('store_action')
+    ):
+        msg = 'No store_action provided for `DispatchItem`'
         raise ValueError(msg)
-    return lambda: store.dispatch(operation)
+    return lambda: store.dispatch(store_action)
 
 
 class DispatchItem(ActionItem):
-    """Menu item that dispatches an action or an event."""
+    """Menu item that dispatches an action."""
 
-    operation: UboAction | UboEvent
+    store_action: UboAction
     action: Callable[[], None] = field(default_factory=_default_action)

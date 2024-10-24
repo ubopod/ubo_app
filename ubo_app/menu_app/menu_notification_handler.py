@@ -14,7 +14,7 @@ from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PAGE_MAX_ITEMS
 
 from ubo_app.menu_app.notification_info import NotificationInfo
-from ubo_app.store.core import CloseApplicationEvent, OpenApplicationEvent
+from ubo_app.store.core import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
@@ -74,7 +74,7 @@ class MenuNotificationHandler(UboApp):
             for unsubscribe in subscriptions:
                 unsubscribe()
             notification_application.unbind(on_close=close)
-            store.dispatch(CloseApplicationEvent(application=notification_application))
+            store.dispatch(CloseApplicationAction(application=notification_application))
             if notification.value.dismiss_on_close:
                 store.dispatch(
                     NotificationsClearAction(notification=notification.value),
@@ -145,7 +145,7 @@ class MenuNotificationHandler(UboApp):
 
         renew_notification(event)
 
-        store.dispatch(OpenApplicationEvent(application=notification_application))
+        store.dispatch(OpenApplicationAction(application=notification_application))
 
     def _notification_items(
         self: MenuNotificationHandler,
@@ -175,7 +175,7 @@ class MenuNotificationHandler(UboApp):
             def open_info() -> None:
                 info_application = NotificationInfo(text=text)
 
-                store.dispatch(OpenApplicationEvent(application=info_application))
+                store.dispatch(OpenApplicationAction(application=info_application))
 
             items.append(
                 NotificationActionItem(

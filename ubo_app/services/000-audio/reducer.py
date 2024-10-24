@@ -18,6 +18,8 @@ from ubo_app.store.services.audio import (
     AudioEvent,
     AudioPlayAudioAction,
     AudioPlayAudioEvent,
+    AudioPlaybackDoneAction,
+    AudioPlaybackDoneEvent,
     AudioPlayChimeAction,
     AudioPlayChimeEvent,
     AudioSetMuteStatusAction,
@@ -112,6 +114,13 @@ def reducer(
                     width=action.width,
                     id=action.id,
                 ),
+            ],
+        )
+    elif isinstance(action, AudioPlaybackDoneAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[
+                AudioPlaybackDoneEvent(id=action.id),
             ],
         )
     return state

@@ -21,6 +21,8 @@ from ubo_app.store.core import (
     MenuChooseByLabelEvent,
     MenuGoBackEvent,
     MenuGoHomeEvent,
+    MenuScrollDirection,
+    MenuScrollEvent,
     OpenApplicationEvent,
     SetMenuPathAction,
 )
@@ -171,6 +173,11 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             self.select_by_index,
             keep_ref=False,
         )
+        store.subscribe_event(
+            MenuScrollEvent,
+            self.scroll,
+            keep_ref=False,
+        )
 
         return self.menu_widget
 
@@ -237,3 +244,10 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         event: MenuChooseByIndexEvent,
     ) -> None:
         self.menu_widget.select(event.index)
+
+    @mainthread
+    def scroll(self: MenuAppCentral, event: MenuScrollEvent) -> None:
+        if event.direction == MenuScrollDirection.UP:
+            self.menu_widget.go_up()
+        elif event.direction == MenuScrollDirection.DOWN:
+            self.menu_widget.go_down()
