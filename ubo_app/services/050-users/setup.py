@@ -22,7 +22,7 @@ from ubo_gui.menu.types import (
 )
 
 from ubo_app.logging import logger
-from ubo_app.store.core import (
+from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
@@ -284,7 +284,7 @@ async def init_service() -> None:
     store.dispatch(
         RegisterSettingAppAction(
             priority=1,
-            category=SettingsCategory.OS,
+            category=SettingsCategory.SYSTEM,
             menu_item=SubMenuItem(
                 label='Users',
                 icon='󰡉',

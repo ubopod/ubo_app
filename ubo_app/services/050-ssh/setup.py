@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
-from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.ssh import SSHClearEnabledStateAction, SSHUpdateStateAction
 from ubo_app.utils.async_ import create_task

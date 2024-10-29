@@ -7,7 +7,7 @@ from ethernet_manager import get_ethernet_device, get_ethernet_device_state
 
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
-from ubo_app.store.status_icons import StatusIconsRegisterAction
+from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.async_ import create_task
 
 

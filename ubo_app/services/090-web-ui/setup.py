@@ -8,12 +8,12 @@ from quart import Quart, render_template, request
 from redux import FinishEvent
 
 from ubo_app.constants import WEB_UI_DEBUG_MODE, WEB_UI_LISTEN_HOST, WEB_UI_LISTEN_PORT
-from ubo_app.store.main import store
-from ubo_app.store.operations import (
+from ubo_app.store.input.types import (
     InputCancelAction,
     InputDescription,
     InputProvideAction,
 )
+from ubo_app.store.main import store
 
 
 async def init_service() -> None:

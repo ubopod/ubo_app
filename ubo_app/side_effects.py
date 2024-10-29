@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from redux import FinishAction, FinishEvent
 
 from ubo_app import display
-from ubo_app.store.core import (
+from ubo_app.store.core.types import (
     PowerOffEvent,
     RebootEvent,
     ReplayRecordedSequenceEvent,
@@ -22,7 +22,7 @@ from ubo_app.store.core import (
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
-from ubo_app.store.update_manager import (
+from ubo_app.store.update_manager.types import (
     UpdateManagerCheckEvent,
     UpdateManagerSetStatusAction,
     UpdateManagerUpdateEvent,

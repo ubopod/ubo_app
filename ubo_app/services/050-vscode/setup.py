@@ -17,7 +17,7 @@ from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
 
 from ubo_app.constants import INSTALLATION_PATH
-from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
@@ -183,7 +183,7 @@ def vscode_menu(state: VSCodeState) -> HeadedMenu:
 
     status = ''
     if state.is_pending:
-        status = '[size=48dp]󰔟[/size]'
+        status = '[size=48dp][/size]'
     elif state.status:
         if state.status.is_running:
             if state.status.name:

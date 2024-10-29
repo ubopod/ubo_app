@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from immutable import Immutable
 
 if TYPE_CHECKING:
-    from ubo_app.store.operations import InputDescription
+    from ubo_app.store.input.types import InputDescription
 
 
 class WebUIState(Immutable):

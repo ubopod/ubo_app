@@ -9,14 +9,14 @@ from typing import TYPE_CHECKING, TypeAlias, overload
 
 from typing_extensions import TypeVar
 
-from ubo_app.store.main import store
-from ubo_app.store.operations import (
+from ubo_app.store.input.types import (
     InputCancelEvent,
     InputDemandAction,
     InputDescription,
     InputFieldDescription,
     InputProvideEvent,
 )
+from ubo_app.store.main import store
 from ubo_app.store.services.camera import CameraStopViewfinderEvent
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
 

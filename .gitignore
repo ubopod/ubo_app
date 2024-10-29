@@ -79,8 +79,8 @@ venv.bak/
 *.log
 *.log.[0-9]*
 
-# headless-kivy-pi
-headless_kivy_pi_buffer.raw
+# headless-kivy
+headless_kivy*.raw
 
 # packer
 scripts/packer/packer_cache/

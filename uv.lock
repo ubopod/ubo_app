@@ -761,17 +761,16 @@ wheels = [
 
 [[package]]
 name = "headless-kivy"
-version = "0.9.8"
+version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kivy" },
     { name = "numpy" },
     { name = "python-strtobool" },
-    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fa/8d/4eeeef63a59b788be235e553ccc84626e9174582a5d970b787fbdabfcd96/headless_kivy-0.9.8.tar.gz", hash = "sha256:deae8fd400cca370f285aaaa1499011f9129d943aa2cf6feb04820e30d006c9c", size = 14617 }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/8a/8a6ad4efc4aa717868da1ca23cbe73b133d760fbeff595ab891da5f81c1b/headless_kivy-0.12.1.tar.gz", hash = "sha256:f8ca69235d28098d28037d76a6a46b128240a5cedb44ed233550035a9cd0b807", size = 16286 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/fd/24597fc9cf25ca27994a1cf536ba468b6e84b3243e25d7332bfb3cf8a07e/headless_kivy-0.9.8-py3-none-any.whl", hash = "sha256:a08eaa488ca16bbe37bc40d65f2074972c646f7d30540f8cff17a58885a3ec48", size = 15855 },
+    { url = "https://files.pythonhosted.org/packages/ec/bd/bac2f7fa173aed21aa14328b23acc528b7e5e63345a8513483d8a03fffc4/headless_kivy-0.12.1-py3-none-any.whl", hash = "sha256:89a78367b003a591ec94c619b1a8dd37dc9dead1ae80618a3b6e8e8f1bb994af", size = 19932 },
 ]
 
 [package.optional-dependencies]
@@ -1645,16 +1644,14 @@ wheels = [
 
 [[package]]
 name = "qrcode"
-version = "7.4.2"
+version = "8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
-    { name = "pypng" },
-    { name = "typing-extensions" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/30/35/ad6d4c5a547fe9a5baf85a9edbafff93fc6394b014fab30595877305fa59/qrcode-7.4.2.tar.gz", hash = "sha256:9dd969454827e127dbd93696b20747239e6d540e082937c90f14ac95b30f5845", size = 535974 }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/db/6fc9631cac1327f609d2c8ae3680ecd987a2e97472437f2de7ead1235156/qrcode-8.0.tar.gz", hash = "sha256:025ce2b150f7fe4296d116ee9bad455a6643ab4f6e7dce541613a4758cbce347", size = 42743 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/79/aaf0c1c7214f2632badb2771d770b1500d3d7cbdf2590ae62e721ec50584/qrcode-7.4.2-py3-none-any.whl", hash = "sha256:581dca7a029bcb2deef5d01068e39093e80ef00b4a61098a2182eac59d01643a", size = 46197 },
+    { url = "https://files.pythonhosted.org/packages/74/ab/df8d889fd01139db68ae9e5cb5c8f0ea016823559a6ecb427582d52b07dc/qrcode-8.0-py3-none-any.whl", hash = "sha256:9fc05f03305ad27a709eb742cf3097fa19e6f6f93bb9e2f039c0979190f6f1b1", size = 45710 },
 ]
 
 [[package]]
@@ -1882,7 +1879,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "1.0.1.dev11+unknown"
+version = "1.0.1.dev13+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
@@ -1951,7 +1948,7 @@ requires-dist = [
     { name = "docker", specifier = ">=7.1.0" },
     { name = "fasteners", specifier = ">=0.19" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = ">=2.0.1" },
-    { name = "headless-kivy", specifier = ">=0.9.8" },
+    { name = "headless-kivy", specifier = ">=0.12.1" },
     { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = ">=1.2.0" },
     { name = "platformdirs", specifier = ">=4.2.0" },
     { name = "psutil", specifier = ">=6.0.0" },
@@ -1971,13 +1968,13 @@ requires-dist = [
     { name = "semver", specifier = ">=3.0.2" },
     { name = "sentry-sdk", specifier = ">=1.43.0" },
     { name = "simpleaudio", specifier = ">=1.0.4" },
-    { name = "ubo-gui", specifier = ">=0.13.3" },
+    { name = "ubo-gui", specifier = ">=0.13.7" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "grpcio-tools", specifier = ">=1.66.1" },
-    { name = "headless-kivy", extras = ["test"], specifier = ">=0.9.8" },
+    { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.1" },
     { name = "ipython", specifier = ">=8.23.0" },
     { name = "poethepoet", specifier = ">=0.24.4" },
     { name = "pyfakefs", git = "https://github.com/pytest-dev/pyfakefs.git" },
@@ -1995,16 +1992,16 @@ dev = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.13.3"
+version = "0.13.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "headless-kivy" },
     { name = "python-immutable" },
     { name = "qrcode" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bf/1f/22376278590aa8dea170291ebba733882da43660017349076493f9c050f1/ubo_gui-0.13.3.tar.gz", hash = "sha256:a2d82b68ec56f114d7bbdd890e73c706d6ea37a5808f3ef74f047c0d60c0bd00", size = 8582266 }
+sdist = { url = "https://files.pythonhosted.org/packages/e9/cc/f0a4474bf4f3c2d6f2566c3d99a21c046421d86929e4983d24d7ba832794/ubo_gui-0.13.7.tar.gz", hash = "sha256:d6b036376a8944f90207d263a26ff8616fb4ccbc83502136c0fab3b5b53b5b18", size = 8579473 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/e2/c25f84e93490bb475688766b9bfa202f530c616df1d8f5f192004d7022c4/ubo_gui-0.13.3-py3-none-any.whl", hash = "sha256:04e0792ce81d7422baebfbd2b515c26644cdd59e1b93a3ba49dfb3e942519d5a", size = 8601143 },
+    { url = "https://files.pythonhosted.org/packages/92/2a/0e1f874afaf23a0f90ced8f34b2ee52fe0cccc4767f2a8e6620eef91a0f6/ubo_gui-0.13.7-py3-none-any.whl", hash = "sha256:20c747c8c8219a3459b438da57d005cf2d9425c5e93a73ee89963cb2a7d47d7a", size = 8602661 },
 ]
 
 [[package]]

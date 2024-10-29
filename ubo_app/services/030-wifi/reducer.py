@@ -22,7 +22,7 @@ from ubo_app.store.services.wifi import (
     WiFiUpdateRequestAction,
     WiFiUpdateRequestEvent,
 )
-from ubo_app.store.status_icons import StatusIconsRegisterAction
+from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 
 
 def reducer(

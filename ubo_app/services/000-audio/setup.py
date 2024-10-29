@@ -15,7 +15,7 @@ from ubo_app.store.services.audio import (
     AudioPlayAudioEvent,
     AudioPlayChimeEvent,
 )
-from ubo_app.store.status_icons import StatusIconsRegisterAction
+from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.async_ import to_thread
 from ubo_app.utils.persistent_store import register_persistent_store
 

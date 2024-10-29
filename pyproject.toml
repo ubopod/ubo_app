@@ -8,8 +8,8 @@ requires-python = ">=3.11"
 keywords = ['ubo', 'ubo-pod', 'raspberry pi', 'rpi', 'home assistance']
 dependencies = [
   "psutil >=6.0.0",
-  "ubo-gui >=0.13.3",
-  "headless-kivy >=0.9.8",
+  "ubo-gui >=0.13.7",
+  "headless-kivy >=0.12.1",
   "pyzbar >=0.1.9",
   "sdbus-networkmanager >=2.0.0 ; platform_machine=='aarch64'",
   "rpi_ws281x >=5.0.0 ; platform_machine=='aarch64'",
@@ -65,7 +65,7 @@ packages = ["ubo_app"]
 
 [tool.uv]
 dev-dependencies = [
-  "headless-kivy [test] >=0.9.8",
+  "headless-kivy [test] >=0.12.1",
   "poethepoet >=0.24.4",
   "pyright >=1.1.377",
   "pytest >=8.0.0",

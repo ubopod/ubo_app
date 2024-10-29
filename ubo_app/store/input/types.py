@@ -94,3 +94,4 @@ class InputProvideEvent(InputResolveEvent):
 
     value: str
     data: dict[str, str | None] | None
+

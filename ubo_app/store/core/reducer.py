@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import replace
 from typing import cast
@@ -13,7 +14,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.core import (
+from ubo_app.store.core.types import (
     CloseApplicationAction,
     CloseApplicationEvent,
     InitEvent,
@@ -44,6 +45,7 @@ from ubo_app.store.core import (
     RegisterSettingAppAction,
     ReplayRecordedSequenceEvent,
     ScreenshotEvent,
+    SetAreEnclosuresVisibleAction,
     SetMenuPathAction,
     SnapshotEvent,
     StoreRecordedSequenceEvent,
@@ -54,6 +56,7 @@ from ubo_app.store.services.keypad import (
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
 )
+from ubo_app.store.services.notifications import Notification, NotificationsAddAction
 
 
 def reducer(
@@ -61,14 +64,14 @@ def reducer(
     action: MainAction,
 ) -> ReducerResult[
     MainState,
-    AudioChangeVolumeAction,
+    AudioChangeVolumeAction | NotificationsAddAction,
     InitEvent | MenuEvent | FinishEvent | MainEvent,
 ]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
     if state is None:
         if isinstance(action, InitAction):
-            from ._menus import HOME_MENU
+            from .menus import HOME_MENU
 
             return CompleteReducerResult(
                 state=MainState(menu=HOME_MENU),
@@ -216,6 +219,36 @@ def reducer(
                     state=state,
                     events=[FinishEvent()],
                 )
+
+            # DEMO {
+            if action.pressed_keys == {Key.HOME, Key.UP} and action.key == Key.UP:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        NotificationsAddAction(
+                            notification=Notification(
+                                title='Test notification with progress',
+                                content='This is a test notification with progress',
+                                progress=0.5,
+                            ),
+                        ),
+                    ],
+                )
+            if action.pressed_keys == {Key.HOME, Key.DOWN} and action.key == Key.DOWN:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        NotificationsAddAction(
+                            notification=Notification(
+                                icon='',
+                                title='Test notification with spinner',
+                                content='This is a test notification with spinner',
+                                progress=math.nan,
+                            ),
+                        ),
+                    ],
+                )
+            # DEMO }
         return state
 
     if isinstance(action, KeypadKeyReleaseAction):
@@ -408,6 +441,13 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
 
     if isinstance(action, SetMenuPathAction):
         return replace(state, path=action.path, depth=action.depth)
+
+    if isinstance(action, SetAreEnclosuresVisibleAction):
+        return replace(
+            state,
+            is_header_visible=action.is_header_visible,
+            is_footer_visible=action.is_footer_visible,
+        )
 
     if isinstance(action, PowerOffAction):
         return CompleteReducerResult(

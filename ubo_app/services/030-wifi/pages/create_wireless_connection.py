@@ -13,9 +13,9 @@ from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
-from ubo_app.store.core import CloseApplicationAction
+from ubo_app.store.core.types import CloseApplicationAction
+from ubo_app.store.input.types import InputFieldDescription, InputFieldType
 from ubo_app.store.main import store
-from ubo_app.store.operations import InputFieldDescription, InputFieldType
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,

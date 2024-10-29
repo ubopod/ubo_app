@@ -122,13 +122,7 @@ async def stability(
             assert is_window_stable, 'The content of the screen is not stable yet'
             assert is_store_stable, 'The content of the store is not stable yet'
 
-            from headless_kivy import HeadlessWidget, config
-
-            headless_widget_instance = HeadlessWidget.get_instance(app_context.app.root)
-            if headless_widget_instance:
-                assert (
-                    headless_widget_instance.fps == config.min_fps()
-                ), 'Not in low fps mode'
+            from headless_kivy import HeadlessWidget
 
         await _run(
             initial_wait=initial_wait,

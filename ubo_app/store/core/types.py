@@ -12,7 +12,7 @@ from redux import BaseAction, BaseEvent
 class SettingsCategory(StrEnum):
     NETWORK = 'Network'
     REMOTE = 'Remote'
-    OS = 'OS'
+    SYSTEM = 'System'
     SPEECH = 'Speech'
     DOCKER = 'Docker'
 
@@ -25,7 +25,7 @@ class MenuScrollDirection(StrEnum):
 SETTINGS_ICONS = {
     SettingsCategory.NETWORK: '󰛳',
     SettingsCategory.REMOTE: '󰑔',
-    SettingsCategory.OS: '󰕈',
+    SettingsCategory.SYSTEM: '󰒔',
     SettingsCategory.SPEECH: '󰔊',
     SettingsCategory.DOCKER: '󰡨',
 }
@@ -78,6 +78,11 @@ class RebootAction(PowerAction): ...
 class SetMenuPathAction(MainAction):
     path: Sequence[str]
     depth: int
+
+
+class SetAreEnclosuresVisibleAction(MainAction):
+    is_header_visible: bool = True
+    is_footer_visible: bool = True
 
 
 class MenuAction(MainAction): ...
@@ -183,6 +188,8 @@ class MainState(Immutable):
     menu: Menu | None = None
     path: Sequence[str] = field(default_factory=list)
     depth: int = 0
+    is_header_visible: bool = True
+    is_footer_visible: bool = True
     settings_items_priorities: dict[str, int] = field(default_factory=dict)
     is_recording: bool = False
     recorded_sequence: list[BaseAction] = field(default_factory=list)

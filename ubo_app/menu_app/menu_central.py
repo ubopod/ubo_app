@@ -14,7 +14,7 @@ from ubo_gui.menu.stack_item import StackItem, StackMenuItem
 from ubo_app.constants import DEBUG_MODE_MENU
 from ubo_app.logging import logger
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
-from ubo_app.store.core import (
+from ubo_app.store.core.types import (
     CloseApplicationEvent,
     MenuChooseByIconEvent,
     MenuChooseByIndexEvent,
@@ -24,11 +24,12 @@ from ubo_app.store.core import (
     MenuScrollDirection,
     MenuScrollEvent,
     OpenApplicationEvent,
+    SetAreEnclosuresVisibleAction,
     SetMenuPathAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
-from ubo_app.store.update_manager import UpdateManagerSetUpdateServiceStatusAction
+from ubo_app.store.update_manager.types import UpdateManagerSetUpdateServiceStatusAction
 from ubo_app.utils.async_ import create_task
 
 from .home_page import HomePage
@@ -56,19 +57,6 @@ class MenuWidgetWithHomePage(MenuWidget):
         return super()._render_menu(menu)
 
 
-def set_path(_: MenuWidget, stack: list[StackItem]) -> None:
-    store.dispatch(
-        SetMenuPathAction(
-            path=[
-                stack_item.selection.key
-                for stack_item in stack
-                if isinstance(stack_item, StackMenuItem) and stack_item.selection
-            ],
-            depth=len(stack),
-        ),
-    )
-
-
 class MenuAppCentral(MenuNotificationHandler, UboApp):
     def __init__(self: MenuAppCentral, **kwargs: object) -> None:
         super().__init__(**kwargs)
@@ -76,6 +64,12 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         self.menu_widget.bind(page_index=self.handle_page_index_change)
         self.menu_widget.bind(current_menu=self.handle_page_index_change)
+        self.menu_widget.bind(title=self.handle_title_change)
+        self.menu_widget.bind(stack=self.handle_stack_change)
+
+        if DEBUG_MODE_MENU:
+            menu_representation = 'Menu:\n' + repr(self.menu_widget)
+            self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 
         _self = weakref.ref(self)
 
@@ -110,27 +104,38 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self: MenuAppCentral,
         *_: object,
     ) -> None:
-        self.root.ids.header_layout.opacity = (
-            1 if self.menu_widget.page_index == 0 else 0
-        )
-        self.root.ids.footer_layout.opacity = (
-            1 if self.menu_widget.page_index >= self.menu_widget.pages - 1 else 0
+        store.dispatch(
+            SetAreEnclosuresVisibleAction(
+                is_header_visible=self.menu_widget.page_index == 0,
+                is_footer_visible=self.menu_widget.page_index
+                >= self.menu_widget.pages - 1,
+            ),
         )
 
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
         self.root.title = title
+
+    def handle_stack_change(
+        self: MenuAppCentral,
+        _: MenuWidget,
+        stack: list[StackItem],
+    ) -> None:
+        store.dispatch(
+            SetMenuPathAction(
+                path=[
+                    stack_item.selection.key
+                    for stack_item in stack
+                    if isinstance(stack_item, StackMenuItem) and stack_item.selection
+                ],
+                depth=len(stack),
+            ),
+        )
 
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
         self.root.is_fullscreen = True
         self.root.title = self.menu_widget.title
-        self.menu_widget.bind(title=self.handle_title_change)
-        self.menu_widget.bind(stack=set_path)
-
-        if DEBUG_MODE_MENU:
-            menu_representation = 'Menu:\n' + repr(self.menu_widget)
-            self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 
         store.subscribe_event(
             NotificationsDisplayEvent,

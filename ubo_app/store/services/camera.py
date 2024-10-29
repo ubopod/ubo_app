@@ -7,7 +7,7 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
-    from ubo_app.store.operations import InputDescription
+    from ubo_app.store.input.types import InputDescription
 
 
 class CameraAction(BaseAction): ...

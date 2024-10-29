@@ -14,6 +14,7 @@
 - fix(users): avoid setting user as sudoer when it performs a password reset
 - feat(ip): use pythonping to perform a real ping test instead to determine the internet connection status instead of opening a socket
 - feat(core): user can start/end recording actioning by hitting r, actions will be recorded in `recordings/` directory and the last recording can be replayed by hitting `ctrl+r` - closes #187
+- feat(core): use new `SpinnerWidget` of ubo-gui to show unknown progress in notifications, and add `General` sub menu to `System` settings menu to host ubo-pod/ubo-app related settings, currently it has `Debug` toggle to control a debug feature of `HeadlessWidget` - closes #190
 
 ## Version 1.0.0
 

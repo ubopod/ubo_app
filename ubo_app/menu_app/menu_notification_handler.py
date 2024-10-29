@@ -14,7 +14,7 @@ from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PAGE_MAX_ITEMS
 
 from ubo_app.menu_app.notification_info import NotificationInfo
-from ubo_app.store.core import CloseApplicationAction, OpenApplicationAction
+from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,

@@ -15,7 +15,7 @@ from kivy.clock import Clock, mainthread
 from typing_extensions import override
 from ubo_gui.page import PageWidget
 
-from ubo_app.store.core import CloseApplicationAction, OpenApplicationAction
+from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraReportBarcodeAction,

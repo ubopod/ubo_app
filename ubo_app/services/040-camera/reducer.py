@@ -12,7 +12,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.store.operations import (
+from ubo_app.store.input.types import (
     InputCancelAction,
     InputDemandAction,
     InputProvideAction,

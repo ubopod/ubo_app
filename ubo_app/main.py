@@ -22,7 +22,14 @@ def main() -> None:
     os.environ['KIVY_NO_CONFIG'] = '1'
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
+    # We want to have full control over the exit behavior
     os.environ['KCFG_KIVY_EXIT_ON_ESCAPE'] = '0'
+    # Hardware FBO is needed to make sure the in memory buffer uses the GPU
+    os.environ['KCFG_GRAPHICS_FBO'] = 'force-hardware'
+    # Anti-aliasing is not needed since Kivy is not directly rendering on a display
+    os.environ['KCFG_GRAPHICS_MULTISAMPLES'] = '0'
+    # V-SYNC is not needed since Kivy is not directly rendering on a display
+    os.environ['KCFG_GRAPHICS_VSYNC'] = '0'
 
     # `setup_logging` needs to be called before anything else to initialize the rotating
     # log files
@@ -47,13 +54,16 @@ def main() -> None:
     from ubo_app.display import render_on_display
 
     headless_kivy.config.setup_headless_kivy(
-        {
-            'callback': render_on_display,
-            'automatic_fps': True,
-            'flip_vertical': True,
-            'width': WIDTH,
-            'height': HEIGHT,
-        },
+        headless_kivy.config.SetupHeadlessConfig(
+            bandwidth_limit=70 * 1000 * 1000 // 8 // 2,
+            bandwidth_limit_window=0.03,
+            bandwidth_limit_overhead=10000,
+            region_size=60,
+            callback=render_on_display,
+            flip_vertical=True,
+            width=WIDTH,
+            height=HEIGHT,
+        ),
     )
 
     from ubo_app.logging import logger

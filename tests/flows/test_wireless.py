@@ -52,7 +52,7 @@ async def test_wireless_flow(
     )
 
     from ubo_app.menu_app.menu import MenuApp
-    from ubo_app.store.core import (
+    from ubo_app.store.core.types import (
         MenuChooseByIconAction,
         MenuChooseByLabelAction,
         MenuGoBackAction,
