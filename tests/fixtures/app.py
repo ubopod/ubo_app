@@ -241,6 +241,10 @@ def _setup_headless_kivy() -> None:
         from kivy.config import Config
 
         Config.set('graphics', 'window_state', 'hidden')
+        Config.set('graphics', 'fbo', 'force-hardware')
+        Config.set('graphics', 'fullscreen', '0')
+        Config.set('graphics', 'multisamples', '1')
+        Config.set('graphics', 'vsync', '0')
 
     import headless_kivy.config
 
@@ -249,7 +253,6 @@ def _setup_headless_kivy() -> None:
     headless_kivy.config.setup_headless_kivy(
         {
             'callback': render_on_display,
-            'automatic_fps': True,
             'flip_vertical': True,
             'width': WIDTH,
             'height': HEIGHT,

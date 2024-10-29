@@ -19,13 +19,11 @@ class DisplayResumeAction(DisplayAction): ...
 
 class DisplayRenderEvent(DisplayEvent):
     data: bytes
-    data_hash: int
     rectangle: tuple[int, int, int, int]
 
 
 class DisplayCompressedRenderEvent(DisplayEvent):
     compressed_data: bytes
-    data_hash: int
     rectangle: tuple[int, int, int, int]
 
 

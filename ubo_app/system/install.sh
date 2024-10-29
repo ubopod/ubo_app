@@ -111,16 +111,16 @@ virtualenv --system-site-packages "$INSTALLATION_PATH/env"
 # Install the latest version of ubo-app
 if [ "$UPDATE" = true ]; then
   if [ "$ALPHA" = true ]; then
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" "$SOURCE"[default]
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" "$SOURCE"
   else
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" "$SOURCE"[default]
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --no-index --upgrade --find-links "$INSTALLATION_PATH/_update/" "$SOURCE"
   fi
 else
   if [ "$ALPHA" = true ]; then
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre "$SOURCE"[default] | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre "$SOURCE" | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
   else
     # Count number of Collecting instances
-    "$INSTALLATION_PATH/env/bin/python" -m pip install "$SOURCE"[default] | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
+    "$INSTALLATION_PATH/env/bin/python" -m pip install "$SOURCE" | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
   fi
 fi
 

@@ -5,7 +5,7 @@ from dataclasses import replace
 
 from redux import InitAction, InitializationActionError
 
-from ubo_app.store.status_icons import (
+from ubo_app.store.status_icons.types import (
     IconState,
     StatusIconsAction,
     StatusIconsRegisterAction,

@@ -13,7 +13,7 @@ from wifi_manager import (
 )
 
 from ubo_app.logging import logger
-from ubo_app.store.core import (
+from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )

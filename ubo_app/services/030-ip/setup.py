@@ -11,7 +11,7 @@ from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.ip import (
@@ -19,7 +19,7 @@ from ubo_app.store.services.ip import (
     IpSetIsConnectedAction,
     IpUpdateInterfacesAction,
 )
-from ubo_app.store.status_icons import StatusIconsRegisterAction
+from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:

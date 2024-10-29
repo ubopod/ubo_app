@@ -23,7 +23,7 @@ from wifi_manager import (
     get_wifi_device,
 )
 
-from ubo_app.store.core import CloseApplicationAction
+from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.wifi import (
     ConnectionState,

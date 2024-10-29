@@ -27,10 +27,10 @@ from redux import (
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logging import logger
-from ubo_app.store.core import MainAction, MainEvent
 from ubo_app.store.core.reducer import reducer as main_reducer
+from ubo_app.store.core.types import MainAction, MainEvent
 from ubo_app.store.input.reducer import reducer as input_reducer
-from ubo_app.store.operations import (
+from ubo_app.store.input.types import (
     InputAction,
     InputResolveEvent,
 )
@@ -53,10 +53,12 @@ from ubo_app.store.services.users import UsersAction, UsersEvent
 from ubo_app.store.services.voice import VoiceAction
 from ubo_app.store.services.vscode import VSCodeAction
 from ubo_app.store.services.wifi import WiFiAction, WiFiEvent
-from ubo_app.store.status_icons import StatusIconsAction
+from ubo_app.store.settings.reducer import reducer as settings_reducer
+from ubo_app.store.settings.types import SettingsAction, SettingsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
-from ubo_app.store.update_manager import UpdateManagerAction
+from ubo_app.store.status_icons.types import StatusIconsAction
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
+from ubo_app.store.update_manager.types import UpdateManagerAction
 from ubo_app.utils.serializer import add_type_field
 
 if TYPE_CHECKING:
@@ -64,7 +66,7 @@ if TYPE_CHECKING:
 
     from redux.basic_types import SnapshotAtom, TaskCreatorCallback
 
-    from ubo_app.store.core import MainState
+    from ubo_app.store.core.types import MainState
     from ubo_app.store.services.audio import AudioState
     from ubo_app.store.services.camera import CameraState
     from ubo_app.store.services.display import DisplayState
@@ -81,18 +83,19 @@ if TYPE_CHECKING:
     from ubo_app.store.services.vscode import VSCodeState
     from ubo_app.store.services.web_ui import WebUIState
     from ubo_app.store.services.wifi import WiFiState
-    from ubo_app.store.status_icons import StatusIconsState
-    from ubo_app.store.update_manager import UpdateManagerState
+    from ubo_app.store.status_icons.types import StatusIconsState
+    from ubo_app.store.update_manager.types import UpdateManagerState
 
 UboAction: TypeAlias = (
     # Core Actions
     CombineReducerAction
-    | StatusIconsAction
-    | UpdateManagerAction
-    | MainAction
-    | InputAction
     | InitAction
     | FinishAction
+    | MainAction
+    | SettingsAction
+    | StatusIconsAction
+    | UpdateManagerAction
+    | InputAction
     # Services Actions
     | AudioAction
     | CameraAction
@@ -142,6 +145,7 @@ def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
 
 class RootState(BaseCombineReducerState):
     main: MainState
+    settings: SettingsState
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
 
@@ -168,6 +172,7 @@ root_reducer, root_reducer_id = combine_reducers(
     action_type=UboAction,  # pyright: ignore [reportArgumentType]
     event_type=UboEvent,  # pyright: ignore [reportArgumentType]
     main=main_reducer,
+    settings=settings_reducer,
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
     input=input_reducer,

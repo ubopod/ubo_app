@@ -6,6 +6,8 @@
   "main": {
     "_type": "MainState",
     "depth": 1,
+    "is_footer_visible": true,
+    "is_header_visible": true,
     "is_recording": false,
     "menu": {
       "_type": "HeadlessMenu",
@@ -121,17 +123,61 @@
                         1,
                         1
                       ],
-                      "icon": "󰕈",
+                      "icon": "󰒔",
                       "is_short": false,
-                      "key": "OS",
-                      "label": "OS",
+                      "key": "System",
+                      "label": "System",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
                         "_type": "HeadlessMenu",
-                        "items": [],
+                        "items": [
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰒓",
+                            "is_short": false,
+                            "key": "general",
+                            "label": "General",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadlessMenu",
+                              "items": [
+                                {
+                                  "_type": "DispatchItem",
+                                  "action": "<function:<lambda>>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Debug",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "SettingsToggleDebugModeAction"
+                                  }
+                                }
+                              ],
+                              "placeholder": null,
+                              "title": "󰒓General"
+                            }
+                          }
+                        ],
                         "placeholder": "No settings in this category",
-                        "title": "󰕈OS"
+                        "title": "󰒔System"
                       }
                     },
                     {
@@ -316,6 +362,10 @@
     "path": [],
     "recorded_sequence": [],
     "settings_items_priorities": {}
+  },
+  "settings": {
+    "_type": "SettingsState",
+    "is_debug_enabled": false
   },
   "status_icons": {
     "_type": "StatusIconsState",

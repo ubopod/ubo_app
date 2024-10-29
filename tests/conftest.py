@@ -67,8 +67,6 @@ fixtures = (
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add options to the pytest command line."""
-    parser.addoption('--override-window-snapshots', action='store_true')
-    parser.addoption('--make-screenshots', action='store_true')
     parser.addoption('--use-fakefs', action='store_true')
 
 

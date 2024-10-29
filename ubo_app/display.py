@@ -1,7 +1,8 @@
-"""Provides the adafruit display tools."""
+"""Provides the adRegion display tools."""
 
 from __future__ import annotations
 
+import time
 import zlib
 from typing import TYPE_CHECKING, cast
 
@@ -17,16 +18,14 @@ from ubo_app.store.services.display import (
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
-    from threading import Thread
+    from headless_kivy.config import Region
 
-    from numpy._typing import NDArray
 
+from ubo_app.constants import HEIGHT, WIDTH
 
 if IS_RPI:
     import board
     import digitalio
-
-    from ubo_app.constants import HEIGHT, WIDTH
 
     cs_pin = digitalio.DigitalInOut(board.CE0)
     dc_pin = digitalio.DigitalInOut(board.D25)
@@ -41,7 +40,7 @@ if IS_RPI:
         cs=cs_pin,
         dc=dc_pin,
         rst=reset_pin,
-        baudrate=60000000,
+        baudrate=70000000,
     )
 else:
     display = cast(ST7789, Fake())
@@ -49,43 +48,51 @@ else:
 
 def render_on_display(
     *,
-    rectangle: tuple[int, int, int, int],
-    data: NDArray[np.uint8],
-    data_hash: int,
-    last_render_thread: Thread,
+    regions: list[Region],
 ) -> None:
     """Transfer data to the display via SPI controller."""
-    data_ = data.astype(np.uint16)
-    color = (
-        ((data_[:, :, 0] & 0xF8) << 8)
-        | ((data_[:, :, 1] & 0xFC) << 3)
-        | (data_[:, :, 2] >> 3)
-    )
-    data_bytes = bytes(
-        np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
-    )
-    if last_render_thread:
-        last_render_thread.join()
-    render_block(rectangle, data_bytes)
-    compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
-    store._dispatch(  # noqa: SLF001
-        [
-            DisplayRenderEvent(
-                data=data.tobytes(),
-                data_hash=data_hash,
-                rectangle=rectangle,
+    for region in regions:
+        rectangle = region['rectangle']
+        data = region['data'].astype(np.uint16)
+        color = (
+            ((data[:, :, 0] & 0xF8) << 8)
+            | ((data[:, :, 1] & 0xFC) << 3)
+            | (data[:, :, 2] >> 3)
+        ).copy()
+        data_bytes = (
+            color.astype(np.uint16).view(np.uint8).reshape(-1, 2)[:, ::-1].tobytes()
+        )
+        render_block(
+            (
+                rectangle[1],
+                rectangle[0],
+                rectangle[3] - 1,
+                rectangle[2] - 1,
             ),
-            DisplayCompressedRenderEvent(
-                compressed_data=compressor.compress(data.tobytes())
-                + compressor.flush(),
-                data_hash=data_hash,
-                rectangle=rectangle,
-            ),
-        ],
-    )
+            data_bytes,
+        )
+        compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+        store._dispatch(  # noqa: SLF001
+            [
+                DisplayRenderEvent(
+                    data=data.tobytes(),
+                    rectangle=rectangle,
+                ),
+                DisplayCompressedRenderEvent(
+                    compressed_data=compressor.compress(data.tobytes())
+                    + compressor.flush(),
+                    rectangle=rectangle,
+                ),
+            ],
+        )
 
 
-@store.view(lambda state: state.display.is_paused)
+original_block = display._block  # noqa: SLF001
+
+
+@store.view(
+    lambda state: state.display.is_paused if hasattr(state, 'display') else False,
+)
 def render_block(
     is_paused: bool,  # noqa: FBT001
     rectangle: tuple[int, int, int, int],
@@ -106,4 +113,14 @@ def turn_off() -> None:
 
 def render_blank() -> None:
     """Render a blank screen."""
-    display.fill(0)
+    if IS_RPI:
+        original_block(0, 0, WIDTH - 1, HEIGHT - 1, b'\x00\x00' * WIDTH * HEIGHT)
+        time.sleep(0.2)
+        original_block(0, 0, WIDTH - 1, HEIGHT - 1, b'\x00\x00' * WIDTH * HEIGHT)
+
+
+splash_screen = None
+if splash_screen:
+    render_block((0, 0, WIDTH - 1, HEIGHT - 1), splash_screen)
+else:
+    render_blank()

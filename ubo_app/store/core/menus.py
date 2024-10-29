@@ -1,5 +1,8 @@
+"""Menu definitions for the Ubo GUI."""
+
 from __future__ import annotations
 
+import math
 import socket
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -11,7 +14,7 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
-from ubo_app.store.core import (
+from ubo_app.store.core.types import (
     SETTINGS_ICONS,
     PowerOffAction,
     RebootAction,
@@ -23,6 +26,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationsDisplayAction,
 )
+from ubo_app.store.settings.types import SettingsToggleDebugModeAction
 from ubo_app.store.update_manager.utils import (
     BASE_IMAGE,
     CURRENT_VERSION,
@@ -41,6 +45,36 @@ APPS_MENU = HeadlessMenu(
     placeholder='No apps',
 )
 
+
+@store.autorun(lambda state: state.settings.is_debug_enabled)
+def _debug_icon(is_debug_eanbled: bool) -> str:  # noqa: FBT001
+    return '󰱒' if is_debug_eanbled else '󰄱'
+
+
+SETTINGS_ITEMS: dict[SettingsCategory, list[Item]] = {
+    SettingsCategory.NETWORK: [],
+    SettingsCategory.REMOTE: [],
+    SettingsCategory.SYSTEM: [
+        SubMenuItem(
+            key='general',
+            label='General',
+            icon='󰒓',
+            sub_menu=HeadlessMenu(
+                title='󰒓General',
+                items=[
+                    DispatchItem(
+                        label='Debug',
+                        store_action=SettingsToggleDebugModeAction(),
+                        icon=_debug_icon,
+                    ),
+                ],
+            ),
+        ),
+    ],
+    SettingsCategory.SPEECH: [],
+    SettingsCategory.DOCKER: [],
+}
+
 SETTINGS_MENU = HeadlessMenu(
     title='Settings',
     items=[
@@ -50,7 +84,7 @@ SETTINGS_MENU = HeadlessMenu(
             icon=SETTINGS_ICONS[category],
             sub_menu=HeadlessMenu(
                 title=SETTINGS_ICONS[category] + category,
-                items=[],
+                items=SETTINGS_ITEMS[category],
                 placeholder='No settings in this category',
             ),
         )
@@ -93,7 +127,7 @@ MAIN_MENU = HeadlessMenu(
     lambda state: state.notifications.unread_count,
     options=AutorunOptions(default_value='Notifications (not loaded)'),
 )
-def notifications_title(unread_count: int) -> str:
+def _notifications_title(unread_count: int) -> str:
     return f'Notifications ({unread_count})'
 
 
@@ -115,7 +149,9 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
                 index=index,
                 count=len(notifications),
             ),
-            progress=notification.progress,
+            progress=None
+            if notification.progress is None or math.isnan(notification.progress)
+            else notification.progress,
         )
         for index, notification in enumerate(notifications)
         if notification.expiration_timestamp is None
@@ -127,7 +163,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
     lambda state: len(state.notifications.notifications),
     options=AutorunOptions(default_value='white'),
 )
-def notifications_color(unread_count: int) -> str:
+def _notifications_color(unread_count: int) -> str:
     return 'yellow' if unread_count > 0 else 'white'
 
 
@@ -145,11 +181,11 @@ HOME_MENU = HeadlessMenu(
             key='notifications',
             label='',
             sub_menu=HeadlessMenu(
-                title=notifications_title,
+                title=_notifications_title,
                 items=notifications_menu_items,
                 placeholder='No notifications',
             ),
-            color=notifications_color,
+            color=_notifications_color,
             icon='',
             is_short=True,
         ),

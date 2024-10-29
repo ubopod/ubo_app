@@ -17,13 +17,13 @@ from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
-from ubo_app.store.core import (
+from ubo_app.store.core.types import (
     RegisterRegularAppAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
+from ubo_app.store.input.types import InputFieldDescription, InputFieldType
 from ubo_app.store.main import store
-from ubo_app.store.operations import InputFieldDescription, InputFieldType
 from ubo_app.store.services.docker import (
     DockerImageRegisterAppEvent,
     DockerRemoveUsernameAction,

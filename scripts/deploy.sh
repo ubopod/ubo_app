@@ -48,9 +48,9 @@ function run_on_pod_as_root() {
 
 scp dist/$LATEST_VERSION ubo-development-pod:/tmp/
 
-run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION[default] &&"; fi)
+run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION &&"; fi)
 mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/models /tmp/
-pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION[default]
+pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION
 mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/
 true"
 

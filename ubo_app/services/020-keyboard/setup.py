@@ -52,27 +52,81 @@ KEY_MAP = {
             pressed_keys=set(),
         ),
         Keyboard.keycodes['m']: AudioToggleMuteStatusAction(device=AudioDevice.INPUT),
-        Keyboard.keycodes['p']: KeypadKeyPressAction(
+    },
+    'ctrl': {
+        Keyboard.keycodes['up']: KeypadKeyPressAction(
+            key=Key.UP,
+            pressed_keys={Key.BACK, Key.UP},
+        ),
+        Keyboard.keycodes['k']: KeypadKeyPressAction(
+            key=Key.UP,
+            pressed_keys={Key.BACK, Key.UP},
+        ),
+        Keyboard.keycodes['down']: KeypadKeyPressAction(
+            key=Key.DOWN,
+            pressed_keys={Key.BACK, Key.DOWN},
+        ),
+        Keyboard.keycodes['j']: KeypadKeyPressAction(
+            key=Key.DOWN,
+            pressed_keys={Key.BACK, Key.DOWN},
+        ),
+        Keyboard.keycodes['1']: KeypadKeyPressAction(
+            key=Key.L1,
+            pressed_keys={Key.BACK, Key.L1},
+        ),
+        Keyboard.keycodes['2']: KeypadKeyPressAction(
+            key=Key.L2,
+            pressed_keys={Key.BACK, Key.L2},
+        ),
+        Keyboard.keycodes['3']: KeypadKeyPressAction(
+            key=Key.L3,
+            pressed_keys={Key.BACK, Key.L3},
+        ),
+        Keyboard.keycodes['backspace']: KeypadKeyPressAction(
+            key=Key.HOME,
+            pressed_keys={Key.BACK, Key.HOME},
+        ),
+    },
+    'shift': {
+        Keyboard.keycodes['up']: KeypadKeyPressAction(
+            key=Key.UP,
+            pressed_keys={Key.HOME, Key.UP},
+        ),
+        Keyboard.keycodes['k']: KeypadKeyPressAction(
+            key=Key.UP,
+            pressed_keys={Key.HOME, Key.UP},
+        ),
+        Keyboard.keycodes['down']: KeypadKeyPressAction(
+            key=Key.DOWN,
+            pressed_keys={Key.HOME, Key.DOWN},
+        ),
+        Keyboard.keycodes['j']: KeypadKeyPressAction(
+            key=Key.DOWN,
+            pressed_keys={Key.HOME, Key.DOWN},
+        ),
+        Keyboard.keycodes['1']: KeypadKeyPressAction(
             key=Key.L1,
             pressed_keys={Key.HOME, Key.L1},
         ),
-        Keyboard.keycodes['s']: KeypadKeyPressAction(
+        Keyboard.keycodes['2']: KeypadKeyPressAction(
             key=Key.L2,
             pressed_keys={Key.HOME, Key.L2},
         ),
-        Keyboard.keycodes['r']: KeypadKeyPressAction(
+        Keyboard.keycodes['3']: KeypadKeyPressAction(
             key=Key.L3,
             pressed_keys={Key.HOME, Key.L3},
         ),
-        Keyboard.keycodes['q']: KeypadKeyPressAction(
+        Keyboard.keycodes['left']: KeypadKeyPressAction(
             key=Key.BACK,
             pressed_keys={Key.HOME, Key.BACK},
         ),
-    },
-    'ctrl': {
-        Keyboard.keycodes['r']: KeypadKeyPressAction(
-            key=Key.L3,
-            pressed_keys={Key.BACK, Key.L3},
+        Keyboard.keycodes['escape']: KeypadKeyPressAction(
+            key=Key.BACK,
+            pressed_keys={Key.HOME, Key.BACK},
+        ),
+        Keyboard.keycodes['h']: KeypadKeyPressAction(
+            key=Key.BACK,
+            pressed_keys={Key.HOME, Key.BACK},
         ),
     },
 }
@@ -93,6 +147,8 @@ def on_keyboard(
         store.dispatch(KEY_MAP['no_modifier'][key])
     elif modifier == ['ctrl'] and key in KEY_MAP['ctrl']:
         store.dispatch(KEY_MAP['ctrl'][key])
+    elif modifier == ['shift'] and key in KEY_MAP['shift']:
+        store.dispatch(KEY_MAP['shift'][key])
 
 
 def init_service() -> None:

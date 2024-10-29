@@ -28,7 +28,7 @@ from ubo_app.store.services.audio import (
     AudioToggleMuteStatusAction,
 )
 from ubo_app.store.services.notifications import Chime
-from ubo_app.store.status_icons import StatusIconsRegisterAction
+from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 
 Action = InitAction | AudioAction | StatusIconsRegisterAction
 

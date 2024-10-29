@@ -20,7 +20,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAction,
     NotificationsAddAction,
 )
-from ubo_app.store.update_manager import (
+from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
     UpdateManagerAction,
     UpdateManagerCheckEvent,

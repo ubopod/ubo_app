@@ -16,7 +16,7 @@ from ubo_gui.constants import SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
 from ubo_app.constants import PICOVOICE_ACCESS_KEY
-from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
 from ubo_app.store.services.notifications import NotificationExtraInformation

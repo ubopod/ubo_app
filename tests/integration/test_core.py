@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from redux_pytest.fixtures import StoreSnapshot, WaitFor
 
     from tests.fixtures import AppContext
+    from tests.fixtures.stability import Stability
 
 
 async def test_app_runs_and_exits(
@@ -19,6 +20,7 @@ async def test_app_runs_and_exits(
     store_snapshot: StoreSnapshot,
     wait_for: WaitFor,
     needs_finish: None,
+    stability: Stability,
 ) -> None:
     """Test the application starts, runs and quits."""
     _ = needs_finish
@@ -34,17 +36,7 @@ async def test_app_runs_and_exits(
 
     await stack_is_loaded()
 
-    from headless_kivy import HeadlessWidget, config
-
-    @wait_for(run_async=True, stop=stop_after_attempt(5))
-    def check() -> None:
-        headless_widget_instance = HeadlessWidget.get_instance(app.root)
-        if headless_widget_instance:
-            assert (
-                headless_widget_instance.fps == config.min_fps()
-            ), 'Not in low fps mode'
-
-    await check()
+    await stability()
 
     window_snapshot.take()
     store_snapshot.take()

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, Menu
 
-from ubo_app.store.core import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.lightdm import (
     LightDMClearEnabledStateAction,
@@ -187,7 +187,7 @@ def init_service() -> None:
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
-            category=SettingsCategory.OS,
+            category=SettingsCategory.SYSTEM,
             menu_item=ActionItem(
                 label='Desktop',
                 icon=lightdm_icon,

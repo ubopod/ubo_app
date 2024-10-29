@@ -6,7 +6,6 @@ import asyncio
 import importlib.metadata
 import shutil
 import subprocess
-import time
 from pathlib import Path
 
 import aiohttp
@@ -14,6 +13,7 @@ import requests
 from kivy.clock import Clock
 from redux import FinishEvent
 from ubo_gui.constants import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
+from ubo_gui.menu.menu_widget import math
 from ubo_gui.menu.types import Item
 
 from ubo_app.constants import (
@@ -23,7 +23,7 @@ from ubo_app.constants import (
     UPDATE_LOCK_PATH,
 )
 from ubo_app.logging import logger
-from ubo_app.store.core import RebootAction
+from ubo_app.store.core.types import RebootAction
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -36,7 +36,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
     NotificationsClearByIdAction,
 )
-from ubo_app.store.update_manager import (
+from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
     UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
     UpdateManagerSetStatusAction,
@@ -184,7 +184,7 @@ Then another reboot will be done to complete the update process.""",
             UPDATE_ASSETS_PATH,
             'setuptools',
             'wheel',
-            'ubo-app[default]',
+            'ubo-app',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -353,14 +353,14 @@ def dispatch_notification(is_presented: bool, _: float = 0) -> None:  # noqa: FB
 Please keep the device powered on.
 This may take around 20 minutes to complete.""",
                 importance=Importance.LOW,
-                icon='󰚰',
+                icon='',
                 display_type=NotificationDisplayType.BACKGROUND
                 if is_presented
                 else NotificationDisplayType.STICKY,
                 dismissable=False,
                 dismiss_on_close=False,
                 color=INFO_COLOR,
-                progress=(int(time.time() / 2) % 4 + 1) / 4,
+                progress=math.nan,
                 blink=not is_presented,
             ),
         ),

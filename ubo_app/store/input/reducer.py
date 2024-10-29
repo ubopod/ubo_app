@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from redux import CompleteReducerResult, ReducerResult
 
-from ubo_app.store.operations import (
+from .types import (
     InputAction,
     InputCancelAction,
     InputCancelEvent,

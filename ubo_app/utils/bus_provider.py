@@ -3,16 +3,12 @@
 
 from __future__ import annotations
 
-from threading import current_thread
-from typing import TYPE_CHECKING
+from threading import Thread, current_thread
 
 from redux import FinishEvent
 from sdbus import SdBus, sd_bus_open_system, sd_bus_open_user, set_default_bus
 
 from ubo_app.store.main import store
-
-if TYPE_CHECKING:
-    from headless_kivy.config import Thread
 
 system_buses: dict[Thread, SdBus] = {}
 user_buses: dict[Thread, SdBus] = {}

@@ -77,10 +77,12 @@ class _BasicType(_Type):
         current_package: str | None,
     ) -> str:
         _ = name, current_package
-        if self.type == 'UboAction':
+        if self.type in ('BaseAction', 'UboAction'):
             return 'Action'
         if self.type == 'UboEvent':
             return 'Event'
+        if self.type == 'PageWidget':  # Not supported
+            return 'string'
         if self.type == 'Color':  # Assuming it is kivy color
             return 'string'
         """ This version is for the case where we have a separate proto file for each
@@ -122,7 +124,7 @@ class _BasicType(_Type):
                 return global_enums[self.type]
             if self.type in global_types:
                 return global_types[self.type]
-            if self.type in ('Color', 'UboAction', 'UboEvent'):
+            if self.type in ('Color', 'UboAction', 'UboEvent', 'BaseAction'):
                 return None
             msg = f'Unknown type "{self.type}"'
             raise TypeError(msg)
@@ -639,16 +641,24 @@ if __name__ == '__main__':
 
     import ubo_gui.menu.types
 
+    import ubo_app.store.core.types
     import ubo_app.store.dispatch_action
-    import ubo_app.store.operations
+    import ubo_app.store.input.types
+    import ubo_app.store.settings.types
+    import ubo_app.store.status_icons.types
+    import ubo_app.store.update_manager.types
 
     generators: list[_ProtoGenerator] = []
 
     generators.append(parse(ubo_gui.menu.types))
-    generators.append(parse(ubo_app.store.operations))
+    generators.append(parse(ubo_app.store.core.types))
     generators.append(
         parse(ubo_app.store.dispatch_action),
     )
+    generators.append(parse(ubo_app.store.input.types))
+    generators.append(parse(ubo_app.store.settings.types))
+    generators.append(parse(ubo_app.store.status_icons.types))
+    generators.append(parse(ubo_app.store.update_manager.types))
     generators.extend(
         parse(importlib.import_module(f'ubo_app.store.services.{file.stem}'))
         for file in sorted(Path('ubo_app/store/services/').glob('*.py'))

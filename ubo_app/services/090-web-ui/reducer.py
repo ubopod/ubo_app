@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from redux import InitAction, InitializationActionError
 
-from ubo_app.store.operations import (
+from ubo_app.store.input.types import (
     InputAction,
     InputDemandAction,
     InputResolveAction,

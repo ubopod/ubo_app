@@ -19,7 +19,7 @@ from ubo_app.store.main import store
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ubo_app.store.status_icons import IconState
+    from ubo_app.store.status_icons.types import IconState
 
 
 class MenuAppFooter(UboApp):
@@ -148,15 +148,15 @@ class MenuAppFooter(UboApp):
         self.icons_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
         self.icons_layout.bind(minimum_width=self.icons_layout.setter('width'))
 
-    def handle_depth_change(self: MenuAppFooter, _: Sequence[str]) -> None:
-        is_fullscreen = False
-        if not is_fullscreen:
-            if self.normal_footer_layout in self.footer_layout.children:
-                self.footer_layout.remove_widget(self.normal_footer_layout)
+    def handle_is_footer_visible_change(
+        self: MenuAppFooter,
+        is_footer_visible: bool,  # noqa: FBT001
+    ) -> None:
+        if is_footer_visible:
+            if self.home_footer_layout not in self.footer_layout.children:
                 self.footer_layout.add_widget(self.home_footer_layout)
         elif self.home_footer_layout in self.footer_layout.children:
             self.footer_layout.remove_widget(self.home_footer_layout)
-            self.footer_layout.add_widget(self.normal_footer_layout)
 
     def set_icons_layout_x(self: MenuAppFooter, *_: list[Any]) -> None:
         self.icons_layout.x = (
@@ -165,22 +165,6 @@ class MenuAppFooter(UboApp):
 
     @cached_property
     def footer(self: MenuAppFooter) -> Widget | None:
-        self.footer_layout = BoxLayout()
-
-        self.normal_footer_layout = BoxLayout(
-            orientation='horizontal',
-            spacing=0,
-            padding=0,
-        )
-        self.normal_footer_layout.add_widget(
-            Label(
-                text='',
-                font_size=dp(20),
-                size_hint=(None, 1),
-            ),
-        )
-        self.normal_footer_layout.add_widget(Widget(size_hint=(1, 1)))
-
         self.home_footer_layout = BoxLayout(
             orientation='horizontal',
             spacing=0,
@@ -216,16 +200,17 @@ class MenuAppFooter(UboApp):
             x=self.set_icons_layout_x,
         )
 
+        self.footer_layout = BoxLayout()
+        self.footer_layout.add_widget(self.home_footer_layout)
+
         store.autorun(
             lambda state: state.status_icons.icons,
             options=AutorunOptions(keep_ref=False),
         )(self.render_icons)
 
         store.autorun(
-            lambda state: state.main.path,
+            lambda state: state.main.is_footer_visible,
             options=AutorunOptions(keep_ref=False),
-        )(self.handle_depth_change)
-
-        self.footer_layout.add_widget(self.home_footer_layout)
+        )(self.handle_is_footer_visible_change)
 
         return self.footer_layout
