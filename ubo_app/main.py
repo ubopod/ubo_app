@@ -10,6 +10,7 @@ import dotenv
 from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logging import setup_logging
 from ubo_app.setup import setup
+from ubo_app.utils import IS_RPI
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')
@@ -55,7 +56,7 @@ def main() -> None:
 
     headless_kivy.config.setup_headless_kivy(
         headless_kivy.config.SetupHeadlessConfig(
-            bandwidth_limit=70 * 1000 * 1000 // 8 // 2,
+            bandwidth_limit=70 * 1000 * 1000 // 8 // 2 if IS_RPI else 0,
             bandwidth_limit_window=0.03,
             bandwidth_limit_overhead=10000,
             region_size=60,

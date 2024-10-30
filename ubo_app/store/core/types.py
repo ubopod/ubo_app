@@ -174,14 +174,26 @@ class SnapshotEvent(MainEvent):
     """Event for taking a snapshot of the store."""
 
 
+class ToggleRecordingAction(MainAction):
+    """Action for toggling recording."""
+
+
 class StoreRecordedSequenceEvent(MainEvent):
     """Event for storing a recorded sequence."""
 
     recorded_sequence: list[BaseAction]
 
 
+class ReplayRecordedSequenceAction(MainAction):
+    """Action for replaying a recorded sequence."""
+
+
 class ReplayRecordedSequenceEvent(MainEvent):
     """Event for replaying a recorded sequence."""
+
+
+class ReportReplayingDoneAction(MainAction):
+    """Action for reporting that replaying is done."""
 
 
 class MainState(Immutable):
@@ -192,4 +204,5 @@ class MainState(Immutable):
     is_footer_visible: bool = True
     settings_items_priorities: dict[str, int] = field(default_factory=dict)
     is_recording: bool = False
+    is_replaying: bool = False
     recorded_sequence: list[BaseAction] = field(default_factory=list)

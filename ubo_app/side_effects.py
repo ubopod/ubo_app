@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 from redux import FinishAction, FinishEvent
 
 from ubo_app import display
@@ -72,6 +73,8 @@ def write_image(image_path: Path, array: NDArray) -> None:
     """Write the `NDAarray` as an image to the given path."""
     import png
 
+    array = np.flipud(array)
+
     png.Writer(
         alpha=True,
         width=array.shape[0],
@@ -129,9 +132,9 @@ def store_recorded_sequence(event: StoreRecordedSequenceEvent) -> None:
         file.write(json_dump)
 
 
-def replay_recorded_sequence() -> None:
+async def replay_recorded_sequence() -> None:
     """Replay the recorded sequence."""
-    replay_actions(store, Path('recordings/active.json'))
+    await replay_actions(store, Path('recordings/active.json'))
 
 
 def setup_side_effects() -> None:

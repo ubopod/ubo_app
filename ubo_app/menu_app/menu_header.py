@@ -5,8 +5,10 @@ import math
 from functools import cached_property
 from typing import TYPE_CHECKING
 
+from kivy.animation import Animation
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
 from kivy.uix.relativelayout import RelativeLayout
 from redux import AutorunOptions
 from ubo_gui.app import UboApp
@@ -97,6 +99,30 @@ class MenuAppHeader(UboApp):
         elif self.header_content in self.header_layout.children:
             self.header_layout.remove_widget(self.header_content)
 
+    def handle_is_recording_change(
+        self: MenuAppHeader,
+        is_recording: bool,  # noqa: FBT001
+    ) -> None:
+        if is_recording:
+            if self.recording_sign not in self.header_content.children:
+                self.header_content.add_widget(self.recording_sign)
+                self.sign_animation.start(self.recording_sign)
+        elif self.recording_sign in self.header_content.children:
+            self.header_content.remove_widget(self.recording_sign)
+            self.sign_animation.cancel(self.recording_sign)
+
+    def handle_is_replaying_change(
+        self: MenuAppHeader,
+        is_replaying: bool,  # noqa: FBT001
+    ) -> None:
+        if is_replaying:
+            if self.replaying_sign not in self.header_content.children:
+                self.header_content.add_widget(self.replaying_sign)
+                self.sign_animation.start(self.replaying_sign)
+        elif self.replaying_sign in self.header_content.children:
+            self.header_content.remove_widget(self.replaying_sign)
+            self.sign_animation.cancel(self.replaying_sign)
+
     @cached_property
     def header(self: MenuAppHeader) -> Widget | None:
         self.header_content = RelativeLayout()
@@ -114,6 +140,30 @@ class MenuAppHeader(UboApp):
             spacing=dp(2),
         )
         self.header_content.add_widget(self.progress_layout)
+
+        self.recording_sign = Label(
+            text='󰑊',
+            font_size=dp(20),
+            color=(1, 0, 0, 1),
+            pos_hint={'right': 1},
+            size_hint=(None, 1),
+        )
+        self.recording_sign.bind(texture_size=self.recording_sign.setter('size'))
+        self.replaying_sign = Label(
+            text='󰑙',
+            font_size=dp(20),
+            color=(0, 1, 0, 1),
+            pos_hint={'right': 1},
+            size_hint=(None, 1),
+        )
+        self.replaying_sign.bind(texture_size=self.replaying_sign.setter('size'))
+        self.sign_animation = (
+            Animation(opacity=1, duration=0.1)
+            + Animation(duration=1)
+            + Animation(opacity=0, duration=0.1)
+            + Animation(duration=0.5)
+        )
+        self.sign_animation.repeat = True
 
         self.notification_widgets = {}
 
@@ -133,5 +183,15 @@ class MenuAppHeader(UboApp):
             lambda state: state.main.is_header_visible,
             options=AutorunOptions(keep_ref=False),
         )(self.handle_is_header_visible_change)
+
+        store.autorun(
+            lambda state: state.main.is_recording,
+            options=AutorunOptions(keep_ref=False),
+        )(self.handle_is_recording_change)
+
+        store.autorun(
+            lambda state: state.main.is_replaying,
+            options=AutorunOptions(keep_ref=False),
+        )(self.handle_is_replaying_change)
 
         return self.header_layout
