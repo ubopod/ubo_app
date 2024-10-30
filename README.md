@@ -10,11 +10,11 @@
 
 Ubo App is a Python application for managing Raspberry Pi utilities and Ubo-specific features.
 
-<img width="550" alt="Ubo ai pod photo" src="https://github.com/ubopod/ubo-app/assets/94014876/9438ab51-9b40-46b8-a656-80b8fcb72bc3">
+![Ubo Pod photo](https://github.com/ubopod/ubo-app/assets/94014876/9438ab51-9b40-46b8-a656-80b8fcb72bc)
 
 Example screenshots:
 
-<img width="200" alt="Ubo ai pod photo" src="https://github.com/ubopod/ubo-app/assets/94014876/899d32e4-ef8e-4849-a967-1e21ad12297a">
+![Ubo Pod photo](https://github.com/ubopod/ubo-app/assets/94014876/899d32e4-ef8e-4849-a967-1e21ad12297a)
 
 ## 🚧 Disclaimer
 
@@ -59,11 +59,11 @@ This is the fastest, easiest, and recommended way to get started with Ubo App.
 
 If you want to install the image on an existing operating system, then read on. Otherwise, skip this section.
 
-______________________________________________________________________
+---
 
 ⚠️ **Executing scripts directly from the internet with root privileges poses a significant security risk. It's generally a good practice to ensure you understand the script's content before running it. You can check the content of this particular script [here](https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh) before running it.**
 
-______________________________________________________________________
+---
 
 To install ubo, run this command in a terminal shell:
 
