@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 1.1.0
 
 - chore: migrate from poetry to uv for the sake of improving performance and dealing with conflicting sub-dependencies
 - feat(core): add colors to logs based on their level to make them more readable
