@@ -5,6 +5,7 @@ import time
 from dataclasses import field
 from enum import StrEnum
 
+from immutable import Immutable
 from redux import BaseAction
 
 
@@ -34,3 +35,7 @@ class KeypadKeyPressAction(KeypadAction): ...
 
 
 class KeypadKeyReleaseAction(KeypadAction): ...
+
+
+class KeypadState(Immutable):
+    depth: int = 0

@@ -9,6 +9,7 @@
     "is_footer_visible": true,
     "is_header_visible": true,
     "is_recording": false,
+    "is_replaying": false,
     "menu": {
       "_type": "HeadlessMenu",
       "items": [

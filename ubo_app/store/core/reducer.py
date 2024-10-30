@@ -1,14 +1,12 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import math
 from collections.abc import Sequence
 from dataclasses import replace
 from typing import cast
 
 from redux import (
     CompleteReducerResult,
-    FinishEvent,
     InitAction,
     InitializationActionError,
     ReducerResult,
@@ -27,13 +25,11 @@ from ubo_app.store.core.types import (
     MenuChooseByIndexEvent,
     MenuChooseByLabelAction,
     MenuChooseByLabelEvent,
-    MenuEvent,
     MenuGoBackAction,
     MenuGoBackEvent,
     MenuGoHomeAction,
     MenuGoHomeEvent,
     MenuScrollAction,
-    MenuScrollDirection,
     MenuScrollEvent,
     OpenApplicationAction,
     OpenApplicationEvent,
@@ -43,30 +39,20 @@ from ubo_app.store.core.types import (
     RebootEvent,
     RegisterRegularAppAction,
     RegisterSettingAppAction,
+    ReplayRecordedSequenceAction,
     ReplayRecordedSequenceEvent,
-    ScreenshotEvent,
+    ReportReplayingDoneAction,
     SetAreEnclosuresVisibleAction,
     SetMenuPathAction,
-    SnapshotEvent,
     StoreRecordedSequenceEvent,
+    ToggleRecordingAction,
 )
-from ubo_app.store.services.audio import AudioChangeVolumeAction, AudioDevice
-from ubo_app.store.services.keypad import (
-    Key,
-    KeypadKeyPressAction,
-    KeypadKeyReleaseAction,
-)
-from ubo_app.store.services.notifications import Notification, NotificationsAddAction
 
 
 def reducer(
     state: MainState | None,
     action: MainAction,
-) -> ReducerResult[
-    MainState,
-    AudioChangeVolumeAction | NotificationsAddAction,
-    InitEvent | MenuEvent | FinishEvent | MainEvent,
-]:
+) -> ReducerResult[MainState, None, InitEvent | MainEvent]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
     if state is None:
@@ -135,136 +121,32 @@ def reducer(
             events=[CloseApplicationEvent(application=action.application)],
         )
 
-    if isinstance(action, KeypadKeyPressAction):
-        if action.pressed_keys == {action.key}:
-            if action.key == Key.UP and state.depth == 1:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        AudioChangeVolumeAction(
-                            amount=0.05,
-                            device=AudioDevice.OUTPUT,
-                        ),
-                    ],
-                )
-            if action.key == Key.DOWN and state.depth == 1:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        AudioChangeVolumeAction(
-                            amount=-0.05,
-                            device=AudioDevice.OUTPUT,
-                        ),
-                    ],
-                )
+    if isinstance(action, ToggleRecordingAction) and not state.is_replaying:
+        return CompleteReducerResult(
+            state=replace(
+                state,
+                is_recording=not state.is_recording,
+                recorded_sequence=[],
+            ),
+            events=[
+                StoreRecordedSequenceEvent(recorded_sequence=state.recorded_sequence),
+            ]
+            if state.is_recording
+            else [],
+        )
 
-            if action.key == Key.L1:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuChooseByIndexEvent(index=0)],
-                )
-            if action.key == Key.L2:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuChooseByIndexEvent(index=1)],
-                )
-            if action.key == Key.L3:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuChooseByIndexEvent(index=2)],
-                )
-            if action.key == Key.UP:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
-                )
-            if action.key == Key.DOWN:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuScrollEvent(direction=MenuScrollDirection.DOWN)],
-                )
-        else:
-            if action.pressed_keys == {Key.HOME, Key.L1} and action.key == Key.L1:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[ScreenshotEvent()],
-                )
-            if action.pressed_keys == {Key.HOME, Key.L2} and action.key == Key.L2:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[SnapshotEvent()],
-                )
-            if action.pressed_keys == {Key.HOME, Key.L3} and action.key == Key.L3:
-                return CompleteReducerResult(
-                    state=replace(
-                        state,
-                        is_recording=not state.is_recording,
-                        recorded_sequence=[],
-                    ),
-                    events=[
-                        StoreRecordedSequenceEvent(
-                            recorded_sequence=state.recorded_sequence,
-                        ),
-                    ]
-                    if state.is_recording
-                    else [],
-                )
-            if action.pressed_keys == {Key.BACK, Key.L3} and action.key == Key.L3:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[ReplayRecordedSequenceEvent()],
-                )
-            if action.pressed_keys == {Key.HOME, Key.BACK} and action.key == Key.BACK:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[FinishEvent()],
-                )
+    if (
+        isinstance(action, ReplayRecordedSequenceAction)
+        and not state.is_recording
+        and not state.is_replaying
+    ):
+        return CompleteReducerResult(
+            state=replace(state, is_replaying=True),
+            events=[ReplayRecordedSequenceEvent()],
+        )
 
-            # DEMO {
-            if action.pressed_keys == {Key.HOME, Key.UP} and action.key == Key.UP:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        NotificationsAddAction(
-                            notification=Notification(
-                                title='Test notification with progress',
-                                content='This is a test notification with progress',
-                                progress=0.5,
-                            ),
-                        ),
-                    ],
-                )
-            if action.pressed_keys == {Key.HOME, Key.DOWN} and action.key == Key.DOWN:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        NotificationsAddAction(
-                            notification=Notification(
-                                icon='',
-                                title='Test notification with spinner',
-                                content='This is a test notification with spinner',
-                                progress=math.nan,
-                            ),
-                        ),
-                    ],
-                )
-            # DEMO }
-        return state
-
-    if isinstance(action, KeypadKeyReleaseAction):
-        if len(action.pressed_keys) == 0:
-            if action.key == Key.BACK:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuGoBackEvent()],
-                )
-            if action.key == Key.HOME:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuGoHomeEvent()],
-                )
-
-        return state
+    if isinstance(action, ReportReplayingDoneAction):
+        return replace(state, is_replaying=False)
 
     if isinstance(action, RegisterSettingAppAction):
         parent_index = 1
