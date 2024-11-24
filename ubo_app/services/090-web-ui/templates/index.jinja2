@@ -15,23 +15,26 @@
         width: 50%;
         border: 1px solid #ccc;
       }
-      input, select {
+      input,
+      select {
         font-size: 1em;
       }
-      input[type="text"], input[type="password"], select {
-        margin-top: .5em;
+      input[type="text"],
+      input[type="password"],
+      select {
+        margin-top: 0.5em;
         width: 100%;
       }
       small {
         display: block;
-        margin-top: .5em;
-        font-size: .75em;
+        margin-top: 0.5em;
+        font-size: 0.75em;
         color: #666;
       }
       button[type="submit"] {
         margin-top: 1em;
         border: none;
-        padding: .75em;
+        padding: 0.75em;
         font-size: 1em;
       }
     </style>
@@ -43,7 +46,9 @@
         <input name="id" type="hidden" value="{{ input.id }}" />
         <p>
           <label>
-            {{ input.prompt }}:
+            <h3>
+            {{ input.prompt }}
+            </h3>
             {% if input.fields %}
               {% for field in input.fields %}
                 <p>
@@ -57,9 +62,11 @@
                             {{ ' selected="selected"' if option == field.default else '' }}
                           >
                             {{ option }}
-                          </option>
+                          </option
                         {% endfor %}
                       </select>
+                    {% elif field.type == 'long' %}
+                      <textarea name="{{ field.name }}" style='width: 100%; height: 240px;'></textarea>
                     {% else %}
                       <input
                         type="{{ field.type }}"

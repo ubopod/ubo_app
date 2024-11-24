@@ -72,7 +72,7 @@ def create_service_file(service: Service) -> None:
 
     template = (
         Path(__file__)
-        .parent.joinpath(f'services/{service["template"]}.service')
+        .parent.joinpath(f'services/{service["template"]}.service.tmpl')
         .open()
         .read()
     )

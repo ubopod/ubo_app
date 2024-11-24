@@ -121,7 +121,7 @@ class MenuAppFooter(UboApp):
             now_ = now()
             Clock.schedule_once(
                 update,
-                60 - now_.second - now_.microsecond / 1000000 + 0.05,
+                60 - now_.second - now_.microsecond / 1_000_000 + 0.05,
             )
 
         update()
