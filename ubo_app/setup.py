@@ -121,12 +121,10 @@ def setup() -> None:
 
         monitor_unit.monitor_unit = fake_monitor_unit
 
-    from kivy.clock import mainthread
-
     import ubo_app.display as _  # noqa: F401
     from ubo_app.store.main import store
 
-    store.subscribe_event(FinishEvent, mainthread(clear_signal_handlers))
+    store.subscribe_event(FinishEvent, _clear_signal_handlers)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -134,6 +132,12 @@ def setup() -> None:
     from ubo_gui import setup as setup_ubo_gui
 
     setup_ubo_gui()
+
+
+def _clear_signal_handlers() -> None:
+    from kivy.clock import mainthread
+
+    mainthread(clear_signal_handlers)()
 
 
 def clear_signal_handlers() -> None:

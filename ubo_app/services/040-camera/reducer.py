@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import re
 from dataclasses import replace
 
@@ -15,9 +16,11 @@ from redux import (
 from ubo_app.store.input.types import (
     InputCancelAction,
     InputDemandAction,
+    InputMethod,
     InputProvideAction,
     InputResolveAction,
 )
+from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraAction,
     CameraEvent,
@@ -27,7 +30,9 @@ from ubo_app.store.services.camera import (
     CameraState,
     CameraStopViewfinderEvent,
 )
-from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
+from ubo_app.store.services.keypad import (
+    KeypadKeyPressAction,
+)
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationDispatchItem,
@@ -66,7 +71,7 @@ def reducer(
             return CameraState(is_viewfinder_active=False, queue=[])
         raise InitializationActionError(action)
 
-    if isinstance(action, InputDemandAction):
+    if isinstance(action, InputDemandAction) and action.method is InputMethod.CAMERA:
         if state.is_viewfinder_active:
             return replace(
                 state,
@@ -98,17 +103,20 @@ def reducer(
                                     pattern=action.description.pattern,
                                 ),
                                 icon='󰄀',
-                                dismiss_notification=True,
+                                dismiss_notification=False,
                             ),
                         ],
                         dismissable=False,
-                        dismiss_on_close=True,
+                        on_dismiss=functools.partial(
+                            store.dispatch,
+                            InputCancelAction(id=action.description.id),
+                        ),
                     ),
                 ),
             ],
         )
 
-    if isinstance(action, InputResolveAction):
+    if isinstance(action, InputResolveAction | InputCancelAction):
         if state.current and state.current.id == action.id:
             return CompleteReducerResult(
                 state=pop_queue(state),
@@ -170,31 +178,5 @@ def reducer(
                 )
 
             return state
-
-    if isinstance(action, KeypadKeyPressAction):  # noqa: SIM102
-        if action.key in [Key.BACK, Key.HOME]:
-            actions: list[DispatchAction] = []
-            events: list[CameraEvent] = []
-
-            if state.current:
-                actions.extend(
-                    [
-                        InputCancelAction(id=state.current.id),
-                        NotificationsClearByIdAction(id='camera:qrcode'),
-                    ],
-                )
-
-            if state.is_viewfinder_active:
-                events.append(
-                    CameraStopViewfinderEvent(
-                        id=state.current.id if state.current else None,
-                    ),
-                )
-
-            return CompleteReducerResult(
-                state=pop_queue(state),
-                actions=actions,
-                events=events,
-            )
 
     return state

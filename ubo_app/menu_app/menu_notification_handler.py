@@ -79,6 +79,8 @@ class MenuNotificationHandler(UboApp):
                 store.dispatch(
                     NotificationsClearAction(notification=notification.value),
                 )
+                if notification.value.on_dismiss:
+                    notification.value.on_dismiss()
             if notification.value.on_close:
                 notification.value.on_close()
 

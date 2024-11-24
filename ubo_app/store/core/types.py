@@ -58,7 +58,13 @@ class RegisterAppAction(MainAction):
     key: str | None = None
 
 
-class RegisterRegularAppAction(RegisterAppAction): ...
+class RegisterRegularAppAction(RegisterAppAction):
+    priority: int | None = None
+
+
+class DeregisterRegularAppAction(MainAction):
+    service: str = field(default_factory=service_default_factory)
+    key: str | None = None
 
 
 class RegisterSettingAppAction(RegisterAppAction):
@@ -202,6 +208,7 @@ class MainState(Immutable):
     depth: int = 0
     is_header_visible: bool = True
     is_footer_visible: bool = True
+    apps_items_priorities: dict[str, int] = field(default_factory=dict)
     settings_items_priorities: dict[str, int] = field(default_factory=dict)
     is_recording: bool = False
     is_replaying: bool = False

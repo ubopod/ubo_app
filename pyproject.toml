@@ -8,8 +8,8 @@ requires-python = ">=3.11"
 keywords = ['ubo', 'ubo-pod', 'raspberry pi', 'rpi', 'home assistance']
 dependencies = [
   "psutil >=6.0.0",
-  "ubo-gui >=0.13.7",
-  "headless-kivy >=0.12.1",
+  "ubo-gui >=0.13.8",
+  "headless-kivy >=0.12.2",
   "pyzbar >=0.1.9",
   "sdbus-networkmanager >=2.0.0 ; platform_machine=='aarch64'",
   "rpi_ws281x >=5.0.0 ; platform_machine=='aarch64'",
@@ -23,7 +23,7 @@ dependencies = [
   "platformdirs >=4.2.0",
   "dill >=0.3.8",
   "simpleaudio >=1.0.4",
-  "python-redux >=0.18.2",
+  "python-redux >=0.18.3",
   "python-debouncer >=0.1.5",
   "python-strtobool >=1.0.0",
   "python-fake >=0.1.3",
@@ -166,7 +166,7 @@ multiline-quotes = "double"
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "PLR0913", "PLR0915"]
 "**/reducer.py" = ["C901", "PLR0912", "PLR0915"]
-"ubo_app/services/*/ubo_handle.py" = ["TCH004"]
+"ubo_app/services/*/ubo_handle.py" = ["TC004"]
 "ubo_app/rpc/generated/*" = [
   "ARG002",
   "ASYNC109",
@@ -177,7 +177,7 @@ multiline-quotes = "double"
   "F401",
   "RUF009",
   "SLF001",
-  "TCH001",
+  "TC001",
   "TID252",
 ]
 

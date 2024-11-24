@@ -56,12 +56,9 @@ if IS_RPI:
 else:
     BASE_IMAGE = '[unknown]'
 BASE_IMAGE_VARIANT = (
-    BASE_IMAGE == '[unknown]'
-    and '[unknown]'
-    or BASE_IMAGE.endswith('-lite')
-    and 'lite'
-    or BASE_IMAGE.endswith('-full')
-    and 'full'
+    (BASE_IMAGE == '[unknown]' and '[unknown]')
+    or (BASE_IMAGE.endswith('-lite') and 'lite')
+    or (BASE_IMAGE.endswith('-full') and 'full')
     or 'desktop'
 )
 

@@ -4,6 +4,7 @@
 
 - chore: add `log_async_process` to log the output of an async processes in a notification if they don't run successfully
 - refactor(core): housekeeping: rename `extra_information` to `qr_code_generation_instructions` in `ubo_input`, add `.tmpl` extension for extension files, use `textarea` for `LONG` input field type in web dashboard, rename `..._HOST` env variables to `..._ADDRESS`, use underscore thousand separators for big numbers in codebase
+- feat(docker): support docker compositions and add a way to import `docker-compose.yml` files
 
 ## Version 1.1.0
 

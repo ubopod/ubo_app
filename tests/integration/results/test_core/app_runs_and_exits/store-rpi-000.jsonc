@@ -5,6 +5,7 @@
   "input": null,
   "main": {
     "_type": "MainState",
+    "apps_items_priorities": {},
     "depth": 1,
     "is_footer_visible": true,
     "is_header_visible": true,
@@ -42,7 +43,7 @@
                 ],
                 "icon": "󰀻",
                 "is_short": false,
-                "key": "home",
+                "key": "apps",
                 "label": "Apps",
                 "opacity": null,
                 "progress": null,

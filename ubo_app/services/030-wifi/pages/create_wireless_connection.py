@@ -14,7 +14,7 @@ from wifi_manager import add_wireless_connection
 
 from ubo_app.logging import logger
 from ubo_app.store.core.types import CloseApplicationAction
-from ubo_app.store.input.types import InputFieldDescription, InputFieldType
+from ubo_app.store.input.types import InputFieldDescription, InputFieldType, InputMethod
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
@@ -57,6 +57,7 @@ class CreateWirelessConnectionPage(PageWidget):
     async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
         try:
             _, data = await ubo_input(
+                input_methods=InputMethod.CAMERA,
                 prompt='Enter WiFi connection',
                 qr_code_generation_instructions=NotificationExtraInformation(
                     text='Go to your phone settings, choose QR code and hold it in '

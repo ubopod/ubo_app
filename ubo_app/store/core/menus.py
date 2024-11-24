@@ -97,7 +97,7 @@ MAIN_MENU = HeadlessMenu(
     title='󰍜Main',
     items=[
         SubMenuItem(
-            key='home',
+            key='apps',
             label='Apps',
             icon='󰀻',
             sub_menu=APPS_MENU,
