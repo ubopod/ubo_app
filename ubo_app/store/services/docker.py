@@ -23,7 +23,7 @@ class DockerStatus(StrEnum):
     ERROR = auto()
 
 
-class ImageStatus(StrEnum):
+class DockerItemStatus(StrEnum):
     """Image status."""
 
     NOT_AVAILABLE = auto()
@@ -66,7 +66,7 @@ class DockerImageAction(DockerAction):
 class DockerImageSetStatusAction(DockerImageAction):
     """Docker image set status action."""
 
-    status: ImageStatus
+    status: DockerItemStatus
     ports: list[str] | None = None
     ip: str | None = None
 
@@ -79,6 +79,10 @@ class DockerImageSetDockerIdAction(DockerImageAction):
 
 class DockerEvent(BaseEvent):
     """Docker event."""
+
+
+class DockerLoadImagesEvent(DockerEvent):
+    """Signal for loading images."""
 
 
 class DockerServiceState(Immutable):
@@ -108,7 +112,8 @@ class ImageState(Immutable):
     """Image state."""
 
     id: str
-    status: ImageStatus = ImageStatus.NOT_AVAILABLE
+    label: str
+    status: DockerItemStatus = DockerItemStatus.NOT_AVAILABLE
     container_ip: str | None = None
     docker_id: str | None = None
     ports: list[str] = field(default_factory=list)
@@ -116,17 +121,17 @@ class ImageState(Immutable):
     @property
     def is_fetching(self: ImageState) -> bool:
         """Check if image is available."""
-        return self.status == ImageStatus.FETCHING
+        return self.status == DockerItemStatus.FETCHING
 
     @property
     def is_available(self: ImageState) -> bool:
         """Check if image is available."""
-        return self.status in [ImageStatus.AVAILABLE, ImageStatus.RUNNING]
+        return self.status in [DockerItemStatus.AVAILABLE, DockerItemStatus.RUNNING]
 
     @property
     def is_running(self: ImageState) -> bool:
         """Check if image is running."""
-        return self.status == ImageStatus.RUNNING
+        return self.status == DockerItemStatus.RUNNING
 
 
 class DockerState(BaseCombineReducerState):

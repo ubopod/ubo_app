@@ -251,12 +251,12 @@ def _setup_headless_kivy() -> None:
     from ubo_app.display import render_on_display
 
     headless_kivy.config.setup_headless_kivy(
-        {
-            'callback': render_on_display,
-            'flip_vertical': True,
-            'width': WIDTH,
-            'height': HEIGHT,
-        },
+        headless_kivy.config.SetupHeadlessConfig(
+            callback=render_on_display,
+            flip_vertical=True,
+            width=WIDTH,
+            height=HEIGHT,
+        ),
     )
 
 

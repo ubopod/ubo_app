@@ -22,11 +22,21 @@
   "docker": {
     "_id": "baf3897a3e70f16a55485822de1b372a",
     "_type": "DockerState",
+    "envoy_grpc": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "envoy_grpc",
+      "label": "Envoy for gRPC",
+      "ports": [],
+      "status": "not_available"
+    },
     "home_assistant": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
       "id": "home_assistant",
+      "label": "Home Assistant",
       "ports": [],
       "status": "not_available"
     },
@@ -35,6 +45,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "home_bridge",
+      "label": "Home Bridge",
       "ports": [],
       "status": "not_available"
     },
@@ -43,6 +54,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "ngrok",
+      "label": "Ngrok",
       "ports": [],
       "status": "not_available"
     },
@@ -51,6 +63,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "ollama",
+      "label": "Ollama",
       "ports": [],
       "status": "not_available"
     },
@@ -59,6 +72,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "open_webui",
+      "label": "Open WebUI",
       "ports": [],
       "status": "not_available"
     },
@@ -67,6 +81,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "pi_hole",
+      "label": "Pi-hole",
       "ports": [],
       "status": "not_available"
     },
@@ -75,6 +90,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "portainer",
+      "label": "Portainer",
       "ports": [],
       "status": "not_available"
     },
@@ -111,6 +127,7 @@
   },
   "main": {
     "_type": "MainState",
+    "apps_items_priorities": {},
     "depth": 1,
     "is_footer_visible": true,
     "is_header_visible": true,
@@ -148,7 +165,7 @@
                 ],
                 "icon": "󰀻",
                 "is_short": false,
-                "key": "home",
+                "key": "apps",
                 "label": "Apps",
                 "opacity": null,
                 "progress": null,
@@ -157,7 +174,36 @@
                   "items": [
                     {
                       "_type": "ActionItem",
-                      "action": "<function:open_image_menu>",
+                      "action": "<function:input_docker_composition>",
+                      "background_color": "#FFC107",
+                      "color": "black",
+                      "icon": "󰋺",
+                      "is_short": false,
+                      "key": "docker:_import",
+                      "label": "Import YAML file",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󱂇",
+                      "is_short": false,
+                      "key": "docker:envoy_grpc",
+                      "label": "Envoy for gRPC",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -174,7 +220,7 @@
                     },
                     {
                       "_type": "ActionItem",
-                      "action": "<function:open_image_menu>",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -191,7 +237,7 @@
                     },
                     {
                       "_type": "ActionItem",
-                      "action": "<function:open_image_menu>",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -208,7 +254,7 @@
                     },
                     {
                       "_type": "ActionItem",
-                      "action": "<function:open_image_menu>",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -225,7 +271,7 @@
                     },
                     {
                       "_type": "ActionItem",
-                      "action": "<function:open_image_menu>",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -242,7 +288,7 @@
                     },
                     {
                       "_type": "ActionItem",
-                      "action": "<function:open_image_menu>",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -259,7 +305,7 @@
                     },
                     {
                       "_type": "ActionItem",
-                      "action": "<function:open_image_menu>",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,
@@ -640,23 +686,6 @@
                             }
                           },
                           {
-                            "_type": "ActionItem",
-                            "action": "<function:open_lightdm_menu>",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "[color=#008000]󰪥[/color]",
-                            "is_short": false,
-                            "key": "lightdm",
-                            "label": "Desktop",
-                            "opacity": null,
-                            "progress": null
-                          },
-                          {
                             "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
                             "color": [
@@ -698,6 +727,23 @@
                               "placeholder": null,
                               "title": "󰒓General"
                             }
+                          },
+                          {
+                            "_type": "ActionItem",
+                            "action": "<function:open_lightdm_menu>",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "[color=#008000]󰪥[/color]",
+                            "is_short": false,
+                            "key": "lightdm",
+                            "label": "Desktop",
+                            "opacity": null,
+                            "progress": null
                           }
                         ],
                         "placeholder": "No settings in this category",
@@ -845,23 +891,6 @@
                         "_type": "HeadlessMenu",
                         "items": [
                           {
-                            "_type": "ActionItem",
-                            "action": "<function:setup_menu_action>",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "",
-                            "is_short": false,
-                            "key": "docker:service",
-                            "label": "Service",
-                            "opacity": null,
-                            "progress": null
-                          },
-                          {
                             "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
                             "color": [
@@ -902,6 +931,23 @@
                               "sub_heading": "Log in to a registry:",
                               "title": "󱥉Docker Registries"
                             }
+                          },
+                          {
+                            "_type": "ActionItem",
+                            "action": "<function:setup_menu_action>",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": "docker:service",
+                            "label": "Service",
+                            "opacity": null,
+                            "progress": null
                           }
                         ],
                         "placeholder": "No settings in this category",
@@ -1046,17 +1092,17 @@
     "path": [],
     "recorded_sequence": [],
     "settings_items_priorities": {
-      "Desktop": 0,
-      "IP Addresses": 0,
-      "Picovoice Settings": 0,
-      "RPi Connect": null,
-      "Registries": null,
-      "SSH": 1,
-      "Service": 1,
-      "Users": 1,
-      "VSCode": null,
-      "Voice Engine": 1,
-      "WiFi": 2
+      "docker:registries": 2,
+      "docker:service": 1,
+      "ip": 0,
+      "lightdm": 0,
+      "rpi_connect": null,
+      "ssh": 1,
+      "users": 1,
+      "voice:engines": 1,
+      "voice:settings": 0,
+      "vscode": null,
+      "wifi": 2
     }
   },
   "notifications": {

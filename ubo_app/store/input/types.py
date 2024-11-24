@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
+import enum
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.notifications import NotificationExtraInformation
 
 
-class InputFieldType(StrEnum):
+class InputFieldType(enum.StrEnum):
     """Enumeration of input field types."""
 
     LONG = 'long'
@@ -25,6 +25,14 @@ class InputFieldType(StrEnum):
     FILE = 'file'
     DATE = 'date'
     TIME = 'time'
+
+
+class InputMethod(enum.Flag, boundary=enum.FlagBoundary.STRICT):
+    """Input method."""
+
+    CAMERA = enum.auto()
+    WEB_DASHBOARD = enum.auto()
+    ALL = CAMERA | WEB_DASHBOARD
 
 
 class InputFieldDescription(Immutable):
@@ -60,6 +68,7 @@ class InputDemandAction(InputAction):
     """Action for demanding input from the user."""
 
     description: InputDescription
+    method: InputMethod
 
 
 class InputResolveAction(InputAction):
@@ -94,4 +103,3 @@ class InputProvideEvent(InputResolveEvent):
 
     value: str
     data: dict[str, str | None] | None
-

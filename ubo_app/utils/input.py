@@ -3,22 +3,33 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
+import functools
+import socket
 import uuid
 from asyncio import Future
 from typing import TYPE_CHECKING, TypeAlias, overload
 
 from typing_extensions import TypeVar
 
+from ubo_app.constants import WEB_UI_LISTEN_PORT
 from ubo_app.store.input.types import (
     InputCancelEvent,
     InputDemandAction,
     InputDescription,
     InputFieldDescription,
+    InputMethod,
     InputProvideEvent,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import CameraStopViewfinderEvent
-from ubo_app.store.services.notifications import NotificationExtraInformation
+from ubo_app.store.services.notifications import (
+    Notification,
+    NotificationActionItem,
+    NotificationDisplayType,
+    NotificationExtraInformation,
+    NotificationsAddAction,
+)
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
 
 if TYPE_CHECKING:
@@ -31,6 +42,64 @@ InputResultGroupDict: TypeAlias = dict[str, str | None] | None
 ReturnType = TypeVar('ReturnType', infer_variance=True)
 
 
+METHOD_NAMES = {
+    InputMethod.CAMERA: 'camera',
+    InputMethod.WEB_DASHBOARD: 'web dashboard',
+}
+
+METHOD_ICONS = {
+    InputMethod.CAMERA: '󰄀',
+    InputMethod.WEB_DASHBOARD: '󱋆',
+}
+
+
+async def select_input_method(input_methods: InputMethod) -> InputMethod:
+    """Select the input method."""
+    if input_methods.value.bit_count() == 1:
+        return input_methods
+    loop = asyncio.get_running_loop()
+    input_method_future: Future[InputMethod] = loop.create_future()
+
+    def set_result(method: InputMethod) -> None:
+        loop.call_soon_threadsafe(input_method_future.set_result, method)
+
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='input:method',
+                icon='',
+                title='Input method',
+                content='Do you want to use the camera or the web dashboard?',
+                display_type=NotificationDisplayType.STICKY,
+                is_read=True,
+                extra_information=NotificationExtraInformation(
+                    text='You can use either the camera or the web dashboard to '
+                    'enter this input. Please choose one by pressing one of the '
+                    'left buttons.',
+                ),
+                expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
+                color='#ffffff',
+                dismissable=False,
+                dismiss_on_close=True,
+                actions=[
+                    NotificationActionItem(
+                        key=METHOD_NAMES[method],
+                        icon=METHOD_ICONS[method],
+                        dismiss_notification=True,
+                        action=functools.partial(set_result, method),
+                    )
+                    for method in InputMethod
+                    if method in input_methods
+                ],
+                on_close=lambda: loop.call_soon_threadsafe(
+                    input_method_future.cancel,
+                ),
+            ),
+        ),
+    )
+    return await input_method_future
+
+
 @overload
 async def ubo_input(
     *,
@@ -39,6 +108,7 @@ async def ubo_input(
     title: str | None = None,
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
+    input_methods: InputMethod = InputMethod.ALL,
 ) -> tuple[str, InputResultGroupDict]: ...
 @overload
 async def ubo_input(
@@ -47,6 +117,7 @@ async def ubo_input(
     qr_code_generation_instructions: NotificationExtraInformation | None = None,
     title: str | None = None,
     fields: list[InputFieldDescription],
+    input_methods: InputMethod = InputMethod.ALL,
 ) -> tuple[str, InputResultGroupDict]: ...
 @overload
 async def ubo_input(
@@ -57,6 +128,7 @@ async def ubo_input(
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
     resolver: Callable[[str, InputResultGroupDict], ReturnType],
+    input_methods: InputMethod = InputMethod.ALL,
 ) -> ReturnType: ...
 @overload
 async def ubo_input(
@@ -66,6 +138,7 @@ async def ubo_input(
     title: str | None = None,
     fields: list[InputFieldDescription],
     resolver: Callable[[str, InputResultGroupDict], ReturnType],
+    input_methods: InputMethod = InputMethod.ALL,
 ) -> ReturnType: ...
 async def ubo_input(  # noqa: PLR0913
     *,
@@ -75,6 +148,7 @@ async def ubo_input(  # noqa: PLR0913
     pattern: str | None = None,
     fields: list[InputFieldDescription] | None = None,
     resolver: Callable[[str, InputResultGroupDict], ReturnType] | None = None,
+    input_methods: InputMethod = InputMethod.ALL,
 ) -> tuple[str, InputResultGroupDict] | ReturnType:
     """Input the user in an imperative way."""
     prompt_id = uuid.uuid4().hex
@@ -82,6 +156,8 @@ async def ubo_input(  # noqa: PLR0913
 
     subscriptions: set[Callable[[], None]] = set()
     future: Future[tuple[str, InputResultGroupDict]] = loop.create_future()
+
+    selected_input_method = await select_input_method(input_methods)
 
     def unsubscribe() -> None:
         for subscription in subscriptions:
@@ -130,6 +206,7 @@ async def ubo_input(  # noqa: PLR0913
             keep_ref=False,
         ),
     )
+
     subscriptions.add(
         store.subscribe_event(
             CameraStopViewfinderEvent,
@@ -144,42 +221,20 @@ async def ubo_input(  # noqa: PLR0913
             keep_ref=False,
         ),
     )
-    web_dashboard_instructions = """
-Web dashboard is served on port 21215 and it provides an interface for entering this \
-input."""
+
+    hostname = socket.gethostname()
     store.dispatch(
         InputDemandAction(
+            method=selected_input_method,
             description=InputDescription(
                 title=title or 'Untitled input',
                 prompt=prompt,
-                extra_information=NotificationExtraInformation(
-                    text=(
-                        (
-                            qr_code_generation_instructions.text
-                            if qr_code_generation_instructions
-                            else None
-                        )
-                        or ''
-                    )
-                    + web_dashboard_instructions,
-                    piper_text=(
-                        (
-                            qr_code_generation_instructions.piper_text
-                            if qr_code_generation_instructions
-                            else None
-                        )
-                        or ''
-                    )
-                    + web_dashboard_instructions,
-                    picovoice_text=(
-                        (
-                            qr_code_generation_instructions.picovoice_text
-                            if qr_code_generation_instructions
-                            else None
-                        )
-                        or ''
-                    )
-                    + web_dashboard_instructions,
+                extra_information=qr_code_generation_instructions
+                if selected_input_method is InputMethod.CAMERA
+                else NotificationExtraInformation(
+                    text=f"""\
+Web dashboard is served on port {hostname}:{WEB_UI_LISTEN_PORT} and it provides an \
+interface for entering this input.""",
                 ),
                 id=prompt_id,
                 pattern=pattern,

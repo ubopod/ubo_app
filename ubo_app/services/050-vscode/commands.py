@@ -64,6 +64,7 @@ async def check_status() -> None:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
+                    id='vscode:error:status',
                     title='VSCode',
                     content='Failed to get status: "status" subcommand',
                     display_type=NotificationDisplayType.STICKY,
@@ -93,6 +94,7 @@ async def check_status() -> None:
             store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
+                        id='vscode:error:user',
                         title='VSCode',
                         content='Failed to get status: "user show" subcommand',
                         display_type=NotificationDisplayType.STICKY,
@@ -148,6 +150,7 @@ async def set_name() -> None:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
+                    id='vscode:error:rename',
                     title='VSCode',
                     content='Failed to setup: renaming the tunnel',
                     display_type=NotificationDisplayType.STICKY,
@@ -178,6 +181,7 @@ async def install_service() -> None:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
+                    id='vscode:error:install',
                     title='VSCode',
                     content='Failed to setup: installing service',
                     display_type=NotificationDisplayType.STICKY,
@@ -210,6 +214,7 @@ async def uninstall_service() -> None:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
+                    id='vscode:error:uninstall',
                     title='VSCode',
                     content='Failed to setup: uninstalling service',
                     display_type=NotificationDisplayType.STICKY,
@@ -241,6 +246,7 @@ async def restart() -> None:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
+                    id='vscode:error:restart',
                     title='VSCode',
                     content='Failed to restart process',
                     display_type=NotificationDisplayType.STICKY,

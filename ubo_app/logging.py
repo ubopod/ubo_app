@@ -219,4 +219,4 @@ def setup_logging() -> None:
         ubo_gui.logger.add_stdout_handler(level)
 
 
-__all__ = ('logger', 'add_stdout_handler', 'add_file_handler', 'setup_logging')
+__all__ = ('add_file_handler', 'add_stdout_handler', 'logger', 'setup_logging')

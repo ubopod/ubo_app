@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from images_ import IMAGE_IDS, IMAGES
 from redux import (
     BaseAction,
     BaseEvent,
@@ -25,6 +24,7 @@ from ubo_app.store.services.docker import (
     DockerImageRegisterAppEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
+    DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerServiceState,
     DockerSetStatusAction,
@@ -46,7 +46,10 @@ def service_reducer(
     """Docker reducer."""
     if state is None:
         if isinstance(action, InitAction):
-            return DockerServiceState()
+            return CompleteReducerResult(
+                state=DockerServiceState(),
+                events=[DockerLoadImagesEvent()],
+            )
         raise InitializationActionError(action)
 
     if isinstance(action, DockerSetStatusAction):
@@ -74,14 +77,17 @@ def service_reducer(
 def image_reducer(
     state: ImageState | None,
     action: DockerImageAction | CombineReducerAction | IpUpdateInterfacesAction,
-) -> ReducerResult[ImageState, BaseAction, BaseEvent]:
+) -> ReducerResult[ImageState | None, BaseAction, BaseEvent]:
     """Image reducer."""
     if state is None:
-        if isinstance(action, CombineReducerInitAction):
-            image = IMAGES[action.key]
+        if (
+            isinstance(action, CombineReducerInitAction)
+            and action.payload
+            and 'label' in action.payload
+        ):
             return CompleteReducerResult(
-                state=ImageState(id=image.id),
-                events=[DockerImageRegisterAppEvent(image=image.id)],
+                state=ImageState(id=action.key, label=action.payload['label']),
+                events=[DockerImageRegisterAppEvent(image=action.key)],
             )
         raise InitializationActionError(action)
 
@@ -107,5 +113,4 @@ reducer, reducer_id = combine_reducers(
     action_type=DockerImageAction,
     event_type=DockerImageEvent,
     service=service_reducer,
-    **{image: image_reducer for image in IMAGE_IDS},
 )

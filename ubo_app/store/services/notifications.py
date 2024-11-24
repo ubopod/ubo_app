@@ -113,6 +113,7 @@ class Notification(Immutable):
     dismissable: bool = True
     dismiss_on_close: bool = False
     on_close: Callable[[], Any] | None = None
+    on_dismiss: Callable[[], Any] | None = None
     blink: bool = True
     progress: float | None = None
     progress_weight: float = 1

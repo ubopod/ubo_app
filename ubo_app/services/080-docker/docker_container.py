@@ -1,28 +1,36 @@
-"""Docker image menu."""
+"""Docker container management."""
 
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING
+from asyncio import iscoroutine
+from typing import TYPE_CHECKING, Any, overload
 
 import docker
 import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
-from images_ import IMAGES
-from redux import FinishEvent
+from docker_images import IMAGES
+from redux import AutorunOptions, FinishEvent
 
 from ubo_app.logging import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
-    ImageStatus,
+    DockerItemStatus,
+    DockerState,
+    ImageState,
+)
+from ubo_app.store.services.notifications import (
+    Importance,
+    Notification,
+    NotificationsAddAction,
 )
 from ubo_app.utils.async_ import to_thread
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Coroutine
 
 
 def find_container(client: docker.DockerClient, *, image: str) -> Container | None:
@@ -38,7 +46,129 @@ def find_container(client: docker.DockerClient, *, image: str) -> Container | No
     return None
 
 
-def update_container(image_id: str, container: Container) -> None:
+@overload
+async def _process_str(
+    value: str
+    | Callable[[], str | Coroutine[Any, Any, str]]
+    | Coroutine[Any, Any, str],
+) -> str: ...
+@overload
+async def _process_str(
+    value: str
+    | Callable[[], str | Coroutine[Any, Any, str | None] | None]
+    | Coroutine[Any, Any, str | None]
+    | None,
+) -> str | None: ...
+async def _process_str(
+    value: str
+    | Callable[[], str | Coroutine[Any, Any, str | None] | None]
+    | Coroutine[Any, Any, str | None]
+    | None,
+) -> str | None:
+    if callable(value):
+        value = value()
+    if iscoroutine(value):
+        value = await value
+    return value
+
+
+async def _process_environment_variables(image_id: str) -> dict[str, str]:
+    environment_variables = IMAGES[image_id].environment_vairables or {}
+    result: dict[str, str] = {}
+
+    for key in environment_variables:
+        result[key] = await _process_str(environment_variables[key])
+
+    return result
+
+
+def run_container(*, image: ImageState) -> None:
+    """Run a container."""
+
+    @store.autorun(
+        lambda state: state.docker,
+        options=AutorunOptions(keep_ref=False),
+    )
+    async def _(docker_state: DockerState) -> None:
+        docker_client = docker.from_env()
+        container = find_container(docker_client, image=IMAGES[image.id].path)
+        if container:
+            if container.status != 'running':
+                container.start()
+        else:
+            hosts = {}
+            for key, value in IMAGES[image.id].hosts.items():
+                if not hasattr(docker_state, value):
+                    store.dispatch(
+                        NotificationsAddAction(
+                            notification=Notification(
+                                title='Dependency error',
+                                content=f'Container "{value}" is not loaded',
+                                importance=Importance.MEDIUM,
+                            ),
+                        ),
+                    )
+                    return
+                if not getattr(docker_state, value).container_ip:
+                    store.dispatch(
+                        NotificationsAddAction(
+                            notification=Notification(
+                                title='Dependency error',
+                                content=f'Container "{value}" does not have an IP'
+                                ' address',
+                                importance=Importance.MEDIUM,
+                            ),
+                        ),
+                    )
+                    return
+                if hasattr(docker_state, value):
+                    hosts[key] = getattr(docker_state, value).container_ip
+                else:
+                    hosts[key] = value
+
+            docker_client.containers.run(
+                IMAGES[image.id].path,
+                hostname=image.id,
+                publish_all_ports=True,
+                detach=True,
+                volumes=IMAGES[image.id].volumes,
+                ports=IMAGES[image.id].ports,
+                network_mode=IMAGES[image.id].network_mode,
+                environment=await _process_environment_variables(image.id),
+                extra_hosts=hosts,
+                restart_policy={'Name': 'always'},
+                command=await _process_str(IMAGES[image.id].command),
+            )
+        docker_client.close()
+
+
+def stop_container(*, image: ImageState) -> None:
+    """Stop a container."""
+
+    def act() -> None:
+        docker_client = docker.from_env()
+        container = find_container(docker_client, image=IMAGES[image.id].path)
+        if container and container.status != 'exited':
+            container.stop()
+        docker_client.close()
+
+    to_thread(act)
+
+
+def remove_container(*, image: ImageState) -> None:
+    """Remove a container."""
+
+    def act() -> None:
+        docker_client = docker.from_env()
+        container = find_container(docker_client, image=IMAGES[image.id].path)
+        if container:
+            container.remove(v=True, force=True)
+        docker_client.close()
+
+    to_thread(act)
+
+
+def update_container(*, image_id: str, container: Container) -> None:
     """Update a container's state in store based on its real state."""
     if container.status == 'running':
         logger.debug(
@@ -48,7 +178,7 @@ def update_container(image_id: str, container: Container) -> None:
         store.dispatch(
             DockerImageSetStatusAction(
                 image=image_id,
-                status=ImageStatus.RUNNING,
+                status=DockerItemStatus.RUNNING,
                 ports=[
                     f'{i["HostIp"]}:{i["HostPort"]}'
                     for i in container.ports.values()
@@ -68,7 +198,7 @@ def update_container(image_id: str, container: Container) -> None:
     store.dispatch(
         DockerImageSetStatusAction(
             image=image_id,
-            status=ImageStatus.CREATED,
+            status=DockerItemStatus.CREATED,
         ),
     )
 
@@ -90,7 +220,7 @@ def _monitor_events(image_id: str, get_docker_id: Callable[[], str]) -> None:  #
                     store.dispatch(
                         DockerImageSetStatusAction(
                             image=image_id,
-                            status=ImageStatus.AVAILABLE,
+                            status=DockerItemStatus.AVAILABLE,
                         ),
                     )
                     if isinstance(image, Image) and image.id:
@@ -104,38 +234,42 @@ def _monitor_events(image_id: str, get_docker_id: Callable[[], str]) -> None:  #
                     store.dispatch(
                         DockerImageSetStatusAction(
                             image=image_id,
-                            status=ImageStatus.NOT_AVAILABLE,
+                            status=DockerItemStatus.NOT_AVAILABLE,
                         ),
                     )
             elif event['status'] == 'delete' and event['id'] == get_docker_id():
                 store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
-                        status=ImageStatus.NOT_AVAILABLE,
+                        status=DockerItemStatus.NOT_AVAILABLE,
                     ),
                 )
         elif event['Type'] == 'container':
-            if event['status'] == 'start' and event['from'] == path:
+            if (
+                event['status'] in 'start'
+                or event['status'].startswith('exec_create')
+                or event['status'].startswith('exec_start')
+            ) and event['from'] == path:
                 container = find_container(docker_client, image=path)
                 if container:
-                    update_container(image_id, container)
+                    update_container(image_id=image_id, container=container)
             elif event['status'] == 'die' and event['from'] == path:
                 store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
-                        status=ImageStatus.CREATED,
+                        status=DockerItemStatus.CREATED,
                     ),
                 )
             elif event['status'] == 'destroy' and event['from'] == path:
                 store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
-                        status=ImageStatus.AVAILABLE,
+                        status=DockerItemStatus.AVAILABLE,
                     ),
                 )
 
 
-def check_container(image_id: str) -> None:
+def check_container(*, image_id: str) -> None:
     """Check the container status."""
     path = IMAGES[image_id].path
 
@@ -158,7 +292,7 @@ def check_container(image_id: str) -> None:
 
             container = find_container(docker_client, image=path)
             if container:
-                update_container(image_id, container)
+                update_container(image_id=image_id, container=container)
                 return
 
             logger.debug(
@@ -168,7 +302,7 @@ def check_container(image_id: str) -> None:
             store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
-                    status=ImageStatus.AVAILABLE,
+                    status=DockerItemStatus.AVAILABLE,
                 ),
             )
         except docker.errors.ImageNotFound:
@@ -180,7 +314,7 @@ def check_container(image_id: str) -> None:
             store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
-                    status=ImageStatus.NOT_AVAILABLE,
+                    status=DockerItemStatus.NOT_AVAILABLE,
                 ),
             )
         except docker.errors.DockerException:
@@ -191,7 +325,7 @@ def check_container(image_id: str) -> None:
             store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
-                    status=ImageStatus.ERROR,
+                    status=DockerItemStatus.ERROR,
                 ),
             )
         finally:

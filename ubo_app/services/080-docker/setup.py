@@ -5,27 +5,33 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import uuid
 from typing import TYPE_CHECKING, cast
 
 import docker
 import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
-from image_menus import IMAGE_MENUS
-from reducer import IMAGES
-from ubo_gui.constants import DANGER_COLOR
+from docker_composition import COMPOSITIONS_PATH
+from docker_images import IMAGES
+from menus import docker_item_menu
+from reducer import image_reducer, reducer_id
+from redux import CombineReducerRegisterAction
+from ubo_gui.constants import DANGER_COLOR, WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
+from ubo_app.logging import logger
 from ubo_app.store.core.types import (
     RegisterRegularAppAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.input.types import InputFieldDescription, InputFieldType
+from ubo_app.store.input.types import InputFieldDescription, InputFieldType, InputMethod
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageRegisterAppEvent,
+    DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
     DockerStatus,
@@ -101,7 +107,7 @@ def stop_docker() -> None:
 
 async def check_docker() -> None:
     """Check if Docker is installed."""
-    from image_ import update_container
+    from docker_container import update_container
 
     is_installed = await is_package_installed('docker')
 
@@ -121,7 +127,7 @@ async def check_docker() -> None:
                         isinstance(container_image, Image)
                         and image_description.path in container_image.tags
                     ):
-                        update_container(image_id, container)
+                        update_container(image_id=image_id, container=container)
 
         docker_client.close()
 
@@ -299,6 +305,54 @@ default.""",
     create_task(act())
 
 
+def input_docker_composition() -> None:
+    """Input the Docker credentials."""
+
+    async def act() -> None:
+        with contextlib.suppress(asyncio.CancelledError):
+            _, data = await ubo_input(
+                input_methods=InputMethod.WEB_DASHBOARD,
+                prompt='Import Docker Composition',
+                fields=[
+                    InputFieldDescription(
+                        name='label',
+                        label='Label',
+                        type=InputFieldType.TEXT,
+                        description='The label of this composition',
+                        required=True,
+                    ),
+                    InputFieldDescription(
+                        name='yaml-config',
+                        label='Compose YAML',
+                        type=InputFieldType.LONG,
+                        description='This will be saved as the docker-compose.yml file',
+                        required=True,
+                    ),
+                ],
+            )
+
+            if not data or not data['yaml-config'] or not data['label']:
+                return
+
+            id = f'composition_{uuid.uuid4().hex}'
+            composition_path = COMPOSITIONS_PATH / id
+            composition_path.mkdir(exist_ok=True, parents=True)
+            with (composition_path / 'docker-compose.yml').open('w') as file:
+                file.write(data['yaml-config'])
+            with (composition_path / 'label').open('w') as file:
+                file.write(data['label'])
+            store.dispatch(
+                CombineReducerRegisterAction(
+                    _id=reducer_id,
+                    key=id,
+                    reducer=image_reducer,
+                    payload={'label': data['label']},
+                ),
+            )
+
+    create_task(act())
+
+
 def clear_credentials(registry: str) -> None:
     """Clear an entry in docker credentials."""
     secrets.clear_secret(DOCKER_CREDENTIALS_TEMPLATE.format(registry))
@@ -341,17 +395,60 @@ def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     ]
 
 
-def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
-    image = IMAGES[event.image]
-    store.dispatch(
-        RegisterRegularAppAction(
-            menu_item=ActionItem(
-                label=image.label,
-                icon=image.icon,
-                action=IMAGE_MENUS[image.id],
+def _register_image_app_entry(id: str) -> None:
+    if id in IMAGES:
+        image = IMAGES[id]
+        store.dispatch(
+            RegisterRegularAppAction(
+                menu_item=ActionItem(
+                    label=image.label,
+                    icon=image.icon,
+                    action=functools.partial(docker_item_menu, image.id),
+                ),
+                key=image.id,
             ),
-            key=image.id,
-        ),
+        )
+    else:
+        path = COMPOSITIONS_PATH / id
+        if not path.exists():
+            logger.error('Composition not found', extra={'image': id})
+            return
+        label = (path / 'label').read_text()
+        store.dispatch(
+            RegisterRegularAppAction(
+                menu_item=ActionItem(
+                    label=label,
+                    icon='󰣆',
+                    action=functools.partial(docker_item_menu, id),
+                ),
+                key=id,
+            ),
+        )
+
+
+def _load_images() -> None:
+    store.dispatch(
+        [
+            CombineReducerRegisterAction(
+                _id=reducer_id,
+                key=image_id,
+                reducer=image_reducer,
+                payload={'label': IMAGES[image_id].label},
+            )
+            for image_id in IMAGES
+        ],
+        [
+            CombineReducerRegisterAction(
+                _id=reducer_id,
+                key=item.stem,
+                reducer=image_reducer,
+                payload={'label': (item / 'label').read_text()},
+            )
+            for item in (
+                COMPOSITIONS_PATH.iterdir() if COMPOSITIONS_PATH.is_dir() else []
+            )
+            if item.stem.startswith('composition_')
+        ],
     )
 
 
@@ -362,6 +459,17 @@ def init_service() -> None:
         lambda state: state.docker.service.usernames,
     )
     store.dispatch(
+        RegisterRegularAppAction(
+            priority=1,
+            menu_item=ActionItem(
+                label='Import YAML file',
+                icon='󰋺',
+                background_color=WARNING_COLOR,
+                color='black',
+                action=input_docker_composition,
+            ),
+            key='_import',
+        ),
         RegisterSettingAppAction(
             priority=1,
             category=SettingsCategory.DOCKER,
@@ -372,9 +480,8 @@ def init_service() -> None:
             ),
             key='service',
         ),
-    )
-    store.dispatch(
         RegisterSettingAppAction(
+            priority=2,
             category=SettingsCategory.DOCKER,
             menu_item=SubMenuItem(
                 label='Registries',
@@ -390,7 +497,11 @@ def init_service() -> None:
         ),
     )
 
-    store.subscribe_event(DockerImageRegisterAppEvent, _register_image_app_entry)
+    store.subscribe_event(DockerLoadImagesEvent, _load_images)
+    store.subscribe_event(
+        DockerImageRegisterAppEvent,
+        lambda event: _register_image_app_entry(event.image),
+    )
 
     create_task(
         monitor_unit(
