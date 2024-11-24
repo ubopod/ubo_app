@@ -58,7 +58,7 @@ class CreateWirelessConnectionPage(PageWidget):
         try:
             _, data = await ubo_input(
                 prompt='Enter WiFi connection',
-                extra_information=NotificationExtraInformation(
+                qr_code_generation_instructions=NotificationExtraInformation(
                     text='Go to your phone settings, choose QR code and hold it in '
                     'front of the camera to scan it.',
                     picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '

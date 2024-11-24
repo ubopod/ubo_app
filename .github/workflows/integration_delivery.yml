@@ -226,9 +226,8 @@ jobs:
 
       - name: Extract Version from CHANGELOG.md
         run: |
-          FIRST_HEADER=$(sed -n '/## /s/## //p' CHANGELOG.md | head -n 1) 
+          FIRST_HEADER=$(sed -n '/## /s/## //p' CHANGELOG.md | head -n 1)
           if [ "$FIRST_HEADER" == "Upcoming" ]; then
-            # Check the version coming from extract-version starts with of x.y.z.devn
             if [[ "${{ steps.extract-version.outputs.VERSION }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+ ]]; then
               VERSION_CHANGELOG="This is a development version."
             else
@@ -237,9 +236,9 @@ jobs:
             fi
           else
             VERSION_CHANGELOG=$(echo $FIRST_HEADER | sed 's/Version //')
-            if [ "${{ steps.extract-version.outputs.VERSION }}" =~ "^$VERSION_CHANGELOG\.dev[0-9]+" ]; then
+            if [[ "${{ steps.extract-version.outputs.VERSION }}" =~ ^$VERSION_CHANGELOG\.dev[0-9]+ ]]; then
               echo "Error: Version extracted from CHANGELOG.md does not match the version in pyproject.toml"
-              exit 1 
+              exit 1
             else
               echo "Versions are consistent."
             fi

@@ -118,7 +118,7 @@ IMAGES = {
                 'NGROK_AUTHTOKEN': lambda: ubo_input(
                     resolver=lambda code, _: code,
                     prompt='Enter the Ngrok Auth Token',
-                    extra_information=NotificationExtraInformation(
+                    qr_code_generation_instructions=NotificationExtraInformation(
                         text="""\
 Follow these steps:
 
@@ -140,7 +140,7 @@ Follow these steps:
             command=lambda: ubo_input(
                 resolver=lambda code, _: code,
                 prompt='Enter the command, for example: `http 80` or `tcp 22`',
-                extra_information=NotificationExtraInformation(
+                qr_code_generation_instructions=NotificationExtraInformation(
                     text='This is the command you would enter when running ngrok. '
                     'Refer to ngrok documentation for further information',
                     picovoice_text="""\

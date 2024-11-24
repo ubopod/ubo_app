@@ -40,7 +40,7 @@ if IS_RPI:
         cs=cs_pin,
         dc=dc_pin,
         rst=reset_pin,
-        baudrate=70000000,
+        baudrate=70_000_000,
     )
 else:
     display = cast(ST7789, Fake())

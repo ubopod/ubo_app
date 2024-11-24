@@ -18,12 +18,12 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import CameraStopViewfinderEvent
+from ubo_app.store.services.notifications import NotificationExtraInformation
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_app.store.services.notifications import NotificationExtraInformation
 
 InputResultGroupDict: TypeAlias = dict[str, str | None] | None
 
@@ -35,7 +35,7 @@ ReturnType = TypeVar('ReturnType', infer_variance=True)
 async def ubo_input(
     *,
     prompt: str | None = None,
-    extra_information: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: NotificationExtraInformation | None = None,
     title: str | None = None,
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
@@ -44,7 +44,7 @@ async def ubo_input(
 async def ubo_input(
     *,
     prompt: str | None = None,
-    extra_information: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: NotificationExtraInformation | None = None,
     title: str | None = None,
     fields: list[InputFieldDescription],
 ) -> tuple[str, InputResultGroupDict]: ...
@@ -52,7 +52,7 @@ async def ubo_input(
 async def ubo_input(
     *,
     prompt: str | None = None,
-    extra_information: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: NotificationExtraInformation | None = None,
     title: str | None = None,
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
@@ -62,7 +62,7 @@ async def ubo_input(
 async def ubo_input(
     *,
     prompt: str | None = None,
-    extra_information: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: NotificationExtraInformation | None = None,
     title: str | None = None,
     fields: list[InputFieldDescription],
     resolver: Callable[[str, InputResultGroupDict], ReturnType],
@@ -70,7 +70,7 @@ async def ubo_input(
 async def ubo_input(  # noqa: PLR0913
     *,
     prompt: str | None = None,
-    extra_information: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: NotificationExtraInformation | None = None,
     title: str | None = None,
     pattern: str | None = None,
     fields: list[InputFieldDescription] | None = None,
@@ -144,12 +144,43 @@ async def ubo_input(  # noqa: PLR0913
             keep_ref=False,
         ),
     )
+    web_dashboard_instructions = """
+Web dashboard is served on port 21215 and it provides an interface for entering this \
+input."""
     store.dispatch(
         InputDemandAction(
             description=InputDescription(
                 title=title or 'Untitled input',
                 prompt=prompt,
-                extra_information=extra_information,
+                extra_information=NotificationExtraInformation(
+                    text=(
+                        (
+                            qr_code_generation_instructions.text
+                            if qr_code_generation_instructions
+                            else None
+                        )
+                        or ''
+                    )
+                    + web_dashboard_instructions,
+                    piper_text=(
+                        (
+                            qr_code_generation_instructions.piper_text
+                            if qr_code_generation_instructions
+                            else None
+                        )
+                        or ''
+                    )
+                    + web_dashboard_instructions,
+                    picovoice_text=(
+                        (
+                            qr_code_generation_instructions.picovoice_text
+                            if qr_code_generation_instructions
+                            else None
+                        )
+                        or ''
+                    )
+                    + web_dashboard_instructions,
+                ),
                 id=prompt_id,
                 pattern=pattern,
                 fields=fields,

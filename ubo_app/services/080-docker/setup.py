@@ -212,7 +212,7 @@ def input_credentials() -> None:
             credentials = (
                 await ubo_input(
                     prompt='Enter Docker Credentials',
-                    extra_information=NotificationExtraInformation(
+                    qr_code_generation_instructions=NotificationExtraInformation(
                         text="""To generate your QR code for login, format your \
 details by separating your service, username, and password with the pipe symbol. For \
 example, format it as "docker.io|johndoe|password" and then convert this text into a \

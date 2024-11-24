@@ -76,9 +76,12 @@ def input_access_key() -> None:
             access_key = (
                 await ubo_input(
                     title='Picovoice Access Key',
-                    extra_information=NotificationExtraInformation(
-                        text='Convert the Picovoice access key to a QR code and scan '
-                        'it',
+                    qr_code_generation_instructions=NotificationExtraInformation(
+                        text='Convert the Picovoice access key to a QR code and hold '
+                        'it in front of the camera to scan it.',
+                        picovoice_text='Convert the Picovoice access key to a '
+                        '{QR|K Y UW AA R} and hold it in front of the camera to scan '
+                        'it.',
                     ),
                     prompt='Enter Picovoice Access Key',
                     fields=[],
