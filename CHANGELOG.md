@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- chore: add `log_async_process` to log the output of an async processes in a notification if they don't run successfully
+
 ## Version 1.1.0
 
 - chore: migrate from poetry to uv for the sake of improving performance and dealing with conflicting sub-dependencies
