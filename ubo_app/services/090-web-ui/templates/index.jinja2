@@ -46,14 +46,17 @@
         <input name="id" type="hidden" value="{{ input.id }}" />
         <p>
           <label>
-            <h3>
+            <h2>
             {{ input.prompt }}
-            </h3>
+            </h2>
             {% if input.fields %}
               {% for field in input.fields %}
                 <p>
                   <label>
-                    {{ field.label }}:
+                    <span style='margin-bottom: .25em; display: inline-block;'>{{ field.label }}</span>
+                    <span style='color: #888888'>
+                      {% if field.required %} (required){%else%} (optional){% endif %}
+                    </span>:
                     {% if field.type == 'select' %}
                       <select name="{{ field.name }}">
                         {% for option in field.options %}
