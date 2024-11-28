@@ -12,6 +12,8 @@ import numpy as np
 from fake import Fake
 from redux import FinishAction, FinishEvent
 
+from ubo_app.utils import IS_TEST_ENV
+
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Callable
 
@@ -124,10 +126,11 @@ def setup() -> None:
     import ubo_app.display as _  # noqa: F401
     from ubo_app.store.main import store
 
-    store.subscribe_event(FinishEvent, _clear_signal_handlers)
+    if not IS_TEST_ENV:
+        store.subscribe_event(FinishEvent, _clear_signal_handlers)
 
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
 
     from ubo_gui import setup as setup_ubo_gui
 

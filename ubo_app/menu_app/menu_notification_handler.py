@@ -79,8 +79,6 @@ class MenuNotificationHandler(UboApp):
                 store.dispatch(
                     NotificationsClearAction(notification=notification.value),
                 )
-                if notification.value.on_dismiss:
-                    notification.value.on_dismiss()
             if notification.value.on_close:
                 notification.value.on_close()
 
@@ -163,10 +161,11 @@ class MenuNotificationHandler(UboApp):
 
         def run_notification_action(action: NotificationActionItem) -> None:
             result = action.action()
-            if action.dismiss_notification:
-                dismiss()
-            else:
-                close()
+            if action.close_notification:
+                if action.dismiss_notification:
+                    dismiss()
+                else:
+                    close()
             return result
 
         items: list[NotificationActionItem | None] = []
@@ -198,7 +197,7 @@ class MenuNotificationHandler(UboApp):
             for action in notification.value.actions
         ]
 
-        if notification.value.dismissable:
+        if notification.value.show_dismiss_action:
             items.append(
                 NotificationActionItem(
                     icon='󰆴',

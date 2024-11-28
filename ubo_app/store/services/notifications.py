@@ -81,6 +81,7 @@ class Chime(StrEnum):
 class NotificationActionItem(ActionItem):
     background_color: Color | Callable[[], Color] = SECONDARY_COLOR_LIGHT
     dismiss_notification: bool = False
+    close_notification: bool = True
 
 
 class NotificationDispatchItem(DispatchItem, NotificationActionItem): ...
@@ -110,10 +111,9 @@ class Notification(Immutable):
     expiration_timestamp: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = NOTIFICATIONS_FLASH_TIME
-    dismissable: bool = True
+    show_dismiss_action: bool = True
     dismiss_on_close: bool = False
     on_close: Callable[[], Any] | None = None
-    on_dismiss: Callable[[], Any] | None = None
     blink: bool = True
     progress: float | None = None
     progress_weight: float = 1

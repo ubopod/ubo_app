@@ -27,6 +27,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "envoy_grpc",
+      "instructions": null,
       "label": "Envoy for gRPC",
       "ports": [],
       "status": "not_available"
@@ -36,6 +37,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "home_assistant",
+      "instructions": null,
       "label": "Home Assistant",
       "ports": [],
       "status": "not_available"
@@ -45,6 +47,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "home_bridge",
+      "instructions": null,
       "label": "Home Bridge",
       "ports": [],
       "status": "not_available"
@@ -54,6 +57,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "ngrok",
+      "instructions": null,
       "label": "Ngrok",
       "ports": [],
       "status": "not_available"
@@ -63,6 +67,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "ollama",
+      "instructions": null,
       "label": "Ollama",
       "ports": [],
       "status": "not_available"
@@ -72,6 +77,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "open_webui",
+      "instructions": null,
       "label": "Open WebUI",
       "ports": [],
       "status": "not_available"
@@ -81,6 +87,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "pi_hole",
+      "instructions": null,
       "label": "Pi-hole",
       "ports": [],
       "status": "not_available"
@@ -90,6 +97,7 @@
       "container_ip": null,
       "docker_id": null,
       "id": "portainer",
+      "instructions": null,
       "label": "Portainer",
       "ports": [],
       "status": "not_available"
