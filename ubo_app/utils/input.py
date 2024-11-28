@@ -79,7 +79,7 @@ async def select_input_method(input_methods: InputMethod) -> InputMethod:
                 ),
                 expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
                 color='#ffffff',
-                dismissable=False,
+                show_dismiss_action=False,
                 dismiss_on_close=True,
                 actions=[
                     NotificationActionItem(

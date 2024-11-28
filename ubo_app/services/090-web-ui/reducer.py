@@ -61,7 +61,7 @@ def reducer(
                         extra_information=action.description.extra_information,
                         expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
                         color='#ffffff',
-                        dismissable=False,
+                        show_dismiss_action=False,
                         dismiss_on_close=True,
                         on_close=functools.partial(
                             store.dispatch,

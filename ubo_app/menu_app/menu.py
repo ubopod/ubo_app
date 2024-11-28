@@ -9,6 +9,7 @@ from ubo_app.menu_app.menu_central import MenuAppCentral
 from ubo_app.menu_app.menu_footer import MenuAppFooter
 from ubo_app.menu_app.menu_header import MenuAppHeader
 from ubo_app.store.main import store
+from ubo_app.store.services.display import DisplayRerenderEvent
 from ubo_app.store.settings.types import SettingsSetDebugModeEvent
 
 
@@ -18,6 +19,10 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
     def set_debug_mode(self: MenuApp, event: SettingsSetDebugModeEvent) -> None:
         """Set the debug mode."""
         self.root.show_update_regions = event.is_enabled
+
+    def rerender(self: MenuApp) -> None:
+        """Re-render the application."""
+        self.root.previous_frame = None
 
     @override
     def on_start(self: MenuApp) -> None:
@@ -31,3 +36,4 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
             self.set_debug_mode,
             keep_ref=False,
         )
+        store.subscribe_event(DisplayRerenderEvent, self.rerender, keep_ref=False)

@@ -12,7 +12,6 @@ import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
-from typing_extensions import override
 from ubo_gui.page import PageWidget
 
 from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
@@ -57,10 +56,7 @@ def check_codes(codes: list[str]) -> None:
     store.dispatch(CameraReportBarcodeAction(codes=codes))
 
 
-class CameraApplication(PageWidget):
-    @override
-    def go_back(self: CameraApplication) -> bool:
-        return True
+class CameraApplication(PageWidget): ...
 
 
 def initialize_camera() -> Picamera2 | None:
@@ -192,7 +188,7 @@ def start_camera_viewfinder() -> None:
 
     store.dispatch(DisplayPauseAction())
 
-    def handle_stop_viewfinder() -> None:
+    def handle_stop_viewfinder(_: object = None) -> None:
         unsubscribe()
         with fs_lock:
             nonlocal is_running
@@ -205,6 +201,8 @@ def start_camera_viewfinder() -> None:
             if picamera2:
                 picamera2.stop()
                 picamera2.close()
+
+    application.bind(on_close=handle_stop_viewfinder)
 
     unsubscribe = store.subscribe_event(
         CameraStopViewfinderEvent,

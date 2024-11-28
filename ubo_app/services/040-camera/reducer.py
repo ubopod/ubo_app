@@ -30,9 +30,7 @@ from ubo_app.store.services.camera import (
     CameraState,
     CameraStopViewfinderEvent,
 )
-from ubo_app.store.services.keypad import (
-    KeypadKeyPressAction,
-)
+from ubo_app.store.services.keypad import KeypadKeyPressAction
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationDispatchItem,
@@ -103,11 +101,12 @@ def reducer(
                                     pattern=action.description.pattern,
                                 ),
                                 icon='󰄀',
-                                dismiss_notification=False,
+                                close_notification=False,
                             ),
                         ],
-                        dismissable=False,
-                        on_dismiss=functools.partial(
+                        show_dismiss_action=False,
+                        dismiss_on_close=True,
+                        on_close=functools.partial(
                             store.dispatch,
                             InputCancelAction(id=action.description.id),
                         ),
@@ -157,6 +156,7 @@ def reducer(
                                     for key, value in match.groupdict().items()
                                 },
                             ),
+                            NotificationsClearByIdAction(id='camera:qrcode'),
                         ],
                         events=[
                             CameraStopViewfinderEvent(id=None),
