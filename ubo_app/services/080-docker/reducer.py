@@ -86,7 +86,11 @@ def image_reducer(
             and 'label' in action.payload
         ):
             return CompleteReducerResult(
-                state=ImageState(id=action.key, label=action.payload['label']),
+                state=ImageState(
+                    id=action.key,
+                    label=action.payload['label'],
+                    instructions=action.payload.get('instructions', None),
+                ),
                 events=[DockerImageRegisterAppEvent(image=action.key)],
             )
         raise InitializationActionError(action)

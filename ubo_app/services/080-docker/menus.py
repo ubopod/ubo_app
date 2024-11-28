@@ -30,10 +30,16 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
+from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerItemStatus,
     ImageState,
+)
+from ubo_app.store.services.notifications import (
+    Notification,
+    NotificationExtraInformation,
+    NotificationsAddAction,
 )
 from ubo_app.utils.async_ import create_task
 
@@ -133,7 +139,27 @@ def image_menu(
                 else functools.partial(stop_container, image=image),
             ),
         )
-        if not image.id.startswith('composition_'):
+        if image.id.startswith('composition_'):
+            items.append(
+                DispatchItem(
+                    label='Instructions',
+                    key='instructions',
+                    icon='󰋗',
+                    store_action=NotificationsAddAction(
+                        notification=Notification(
+                            icon='󰋗',
+                            title='Instructions',
+                            content='',
+                            extra_information=NotificationExtraInformation(
+                                text=image.instructions,
+                            )
+                            if image.instructions
+                            else None,
+                        ),
+                    ),
+                ),
+            )
+        else:
             items.append(
                 SubMenuItem(
                     label='Ports',

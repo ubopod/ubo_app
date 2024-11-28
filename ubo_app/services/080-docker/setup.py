@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import json
 import uuid
 from typing import TYPE_CHECKING, cast
 
@@ -328,6 +329,22 @@ def input_docker_composition() -> None:
                         description='This will be saved as the docker-compose.yml file',
                         required=True,
                     ),
+                    InputFieldDescription(
+                        name='icon',
+                        label='Icon',
+                        type=InputFieldType.TEXT,
+                        description="""<a \
+href="https://www.nerdfonts.com/cheat-sheet" target="_blank">Nerd Fonts</a> are \
+supported""",
+                        required=False,
+                    ),
+                    InputFieldDescription(
+                        name='instructions',
+                        label='Instructions',
+                        type=InputFieldType.LONG,
+                        description='Instructions on how to use this composition',
+                        required=False,
+                    ),
                 ],
             )
 
@@ -339,14 +356,15 @@ def input_docker_composition() -> None:
             composition_path.mkdir(exist_ok=True, parents=True)
             with (composition_path / 'docker-compose.yml').open('w') as file:
                 file.write(data['yaml-config'])
-            with (composition_path / 'label').open('w') as file:
-                file.write(data['label'])
+            with (composition_path / 'metadata.json').open('w') as file:
+                data.pop('yaml-config')
+                file.write(json.dumps(data))
             store.dispatch(
                 CombineReducerRegisterAction(
                     _id=reducer_id,
                     key=id,
                     reducer=image_reducer,
-                    payload={'label': data['label']},
+                    payload=data,
                 ),
             )
 
@@ -395,9 +413,9 @@ def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     ]
 
 
-def _register_image_app_entry(id: str) -> None:
-    if id in IMAGES:
-        image = IMAGES[id]
+def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
+    if event.image in IMAGES:
+        image = IMAGES[event.image]
         store.dispatch(
             RegisterRegularAppAction(
                 menu_item=ActionItem(
@@ -409,19 +427,19 @@ def _register_image_app_entry(id: str) -> None:
             ),
         )
     else:
-        path = COMPOSITIONS_PATH / id
+        path = COMPOSITIONS_PATH / event.image
         if not path.exists():
-            logger.error('Composition not found', extra={'image': id})
+            logger.error('Composition not found', extra={'image': event.image})
             return
-        label = (path / 'label').read_text()
+        metadata = json.load((path / 'metadata.json').open())
         store.dispatch(
             RegisterRegularAppAction(
                 menu_item=ActionItem(
-                    label=label,
-                    icon='󰣆',
-                    action=functools.partial(docker_item_menu, id),
+                    label=metadata['label'],
+                    icon=metadata['icon'] or '󰣆',
+                    action=functools.partial(docker_item_menu, event.image),
                 ),
-                key=id,
+                key=event.image,
             ),
         )
 
@@ -442,7 +460,7 @@ def _load_images() -> None:
                 _id=reducer_id,
                 key=item.stem,
                 reducer=image_reducer,
-                payload={'label': (item / 'label').read_text()},
+                payload=json.load((item / 'metadata.json').open()),
             )
             for item in (
                 COMPOSITIONS_PATH.iterdir() if COMPOSITIONS_PATH.is_dir() else []
@@ -500,7 +518,7 @@ def init_service() -> None:
     store.subscribe_event(DockerLoadImagesEvent, _load_images)
     store.subscribe_event(
         DockerImageRegisterAppEvent,
-        lambda event: _register_image_app_entry(event.image),
+        _register_image_app_entry,
     )
 
     create_task(

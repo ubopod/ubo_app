@@ -113,6 +113,7 @@ class ImageState(Immutable):
 
     id: str
     label: str
+    instructions: str | None
     status: DockerItemStatus = DockerItemStatus.NOT_AVAILABLE
     container_ip: str | None = None
     docker_id: str | None = None
