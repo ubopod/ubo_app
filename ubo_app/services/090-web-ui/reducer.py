@@ -52,7 +52,7 @@ def reducer(
             actions=[
                 NotificationsAddAction(
                     notification=Notification(
-                        id='web_ui:pending',
+                        id=f'web_ui:pending:{action.description.id}',
                         icon='󱋆',
                         title='Web UI',
                         content=f'[size=18dp]{action.description.prompt}[/size]',
@@ -81,7 +81,7 @@ def reducer(
                     if description.id != action.id
                 ],
             ),
-            actions=[NotificationsClearByIdAction(id='web_ui:pending')],
+            actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{action.id}')],
         )
 
     return state

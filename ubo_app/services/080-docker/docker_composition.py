@@ -20,6 +20,9 @@ def stop_composition(*, id: str) -> None:
     """Stop the composition."""
 
     async def act() -> None:
+        store.dispatch(
+            DockerImageSetStatusAction(image=id, status=DockerItemStatus.PROCESSING),
+        )
         stop_process = await asyncio.subprocess.create_subprocess_exec(
             'docker',
             'compose',
@@ -43,6 +46,9 @@ def run_composition(*, id: str) -> None:
     """Run the composition."""
 
     async def act() -> None:
+        store.dispatch(
+            DockerImageSetStatusAction(image=id, status=DockerItemStatus.PROCESSING),
+        )
         run_process = await asyncio.subprocess.create_subprocess_exec(
             'docker',
             'compose',
@@ -63,7 +69,36 @@ def run_composition(*, id: str) -> None:
     create_task(act())
 
 
+def pull_composition(*, id: str) -> None:
+    """Pull the composition images."""
+
+    async def act() -> None:
+        store.dispatch(
+            DockerImageSetStatusAction(image=id, status=DockerItemStatus.FETCHING),
+        )
+        run_process = await asyncio.subprocess.create_subprocess_exec(
+            'docker',
+            'compose',
+            'pull',
+            cwd=COMPOSITIONS_PATH / id,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        await run_process.wait()
+        await log_async_process(
+            run_process,
+            title='Docker Composition Error',
+            message='Failed to run composition.',
+        )
+        await check_composition(id=id)
+
+    create_task(act())
+
+
 async def _release_composition(id: str) -> None:
+    store.dispatch(
+        DockerImageSetStatusAction(image=id, status=DockerItemStatus.PROCESSING),
+    )
     check_process = await asyncio.subprocess.create_subprocess_exec(
         'docker',
         'compose',

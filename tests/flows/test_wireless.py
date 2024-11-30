@@ -64,7 +64,7 @@ async def test_wireless_flow(
 
     app = MenuApp()
     app_context.set_app(app)
-    load_services(['camera', 'display', 'notifications', 'wifi'])
+    await load_services(['camera', 'display', 'notifications', 'wifi'], run_async=True)
 
     @wait_for(wait=wait_fixed(1), run_async=True)
     def check_icon(expected_icon: str) -> None:
