@@ -7,6 +7,7 @@
 - feat(docker): support docker compositions and add a way to import `docker-compose.yml` files
 - feat(docker): add instructions and icon for docker compositions
 - refactor(core): rerender screen when rendering on the display is resumed like when returning from viewfinder to avoid artifacts
+- refactor(docker): make composition menus responsive: showing spinner, etc
 
 ## Version 1.1.0
 

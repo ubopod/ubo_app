@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from docker_composition import (
     check_composition,
     delete_composition,
+    pull_composition,
     release_composition,
     run_composition,
     stop_composition,
@@ -57,7 +58,7 @@ if TYPE_CHECKING:
 
 
 @store.view(lambda state: state.ip.interfaces)
-def image_menu(
+def image_menu(  # noqa: C901
     interfaces: Sequence[IpNetworkInterface],
     image: ImageState,
 ) -> HeadedMenu:
@@ -92,6 +93,17 @@ def image_menu(
                     action=functools.partial(run_composition, id=image.id)
                     if image.id.startswith('composition_')
                     else functools.partial(run_container, image=image),
+                ),
+                *(
+                    [
+                        ActionItem(
+                            label='Pull Images',
+                            icon='󰇚',
+                            action=functools.partial(pull_composition, id=image.id),
+                        ),
+                    ]
+                    if image.id.startswith('composition_')
+                    else []
                 ),
                 ActionItem(
                     label='Delete Application'
@@ -182,16 +194,19 @@ def image_menu(
                     ),
                 ),
             )
+    elif image.status == DockerItemStatus.PROCESSING:
+        pass
 
     if image.id.startswith('composition_'):
         messages = {
             DockerItemStatus.NOT_AVAILABLE: 'Need to fetch images',
-            DockerItemStatus.FETCHING: 'Images is being fetched',
+            DockerItemStatus.FETCHING: 'Images are being fetched',
             DockerItemStatus.AVAILABLE: 'Images are ready but composition is not '
             'running',
             DockerItemStatus.CREATED: 'Composition is created but not running',
             DockerItemStatus.RUNNING: 'Composition is running',
             DockerItemStatus.ERROR: 'We have an error, please check the logs',
+            DockerItemStatus.PROCESSING: 'Waiting...',
         }
     else:
         messages = {
@@ -201,6 +216,7 @@ def image_menu(
             DockerItemStatus.CREATED: 'Container is created but not running',
             DockerItemStatus.RUNNING: IMAGES[image.id].note or 'Container is running',
             DockerItemStatus.ERROR: 'We have an error, please check the logs',
+            DockerItemStatus.PROCESSING: 'Waiting...',
         }
 
     return HeadedMenu(
@@ -208,7 +224,7 @@ def image_menu(
         heading=image.label,
         sub_heading=messages[image.status],
         items=items,
-        placeholder='Waiting...',
+        placeholder='',
     )
 
 

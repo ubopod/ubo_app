@@ -219,7 +219,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 f'"{len(filtered_items)}"'
             )
             raise ValueError(msg)
-        self.menu_widget.select_item(filtered_items[0])
+        self.menu_widget.select_item(filtered_items[0], parent=self.menu_widget.top)
 
     @mainthread
     def select_by_label(
@@ -241,7 +241,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 f'"{len(filtered_items)}"'
             )
             raise ValueError(msg)
-        self.menu_widget.select_item(filtered_items[0])
+        self.menu_widget.select_item(filtered_items[0], parent=self.menu_widget.top)
 
     @mainthread
     def select_by_index(

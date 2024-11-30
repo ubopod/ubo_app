@@ -32,6 +32,7 @@ class DockerItemStatus(StrEnum):
     CREATED = auto()
     RUNNING = auto()
     ERROR = auto()
+    PROCESSING = auto()
 
 
 class DockerAction(BaseAction):

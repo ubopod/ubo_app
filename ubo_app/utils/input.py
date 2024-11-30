@@ -233,8 +233,8 @@ async def ubo_input(  # noqa: PLR0913
                 if selected_input_method is InputMethod.CAMERA
                 else NotificationExtraInformation(
                     text=f"""\
-Web dashboard is served on port {hostname}:{WEB_UI_LISTEN_PORT} and it provides an \
-interface for entering this input.""",
+Web dashboard is served on port {hostname}.local:{WEB_UI_LISTEN_PORT} and it provides \
+an interface for entering this input.""",
                 ),
                 id=prompt_id,
                 pattern=pattern,

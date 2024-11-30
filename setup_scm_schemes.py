@@ -10,5 +10,7 @@ from setuptools_scm.version import (  # pyright: ignore [reportMissingImports]
 def local_scheme(version) -> str:  # noqa: ANN001
     version.node = re.sub(r'.', lambda match: str(ord(match.group(0))), version.node)
     original_local_version = get_local_node_and_date(version)
-    numeric_version = original_local_version.replace('+', '').replace('.d', '')
+    if not original_local_version:
+        return original_local_version
+    numeric_version = original_local_version.replace('+', '').replace('.d', '')[:12]
     return datetime.now(UTC).strftime('%y%m%d') + numeric_version
