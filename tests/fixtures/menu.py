@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Protocol, overload
 
 import pytest
 from tenacity import wait_fixed
-from ubo_gui.page import PageWidget
 
 if TYPE_CHECKING:
     from redux_pytest.fixtures import WaitFor
@@ -87,6 +86,9 @@ def wait_for_empty_menu(app_context: AppContext, wait_for: WaitFor) -> WaitForEm
             assert not app_context.app.menu_widget._is_transition_in_progress  # noqa: SLF001
             current_page = app_context.app.menu_widget.current_screen
             assert current_page is not None
+
+            from ubo_gui.page import PageWidget
+
             assert isinstance(current_page, PageWidget)
             assert all(item is None for item in current_page.items)
             if placeholder is not None:

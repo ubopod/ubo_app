@@ -78,6 +78,7 @@ class LoginPage(PageWidget):
                 store.dispatch(
                     NotificationsAddAction(
                         notification=Notification(
+                            id='vscode:login',
                             title='VSCode',
                             content='Failed to login: invalid output',
                             display_type=NotificationDisplayType.STICKY,
@@ -92,6 +93,7 @@ class LoginPage(PageWidget):
             store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
+                        id='vscode:error:login',
                         title='VSCode',
                         content='Failed to login: process error',
                         display_type=NotificationDisplayType.STICKY,

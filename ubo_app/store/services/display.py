@@ -17,6 +17,9 @@ class DisplayPauseAction(DisplayAction): ...
 class DisplayResumeAction(DisplayAction): ...
 
 
+class DisplayRerenderEvent(DisplayEvent): ...
+
+
 class DisplayRenderEvent(DisplayEvent):
     data: bytes
     rectangle: tuple[int, int, int, int]

@@ -174,7 +174,7 @@ def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     file_handler = logging.handlers.RotatingFileHandler(
         f'{logger.name}.log',
         backupCount=3,
-        maxBytes=1000000,
+        maxBytes=1_000_000,
     )
     file_handler.setLevel(level)
     file_handler.setFormatter(
@@ -219,4 +219,4 @@ def setup_logging() -> None:
         ubo_gui.logger.add_stdout_handler(level)
 
 
-__all__ = ('logger', 'add_stdout_handler', 'add_file_handler', 'setup_logging')
+__all__ = ('add_file_handler', 'add_stdout_handler', 'logger', 'setup_logging')

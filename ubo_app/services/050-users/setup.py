@@ -129,7 +129,7 @@ async def delete_account(event: UsersDeleteUserEvent) -> None:
                         dismiss_notification=True,
                     ),
                 ],
-                dismissable=False,
+                show_dismiss_action=False,
                 dismiss_on_close=True,
                 on_close=lambda: loop.call_soon_threadsafe(notification_future.cancel),
             ),

@@ -72,6 +72,7 @@ def download_code() -> None:
             store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
+                        id='vscode:download',
                         title='VSCode',
                         content='Failed to download',
                         display_type=NotificationDisplayType.STICKY,
@@ -107,6 +108,7 @@ def logout() -> None:
             store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
+                        id='vscode:logout',
                         title='VSCode',
                         content='Failed to logout',
                         display_type=NotificationDisplayType.STICKY,

@@ -56,6 +56,7 @@ def reducer(
             actions.append(
                 NotificationsAddAction(
                     notification=Notification(
+                        id='vscode:login',
                         title='VSCode',
                         content='Successful Login',
                         icon='󰨞',

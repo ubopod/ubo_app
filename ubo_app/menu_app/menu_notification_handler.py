@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ubo_gui.menu.menu_widget import MenuWidget
+    from ubo_gui.menu.types import PageWidget
 
 
 class NotificationReference:
@@ -161,10 +162,11 @@ class MenuNotificationHandler(UboApp):
 
         def run_notification_action(action: NotificationActionItem) -> None:
             result = action.action()
-            if action.dismiss_notification:
-                dismiss()
-            else:
-                close()
+            if action.close_notification:
+                if action.dismiss_notification:
+                    dismiss()
+                else:
+                    close()
             return result
 
         items: list[NotificationActionItem | None] = []
@@ -172,10 +174,8 @@ class MenuNotificationHandler(UboApp):
         if notification.value.extra_information:
             text = notification.value.extra_information.text
 
-            def open_info() -> None:
-                info_application = NotificationInfo(text=text)
-
-                store.dispatch(OpenApplicationAction(application=info_application))
+            def open_info() -> PageWidget:
+                return NotificationInfo(text=text)
 
             items.append(
                 NotificationActionItem(
@@ -196,7 +196,7 @@ class MenuNotificationHandler(UboApp):
             for action in notification.value.actions
         ]
 
-        if notification.value.dismissable:
+        if notification.value.show_dismiss_action:
             items.append(
                 NotificationActionItem(
                     icon='󰆴',

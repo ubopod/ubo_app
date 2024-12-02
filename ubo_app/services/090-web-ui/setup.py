@@ -7,7 +7,11 @@ from pathlib import Path
 from quart import Quart, render_template, request
 from redux import FinishEvent
 
-from ubo_app.constants import WEB_UI_DEBUG_MODE, WEB_UI_LISTEN_HOST, WEB_UI_LISTEN_PORT
+from ubo_app.constants import (
+    WEB_UI_DEBUG_MODE,
+    WEB_UI_LISTEN_ADDRESS,
+    WEB_UI_LISTEN_PORT,
+)
 from ubo_app.store.input.types import (
     InputCancelAction,
     InputDescription,
@@ -67,7 +71,7 @@ async def init_service() -> None:
         await shutdown_event.wait()
 
     await app.run_task(
-        host=WEB_UI_LISTEN_HOST,
+        host=WEB_UI_LISTEN_ADDRESS,
         port=WEB_UI_LISTEN_PORT,
         debug=WEB_UI_DEBUG_MODE,
         shutdown_trigger=wait_for_shutdown,

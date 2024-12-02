@@ -56,12 +56,9 @@ if IS_RPI:
 else:
     BASE_IMAGE = '[unknown]'
 BASE_IMAGE_VARIANT = (
-    BASE_IMAGE == '[unknown]'
-    and '[unknown]'
-    or BASE_IMAGE.endswith('-lite')
-    and 'lite'
-    or BASE_IMAGE.endswith('-full')
-    and 'full'
+    (BASE_IMAGE == '[unknown]' and '[unknown]')
+    or (BASE_IMAGE.endswith('-lite') and 'lite')
+    or (BASE_IMAGE.endswith('-full') and 'full')
     or 'desktop'
 )
 
@@ -129,7 +126,7 @@ Then another reboot will be done to complete the update process.""",
                     icon='󰇚',
                     blink=False,
                     progress=0,
-                    dismissable=False,
+                    show_dismiss_action=False,
                 ),
             ),
         )
@@ -171,7 +168,7 @@ Then another reboot will be done to complete the update process.""",
                     icon='󰇚',
                     blink=False,
                     progress=1 / packages_count,
-                    dismissable=False,
+                    show_dismiss_action=False,
                 ),
             ),
         )
@@ -223,7 +220,7 @@ Then another reboot will be done to complete the update process.""",
                             icon='󰇚',
                             blink=False,
                             progress=min((counter + 1) / packages_count, 1),
-                            dismissable=False,
+                            show_dismiss_action=False,
                         ),
                     ),
                 )
@@ -260,7 +257,7 @@ Then another reboot will be done to complete the update process.""",
                     color=INFO_COLOR,
                     icon='󰇚',
                     progress=1,
-                    dismissable=False,
+                    show_dismiss_action=False,
                 ),
             ),
         )
@@ -357,7 +354,7 @@ This may take around 20 minutes to complete.""",
                 display_type=NotificationDisplayType.BACKGROUND
                 if is_presented
                 else NotificationDisplayType.STICKY,
-                dismissable=False,
+                show_dismiss_action=False,
                 dismiss_on_close=False,
                 color=INFO_COLOR,
                 progress=math.nan,

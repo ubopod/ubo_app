@@ -6,7 +6,7 @@ from __future__ import annotations
 from grpclib.reflection.service import ServerReflection
 from grpclib.server import Server
 
-from ubo_app.constants import GRPC_LISTEN_HOST, GRPC_LISTEN_PORT
+from ubo_app.constants import GRPC_LISTEN_ADDRESS, GRPC_LISTEN_PORT
 from ubo_app.logging import logger
 from ubo_app.rpc.service import StoreService
 
@@ -20,8 +20,8 @@ async def serve() -> None:
 
     logger.info(
         'Starting gRPC server',
-        extra={'host': GRPC_LISTEN_HOST, 'port': GRPC_LISTEN_PORT},
+        extra={'host': GRPC_LISTEN_ADDRESS, 'port': GRPC_LISTEN_PORT},
     )
-    await server.start(GRPC_LISTEN_HOST, GRPC_LISTEN_PORT)
+    await server.start(GRPC_LISTEN_ADDRESS, GRPC_LISTEN_PORT)
 
     await server.wait_closed()

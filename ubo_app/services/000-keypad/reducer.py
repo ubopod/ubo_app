@@ -7,9 +7,9 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from redux import (
-    CombineReducerInitAction,
     CompleteReducerResult,
     FinishEvent,
+    InitAction,
     InitializationActionError,
     ReducerResult,
 )
@@ -58,7 +58,7 @@ def reducer(
 ):
     """Keypad reducer."""
     if state is None:
-        if isinstance(action, CombineReducerInitAction):
+        if isinstance(action, InitAction):
             return KeypadState()
 
         raise InitializationActionError(action)
