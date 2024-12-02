@@ -39,6 +39,16 @@ fi
 echo "${USERNAME}:${PASSWORD}" | chpasswd
 printf "${USERNAME}:${PASSWORD}"
 
+# TODO: Create a seperate script to adding user to sudo group
+# and allowing passwordless sudo. Call this script with explict user action
+# exposed via the UI.
+
+# Add the user to the sudo group
+usermod -aG sudo $USERNAME
+
+# Allow the user to run sudo without a password
+echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME}
+
 # Allow password authentication
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl restart ssh
