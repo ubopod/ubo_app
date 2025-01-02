@@ -8,6 +8,7 @@
 - feat(docker): add instructions and icon for docker compositions
 - refactor(core): rerender screen when rendering on the display is resumed like when returning from viewfinder to avoid artifacts
 - refactor(docker): make composition menus responsive: showing spinner, etc
+- fix: pass raw bytes to `DisplayRenderEvent` and `DisplayCompressedRenderEvent` to avoid encoding issues
 
 ## Version 1.1.0
 
