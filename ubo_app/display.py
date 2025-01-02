@@ -46,10 +46,7 @@ else:
     display = cast(ST7789, Fake())
 
 
-def render_on_display(
-    *,
-    regions: list[Region],
-) -> None:
+def render_on_display(*, regions: list[Region]) -> None:
     """Transfer data to the display via SPI controller."""
     for region in regions:
         rectangle = region['rectangle']
@@ -75,11 +72,11 @@ def render_on_display(
         store._dispatch(  # noqa: SLF001
             [
                 DisplayRenderEvent(
-                    data=data.tobytes(),
+                    data=region['data'].tobytes(),
                     rectangle=rectangle,
                 ),
                 DisplayCompressedRenderEvent(
-                    compressed_data=compressor.compress(data.tobytes())
+                    compressed_data=compressor.compress(region['data'].tobytes())
                     + compressor.flush(),
                     rectangle=rectangle,
                 ),
