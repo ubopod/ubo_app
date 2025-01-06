@@ -175,7 +175,7 @@ def configure_fan() -> None:
 
 def setup_polkit() -> None:
     """Create the polkit rules file."""
-    with Path('/etc/polkit-1/rules.d/50-ubo.rules').open('w') as file:
+    with Path('/etc/polkit-1/rules.d/10-ubo.rules').open('w') as file:
         file.write(
             Path(__file__)
             .parent.joinpath('polkit.rules')
