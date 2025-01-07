@@ -17,7 +17,11 @@ from ubo_app.store.services.notifications import (
     NotificationsAction,
     NotificationsClearByIdAction,
 )
-from ubo_app.store.services.web_ui import WebUICheckHotspotEvent, WebUIState
+from ubo_app.store.services.web_ui import (
+    WebUIInitializeEvent,
+    WebUIState,
+    WebUIStopEvent,
+)
 
 if TYPE_CHECKING:
     from redux import ReducerResult
@@ -28,7 +32,10 @@ DispatchAction = InputCancelAction | NotificationsAction
 def reducer(
     state: WebUIState | None,
     action: InputAction,
-) -> WebUIState | ReducerResult[WebUIState, DispatchAction, WebUICheckHotspotEvent]:
+) -> (
+    WebUIState
+    | ReducerResult[WebUIState, DispatchAction, WebUIInitializeEvent | WebUIStopEvent]
+):
     if state is None:
         if isinstance(action, InitAction):
             return WebUIState(active_inputs=[])
@@ -43,7 +50,7 @@ def reducer(
                 state,
                 active_inputs=[*state.active_inputs, action.description],
             ),
-            events=[WebUICheckHotspotEvent(description=action.description)],
+            events=[WebUIInitializeEvent(description=action.description)],
         )
     if isinstance(action, InputResolveAction | InputCancelAction):
         return CompleteReducerResult(
@@ -54,11 +61,11 @@ def reducer(
                         description
                         for description in state.active_inputs
                         if description.id != action.id
-                    ]
+                    ],
                 ),
             ),
             actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{action.id}')],
-            events=[] if new_active_inputs else [WebUICheckHotspotEvent()],
+            events=[] if new_active_inputs else [WebUIStopEvent()],
         )
 
     return state
