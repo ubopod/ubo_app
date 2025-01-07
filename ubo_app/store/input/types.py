@@ -9,7 +9,7 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
-    from ubo_app.store.services.notifications import NotificationExtraInformation
+    from ubo_app.store.services.voice import ReadableInformation
 
 
 class InputFieldType(enum.StrEnum):
@@ -54,7 +54,7 @@ class InputDescription(Immutable):
 
     title: str
     prompt: str | None
-    extra_information: NotificationExtraInformation | None = None
+    extra_information: ReadableInformation | None = None
     id: str
     pattern: str | None
     fields: list[InputFieldDescription] | None = None

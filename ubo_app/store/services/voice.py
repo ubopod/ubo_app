@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import sys
 from dataclasses import field
 from enum import StrEnum
 
@@ -29,18 +30,41 @@ class VoiceSetEngineAction(VoiceAction):
     engine: VoiceEngine
 
 
-class VoiceReadTextAction(VoiceAction):
+def _default_text() -> str:
+    # WARNING: Dirty hack ahead
+    # This is to set the default value of `piper_text`/`picovoice_text` based on the
+    # provided value of `text`
+    parent_frame = sys._getframe().f_back  # noqa: SLF001
+    if not parent_frame:
+        return ''
+    return parent_frame.f_locals.get('text') or ''
+
+
+class ReadableInformation(Immutable):
     text: str
-    piper_text: str | None = None
-    picovoice_text: str | None = None
+    piper_text: str = field(default_factory=_default_text)
+    picovoice_text: str = field(default_factory=_default_text)
+
+    def __add__(
+        self,
+        other: ReadableInformation,
+    ) -> ReadableInformation:
+        """Concatenate two `ReadableInformation` objects."""
+        return ReadableInformation(
+            text=self.text + other.text,
+            piper_text=self.piper_text + other.piper_text,
+            picovoice_text=self.picovoice_text + other.picovoice_text,
+        )
+
+
+class VoiceReadTextAction(VoiceAction):
+    information: ReadableInformation
     speech_rate: float | None = None
     engine: VoiceEngine | None = None
 
 
 class VoiceSynthesizeTextEvent(VoiceEvent):
-    text: str
-    piper_text: str
-    picovoice_text: str
+    information: ReadableInformation
     speech_rate: float | None = None
 
 

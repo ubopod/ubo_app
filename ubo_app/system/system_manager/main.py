@@ -23,6 +23,7 @@ from ubo_app.logger import add_file_handler, add_stdout_handler, get_logger
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler
+from ubo_app.system.system_manager.hotspot import hotspot_handler
 from ubo_app.system.system_manager.led import LEDManager
 from ubo_app.system.system_manager.package import package_handler
 from ubo_app.system.system_manager.reset_button import setup_reset_button
@@ -72,6 +73,7 @@ def handle_command(command: str) -> str | None:
             'users': users_handler,
             'package': package_handler,
             'audio': audio_handler,
+            'hotspot': hotspot_handler,
         }
         if header in handlers:
             return handlers[header](*arguments)

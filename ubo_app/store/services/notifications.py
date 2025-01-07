@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
     from kivy.graphics.context_instructions import Color
 
+    from ubo_app.store.services.voice import ReadableInformation
+
 
 class Importance(StrEnum):
     CRITICAL = auto()
@@ -87,17 +89,11 @@ class NotificationActionItem(ActionItem):
 class NotificationDispatchItem(DispatchItem, NotificationActionItem): ...
 
 
-class NotificationExtraInformation(Immutable):
-    text: str
-    piper_text: str | None = None
-    picovoice_text: str | None = None
-
-
 class Notification(Immutable):
     id: str = field(default_factory=lambda: uuid4().hex)
     title: str
     content: str
-    extra_information: NotificationExtraInformation | None = None
+    extra_information: ReadableInformation | None = None
     importance: Importance = Importance.LOW
     chime: Chime | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))

@@ -43,9 +43,9 @@ from ubo_app.store.services.notifications import (
     Importance,
     Notification,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils import secrets
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
@@ -219,7 +219,7 @@ def input_credentials() -> None:
             credentials = (
                 await ubo_input(
                     prompt='Enter Docker Credentials',
-                    qr_code_generation_instructions=NotificationExtraInformation(
+                    qr_code_generation_instructions=ReadableInformation(
                         text="""To generate your QR code for login, format your \
 details by separating your service, username, and password with the pipe symbol. For \
 example, format it as "docker.io|johndoe|password" and then convert this text into a \
@@ -295,7 +295,7 @@ default.""",
                     notification=Notification(
                         title='Docker Credentials Error',
                         content='Invalid credentials',
-                        extra_information=NotificationExtraInformation(
+                        extra_information=ReadableInformation(
                             text=explanation,
                         ),
                         importance=Importance.HIGH,

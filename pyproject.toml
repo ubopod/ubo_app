@@ -44,6 +44,7 @@ dependencies = [
   "gpiozero >=2.0.1 ; platform_machine != 'aarch64'",
   "quart >=0.19.6",
   "pythonping>=1.1.4",
+  "netifaces>=0.11.0",
 ]
 
 [build-system]

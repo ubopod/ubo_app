@@ -67,7 +67,9 @@ logging.setLoggerClass(UboLogger)
 
 
 def get_logger(name: str) -> UboLogger:
-    return cast(UboLogger, logging.getLogger(name))
+    logger = cast(UboLogger, logging.getLogger(name))
+    logger.propagate = False
+    return logger
 
 
 def supports_truecolor() -> bool:
@@ -77,7 +79,6 @@ def supports_truecolor() -> bool:
 
 
 logger = get_logger('ubo-app')
-logger.propagate = False
 
 
 class ExtraFormatter(logging.Formatter):
