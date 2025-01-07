@@ -80,7 +80,7 @@ async def create_account() -> None:
         NotificationsAddAction(
             notification=Notification(
                 title='Account Info',
-                content=f'[size=18dp][b]host:[/b] {hostname}\n'
+                content=f'[size=18dp][b]host:[/b] {hostname}.local\n'
                 f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
                 importance=Importance.MEDIUM,
                 icon='󰀈',
@@ -185,7 +185,7 @@ async def reset_password(event: UsersResetPasswordEvent) -> None:
         NotificationsAddAction(
             notification=Notification(
                 title='Account Info',
-                content=f'[size=18dp][b]host:[/b] {hostname}\n'
+                content=f'[size=18dp][b]host:[/b] {hostname}.local\n'
                 f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
                 importance=Importance.MEDIUM,
                 icon='󰀈',
