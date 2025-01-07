@@ -18,6 +18,7 @@ from ubo_app.constants import (
     WEB_UI_LISTEN_ADDRESS,
     WEB_UI_LISTEN_PORT,
 )
+from ubo_app.logger import logger
 from ubo_app.store.input.types import (
     InputCancelAction,
     InputDescription,
@@ -31,7 +32,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.voice import ReadableInformation
-from ubo_app.store.services.web_ui import WebUICheckHotspotEvent
+from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
 from ubo_app.utils.server import send_command
 
 
@@ -79,14 +80,18 @@ async def has_gateway() -> bool:
     return False
 
 
-async def check_connection(event: WebUICheckHotspotEvent) -> None:
+async def initialize(event: WebUIInitializeEvent) -> None:
     """Start the hotspot if there is no network connection."""
     is_connected = await has_gateway()
+    logger.info(
+        'web-ui - check_connection',
+        extra={
+            'is_connected': is_connected,
+            'description': event.description,
+        },
+    )
     if not is_connected:
-        await send_command(
-            'hotspot',
-            'stop' if event.description is None else 'start',
-        )
+        await send_command('hotspot', 'start')
     hostname = socket.gethostname()
     if event.description:
         store.dispatch(
@@ -120,6 +125,11 @@ async def check_connection(event: WebUICheckHotspotEvent) -> None:
                 ),
             ),
         )
+
+
+async def stop() -> None:
+    """Start the hotspot if there is no network connection."""
+    await send_command('hotspot', 'stop')
 
 
 async def init_service() -> None:
@@ -174,7 +184,8 @@ async def init_service() -> None:
 
     store.subscribe_event(FinishEvent, shutdown_event.set)
 
-    store.subscribe_event(WebUICheckHotspotEvent, check_connection)
+    store.subscribe_event(WebUIInitializeEvent, initialize)
+    store.subscribe_event(WebUIStopEvent, stop)
 
     async def wait_for_shutdown() -> None:
         await shutdown_event.wait()

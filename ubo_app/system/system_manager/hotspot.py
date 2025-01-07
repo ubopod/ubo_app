@@ -23,7 +23,7 @@ channel=7
 wpa=2
 wpa_passphrase=ubo-pod-setup
 wpa_key_mgmt=WPA-PSK
-wpa_pairwise=TKIP
+wpa_pairwise=TKIP CCMP
 rsn_pairwise=CCMP""")
         with pathlib.Path('/etc/default/hostapd').open('w') as f:
             f.write('DAEMON_CONF="/etc/hostapd/hostapd.conf"')
@@ -39,4 +39,8 @@ rsn_pairwise=CCMP""")
         subprocess.run(['/usr/bin/env', 'systemctl', 'disable', 'hostapd'], check=True)  # noqa: S603
         subprocess.run(['/usr/bin/env', 'systemctl', 'mask', 'hostapd'], check=True)  # noqa: S603
         subprocess.run(['/usr/bin/env', 'systemctl', 'stop', 'dnsmasq'], check=True)  # noqa: S603
-        subprocess.run(['/usr/bin/env', 'systemctl', 'stop', 'dhcpcd'], check=True)  # noqa: S603
+        with pathlib.Path('/etc/dhcpcd.conf').open('w') as f:
+            f.write("""# Default dhcpcd configuration
+                    # Leave this blank for automatic configuration
+                    """)
+        subprocess.run(['/usr/bin/env', 'systemctl', 'restart', 'dhcpcd'], check=True)  # noqa: S603

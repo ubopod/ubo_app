@@ -13,8 +13,11 @@ if TYPE_CHECKING:
 class WebUIEvent(BaseEvent): ...
 
 
-class WebUICheckHotspotEvent(WebUIEvent):
+class WebUIInitializeEvent(WebUIEvent):
     description: InputDescription | None = None
+
+
+class WebUIStopEvent(WebUIEvent): ...
 
 
 class WebUIState(Immutable):
