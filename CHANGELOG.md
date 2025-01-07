@@ -10,6 +10,7 @@
 - refactor(docker): make composition menus responsive: showing spinner, etc
 - fix: pass raw bytes to `DisplayRenderEvent` and `DisplayCompressedRenderEvent` to avoid encoding issues
 - fix: add ".local" to hostname in users menus - closes #134
+- fix: use stdout instead of stderr for reading rpi-connect process output - closes #174
 
 ## Version 1.1.0
 

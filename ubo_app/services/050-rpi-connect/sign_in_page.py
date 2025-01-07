@@ -48,12 +48,12 @@ class SignInPage(PageWidget):
                 '/usr/bin/env',
                 'rpi-connect',
                 'signin',
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
             )
-            if self.process.stderr is None:
+            if self.process.stdout is None:
                 return
-            output = (await self.process.stderr.readline()).decode()
+            output = (await self.process.stdout.readline()).decode()
             regex = r'^Complete sign in by visiting (?P<url>[^\n]*)'
             match = re.search(regex, output)
             if match:
