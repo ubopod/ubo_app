@@ -36,7 +36,10 @@ async def send_command(*command_: str, has_output: bool = False) -> str | None:
         writer.close()
 
     except Exception:
-        logger.exception('Failed to send command to the server')
+        logger.exception(
+            'Failed to send command to the server',
+            extra={'command': command},
+        )
         raise
     else:
         return response

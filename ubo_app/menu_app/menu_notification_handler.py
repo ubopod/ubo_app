@@ -113,9 +113,7 @@ class MenuNotificationHandler(UboApp):
                 notification.is_initialized = True
                 store.dispatch(
                     VoiceReadTextAction(
-                        text=event.notification.extra_information.text,
-                        piper_text=event.notification.extra_information.piper_text,
-                        picovoice_text=event.notification.extra_information.picovoice_text,
+                        information=event.notification.extra_information,
                     ),
                 )
 

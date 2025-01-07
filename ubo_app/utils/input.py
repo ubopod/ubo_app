@@ -5,14 +5,12 @@ from __future__ import annotations
 import asyncio
 import datetime
 import functools
-import socket
 import uuid
 from asyncio import Future
 from typing import TYPE_CHECKING, TypeAlias, overload
 
 from typing_extensions import TypeVar
 
-from ubo_app.constants import WEB_UI_LISTEN_PORT
 from ubo_app.store.input.types import (
     InputCancelEvent,
     InputDemandAction,
@@ -27,10 +25,10 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
+from ubo_app.store.services.voice import ReadableInformation
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -63,6 +61,10 @@ async def select_input_method(input_methods: InputMethod) -> InputMethod:
     def set_result(method: InputMethod) -> None:
         loop.call_soon_threadsafe(input_method_future.set_result, method)
 
+    if len(input_methods) == 1:
+        set_result(next(iter(input_methods)))
+        return await input_method_future
+
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
@@ -72,7 +74,7 @@ async def select_input_method(input_methods: InputMethod) -> InputMethod:
                 content='Do you want to use the camera or the web dashboard?',
                 display_type=NotificationDisplayType.STICKY,
                 is_read=True,
-                extra_information=NotificationExtraInformation(
+                extra_information=ReadableInformation(
                     text='You can use either the camera or the web dashboard to '
                     'enter this input. Please choose one by pressing one of the '
                     'left buttons.',
@@ -104,7 +106,7 @@ async def select_input_method(input_methods: InputMethod) -> InputMethod:
 async def ubo_input(
     *,
     prompt: str | None = None,
-    qr_code_generation_instructions: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: ReadableInformation | None = None,
     title: str | None = None,
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
@@ -114,7 +116,7 @@ async def ubo_input(
 async def ubo_input(
     *,
     prompt: str | None = None,
-    qr_code_generation_instructions: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: ReadableInformation | None = None,
     title: str | None = None,
     fields: list[InputFieldDescription],
     input_methods: InputMethod = InputMethod.ALL,
@@ -123,7 +125,7 @@ async def ubo_input(
 async def ubo_input(
     *,
     prompt: str | None = None,
-    qr_code_generation_instructions: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: ReadableInformation | None = None,
     title: str | None = None,
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
@@ -134,7 +136,7 @@ async def ubo_input(
 async def ubo_input(
     *,
     prompt: str | None = None,
-    qr_code_generation_instructions: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: ReadableInformation | None = None,
     title: str | None = None,
     fields: list[InputFieldDescription],
     resolver: Callable[[str, InputResultGroupDict], ReturnType],
@@ -143,7 +145,7 @@ async def ubo_input(
 async def ubo_input(  # noqa: PLR0913
     *,
     prompt: str | None = None,
-    qr_code_generation_instructions: NotificationExtraInformation | None = None,
+    qr_code_generation_instructions: ReadableInformation | None = None,
     title: str | None = None,
     pattern: str | None = None,
     fields: list[InputFieldDescription] | None = None,
@@ -222,7 +224,6 @@ async def ubo_input(  # noqa: PLR0913
         ),
     )
 
-    hostname = socket.gethostname()
     store.dispatch(
         InputDemandAction(
             method=selected_input_method,
@@ -231,11 +232,7 @@ async def ubo_input(  # noqa: PLR0913
                 prompt=prompt,
                 extra_information=qr_code_generation_instructions
                 if selected_input_method is InputMethod.CAMERA
-                else NotificationExtraInformation(
-                    text=f"""\
-Web dashboard is served on port {hostname}.local:{WEB_UI_LISTEN_PORT} and it provides \
-an interface for entering this input.""",
-                ),
+                else None,
                 id=prompt_id,
                 pattern=pattern,
                 fields=fields,

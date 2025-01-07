@@ -20,9 +20,9 @@ from ubo_app.store.services.notifications import (
     Chime,
     Notification,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
@@ -57,9 +57,9 @@ class CreateWirelessConnectionPage(PageWidget):
     async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
         try:
             _, data = await ubo_input(
-                input_methods=InputMethod.CAMERA,
+                input_methods=InputMethod.ALL,
                 prompt='Enter WiFi connection',
-                qr_code_generation_instructions=NotificationExtraInformation(
+                qr_code_generation_instructions=ReadableInformation(
                     text='Go to your phone settings, choose QR code and hold it in '
                     'front of the camera to scan it.',
                     picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '

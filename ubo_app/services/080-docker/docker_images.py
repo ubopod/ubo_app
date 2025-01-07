@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from ubo_app.store.services.voice import ReadableInformation
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
@@ -14,7 +16,6 @@ from typing import TYPE_CHECKING
 from immutable import Immutable
 
 from ubo_app.constants import DEBUG_MODE_DOCKER, GRPC_ENVOY_LISTEN_PORT
-from ubo_app.store.services.notifications import NotificationExtraInformation
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
@@ -113,7 +114,7 @@ IMAGES = {
                 'NGROK_AUTHTOKEN': lambda: ubo_input(
                     resolver=lambda code, _: code,
                     prompt='Enter the Ngrok Auth Token',
-                    qr_code_generation_instructions=NotificationExtraInformation(
+                    qr_code_generation_instructions=ReadableInformation(
                         text="""\
 Follow these steps:
 
@@ -135,7 +136,7 @@ Follow these steps:
             command=lambda: ubo_input(
                 resolver=lambda code, _: code,
                 prompt='Enter the command, for example: `http 80` or `tcp 22`',
-                qr_code_generation_instructions=NotificationExtraInformation(
+                qr_code_generation_instructions=ReadableInformation(
                     text='This is the command you would enter when running ngrok. '
                     'Refer to ngrok documentation for further information',
                     picovoice_text="""\

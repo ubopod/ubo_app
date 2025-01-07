@@ -19,8 +19,8 @@ from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
-from ubo_app.store.services.notifications import NotificationExtraInformation
 from ubo_app.store.services.voice import (
+    ReadableInformation,
     VoiceEngine,
     VoiceReadTextAction,
     VoiceSetEngineAction,
@@ -76,7 +76,7 @@ def input_access_key() -> None:
             access_key = (
                 await ubo_input(
                     title='Picovoice Access Key',
-                    qr_code_generation_instructions=NotificationExtraInformation(
+                    qr_code_generation_instructions=ReadableInformation(
                         text='Convert the Picovoice access key to a QR code and hold '
                         'it in front of the camera to scan it.',
                         picovoice_text='Convert the Picovoice access key to a '
@@ -113,7 +113,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
     """Synthesize the text."""
     engine = _engine()
     if engine == VoiceEngine.PIPER:
-        text = event.piper_text
+        text = event.information.piper_text
         if not _context.piper_voice:
             return
         id = hex(hash(text))
@@ -153,7 +153,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
             rate = _context.picovoice_instance.sample_rate
 
             audio_sequence = _context.picovoice_instance.synthesize(
-                text=event.picovoice_text,
+                text=event.information.picovoice_text,
                 speech_rate=event.speech_rate,
             )
         sample = b''.join(struct.pack('h', sample) for sample in audio_sequence[0])
@@ -205,10 +205,12 @@ def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
         store.dispatch(
             VoiceSetEngineAction(engine=engine),
             VoiceReadTextAction(
-                text={
-                    VoiceEngine.PIPER: 'Piper voice engine selected',
-                    VoiceEngine.PICOVOICE: 'Picovoice voice engine selected',
-                }[engine],
+                information=ReadableInformation(
+                    text={
+                        VoiceEngine.PIPER: 'Piper voice engine selected',
+                        VoiceEngine.PICOVOICE: 'Picovoice voice engine selected',
+                    }[engine],
+                ),
                 engine=engine,
             ),
         )
