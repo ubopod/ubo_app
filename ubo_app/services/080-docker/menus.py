@@ -39,9 +39,9 @@ from ubo_app.store.services.docker import (
 )
 from ubo_app.store.services.notifications import (
     Notification,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
@@ -162,7 +162,7 @@ def image_menu(  # noqa: C901
                             icon='󰋗',
                             title='Instructions',
                             content='',
-                            extra_information=NotificationExtraInformation(
+                            extra_information=ReadableInformation(
                                 text=image.instructions,
                             )
                             if image.instructions

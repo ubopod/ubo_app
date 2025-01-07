@@ -1159,6 +1159,12 @@ wheels = [
 ]
 
 [[package]]
+name = "netifaces"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae239e93ffc1918cf33fd9bab35c04d1e963b311e347a73/netifaces-0.11.0.tar.gz", hash = "sha256:043a79146eb2907edf439899f262b3dfe41717d34124298ed281139a8b93ca32", size = 30106 }
+
+[[package]]
 name = "nodeenv"
 version = "1.9.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2025,7 +2031,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "1.0.1.dev22+unknown"
+version = "1.0.1.dev23+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
@@ -2040,6 +2046,7 @@ dependencies = [
     { name = "fasteners" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'" },
     { name = "headless-kivy" },
+    { name = "netifaces" },
     { name = "piper-tts", marker = "sys_platform == 'linux'" },
     { name = "platformdirs" },
     { name = "psutil" },
@@ -2095,6 +2102,7 @@ requires-dist = [
     { name = "fasteners", specifier = ">=0.19" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = ">=2.0.1" },
     { name = "headless-kivy", specifier = ">=0.12.2" },
+    { name = "netifaces", specifier = ">=0.11.0" },
     { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = ">=1.2.0" },
     { name = "platformdirs", specifier = ">=4.2.0" },
     { name = "psutil", specifier = ">=6.0.0" },

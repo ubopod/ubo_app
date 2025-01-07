@@ -6,9 +6,9 @@ from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 
 
 async def log_async_process(
@@ -37,7 +37,7 @@ async def log_async_process(
                 notification=Notification(
                     title=title,
                     content=message,
-                    extra_information=NotificationExtraInformation(
+                    extra_information=ReadableInformation(
                         text=logs,
                     ),
                     importance=Importance.HIGH,

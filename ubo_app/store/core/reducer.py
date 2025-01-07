@@ -189,7 +189,6 @@ def reducer(
             msg = f"""Settings application with key "{key}", in category \
 "{category_menu_item.label}", already exists. Consider providing a unique `key` field \
 for the `RegisterSettingAppAction` instance."""
-            return state
             raise ValueError(msg)
 
         menu_item = replace(action.menu_item, key=key)
@@ -275,7 +274,6 @@ for the `RegisterSettingAppAction` instance."""
         ):
             msg = f"""Regular application with key "{key}", already exists. Consider \
 providing a unique `key` field for the `RegisterRegularAppAction` instance."""
-            return state
             raise ValueError(msg)
 
         priorities = {

@@ -32,10 +32,10 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationDispatchItem,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
     NotificationsClearByIdAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
     UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
@@ -105,7 +105,7 @@ async def update() -> None:
     """Update the Ubo app."""
     logger.info('Updating Ubo app...')
 
-    extra_information = NotificationExtraInformation(
+    extra_information = ReadableInformation(
         text="""\
 The download progress is shown in the radial progress bar at the top left corner of \
 the screen.
@@ -241,7 +241,7 @@ Then another reboot will be done to complete the update process.""",
                     content="""\
 All packages downloaded successfully.
 Press 󰜉 button to reboot now or dismiss this notification to reboot later.""",
-                    extra_information=NotificationExtraInformation(
+                    extra_information=ReadableInformation(
                         text="""\
 After the reboot, the system will apply the update.
 This part may take around 20 minutes to complete.

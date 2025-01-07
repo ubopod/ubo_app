@@ -76,7 +76,10 @@ apt-get -y update
 apt-get -y upgrade
 apt-get -y install \
   accountsservice \
+  dhcpcd \
+  dnsmasq \
   git \
+  hostapd \
   i2c-tools \
   libasound2-dev \
   libcap-dev \
