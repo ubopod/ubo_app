@@ -16,7 +16,7 @@
 |----------|---------|
 | HOME + L1 | Take screenshot |
 | HOME + L2 | Take store snapshot |
-| HOME + L3 | Start/Stop recording sequence |
+| HOME + L3 | Start/Stop recording input keys |
 | BACK + L3 | Replay recorded sequence |
 | HOME + BACK | Exit application |
 | CTRL + M | Toggle input mute |
