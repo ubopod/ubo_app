@@ -15,7 +15,7 @@
 | Shortcut | Action |
 |----------|---------|
 | HOME + L1 | Take screenshot |
-| HOME + L2 | Take snapshot |
+| HOME + L2 | Take store snapshot |
 | HOME + L3 | Start/Stop recording sequence |
 | BACK + L3 | Replay recorded sequence |
 | HOME + BACK | Exit application |
