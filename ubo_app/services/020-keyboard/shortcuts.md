@@ -1,7 +1,7 @@
 # Keyboard & Keypad Shortcuts Guide
 
 ## Basic Navigation
-| Shortcut | Alternative Keys | Action |
+| Key on Device | Equivalent on Keyboard | Action |
 |----------|-----------------|---------|
 | UP | K | Move selection up |
 | DOWN | J | Move selection down |
