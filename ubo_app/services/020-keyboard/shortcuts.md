@@ -3,7 +3,7 @@
 ## Basic Navigation
 | Key on Device | Equivalent on Keyboard | Action |
 |----------|-----------------|---------|
-| UP | K | Move selection up |
+| UP | ARROW_UP  + K | Move selection up |
 | DOWN | J | Move selection down |
 | BACK | ESC, H, ← | Go back one level |
 | HOME | Backspace | Return to home menu |
