@@ -13,7 +13,7 @@ from docker.models.images import Image
 from docker_images import IMAGES
 from redux import AutorunOptions, FinishEvent
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageSetDockerIdAction,

@@ -152,7 +152,7 @@ def clear_signal_handlers() -> None:
 def signal_handler(signum: int, _: object) -> None:
     """Handle the signal."""
     from ubo_app import display
-    from ubo_app.logging import logger
+    from ubo_app.logger import logger
 
     logger.info('Received signal %s, turning off the display...', signum)
 

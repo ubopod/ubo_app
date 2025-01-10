@@ -95,7 +95,7 @@ def app_context(original_app_context: AppContext) -> AppContext:
 def _logger() -> None:
     import logging
 
-    from ubo_app.logging import ExtraFormatter
+    from ubo_app.logger import ExtraFormatter
 
     extra_formatter = ExtraFormatter()
 

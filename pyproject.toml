@@ -151,7 +151,7 @@ select = ["ALL"]
 ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
 fixable = ["ALL"]
 unfixable = []
-logger-objects = ['ubo_app.logging.logger']
+logger-objects = ['ubo_app.logger.logger']
 
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["type", "id"]

@@ -13,7 +13,8 @@ User=root
 Environment=INSTALLATION_PATH={{INSTALLATION_PATH}}
 Environment=USERNAME={{USERNAME}}
 ExecStartPre=/bin/bash -c '[[ -e /opt/ubo/_update/update_is_ready.lock ]]'
-ExecStart={{INSTALLATION_PATH}}/_update/install.sh --update
+ExecStartPre=rm -f {{INSTALLATION_PATH}}/app_ready
+ExecStart={{INSTALLATION_PATH}}/_update/install.sh --update --wait-for-app
 RemainAfterExit=no
 Restart=yes
 RestartSec=5

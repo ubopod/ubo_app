@@ -10,7 +10,7 @@ import alsaaudio
 import simpleaudio
 from simpleaudio import _simpleaudio  # pyright: ignore [reportAttributeAccessIssue]
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlaybackDoneAction
 from ubo_app.utils.async_ import create_task

@@ -62,7 +62,7 @@ class WorkerThread(threading.Thread):
 
     async def shutdown(self: WorkerThread) -> None:
         from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD
-        from ubo_app.logging import logger
+        from ubo_app.logger import logger
 
         logger.info('Stopping worker thread')
 

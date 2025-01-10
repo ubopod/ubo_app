@@ -22,7 +22,7 @@ from ubo_gui.constants import DANGER_COLOR, WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterRegularAppAction,
     RegisterSettingAppAction,

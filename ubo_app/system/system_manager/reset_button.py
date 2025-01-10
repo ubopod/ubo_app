@@ -3,7 +3,7 @@
 import subprocess
 import time
 
-from ubo_app.logging import get_logger
+from ubo_app.logger import get_logger
 
 logger = get_logger('system-manager')
 

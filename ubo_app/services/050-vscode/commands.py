@@ -11,7 +11,7 @@ from _constants import CODE_BINARY_PATH
 from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,

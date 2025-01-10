@@ -13,7 +13,7 @@ from sys import stdout
 from typing import Literal, TypedDict
 
 from ubo_app.constants import INSTALLATION_PATH, USERNAME
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 
 RETRIES = 5
 
