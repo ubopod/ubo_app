@@ -276,7 +276,7 @@ async def app_context(
 
     import os
 
-    from ubo_app.logging import setup_logging
+    from ubo_app.logger import setup_logging
 
     setup_logging()
 

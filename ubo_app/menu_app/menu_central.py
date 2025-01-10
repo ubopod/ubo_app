@@ -12,7 +12,7 @@ from ubo_gui.menu.menu_widget import MenuWidget
 from ubo_gui.menu.stack_item import StackItem, StackMenuItem
 
 from ubo_app.constants import DEBUG_MODE_MENU
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core.types import (
     CloseApplicationEvent,

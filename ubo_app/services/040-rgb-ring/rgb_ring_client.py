@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.rgb_ring import RgbRingSetIsConnectedAction
 from ubo_app.utils.server import send_command

@@ -264,7 +264,7 @@ async def add_wireless_connection(
             'auth-alg': ('s', 'open'),
             'psk': ('s', password),
         }
-    from ubo_app.logging import logger
+    from ubo_app.logger import logger
 
     properties: NetworkManagerConnectionProperties = {
         'connection': {

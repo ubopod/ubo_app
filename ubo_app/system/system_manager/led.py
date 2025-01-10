@@ -12,7 +12,7 @@ import board
 from adafruit_blinka.microcontroller.generic_micropython import Pin
 from fake import Fake
 
-from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
+from ubo_app.logger import add_file_handler, add_stdout_handler, get_logger
 
 if Path('/proc/device-tree/model').read_text().startswith('Raspberry Pi 5'):
     import sys

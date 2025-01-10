@@ -21,7 +21,7 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,

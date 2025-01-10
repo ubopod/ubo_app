@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 
-from ubo_app.logging import get_logger
+from ubo_app.logger import get_logger
 from ubo_app.utils.apt import install_package, uninstall_package
 
 PACKAGE_WHITELIST = [

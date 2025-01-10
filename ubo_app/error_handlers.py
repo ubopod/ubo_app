@@ -49,7 +49,7 @@ def global_exception_handler(
     exception_traceback: TracebackType,
 ) -> None:
     _ = exception_type, exception_traceback
-    from ubo_app.logging import logger
+    from ubo_app.logger import logger
 
     threads_info = get_all_thread_stacks()
 
@@ -67,7 +67,7 @@ def global_exception_handler(
 
 
 def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
-    from ubo_app.logging import logger
+    from ubo_app.logger import logger
 
     threads_info = get_all_thread_stacks()
 
@@ -98,7 +98,7 @@ def loop_exception_handler(
     context: dict[str, object],
 ) -> None:
     from ubo_app.constants import DEBUG_MODE_TASKS
-    from ubo_app.logging import logger
+    from ubo_app.logger import logger
 
     threads_info = get_all_thread_stacks()
 

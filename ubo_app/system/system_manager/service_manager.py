@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 
-from ubo_app.logging import get_logger
+from ubo_app.logger import get_logger
 
 
 def service_handler(service: str, command: str) -> str | None:

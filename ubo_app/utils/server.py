@@ -6,7 +6,7 @@ import asyncio
 from typing import Literal, overload
 
 from ubo_app.constants import SERVER_SOCKET_PATH
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.utils import IS_RPI
 
 

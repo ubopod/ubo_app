@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.utils import IS_RPI
 
 

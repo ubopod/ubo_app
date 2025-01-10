@@ -9,7 +9,7 @@ import docker.errors
 from docker_images import IMAGES
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import DockerImageSetStatusAction, DockerItemStatus
 from ubo_app.utils import secrets

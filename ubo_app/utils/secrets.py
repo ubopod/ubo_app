@@ -1,3 +1,4 @@
+# ruff: noqa: A005
 """Module to manage secrets in a .env file."""
 
 from __future__ import annotations

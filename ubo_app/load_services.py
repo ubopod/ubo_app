@@ -29,7 +29,7 @@ from ubo_app.constants import (
     SERVICES_PATH,
 )
 from ubo_app.error_handlers import STACKS, loop_exception_handler
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 
 if TYPE_CHECKING:
     from asyncio.tasks import Task
@@ -339,7 +339,7 @@ class UboServiceThread(threading.Thread):
         )
 
     async def shutdown(self: UboServiceThread) -> None:
-        from ubo_app.logging import logger
+        from ubo_app.logger import logger
 
         logger.debug(
             'Stopping service thread',

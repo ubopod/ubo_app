@@ -7,7 +7,7 @@ from grpclib.reflection.service import ServerReflection
 from grpclib.server import Server
 
 from ubo_app.constants import GRPC_LISTEN_ADDRESS, GRPC_LISTEN_PORT
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.rpc.service import StoreService
 
 

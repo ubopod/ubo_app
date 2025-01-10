@@ -19,7 +19,7 @@ from pythonping import ping
 
 from ubo_app.constants import USERNAME
 from ubo_app.error_handlers import setup_error_handling
-from ubo_app.logging import add_file_handler, add_stdout_handler, get_logger
+from ubo_app.logger import add_file_handler, add_stdout_handler, get_logger
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler

@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from ubo_app.logging import get_logger
+from ubo_app.logger import get_logger
 
 
 def users_handler(command: str, username: str | None = None) -> str | None:

@@ -11,6 +11,7 @@
 - fix: pass raw bytes to `DisplayRenderEvent` and `DisplayCompressedRenderEvent` to avoid encoding issues
 - fix: add ".local" to hostname in users menus - closes #134
 - fix: use stdout instead of stderr for reading rpi-connect process output - closes #174
+- feat: hold update until the app creates a file signaling it is loaded - closes #177
 
 ## Version 1.1.0
 

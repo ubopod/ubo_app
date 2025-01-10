@@ -22,7 +22,7 @@ from ubo_app.constants import (
     UPDATE_ASSETS_PATH,
     UPDATE_LOCK_PATH,
 )
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.core.types import RebootAction
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
