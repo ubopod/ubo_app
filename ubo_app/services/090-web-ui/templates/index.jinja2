@@ -42,7 +42,7 @@
 
   <body>
     {% for input in inputs %}
-      <form method="POST">
+      <form method="POST" enctype="multipart/form-data">
         <input name="id" type="hidden" value="{{ input.id }}" />
         <p>
           <label>

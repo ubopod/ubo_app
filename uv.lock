@@ -2030,7 +2030,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "1.0.1.dev25+unknown"
+version = "1.0.1.dev26+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
@@ -2051,6 +2051,7 @@ dependencies = [
     { name = "psutil" },
     { name = "pulsectl" },
     { name = "pvorca" },
+    { name = "pypng" },
     { name = "python-debouncer" },
     { name = "python-dotenv" },
     { name = "python-fake" },
@@ -2107,6 +2108,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=6.0.0" },
     { name = "pulsectl", specifier = ">=23.5.2" },
     { name = "pvorca", specifier = ">=0.2.1" },
+    { name = "pypng", specifier = ">=0.20220715.0" },
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.1.3" },

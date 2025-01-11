@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING
+from typing import IO, TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
+    from io import BytesIO
+
     from ubo_app.store.services.voice import ReadableInformation
+
+
+class InputResult(Immutable):
+    """Input result."""
+
+    data: dict[str, str | None]
+    files: dict[str, IO[bytes] | BytesIO]
 
 
 class InputFieldType(enum.StrEnum):
@@ -85,7 +94,7 @@ class InputProvideAction(InputResolveAction):
     """Action for reporting input from the user."""
 
     value: str
-    data: dict[str, str | None] | None
+    result: InputResult | None
 
 
 class InputResolveEvent(BaseEvent):
@@ -102,4 +111,4 @@ class InputProvideEvent(InputResolveEvent):
     """Event for reporting input from the user."""
 
     value: str
-    data: dict[str, str | None] | None
+    result: InputResult | None

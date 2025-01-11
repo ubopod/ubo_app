@@ -56,7 +56,7 @@ class CreateWirelessConnectionPage(PageWidget):
 
     async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
         try:
-            _, data = await ubo_input(
+            _, result = await ubo_input(
                 input_methods=InputMethod.ALL,
                 prompt='Enter WiFi connection',
                 qr_code_generation_instructions=ReadableInformation(
@@ -104,20 +104,25 @@ class CreateWirelessConnectionPage(PageWidget):
             store.dispatch(CloseApplicationAction(application=self))
             return
 
-        if not data:
+        if not result:
             store.dispatch(CloseApplicationAction(application=self))
             return
-        ssid = data.get('SSID') or data.get('SSID_')
+        ssid = result.data.get('SSID') or result.data.get('SSID_')
         if ssid is None:
             store.dispatch(CloseApplicationAction(application=self))
             return
 
-        password = data.get('Password') or data.get('Password_')
-        type = data.get('Type') or data.get('Type_')
+        password = result.data.get('Password') or result.data.get('Password_')
+        type = result.data.get('Type') or result.data.get('Type_')
         if type:
             type = type.upper()
         type = cast(WiFiType, type)
-        hidden = str_to_bool(data.get('Hidden') or data.get('Hidden_') or 'false') == 1
+        hidden = (
+            str_to_bool(
+                result.data.get('Hidden') or result.data.get('Hidden_') or 'false',
+            )
+            == 1
+        )
 
         if not password:
             logger.warning('Password is required')
@@ -148,7 +153,8 @@ class CreateWirelessConnectionPage(PageWidget):
                 notification=Notification(
                     title=f'"{ssid}" Added',
                     content=f"""WiFi connection with ssid "{
-                    ssid}" was added successfully""",
+                        ssid
+                    }" was added successfully""",
                     display_type=NotificationDisplayType.FLASH,
                     color=SUCCESS_COLOR,
                     icon='󱛃',
