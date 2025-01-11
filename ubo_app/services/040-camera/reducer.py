@@ -19,6 +19,7 @@ from ubo_app.store.input.types import (
     InputMethod,
     InputProvideAction,
     InputResolveAction,
+    InputResult,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
@@ -151,10 +152,13 @@ def reducer(
                             InputProvideAction(
                                 id=state.current.id,
                                 value=code,
-                                data={
-                                    key.rstrip('_'): value
-                                    for key, value in match.groupdict().items()
-                                },
+                                result=InputResult(
+                                    data={
+                                        key.rstrip('_'): value
+                                        for key, value in match.groupdict().items()
+                                    },
+                                    files={},
+                                ),
                             ),
                             NotificationsClearByIdAction(id='camera:qrcode'),
                         ],
@@ -169,7 +173,7 @@ def reducer(
                         InputProvideAction(
                             id=state.current.id,
                             value=code,
-                            data=None,
+                            result=None,
                         ),
                     ],
                     events=[

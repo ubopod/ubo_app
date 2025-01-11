@@ -7,9 +7,11 @@ import re
 import socket
 import subprocess
 from pathlib import Path
+from typing import cast
 
 from quart import Quart, render_template, request
 from redux import FinishEvent
+from werkzeug.datastructures import FileStorage
 
 from ubo_app.constants import (
     WEB_UI_DEBUG_MODE,
@@ -20,6 +22,7 @@ from ubo_app.store.input.types import (
     InputCancelAction,
     InputDescription,
     InputProvideAction,
+    InputResult,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -137,6 +140,11 @@ async def init_service() -> None:
     async def inputs_form() -> str:
         if request.method == 'POST':
             data = dict(await request.form)
+            files = {
+                key: cast(FileStorage, value).stream
+                for key, value in (await request.files).items()
+            }
+
             if data['action'] == 'cancel':
                 store.dispatch(InputCancelAction(id=data['id']))
             elif data['action'] == 'provide':
@@ -146,7 +154,7 @@ async def init_service() -> None:
                     InputProvideAction(
                         id=id,
                         value=value,
-                        data=data,
+                        result=InputResult(data=data, files=files),
                     ),
                 )
             await asyncio.sleep(0.2)

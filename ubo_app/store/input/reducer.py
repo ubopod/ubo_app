@@ -26,7 +26,7 @@ def reducer(
                 InputProvideEvent(
                     id=action.id,
                     value=action.value,
-                    data=action.data,
+                    result=action.result,
                 ),
             ],
         )

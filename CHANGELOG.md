@@ -13,6 +13,7 @@
 - fix: use stdout instead of stderr for reading rpi-connect process output - closes #174
 - feat: hold update until the app creates a file signaling it is loaded - closes #177
 - feat: setup a wifi hotspot for when the a web-ui input is demanded and the device is not connected to any network - closes #169
+- feat: let the user upload directory content of the docker composition they are creating - closes #202
 
 ## Version 1.1.0
 

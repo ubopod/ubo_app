@@ -7,7 +7,7 @@ import datetime
 import functools
 import uuid
 from asyncio import Future
-from typing import TYPE_CHECKING, TypeAlias, overload
+from typing import TYPE_CHECKING, overload
 
 from typing_extensions import TypeVar
 
@@ -18,6 +18,7 @@ from ubo_app.store.input.types import (
     InputFieldDescription,
     InputMethod,
     InputProvideEvent,
+    InputResult,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import CameraStopViewfinderEvent
@@ -32,9 +33,6 @@ from ubo_app.store.services.voice import ReadableInformation
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-
-InputResultGroupDict: TypeAlias = dict[str, str | None] | None
 
 
 ReturnType = TypeVar('ReturnType', infer_variance=True)
@@ -111,7 +109,7 @@ async def ubo_input(
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
     input_methods: InputMethod = InputMethod.ALL,
-) -> tuple[str, InputResultGroupDict]: ...
+) -> tuple[str, InputResult]: ...
 @overload
 async def ubo_input(
     *,
@@ -120,7 +118,7 @@ async def ubo_input(
     title: str | None = None,
     fields: list[InputFieldDescription],
     input_methods: InputMethod = InputMethod.ALL,
-) -> tuple[str, InputResultGroupDict]: ...
+) -> tuple[str, InputResult]: ...
 @overload
 async def ubo_input(
     *,
@@ -129,7 +127,7 @@ async def ubo_input(
     title: str | None = None,
     pattern: str,
     fields: list[InputFieldDescription] | None = None,
-    resolver: Callable[[str, InputResultGroupDict], ReturnType],
+    resolver: Callable[[str, InputResult | None], ReturnType],
     input_methods: InputMethod = InputMethod.ALL,
 ) -> ReturnType: ...
 @overload
@@ -139,7 +137,7 @@ async def ubo_input(
     qr_code_generation_instructions: ReadableInformation | None = None,
     title: str | None = None,
     fields: list[InputFieldDescription],
-    resolver: Callable[[str, InputResultGroupDict], ReturnType],
+    resolver: Callable[[str, InputResult | None], ReturnType],
     input_methods: InputMethod = InputMethod.ALL,
 ) -> ReturnType: ...
 async def ubo_input(  # noqa: PLR0913
@@ -149,15 +147,15 @@ async def ubo_input(  # noqa: PLR0913
     title: str | None = None,
     pattern: str | None = None,
     fields: list[InputFieldDescription] | None = None,
-    resolver: Callable[[str, InputResultGroupDict], ReturnType] | None = None,
+    resolver: Callable[[str, InputResult | None], ReturnType] | None = None,
     input_methods: InputMethod = InputMethod.ALL,
-) -> tuple[str, InputResultGroupDict] | ReturnType:
+) -> tuple[str, InputResult | None] | ReturnType:
     """Input the user in an imperative way."""
     prompt_id = uuid.uuid4().hex
     loop = asyncio.get_running_loop()
 
     subscriptions: set[Callable[[], None]] = set()
-    future: Future[tuple[str, InputResultGroupDict]] = loop.create_future()
+    future: Future[tuple[str, InputResult | None]] = loop.create_future()
 
     selected_input_method = await select_input_method(input_methods)
 
@@ -177,7 +175,7 @@ async def ubo_input(  # noqa: PLR0913
 
             loop.call_soon_threadsafe(
                 future.set_result,
-                (event.value, event.data),
+                (event.value, event.result),
             )
             kivy_color = get_color_from_hex('#21E693')
             color = tuple(round(c * 255) for c in kivy_color[:3])
