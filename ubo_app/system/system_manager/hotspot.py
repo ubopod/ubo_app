@@ -3,6 +3,8 @@
 import pathlib
 import subprocess
 
+from ubo_app.utils.pod_id import get_pod_id
+
 
 def hotspot_handler(desired_state: str) -> None:
     """Set up a hotspot on the UBO."""
@@ -15,9 +17,9 @@ nohook wpa_supplicant""")
             f.write("""interface=wlan0
 dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h""")
         with pathlib.Path('/etc/hostapd/hostapd.conf').open('w') as f:
-            f.write("""interface=wlan0
+            f.write(f"""interface=wlan0
 driver=nl80211
-ssid=UBO
+ssid={get_pod_id()}
 hw_mode=g
 channel=7
 wpa=2

@@ -30,6 +30,7 @@ from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
 from ubo_app.system.system_manager.users import users_handler
 from ubo_app.utils.eeprom import read_serial_number
+from ubo_app.utils.pod_id import get_pod_id, set_pod_id
 
 SOCKET_PATH = Path(os.environ.get('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
     'system_manager.sock',
@@ -96,7 +97,6 @@ def process_request(command: bytes, connection: socket.socket) -> None:
 def setup_hostname() -> None:
     """Set the hostname to 'ubo'."""
     logger.info('Setting hostname...')
-    from ubo_app.constants import INSTALLATION_PATH
 
     thread = Thread(target=check_connection)
     thread.start()
@@ -105,16 +105,14 @@ def setup_hostname() -> None:
         set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
     )
 
-    id_path = Path(INSTALLATION_PATH) / 'pod-id'
-
-    if not id_path.exists():
+    if not get_pod_id():
         serial_number = read_serial_number()
         random.seed(serial_number)
         # Generate 2 letters random id
         id = f'ubo-{"".join(random.sample(available_letters, 2))}'
-        id_path.write_text(id)
+        set_pod_id(id)
 
-    id = id_path.read_text().strip()
+    id = get_pod_id()
 
     # Set hostname of the system
     subprocess.run(  # noqa: S603
