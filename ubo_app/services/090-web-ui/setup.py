@@ -84,7 +84,7 @@ async def initialize(event: WebUIInitializeEvent) -> None:
     """Start the hotspot if there is no network connection."""
     is_connected = await has_gateway()
     logger.info(
-        'web-ui - check_connection',
+        'web-ui - initialize',
         extra={
             'is_connected': is_connected,
             'description': event.description,
@@ -129,6 +129,7 @@ async def initialize(event: WebUIInitializeEvent) -> None:
 
 async def stop() -> None:
     """Start the hotspot if there is no network connection."""
+    logger.info('web-ui - stop')
     await send_command('hotspot', 'stop')
 
 

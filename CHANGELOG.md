@@ -15,6 +15,7 @@
 - feat: setup a wifi hotspot for when the a web-ui input is demanded and the device is not connected to any network - closes #169
 - feat: let the user upload directory content of the docker composition they are creating - closes #202
 - feat: use `pod_id` as the ssid of the wifi hotspot
+- feat: add dark mode for web-ui
 
 ## Version 1.1.0
 
