@@ -130,21 +130,60 @@ Contributions following Python best practices are welcome.
 
 #### Setting up the development environment
 
-To set up the development environment, you need to have Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) installed.
+To set up the development environment, you need to [have `uv` installed](https://docs.astral.sh/uv/).
 
-First, clone the repository, then install the dependencies:
+First, clone the repository (you need to have [git-lfs installed](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)):
 
 ```bash
-uv install --with dev --extras=dev
+git clone https://github.com/ubopod/ubo_app.git
+git lfs install
+git lfs pull
+```
+
+Then, navigate to the project directory and install the dependencies:
+
+```bash
+uv sync --dev
 ```
 
 Now you can run the app with:
 
 ```bash
-uv run ubo
+HEADLESS_KIVY_DEBUG=true uv run ubo
 ```
 
-#### Running tests
+#### Run the app on the physical device
+
+Add `ubo-development-pod` host in your ssh config at `~/.ssh/config`:
+
+```plaintext
+Host ubo-development-pod
+  HostName <ubopod IP here>
+  User pi
+```
+
+⚠️*Note: You may want to add the ssh public key to the device's authorized keys (`~/.ssh/authorized_keys`) so that you don't need to enter the password each time you ssh into the device. If you decide to use password instead,  you need to reset the password for Pi user first using the GUI on the device by going to Hamburger Menu -> Settings -> System -> Users and select pi user*
+
+Then you need to run this command once to set up the pod for development:
+
+```bash
+uv run poe device:deploy:complete
+```
+
+After that, you can deploy the app to the device with:
+
+```bash
+uv run poe device:deploy
+```
+
+To run the app on the device, you can use either of these commands:
+
+```bash
+uv run poe device:deploy:restart # gracefully restart the app with systemctl
+uv run poe device:deploy:kill # kill the process, which will be restarted by systemd if the service is not stopped
+```
+
+#### Running tests on desktop
 
 Easiest way to run tests is to use the provided `Dockerfile`s. To run the tests in a container, you first need to create the development images by running:
 
@@ -167,7 +206,13 @@ docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-uv-cache:/r
 For example, to run only the tests in the `tests/integration/test_core.py` file, you can run:
 
 ```bash
-docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test -- -n3 tests/integration/test_core.py
+docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv -v uvo-app-dev-uv-local:/root/.local/share/uv -v ubo-app-dev-uv-venv:/ubo-app/.venv ubo-app-test
+```
+
+To pass it command line options add a double-dash before the options:
+
+```bash
+docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv -v uvo-app-dev-uv-local:/root/.local/share/uv -v ubo-app-dev-uv-venv:/ubo-app/.venv ubo-app-test -- -svv --make-screenshots --override-store-snapshots --override-window-snapshots
 ```
 
 You can also run the tests in your local environment by running:
@@ -177,6 +222,42 @@ uv run poe test
 ```
 
 ⚠️**Note:** When running the tests in your local environment, the window snapshots produced by tests may mismatch the expected snapshots. This is because the snapshots are taken with a certain DPI and some environments may have different DPI settings. For example, we are aware that the snapshots taken in macOS have different DPI settings. If you encounter this issue, you should run the tests in a Docker container as described above.
+
+#### Running tests on the device
+
+You need to install dependencies with this command once:
+
+```bash
+uv run poe device:test:deps
+```
+
+Then you can use the following command each time you want to run the tests:
+
+```bash
+uv run poe device:test
+```
+
+#### Running linter
+
+To run the linter run the following command:
+
+```bash
+uv run poe lint
+```
+
+To automatically fix the linting issues run:
+
+```bash
+uv run poe lint --fix
+```
+
+#### Running type checker
+
+To run the type checker run the following command:
+
+```bash
+uv run poe type-check
+```
 
 #### QR code
 

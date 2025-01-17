@@ -6,7 +6,7 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.12"
 keywords = ['ubo', 'ubo-pod', 'raspberry pi', 'rpi', 'home assistance']
 dependencies = [
   "aiohttp >=3.9.1",
