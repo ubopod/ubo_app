@@ -3,4 +3,4 @@ FROM ubo-app-dev
 RUN mkdir -p /root/.kivy/mods
 RUN touch /root/.kivy/icon
 
-ENTRYPOINT ["/bin/bash", "-c", "uv sync --locked && uv run poe test $@"]
+ENTRYPOINT ["/bin/bash", "-c", "uv sync --frozen && uv run poe test $@"]

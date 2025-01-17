@@ -16,6 +16,7 @@
 - feat: let the user upload directory content of the docker composition they are creating - closes #202
 - feat: use `pod_id` as the ssid of the wifi hotspot
 - feat: add dark mode for web-ui
+- docs: update development documentation
 
 ## Version 1.1.0
 
