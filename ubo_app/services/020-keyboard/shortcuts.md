@@ -3,8 +3,8 @@
 ## Basic Navigation
 | Key on Device | Equivalent on Keyboard | Action |
 |----------|-----------------|---------|
-| UP | ARROW_UP  + K | Move selection up |
-| DOWN | J | Move selection down |
+| UP | ARROW_UP, or K | Move selection up |
+| DOWN | ARROW_DOWN, or J | Move selection down |
 | BACK | ESC, H, ← | Go back one level |
 | HOME | Backspace | Return to home menu |
 | L1 | 1 | Select first item |
@@ -19,15 +19,6 @@
 | HOME + L3 | Backspace + 3 | Start/Stop recording input keys |
 | BACK + L3 | ESC, H, or ← + 3 | Replay latest recorded keys sequence |
 | HOME + BACK | Backspace + ESC, H, or ← | Exit application |
-
-## Advanced Navigation
-| Shortcut | Action |
-|----------|---------|
-| CTRL + UP/K | Move up with BACK modifier |
-| CTRL + DOWN/J | Move down with BACK modifier |
-| SHIFT + UP/K | Move up with HOME modifier |
-| SHIFT + DOWN/J | Move down with HOME modifier |
-
 
 Note: All shortcuts can be triggered either through the physical keypad or keyboard keys. The keyboard shortcuts are designed to mirror the keypad functionality for easier testing and development.
 
