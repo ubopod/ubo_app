@@ -12,14 +12,13 @@
 | L3 | 3 | Select third item |
 
 ## Special Commands
-| Shortcut | Action |
-|----------|---------|
-| HOME + L1 | Take screenshot |
-| HOME + L2 | Take store snapshot |
-| HOME + L3 | Start/Stop recording input keys |
-| BACK + L3 | Replay latest recorded keys sequence |
-| HOME + BACK | Exit application |
-| CTRL + M | Toggle input mute |
+| Shortcut | Equivalent on Keyboard | Action |
+|----------|---------| ---------|
+| HOME + L1 | Backspace + 1 | Take screenshot |
+| HOME + L2 | Backspace + 2 | Take store snapshot |
+| HOME + L3 | Backspace + 3 | Start/Stop recording input keys |
+| BACK + L3 | ESC, H, or ← + 3 | Replay latest recorded keys sequence |
+| HOME + BACK | Backspace + ESC, H, or ← | Exit application |
 
 ## Advanced Navigation
 | Shortcut | Action |
@@ -29,15 +28,8 @@
 | SHIFT + UP/K | Move up with HOME modifier |
 | SHIFT + DOWN/J | Move down with HOME modifier |
 
-## Demo Features
-| Shortcut | Action |
-|----------|---------|
-| HOME + UP | Show progress notification demo |
-| HOME + DOWN | Show spinner notification demo |
 
-Note 1: Demo notifications can be managed through the Notification Manager (Prss L2 on keypad), where individual notifications can be deleted.
-
-Note 2: All shortcuts can be triggered either through the physical keypad or keyboard keys. The keyboard shortcuts are designed to mirror the keypad functionality for easier testing and development.
+Note: All shortcuts can be triggered either through the physical keypad or keyboard keys. The keyboard shortcuts are designed to mirror the keypad functionality for easier testing and development.
 
 ## Artifact Storage
 
@@ -49,20 +41,20 @@ Note 2: All shortcuts can be triggered either through the physical keypad or key
 - Captures the entire screen content
 - Includes timestamp in filename for easy reference
 
-### Snapshots
-**Location**: `/opt/ubo/recordings/`
+### Snapshots of the store
+**Location**: `/opt/ubo/snapshots/`
 **Format**: JSON files
-**Naming**: `ubo-recording-xxx.json` and `active.json` for the last recording
+**Naming**: `ubo-screenshot-xxx.json`
 
 
 ### Recordings
 **Location**: `/opt/ubo/recordings/`
-**Format**: Binary sequence files (.seq)
-**Naming**: `recording_YYYY-MM-DD_HH-MM-SS.seq`
+**Format**: JSON files
+**Naming**: `ubo-recording-xxx.json` and `active.json` for the last recording
 **Contents**:
 - Sequence of keypad events
 - Timing information
 - State transitions
-- Only the last recording can be replayed using BACK + L3
+- Only the last recording can be replayed using BACK + L3 on device keypad
 
 Note: All directories are automatically created if they don't exist. Files are never automatically deleted - manual cleanup may be required to manage storage space.
