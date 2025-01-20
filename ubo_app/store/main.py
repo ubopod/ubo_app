@@ -26,7 +26,7 @@ from redux import (
 )
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.core.reducer import reducer as main_reducer
 from ubo_app.store.core.types import MainAction, MainEvent
 from ubo_app.store.input.reducer import reducer as input_reducer

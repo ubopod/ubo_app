@@ -9,14 +9,13 @@ from typing import TypedDict
 from debouncer import DebounceOptions, debounce
 from ubo_gui.constants import DANGER_COLOR
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Importance,
     Notification,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.rpi_connect import (
@@ -27,6 +26,7 @@ from ubo_app.store.services.rpi_connect import (
     RPiConnectStatus,
     RPiConnectUpdateServiceStateAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import is_unit_active
@@ -208,7 +208,7 @@ def start_service(is_lightdm_active: bool) -> None:  # noqa: FBT001
                     notification=Notification(
                         title='RPi-Connect',
                         content='LightDM is not running',
-                        extra_information=NotificationExtraInformation(
+                        extra_information=ReadableInformation(
                             text="""\
 LightDM is not running so RPi-Connect will run without screen sharing and you can only \
 use the remote shell feature. To enable screen sharing, start LightDM service in \

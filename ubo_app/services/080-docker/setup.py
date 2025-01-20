@@ -22,7 +22,7 @@ from ubo_gui.constants import DANGER_COLOR, WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterRegularAppAction,
     RegisterSettingAppAction,
@@ -43,9 +43,9 @@ from ubo_app.store.services.notifications import (
     Importance,
     Notification,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils import secrets
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
@@ -219,7 +219,7 @@ def input_credentials() -> None:
             credentials = (
                 await ubo_input(
                     prompt='Enter Docker Credentials',
-                    qr_code_generation_instructions=NotificationExtraInformation(
+                    qr_code_generation_instructions=ReadableInformation(
                         text="""To generate your QR code for login, format your \
 details by separating your service, username, and password with the pipe symbol. For \
 example, format it as "docker.io|johndoe|password" and then convert this text into a \
@@ -265,9 +265,15 @@ default.""",
             )[1]
             if not credentials:
                 return
-            username = credentials.get('Username', credentials.get('Username_', ''))
-            password = credentials.get('Password', credentials.get('Password_', ''))
-            registry = credentials.get('Service', 'docker.io')
+            username = credentials.data.get(
+                'Username',
+                credentials.data.get('Username_', ''),
+            )
+            password = credentials.data.get(
+                'Password',
+                credentials.data.get('Password_', ''),
+            )
+            registry = credentials.data.get('Service', 'docker.io')
             username = cast(str, username).strip()
             password = cast(str, password).strip()
             registry = cast(str, registry).strip()
@@ -295,7 +301,7 @@ default.""",
                     notification=Notification(
                         title='Docker Credentials Error',
                         content='Invalid credentials',
-                        extra_information=NotificationExtraInformation(
+                        extra_information=ReadableInformation(
                             text=explanation,
                         ),
                         importance=Importance.HIGH,
@@ -311,7 +317,7 @@ def input_docker_composition() -> None:
 
     async def act() -> None:
         with contextlib.suppress(asyncio.CancelledError):
-            _, data = await ubo_input(
+            _, result = await ubo_input(
                 input_methods=InputMethod.WEB_DASHBOARD,
                 prompt='Import Docker Composition',
                 fields=[
@@ -345,26 +351,53 @@ supported""",
                         description='Instructions on how to use this composition',
                         required=False,
                     ),
+                    InputFieldDescription(
+                        name='content',
+                        label='Directory Content',
+                        type=InputFieldType.FILE,
+                        description='The content of the directory in any of these '
+                        'formats .tar.gz, .tar.bz2, .tar.xz, or .zip',
+                        required=False,
+                    ),
                 ],
             )
 
-            if not data or not data['yaml-config'] or not data['label']:
+            if not result or not result.data['yaml-config'] or not result.data['label']:
                 return
 
             id = f'composition_{uuid.uuid4().hex}'
             composition_path = COMPOSITIONS_PATH / id
             composition_path.mkdir(exist_ok=True, parents=True)
             with (composition_path / 'docker-compose.yml').open('w') as file:
-                file.write(data['yaml-config'])
+                file.write(result.data['yaml-config'])
             with (composition_path / 'metadata.json').open('w') as file:
-                data.pop('yaml-config')
-                file.write(json.dumps(data))
+                result.data.pop('yaml-config')
+                file.write(json.dumps(result.data))
+
+            directory_content = result.files.pop('content', None)
+            # uncompress content
+            if directory_content:
+                header = directory_content.read(6)
+                directory_content.seek(0)
+
+                if header.startswith(b'PK'):
+                    directory_content.seek(0)
+                    import zipfile
+
+                    with zipfile.ZipFile(directory_content) as zip_file:
+                        zip_file.extractall(path=composition_path)
+                if header.startswith((b'\x1f\x8b', b'BZh', b'\xfd7zXZ')):
+                    import tarfile
+
+                    with tarfile.open(fileobj=directory_content) as tar_file:
+                        tar_file.extractall(path=composition_path)  # noqa: S202
+
             store.dispatch(
                 CombineReducerRegisterAction(
                     _id=reducer_id,
                     key=id,
                     reducer=image_reducer,
-                    payload=data,
+                    payload=result.data,
                 ),
             )
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import subprocess
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 
 
 def install_package(packages: str | list[str], /, *, force: bool = False) -> None:

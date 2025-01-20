@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import betterproto
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.rpc.generated.store.v1 import (
     DispatchActionRequest,
     DispatchActionResponse,

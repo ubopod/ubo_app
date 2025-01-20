@@ -12,7 +12,7 @@ from wifi_manager import (
     request_scan,
 )
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
@@ -23,9 +23,9 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiSetHasVisitedOnboardingAction,
@@ -85,7 +85,7 @@ ONBOARDING_NOTIFICATION = Notification(
             dismiss_notification=True,
         ),
     ],
-    extra_information=NotificationExtraInformation(
+    extra_information=ReadableInformation(
         text='Press middle button to add WiFi network with QR code.\n'
         'If you dismiss this, you can always add WiFi network through '
         'Settings → Network → WiFi',

@@ -113,10 +113,19 @@ async def test_wireless_flow(
     # Select "Add" to add a new connection
     store.dispatch(MenuChooseByLabelAction(label='Add'))
     await stability()
+
+    # Input method selection should be shown
     window_snapshot.take()
 
     # Set QR Code image of the WiFi credentials before camera is started
     camera.set_image('qrcode/wifi')
+
+    # Select "QR code" input method
+    store.dispatch(MenuChooseByIconAction(icon='󰄀'))
+    await stability()
+
+    # QR code instructions should be shown
+    window_snapshot.take()
 
     # Select "QR code" to scan a QR code for credentials
     store.dispatch(MenuChooseByIconAction(icon='󰄀'))

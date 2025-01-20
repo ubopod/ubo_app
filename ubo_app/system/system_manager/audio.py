@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from ubo_app.logging import get_logger
+from ubo_app.logger import get_logger
 
 DEVICE = '1-001a'
 DRIVER_PATH = Path('/sys/bus/i2c/drivers/wm8960')

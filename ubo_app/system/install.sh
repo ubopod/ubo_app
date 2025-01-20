@@ -7,6 +7,7 @@ set -o nounset
 
 USERNAME=${USERNAME:-"ubo"}
 UPDATE=${UPDATE:-false}
+WAIT_FOR_APP=${WAIT_FOR_APP:-false}
 ALPHA=${ALPHA:-false}
 WITH_DOCKER=${WITH_DOCKER:-false}
 IN_PACKER=false
@@ -21,6 +22,10 @@ do
         --update)
         UPDATE=true
         shift # Remove --update from processing
+        ;;
+        --wait-for-app)
+        WAIT_FOR_APP=true
+        shift # Remove --wait-for-app from processing
         ;;
         --alpha)
         ALPHA=true
@@ -76,7 +81,10 @@ apt-get -y update
 apt-get -y upgrade
 apt-get -y install \
   accountsservice \
+  dhcpcd \
+  dnsmasq \
   git \
+  hostapd \
   i2c-tools \
   libasound2-dev \
   libcap-dev \
@@ -104,7 +112,14 @@ set -o errexit
 # Define the installation path
 INSTALLATION_PATH=${INSTALLATION_PATH:-"/opt/ubo"}
 
-# Create the installation path
+if [ "$WAIT_FOR_APP" = true ]; then
+  # Wait for the app to signal
+  while [ ! -f "$INSTALLATION_PATH/app_ready" ]; do
+    sleep 1
+  done
+fi
+
+# Remove the old files and create a fresh virtual environment in the installation path
 rm -rf "$INSTALLATION_PATH/env"
 virtualenv --system-site-packages "$INSTALLATION_PATH/env"
 

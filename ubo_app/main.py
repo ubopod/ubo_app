@@ -8,7 +8,7 @@ from pathlib import Path
 import dotenv
 
 from ubo_app.error_handlers import setup_error_handling
-from ubo_app.logging import setup_logging
+from ubo_app.logger import setup_logging
 from ubo_app.setup import setup
 from ubo_app.utils import IS_RPI
 
@@ -67,7 +67,7 @@ def main() -> None:
         ),
     )
 
-    from ubo_app.logging import logger
+    from ubo_app.logger import logger
     from ubo_app.menu_app.menu import MenuApp
 
     logger.info('----------------------Starting the app----------------------')

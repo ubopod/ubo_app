@@ -21,7 +21,7 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
-from ubo_app.logging import logger
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
@@ -33,7 +33,6 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
     NotificationDisplayType,
-    NotificationExtraInformation,
     NotificationsAddAction,
 )
 from ubo_app.store.services.users import (
@@ -47,6 +46,7 @@ from ubo_app.store.services.users import (
     UsersState,
     UserState,
 )
+from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus
@@ -85,7 +85,7 @@ async def create_account() -> None:
                 importance=Importance.MEDIUM,
                 icon='󰀈',
                 display_type=NotificationDisplayType.STICKY,
-                extra_information=NotificationExtraInformation(
+                extra_information=ReadableInformation(
                     text="""\
 Note that in order to make ssh works for you, we had to make sure password \
 authentication for ssh server is enabled, you may want to disable it later.""",
@@ -113,7 +113,7 @@ async def delete_account(event: UsersDeleteUserEvent) -> None:
                 content=f'Delete user "{event.id}"?',
                 display_type=NotificationDisplayType.STICKY,
                 is_read=True,
-                extra_information=NotificationExtraInformation(
+                extra_information=ReadableInformation(
                     text='This will delete the system user account and its home '
                     'directory.',
                 ),
@@ -190,7 +190,7 @@ async def reset_password(event: UsersResetPasswordEvent) -> None:
                 importance=Importance.MEDIUM,
                 icon='󰀈',
                 display_type=NotificationDisplayType.STICKY,
-                extra_information=NotificationExtraInformation(
+                extra_information=ReadableInformation(
                     text="""\
 Note that in order to make ssh works for you, we had to make sure password \
 authentication for ssh server is enabled, you may want to disable it later.""",

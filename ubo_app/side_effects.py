@@ -12,6 +12,7 @@ import numpy as np
 from redux import FinishAction, FinishEvent
 
 from ubo_app import display
+from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store.core.types import (
     PowerOffEvent,
     RebootEvent,
@@ -152,3 +153,8 @@ def setup_side_effects() -> None:
     store.subscribe_event(ReplayRecordedSequenceEvent, replay_recorded_sequence)
 
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
+
+    # Create a file signaling that the app is ready
+    if IS_RPI:
+        Path(INSTALLATION_PATH).mkdir(parents=True, exist_ok=True)
+        (Path(INSTALLATION_PATH) / 'app_ready').touch()

@@ -13,6 +13,7 @@ from ubo_gui.menu.stack_item import StackApplicationItem
 from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PAGE_MAX_ITEMS
 
+from ubo_app.logger import logger
 from ubo_app.menu_app.notification_info import NotificationInfo
 from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
@@ -66,9 +67,16 @@ class MenuNotificationHandler(UboApp):
         notification = NotificationReference(event.notification)
         is_closed = False
 
+        logger.debug('Opening notification %s', notification.value.id)
+
         @mainthread
         def close(_: object = None) -> None:
             nonlocal is_closed
+            logger.debug(
+                'Closing notification %s',
+                notification.value.id,
+                extra={'is_closed': is_closed},
+            )
             if is_closed:
                 return
             is_closed = True
@@ -90,6 +98,7 @@ class MenuNotificationHandler(UboApp):
         _self = weakref.ref(self)
 
         def renew_notification(event: NotificationsDisplayEvent) -> None:
+            logger.debug('Renewing notification %s', notification.value.id)
             self = _self()
             if self is None:
                 return
@@ -113,9 +122,7 @@ class MenuNotificationHandler(UboApp):
                 notification.is_initialized = True
                 store.dispatch(
                     VoiceReadTextAction(
-                        text=event.notification.extra_information.text,
-                        piper_text=event.notification.extra_information.piper_text,
-                        picovoice_text=event.notification.extra_information.picovoice_text,
+                        information=event.notification.extra_information,
                     ),
                 )
 

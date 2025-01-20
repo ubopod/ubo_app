@@ -8,6 +8,19 @@
         font-family: sans-serif;
         margin: 0;
         padding: 0;
+        background-color: white;
+        color: black;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: black;
+          color: white;
+        }
+        input, textarea {
+          background-color: #333;
+          color: white;
+          border: 1px solid #555;
+        }
       }
       form {
         margin: 1em auto;
@@ -42,7 +55,7 @@
 
   <body>
     {% for input in inputs %}
-      <form method="POST">
+      <form method="POST" enctype="multipart/form-data">
         <input name="id" type="hidden" value="{{ input.id }}" />
         <p>
           <label>

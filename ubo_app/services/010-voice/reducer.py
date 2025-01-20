@@ -36,9 +36,7 @@ def reducer(
             state=state,
             events=[
                 VoiceSynthesizeTextEvent(
-                    text=action.text,
-                    piper_text=action.piper_text or action.text,
-                    picovoice_text=action.picovoice_text or action.text,
+                    information=action.information,
                     speech_rate=action.speech_rate,
                 ),
             ],
