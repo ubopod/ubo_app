@@ -36,7 +36,8 @@ Note: All shortcuts can be triggered either through the physical keypad or keybo
 **Location**: `/opt/ubo/snapshots/`
 **Format**: JSON files
 **Naming**: `ubo-screenshot-xxx.json`
-
+**Contents**:
+- The content of each snapshot file is the dump of the redux store and it is used for debug and testing purposes.
 
 ### Recordings
 **Location**: `/opt/ubo/recordings/`
