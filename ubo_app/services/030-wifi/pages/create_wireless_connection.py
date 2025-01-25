@@ -14,7 +14,11 @@ from wifi_manager import add_wireless_connection
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction
-from ubo_app.store.input.types import InputFieldDescription, InputFieldType, InputMethod
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    InputMethod,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
@@ -28,7 +32,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from ubo_gui.menu.types import Item
 
@@ -40,6 +44,118 @@ BARCODE_PATTERN = (
     r'^WIFI:T:(?P<Type_>(?i:WEP|WPA|WPA2|nopass));S:(?P<SSID_>[^;]*);'
     r'(?:P:(?P<Password_>[^;]*);)?(?:H:(?P<Hidden_>(?i:true|false|));)?;$'
 )
+
+
+async def input_wifi_connection(
+    *,
+    input_methods: InputMethod = InputMethod.WEB_DASHBOARD,
+    on_creating: Callable[[], None] | None = None,
+) -> None:
+    """Input WiFi connection."""
+    try:
+        _, result = await ubo_input(
+            input_methods=input_methods,
+            prompt='Enter WiFi connection',
+            qr_code_generation_instructions=ReadableInformation(
+                text='Go to your phone settings, choose QR code and hold it in '
+                'front of the camera to scan it.',
+                picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '
+                'code and hold it in front of the camera to scan it.',
+            ),
+            pattern=BARCODE_PATTERN,
+            fields=[
+                InputFieldDescription(
+                    name='SSID',
+                    label='SSID',
+                    type=InputFieldType.TEXT,
+                    description='The name of the WiFi network',
+                    required=True,
+                ),
+                InputFieldDescription(
+                    name='Password',
+                    label='Password',
+                    type=InputFieldType.PASSWORD,
+                    description='The password of the WiFi network',
+                    required=False,
+                ),
+                InputFieldDescription(
+                    name='Type',
+                    label='Type',
+                    type=InputFieldType.SELECT,
+                    description='The type of the WiFi network',
+                    default='WPA2',
+                    options=['WEP', 'WPA', 'WPA2', 'nopass'],
+                    required=False,
+                ),
+                InputFieldDescription(
+                    name='Hidden',
+                    label='Hidden',
+                    type=InputFieldType.CHECKBOX,
+                    description='Is the WiFi network hidden?',
+                    default='false',
+                    required=False,
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        return
+
+    if not result:
+        return
+    ssid = result.data.get('SSID') or result.data.get('SSID_')
+    if ssid is None:
+        return
+
+    password = result.data.get('Password') or result.data.get('Password_')
+    type = result.data.get('Type') or result.data.get('Type_')
+    if type:
+        type = type.upper()
+    type = cast(WiFiType, type)
+    hidden = (
+        str_to_bool(
+            result.data.get('Hidden') or result.data.get('Hidden_') or 'false',
+        )
+        == 1
+    )
+
+    if not password:
+        logger.warning('Password is required')
+        return
+
+    if on_creating:
+        on_creating()
+
+    await add_wireless_connection(
+        ssid=ssid,
+        password=password,
+        type=type or WiFiType.NOPASS,
+        hidden=hidden,
+    )
+
+    logger.info(
+        'Wireless connection created',
+        extra={
+            'ssid': ssid,
+            'type': type,
+            'hidden': hidden,
+        },
+    )
+
+    store.dispatch(
+        WiFiUpdateRequestAction(reset=True),
+        NotificationsAddAction(
+            notification=Notification(
+                title=f'"{ssid}" Added',
+                content=f"""WiFi connection with ssid "{
+                    ssid
+                }" was added successfully""",
+                display_type=NotificationDisplayType.FLASH,
+                color=SUCCESS_COLOR,
+                icon='󱛃',
+                chime=Chime.ADD,
+            ),
+        ),
+    )
 
 
 class CreateWirelessConnectionPage(PageWidget):
@@ -55,114 +171,11 @@ class CreateWirelessConnectionPage(PageWidget):
         create_task(self.create_wireless_connection())
 
     async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
-        try:
-            _, result = await ubo_input(
-                input_methods=InputMethod.ALL,
-                prompt='Enter WiFi connection',
-                qr_code_generation_instructions=ReadableInformation(
-                    text='Go to your phone settings, choose QR code and hold it in '
-                    'front of the camera to scan it.',
-                    picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '
-                    'code and hold it in front of the camera to scan it.',
-                ),
-                pattern=BARCODE_PATTERN,
-                fields=[
-                    InputFieldDescription(
-                        name='SSID',
-                        label='SSID',
-                        type=InputFieldType.TEXT,
-                        description='The name of the WiFi network',
-                        required=True,
-                    ),
-                    InputFieldDescription(
-                        name='Password',
-                        label='Password',
-                        type=InputFieldType.PASSWORD,
-                        description='The password of the WiFi network',
-                        required=False,
-                    ),
-                    InputFieldDescription(
-                        name='Type',
-                        label='Type',
-                        type=InputFieldType.SELECT,
-                        description='The type of the WiFi network',
-                        default='WPA2',
-                        options=['WEP', 'WPA', 'WPA2', 'nopass'],
-                        required=False,
-                    ),
-                    InputFieldDescription(
-                        name='Hidden',
-                        label='Hidden',
-                        type=InputFieldType.CHECKBOX,
-                        description='Is the WiFi network hidden?',
-                        default='false',
-                        required=False,
-                    ),
-                ],
-            )
-        except asyncio.CancelledError:
-            store.dispatch(CloseApplicationAction(application=self))
-            return
-
-        if not result:
-            store.dispatch(CloseApplicationAction(application=self))
-            return
-        ssid = result.data.get('SSID') or result.data.get('SSID_')
-        if ssid is None:
-            store.dispatch(CloseApplicationAction(application=self))
-            return
-
-        password = result.data.get('Password') or result.data.get('Password_')
-        type = result.data.get('Type') or result.data.get('Type_')
-        if type:
-            type = type.upper()
-        type = cast(WiFiType, type)
-        hidden = (
-            str_to_bool(
-                result.data.get('Hidden') or result.data.get('Hidden_') or 'false',
-            )
-            == 1
+        await input_wifi_connection(
+            on_creating=lambda: setattr(self, 'creating', True),
+            input_methods=InputMethod.ALL,
         )
-
-        if not password:
-            logger.warning('Password is required')
-            store.dispatch(CloseApplicationAction(application=self))
-            return
-
-        self.creating = True
-
-        await add_wireless_connection(
-            ssid=ssid,
-            password=password,
-            type=type or WiFiType.NOPASS,
-            hidden=hidden,
-        )
-
-        logger.info(
-            'Wireless connection created',
-            extra={
-                'ssid': ssid,
-                'type': type,
-                'hidden': hidden,
-            },
-        )
-
-        store.dispatch(
-            WiFiUpdateRequestAction(reset=True),
-            NotificationsAddAction(
-                notification=Notification(
-                    title=f'"{ssid}" Added',
-                    content=f"""WiFi connection with ssid "{
-                        ssid
-                    }" was added successfully""",
-                    display_type=NotificationDisplayType.FLASH,
-                    color=SUCCESS_COLOR,
-                    icon='󱛃',
-                    chime=Chime.ADD,
-                ),
-            ),
-            CloseApplicationAction(application=self),
-        )
+        store.dispatch(CloseApplicationAction(application=self))
 
 
 Builder.load_file(

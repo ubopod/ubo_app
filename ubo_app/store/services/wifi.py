@@ -39,6 +39,9 @@ class WiFiConnection(Immutable):
 class WiFiAction(BaseAction): ...
 
 
+class WiFiInputConnectionAction(WiFiAction): ...
+
+
 class WiFiSetHasVisitedOnboardingAction(WiFiAction):
     has_visited_onboarding: bool
 
@@ -54,6 +57,9 @@ class WiFiUpdateRequestAction(WiFiAction):
 
 
 class WiFiEvent(BaseEvent): ...
+
+
+class WiFiInputConnectionEvent(WiFiEvent): ...
 
 
 class WiFiUpdateRequestEvent(WiFiEvent): ...

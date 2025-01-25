@@ -28,6 +28,7 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.wifi import (
     ConnectionState,
+    WiFiInputConnectionEvent,
     WiFiSetHasVisitedOnboardingAction,
     WiFiUpdateAction,
     WiFiUpdateRequestEvent,
@@ -127,6 +128,10 @@ async def init_service() -> None:
     )
 
     store.subscribe_event(WiFiUpdateRequestEvent, request_scan)
+    store.subscribe_event(
+        WiFiInputConnectionEvent,
+        create_wireless_connection.input_wifi_connection,
+    )
 
     @store.autorun(
         lambda state: state.ip.is_connected,

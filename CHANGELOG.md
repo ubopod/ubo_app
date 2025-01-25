@@ -17,6 +17,7 @@
 - feat: use `pod_id` as the ssid of the wifi hotspot
 - feat: add dark mode for web-ui
 - docs: update development documentation
+- feat(web-ui): automatically run the wifi creation procedure when there is no ssid saved in the network manager and no default gateway is set - closes #214
 
 ## Version 1.1.0
 

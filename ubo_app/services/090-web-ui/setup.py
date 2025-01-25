@@ -5,7 +5,6 @@ import datetime
 import functools
 import re
 import socket
-import subprocess
 from pathlib import Path
 from typing import cast
 
@@ -33,51 +32,8 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
+from ubo_app.utils.network import has_gateway
 from ubo_app.utils.server import send_command
-
-
-async def has_gateway() -> bool:
-    """Check if any network is connected."""
-    try:
-        # macOS uses 'route -n get default', Linux uses 'ip route'
-        process = await asyncio.create_subprocess_exec(
-            'which',
-            'ip',
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        await process.wait()
-        if process.returncode == 0:
-            # For Linux
-            process = await asyncio.create_subprocess_exec(
-                'ip',
-                'route',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            await process.wait()
-            if process.returncode == 0 and process.stdout:
-                for line in (await process.stdout.read()).splitlines():
-                    if line.startswith(b'default'):
-                        return True
-        else:
-            # For macOS
-            process = await asyncio.create_subprocess_exec(
-                'route',
-                '-n',
-                'get',
-                'default',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            await process.wait()
-            if process.returncode == 0 and process.stdout:
-                for line in (await process.stdout.read()).splitlines():
-                    if b'gateway:' in line:
-                        return True
-    finally:
-        pass
-    return False
 
 
 async def initialize(event: WebUIInitializeEvent) -> None:
