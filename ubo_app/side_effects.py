@@ -24,6 +24,7 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
+from ubo_app.store.services.wifi import WiFiInputConnectionAction
 from ubo_app.store.update_manager.types import (
     UpdateManagerCheckEvent,
     UpdateManagerSetStatusAction,
@@ -31,7 +32,9 @@ from ubo_app.store.update_manager.types import (
     UpdateStatus,
 )
 from ubo_app.store.update_manager.utils import check_version, update
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI, initialize_board
+from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
 from ubo_app.utils.store import replay_actions
 
 if TYPE_CHECKING:
@@ -138,6 +141,12 @@ async def replay_recorded_sequence() -> None:
     await replay_actions(store, Path('recordings/active.json'))
 
 
+async def check_wifi() -> None:
+    """Dispatch the Wi-Fi input action if needed."""
+    if not await has_gateway() and not await get_saved_wifi_ssids():
+        store.dispatch(WiFiInputConnectionAction())
+
+
 def setup_side_effects() -> None:
     """Set up the application."""
     initialize_board()
@@ -153,6 +162,8 @@ def setup_side_effects() -> None:
     store.subscribe_event(ReplayRecordedSequenceEvent, replay_recorded_sequence)
 
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
+
+    create_task(check_wifi())
 
     # Create a file signaling that the app is ready
     if IS_RPI:

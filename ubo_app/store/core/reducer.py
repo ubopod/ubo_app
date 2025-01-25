@@ -62,7 +62,12 @@ def reducer(
 
             return CompleteReducerResult(
                 state=MainState(menu=HOME_MENU),
-                events=[InitEvent()],
+                events=[
+                    # This is required for redux store to initialize as it is set to not
+                    # initialize automatically with `auto_init` being set to `False` in
+                    # `CreateStoreOptions`
+                    InitEvent(),
+                ],
             )
         raise InitializationActionError(action)
 
