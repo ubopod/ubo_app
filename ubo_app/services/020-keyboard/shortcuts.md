@@ -14,11 +14,11 @@
 ## Special Commands
 | Shortcut | Equivalent on Keyboard | Action |
 |----------|---------| ---------|
-| HOME <kbd>⌂</kbd> + L1 | `SHIFT` + 1 | Take screenshot |
-| HOME <kbd>⌂</kbd> + L2 | `SHIFT` + 2 | Take store snapshot |
-| HOME <kbd>⌂</kbd> + L3 | `SHIFT` + 3 | Start/Stop recording input keys |
-| BACK <kbd>⟲</kbd> + L3 | `ESC`, H, or ← + 3 | Replay latest recorded keys sequence |
-| HOME <kbd>⌂</kbd> + BACK | `SHIFT` + `ESC`, H, or ← | Exit application |
+| `HOME` <kbd>⌂</kbd> + `L1` | <kbd>SHIFT</kbd> + <kbd>1</kbd> | Take screenshot |
+| `HOME` <kbd>⌂</kbd> + `L2` | <kbd>SHIFT</kbd> + <kbd>2</kbd> | Take store snapshot |
+| `HOME` <kbd>⌂</kbd> + `L3` | <kbd>SHIFT</kbd> + <kbd>3</kbd> | Start/Stop recording input keys |
+| `BACK` <kbd>⟲</kbd> + `L3` | <kbd>CTRL</kbd> + <kbd>3</kbd> | Replay latest recorded keys sequence |
+| `HOME` <kbd>⌂</kbd> + `BACK` <kbd>⟲</kbd> | <kbd>SHIFT</kbd> + <kbd>←</kbd>/<kbd>SHIFT</kbd> + <kbd>H</kbd>/<kbd>SHIFT</kbd> + <kbd>Esc</kbd> | Exit application |
 
 Note: All shortcuts can be triggered either through the physical keypad or keyboard keys. The keyboard shortcuts are designed to mirror the keypad functionality for easier testing and development.
 
