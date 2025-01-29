@@ -25,6 +25,7 @@
 - fix(web-ui): run `iw wlan0 set power_save off` before running hotspot to avoid the soft block - closes #222
 - refactor(ci): use new github runner arm images for building images
 - feat(web-ui): add `ubo-redirect-server` service
+- refactor(web-ui): add notifications for when starting/stopping the hotspot fails in the system manager
 
 ## Version 1.1.0
 

@@ -26,6 +26,7 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
+    Importance,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
@@ -48,46 +49,73 @@ async def initialize(event: WebUIInitializeEvent) -> None:
         },
     )
     if not is_connected:
-        await send_command('hotspot', 'start')
-    hostname = socket.gethostname()
-    if event.description:
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=f'web_ui:pending:{event.description.id}',
-                    icon='󱋆',
-                    title='Web UI',
-                    content=f'[size=18dp]{event.description.prompt}[/size]',
-                    display_type=NotificationDisplayType.STICKY,
-                    is_read=True,
-                    extra_information=ReadableInformation(
-                        text=(
-                            'Please make sure you are on the same network as this '
-                            f'ubo-pod and open http://{hostname}.local:{WEB_UI_LISTEN_PORT}'
-                            'in your browser.'
-                            if is_connected
-                            else f'Please connect to the "{get_pod_id()}" WiFi network '
-                            f'and open http://{hostname}.local:{WEB_UI_LISTEN_PORT} in '
-                            'your browser.'
-                        ),
-                    ),
-                    expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
-                    color='#ffffff',
-                    show_dismiss_action=False,
-                    dismiss_on_close=True,
-                    on_close=functools.partial(
-                        store.dispatch,
-                        InputCancelAction(id=event.description.id),
+        result = await send_command('hotspot', 'start', has_output=True)
+        if result != 'done':
+            store.dispatch(
+                InputCancelAction(id=event.description.id),
+                NotificationsAddAction(
+                    notification=Notification(
+                        id='web_ui:hotspot_error',
+                        icon='󱋆',
+                        title='Web UI Error',
+                        content='Failed to start the hotspot, please check the logs.',
+                        display_type=NotificationDisplayType.STICKY,
+                        importance=Importance.HIGH,
                     ),
                 ),
+            )
+            return
+    hostname = socket.gethostname()
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id=f'web_ui:pending:{event.description.id}',
+                icon='󱋆',
+                title='Web UI',
+                content=f'[size=18dp]{event.description.prompt}[/size]',
+                display_type=NotificationDisplayType.STICKY,
+                is_read=True,
+                extra_information=ReadableInformation(
+                    text=(
+                        'Please make sure you are on the same network as this '
+                        f'ubo-pod and open http://{hostname}.local:{WEB_UI_LISTEN_PORT}'
+                        'in your browser.'
+                        if is_connected
+                        else f'Please connect to the "{get_pod_id()}" WiFi network '
+                        f'and open http://{hostname}.local:{WEB_UI_LISTEN_PORT} in '
+                        'your browser.'
+                    ),
+                ),
+                expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
+                show_dismiss_action=False,
+                dismiss_on_close=True,
+                on_close=functools.partial(
+                    store.dispatch,
+                    InputCancelAction(id=event.description.id),
+                ),
             ),
-        )
+        ),
+    )
 
 
 async def stop() -> None:
     """Start the hotspot if there is no network connection."""
     logger.info('web-ui - stop')
-    await send_command('hotspot', 'stop')
+    result = await send_command('hotspot', 'stop', has_output=True)
+    if result != 'done':
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='web_ui:hotspot_error',
+                    icon='󱋆',
+                    title='Web UI Error',
+                    content='Failed to stop the hotspot property, '
+                    'please check the logs.',
+                    display_type=NotificationDisplayType.STICKY,
+                    importance=Importance.HIGH,
+                ),
+            ),
+        )
 
 
 async def init_service() -> None:
