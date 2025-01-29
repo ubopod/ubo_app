@@ -77,6 +77,7 @@ echo "User $USERNAME created successfully."
 echo "export XDG_RUNTIME_DIR=/run/user/$(id -u $USERNAME)" >> /home/$USERNAME/.bashrc
 
 # Install required packages
+apt-get -fy install
 apt-get -y update
 apt-get -y upgrade
 apt-get -y install \

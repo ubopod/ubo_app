@@ -189,35 +189,51 @@ def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     atexit.register(file_handler.flush)
 
 
-def setup_logging() -> None:
-    from ubo_app.constants import GUI_LOG_LEVEL, LOG_LEVEL
+def get_log_level() -> int | None:
+    from ubo_app.constants import LOG_LEVEL
 
     if LOG_LEVEL:
         import logging
 
-        level = globals().get(
+        return globals().get(
             LOG_LEVEL,
             getattr(logging, LOG_LEVEL, logging.INFO),
         )
+    return None
 
-        logger.setLevel(level)
-        add_file_handler(logger, level)
-        add_stdout_handler(logger, level)
+
+def get_gui_log_level() -> int | None:
+    from ubo_app.constants import GUI_LOG_LEVEL
 
     if GUI_LOG_LEVEL:
         import logging
 
         import ubo_gui.logger
 
-        level = getattr(
+        return getattr(
             ubo_gui.logger,
             GUI_LOG_LEVEL,
             getattr(logging, GUI_LOG_LEVEL, logging.INFO),
         )
+    return None
 
-        ubo_gui.logger.logger.setLevel(level)
-        ubo_gui.logger.add_file_handler(level)
-        ubo_gui.logger.add_stdout_handler(level)
+
+def setup_logging() -> None:
+    level = get_log_level()
+
+    if level is not None:
+        logger.setLevel(level)
+        add_file_handler(logger, level)
+        add_stdout_handler(logger, level)
+
+    gui_level = get_gui_log_level()
+
+    if gui_level is not None:
+        import ubo_gui.logger
+
+        ubo_gui.logger.logger.setLevel(gui_level)
+        ubo_gui.logger.add_file_handler(gui_level)
+        ubo_gui.logger.add_stdout_handler(gui_level)
 
 
 __all__ = ('add_file_handler', 'add_stdout_handler', 'logger', 'setup_logging')

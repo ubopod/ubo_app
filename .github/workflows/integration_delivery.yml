@@ -315,8 +315,9 @@ jobs:
             SUFFIX="_${{ matrix.suffix }}"
           fi
           DASHED_SUFFIX=$(echo $SUFFIX | sed 's/_/-/g')
-          IMAGE_NAME="2024-07-04-raspios-bookworm-arm64${DASHED_SUFFIX}"
-          IMAGE_URL="https://downloads.raspberrypi.com/raspios${SUFFIX}_arm64/images/raspios${SUFFIX}_arm64-2024-07-04/${IMAGE_NAME}.img.xz"
+          IMAGE_DATE='2024-11-19'
+          IMAGE_NAME="${IMAGE_DATE}-raspios-bookworm-arm64${DASHED_SUFFIX}"
+          IMAGE_URL="https://downloads.raspberrypi.com/raspios${SUFFIX}_arm64/images/raspios${SUFFIX}_arm64-${IMAGE_DATE}/${IMAGE_NAME}.img.xz"
           CHECKSUM_URL="${IMAGE_URL}.sha256"
           echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
           echo "dashed_suffix=$DASHED_SUFFIX" >> "$GITHUB_OUTPUT"

@@ -18,6 +18,7 @@
 - feat: add dark mode for web-ui
 - docs: update development documentation
 - feat(web-ui): automatically run the wifi creation procedure when there is no ssid saved in the network manager and no default gateway is set - closes #214
+- feat(web-ui): use captive portal in the hotspot started by web-ui - closes #211
 
 ## Version 1.1.0
 
