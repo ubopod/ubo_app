@@ -11,6 +11,7 @@ import stat
 import string
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Thread
@@ -61,12 +62,13 @@ connection_state = ConnectionState()
 def check_connection() -> None:
     while True:
         try:
-            response = ping('1.1.1.1', count=1, timeout=1)
+            response = ping('1.1.1.1', timeout=1, count=1, out=None)
             connection_state.state = (
                 NetState.CONNECTED if response.success() else NetState.DISCONNECTED
             )
         except OSError:
             connection_state.state = NetState.DISCONNECTED
+            time.sleep(0.5)
 
 
 def handle_command(command: str) -> str | None:

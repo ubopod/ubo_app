@@ -20,6 +20,7 @@
 - feat(web-ui): automatically run the wifi creation procedure when there is no ssid saved in the network manager and no default gateway is set - closes #214
 - feat(web-ui): use captive portal in the hotspot started by web-ui - closes #211
 - fix(core): an issue where a tuple of lists where passed as active_inputs instead of a list due to an unwanted comma - closes #212
+- fix(core): high cpu usage due to the while loop going non-blocking when the ping raised an exception - closes #216
 
 ## Version 1.1.0
 

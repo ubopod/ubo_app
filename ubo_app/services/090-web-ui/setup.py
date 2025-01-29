@@ -33,6 +33,7 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
 from ubo_app.utils.network import has_gateway
+from ubo_app.utils.pod_id import get_pod_id
 from ubo_app.utils.server import send_command
 
 
@@ -65,9 +66,9 @@ async def initialize(event: WebUIInitializeEvent) -> None:
                             f'ubo-pod and open http://{hostname}.local:{WEB_UI_LISTEN_PORT}'
                             'in your browser.'
                             if is_connected
-                            else 'Please connect to the "UBO" WiFi network and open '
-                            f'http://{hostname}.local:{WEB_UI_LISTEN_PORT} in your '
-                            'browser.'
+                            else f'Please connect to the "{get_pod_id()}" WiFi network '
+                            f'and open http://{hostname}.local:{WEB_UI_LISTEN_PORT} in '
+                            'your browser.'
                         ),
                     ),
                     expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
