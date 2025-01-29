@@ -19,7 +19,12 @@ from pythonping import ping
 
 from ubo_app.constants import USERNAME
 from ubo_app.error_handlers import setup_error_handling
-from ubo_app.logger import add_file_handler, add_stdout_handler, get_logger
+from ubo_app.logger import (
+    add_file_handler,
+    add_stdout_handler,
+    get_log_level,
+    get_logger,
+)
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler
@@ -39,9 +44,10 @@ SOCKET_PATH = Path(os.environ.get('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
 led_manager = LEDManager()
 
 logger = get_logger('system-manager')
-add_file_handler(logger, logging.DEBUG)
-add_stdout_handler(logger, logging.DEBUG)
-logger.setLevel(logging.DEBUG)
+log_level = get_log_level() or logging.INFO
+add_file_handler(logger, log_level)
+add_stdout_handler(logger, log_level)
+logger.setLevel(log_level)
 
 
 @dataclass(kw_only=True)
@@ -87,8 +93,8 @@ def handle_command(command: str) -> str | None:
 def process_request(command: bytes, connection: socket.socket) -> None:
     try:
         result = handle_command(command.decode('utf-8'))
-    except Exception:
-        logger.exception('Failed to handle command')
+    except Exception as exception:
+        logger.exception('Failed to handle command', extra={'exception': exception})
         result = None
     if result is not None:
         connection.sendall(result.encode() + b'\0')
@@ -160,7 +166,7 @@ def main() -> None:
     while True:
         try:
             connection, client_address = server.accept()
-            logger.info('New connection:', extra={'client_address': client_address})
+            logger.debug('New connection:', extra={'client_address': client_address})
             datagram = remaining + connection.recv(1024)
             if not datagram:
                 break
@@ -170,12 +176,12 @@ def main() -> None:
 
             command, remaining = datagram.split(b'\0', 1)
 
-            logger.info('Received command:', extra={'command': command})
+            logger.debug('Received command:', extra={'command': command})
             thread = Thread(target=process_request, args=(command, connection))
             thread.start()
 
         except KeyboardInterrupt:
-            logger.info('Interrupted')
+            logger.warning('Interrupted')
             server.close()
             try:
                 sys.exit(0)

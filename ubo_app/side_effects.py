@@ -1,7 +1,8 @@
-"""Application logic."""
+"""Side effects for the application."""
 
 from __future__ import annotations
 
+import asyncio
 import atexit
 import json
 import subprocess
@@ -13,6 +14,7 @@ from redux import FinishAction, FinishEvent
 
 from ubo_app import display
 from ubo_app.constants import INSTALLATION_PATH
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     PowerOffEvent,
     RebootEvent,
@@ -143,12 +145,22 @@ async def replay_recorded_sequence() -> None:
 
 async def check_wifi() -> None:
     """Dispatch the Wi-Fi input action if needed."""
+    await asyncio.sleep(5)
+    logger.info(
+        'Checking Wi-Fi',
+        extra={
+            'has_gateway': await has_gateway(),
+            'saved_wifi_ssids': await get_saved_wifi_ssids(),
+            'oho': not await get_saved_wifi_ssids(),
+        },
+    )
     if not await has_gateway() and not await get_saved_wifi_ssids():
+        logger.info('No network connection found, prompting for Wi-Fi input')
         store.dispatch(WiFiInputConnectionAction())
 
 
 def setup_side_effects() -> None:
-    """Set up the application."""
+    """Set up the side effects for the application."""
     initialize_board()
 
     store.subscribe_event(FinishEvent, display.turn_off)
