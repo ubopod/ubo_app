@@ -61,7 +61,7 @@ def reducer(
                         description
                         for description in state.active_inputs
                         if description.id != action.id
-                    ],
+                    ]
                 ),
             ),
             actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{action.id}')],
