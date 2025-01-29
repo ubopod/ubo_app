@@ -281,7 +281,7 @@ jobs:
       - lint
       - test
       - build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     container:
       image: mkaczanowski/packer-builder-arm
       volumes:
