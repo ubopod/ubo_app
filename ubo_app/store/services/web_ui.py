@@ -14,7 +14,7 @@ class WebUIEvent(BaseEvent): ...
 
 
 class WebUIInitializeEvent(WebUIEvent):
-    description: InputDescription | None = None
+    description: InputDescription
 
 
 class WebUIStopEvent(WebUIEvent): ...

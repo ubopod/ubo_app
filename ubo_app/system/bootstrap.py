@@ -22,24 +22,24 @@ class Service(TypedDict):
     """System service metadata."""
 
     name: str
-    template: str
     scope: Literal['system', 'user']
 
 
 SERVICES: list[Service] = [
     {
         'name': 'ubo-system',
-        'template': 'system',
         'scope': 'system',
     },
     {
         'name': 'ubo-update',
-        'template': 'update',
+        'scope': 'system',
+    },
+    {
+        'name': 'ubo-redirect-server',
         'scope': 'system',
     },
     {
         'name': 'ubo-app',
-        'template': 'app',
         'scope': 'user',
     },
 ]
@@ -72,7 +72,7 @@ def create_service_file(service: Service) -> None:
 
     template = (
         Path(__file__)
-        .parent.joinpath(f'services/{service["template"]}.service.tmpl')
+        .parent.joinpath(f'services/{service["name"]}.service.tmpl')
         .open()
         .read()
     )

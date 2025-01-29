@@ -24,6 +24,7 @@
 - feat(core): add a utility function to apply templates to filesystem based on a templates directory, while taking backups of the original files and another utility function to restore the backups
 - fix(web-ui): run `iw wlan0 set power_save off` before running hotspot to avoid the soft block - closes #222
 - refactor(ci): use new github runner arm images for building images
+- feat(web-ui): add `ubo-redirect-server` service
 
 ## Version 1.1.0
 
