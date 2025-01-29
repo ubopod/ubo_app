@@ -22,6 +22,7 @@
 - fix(core): an issue where a tuple of lists where passed as active_inputs instead of a list due to an unwanted comma - closes #212
 - fix(core): high cpu usage due to the while loop going non-blocking when the ping raised an exception - closes #216
 - feat(core): add a utility function to apply templates to filesystem based on a templates directory, while taking backups of the original files and another utility function to restore the backups
+- fix(web-ui): run `iw wlan0 set power_save off` before running hotspot to avoid the soft block - closes #222
 
 ## Version 1.1.0
 
