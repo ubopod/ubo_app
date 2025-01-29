@@ -21,6 +21,7 @@
 - feat(web-ui): use captive portal in the hotspot started by web-ui - closes #211
 - fix(core): an issue where a tuple of lists where passed as active_inputs instead of a list due to an unwanted comma - closes #212
 - fix(core): high cpu usage due to the while loop going non-blocking when the ping raised an exception - closes #216
+- feat(core): add a utility function to apply templates to filesystem based on a templates directory, while taking backups of the original files and another utility function to restore the backups
 
 ## Version 1.1.0
 
