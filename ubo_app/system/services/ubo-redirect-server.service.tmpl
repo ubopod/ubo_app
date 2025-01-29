@@ -1,0 +1,12 @@
+[Unit]
+Description=Ubo Redirect Server Service
+
+[Service]
+Type=simple
+User=root
+ExecStart={{INSTALLATION_PATH}}/env/bin/ubo-redirect-server
+WorkingDirectory={{INSTALLATION_PATH}}
+StandardOutput=inherit
+StandardError=inherit
+KillMode=control-group
+Restart=always
