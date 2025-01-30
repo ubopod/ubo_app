@@ -26,6 +26,7 @@
 - refactor(ci): use new github runner arm images for building images
 - feat(web-ui): add `ubo-redirect-server` service
 - refactor(web-ui): add notifications for when starting/stopping the hotspot fails in the system manager
+- refactor(web-ui): move starting/stopping of the required hotspot system services to the `ubo-hotspot` service (the more general version of the `ubo-redirect-server` service which runs the redirect server as its main process.)
 
 ## Version 1.1.0
 

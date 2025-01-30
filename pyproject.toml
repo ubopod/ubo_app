@@ -92,8 +92,9 @@ pyfakefs = { git = "https://github.com/pytest-dev/pyfakefs.git" }
 
 [project.scripts]
 ubo = "ubo_app.main:main"
-bootstrap = "ubo_app.bootstrap:main"
+ubo-bootstrap = "ubo_app.system.bootstrap:main"
 ubo-system = "ubo_app.system.system_manager.main:main"
+ubo-hotspot-config = "ubo_app.system.hotspot_config:main"
 ubo-redirect-server = "ubo_app.system.redirect_server:main"
 
 

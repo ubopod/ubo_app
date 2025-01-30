@@ -145,7 +145,7 @@ chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
 chmod -R 700 "$INSTALLATION_PATH"
 
 # Bootstrap the application
-UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/bootstrap"${WITH_DOCKER:+ --with-docker}${IN_PACKER:+ --in-packer}
+UBO_LOG_LEVEL=INFO "$INSTALLATION_PATH/env/bin/ubo-bootstrap"${WITH_DOCKER:+ --with-docker}${IN_PACKER:+ --in-packer}
 echo "Bootstrapping completed"
 
 if [ "$UPDATE" = true ]; then

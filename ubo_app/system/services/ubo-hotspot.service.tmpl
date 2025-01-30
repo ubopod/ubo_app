@@ -1,0 +1,39 @@
+[Unit]
+Description=Ubo Hotspot Service
+
+[Service]
+Type=simple
+User=root
+ExecStartPre=/bin/sh -c 'echo "Disabling power save mode on wlan0"'
+ExecStartPre=/usr/bin/env iw wlan0 set power_save off
+ExecStartPre=/bin/sh -c 'echo "Unblocking wifi"'
+ExecStartPre=/usr/bin/env rfkill unblock wifi
+ExecStartPre=/bin/sh -c 'echo "Writing configuration files"'
+ExecStartPre=/opt/ubo/env/bin/ubo-hotspot-config configure
+ExecStartPre=/bin/sh -c 'echo "Restarting dhcpcd service"'
+ExecStartPre=/bin/systemctl restart dhcpcd.service
+ExecStartPre=/bin/sh -c 'echo "Restarting dnsmasq service"'
+ExecStartPre=/bin/systemctl restart dnsmasq.service
+ExecStartPre=/bin/sh -c 'echo "Unmasking hostapd service"'
+ExecStartPre=/bin/systemctl unmask hostapd.service
+ExecStartPre=/bin/sh -c 'echo "Enabling hostapd service"'
+ExecStartPre=/bin/systemctl enable hostapd.service
+ExecStartPre=/bin/sh -c 'echo "Starting Ubo Hotspot Service"'
+ExecStartPre=/bin/systemctl start hostapd.service
+ExecStartPre=/bin/sh -c 'echo "Starting Redirect Server"'
+ExecStart=/opt/ubo/env/bin/ubo-redirect-server
+ExecStopPost={{INSTALLATION_PATH}}/env/bin/ubo-hotspot-config restore
+ExecStopPost=/bin/sh -c 'echo "# Default dhcpcd configuration\n# Leave this blank for automatic configuration" > /etc/dhcpcd.conf'
+ExecStartPre=/bin/sh -c 'echo "Stopping Ubo Hotspot Service"'
+ExecStopPost=/bin/systemctl stop hostapd.service
+ExecStartPre=/bin/sh -c 'echo "Disabling hostapd service"'
+ExecStopPost=/bin/systemctl disable hostapd.service
+ExecStartPre=/bin/sh -c 'echo "Masking hostapd service"'
+ExecStopPost=/bin/systemctl mask hostapd.service
+ExecStartPre=/bin/sh -c 'echo "Stopping dnsmasq service"'
+ExecStopPost=/bin/systemctl stop dnsmasq.service
+ExecStartPre=/bin/sh -c 'echo "Restarting dhcpcd service"'
+ExecStopPost=/bin/systemctl restart dhcpcd.service
+WorkingDirectory=/opt/ubo
+KillMode=control-group
+Restart=always
