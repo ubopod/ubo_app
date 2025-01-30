@@ -3,10 +3,9 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-
 FILE=$1
 CHUNK_SIZE=$((1024*1024*1024))
-SIZE=$(wc -c $FILE | awk '{print $1}')
+SIZE=$(stat -c "%s" "$FILE")
 CHUNKS=$((($SIZE + $CHUNK_SIZE - 1) / $CHUNK_SIZE))
 BLOCK_BASED_SIZE=$(($CHUNKS*$CHUNK_SIZE))
 

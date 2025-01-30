@@ -35,9 +35,14 @@ GRPC_LISTEN_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 GRPC_ENVOY_LISTEN_ADDRESS = os.environ.get('UBO_GRPC_ENVOY_LISTEN_ADDRESS', '127.0.0.1')
 GRPC_ENVOY_LISTEN_PORT = int(os.environ.get('UBO_GRPC_ENVOY_LISTEN_PORT', '50052'))
 
+# Most of these should be changed in ubo-app and ubo-system-manager simultaneously to
+# avoid breaking the system.
+# TODO(sassanh): Make above comment visible to the end user when a change # noqa: FIX002
+# is detected in of these values.
 WEB_UI_LISTEN_ADDRESS = os.environ.get('UBO_WEB_UI_LISTEN_ADDRESS', '0.0.0.0')  # noqa: S104
 WEB_UI_LISTEN_PORT = int(os.environ.get('UBO_WEB_UI_LISTEN_PORT', '4321'))
 WEB_UI_DEBUG_MODE = str_to_bool(os.environ.get('UBO_WEB_UI_DEBUG_MODE', 'False')) == 1
+WEB_UI_HOTSPOT_PASSWORD = os.environ.get('UBO_WEB_UI_HOTSPOT_PASSWORD', 'ubopod-setup')
 
 UPDATE_ASSETS_PATH = Path(f'{INSTALLATION_PATH}/_update/')
 UPDATE_LOCK_PATH = UPDATE_ASSETS_PATH / 'update_is_ready.lock'

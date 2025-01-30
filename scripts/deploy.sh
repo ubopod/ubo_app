@@ -55,7 +55,7 @@ mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice
 true"
 
 if [ "$bootstrap" == "True" ] || [ "$env" == "True" ] || [ "$restart" == "True" ]; then
-  run_on_pod_as_root "$(if [ "$bootstrap" == "True" ]; then echo "/opt/ubo/env/bin/bootstrap && systemctl daemon-reload && systemctl restart ubo-system.service &&"; fi)
+  run_on_pod_as_root "$(if [ "$bootstrap" == "True" ]; then echo "/opt/ubo/env/bin/ubo-bootstrap && systemctl daemon-reload && systemctl restart ubo-system.service &&"; fi)
 $(if [ "$env" == "True" ]; then echo "cat <<'EOF' > /tmp/.dev.env
 $(cat ubo_app/.dev.env)
 EOF &&

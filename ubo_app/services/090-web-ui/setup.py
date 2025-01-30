@@ -14,6 +14,7 @@ from werkzeug.datastructures import FileStorage
 
 from ubo_app.constants import (
     WEB_UI_DEBUG_MODE,
+    WEB_UI_HOTSPOT_PASSWORD,
     WEB_UI_LISTEN_ADDRESS,
     WEB_UI_LISTEN_PORT,
 )
@@ -82,8 +83,8 @@ async def initialize(event: WebUIInitializeEvent) -> None:
                         'in your browser.'
                         if is_connected
                         else f'Please connect to the "{get_pod_id()}" WiFi network '
-                        f'and open http://{hostname}.local:{WEB_UI_LISTEN_PORT} in '
-                        'your browser.'
+                        f'with password "{WEB_UI_HOTSPOT_PASSWORD}" and open '
+                        f'http://{hostname}.local:{WEB_UI_LISTEN_PORT} in your browser.'
                     ),
                 ),
                 expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),

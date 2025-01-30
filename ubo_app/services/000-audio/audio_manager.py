@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 import wave
 
@@ -40,7 +41,7 @@ class AudioManager:
         self.cardindex = None
 
         async def initialize_audio() -> None:
-            while True:
+            for _ in range(20):
                 try:
                     cards = alsaaudio.cards()
                     self.cardindex = cards.index(
@@ -50,6 +51,7 @@ class AudioManager:
                     logger.exception('No audio card found')
                 else:
                     break
+                await asyncio.sleep(1)
 
         create_task(initialize_audio())
 

@@ -44,7 +44,7 @@ function install_module {
   fi
 
   if [[ -e /usr/src/$mod-$ver || -e /var/lib/dkms/$mod/$ver ]]; then
-    dkms remove --force -m $mod -v $ver --all
+    dkms remove --force -m $mod -v $ver --all || true
     rm -rf /usr/src/$mod-$ver
   fi
   mkdir -p /usr/src/$mod-$ver

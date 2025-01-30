@@ -145,7 +145,7 @@ async def replay_recorded_sequence() -> None:
 
 async def check_wifi() -> None:
     """Dispatch the Wi-Fi input action if needed."""
-    await asyncio.sleep(5)
+    await asyncio.sleep(10)
     logger.info(
         'Checking Wi-Fi',
         extra={

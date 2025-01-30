@@ -6,6 +6,7 @@ import grp
 import os
 import pwd
 import subprocess
+import sys
 import time
 import warnings
 from pathlib import Path
@@ -23,25 +24,14 @@ class Service(TypedDict):
 
     name: str
     scope: Literal['system', 'user']
+    enabled: bool
 
 
 SERVICES: list[Service] = [
-    {
-        'name': 'ubo-system',
-        'scope': 'system',
-    },
-    {
-        'name': 'ubo-update',
-        'scope': 'system',
-    },
-    {
-        'name': 'ubo-redirect-server',
-        'scope': 'system',
-    },
-    {
-        'name': 'ubo-app',
-        'scope': 'user',
-    },
+    Service(name='ubo-system', scope='system', enabled=True),
+    Service(name='ubo-update', scope='system', enabled=True),
+    Service(name='ubo-hotspot', scope='system', enabled=False),
+    Service(name='ubo-app', scope='user', enabled=True),
 ]
 
 uid = pwd.getpwnam(USERNAME).pw_uid
@@ -151,7 +141,12 @@ def enable_services() -> None:
             )
         elif service['scope'] == 'system':
             subprocess.run(  # noqa: S603
-                ['/usr/bin/env', 'systemctl', 'enable', service['name']],
+                [
+                    '/usr/bin/env',
+                    'systemctl',
+                    'enable' if service['enabled'] else 'disable',
+                    service['name'],
+                ],
                 check=True,
             )
 
@@ -275,3 +270,14 @@ def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
         stdout.flush()
 
     install_audio_driver(in_packer=in_packer)
+
+
+def main() -> None:
+    """Run the bootstrap script."""
+    bootstrap(
+        with_docker='--with-docker' in sys.argv,
+        in_packer='--in-packer' in sys.argv,
+    )
+    sys.stdout.write('Bootstrap completed.\n')
+    sys.stdout.flush()
+    sys.exit(0)
