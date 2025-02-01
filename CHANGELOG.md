@@ -27,6 +27,7 @@
 - feat(web-ui): add `ubo-redirect-server` service
 - refactor(web-ui): add notifications for when starting/stopping the hotspot fails in the system manager
 - refactor(web-ui): move starting/stopping of the required hotspot system services to the `ubo-hotspot` service (the more general version of the `ubo-redirect-server` service which runs the redirect server as its main process.)
+- fix(core): uninstall RPi.GPIO after installing python packages in `install.sh` related: https://github.com/adafruit/Adafruit_Blinka/issues/910 - closes #231
 
 ## Version 1.1.0
 

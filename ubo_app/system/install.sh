@@ -140,6 +140,8 @@ else
   fi
 fi
 
+$INSTALLATION_PATH/env/bin/pip uninstall -y RPi.GPIO
+
 # Set the ownership of the installation path
 chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
 chmod -R 700 "$INSTALLATION_PATH"
