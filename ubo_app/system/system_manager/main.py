@@ -68,7 +68,7 @@ def check_connection() -> None:
             )
         except OSError:
             connection_state.state = NetState.DISCONNECTED
-            time.sleep(0.5)
+        time.sleep(0.25)
 
 
 def handle_command(command: str) -> str | None:
