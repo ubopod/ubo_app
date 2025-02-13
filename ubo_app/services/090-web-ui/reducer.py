@@ -53,19 +53,21 @@ def reducer(
             events=[WebUIInitializeEvent(description=action.description)],
         )
     if isinstance(action, InputResolveAction | InputCancelAction):
+        new_active_inputs = [
+            description
+            for description in state.active_inputs
+            if description.id != action.id
+        ]
+        should_dispatch_stop_event = (
+            len(state.active_inputs) > 0 and len(new_active_inputs) == 0
+        )
         return CompleteReducerResult(
             state=replace(
                 state,
-                active_inputs=(
-                    new_active_inputs := [
-                        description
-                        for description in state.active_inputs
-                        if description.id != action.id
-                    ]
-                ),
+                active_inputs=new_active_inputs,
             ),
             actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{action.id}')],
-            events=[] if new_active_inputs else [WebUIStopEvent()],
+            events=[WebUIStopEvent()] if should_dispatch_stop_event else [],
         )
 
     return state
