@@ -46,6 +46,7 @@ dependencies = [
   "gpiozero >=2.0.1 ; platform_machine != 'aarch64'",
   "pythonping >=1.1.4",
   "quart >=0.19.6",
+  "ruff>=0.9.6",
 ]
 
 [build-system]
@@ -77,7 +78,7 @@ dev-dependencies = [
   "pytest-cov >=4.1.0",
   "pytest-timeout >=2.3.1",
   "pytest-xdist >=3.5.0",
-  "ruff >=0.6.2",
+  "ruff >=0.9.6",
   "tenacity >=8.2.3",
   "toml >=0.10.2",
   "pytest-mock >=3.14.0",
@@ -159,11 +160,13 @@ logger-objects = ['ubo_app.logger.logger']
 
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["type", "id"]
+builtins-allowed-modules = ["types"]
 
 [tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"
 inline-quotes = "single"
 multiline-quotes = "double"
+
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "PLR0913", "PLR0915"]
