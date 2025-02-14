@@ -30,6 +30,7 @@
 - fix(core): uninstall RPi.GPIO after installing python packages in `install.sh` related: https://github.com/adafruit/Adafruit_Blinka/issues/910 - closes #231
 - fix(web-ui): avoid web-ui stop procedure being triggered when qr-code input is cancelled
 - fix(system): run `time.sleep` for both branches of the ping loop (success and failure) to avoid high cpu usage of the system process
+- fix(camera): avoid values read from qrcode being overridden by `None` values of alternative patterns - closes #230
 
 ## Version 1.1.0
 
