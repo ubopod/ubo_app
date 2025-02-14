@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, cast
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
 from str_to_bool import str_to_bool
-from ubo_gui.constants import SUCCESS_COLOR
+from ubo_gui.constants import SUCCESS_COLOR, WARNING_COLOR
 from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
@@ -25,6 +25,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
+    NotificationsClearByIdAction,
 )
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
@@ -44,6 +45,7 @@ BARCODE_PATTERN = (
     r'^WIFI:T:(?P<Type_>(?i:WEP|WPA|WPA2|nopass));S:(?P<SSID_>[^;]*);'
     r'(?:P:(?P<Password_>[^;]*);)?(?:H:(?P<Hidden_>(?i:true|false|));)?;$'
 )
+HOTSPOT_GRACE_TIME = 5
 
 
 async def input_wifi_connection(
@@ -52,6 +54,7 @@ async def input_wifi_connection(
     on_creating: Callable[[], None] | None = None,
 ) -> None:
     """Input WiFi connection."""
+    logger.debug('wifi connection input - start')
     try:
         _, result = await ubo_input(
             input_methods=input_methods,
@@ -98,12 +101,17 @@ async def input_wifi_connection(
             ],
         )
     except asyncio.CancelledError:
+        logger.debug('wifi connection input - cancelled')
         return
 
+    logger.debug('wifi connection input - result', extra={'result': result})
+
     if not result:
+        logger.debug('wifi connection input - no result')
         return
     ssid = result.data.get('SSID') or result.data.get('SSID_')
     if ssid is None:
+        logger.debug('wifi connection input - no ssid')
         return
 
     password = result.data.get('Password') or result.data.get('Password_')
@@ -119,18 +127,50 @@ async def input_wifi_connection(
     )
 
     if not password:
+        logger.debug('wifi connection input - no password')
         logger.warning('Password is required')
         return
 
     if on_creating:
         on_creating()
 
-    await add_wireless_connection(
-        ssid=ssid,
-        password=password,
-        type=type or WiFiType.NOPASS,
-        hidden=hidden,
-    )
+    if result.method is InputMethod.WEB_DASHBOARD:
+        logger.debug(
+            'wifi connection input - waiting for hotspot to go down',
+            extra={'grace time': HOTSPOT_GRACE_TIME},
+        )
+        # Wait for hotspot to go down
+        notification = Notification(
+            id='wifi-wait-hotspot',
+            title='Please wait!',
+            content='To avoid interference we need to wait for the hotspot to go down.',
+            display_type=NotificationDisplayType.STICKY,
+            color=WARNING_COLOR,
+            icon='󱋆',
+        )
+        store.dispatch(
+            NotificationsAddAction(
+                notification=notification,
+            ),
+        )
+        await asyncio.sleep(HOTSPOT_GRACE_TIME)
+        store.dispatch(NotificationsClearByIdAction(id='wifi-wait-hotspot'))
+        logger.debug(
+            'wifi connection input - done waiting for hotspot to go down',
+            extra={'grace time': HOTSPOT_GRACE_TIME},
+        )
+
+    logger.debug('wifi connection input - creating connection')
+    try:
+        await add_wireless_connection(
+            ssid=ssid,
+            password=password,
+            type=type or WiFiType.NOPASS,
+            hidden=hidden,
+        )
+    except Exception:
+        logger.exception('wifi connection input - error while creating connection')
+        return
 
     logger.info(
         'Wireless connection created',

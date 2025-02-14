@@ -22,6 +22,7 @@ from ubo_app.logger import logger
 from ubo_app.store.input.types import (
     InputCancelAction,
     InputDescription,
+    InputMethod,
     InputProvideAction,
     InputResult,
 )
@@ -151,7 +152,11 @@ async def init_service() -> None:
                     InputProvideAction(
                         id=id,
                         value=value,
-                        result=InputResult(data=data, files=files),
+                        result=InputResult(
+                            data=data,
+                            files=files,
+                            method=InputMethod.WEB_DASHBOARD,
+                        ),
                     ),
                 )
             await asyncio.sleep(0.2)

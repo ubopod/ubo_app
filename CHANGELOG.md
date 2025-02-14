@@ -31,6 +31,7 @@
 - fix(web-ui): avoid web-ui stop procedure being triggered when qr-code input is cancelled
 - fix(system): run `time.sleep` for both branches of the ping loop (success and failure) to avoid high cpu usage of the system process
 - fix(camera): avoid values read from qrcode being overridden by `None` values of alternative patterns - closes #230
+- fix(wifi): wait a few seconds before creating the wifi connection if the provided input result has the input method `WEB_DASHBOARD` - closes #230
 
 ## Version 1.1.0
 

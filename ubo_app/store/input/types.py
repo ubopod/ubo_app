@@ -19,6 +19,7 @@ class InputResult(Immutable):
 
     data: dict[str, str | None]
     files: dict[str, IO[bytes] | BytesIO]
+    method: InputMethod
 
 
 class InputFieldType(enum.StrEnum):

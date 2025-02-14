@@ -159,6 +159,7 @@ def reducer(
                                         if value
                                     },
                                     files={},
+                                    method=InputMethod.CAMERA,
                                 ),
                             ),
                             NotificationsClearByIdAction(id='camera:qrcode'),
