@@ -225,6 +225,9 @@ async def add_wireless_connection(
     *,
     hidden: bool | None = False,
 ) -> None:
+    network_manager = NetworkManager(get_system_bus())
+    await network_manager.wireless_enabled.set_async(True)
+
     wifi_device = await get_wifi_device()
     if not wifi_device:
         return
@@ -284,7 +287,6 @@ async def add_wireless_connection(
         'ipv6': {'method': ('s', 'auto')},
     }
 
-    network_manager = NetworkManager(get_system_bus())
     connection = await wait_for(
         network_manager.add_and_activate_connection(
             properties,
@@ -297,6 +299,9 @@ async def add_wireless_connection(
 
 
 async def connect_wireless_connection(ssid: str) -> None:
+    network_manager = NetworkManager(get_system_bus())
+    await network_manager.wireless_enabled.set_async(True)
+
     wifi_device = await get_wifi_device()
 
     if not wifi_device:
@@ -331,7 +336,6 @@ async def connect_wireless_connection(ssid: str) -> None:
     if not desired_connection:
         return
 
-    network_manager = NetworkManager(get_system_bus())
     await wait_for(
         network_manager.activate_connection(
             desired_connection,
