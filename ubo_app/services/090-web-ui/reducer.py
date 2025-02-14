@@ -52,7 +52,7 @@ def reducer(
             ),
             events=[WebUIInitializeEvent(description=action.description)],
         )
-    if isinstance(action, InputResolveAction | InputCancelAction):
+    if isinstance(action, InputResolveAction):
         new_active_inputs = [
             description
             for description in state.active_inputs

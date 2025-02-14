@@ -293,7 +293,7 @@ async def add_wireless_connection(
         ),
     )
 
-    logger.info('Connection added', extra={'connection': connection})
+    logger.debug('Connection added', extra={'connection': connection})
 
 
 async def connect_wireless_connection(ssid: str) -> None:
@@ -378,7 +378,8 @@ async def forget_wireless_connection(ssid: str) -> None:
                     notification=Notification(
                         title=f'"{ssid}" Deleted',
                         content=f"""WiFi connection with ssid "{
-                        ssid}" was deleted successfully""",
+                            ssid
+                        }" was deleted successfully""",
                         display_type=NotificationDisplayType.FLASH,
                         color=DANGER_COLOR,
                         icon='󱛅',
