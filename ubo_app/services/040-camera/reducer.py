@@ -156,6 +156,7 @@ def reducer(
                                     data={
                                         key.rstrip('_'): value
                                         for key, value in match.groupdict().items()
+                                        if value
                                     },
                                     files={},
                                 ),
