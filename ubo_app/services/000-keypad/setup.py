@@ -1,12 +1,14 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+import errno
 import logging
 import math
 import time
 from typing import TYPE_CHECKING, Literal, cast
 
 import board
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 
 from ubo_app.store.services.audio import AudioDevice, AudioSetMuteStatusAction
 from ubo_app.store.services.keypad import (
@@ -17,6 +19,7 @@ from ubo_app.store.services.keypad import (
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
+    import busio
     from adafruit_aw9523 import AW9523
     from adafruit_bus_device import i2c_device
     from adafruit_register.i2c_struct import UnaryStruct
@@ -94,6 +97,23 @@ class Keypad:
         i2c.write(buffer)
         i2c.write_then_readinto(buffer, buffer, out_end=1, in_start=1)
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(1),
+        retry=retry_if_exception(
+            lambda e: isinstance(e, OSError) and e.errno == errno.EIO,
+        ),
+    )
+    def _initialize_i2c(
+        self: Keypad,
+        i2c: busio.I2C,
+    ) -> tuple[AW9523, i2c_device.I2CDevice]:
+        import adafruit_aw9523
+
+        # Search for the GPIO expander address on the I2C bus
+        aw = adafruit_aw9523.AW9523(i2c, self.bus_address)
+        return aw, aw.i2c_device
+
     def init_i2c(self: Keypad) -> None:
         if not IS_RPI:
             return
@@ -103,16 +123,14 @@ class Keypad:
         i2c = board.I2C()
         # Set this to the GPIO of the interrupt:
         btn = Button(INT_EXPANDER)
-        try:
-            import adafruit_aw9523
 
-            # Search for the GPIO expander address on the I2C bus
-            self.aw = adafruit_aw9523.AW9523(i2c, self.bus_address)
-            new_i2c = self.aw.i2c_device
-        except Exception:
+        try:
+            self.aw, new_i2c = self._initialize_i2c(i2c)
+        except Exception as e:
             self.bus_address = False
             self.logger.exception('Failed to initialize I2C Bus on address 0x58')
-            raise
+            msg = 'Failed to initialize I2C Bus on address 0x58'
+            raise KeypadError(msg) from e
 
         # Perform soft reset of the expander
         self.aw.reset()
