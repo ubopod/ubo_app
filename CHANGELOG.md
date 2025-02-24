@@ -34,6 +34,7 @@
 - fix(wifi): wait a few seconds before creating the wifi connection if the provided input result has the input method `WEB_DASHBOARD` - closes #230
 - fix(wifi): set `network_manager.wireless_enabled` for when hotspot is being turned off and also before creating a wifi connection and before connecting to a wifi network - closes #230
 - fix(keypad,sensors): retry i2c initializations - closes #234
+- fix(wifi): make `get_saved_wifi_ssids` return empty list in non-rpi environments
 
 ## Version 1.1.0
 

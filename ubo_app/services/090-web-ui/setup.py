@@ -80,8 +80,8 @@ async def initialize(event: WebUIInitializeEvent) -> None:
                 extra_information=ReadableInformation(
                     text=(
                         'Please make sure you are on the same network as this '
-                        f'ubo-pod and open http://{hostname}.local:{WEB_UI_LISTEN_PORT}'
-                        'in your browser.'
+                        'ubo-pod and open '
+                        f'http://{hostname}.local:{WEB_UI_LISTEN_PORT} in your browser.'
                         if is_connected
                         else f'Please connect to the "{get_pod_id()}" WiFi network '
                         f'with password "{WEB_UI_HOTSPOT_PASSWORD}" and open '
