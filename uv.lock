@@ -1701,7 +1701,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "1.0.1.dev47+unknown"
+version = "1.0.1.dev48+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
