@@ -4,6 +4,7 @@ import asyncio
 import subprocess
 
 from ubo_app.logger import logger
+from ubo_app.utils import IS_RPI
 
 
 async def has_gateway() -> bool:
@@ -57,6 +58,8 @@ async def get_saved_wifi_ssids() -> list[str]:
         list: List of saved Wi-Fi SSIDs or an empty list if none are found.
 
     """
+    if not IS_RPI:
+        return []
     try:
         process = await asyncio.create_subprocess_exec(
             'nmcli',
