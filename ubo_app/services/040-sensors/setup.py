@@ -64,7 +64,7 @@ def init_service() -> None:
 
     i2c = board.I2C()
     try:
-        temperature_sensor = _initialize_device(adafruit_pct2075.PCT2075, 0x44, i2c)
+        temperature_sensor = _initialize_device(adafruit_pct2075.PCT2075, 0x48, i2c)
     except Exception:
         logger.exception('Error initializing temperature sensor')
 
