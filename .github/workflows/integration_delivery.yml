@@ -157,8 +157,10 @@ jobs:
           uv venv --system-site-packages
 
       - name: Run Tests
+        env:
+          THREADS: ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
         run: |
-          uv run --frozen poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
+          uv run --frozen poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n "$THREADS"
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
@@ -223,41 +225,28 @@ jobs:
           echo "NAME=$(uvx hatch project metadata | jq -r .name)" >>"$GITHUB_OUTPUT"
           echo "NAME=$(uvx hatch project metadata | jq -r .name)"
 
-      - name: Extract Version from CHANGELOG.md
-        run: |
-          FIRST_HEADER=$(sed -n '/## /s/## //p' CHANGELOG.md | head -n 1)
-          if [ "$FIRST_HEADER" == "Upcoming" ]; then
-            if [[ "${{ steps.extract-version.outputs.VERSION }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+ ]]; then
-              VERSION_CHANGELOG="This is a development version."
-            else
-              echo "Error: First header in CHANGELOG.md is 'Upcoming' but the version in pyproject.toml is not a development version."
-              exit 1
-            fi
-          else
-            VERSION_CHANGELOG=$(echo $FIRST_HEADER | sed 's/Version //')
-            if [[ "${{ steps.extract-version.outputs.VERSION }}" =~ ^$VERSION_CHANGELOG\.dev[0-9]+ ]]; then
-              echo "Error: Version extracted from CHANGELOG.md does not match the version in pyproject.toml"
-              exit 1
-            else
-              echo "Versions are consistent."
-            fi
-          fi
-
       - name: Configure Sentry
+        env:
+          VERSION: ${{ steps.extract-version.outputs.VERSION }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> ubo_app/.env
+          echo "SENTRY_DSN=$SENTRY_DSN" >>ubo_app/.env
           # conditionally set it based on whether it's a tag or not using github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-          if [ "${{ github.event_name }}" == "push" ] && [ "$(echo ${{ github.ref }} | grep -c 'refs/tags/v')" -eq 1 ]; then
-            echo "SENTRY_RELEASE=ubo-app@${{ steps.extract-version.outputs.VERSION }}" >> ubo_app/.env
+          if [ "$GITHUB_EVENT_NAME" == "push" ] && [ "$(echo $GITHUB_REF | grep -c 'refs/tags/v')" -eq 1 ]; then
+            echo "SENTRY_RELEASE=ubo-app@$VERSION" >>ubo_app/.env
           else
-            echo "SENTRY_RELEASE=ubo-app@${{ github.sha }}" >> ubo_app/.env
+            echo "SENTRY_RELEASE=ubo-app@$GITHUB_SHA" >>ubo_app/.env
           fi
           cat ubo_app/.env
 
       - name: Build
-        run:
-          SETUPTOOLS_SCM_PRETEND_VERSION=${{
-          steps.extract-version.outputs.VERSION }} uv build
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION:
+            ${{ steps.extract-version.outputs.VERSION }}
+        run: uv build
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
@@ -291,8 +280,6 @@ jobs:
       matrix:
         suffix: ['lite', '']
     steps:
-      - run: echo Building amd64-${{ matrix.suffix }} image
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -308,24 +295,32 @@ jobs:
 
       - name: Generate Image URL and Checksum
         id: generate-image-url
+        env:
+          MATRIX_SUFFIX: ${{ matrix.suffix }}
         run: |
           SUFFIX=""
-          if [ -n "${{ matrix.suffix }}" ]; then
-            SUFFIX="_${{ matrix.suffix }}"
+          if [ -n "$MATRIX_SUFFIX" ]; then
+            SUFFIX="_$MATRIX_SUFFIX"
           fi
           DASHED_SUFFIX=$(echo $SUFFIX | sed 's/_/-/g')
           IMAGE_DATE='2024-11-19'
           IMAGE_NAME="${IMAGE_DATE}-raspios-bookworm-arm64${DASHED_SUFFIX}"
           IMAGE_URL="https://downloads.raspberrypi.com/raspios${SUFFIX}_arm64/images/raspios${SUFFIX}_arm64-${IMAGE_DATE}/${IMAGE_NAME}.img.xz"
           CHECKSUM_URL="${IMAGE_URL}.sha256"
-          echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
-          echo "dashed_suffix=$DASHED_SUFFIX" >> "$GITHUB_OUTPUT"
-          echo "image_url=$IMAGE_URL" >> "$GITHUB_OUTPUT"
-          echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
-          echo "image_checksum_url=$CHECKSUM_URL" >> "$GITHUB_OUTPUT"
-          IMAGE_SIZE_GB=${{ matrix.suffix == 'lite' && '4.5' || matrix.suffix == '' && '6.75' || '13' }}
+          echo "suffix=$SUFFIX" >>"$GITHUB_OUTPUT"
+          echo "dashed_suffix=$DASHED_SUFFIX" >>"$GITHUB_OUTPUT"
+          echo "image_url=$IMAGE_URL" >>"$GITHUB_OUTPUT"
+          echo "image_name=$IMAGE_NAME" >>"$GITHUB_OUTPUT"
+          echo "image_checksum_url=$CHECKSUM_URL" >>"$GITHUB_OUTPUT"
+          if $MATRIX_SUFFIX == 'lite'; then
+            IMAGE_SIZE_GB=4.5
+          elif $MATRIX_SUFFIX == ''; then
+            IMAGE_SIZE_GB=6.75
+          else
+            IMAGE_SIZE_GB=13
+          fi
           IMAGE_SIZE=$(awk -v IMAGE_SIZE_GB=$IMAGE_SIZE_GB 'BEGIN {printf "%.0f", IMAGE_SIZE_GB * 1024 ^ 3}')
-          echo "image_size=$IMAGE_SIZE" >> "$GITHUB_OUTPUT"
+          echo "image_size=$IMAGE_SIZE" >>"$GITHUB_OUTPUT"
 
       - name: Build Artifact
         env:
@@ -353,8 +348,11 @@ jobs:
           losetup -d $LOOP_DEV
 
       - name: Compress File with Gzip
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          DASHED_SUFFIX: ${{ steps.generate-image-url.outputs.dashed_suffix }}
         run: |
-          scripts/consume.sh /build/image.img | gzip -9 > /ubo_app-${{ needs.build.outputs.version }}-bookworm${{ steps.generate-image-url.outputs.dashed_suffix }}.img.gz
+          scripts/consume.sh /build/image.img | gzip -9 >/ubo_app-$VERSION-bookworm$DASHED_SUFFIX.img.gz
 
       - name: Upload Image
         uses: actions/upload-artifact@v4

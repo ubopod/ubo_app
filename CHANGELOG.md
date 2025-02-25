@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 1.2.1
 
 - fix: tenacity is now a production dependency
 - chore: add pypi publish and automatic release github workflows
