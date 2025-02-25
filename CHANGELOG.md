@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- fix: temperature sensor is on 0x48, not 0x44
+
 ## Version 1.2.1
 
 - fix: tenacity is now a production dependency

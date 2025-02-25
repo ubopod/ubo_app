@@ -35,5 +35,7 @@ jobs:
 
       - name: Create Release Tag
         run: |
+          git config --local user.email "admin@getubo.com"
+          git config --local user.name "Ubo Admin"
           git tag -a "v${{ steps.extract-version.outputs.VERSION }}" -m "Release v${{ steps.extract-version.outputs.VERSION }}"
           git push origin "v${{ steps.extract-version.outputs.VERSION }}"
