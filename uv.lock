@@ -1701,7 +1701,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "1.0.1.dev48+unknown"
+version = "1.2.1.dev0+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
@@ -1733,11 +1733,11 @@ dependencies = [
     { name = "quart" },
     { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'" },
     { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'" },
-    { name = "ruff" },
     { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'" },
     { name = "semver" },
     { name = "sentry-sdk" },
     { name = "simpleaudio" },
+    { name = "tenacity" },
     { name = "ubo-gui" },
 ]
 
@@ -1756,7 +1756,6 @@ dev = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "ruff" },
-    { name = "tenacity" },
     { name = "toml" },
 ]
 
@@ -1791,11 +1790,11 @@ requires-dist = [
     { name = "quart", specifier = ">=0.19.6" },
     { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'", specifier = ">=0.6" },
     { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'", specifier = ">=5.0.0" },
-    { name = "ruff", specifier = ">=0.9.6" },
     { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'", specifier = ">=2.0.0" },
     { name = "semver", specifier = ">=3.0.2" },
     { name = "sentry-sdk", specifier = ">=1.43.0" },
     { name = "simpleaudio", specifier = ">=1.0.4" },
+    { name = "tenacity", specifier = ">=8.2.3" },
     { name = "ubo-gui", specifier = ">=0.13.10" },
 ]
 
@@ -1814,7 +1813,6 @@ dev = [
     { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "pytest-xdist", specifier = ">=3.5.0" },
     { name = "ruff", specifier = ">=0.9.6" },
-    { name = "tenacity", specifier = ">=8.2.3" },
     { name = "toml", specifier = ">=0.10.2" },
 ]
 

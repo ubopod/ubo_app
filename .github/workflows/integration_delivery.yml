@@ -371,12 +371,10 @@ jobs:
   publish:
     name: Publish
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' && github.event.action == 'closed' &&
-       github.event.pull_request.merged == true && 
-       github.event.pull_request.base.ref == 'main' && 
-       startsWith(github.event.pull_request.head.ref, 'release/')) ||
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
     needs:
       - type-check
       - lint
@@ -407,7 +405,11 @@ jobs:
           packages-dir: dist
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
     name: Release
     needs:
       - type-check
