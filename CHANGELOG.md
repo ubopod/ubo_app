@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 1.2.1
 
 - fix: tenacity is now a production dependency
 
@@ -31,7 +31,7 @@
 - feat(web-ui): add `ubo-redirect-server` service
 - refactor(web-ui): add notifications for when starting/stopping the hotspot fails in the system manager
 - refactor(web-ui): move starting/stopping of the required hotspot system services to the `ubo-hotspot` service (the more general version of the `ubo-redirect-server` service which runs the redirect server as its main process.)
-- fix(core): uninstall RPi.GPIO after installing python packages in `install.sh` related: <https://github.com/adafruit/Adafruit_Blinka/issues/910> - closes #231
+- fix(core): uninstall RPi.GPIO after installing python packages in `install.sh` [related](https://github.com/adafruit/Adafruit_Blinka/issues/910) - closes #231
 - fix(web-ui): avoid web-ui stop procedure being triggered when qr-code input is cancelled
 - fix(system): run `time.sleep` for both branches of the ping loop (success and failure) to avoid high cpu usage of the system process
 - fix(camera): avoid values read from qrcode being overridden by `None` values of alternative patterns - closes #230
