@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 1.2.2
 
 - fix: temperature sensor is on 0x48, not 0x44
 
