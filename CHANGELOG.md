@@ -3,6 +3,7 @@
 ## Upcoming
 
 - fix: remove dependencies of `publish` job of `publish_to_pypi` workflow
+- fix: vscode binary now needs to be instructed about the location of the binary with `version use` sub-command - closes #217
 
 ## Version 1.2.2
 
