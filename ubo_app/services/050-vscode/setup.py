@@ -68,6 +68,16 @@ def download_code() -> None:
                 stderr=subprocess.DEVNULL,
             )
             await process.wait()
+            process = await asyncio.create_subprocess_exec(
+                './code',
+                'version',
+                'use',
+                'stable',
+                '--install-dir',
+                './code',
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         except subprocess.CalledProcessError:
             store.dispatch(
                 NotificationsAddAction(
