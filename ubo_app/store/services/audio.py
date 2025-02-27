@@ -62,6 +62,7 @@ class AudioPlayChimeEvent(AudioEvent):
 
 class AudioPlayAudioEvent(AudioEvent):
     id: str | None = None
+    volume: float
     sample: bytes
     channels: int
     rate: int

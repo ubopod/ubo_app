@@ -1179,8 +1179,12 @@ wheels = [
 
 [[package]]
 name = "pyfakefs"
-version = "5.8.dev0"
-source = { git = "https://github.com/pytest-dev/pyfakefs.git#51e6e0456dc41bd2deae6f7a8be9b7518653418c" }
+version = "5.7.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/f9/3a2f10b1b3e251cec47ab7581d15bc39553cd5a23893cbe0efe633856c4e/pyfakefs-5.7.4.tar.gz", hash = "sha256:4971e65cc80a93a1e6f1e3a4654909c0c493186539084dc9301da3d68c8878fe", size = 213382 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/52/eb08c795d9159da167334a7fa8a23bd04112b4c8b63030a2600711a94143/pyfakefs-5.7.4-py3-none-any.whl", hash = "sha256:3e763d700b91c54ade6388be2cfa4e521abc00e34f7defb84ee511c73031f45f", size = 228706 },
+]
 
 [[package]]
 name = "pyftdi"
@@ -1379,15 +1383,15 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.18.3"
+version = "0.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-immutable" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/61/66fcf7ba2b93257ce3154a11305111cdb86fe3c4cadf570bab5ded24dd27/python_redux-0.18.3.tar.gz", hash = "sha256:5f4b136be2bf8b3b947b60f8df52810cd2c72306a336005644a37767cbb5c8b7", size = 20366 }
+sdist = { url = "https://files.pythonhosted.org/packages/32/a1/c2dd725240db9fc1f284cbce33edb426d5385c37e94061aa681825396617/python_redux-0.19.0.tar.gz", hash = "sha256:54b3c7d07e1344f6135b237fefab1940c23845259f0686ced2e3df1ccf445c2b", size = 20391 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/5c/447ecf1a90b6d2b8965ffbe34829f7a18934ece74909162047a924effc87/python_redux-0.18.3-py3-none-any.whl", hash = "sha256:63ccab46ea556941bae503363237542f8240d05802fe092046d47035478042d0", size = 25931 },
+    { url = "https://files.pythonhosted.org/packages/67/8a/c798814ff5c6e2835a4cdf853c7a207190ac85c2ecea5cbda6f61fdee15e/python_redux-0.19.0-py3-none-any.whl", hash = "sha256:3de142f5ae40f4a078de6effcdf5653986fc53ae711c6904d36c6beffc32ed67", size = 25968 },
 ]
 
 [[package]]
@@ -1781,7 +1785,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.1.3" },
-    { name = "python-redux", specifier = ">=0.18.3" },
+    { name = "python-redux", specifier = ">=0.19.0" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
     { name = "pythonping", specifier = ">=1.1.4" },
     { name = "pyzbar", specifier = ">=0.1.9" },
@@ -1802,7 +1806,7 @@ dev = [
     { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.1" },
     { name = "ipython", specifier = ">=8.23.0" },
     { name = "poethepoet", specifier = ">=0.24.4" },
-    { name = "pyfakefs", git = "https://github.com/pytest-dev/pyfakefs.git" },
+    { name = "pyfakefs", specifier = ">=5.7.4" },
     { name = "pyright", specifier = ">=1.1.389" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.5.post1" },
