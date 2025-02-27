@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- fix: remove dependencies of `publish` job of `publish_to_pypi` workflow
+
 ## Version 1.2.2
 
 - fix: temperature sensor is on 0x48, not 0x44

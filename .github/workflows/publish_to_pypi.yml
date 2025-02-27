@@ -10,32 +10,44 @@ on:
 jobs:
   publish:
     name: Publish
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs:
-      - type-check
-      - lint
-      - test
-      - build
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url:
-        https://pypi.org/project/${{ needs.build.outputs.name }}/${{
-        needs.build.outputs.version }}
+        https://pypi.org/project/${{ steps.extract-version.outputs.NAME }}/${{
+        steps.extract-version.outputs.VERSION }}
     permissions:
       id-token: write
     steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+        with:
+          lfs: true
+
       - uses: actions/download-artifact@v4
         with:
           name: wheel
           path: dist
           run-id: ${{ github.event.inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/download-artifact@v4
         with:
           name: binary
           path: dist
           run-id: ${{ github.event.inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Version
+        id: extract-version
+        run: |
+          TAR_GZ_FILENAME=$(find dist -type f -name "*.tar.gz")
+          NAME=$(basename "$TAR_GZ_FILENAME" .tar.gz | cut -d- -f1)
+          VERSION=$(basename "$TAR_GZ_FILENAME" .tar.gz | cut -d- -f2)
+          echo "VERSION=$VERSION" >>"$GITHUB_OUTPUT"
+          echo "VERSION=$VERSION"
+          echo "NAME=$NAME" >>"$GITHUB_OUTPUT"
+          echo "NAME=$NAME"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
