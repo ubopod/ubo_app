@@ -20,6 +20,8 @@ ReturnType: TypeAlias = (
     | None
     | datetime
     | list['ReturnType']
+    | set['ReturnType']
+    | dict[str, 'ReturnType']
 )
 
 META_FIELD_PREFIX_PACKAGE_NAME = 'meta_field_package_name_'
@@ -64,7 +66,7 @@ def reduce_group(message: betterproto.Message) -> betterproto.Message:
 T = TypeVar('T', bound=betterproto.Message | betterproto.Enum)
 
 
-def rebuild_object(
+def rebuild_object(  # noqa: C901
     message: betterproto.Message | list[betterproto.Message],
 ) -> ReturnType:
     if isinstance(message, int | float | str | bytes | bool | None) and not isinstance(
@@ -75,6 +77,13 @@ def rebuild_object(
 
     if isinstance(message, list):
         return [rebuild_object(item) for item in message]
+
+    if isinstance(message, dict):
+        return {
+            key: rebuild_object(value)
+            for key, value in message.items()
+            if value is not None
+        }
 
     if hasattr(message, '_group_current') and len(message._group_current) > 0:
         return rebuild_object(reduce_group(message))
@@ -88,7 +97,10 @@ def rebuild_object(
 
     keys = message._betterproto.sorted_field_names
     if len(keys) == 1 and keys[0] == 'items':
-        return [rebuild_object(item) for item in getattr(message, 'items', [])]
+        items = [rebuild_object(item) for item in getattr(message, 'items', [])]
+        if type(message).__name__.endswith('SetType'):
+            return set(items)
+        return items
 
     if destination_class is None:
         msg = f'Class not found for {message}'

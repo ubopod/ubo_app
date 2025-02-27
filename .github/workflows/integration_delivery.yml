@@ -242,6 +242,18 @@ jobs:
           fi
           cat ubo_app/.env
 
+      - uses: actions/setup-node@v4
+        name: Setup Node
+        with:
+          node-version: '20'
+
+      - name: Build Web Application
+        run: |
+          cd ubo_app/services/090-web-ui/web-app
+          npm install
+          npm run proto:compile
+          npm run build
+
       - name: Build
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION:

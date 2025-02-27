@@ -1179,8 +1179,12 @@ wheels = [
 
 [[package]]
 name = "pyfakefs"
-version = "5.8.dev0"
-source = { git = "https://github.com/pytest-dev/pyfakefs.git#51e6e0456dc41bd2deae6f7a8be9b7518653418c" }
+version = "5.7.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/f9/3a2f10b1b3e251cec47ab7581d15bc39553cd5a23893cbe0efe633856c4e/pyfakefs-5.7.4.tar.gz", hash = "sha256:4971e65cc80a93a1e6f1e3a4654909c0c493186539084dc9301da3d68c8878fe", size = 213382 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/52/eb08c795d9159da167334a7fa8a23bd04112b4c8b63030a2600711a94143/pyfakefs-5.7.4-py3-none-any.whl", hash = "sha256:3e763d700b91c54ade6388be2cfa4e521abc00e34f7defb84ee511c73031f45f", size = 228706 },
+]
 
 [[package]]
 name = "pyftdi"
@@ -1226,15 +1230,15 @@ wheels = [
 
 [[package]]
 name = "pyright"
-version = "1.1.393"
+version = "1.1.395"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodeenv" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/c1/aede6c74e664ab103673e4f1b7fd3d058fef32276be5c43572f4067d4a8e/pyright-1.1.393.tar.gz", hash = "sha256:aeeb7ff4e0364775ef416a80111613f91a05c8e01e58ecfefc370ca0db7aed9c", size = 3790430 }
+sdist = { url = "https://files.pythonhosted.org/packages/fb/47/a2e1dfd70f9f0db34f70d5b108c82be57bf24185af69c95acff57f9239fa/pyright-1.1.395.tar.gz", hash = "sha256:53703169068c160bfb41e1b44ba3e2512492869c26cfad927e1268cb3fbb1b1c", size = 3813566 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/92/47/f0dd0f8afce13d92e406421ecac6df0990daee84335fc36717678577d3e0/pyright-1.1.393-py3-none-any.whl", hash = "sha256:8320629bb7a44ca90944ba599390162bf59307f3d9fb6e27da3b7011b8c17ae5", size = 5646057 },
+    { url = "https://files.pythonhosted.org/packages/5f/a1/531897f8caa6c6cc99862cd1c908ddd8a366a51d968e83ab4523ded98b30/pyright-1.1.395-py3-none-any.whl", hash = "sha256:f9bc726870e740c6c77c94657734d90563a3e9765bb523b39f5860198ed75eef", size = 5688787 },
 ]
 
 [[package]]
@@ -1379,15 +1383,15 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.18.3"
+version = "0.19.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-immutable" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/61/66fcf7ba2b93257ce3154a11305111cdb86fe3c4cadf570bab5ded24dd27/python_redux-0.18.3.tar.gz", hash = "sha256:5f4b136be2bf8b3b947b60f8df52810cd2c72306a336005644a37767cbb5c8b7", size = 20366 }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/b0/8b395eda304482609401d499715d62ab9bb130250e7f070b3157464d02cd/python_redux-0.19.1.tar.gz", hash = "sha256:cda04e28886d9fe10b68d3be2674da1560e34bdd1bc78f11fab03a5f0e1a651f", size = 20750 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/5c/447ecf1a90b6d2b8965ffbe34829f7a18934ece74909162047a924effc87/python_redux-0.18.3-py3-none-any.whl", hash = "sha256:63ccab46ea556941bae503363237542f8240d05802fe092046d47035478042d0", size = 25931 },
+    { url = "https://files.pythonhosted.org/packages/57/a9/026a7d7032dfa313295839dd774db4738224f81296e99c088209200c857a/python_redux-0.19.1-py3-none-any.whl", hash = "sha256:8603215536fae0eb0eed671f73e859bb2049e518922e9c1d1914193d569bd29d", size = 26305 },
 ]
 
 [[package]]
@@ -1781,7 +1785,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.1.3" },
-    { name = "python-redux", specifier = ">=0.18.3" },
+    { name = "python-redux", specifier = ">=0.19.1" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
     { name = "pythonping", specifier = ">=1.1.4" },
     { name = "pyzbar", specifier = ">=0.1.9" },
@@ -1802,8 +1806,8 @@ dev = [
     { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.1" },
     { name = "ipython", specifier = ">=8.23.0" },
     { name = "poethepoet", specifier = ">=0.24.4" },
-    { name = "pyfakefs", git = "https://github.com/pytest-dev/pyfakefs.git" },
-    { name = "pyright", specifier = ">=1.1.389" },
+    { name = "pyfakefs", specifier = ">=5.7.4" },
+    { name = "pyright", specifier = ">=1.1.395" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.5.post1" },
     { name = "pytest-cov", specifier = ">=4.1.0" },

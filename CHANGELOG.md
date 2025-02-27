@@ -6,6 +6,7 @@
 - fix: vscode binary now needs to be instructed about the location of the binary with `version use` sub-command - closes #217
 - fix: image size being too big for the lite version of the raspberry os
 - fix: restart avahi-daemon after the hostname is set in `ubo-system`
+- feat(web-ui): implement react web application for the web-ui service - closes #224
 
 ## Version 1.2.2
 
