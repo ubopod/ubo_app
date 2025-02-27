@@ -23,11 +23,13 @@ class DisplayRerenderEvent(DisplayEvent): ...
 class DisplayRenderEvent(DisplayEvent):
     data: bytes
     rectangle: tuple[int, int, int, int]
+    density: float
 
 
 class DisplayCompressedRenderEvent(DisplayEvent):
     compressed_data: bytes
     rectangle: tuple[int, int, int, int]
+    density: float
 
 
 class DisplayState(Immutable):
