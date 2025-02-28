@@ -68,24 +68,32 @@ def render_on_display(*, regions: list[Region]) -> None:
             ),
             data_bytes,
         )
-        compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
-        from kivy.metrics import dp
 
-        store._dispatch(  # noqa: SLF001
-            [
-                DisplayRenderEvent(
-                    data=region['data'].tobytes(),
-                    rectangle=rectangle,
-                    density=dp(1),
-                ),
-                DisplayCompressedRenderEvent(
-                    compressed_data=compressor.compress(region['data'].tobytes())
-                    + compressor.flush(),
-                    rectangle=rectangle,
-                    density=dp(1),
-                ),
-            ],
+    from kivy.metrics import dp
+
+    density = dp(1)
+
+    def generate_render_actions(
+        region: Region,
+    ) -> tuple[DisplayRenderEvent, DisplayCompressedRenderEvent]:
+        data = region['data'].tobytes()
+        compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+        return (
+            DisplayRenderEvent(
+                data=data,
+                rectangle=region['rectangle'],
+                density=density,
+            ),
+            DisplayCompressedRenderEvent(
+                compressed_data=compressor.compress(data) + compressor.flush(),
+                rectangle=region['rectangle'],
+                density=density,
+            ),
         )
+
+    store._dispatch(  # noqa: SLF001
+        [event for region in regions for event in generate_render_actions(region)],
+    )
 
 
 original_block = display._block  # noqa: SLF001
