@@ -7,6 +7,7 @@
 - fix: image size being too big for the lite version of the raspberry os
 - fix: restart avahi-daemon after the hostname is set in `ubo-system`
 - feat(web-ui): implement react web application for the web-ui service - closes #224
+- refactor(web-ui): use mui dialogs for input demands - closes #224
 
 ## Version 1.2.2
 
