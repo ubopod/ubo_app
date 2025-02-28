@@ -5,6 +5,7 @@
 - fix: remove dependencies of `publish` job of `publish_to_pypi` workflow
 - fix: vscode binary now needs to be instructed about the location of the binary with `version use` sub-command - closes #217
 - fix: image size being too big for the lite version of the raspberry os
+- fix: restart avahi-daemon after the hostname is set in `ubo-system`
 
 ## Version 1.2.2
 
