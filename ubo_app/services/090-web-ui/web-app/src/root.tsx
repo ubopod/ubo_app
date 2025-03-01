@@ -1,8 +1,12 @@
-import { Display } from "./display";
+import { VolumeUp } from "@mui/icons-material";
+import { Button } from "@mui/material";
 import { useEffect, useState } from "react";
-import { Inputs } from "./inputs";
-import { Action, StatusType } from "./types";
+
+import { Display } from "./display";
 import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
+import { Inputs } from "./inputs";
+import { audioContext } from "./store-event-handler";
+import { Action, StatusType } from "./types";
 
 function request(action: Action) {
   fetch("/action/", {
@@ -31,7 +35,7 @@ export function Root() {
         const response = await fetch("/status");
         const data: StatusType = await response.json();
         setStatus(data);
-      } catch (e) {
+      } catch {
         setStatus(undefined);
       }
     }
@@ -53,6 +57,21 @@ export function Root() {
       if (status.envoy === "running") {
         return (
           <>
+            <Button
+              onClick={() => {
+                audioContext.resume();
+              }}
+              variant="contained"
+              endIcon={<VolumeUp />}
+              sx={{
+                position: "fixed",
+                zIndex: 10000,
+                bottom: 8,
+                right: 8,
+              }}
+            >
+              Unmute Audio
+            </Button>
             <Display store={store} />
             <Inputs inputs={status.inputs} store={store} />
           </>

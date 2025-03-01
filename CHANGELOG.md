@@ -13,6 +13,7 @@
 - feat(web-ui): implement react web application for the web-ui service - closes #224
 - refactor(web-ui): use mui dialogs for input demands - closes #224
 - chore(web-ui): add linting and formatting to the web application code - closes #224
+- refactor(web-ui): use webaudio for audio playback in the web application and add an unmute button - closes #224
 
 ## Version 1.2.2
 
