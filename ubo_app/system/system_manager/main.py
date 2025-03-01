@@ -132,6 +132,10 @@ def setup_hostname() -> None:
         ],
         check=True,
     )
+    subprocess.run(  # noqa: S603
+        ['/usr/bin/env', 'systemctl', 'restart', 'avahi-daemon'],
+        check=True,
+    )
     logger.info('Hostname set to %s', id)
 
 

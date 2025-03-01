@@ -17,6 +17,7 @@ from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
 from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.input.types import InputFieldDescription, InputFieldType
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
 from ubo_app.store.services.voice import (
@@ -73,7 +74,7 @@ def input_access_key() -> None:
 
     async def act() -> None:
         try:
-            access_key = (
+            input_result = (
                 await ubo_input(
                     title='Picovoice Access Key',
                     qr_code_generation_instructions=ReadableInformation(
@@ -84,9 +85,22 @@ def input_access_key() -> None:
                         'it.',
                     ),
                     prompt='Enter Picovoice Access Key',
-                    fields=[],
+                    pattern=r'^(?P<access_key>.*)$',
+                    fields=[
+                        InputFieldDescription(
+                            name='access_key',
+                            label='Access Key',
+                            description='Enter Picovoice Access Key',
+                            type=InputFieldType.TEXT,
+                            required=True,
+                            title='Picovoice Access Key',
+                        ),
+                    ],
                 )
-            )[0]
+            )[1]
+            access_key = input_result.data.get('access_key')
+            if not access_key:
+                return
             secrets.write_secret(key=PICOVOICE_ACCESS_KEY, value=access_key)
             to_thread(_context.set_access_key, access_key)
         except CancelledError:

@@ -1,0 +1,53 @@
+{
+  "name": "ubo-rpc-client-grpc-web",
+  "version": "0.0.0",
+  "description": "A demo gRPC client for UBO using grpc-web",
+  "author": "Sassan Haradji <me@sassanh.com>",
+  "license": "Apache-2.0",
+  "readme": "README.md",
+  "keywords": [
+    "gRPC",
+    "grpc-web",
+    "ubo",
+    "TypeScript"
+  ],
+  "repository": "https://github.com/ubopod/ubo-grpc-clients",
+  "scripts": {
+    "proto:compile": "mkdir -p src/generated && grpc_tools_node_protoc --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js --js_out=import_style=commonjs:./src/generated --grpc-web_out=import_style=typescript,mode=grpcwebtext:./src/generated -I ../../../rpc/proto/ ../../../rpc/proto/package_info/v1/package_info.proto ../../../rpc/proto/store/v1/store.proto ../../../rpc/proto/ubo/v1/ubo.proto",
+    "start": "webpack serve --open",
+    "build": "webpack",
+    "build:watch": "webpack --watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "css-loader": "^7.1.2",
+    "envsub": "^4.1.0",
+    "eslint": "^9.21.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react": "^7.37.4",
+    "globals": "^16.0.0",
+    "google-protobuf": "^3.21.4",
+    "grpc-tools": "^1.13.0",
+    "protoc-gen-grpc-web": "^1.5.0",
+    "protoc-gen-js": "3.21.4-4",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.25.0",
+    "webpack": "^5.98.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.0"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.1.1",
+    "@mui/icons-material": "^6.4.6",
+    "@mui/material": "^6.4.6",
+    "fflate": "^0.8.2",
+    "grpc-web": "^1.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

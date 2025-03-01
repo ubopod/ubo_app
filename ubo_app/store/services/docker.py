@@ -78,6 +78,46 @@ class DockerImageSetDockerIdAction(DockerImageAction):
     docker_id: str
 
 
+class DockerImageFetchCompositionAction(DockerImageAction):
+    """Fetch composition."""
+
+
+class DockerImageFetchAction(DockerImageAction):
+    """Fetch image."""
+
+
+class DockerImageRemoveCompositionAction(DockerImageAction):
+    """Remove composition."""
+
+
+class DockerImageRemoveAction(DockerImageAction):
+    """Remove image."""
+
+
+class DockerImageRunCompositionAction(DockerImageAction):
+    """Run composition."""
+
+
+class DockerImageRunContainerAction(DockerImageAction):
+    """Run container."""
+
+
+class DockerImageStopCompositionAction(DockerImageAction):
+    """Stop composition."""
+
+
+class DockerImageStopContainerAction(DockerImageAction):
+    """Stop container."""
+
+
+class DockerImageReleaseCompositionAction(DockerImageAction):
+    """Release composition."""
+
+
+class DockerImageRemoveContainerAction(DockerImageAction):
+    """Remove container."""
+
+
 class DockerEvent(BaseEvent):
     """Docker event."""
 
@@ -107,6 +147,46 @@ class DockerImageEvent(DockerEvent):
 
 class DockerImageRegisterAppEvent(DockerImageEvent):
     """Register image entry in apps in store."""
+
+
+class DockerImageFetchCompositionEvent(DockerImageEvent):
+    """Fetch composition."""
+
+
+class DockerImageFetchEvent(DockerImageEvent):
+    """Fetch image."""
+
+
+class DockerImageRemoveCompositionEvent(DockerImageEvent):
+    """Remove composition."""
+
+
+class DockerImageRemoveEvent(DockerImageEvent):
+    """Remove image."""
+
+
+class DockerImageRunCompositionEvent(DockerImageEvent):
+    """Run composition."""
+
+
+class DockerImageRunContainerEvent(DockerImageEvent):
+    """Run container."""
+
+
+class DockerImageStopCompositionEvent(DockerImageEvent):
+    """Stop composition."""
+
+
+class DockerImageStopContainerEvent(DockerImageEvent):
+    """Stop container."""
+
+
+class DockerImageReleaseCompositionEvent(DockerImageEvent):
+    """Release composition."""
+
+
+class DockerImageRemoveContainerEvent(DockerImageEvent):
+    """Remove container."""
 
 
 class ImageState(Immutable):

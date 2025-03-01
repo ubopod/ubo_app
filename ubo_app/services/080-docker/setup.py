@@ -13,7 +13,16 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
-from docker_composition import COMPOSITIONS_PATH
+from docker_composition import (
+    COMPOSITIONS_PATH,
+    pull_composition,
+    release_composition,
+    remove_composition,
+    run_composition,
+    stop_composition,
+)
+from docker_container import remove_container, run_container, stop_container
+from docker_image import fetch_image, remove_image
 from docker_images import IMAGES
 from menus import docker_item_menu
 from reducer import image_reducer, reducer_id
@@ -31,7 +40,17 @@ from ubo_app.store.core.types import (
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType, InputMethod
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
+    DockerImageFetchCompositionEvent,
+    DockerImageFetchEvent,
     DockerImageRegisterAppEvent,
+    DockerImageReleaseCompositionEvent,
+    DockerImageRemoveCompositionEvent,
+    DockerImageRemoveContainerEvent,
+    DockerImageRemoveEvent,
+    DockerImageRunCompositionEvent,
+    DockerImageRunContainerEvent,
+    DockerImageStopCompositionEvent,
+    DockerImageStopContainerEvent,
     DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
@@ -553,6 +572,17 @@ def init_service() -> None:
         DockerImageRegisterAppEvent,
         _register_image_app_entry,
     )
+
+    store.subscribe_event(DockerImageFetchCompositionEvent, pull_composition)
+    store.subscribe_event(DockerImageFetchEvent, fetch_image)
+    store.subscribe_event(DockerImageRemoveCompositionEvent, remove_composition)
+    store.subscribe_event(DockerImageRemoveEvent, remove_image)
+    store.subscribe_event(DockerImageRunCompositionEvent, run_composition)
+    store.subscribe_event(DockerImageRunContainerEvent, run_container)
+    store.subscribe_event(DockerImageStopCompositionEvent, stop_composition)
+    store.subscribe_event(DockerImageStopContainerEvent, stop_container)
+    store.subscribe_event(DockerImageReleaseCompositionEvent, release_composition)
+    store.subscribe_event(DockerImageRemoveContainerEvent, remove_container)
 
     create_task(
         monitor_unit(
