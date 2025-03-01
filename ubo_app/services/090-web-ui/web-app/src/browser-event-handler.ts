@@ -1,14 +1,12 @@
-import { DispatchActionRequest } from "./generated/store/v1/store_pb";
-import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
-import {
-  Action,
-  Key,
-  KeypadAction,
-  KeypadKeyPressAction,
-  KeypadKeyReleaseAction,
-} from "./generated/ubo/v1/ubo_pb";
+import { Key } from "./generated/ubo/v1/ubo_pb";
 
-export function subscribeToBrowserEvents(store: StoreServiceClient) {
+export function subscribeToBrowserEvents({
+  onKeyUp,
+  onKeyDown,
+}: {
+  onKeyUp: (key: Key) => void;
+  onKeyDown: (key: Key) => void;
+}) {
   const KEYS = {
     "1": Key.KEY_L1,
     "2": Key.KEY_L2,
@@ -27,43 +25,15 @@ export function subscribeToBrowserEvents(store: StoreServiceClient) {
     return key in KEYS;
   }
 
-  const pressedKeys = new KeypadAction.PressedKeysSetType();
-
   function keyUpHandler({ key }: KeyboardEvent) {
     if (isValidKey(key)) {
-      pressedKeys.setItemsList(
-        pressedKeys.getItemsList().filter((item) => item !== KEYS[key]),
-      );
-
-      const keypadKeyReleaseAction = new KeypadKeyReleaseAction();
-      keypadKeyReleaseAction.setKey(KEYS[key]);
-      keypadKeyReleaseAction.setPressedKeys(pressedKeys);
-
-      const action = new Action();
-      action.setKeypadKeyReleaseAction(keypadKeyReleaseAction);
-
-      const dispatchActionRequest = new DispatchActionRequest();
-      dispatchActionRequest.setAction(action);
-
-      store.dispatchAction(dispatchActionRequest);
+      onKeyUp(KEYS[key]);
     }
   }
 
   function keyDownHandler({ key }: KeyboardEvent) {
     if (isValidKey(key)) {
-      pressedKeys.addItems(KEYS[key]);
-
-      const keypadKeyPressAction = new KeypadKeyPressAction();
-      keypadKeyPressAction.setKey(KEYS[key]);
-      keypadKeyPressAction.setPressedKeys(pressedKeys);
-
-      const action = new Action();
-      action.setKeypadKeyPressAction(keypadKeyPressAction);
-
-      const dispatchActionRequest = new DispatchActionRequest();
-      dispatchActionRequest.setAction(action);
-
-      store.dispatchAction(dispatchActionRequest);
+      onKeyDown(KEYS[key]);
     }
   }
 
