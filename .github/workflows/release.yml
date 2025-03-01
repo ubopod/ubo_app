@@ -30,10 +30,13 @@ jobs:
         run: |
           git fetch --prune --unshallow
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-          echo "VERSION=$(uvx hatch version)" >>"$GITHUB_OUTPUT"
-          echo "VERSION=$(uvx hatch version)"
+          VERSION=$(uvx hatch version | sed 's/\.dev.*//')
+          echo "VERSION=$VERSION" >>"$GITHUB_OUTPUT"
+          echo "VERSION=$VERSION"
 
       - name: Create Release Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "admin@getubo.com"
           git config --local user.name "Ubo Admin"

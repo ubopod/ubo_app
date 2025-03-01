@@ -11,16 +11,18 @@ import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
 from docker_images import IMAGES
-from redux import AutorunOptions, FinishEvent
+from redux import FinishEvent
 
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
+    DockerImageRemoveContainerEvent,
+    DockerImageRunContainerEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
+    DockerImageStopContainerEvent,
     DockerItemStatus,
     DockerState,
-    ImageState,
 )
 from ubo_app.store.services.notifications import (
     Importance,
@@ -59,12 +61,28 @@ async def _process_str(
     | Coroutine[Any, Any, str | None]
     | None,
 ) -> str | None: ...
+@overload
 async def _process_str(
     value: str
-    | Callable[[], str | Coroutine[Any, Any, str | None] | None]
-    | Coroutine[Any, Any, str | None]
+    | list[str]
+    | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str]]]
+    | Coroutine[Any, Any, str | list[str]],
+) -> str | list[str]: ...
+@overload
+async def _process_str(
+    value: str
+    | list[str]
+    | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str] | None] | None]
+    | Coroutine[Any, Any, str | list[str] | None]
     | None,
-) -> str | None:
+) -> str | list[str] | None: ...
+async def _process_str(
+    value: str
+    | list[str]
+    | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str] | None] | None]
+    | Coroutine[Any, Any, str | list[str] | None]
+    | None,
+) -> str | list[str] | None:
     if callable(value):
         value = value()
     if iscoroutine(value):
@@ -82,72 +100,81 @@ async def _process_environment_variables(image_id: str) -> dict[str, str]:
     return result
 
 
-def run_container(*, image: ImageState) -> None:
+@store.view(lambda state: state.docker)
+async def run_container(
+    docker_state: DockerState,
+    event: DockerImageRunContainerEvent,
+) -> None:
     """Run a container."""
+    id = event.image
 
-    @store.autorun(
-        lambda state: state.docker,
-        options=AutorunOptions(keep_ref=False),
-    )
-    async def _(docker_state: DockerState) -> None:
-        docker_client = docker.from_env()
-        container = find_container(docker_client, image=IMAGES[image.id].path)
-        if container:
-            if container.status != 'running':
-                container.start()
-        else:
-            hosts = {}
-            for key, value in IMAGES[image.id].hosts.items():
-                if not hasattr(docker_state, value):
-                    store.dispatch(
-                        NotificationsAddAction(
-                            notification=Notification(
-                                title='Dependency error',
-                                content=f'Container "{value}" is not loaded',
-                                importance=Importance.MEDIUM,
-                            ),
+    docker_client = docker.from_env()
+    container = find_container(docker_client, image=IMAGES[id].path)
+    if container:
+        if container.status != 'running':
+            container.start()
+    else:
+        hosts = {}
+        for key, value in IMAGES[id].hosts.items():
+            if not hasattr(docker_state, value):
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='Dependency error',
+                            content=f'Container "{value}" is not loaded',
+                            importance=Importance.MEDIUM,
                         ),
-                    )
-                    return
-                if not getattr(docker_state, value).container_ip:
-                    store.dispatch(
-                        NotificationsAddAction(
-                            notification=Notification(
-                                title='Dependency error',
-                                content=f'Container "{value}" does not have an IP'
-                                ' address',
-                                importance=Importance.MEDIUM,
-                            ),
+                    ),
+                )
+                return
+            if not getattr(docker_state, value).container_ip:
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='Dependency error',
+                            content=f'Container "{value}" does not have an IP address',
+                            importance=Importance.MEDIUM,
                         ),
-                    )
-                    return
-                if hasattr(docker_state, value):
-                    hosts[key] = getattr(docker_state, value).container_ip
-                else:
-                    hosts[key] = value
+                    ),
+                )
+                return
+            if hasattr(docker_state, value):
+                hosts[key] = getattr(docker_state, value).container_ip
+            else:
+                hosts[key] = value
 
-            docker_client.containers.run(
-                IMAGES[image.id].path,
-                hostname=image.id,
-                publish_all_ports=True,
-                detach=True,
-                volumes=IMAGES[image.id].volumes,
-                ports=IMAGES[image.id].ports,
-                network_mode=IMAGES[image.id].network_mode,
-                environment=await _process_environment_variables(image.id),
-                extra_hosts=hosts,
-                restart_policy={'Name': 'always'},
-                command=await _process_str(IMAGES[image.id].command),
-            )
-        docker_client.close()
+        prepare_function = IMAGES[id].prepare
+        if prepare_function:
+            result = prepare_function()
+            if iscoroutine(result):
+                result = await result
+            if not result:
+                logger.error('Failed to prepare the container', extra={'image': id})
+                return
+
+        docker_client.containers.run(
+            IMAGES[id].path,
+            hostname=id,
+            publish_all_ports=True,
+            detach=True,
+            volumes=IMAGES[id].volumes,
+            ports=IMAGES[id].ports,
+            network_mode=IMAGES[id].network_mode,
+            environment=await _process_environment_variables(id),
+            extra_hosts=hosts,
+            restart_policy={'Name': 'always'},
+            command=await _process_str(IMAGES[id].command),
+        )
+    docker_client.close()
 
 
-def stop_container(*, image: ImageState) -> None:
+def stop_container(event: DockerImageStopContainerEvent) -> None:
     """Stop a container."""
+    id = event.image
 
     def act() -> None:
         docker_client = docker.from_env()
-        container = find_container(docker_client, image=IMAGES[image.id].path)
+        container = find_container(docker_client, image=IMAGES[id].path)
         if container and container.status != 'exited':
             container.stop()
         docker_client.close()
@@ -155,12 +182,13 @@ def stop_container(*, image: ImageState) -> None:
     to_thread(act)
 
 
-def remove_container(*, image: ImageState) -> None:
+def remove_container(event: DockerImageRemoveContainerEvent) -> None:
     """Remove a container."""
+    id = event.image
 
     def act() -> None:
         docker_client = docker.from_env()
-        container = find_container(docker_client, image=IMAGES[image.id].path)
+        container = find_container(docker_client, image=IMAGES[id].path)
         if container:
             container.remove(v=True, force=True)
         docker_client.close()

@@ -242,6 +242,18 @@ jobs:
           fi
           cat ubo_app/.env
 
+      - uses: actions/setup-node@v4
+        name: Setup Node
+        with:
+          node-version: '20'
+
+      - name: Build Web Application
+        run: |
+          cd ubo_app/services/090-web-ui/web-app
+          npm install
+          npm run proto:compile
+          npm run build
+
       - name: Build
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION:
@@ -312,9 +324,9 @@ jobs:
           echo "image_url=$IMAGE_URL" >>"$GITHUB_OUTPUT"
           echo "image_name=$IMAGE_NAME" >>"$GITHUB_OUTPUT"
           echo "image_checksum_url=$CHECKSUM_URL" >>"$GITHUB_OUTPUT"
-          if $MATRIX_SUFFIX == 'lite'; then
+          if [ "$MATRIX_SUFFIX" = "lite" ]; then
             IMAGE_SIZE_GB=4.5
-          elif $MATRIX_SUFFIX == ''; then
+          elif [ "$MATRIX_SUFFIX" = "" ]; then
             IMAGE_SIZE_GB=6.75
           else
             IMAGE_SIZE_GB=13

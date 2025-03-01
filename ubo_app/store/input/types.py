@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import enum
+from enum import Flag, FlagBoundary, StrEnum, auto
 from typing import IO, TYPE_CHECKING
 
 from immutable import Immutable
@@ -22,7 +22,7 @@ class InputResult(Immutable):
     method: InputMethod
 
 
-class InputFieldType(enum.StrEnum):
+class InputFieldType(StrEnum):
     """Enumeration of input field types."""
 
     LONG = 'long'
@@ -37,11 +37,11 @@ class InputFieldType(enum.StrEnum):
     TIME = 'time'
 
 
-class InputMethod(enum.Flag, boundary=enum.FlagBoundary.STRICT):
+class InputMethod(Flag, boundary=FlagBoundary.STRICT):
     """Input method."""
 
-    CAMERA = enum.auto()
-    WEB_DASHBOARD = enum.auto()
+    CAMERA = auto()
+    WEB_DASHBOARD = auto()
     ALL = CAMERA | WEB_DASHBOARD
 
 

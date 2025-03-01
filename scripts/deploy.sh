@@ -6,7 +6,7 @@ set -o nounset
 
 # Signal handler
 function cleanup() {
-  perl -i -pe 's/^exclude = .*-voice\/models.*\n//' pyproject.toml
+  perl -i -pe 's/^exclude = \["ubo_app\/services\/\*-voice\/models\/\*", (.*)\]$/exclude = [\1]/' pyproject.toml
 }
 trap cleanup ERR
 trap cleanup EXIT
@@ -17,7 +17,7 @@ kill=${kill:-"False"}
 restart=${restart:-"False"}
 env=${env:-"False"}
 
-perl -i -pe 's/^(packages = \[.*)$/\1\nexclude = ["ubo_app\/services\/*-voice\/models\/*"]/' pyproject.toml
+perl -i -pe 's/^exclude = \[(.*)\]$/exclude = ["ubo_app\/services\/*-voice\/models\/*", \1]/' pyproject.toml
 uv build
 cleanup
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
