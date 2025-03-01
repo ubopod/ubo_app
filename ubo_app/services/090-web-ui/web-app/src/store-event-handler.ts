@@ -1,4 +1,5 @@
 import { inflate } from "fflate";
+
 import {
   SubscribeEventRequest,
   SubscribeEventResponse,
@@ -67,6 +68,8 @@ function subscribeToRenderEvents(
   });
 }
 
+export const audioContext = new AudioContext();
+
 function createWavFile(
   samples: Uint8Array,
   sampleRate: number,
@@ -125,7 +128,7 @@ function subscribeToAudioEvents(store: StoreServiceClient) {
   stream.on("error", () =>
     setTimeout(() => subscribeToAudioEvents(store), 1000),
   );
-  stream.on("data", (response: SubscribeEventResponse) => {
+  stream.on("data", async (response: SubscribeEventResponse) => {
     const audioEvent = response.getEvent()?.getAudioPlayAudioEvent();
 
     if (!audioEvent) {
@@ -136,15 +139,25 @@ function subscribeToAudioEvents(store: StoreServiceClient) {
     const rate = audioEvent.getRate();
     const width = audioEvent.getWidth();
     const channels = audioEvent.getChannels();
+    const volume = audioEvent.getVolume();
 
-    const audio = new Audio();
     const audioBlob = createWavFile(sample, rate, channels, width * 8);
-    const url = URL.createObjectURL(audioBlob);
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-    audio.volume = audioEvent.getVolume();
-    audio.src = url;
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
 
-    audio.play();
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = volume;
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    source.start(audioContext.currentTime + 0.1);
   });
 }
 
