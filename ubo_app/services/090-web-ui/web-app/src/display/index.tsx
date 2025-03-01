@@ -2,17 +2,17 @@ import { Box } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { subscribeToBrowserEvents } from "./browser-event-handler";
-import { DispatchActionRequest } from "./generated/store/v1/store_pb";
-import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
+import { Layout } from "./layout";
+import { subscribeToStoreEvents } from "./store-event-handler";
+import { DispatchActionRequest } from "../generated/store/v1/store_pb";
+import { StoreServiceClient } from "../generated/store/v1/StoreServiceClientPb";
 import {
   Action,
   Key,
   KeypadAction,
   KeypadKeyPressAction,
   KeypadKeyReleaseAction,
-} from "./generated/ubo/v1/ubo_pb";
-import { Layout } from "./layout";
-import { subscribeToStoreEvents } from "./store-event-handler";
+} from "../generated/ubo/v1/ubo_pb";
 
 export function Display({ store }: { store: StoreServiceClient }) {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
