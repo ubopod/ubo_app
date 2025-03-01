@@ -1,6 +1,4 @@
-import { createPortal } from "react-dom";
-import { InputDescription, InputFieldType } from "./types";
-import { useEffect, useState } from "react";
+import { Clear } from "@mui/icons-material";
 import {
   Box,
   Typography,
@@ -20,6 +18,12 @@ import {
   DialogTitle,
   DialogContent,
 } from "@mui/material";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+
+
+import { DispatchActionRequest } from "./generated/store/v1/store_pb";
+import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
 import {
   Action,
   InputCancelAction,
@@ -28,9 +32,8 @@ import {
   InputProvideAction,
   InputResult,
 } from "./generated/ubo/v1/ubo_pb";
-import { DispatchActionRequest } from "./generated/store/v1/store_pb";
-import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
-import { Clear } from "@mui/icons-material";
+import { InputDescription, InputFieldType } from "./types";
+
 
 export function Inputs({
   inputs,
@@ -135,7 +138,7 @@ export function Inputs({
           >
             <input name="id" type="hidden" value={input.id} />
 
-            {input.fields ? (
+            {input.fields?.length ? (
               input.fields.map((field) =>
                 field.type === InputFieldType.SELECT ? (
                   <FormControl
