@@ -1,4 +1,4 @@
-import { Key } from "./generated/ubo/v1/ubo_pb";
+import { Key } from "../generated/ubo/v1/ubo_pb";
 
 export function subscribeToBrowserEvents({
   onKeyUp,

@@ -3,13 +3,13 @@ import { inflate } from "fflate";
 import {
   SubscribeEventRequest,
   SubscribeEventResponse,
-} from "./generated/store/v1/store_pb";
-import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
+} from "../generated/store/v1/store_pb";
+import { StoreServiceClient } from "../generated/store/v1/StoreServiceClientPb";
 import {
   AudioPlayAudioEvent,
   DisplayCompressedRenderEvent,
   Event,
-} from "./generated/ubo/v1/ubo_pb";
+} from "../generated/ubo/v1/ubo_pb";
 
 function subscribeToRenderEvents(
   store: StoreServiceClient,
@@ -150,6 +150,7 @@ function subscribeToAudioEvents(store: StoreServiceClient) {
 
     const gainNode = audioContext.createGain();
     gainNode.gain.value = volume;
+
     source.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
