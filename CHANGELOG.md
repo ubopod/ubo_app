@@ -16,6 +16,7 @@
 - refactor(web-ui): use webaudio for audio playback in the web application and add an unmute button - closes #224
 - feat(web-ui): add side buttons layout, and handle swipe gestures for the web application - closes #224
 - feat(web-ui): add dark-mode support for layout buttons and add color scheme switch buttons - closes #224
+- fix(web-ui): provide input field for when there is no `fields` nor `pattern` in the `InputDescription`
 
 ## Version 1.2.2
 
