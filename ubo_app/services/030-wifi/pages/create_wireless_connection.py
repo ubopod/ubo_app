@@ -206,8 +206,14 @@ async def input_wifi_connection(
     retry=retry_if_exception(lambda e: isinstance(e,
                                                   NetworkManagerUnknownConnectionError)),
 )
-async def add_wireless_connection_with_retry(*args: object, **kwargs: object) -> None:
-    return await add_wireless_connection(*args, **kwargs)
+async def add_wireless_connection_with_retry(
+    ssid: str,
+    password: str,
+    type: WiFiType,
+    *,
+    hidden: bool | None = False,
+) -> None:
+    return await add_wireless_connection(ssid, password, type, hidden=hidden)
 
 
 class CreateWirelessConnectionPage(PageWidget):
