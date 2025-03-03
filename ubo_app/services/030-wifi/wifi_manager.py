@@ -236,7 +236,9 @@ async def add_wireless_connection(
     hidden: bool | None = False,
 ) -> None:
     network_manager = NetworkManager(get_system_bus())
-    await network_manager.wireless_enabled.set_async(True)
+    if not await network_manager.wireless_enabled.get_async():
+        await network_manager.wireless_enabled.set_async(True)
+        await asyncio.sleep(3)
 
     wifi_device = await get_wifi_device()
     if not wifi_device:
@@ -309,7 +311,9 @@ async def add_wireless_connection(
 
 async def connect_wireless_connection(ssid: str) -> None:
     network_manager = NetworkManager(get_system_bus())
-    await network_manager.wireless_enabled.set_async(True)
+    if not await network_manager.wireless_enabled.get_async():
+        await network_manager.wireless_enabled.set_async(True)
+        await asyncio.sleep(3)
 
     wifi_device = await get_wifi_device()
 
