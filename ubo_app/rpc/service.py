@@ -32,19 +32,25 @@ class StoreService(StoreServiceBase):
         dispatch_action_request: DispatchActionRequest,
     ) -> DispatchActionResponse:
         """Dispatch an action to the store."""
-        logger.info(
-            'Received action to be dispatched over gRPC',
-            extra={
-                'request': dispatch_action_request,
-            },
-        )
         if not dispatch_action_request.action:
             return DispatchActionResponse()
         try:
             action = rebuild_object(dispatch_action_request.action)
         except Exception:
-            logger.exception('Failed to build object from dispatch action request')
+            logger.exception(
+                'Failed to build object from dispatch action request coming from gRPC',
+                extra={
+                    'request': dispatch_action_request,
+                },
+            )
         else:
+            logger.info(
+                'Dispatching action coming from gRPC',
+                extra={
+                    'request': dispatch_action_request,
+                    'action': action,
+                },
+            )
             store.dispatch(cast(UboAction, action))
         return DispatchActionResponse()
 
