@@ -3,6 +3,7 @@
 import pathlib
 import subprocess
 import sys
+import time
 
 from ubo_app.constants import WEB_UI_HOTSPOT_PASSWORD
 from ubo_app.utils.pod_id import get_pod_id
@@ -46,6 +47,8 @@ def main() -> None:
         subprocess.run(['/bin/systemctl', 'mask', 'hostapd.service'], check=True)  # noqa: S603
         subprocess.run(['/bin/systemctl', 'stop', 'dnsmasq.service'], check=True)  # noqa: S603
         subprocess.run(['/usr/bin/env', 'nmcli', 'radio', 'wifi', 'on'], check=True)  # noqa: S603
+        # Wait for the wifi to be turned on and become more stable
+        time.sleep(2)
     else:
         msg = 'Invalid argument'
         raise ValueError(msg)
