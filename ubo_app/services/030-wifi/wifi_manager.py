@@ -112,11 +112,11 @@ async def request_scan() -> None:
     try:
         await wait_for(wifi_device.request_scan({}))
     except NmDeviceNotAllowedError as e:
-        logger.error('WiFi scan not allowed', extra={'error': e})
-    except asyncio.TimeoutError:
-        logger.error('WiFi scan timed out')
+        logger.exception('WiFi scan not allowed', extra={'error': e})
+    except TimeoutError:
+        logger.exception('WiFi scan timed out')
     except Exception as e:
-        logger.error('Unexpected error during WiFi scan', extra={'error': e})
+        logger.exception('Unexpected error during WiFi scan', extra={'error': e})
 
 
 async def get_access_points() -> list[AccessPoint]:
