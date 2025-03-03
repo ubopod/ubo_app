@@ -3,15 +3,17 @@
 import asyncio
 import datetime
 import functools
+import json
 import re
 from pathlib import Path
 from typing import cast
 
-from quart import Quart, render_template, request
+from quart import Quart, Response, render_template, request
 from redux import FinishEvent
 from werkzeug.datastructures import FileStorage
 
 from ubo_app.constants import (
+    GRPC_ENVOY_LISTEN_PORT,
     WEB_UI_DEBUG_MODE,
     WEB_UI_HOTSPOT_PASSWORD,
     WEB_UI_LISTEN_ADDRESS,
@@ -25,7 +27,11 @@ from ubo_app.store.input.types import (
     InputProvideAction,
     InputResult,
 )
-from ubo_app.store.main import store
+from ubo_app.store.main import UboStore, store
+from ubo_app.store.services.docker import (
+    DockerImageFetchAction,
+    DockerImageRunContainerAction,
+)
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -37,6 +43,77 @@ from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
 from ubo_app.utils.network import has_gateway
 from ubo_app.utils.pod_id import get_pod_id
 from ubo_app.utils.server import send_command
+
+ENVOY_IMAGE_NAME = 'thegrandpkizzle/envoy:1.26.1'
+
+
+async def _get_docker_status() -> str:
+    try:
+        process = await asyncio.subprocess.create_subprocess_exec(
+            'docker',
+            'info',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await asyncio.wait_for(process.wait(), timeout=3)
+        if process.returncode is None:
+            process.kill()
+        if process.stdout and process.returncode == 0:
+            output = await process.stdout.read()
+            return 'running' if 'Containers' in output.decode() else 'not ready'
+    except FileNotFoundError:
+        logger.warning('Docker is not installed')
+        return 'not installed'
+    except Exception:
+        logger.exception('Failed to check if docker is running')
+        return 'failed'
+    else:
+        logger.warning('Docker process returned non-zero exit code')
+        return 'not running'
+
+
+async def _get_envoy_status() -> str:
+    try:
+        process = await asyncio.subprocess.create_subprocess_exec(
+            'docker',
+            'inspect',
+            ENVOY_IMAGE_NAME,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await asyncio.wait_for(process.wait(), timeout=3)
+        if process.returncode is None:
+            process.kill()
+        if process.stdout and process.returncode == 0:
+            output = await process.stdout.read()
+            if ENVOY_IMAGE_NAME in output.decode():
+                process = await asyncio.subprocess.create_subprocess_exec(
+                    'docker',
+                    'ps',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await asyncio.wait_for(process.wait(), timeout=3)
+                if process.returncode is None:
+                    process.kill()
+                if process.stdout and process.returncode == 0:
+                    output = await process.stdout.read()
+                    return (
+                        'running'
+                        if ENVOY_IMAGE_NAME in output.decode()
+                        else 'not running'
+                    )
+
+                logger.warning('Docker process returned non-zero exit code')
+                return 'not running'
+
+            return 'not running'
+        else:  # noqa: RET505
+            logger.warning('Docker process returned non-zero exit code')
+            return 'not downloaded'
+    except Exception:
+        logger.exception('Failed to check if envoy is running')
+        return 'failed'
 
 
 async def initialize(event: WebUIInitializeEvent) -> None:
@@ -118,12 +195,15 @@ async def stop() -> None:
         )
 
 
-async def init_service() -> None:
+async def init_service() -> None:  # noqa: C901
     """Initialize the web-ui service."""
     _ = []
     app = Quart(
         'ubo-app',
         template_folder=(Path(__file__).parent / 'templates').absolute().as_posix(),
+        static_folder=(Path(__file__).parent / 'web-app' / 'dist')
+        .absolute()
+        .as_posix(),
     )
     app.debug = WEB_UI_DEBUG_MODE
     shutdown_event: asyncio.Event = asyncio.Event()
@@ -158,9 +238,45 @@ async def init_service() -> None:
                     ),
                 )
             await asyncio.sleep(0.2)
-        return await render_template('index.jinja2', inputs=inputs(), re=re)
+        return await render_template(
+            'index.jinja2',
+            inputs=inputs(),
+            re=re,
+            GRPC_ENVOY_LISTEN_PORT=GRPC_ENVOY_LISTEN_PORT,
+        )
 
-    _.append(inputs_form)
+    @app.route('/status')
+    async def status() -> Response:
+        statuses = await asyncio.gather(
+            _get_docker_status(),
+            _get_envoy_status(),
+        )
+        return Response(
+            json.dumps(
+                {
+                    'status': 'ok',
+                    'docker': statuses[0],
+                    'envoy': statuses[1],
+                    'inputs': UboStore.serialize_value(inputs()),
+                },
+            ),
+            content_type='application/json',
+        )
+
+    @app.route('/action/', methods=['POST'])
+    async def action() -> Response:
+        data = await request.json
+        action = data['action']
+        if action == 'download envoy':
+            store.dispatch(DockerImageFetchAction(image='envoy_grpc'))
+        elif action == 'run envoy':
+            store.dispatch(DockerImageRunContainerAction(image='envoy_grpc'))
+        return Response(
+            json.dumps({'status': 'ok'}),
+            content_type='application/json',
+        )
+
+    _.extend([inputs_form, status, action])
 
     if WEB_UI_DEBUG_MODE:
 
