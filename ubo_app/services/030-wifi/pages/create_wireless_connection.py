@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING, cast
 
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
+from sdbus_async.networkmanager import NetworkManagerUnknownConnectionError
 from str_to_bool import str_to_bool
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 from ubo_gui.constants import SUCCESS_COLOR, WARNING_COLOR
 from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
@@ -162,7 +164,7 @@ async def input_wifi_connection(
 
     logger.debug('wifi connection input - creating connection')
     try:
-        await add_wireless_connection(
+        await add_wireless_connection_with_retry(
             ssid=ssid,
             password=password,
             type=type or WiFiType.NOPASS,
@@ -196,6 +198,22 @@ async def input_wifi_connection(
             ),
         ),
     )
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception(lambda e: isinstance(e,
+                                                  NetworkManagerUnknownConnectionError)),
+)
+async def add_wireless_connection_with_retry(
+    ssid: str,
+    password: str,
+    type: WiFiType,
+    *,
+    hidden: bool | None = False,
+) -> None:
+    return await add_wireless_connection(ssid, password, type, hidden=hidden)
 
 
 class CreateWirelessConnectionPage(PageWidget):
