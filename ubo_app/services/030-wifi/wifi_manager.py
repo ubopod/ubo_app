@@ -107,16 +107,16 @@ async def get_wifi_device_state() -> NetState:
 async def request_scan() -> None:
     wifi_device = await get_wifi_device()
     if wifi_device is None:
-        logger.warning("Cannot scan: WiFi device not found")
+        logger.warning('Cannot scan: WiFi device not found')
         return
     try:
         await wait_for(wifi_device.request_scan({}))
     except NmDeviceNotAllowedError as e:
-        logger.error(f"WiFi scan not allowed: {e}")
+        logger.error('WiFi scan not allowed', extra={'error': e})
     except asyncio.TimeoutError:
-        logger.error("WiFi scan timed out")
+        logger.error('WiFi scan timed out')
     except Exception as e:
-        logger.error(f"Unexpected error during WiFi scan: {e}")
+        logger.error('Unexpected error during WiFi scan', extra={'error': e})
 
 
 async def get_access_points() -> list[AccessPoint]:
@@ -278,7 +278,6 @@ async def add_wireless_connection(
             'auth-alg': ('s', 'open'),
             'psk': ('s', password),
         }
-    from ubo_app.logger import logger
 
     properties: NetworkManagerConnectionProperties = {
         'connection': {
