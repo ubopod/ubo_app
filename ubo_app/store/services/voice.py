@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import socket
 import sys
 from dataclasses import field
 from enum import StrEnum
@@ -37,13 +38,28 @@ def _default_text() -> str:
     parent_frame = sys._getframe().f_back  # noqa: SLF001
     if not parent_frame:
         return ''
-    return parent_frame.f_locals.get('text') or ''
+    text = parent_frame.f_locals.get('text') or ''
+    return text.replace(
+        '{{hostname}}',
+        f'{socket.gethostname()}.local',
+    )
 
 
 class ReadableInformation(Immutable):
     text: str
     piper_text: str = field(default_factory=_default_text)
     picovoice_text: str = field(default_factory=_default_text)
+
+    def __post_init__(self) -> None:
+        """Replace `{{hostname}}` with the current hostname."""
+        object.__setattr__(
+            self,
+            'text',
+            self.text.replace(
+                '{{hostname}}',
+                f'{socket.gethostname()}.local',
+            ),
+        )
 
     def __add__(
         self,

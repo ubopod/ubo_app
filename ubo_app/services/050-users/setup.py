@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime
-import socket
 from asyncio import Future
 
 from sdbus import (  # pyright: ignore [reportMissingModuleSource]
@@ -75,12 +74,11 @@ async def create_account() -> None:
 
         return
     username, password = result.split(':')
-    hostname = socket.gethostname()
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
                 title='Account Info',
-                content=f'[size=18dp][b]host:[/b] {hostname}.local\n'
+                content='[size=18dp][b]host:[/b] {{hostname}}\n'
                 f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
                 importance=Importance.MEDIUM,
                 icon='󰀈',
@@ -180,12 +178,11 @@ async def reset_password(event: UsersResetPasswordEvent) -> None:
 
         return
     username, password = result.split(':')
-    hostname = socket.gethostname()
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
                 title='Account Info',
-                content=f'[size=18dp][b]host:[/b] {hostname}.local\n'
+                content='[size=18dp][b]host:[/b] {{hostname}}\n'
                 f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
                 importance=Importance.MEDIUM,
                 icon='󰀈',
