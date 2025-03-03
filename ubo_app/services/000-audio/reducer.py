@@ -108,6 +108,7 @@ def reducer(
             state=state,
             events=[
                 AudioPlayAudioEvent(
+                    volume=state.playback_volume,
                     sample=action.sample,
                     channels=action.channels,
                     rate=action.rate,
