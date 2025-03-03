@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import asyncio
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 
 from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -15,11 +19,36 @@ from typing import TYPE_CHECKING
 
 from immutable import Immutable
 
-from ubo_app.constants import DEBUG_MODE_DOCKER, GRPC_ENVOY_LISTEN_PORT
+from ubo_app.constants import (
+    DEBUG_MODE_DOCKER,
+    GRPC_ENVOY_LISTEN_PORT,
+    GRPC_LISTEN_PORT,
+)
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+
+ENVOY_TEMPLATE_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml.tmpl'
+ENVOY_CONFIG_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml'
+
+
+async def prepare_envoy() -> bool:
+    """Prepare Envoy for gRPC."""
+    process = await asyncio.create_subprocess_exec(
+        '/usr/bin/env',
+        'envsubst',
+        env={
+            'GRPC_ENVOY_LISTEN_PORT': f'{GRPC_ENVOY_LISTEN_PORT}',
+            'GRPC_LISTEN_PORT': f'{GRPC_LISTEN_PORT}',
+            'GRPC_SERVER_HOST': '127.0.0.1' if IS_RPI else 'host.docker.internal',
+            **os.environ,
+        },
+        stdin=ENVOY_TEMPLATE_PATH.open(),
+        stdout=ENVOY_CONFIG_PATH.open('w'),
+    )
+    await process.wait()
+    return process.returncode == 0
 
 
 class CompositionEntry(Immutable):
@@ -47,7 +76,13 @@ class CompositionEntry(Immutable):
     ) = None
     network_mode: str = 'bridge'
     volumes: list[str] | None = None
-    command: str | Callable[[], str | Coroutine[Any, Any, str]] | None = None
+    command: (
+        str
+        | list[str]
+        | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str]]]
+        | None
+    ) = None
+    prepare: Callable[[], Coroutine[Any, Any, bool] | bool] | None = None
 
 
 IMAGES = {
@@ -130,7 +165,7 @@ Follow these steps:
 3. Convert it to {QR|K Y UW AA R} code
 4. Scan QR code to input the token""",
                     ),
-                    pattern=rf'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
+                    pattern=rf'^[a-zA-Z0-9]{20, 30}_[a-zA-Z0-9]{20, 30}$',
                 ),
             },
             command=lambda: ubo_input(
@@ -163,10 +198,24 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
             id='envoy_grpc',
             label='Envoy for gRPC',
             icon='󱂇',
-            path='envoyproxy/envoy-distroless:v1.32-latest',
+            path='thegrandpkizzle/envoy:1.26.1',
+            prepare=prepare_envoy,
+            command=['--config-path', 'envoy.yaml'],
             registry='docker.io',
-            volumes=[],
-            ports={f'{GRPC_ENVOY_LISTEN_PORT}/tcp': GRPC_ENVOY_LISTEN_PORT},
+            volumes=[
+                f'{ENVOY_CONFIG_PATH}:/envoy.yaml',
+            ],
+            **cast(
+                Any,
+                {'network_mode': 'host'}
+                if IS_RPI
+                else {
+                    'ports': {
+                        f'{GRPC_LISTEN_PORT}/tcp': GRPC_LISTEN_PORT,
+                        f'{GRPC_ENVOY_LISTEN_PORT}/tcp': GRPC_ENVOY_LISTEN_PORT,
+                    },
+                },
+            ),
         ),
     ]
 }

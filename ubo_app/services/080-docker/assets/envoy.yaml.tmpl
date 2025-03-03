@@ -4,7 +4,7 @@ static_resources:
       address:
         socket_address:
           address: 0.0.0.0
-          port_value: {{GRPC_ENVOY_LISTEN_PORT}}
+          port_value: $GRPC_ENVOY_LISTEN_PORT
       filter_chains:
         - filters:
             - name: envoy.filters.network.http_connection_manager
@@ -57,8 +57,8 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: {{GRPC_LISTEN_ADDRESS}}
-                      port_value: {{GRPC_LISTEN_PORT}}
+                      address: $GRPC_SERVER_HOST
+                      port_value: $GRPC_LISTEN_PORT
       http2_protocol_options: {}
       health_checks:
         - timeout: 1s

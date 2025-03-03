@@ -9,15 +9,24 @@ import subprocess
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.store.core.types import DeregisterRegularAppAction
 from ubo_app.store.main import store
-from ubo_app.store.services.docker import DockerImageSetStatusAction, DockerItemStatus
+from ubo_app.store.services.docker import (
+    DockerImageFetchCompositionEvent,
+    DockerImageReleaseCompositionEvent,
+    DockerImageRemoveCompositionEvent,
+    DockerImageRunCompositionEvent,
+    DockerImageSetStatusAction,
+    DockerImageStopCompositionEvent,
+    DockerItemStatus,
+)
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.log_process import log_async_process
 
 COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 
 
-def stop_composition(*, id: str) -> None:
+def stop_composition(event: DockerImageStopCompositionEvent) -> None:
     """Stop the composition."""
+    id = event.image
 
     async def act() -> None:
         store.dispatch(
@@ -42,8 +51,9 @@ def stop_composition(*, id: str) -> None:
     create_task(act())
 
 
-def run_composition(*, id: str) -> None:
+def run_composition(event: DockerImageRunCompositionEvent) -> None:
     """Run the composition."""
+    id = event.image
 
     async def act() -> None:
         store.dispatch(
@@ -69,8 +79,9 @@ def run_composition(*, id: str) -> None:
     create_task(act())
 
 
-def pull_composition(*, id: str) -> None:
+def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
     """Pull the composition images."""
+    id = event.image
 
     async def act() -> None:
         store.dispatch(
@@ -116,8 +127,9 @@ async def _release_composition(id: str) -> None:
     await check_composition(id=id)
 
 
-def release_composition(*, id: str) -> None:
+def release_composition(event: DockerImageReleaseCompositionEvent) -> None:
     """Release resources of composition."""
+    id = event.image
     create_task(_release_composition(id))
 
 
@@ -172,8 +184,9 @@ async def check_composition(*, id: str) -> None:
         )
 
 
-def delete_composition(*, id: str) -> None:
+def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
     """Delete the composition."""
+    id = event.image
 
     async def act() -> None:
         await _release_composition(id=id)

@@ -21,9 +21,28 @@ from ubo_app.store.services.docker import (
     DockerAction,
     DockerImageAction,
     DockerImageEvent,
+    DockerImageFetchAction,
+    DockerImageFetchCompositionAction,
+    DockerImageFetchCompositionEvent,
+    DockerImageFetchEvent,
     DockerImageRegisterAppEvent,
+    DockerImageReleaseCompositionAction,
+    DockerImageReleaseCompositionEvent,
+    DockerImageRemoveAction,
+    DockerImageRemoveCompositionAction,
+    DockerImageRemoveCompositionEvent,
+    DockerImageRemoveContainerAction,
+    DockerImageRemoveContainerEvent,
+    DockerImageRunCompositionAction,
+    DockerImageRunCompositionEvent,
+    DockerImageRunContainerAction,
+    DockerImageRunContainerEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
+    DockerImageStopCompositionAction,
+    DockerImageStopCompositionEvent,
+    DockerImageStopContainerAction,
+    DockerImageStopContainerEvent,
     DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerServiceState,
@@ -108,6 +127,57 @@ def image_reducer(
 
     if isinstance(action, DockerImageSetDockerIdAction):
         return replace(state, docker_id=action.docker_id)
+
+    if isinstance(action, DockerImageFetchCompositionAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageFetchCompositionEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageFetchAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageFetchEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageRemoveCompositionAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageRemoveCompositionEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageRemoveAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageRemoveContainerEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageRunCompositionAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageRunCompositionEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageRunContainerAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageRunContainerEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageStopCompositionAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageStopCompositionEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageStopContainerAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageStopContainerEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageReleaseCompositionAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageReleaseCompositionEvent(image=state.id)],
+        )
+    if isinstance(action, DockerImageRemoveContainerAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[DockerImageRemoveContainerEvent(image=state.id)],
+        )
 
     return state
 
