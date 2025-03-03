@@ -8,27 +8,9 @@ import uuid
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
-from ubo_gui.constants import DANGER_COLOR
-
-from ubo_app.store.main import store
-from ubo_app.store.services.ethernet import NetState
-from ubo_app.store.services.notifications import (
-    Chime,
-    Notification,
-    NotificationDisplayType,
-    NotificationsAddAction,
-)
-from ubo_app.store.services.wifi import ConnectionState, WiFiConnection, WiFiType
-from ubo_app.utils.bus_provider import get_system_bus
-from ubo_app.logger import logger
-
-if TYPE_CHECKING:
-    from asyncio.tasks import _FutureLike
-    from collections.abc import Coroutine
-
 from sdbus import dbus_exceptions
-from sdbus.utils.inspect import (  # pyright: ignore [reportMissingImports]
-    inspect_dbus_path,
+from sdbus.utils.inspect import (
+    inspect_dbus_path,  # pyright: ignore [reportMissingImports]
 )
 from sdbus_async.networkmanager import (
     AccessPoint,
@@ -46,6 +28,23 @@ from sdbus_async.networkmanager.enums import (
     ConnectionState as SdBusConnectionState,
 )
 from sdbus_async.networkmanager.enums import DeviceType
+from ubo_gui.constants import DANGER_COLOR
+
+from ubo_app.logger import logger
+from ubo_app.store.main import store
+from ubo_app.store.services.ethernet import NetState
+from ubo_app.store.services.notifications import (
+    Chime,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
+from ubo_app.store.services.wifi import ConnectionState, WiFiConnection, WiFiType
+from ubo_app.utils.bus_provider import get_system_bus
+
+if TYPE_CHECKING:
+    from asyncio.tasks import _FutureLike
+    from collections.abc import Coroutine
 
 RETRIES = 3
 

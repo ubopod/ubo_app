@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, cast
 
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
+from sdbus_async.networkmanager import NetworkManagerUnknownConnectionError
 from str_to_bool import str_to_bool
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 from ubo_gui.constants import SUCCESS_COLOR, WARNING_COLOR
 from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
-from sdbus_async.networkmanager import NetworkManagerUnknownConnectionError
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction
@@ -203,9 +203,10 @@ async def input_wifi_connection(
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_fixed(1),
-    retry=retry_if_exception(lambda e: isinstance(e, NetworkManagerUnknownConnectionError)),
+    retry=retry_if_exception(lambda e: isinstance(e,
+                                                  NetworkManagerUnknownConnectionError)),
 )
-async def add_wireless_connection_with_retry(*args, **kwargs):
+async def add_wireless_connection_with_retry(*args: object, **kwargs: object) -> None:
     return await add_wireless_connection(*args, **kwargs)
 
 
