@@ -20,6 +20,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.wifi import ConnectionState, WiFiConnection, WiFiType
 from ubo_app.utils.bus_provider import get_system_bus
+from ubo_app.logger import logger
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -39,6 +40,7 @@ from sdbus_async.networkmanager import (
     NetworkManager,
     NetworkManagerConnectionProperties,
     NetworkManagerSettings,
+    NmDeviceNotAllowedError,
 )
 from sdbus_async.networkmanager.enums import (
     ConnectionState as SdBusConnectionState,
@@ -104,8 +106,17 @@ async def get_wifi_device_state() -> NetState:
 @debounce(wait=0.5, options=DebounceOptions(trailing=True, time_window=2))
 async def request_scan() -> None:
     wifi_device = await get_wifi_device()
-    if wifi_device:
+    if wifi_device is None:
+        logger.warning("Cannot scan: WiFi device not found")
+        return
+    try:
         await wait_for(wifi_device.request_scan({}))
+    except NmDeviceNotAllowedError as e:
+        logger.error(f"WiFi scan not allowed: {e}")
+    except asyncio.TimeoutError:
+        logger.error("WiFi scan timed out")
+    except Exception as e:
+        logger.error(f"Unexpected error during WiFi scan: {e}")
 
 
 async def get_access_points() -> list[AccessPoint]:
