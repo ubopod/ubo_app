@@ -4,7 +4,6 @@ import asyncio
 import datetime
 import functools
 import re
-import socket
 from pathlib import Path
 from typing import cast
 
@@ -67,7 +66,6 @@ async def initialize(event: WebUIInitializeEvent) -> None:
                 ),
             )
             return
-    hostname = socket.gethostname()
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
@@ -81,11 +79,11 @@ async def initialize(event: WebUIInitializeEvent) -> None:
                     text=(
                         'Please make sure you are on the same network as this '
                         'ubo-pod and open '
-                        f'http://{hostname}.local:{WEB_UI_LISTEN_PORT} in your browser.'
+                        'http://{{hostname}}:{WEB_UI_LISTEN_PORT} in your browser.'
                         if is_connected
                         else f'Please connect to the "{get_pod_id()}" WiFi network '
                         f'with password "{WEB_UI_HOTSPOT_PASSWORD}" and open '
-                        f'http://{hostname}.local:{WEB_UI_LISTEN_PORT} in your browser.'
+                        'http://{{hostname}}:{WEB_UI_LISTEN_PORT} in your browser.'
                     ),
                 ),
                 expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),

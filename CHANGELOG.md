@@ -7,6 +7,7 @@
 - fix: image size being too big for the lite version of the raspberry os
 - fix: restart avahi-daemon after the hostname is set in `ubo-system`
 - feat: add support for `set`s and `dict`s for rpc api
+- feat: `{{hostname}}`, as a template variable, will be replaced with the hostname of the device whenever used in `title` and `content` properties of a `Notification` instance or in the `text`, `picovoice_text` or `piper_text` properties of a `ReadableInformation` instance.
 
 ## Version 1.2.2
 

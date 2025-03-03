@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import socket
 import sys
 from dataclasses import field
 from datetime import UTC, datetime
@@ -113,6 +114,25 @@ class Notification(Immutable):
     blink: bool = True
     progress: float | None = None
     progress_weight: float = 1
+
+    def __post_init__(self) -> None:
+        """Replace `{{hostname}}` with the current hostname."""
+        object.__setattr__(
+            self,
+            'title',
+            self.title.replace(
+                '{{hostname}}',
+                f'{socket.gethostname()}.local',
+            ),
+        )
+        object.__setattr__(
+            self,
+            'content',
+            self.content.replace(
+                '{{hostname}}',
+                f'{socket.gethostname()}.local',
+            ),
+        )
 
 
 class NotificationsAction(BaseAction): ...
