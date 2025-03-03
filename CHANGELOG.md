@@ -10,6 +10,7 @@
 - feat: `{{hostname}}`, as a template variable, will be replaced with the hostname of the device whenever used in `title` and `content` properties of a `Notification` instance or in the `text`, `picovoice_text` or `piper_text` properties of a `ReadableInformation` instance.
 - refactor: minor improvements like add `volume` to `AudioPlayAudioEvent`, metric's `density` of kivy to `DisplayRenderEvent` and `DisplayCompressedRenderEvent`, some housekeeping in syntax, logs and ci/cd scripts
 - refactor: to make it easier for other modules to interact with docker containers and compositions, there is now a store action for each interaction and now they run as side effects of those store actions dispatched to the store, instead of directly calling functions
+- feat(web-ui): implement react web application for the web-ui service - closes #224
 
 ## Version 1.2.2
 
