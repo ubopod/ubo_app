@@ -2,24 +2,14 @@
 
 from __future__ import annotations
 
-import functools
 from typing import TYPE_CHECKING
 
 from docker_composition import (
     check_composition,
-    delete_composition,
-    pull_composition,
-    release_composition,
-    run_composition,
-    stop_composition,
 )
 from docker_container import (
     check_container,
-    remove_container,
-    run_container,
-    stop_container,
 )
-from docker_image import fetch_image, remove_image
 from docker_images import IMAGES
 from docker_qrcode_page import DockerQRCodePage
 from ubo_gui.constants import DANGER_COLOR
@@ -34,6 +24,16 @@ from ubo_gui.menu.types import (
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
+    DockerImageFetchAction,
+    DockerImageFetchCompositionAction,
+    DockerImageReleaseCompositionAction,
+    DockerImageRemoveAction,
+    DockerImageRemoveCompositionAction,
+    DockerImageRemoveContainerAction,
+    DockerImageRunCompositionAction,
+    DockerImageRunContainerAction,
+    DockerImageStopCompositionAction,
+    DockerImageStopContainerAction,
     DockerItemStatus,
     ImageState,
 )
@@ -76,10 +76,10 @@ def image_menu(  # noqa: C901
 
     if image.status == DockerItemStatus.NOT_AVAILABLE:
         items.append(
-            ActionItem(
+            DispatchItem(
                 label='Fetch',
                 icon='󰇚',
-                action=functools.partial(fetch_image, image=image),
+                store_action=DockerImageFetchAction(image=image.id),
             ),
         )
     elif image.status == DockerItemStatus.FETCHING:
@@ -87,32 +87,34 @@ def image_menu(  # noqa: C901
     elif image.status == DockerItemStatus.AVAILABLE:
         items.extend(
             [
-                ActionItem(
+                DispatchItem(
                     label='Start',
                     icon='󰐊',
-                    action=functools.partial(run_composition, id=image.id)
+                    store_action=DockerImageRunCompositionAction(image=image.id)
                     if image.id.startswith('composition_')
-                    else functools.partial(run_container, image=image),
+                    else DockerImageRunContainerAction(image=image.id),
                 ),
                 *(
                     [
-                        ActionItem(
+                        DispatchItem(
                             label='Pull Images',
                             icon='󰇚',
-                            action=functools.partial(pull_composition, id=image.id),
+                            store_action=DockerImageFetchCompositionAction(
+                                image=image.id,
+                            ),
                         ),
                     ]
                     if image.id.startswith('composition_')
                     else []
                 ),
-                ActionItem(
+                DispatchItem(
                     label='Delete Application'
                     if image.id.startswith('composition_')
                     else 'Remove Image',
                     icon='󰆴',
-                    action=functools.partial(delete_composition, id=image.id)
+                    store_action=DockerImageRemoveCompositionAction(image=image.id)
                     if image.id.startswith('composition_')
-                    else functools.partial(remove_image, image=image),
+                    else DockerImageRemoveAction(image=image.id),
                     background_color=DANGER_COLOR
                     if image.id.startswith('composition_')
                     else None,
@@ -122,33 +124,33 @@ def image_menu(  # noqa: C901
     elif image.status == DockerItemStatus.CREATED:
         items.extend(
             [
-                ActionItem(
+                DispatchItem(
                     label='Start',
                     icon='󰐊',
-                    action=functools.partial(run_composition, id=image.id)
+                    store_action=DockerImageRunCompositionAction(image=image.id)
                     if image.id.startswith('composition_')
-                    else functools.partial(run_container, image=image),
+                    else DockerImageRunContainerAction(image=image.id),
                 ),
-                ActionItem(
+                DispatchItem(
                     label='Release Resources'
                     if image.id.startswith('composition_')
                     else 'Remove Container',
                     icon='󰆴',
-                    action=functools.partial(release_composition, id=image.id)
+                    store_action=DockerImageReleaseCompositionAction(image=image.id)
                     if image.id.startswith('composition_')
-                    else functools.partial(remove_container, image=image),
+                    else DockerImageRemoveContainerAction(image=image.id),
                 ),
             ],
         )
     elif image.status == DockerItemStatus.RUNNING:
         items.append(
-            ActionItem(
+            DispatchItem(
                 label='Stop',
                 key='stop',
                 icon='󰓛',
-                action=functools.partial(stop_composition, id=image.id)
+                store_action=DockerImageStopCompositionAction(image=image.id)
                 if image.id.startswith('composition_')
-                else functools.partial(stop_container, image=image),
+                else DockerImageStopContainerAction(image=image.id),
             ),
         )
         if image.id.startswith('composition_'):
