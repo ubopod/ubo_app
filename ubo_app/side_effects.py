@@ -151,7 +151,6 @@ async def check_wifi() -> None:
         extra={
             'has_gateway': await has_gateway(),
             'saved_wifi_ssids': await get_saved_wifi_ssids(),
-            'oho': not await get_saved_wifi_ssids(),
         },
     )
     if not await has_gateway() and not await get_saved_wifi_ssids():

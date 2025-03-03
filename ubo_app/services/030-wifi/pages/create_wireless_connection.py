@@ -176,6 +176,7 @@ async def input_wifi_connection(
         'Wireless connection created',
         extra={
             'ssid': ssid,
+            'password': '<HIDDEN>' if password else '<NOT PROVIDED>',
             'type': type,
             'hidden': hidden,
         },
