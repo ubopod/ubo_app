@@ -43,11 +43,17 @@ from ubo_app.store.services.docker import (
     DockerImageStopCompositionEvent,
     DockerImageStopContainerAction,
     DockerImageStopContainerEvent,
+    DockerInstallAction,
+    DockerInstallEvent,
     DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerServiceState,
     DockerSetStatusAction,
+    DockerStartAction,
+    DockerStartEvent,
     DockerState,
+    DockerStopAction,
+    DockerStopEvent,
     DockerStoreUsernameAction,
     ImageState,
 )
@@ -89,6 +95,15 @@ def service_reducer(
                 if registry != action.registry
             },
         )
+
+    if isinstance(action, DockerInstallAction):
+        return CompleteReducerResult(state=state, events=[DockerInstallEvent()])
+
+    if isinstance(action, DockerStartAction):
+        return CompleteReducerResult(state=state, events=[DockerStartEvent()])
+
+    if isinstance(action, DockerStopAction):
+        return CompleteReducerResult(state=state, events=[DockerStopEvent()])
 
     return state
 

@@ -18,6 +18,7 @@
 - feat(web-ui): add dark-mode support for layout buttons and add color scheme switch buttons - closes #224
 - fix(web-ui): provide input field for when there is no `fields` nor `pattern` in the `InputDescription`
 - refactor(voice): upgrade `access_key` input to use the new `fields` value of the `InputDescription`
+- refactor(web-ui): use the same mui interface in static server too (instead of jinja-rendered interface) and add action buttons for all status reported by server - closes #224
 
 ## Version 1.2.2
 

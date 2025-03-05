@@ -6,7 +6,7 @@ import functools
 import json
 import re
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from quart import Quart, Response, render_template, request
 from redux import FinishEvent
@@ -30,7 +30,13 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import UboStore, store
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
+    DockerImageRemoveAction,
+    DockerImageRemoveContainerAction,
     DockerImageRunContainerAction,
+    DockerImageStopContainerAction,
+    DockerInstallAction,
+    DockerStartAction,
+    DockerStopAction,
 )
 from ubo_app.store.services.notifications import (
     Importance,
@@ -55,7 +61,7 @@ async def _get_docker_status() -> str:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        await asyncio.wait_for(process.wait(), timeout=3)
+        await asyncio.wait_for(process.wait(), timeout=2)
         if process.returncode is None:
             process.kill()
         if process.stdout and process.returncode == 0:
@@ -81,7 +87,7 @@ async def _get_envoy_status() -> str:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        await asyncio.wait_for(process.wait(), timeout=3)
+        await asyncio.wait_for(process.wait(), timeout=2)
         if process.returncode is None:
             process.kill()
         if process.stdout and process.returncode == 0:
@@ -156,11 +162,11 @@ async def initialize(event: WebUIInitializeEvent) -> None:
                     text=(
                         'Please make sure you are on the same network as this '
                         'ubo-pod and open '
-                        'http://{{hostname}}:{WEB_UI_LISTEN_PORT} in your browser.'
+                        f'http://{{{{hostname}}}}:{WEB_UI_LISTEN_PORT} in your browser.'
                         if is_connected
                         else f'Please connect to the "{get_pod_id()}" WiFi network '
                         f'with password "{WEB_UI_HOTSPOT_PASSWORD}" and open '
-                        'http://{{hostname}}:{WEB_UI_LISTEN_PORT} in your browser.'
+                        f'http://{{{{hostname}}}}:{WEB_UI_LISTEN_PORT} in your browser.'
                     ),
                 ),
                 expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
@@ -240,7 +246,7 @@ async def init_service() -> None:  # noqa: C901
             await asyncio.sleep(0.2)
         return await render_template(
             'index.jinja2',
-            inputs=inputs(),
+            inputs=UboStore.serialize_value(inputs()),
             re=re,
             GRPC_ENVOY_LISTEN_PORT=GRPC_ENVOY_LISTEN_PORT,
         )
@@ -266,11 +272,30 @@ async def init_service() -> None:  # noqa: C901
     @app.route('/action/', methods=['POST'])
     async def action() -> Response:
         data = await request.json
-        action = data['action']
-        if action == 'download envoy':
+        action: Literal[
+            'install docker',
+            'run docker',
+            'stop docker',
+            'download envoy',
+            'run envoy',
+            'remove envoy',
+        ] = data['action']
+        if action == 'install docker':
+            store.dispatch(DockerInstallAction())
+        elif action == 'run docker':
+            store.dispatch(DockerStartAction())
+        elif action == 'stop docker':
+            store.dispatch(DockerStopAction())
+        elif action == 'download envoy':
             store.dispatch(DockerImageFetchAction(image='envoy_grpc'))
         elif action == 'run envoy':
             store.dispatch(DockerImageRunContainerAction(image='envoy_grpc'))
+        elif action == 'remove envoy':
+            store.dispatch(DockerImageStopContainerAction(image='envoy_grpc'))
+            await asyncio.sleep(2)
+            store.dispatch(DockerImageRemoveContainerAction(image='envoy_grpc'))
+            await asyncio.sleep(2)
+            store.dispatch(DockerImageRemoveAction(image='envoy_grpc'))
         return Response(
             json.dumps({'status': 'ok'}),
             content_type='application/json',
