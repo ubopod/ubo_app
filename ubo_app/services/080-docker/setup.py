@@ -37,6 +37,7 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
+from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType, InputMethod
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
@@ -51,10 +52,16 @@ from ubo_app.store.services.docker import (
     DockerImageRunContainerEvent,
     DockerImageStopCompositionEvent,
     DockerImageStopContainerEvent,
+    DockerInstallAction,
+    DockerInstallEvent,
     DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
+    DockerStartAction,
+    DockerStartEvent,
     DockerStatus,
+    DockerStopAction,
+    DockerStopEvent,
     DockerStoreUsernameAction,
 )
 from ubo_app.store.services.notifications import (
@@ -78,7 +85,7 @@ if TYPE_CHECKING:
 
 
 def install_docker() -> None:
-    """Install Docker."""
+    """Install docker."""
 
     async def act() -> None:
         store.dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
@@ -105,8 +112,8 @@ def install_docker() -> None:
     create_task(act())
 
 
-def run_docker() -> None:
-    """Install Docker."""
+def start_docker() -> None:
+    """Start docker service."""
 
     async def act() -> None:
         await send_command('docker', 'start')
@@ -116,7 +123,7 @@ def run_docker() -> None:
 
 
 def stop_docker() -> None:
-    """Install Docker."""
+    """Stop docker service."""
 
     async def act() -> None:
         await send_command('docker', 'stop')
@@ -176,10 +183,10 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Docker is not Installed',
             sub_heading='Install it to enjoy the power of Docker on your Ubo pod',
             items=[
-                ActionItem(
+                DispatchItem(
                     label='Install Docker',
                     icon='󰶮',
-                    action=install_docker,
+                    store_action=DockerInstallAction(),
                 ),
             ],
         ),
@@ -195,10 +202,10 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Docker is not Running',
             sub_heading='Run it to enjoy the power of Docker on your Ubo pod',
             items=[
-                ActionItem(
+                DispatchItem(
                     label='Start Docker',
                     icon='󰐊',
-                    action=run_docker,
+                    store_action=DockerStartAction(),
                 ),
             ],
         ),
@@ -207,10 +214,10 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Docker is Running',
             sub_heading='Enjoy the power of Docker on your Ubo pod',
             items=[
-                ActionItem(
+                DispatchItem(
                     label='Stop Docker',
                     icon='󰓛',
-                    action=stop_docker,
+                    store_action=DockerStopAction(),
                 ),
             ],
         ),
@@ -572,6 +579,10 @@ def init_service() -> None:
         DockerImageRegisterAppEvent,
         _register_image_app_entry,
     )
+
+    store.subscribe_event(DockerInstallEvent, install_docker)
+    store.subscribe_event(DockerStartEvent, start_docker)
+    store.subscribe_event(DockerStopEvent, stop_docker)
 
     store.subscribe_event(DockerImageFetchCompositionEvent, pull_composition)
     store.subscribe_event(DockerImageFetchEvent, fetch_image)

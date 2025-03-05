@@ -39,6 +39,18 @@ class DockerAction(BaseAction):
     """Docker action."""
 
 
+class DockerInstallAction(DockerAction):
+    """Install docker."""
+
+
+class DockerStartAction(DockerAction):
+    """Start docker service."""
+
+
+class DockerStopAction(DockerAction):
+    """Stop docker service."""
+
+
 class DockerSetStatusAction(DockerAction):
     """Set status of docker service."""
 
@@ -120,6 +132,18 @@ class DockerImageRemoveContainerAction(DockerImageAction):
 
 class DockerEvent(BaseEvent):
     """Docker event."""
+
+
+class DockerInstallEvent(DockerEvent):
+    """Signal for installing docker."""
+
+
+class DockerStartEvent(DockerEvent):
+    """Signal for starting docker service."""
+
+
+class DockerStopEvent(DockerEvent):
+    """Signal for stopping docker service."""
 
 
 class DockerLoadImagesEvent(DockerEvent):

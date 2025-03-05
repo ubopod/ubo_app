@@ -7,156 +7,16 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
     />
     <title>ubo - web-ui</title>
-    <style>
-      html,
-      body {
-        overflow: hidden;
-      }
-
-      body {
-        font-family: sans-serif;
-        margin: 0;
-        padding: 0;
-        background-color: white;
-        color: black;
-      }
-
-      #container {
-        display: flex;
-        flex-direction: column;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: black;
-          color: white;
-        }
-
-        .static-input-form input,
-        .static-input-form textarea {
-          background-color: #333;
-          color: white;
-          border: 1px solid #555;
-        }
-      }
-      form.static-input-form {
-        margin: 1em auto;
-        padding: 1em;
-        width: 50%;
-        border: 1px solid #ccc;
-      }
-      .static-input-form input,
-      .static-input-form select {
-        font-size: 1em;
-      }
-      .static-input-form input[type="text"],
-      .static-input-form input[type="password"],
-      .static-input-form select {
-        margin-top: 0.5em;
-        width: 100%;
-      }
-      .static-input-form small {
-        display: block;
-        margin-top: 0.5em;
-        font-size: 0.75em;
-        color: #666;
-      }
-      .static-input-form button[type="submit"] {
-        margin-top: 1em;
-        border: none;
-        padding: 0.75em;
-        font-size: 1em;
-      }
-    </style>
   </head>
 
   <script type="module">
     window.GRPC_ENVOY_LISTEN_PORT = "{{ GRPC_ENVOY_LISTEN_PORT }}";
 
     import { init } from "{{ url_for('static', filename='main.js') }}";
-    init();
+    init({{ inputs | tojson }});
   </script>
 
   <body>
-    <div id="container">
-      <div id="web-app-root"></div>
-      <div id="inputs">
-        {% for input in inputs %}
-          <form
-            class="static-input-form"
-            method="POST"
-            enctype="multipart/form-data"
-          >
-            <input name="id" type="hidden" value="{{ input.id }}" />
-            <h2>{{ input.prompt }}</h2>
-            {% if input.fields %}
-              {% for field in input.fields %}
-                <p>
-                  <label>
-                    <span style="margin-bottom: .25em; display: inline-block;"
-                      >{{ field.label }}</span
-                    >
-                    <span style="color: #888888">
-                      {% if field.required %}(required){% else %}(optional){% endif %} </span
-                    >:
-                    {% if field.type == 'select' %}
-                      <select name="{{ field.name }}">
-                        {% for option in field.options %}
-                          <option
-                            value="{{ option }}"
-                            {{ ' selected="selected"' if option == field.default else '' }}
-                          >
-                            {{ option }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                    {% elif field.type == 'long' %}
-                      <textarea
-                        name="{{ field.name }}"
-                        style="width: 100%; height: 240px;"
-                      ></textarea>
-                    {% else %}
-                      <input
-                        type="{{ field.type }}"
-                        name="{{ field.name }}"
-                        {{ 'value='' ~ field.default ~ ''' if field.default else '' }}
-                        {{ 'title='' ~ field.title ~ ''' if field.title else '' }}
-                        {{ 'pattern='' ~ field.pattern ~ ''' if field.pattern else '' }}
-                        {{ 'required' if field.required else '' }}
-                      />
-                    {% endif %}
-                    {% if field.description %}
-                      <small>{{ field.description }}</small>
-                    {% endif %}
-                  </label>
-                </p>
-              {% endfor %}
-            {% elif input.pattern and re.compile(input.pattern).groupindex.keys() | length > 0 %}
-              {%
-                for group_name in
-                re.compile(input.pattern).groupindex.keys() | map('regex_replace', '_+$', '') | list | unique
-              %}
-                <p>
-                  <label>
-                    {{ group_name }}:
-                    <input type="text" name="{{ group_name }}" value="" />
-                  </label>
-                </p>
-              {% endfor %}
-            {% else %}
-              <input type="text" name="value" value="" />
-            {% endif %}
-
-            <button type="submit" name="action" value="provide">Provide</button>
-            <button type="submit" name="action" value="cancel" formnovalidate>
-              Cancel
-            </button>
-            {% if not loop.last %}
-              <hr />
-            {% endif %}
-          </form>
-        {% endfor %}
-      </div>
-    </div>
+    <div id="web-app-root"></div>
   </body>
 </html>

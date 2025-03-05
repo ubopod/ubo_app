@@ -1,4 +1,10 @@
-export type Action = "download envoy" | "run envoy";
+export type Action =
+  | "install docker"
+  | "run docker"
+  | "stop docker"
+  | "download envoy"
+  | "run envoy"
+  | "remove envoy";
 
 export interface ReadableInformation {
   text: string;
@@ -40,7 +46,13 @@ export interface InputDescription {
 
 export interface StatusType {
   status: "ok" | "error";
-  docker: "running" | "not ready" | "not installed" | "not running" | "unknown";
-  envoy: "running" | "not downloaded" | "not running" | "unknown";
+  docker:
+    | "running"
+    | "not ready"
+    | "not installed"
+    | "not running"
+    | "unknown"
+    | "failed";
+  envoy: "running" | "not downloaded" | "not running" | "unknown" | "failed";
   inputs: InputDescription[];
 }
