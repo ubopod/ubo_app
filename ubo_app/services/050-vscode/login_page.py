@@ -75,6 +75,10 @@ class LoginPage(PageWidget):
                 mainthread(set_properties)()
                 await self.process.wait()
             else:
+                logger.error(
+                    'VSCode: Failed to login: invalid output',
+                    extra={'output': output},
+                )
                 store.dispatch(
                     NotificationsAddAction(
                         notification=Notification(

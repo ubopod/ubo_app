@@ -115,7 +115,7 @@ def clear_access_key() -> None:
     to_thread(_context.cleanup)
 
 
-@store.view(lambda state: state.voice.selected_engine)
+@store.with_state(lambda state: state.voice.selected_engine)
 def _engine(engine: VoiceEngine) -> VoiceEngine:
     return engine
 
