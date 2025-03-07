@@ -45,7 +45,6 @@ def main() -> None:
         subprocess.run(['/bin/systemctl', 'disable', 'hostapd.service'], check=True)  # noqa: S603
         subprocess.run(['/bin/systemctl', 'mask', 'hostapd.service'], check=True)  # noqa: S603
         subprocess.run(['/bin/systemctl', 'stop', 'dnsmasq.service'], check=True)  # noqa: S603
-        subprocess.run(['/usr/bin/env', 'nmcli', 'radio', 'wifi', 'on'], check=True)  # noqa: S603
     else:
         msg = 'Invalid argument'
         raise ValueError(msg)
