@@ -99,7 +99,7 @@ def render_on_display(*, regions: list[Region]) -> None:
 original_block = display._block  # noqa: SLF001
 
 
-@store.view(
+@store.with_state(
     lambda state: state.display.is_paused if hasattr(state, 'display') else False,
 )
 def render_block(

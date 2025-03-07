@@ -57,7 +57,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-@store.view(lambda state: state.ip.interfaces)
+@store.with_state(lambda state: state.ip.interfaces)
 def image_menu(  # noqa: C901
     interfaces: Sequence[IpNetworkInterface],
     image: ImageState,

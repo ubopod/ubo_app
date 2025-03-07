@@ -65,6 +65,10 @@ class SignInPage(PageWidget):
                 mainthread(set_properties)()
                 await self.process.wait()
             else:
+                logger.error(
+                    'RPi Connect: Failed to login: invalid output',
+                    extra={'output': output},
+                )
                 store.dispatch(
                     NotificationsAddAction(
                         notification=Notification(

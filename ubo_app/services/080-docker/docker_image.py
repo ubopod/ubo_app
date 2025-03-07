@@ -19,7 +19,7 @@ from ubo_app.utils import secrets
 from ubo_app.utils.async_ import to_thread
 
 
-@store.view(lambda state: state.docker.service.usernames)
+@store.with_state(lambda state: state.docker.service.usernames)
 def fetch_image(
     usernames: dict[str, str],
     event: DockerImageFetchEvent,

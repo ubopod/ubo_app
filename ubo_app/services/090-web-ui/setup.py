@@ -214,7 +214,7 @@ async def init_service() -> None:  # noqa: C901
     app.debug = WEB_UI_DEBUG_MODE
     shutdown_event: asyncio.Event = asyncio.Event()
 
-    @store.view(lambda state: state.web_ui.active_inputs)
+    @store.with_state(lambda state: state.web_ui.active_inputs)
     def inputs(inputs: list[InputDescription]) -> list[InputDescription]:
         return inputs
 

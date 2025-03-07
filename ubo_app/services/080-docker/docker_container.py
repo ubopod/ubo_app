@@ -100,7 +100,7 @@ async def _process_environment_variables(image_id: str) -> dict[str, str]:
     return result
 
 
-@store.view(lambda state: state.docker)
+@store.with_state(lambda state: state.docker)
 async def run_container(
     docker_state: DockerState,
     event: DockerImageRunContainerEvent,

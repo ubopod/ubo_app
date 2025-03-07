@@ -63,21 +63,22 @@ async def _check_status() -> None:
 
             data = re.search(
                 r"""Signed in: (yes|no)
-(?:Screen sharing: (allowed|unavailable)(?: \((\d+) sessions active\))?
-Remote shell: (allowed|unavailable)(?: \((\d+) sessions active\))?)?""",
+(?:Screen sharing: (allowed|unavailable)(?: \((\d+) sessions? active\))?
+Remote shell: (allowed|unavailable)(?: \((\d+) sessions? active\))?)?""",
                 output,
             )
 
             if data:
                 is_signed_in = data.group(1) == 'yes'
-                status_data = {
-                    'screen_sharing_sessions': int(data.group(3))
-                    if data.group(2) == 'allowed'
-                    else None,
-                    'remote_shell_sessions': int(data.group(5))
-                    if data.group(4) == 'allowed'
-                    else None,
-                }
+                if is_signed_in:
+                    status_data = {
+                        'screen_sharing_sessions': int(data.group(3) or '0')
+                        if data.group(2) == 'allowed'
+                        else None,
+                        'remote_shell_sessions': int(data.group(5) or '0')
+                        if data.group(4) == 'allowed'
+                        else None,
+                    }
     except (subprocess.CalledProcessError, TimeoutError):
         store.dispatch(
             NotificationsAddAction(
@@ -92,7 +93,7 @@ Remote shell: (allowed|unavailable)(?: \((\d+) sessions active\))?)?""",
             ),
         )
     logger.info(
-        'Checked VSCode Tunnel Status',
+        'Checked RPi Connect Status',
         extra=status_data,
     )
     store.dispatch(
@@ -197,7 +198,7 @@ def sign_out() -> None:
     create_task(act())
 
 
-@store.view(lambda state: state.lightdm.is_active)
+@store.with_state(lambda state: state.lightdm.is_active)
 def start_service(is_lightdm_active: bool) -> None:  # noqa: FBT001
     """Start the RPi Connect service."""
 
