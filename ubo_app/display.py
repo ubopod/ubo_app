@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from headless_kivy.config import Region
 
 
-from ubo_app.constants import HEIGHT, WIDTH
+from ubo_app.constants import DISPLAY_BAUDRATE, HEIGHT, WIDTH
 
 
 class Display:
@@ -61,7 +61,7 @@ class Display:
                     cs=self.cs_pin,
                     dc=self.dc_pin,
                     rst=self.reset_pin,
-                    baudrate=70_000_000,
+                    baudrate=DISPLAY_BAUDRATE,
                 )
         else:
             self.display = cast('ST7789', Fake())

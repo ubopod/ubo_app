@@ -51,12 +51,18 @@ def main() -> None:
 
     import headless_kivy.config
 
-    from ubo_app.constants import DISABLE_GRPC, HEIGHT, WIDTH
+    from ubo_app.constants import (
+        BYTES_PER_PIXEL,
+        DISABLE_GRPC,
+        DISPLAY_BAUDRATE,
+        HEIGHT,
+        WIDTH,
+    )
     from ubo_app.display import render_on_display
 
     headless_kivy.config.setup_headless_kivy(
         headless_kivy.config.SetupHeadlessConfig(
-            bandwidth_limit=70 * 1000 * 1000 // 8 // 2 if IS_RPI else 0,
+            bandwidth_limit=DISPLAY_BAUDRATE // BYTES_PER_PIXEL // 8 if IS_RPI else 0,
             bandwidth_limit_window=0.03,
             bandwidth_limit_overhead=10000,
             region_size=60,
