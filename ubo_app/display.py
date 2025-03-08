@@ -16,6 +16,7 @@ from ubo_app.store.services.display import (
     DisplayRenderEvent,
 )
 from ubo_app.utils import IS_RPI
+from ubo_app.utils.eeprom import get_eeprom_data
 
 if TYPE_CHECKING:
     from headless_kivy.config import Region
@@ -24,24 +25,34 @@ if TYPE_CHECKING:
 from ubo_app.constants import HEIGHT, WIDTH
 
 if IS_RPI:
-    import board
-    import digitalio
+    eeprom_data = get_eeprom_data()
 
-    cs_pin = digitalio.DigitalInOut(board.CE0)
-    dc_pin = digitalio.DigitalInOut(board.D25)
-    reset_pin = digitalio.DigitalInOut(board.D24)
-    spi = board.SPI()
-    display = ST7789(
-        spi,
-        height=HEIGHT,
-        width=WIDTH,
-        y_offset=80,
-        x_offset=0,
-        cs=cs_pin,
-        dc=dc_pin,
-        rst=reset_pin,
-        baudrate=70_000_000,
-    )
+    if (
+        eeprom_data is not None
+        and 'lcd' in eeprom_data
+        and eeprom_data['lcd'] is not None
+        and eeprom_data['lcd']['model'] == 'st7789'
+    ):
+        import board
+        import digitalio
+
+        cs_pin = digitalio.DigitalInOut(board.CE0)
+        dc_pin = digitalio.DigitalInOut(board.D25)
+        reset_pin = digitalio.DigitalInOut(board.D24)
+        spi = board.SPI()
+        display = ST7789(
+            spi,
+            height=HEIGHT,
+            width=WIDTH,
+            y_offset=80,
+            x_offset=0,
+            cs=cs_pin,
+            dc=dc_pin,
+            rst=reset_pin,
+            baudrate=70_000_000,
+        )
+    else:
+        display = None
 else:
     display = cast(ST7789, Fake())
 
@@ -96,7 +107,7 @@ def render_on_display(*, regions: list[Region]) -> None:
     )
 
 
-original_block = display._block  # noqa: SLF001
+original_block = display._block if display is not None else None  # noqa: SLF001
 
 
 @store.with_state(
@@ -110,19 +121,20 @@ def render_block(
     bypass_pause: bool = False,
 ) -> None:
     """Block the display."""
-    if not is_paused or bypass_pause:
+    if display is not None and (not is_paused or bypass_pause):
         display._block(*rectangle, data_bytes)  # noqa: SLF001
 
 
 def turn_off() -> None:
     """Turn off the display."""
-    display._block = lambda *args, **kwargs: (args, kwargs)  # noqa: SLF001
+    if display is not None:
+        display._block = lambda *args, **kwargs: (args, kwargs)  # noqa: SLF001
     render_blank()
 
 
 def render_blank() -> None:
     """Render a blank screen."""
-    if IS_RPI:
+    if IS_RPI and original_block is not None:
         original_block(0, 0, WIDTH - 1, HEIGHT - 1, b'\x00\x00' * WIDTH * HEIGHT)
         time.sleep(0.2)
         original_block(0, 0, WIDTH - 1, HEIGHT - 1, b'\x00\x00' * WIDTH * HEIGHT)

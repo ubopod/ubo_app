@@ -20,6 +20,7 @@
 - refactor(voice): upgrade `access_key` input to use the new `fields` value of the `InputDescription`
 - refactor(web-ui): use the same mui interface in static server too (instead of jinja-rendered interface) and add action buttons for all status reported by server - closes #224
 - fix(rpi-connect): use `with_state` of the latest python-redux version instead of `view` to avoid memoization of actions - closes #248
+- refactor(core,audio,display,keypad,sensors): read and check content of eeprom to determine if a device/service should be initialized or not - closes #223, #closes #249
 
 ## Version 1.2.2
 
