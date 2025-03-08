@@ -18,7 +18,7 @@ class UpdateManagerSetVersionsAction(UpdateManagerAction):
     current_version: str
     base_image_variant: str
     latest_version: str
-    serial_number: str
+    serial_number: str | None
 
 
 class UpdateManagerSetStatusAction(UpdateManagerAction):

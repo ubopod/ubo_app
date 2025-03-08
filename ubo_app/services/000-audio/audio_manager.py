@@ -15,6 +15,7 @@ from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlaybackDoneAction
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.eeprom import get_eeprom_data
 from ubo_app.utils.server import send_command
 
 CHUNK_SIZE = 1024
@@ -38,13 +39,15 @@ class AudioManager:
     def __init__(self: AudioManager) -> None:
         """Initialize the audio manager."""
         # create an audio object
-        self.cardindex = None
+        self.card_index = None
+        self.has_speakers = False
+        self.has_microphones = False
 
         async def initialize_audio() -> None:
             for _ in range(20):
                 try:
                     cards = alsaaudio.cards()
-                    self.cardindex = cards.index(
+                    self.card_index = cards.index(
                         next(card for card in cards if 'wm8960' in card),
                     )
                 except StopIteration:
@@ -53,7 +56,24 @@ class AudioManager:
                     break
                 await asyncio.sleep(1)
 
-        create_task(initialize_audio())
+        eeprom_data = get_eeprom_data()
+
+        if eeprom_data is not None and (
+            'speakers' in eeprom_data
+            and eeprom_data['speakers']
+            and eeprom_data['speakers']['model'] == 'wm8960'
+        ):
+            self.has_speakers = True
+
+        if eeprom_data is not None and (
+            'microphones' in eeprom_data
+            and eeprom_data['microphones']
+            and eeprom_data['microphones']['model'] == 'wm8960'
+        ):
+            self.has_microphones = True
+
+        if self.has_speakers or self.has_microphones:
+            create_task(initialize_audio())
 
     async def play_file(self: AudioManager, filename: str) -> None:
         """Play a waveform audio file.
@@ -154,17 +174,17 @@ class AudioManager:
             mixer.setmute(1 if mute else 0)
         except alsaaudio.ALSAAudioError:
             # Seems like pulseaudio is not installed, so we directly use device mixers
-            if self.cardindex is None:
+            if self.card_index is None or not self.has_speakers:
                 return
 
             mixer = alsaaudio.Mixer(
                 control='Right Output Mixer PCM',
-                cardindex=self.cardindex,
+                cardindex=self.card_index,
             )
             mixer.setmute(0)
             mixer = alsaaudio.Mixer(
                 control='Left Output Mixer PCM',
-                cardindex=self.cardindex,
+                cardindex=self.card_index,
             )
             mixer.setmute(0)
 
@@ -186,16 +206,16 @@ class AudioManager:
             mixer.setvolume(round(volume * 100))
         except alsaaudio.ALSAAudioError:
             # Seems like pulseaudio is not installed, so we directly use device mixers
-            if self.cardindex is None:
+            if self.card_index is None or not self.has_speakers:
                 return
 
-            mixer = alsaaudio.Mixer(control='Speaker', cardindex=self.cardindex)
+            mixer = alsaaudio.Mixer(control='Speaker', cardindex=self.card_index)
             mixer.setvolume(
                 _linear_to_logarithmic(volume),
                 alsaaudio.MIXER_CHANNEL_ALL,
                 alsaaudio.PCM_PLAYBACK,
             )
-            mixer = alsaaudio.Mixer(control='Playback', cardindex=self.cardindex)
+            mixer = alsaaudio.Mixer(control='Playback', cardindex=self.card_index)
             mixer.setvolume(
                 100,
                 alsaaudio.MIXER_CHANNEL_ALL,
@@ -220,10 +240,10 @@ class AudioManager:
             mixer.setrec(round(volume * 100))
         except alsaaudio.ALSAAudioError:
             # Seems like pulseaudio is not installed, so we directly use device mixers
-            if self.cardindex is None:
+            if self.card_index is None or not self.has_microphones:
                 return
 
-            mixer = alsaaudio.Mixer(control='Capture', cardindex=self.cardindex)
+            mixer = alsaaudio.Mixer(control='Capture', cardindex=self.card_index)
             mixer.setvolume(
                 _linear_to_logarithmic(volume),
                 alsaaudio.MIXER_CHANNEL_ALL,
