@@ -17,6 +17,7 @@ from ubo_app.store.services.keypad import (
     KeypadKeyReleaseAction,
 )
 from ubo_app.utils import IS_RPI
+from ubo_app.utils.eeprom import get_eeprom_data
 
 if TYPE_CHECKING:
     import busio
@@ -279,4 +280,11 @@ class Keypad:
 def init_service() -> None:
     if not IS_RPI:
         return
-    Keypad()
+    eeprom_data = get_eeprom_data()
+    if (
+        eeprom_data is not None
+        and 'keypad' in eeprom_data
+        and eeprom_data['keypad']
+        and eeprom_data['keypad']['model'] == 'aw9523'
+    ):
+        Keypad()
