@@ -58,6 +58,7 @@
 - fix(core): add `task_runner` parameter to `async_.create_task` and use it with `async_.get_task_runner` in store event handlers instead of directly calling the task runner to make sure a reference to tasks are stored in the memory until they are finished, handle by `async_.create_task` - closes #247, closes #266
 - chore: update pyright and fix/silent newly reported type errors
 - fix(core): improve `has_gateway` utility function to ignore default routes with local scope - closes #251
+- fix(display): decrease baudrate from 70,000,000 to 60,000,000 to avoid residual noise on the display - closes #236
 
 ## Version 1.2.2
 
