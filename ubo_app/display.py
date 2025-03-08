@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from headless_kivy.config import Region
 
 
-from ubo_app.constants import HEIGHT, WIDTH
+from ubo_app.constants import DISPLAY_BAUDRATE, HEIGHT, WIDTH
 
 if IS_RPI:
     import board
@@ -40,7 +40,7 @@ if IS_RPI:
         cs=cs_pin,
         dc=dc_pin,
         rst=reset_pin,
-        baudrate=70_000_000,
+        baudrate=DISPLAY_BAUDRATE,
     )
 else:
     display = cast(ST7789, Fake())
