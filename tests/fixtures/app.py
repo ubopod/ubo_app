@@ -286,7 +286,7 @@ async def app_context(
             '--use-fakefs',
             default=cast(
                 Any,
-                str_to_bool(os.environ.get('UBO_TEST_USE_FAKEFS', 'false')) == 1,
+                str_to_bool(os.environ.get('UBO_TEST_USE_FAKEFS', 'false')),
             ),
         )
         is True
