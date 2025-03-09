@@ -119,11 +119,8 @@ async def input_wifi_connection(
     if type:
         type = type.upper()
     type = cast(WiFiType, type)
-    hidden = (
-        str_to_bool(
-            result.data.get('Hidden') or result.data.get('Hidden_') or 'false',
-        )
-        == 1
+    hidden = str_to_bool(
+        result.data.get('Hidden') or result.data.get('Hidden_') or 'false',
     )
 
     if not password:
