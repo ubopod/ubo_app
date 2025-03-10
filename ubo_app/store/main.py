@@ -215,9 +215,13 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             if file_path and ubo_app_path:
                 root_path = Path(ubo_app_path).parent
                 path = Path(file_path)
-                return f"""{(path.relative_to(root_path)
-                             if file_path.startswith(root_path.as_posix())
-                             else path.absolute()).as_posix()}:{obj.__name__}"""
+                return f"""{
+                    (
+                        path.relative_to(root_path)
+                        if file_path.startswith(root_path.as_posix())
+                        else path.absolute()
+                    ).as_posix()
+                }:{obj.__name__}"""
             return f'{obj.__module__}:{obj.__name__}'
         if isinstance(obj, functools.partial):
             return f'<functools.partial:{cls.serialize_value(obj.func)}>'

@@ -27,7 +27,7 @@ class LoadServices(Protocol):
         service_ids: Sequence[str],
         *,
         timeout: float | None = None,
-        delay: float = 0.4,
+        gap_duration: float = 0.4,
     ) -> None: ...
 
     @overload
@@ -37,25 +37,25 @@ class LoadServices(Protocol):
         *,
         run_async: Literal[True],
         timeout: float | None = None,
-        delay: float = 0.4,
+        gap_duration: float = 0.4,
     ) -> Coroutine[None, None, None]: ...
 
 
 @pytest.fixture
 def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
     """Load services and wait for them to be ready."""
-    from ubo_app.load_services import REGISTERED_PATHS
+    from ubo_app.service_thread import REGISTERED_PATHS
 
     def load_services_and_wait(
         service_ids: Sequence[str],
         *,
         run_async: bool = False,
         timeout: float | None = None,
-        delay: float = 0.4,
+        gap_duration: float = 0.4,
     ) -> Coroutine[None, None, None] | None:
-        from ubo_app.load_services import load_services
+        from ubo_app.service_thread import load_services
 
-        load_services(service_ids, delay=delay)
+        load_services(service_ids, gap_duration=gap_duration)
 
         @wait_for(run_async=cast(Literal[True], run_async), timeout=timeout)
         def check() -> None:

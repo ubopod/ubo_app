@@ -26,7 +26,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationsDisplayAction,
 )
-from ubo_app.store.settings.types import SettingsToggleDebugModeAction
+from ubo_app.store.settings.menu import SYSTEM_MENU
 from ubo_app.store.update_manager.utils import (
     BASE_IMAGE,
     CURRENT_VERSION,
@@ -46,31 +46,10 @@ APPS_MENU = HeadlessMenu(
 )
 
 
-@store.autorun(lambda state: state.settings.is_debug_enabled)
-def _debug_icon(is_debug_eanbled: bool) -> str:  # noqa: FBT001
-    return '󰱒' if is_debug_eanbled else '󰄱'
-
-
-SETTINGS_ITEMS: dict[SettingsCategory, list[Item]] = {
+SETTINGS_ITEMS: dict[SettingsCategory, Sequence[Item]] = {
     SettingsCategory.NETWORK: [],
     SettingsCategory.REMOTE: [],
-    SettingsCategory.SYSTEM: [
-        SubMenuItem(
-            key='general',
-            label='General',
-            icon='󰒓',
-            sub_menu=HeadlessMenu(
-                title='󰒓General',
-                items=[
-                    DispatchItem(
-                        label='Debug',
-                        store_action=SettingsToggleDebugModeAction(),
-                        icon=_debug_icon,
-                    ),
-                ],
-            ),
-        ),
-    ],
+    SettingsCategory.SYSTEM: SYSTEM_MENU,
     SettingsCategory.SPEECH: [],
     SettingsCategory.DOCKER: [],
 }

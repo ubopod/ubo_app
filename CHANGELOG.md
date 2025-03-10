@@ -22,6 +22,7 @@
 - fix(rpi-connect): use `with_state` of the latest python-redux version instead of `view` to avoid memoization of actions - closes #248
 - refactor(core,audio,display,keypad,sensors): read and check content of eeprom to determine if a device/service should be initialized or not - closes #223, #closes #249
 - fix(core): improve syntax of `str_to_bool`, removing all unnecessary `== 1` postfixes
+- feat(core): implement services menu in settings for controlling services - closes #4, closes #226
 
 ## Version 1.2.2
 

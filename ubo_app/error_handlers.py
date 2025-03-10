@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import threading
+import time
 import traceback
 import weakref
 from typing import TYPE_CHECKING, cast
@@ -110,10 +111,53 @@ def loop_exception_handler(
     else:
         parent_stack = None
 
-    if exception and not isinstance(exception, asyncio.CancelledError):
+    thread = threading.current_thread()
+    label = getattr(thread, 'label', None)
+    service_id = getattr(thread, 'service_id', None)
+
+    if service_id is not None:
+        from ubo_app.store.main import store
+        from ubo_app.store.settings.types import (
+            ErrorReport,
+            SettingsReportServiceErrorAction,
+        )
+
+        message = ''
+
+        if exception and isinstance(exception, Exception):
+            message += '[b]exception:[/b] ' + ''.join(
+                traceback.format_exception(
+                    type(exception),
+                    exception,
+                    exception.__traceback__,
+                ),
+            )
+
+        if context.get('message'):
+            message += '\n\n[b]message:[/b] ' + str(context.get('message'))
+
+        if context.get('task'):
+            message += '\n\n[b]task:[/b] ' + str(context.get('task'))
+
+        if context.get('future'):
+            message += '\n\n[b]future:[/b] ' + str(context.get('future'))
+
+        store.dispatch(
+            SettingsReportServiceErrorAction(
+                service_id=service_id,
+                error=ErrorReport(
+                    message=message,
+                    timestamp=time.time(),
+                ),
+            ),
+        )
+
+    if exception:
         logger.exception(
             'Event loop exception',
             extra={
+                'service': label,
+                'service_id': service_id,
                 'loop': loop,
                 'error_message': context.get('message'),
                 'future': context.get('future'),
@@ -124,6 +168,8 @@ def loop_exception_handler(
         logger.verbose(
             'Event loop exception',
             extra={
+                'service': label,
+                'service_id': service_id,
                 'loop': loop,
                 'error_message': context.get('message'),
                 'future': context.get('future'),
@@ -136,6 +182,8 @@ def loop_exception_handler(
         logger.error(
             'Event loop exception handler called without an exception in the context',
             extra={
+                'service': label,
+                'service_id': service_id,
                 'loop': loop,
                 'context': context,
                 'parent_stack': parent_stack,

@@ -41,7 +41,7 @@ def main() -> None:
     setup_error_handling()
 
     # This should be imported early to set the custom loader
-    from ubo_app.load_services import load_services
+    from ubo_app.service_thread import load_services
 
     setup()
 
