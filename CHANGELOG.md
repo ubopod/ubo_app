@@ -25,6 +25,7 @@
 - feat(core): implement services menu in settings for controlling services - closes #4, closes #226
 - feat(core): store services configuration into and read them from the persistent store
 - refactor: use the new subscriptions return value of the `setup` function for different services to report subscriptions so that the service manager can clean up the subscriptions when the service is stopped
+- fix(core): remove the reference of the async task handle after it is done to avoid memory leaks
 
 ## Version 1.2.2
 
