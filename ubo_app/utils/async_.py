@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from redux.basic_types import TaskCreatorCallback
 
 
-background_tasks = []
+background_tasks: list[Handle] = []
 
 
 def create_task(
@@ -26,8 +26,22 @@ def create_task(
         if callback:
             callback(task)
 
-    handle = ubo_app.service._create_task(task, callback_)  # noqa: SLF001
+    handle: Handle | None = None
+    signal = asyncio.Event()
+
+    async def wrapper() -> None:
+        await task
+        await signal.wait()
+        if handle in background_tasks:
+            background_tasks.remove(handle)
+
+    if callback:
+        handle = ubo_app.service._create_task(wrapper(), callback_)  # noqa: SLF001
+    else:
+        handle = ubo_app.service._create_task(wrapper())  # noqa: SLF001
+
     background_tasks.append(handle)
+    signal.set()
     return handle
 
 
