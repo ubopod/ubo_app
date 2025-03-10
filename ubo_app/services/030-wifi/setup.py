@@ -1,6 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from debouncer import DebounceOptions, debounce
 from pages import create_wireless_connection, main
 from redux import AutorunOptions
@@ -38,6 +40,9 @@ from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
     register_persistent_store,
 )
+
+if TYPE_CHECKING:
+    from ubo_app.utils.types import Subscriptions
 
 
 @debounce(
@@ -110,14 +115,16 @@ def show_onboarding_notification() -> None:
     )
 
 
-async def init_service() -> None:
+def init_service() -> Subscriptions:
     create_task(update_wifi_list())
     create_task(setup_listeners())
 
-    register_persistent_store(
-        'wifi_has_visited_onboarding',
-        lambda state: state.wifi.has_visited_onboarding,
-    )
+    subscriptions = [
+        register_persistent_store(
+            'wifi_has_visited_onboarding',
+            lambda state: state.wifi.has_visited_onboarding,
+        ),
+    ]
 
     store.dispatch(
         RegisterSettingAppAction(
@@ -125,12 +132,6 @@ async def init_service() -> None:
             category=SettingsCategory.NETWORK,
             menu_item=main.WiFiMainMenu,
         ),
-    )
-
-    store.subscribe_event(WiFiUpdateRequestEvent, request_scan)
-    store.subscribe_event(
-        WiFiInputConnectionEvent,
-        create_wireless_connection.input_wifi_connection,
     )
 
     @store.autorun(
@@ -155,3 +156,14 @@ async def init_service() -> None:
 
         if is_connected is not None:
             check_onboarding.unsubscribe()
+
+    subscriptions += [
+        store.subscribe_event(WiFiUpdateRequestEvent, request_scan),
+        store.subscribe_event(
+            WiFiInputConnectionEvent,
+            create_wireless_connection.input_wifi_connection,
+        ),
+        check_onboarding.unsubscribe,
+    ]
+
+    return subscriptions

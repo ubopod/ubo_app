@@ -24,6 +24,7 @@
 - fix(core): improve syntax of `str_to_bool`, removing all unnecessary `== 1` postfixes
 - feat(core): implement services menu in settings for controlling services - closes #4, closes #226
 - feat(core): store services configuration into and read them from the persistent store
+- refactor: use the new subscriptions return value of the `setup` function for different services to report subscriptions so that the service manager can clean up the subscriptions when the service is stopped
 
 ## Version 1.2.2
 
@@ -428,7 +429,7 @@
 
 - feat(docker): add ngrok service (currently serves port 22 with no auth token)
 - refactor(style): update `ubo-gui` to the latest version and change all icons to use nerd font icons
-- refactor(serviceS): change the loading order of the services
+- refactor(services): change the loading order of the services
 - feat(ssh): add ssh service to create and remove temporary ssh target users
 - fix(server): it would miss commands coming together in a single packet, now it waits for the next packet if the current packet is not a complete command and it doesn't miss extra commands in the packet if it has multiple commands.
 

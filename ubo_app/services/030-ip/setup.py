@@ -20,6 +20,7 @@ from ubo_app.store.services.ip import (
     IpUpdateInterfacesAction,
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ IpMainMenu = SubMenuItem(
 )
 
 
-async def init_service() -> None:
+def init_service() -> None:
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
@@ -117,4 +118,4 @@ async def init_service() -> None:
         ),
     )
 
-    await check_connection()
+    create_task(check_connection())

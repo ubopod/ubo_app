@@ -28,6 +28,8 @@ from ubo_app.utils.async_ import create_task
 if TYPE_CHECKING:
     from numpy._typing import NDArray
 
+    from ubo_app.utils.types import Subscriptions
+
 from picamera2.picamera2 import Picamera2
 
 THROTTL_TIME = 0.5
@@ -210,8 +212,10 @@ def start_camera_viewfinder() -> None:
     )
 
 
-def init_service() -> None:
-    store.subscribe_event(
-        CameraStartViewfinderEvent,
-        start_camera_viewfinder,
-    )
+def init_service() -> Subscriptions:
+    return [
+        store.subscribe_event(
+            CameraStartViewfinderEvent,
+            start_camera_viewfinder,
+        ),
+    ]
