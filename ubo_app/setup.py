@@ -87,7 +87,7 @@ def setup() -> None:
 
     if not IS_RPI:
         sys.modules['adafruit_rgb_display.st7789'] = Fake()
-        sys.modules['alsaaudio'] = Fake()
+        sys.modules['alsaaudio'] = Fake(_Fake__attrs={'cards': lambda: ['wm8960']})
         sys.modules['apt'] = Fake()
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()

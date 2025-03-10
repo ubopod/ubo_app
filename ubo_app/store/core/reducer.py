@@ -48,6 +48,7 @@ from ubo_app.store.core.types import (
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
 )
+from ubo_app.store.settings.types import SettingsServiceSetStatusAction
 
 
 def reducer(
@@ -55,6 +56,13 @@ def reducer(
     action: MainAction,
 ) -> ReducerResult[MainState, None, InitEvent | MainEvent]:
     from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
+
+    def find_sub_menu_item(items: Sequence[Item], key: str) -> SubMenuItem:
+        item = next((item for item in items if item.key == key), None)
+        if not isinstance(item, SubMenuItem):
+            msg = f'{key.capitalize()} menu item is not a `SubMenuItem`'
+            raise TypeError(msg)
+        return item
 
     if state is None:
         if isinstance(action, InitAction):
@@ -155,15 +163,13 @@ def reducer(
         return replace(state, is_replaying=False)
 
     if isinstance(action, RegisterSettingAppAction):
-        parent_index = 1
         menu = state.menu
         if not menu:
             return state
         root_menu_items = menu_items(menu)
-        main_menu_item = cast(SubMenuItem, root_menu_items[0])
+        main_menu_item = find_sub_menu_item(root_menu_items, 'main')
         main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
-
-        settings_menu_item = cast(SubMenuItem, main_menu_items[parent_index])
+        settings_menu_item = find_sub_menu_item(main_menu_items, 'settings')
         settings_menu_items = menu_items(cast(Menu, settings_menu_item.sub_menu))
 
         category_menu_item = cast(
@@ -171,9 +177,9 @@ def reducer(
             next(item for item in settings_menu_items if item.label == action.category),
         )
 
-        key = action.service
+        key = f'{action.service}:'
         if action.key is not None:
-            key += f':{action.key}'
+            key += action.key
 
         priorities = {
             **state.settings_items_priorities,
@@ -248,35 +254,19 @@ for the `RegisterSettingAppAction` instance."""
         )
 
     if isinstance(action, RegisterRegularAppAction):
-        parent_index = 0
         menu = state.menu
         if not menu:
             return state
         root_menu_items = menu_items(menu)
-        main_menu_item = root_menu_items[0]
-
-        if not isinstance(main_menu_item, SubMenuItem):
-            msg = 'Main menu item is not a `SubMenuItem`'
-            raise TypeError(msg)
-
+        main_menu_item = find_sub_menu_item(root_menu_items, 'main')
         main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
+        apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
+        apps_menu_items = menu_items(cast(Menu, apps_menu_item.sub_menu))
 
-        apps_menu_item = main_menu_items[parent_index]
-
-        if not isinstance(apps_menu_item, SubMenuItem):
-            msg = 'Applications menu item is not a `SubMenuItem`'
-            raise TypeError(msg)
-
-        key = action.service
+        key = f'{action.service}:'
         if action.key is not None:
-            key += f':{action.key}'
-        if any(
-            item.key == key
-            for item in cast(
-                Sequence[Item],
-                cast(Menu, apps_menu_item.sub_menu).items,
-            )
-        ):
+            key += action.key
+        if any(item.key == key for item in apps_menu_items):
             msg = f"""Regular application with key "{key}", already exists. Consider \
 providing a unique `key` field for the `RegisterRegularAppAction` instance."""
             raise ValueError(msg)
@@ -293,7 +283,7 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         menu_item = replace(action.menu_item, key=key)
         new_items = sorted(
             [
-                *cast(Sequence[Item], cast(Menu, apps_menu_item.sub_menu).items),
+                *cast(Sequence[Item], apps_menu_items),
                 menu_item,
             ],
             key=sort_key,
@@ -312,8 +302,8 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
             sub_menu=replace(
                 cast(Menu, main_menu_item.sub_menu),
                 items=[
-                    apps_menu_item if index == parent_index else item
-                    for index, item in enumerate(main_menu_items)
+                    apps_menu_item if item.key == 'apps' else item
+                    for item in main_menu_items
                 ],
             ),
         )
@@ -330,32 +320,20 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         )
 
     if isinstance(action, DeregisterRegularAppAction):
-        key = action.service
+        key = f'{action.service}:'
         if action.key is not None:
-            key += f':{action.key}'
+            key += action.key
 
         if key is None:
             return state
 
-        parent_index = 0
         menu = state.menu
         if not menu:
             return state
         root_menu_items = menu_items(menu)
-        main_menu_item = root_menu_items[0]
-
-        if not isinstance(main_menu_item, SubMenuItem):
-            msg = 'Main menu item is not a `SubMenuItem`'
-            raise TypeError(msg)
-
+        main_menu_item = find_sub_menu_item(root_menu_items, 'main')
         main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
-
-        apps_menu_item = main_menu_items[parent_index]
-
-        if not isinstance(apps_menu_item, SubMenuItem):
-            msg = 'Applications menu item is not a `SubMenuItem`'
-            raise TypeError(msg)
-
+        apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
         apps_menu_items = menu_items(cast(Menu, apps_menu_item.sub_menu))
 
         new_items = [item for item in apps_menu_items if item.key != key]
@@ -419,5 +397,97 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
             state=state,
             events=[RebootEvent()],
         )
+
+    if isinstance(action, SettingsServiceSetStatusAction):  # noqa: SIM102
+        if action.is_active is False:
+            menu = state.menu
+            if not menu:
+                return state
+            root_menu_items = menu_items(menu)
+            main_menu_item = find_sub_menu_item(root_menu_items, 'main')
+            main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
+            apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
+            apps_menu_items = menu_items(cast(Menu, apps_menu_item.sub_menu))
+            settings_menu_item = find_sub_menu_item(main_menu_items, 'settings')
+            settings_menu_items = menu_items(cast(Menu, settings_menu_item.sub_menu))
+
+            new_apps_menu_item = replace(
+                apps_menu_item,
+                sub_menu=replace(
+                    cast(Menu, apps_menu_item.sub_menu),
+                    items=[
+                        item
+                        for item in apps_menu_items
+                        if item.key is None
+                        or not item.key.startswith(f'{action.service_id}:')
+                    ],
+                ),
+            )
+
+            new_settings_menu_item = replace(
+                settings_menu_item,
+                sub_menu=replace(
+                    cast(Menu, settings_menu_item.sub_menu),
+                    items=[
+                        replace(
+                            category_menu_item,
+                            sub_menu=replace(
+                                cast(Menu, category_menu_item.sub_menu),
+                                items=[
+                                    item
+                                    for item in menu_items(
+                                        cast(Menu, category_menu_item.sub_menu),
+                                    )
+                                    if item.key is None
+                                    or not item.key.startswith(f'{action.service_id}:')
+                                ],
+                            ),
+                        )
+                        if isinstance(category_menu_item, SubMenuItem)
+                        else category_menu_item
+                        for category_menu_item in settings_menu_items
+                    ],
+                ),
+            )
+
+            new_main_menu_item = replace(
+                main_menu_item,
+                sub_menu=replace(
+                    cast(Menu, main_menu_item.sub_menu),
+                    items=[
+                        new_apps_menu_item
+                        if item == apps_menu_item
+                        else new_settings_menu_item
+                        if item == settings_menu_item
+                        else item
+                        for item in main_menu_items
+                    ],
+                ),
+            )
+
+            events: list[MenuGoBackEvent] = []
+
+            if state.path[:2] == ['main', 'apps'] and state.path[2].startswith(
+                f'{action.service_id}:',
+            ):
+                events = [MenuGoBackEvent()] * (len(state.path) - 2)
+            if state.path[:2] == ['main', 'settings'] and state.path[3].startswith(
+                f'{action.service_id}:',
+            ):
+                events = [MenuGoBackEvent()] * (len(state.path) - 3)
+
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    menu=replace(
+                        menu,
+                        items=[
+                            new_main_menu_item if item == main_menu_item else item
+                            for item in root_menu_items
+                        ],
+                    ),
+                ),
+                events=events,
+            )
 
     return state

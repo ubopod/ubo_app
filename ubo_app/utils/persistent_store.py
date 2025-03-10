@@ -25,7 +25,7 @@ persistent_store_lock = fasteners.ReaderWriterLock()
 def register_persistent_store(
     key: str,
     selector: Callable[[RootState], T],
-) -> None:
+) -> Callable[[], None]:
     """Register a part of the store to be persistent in the filesystem."""
     from ubo_app.store.main import store
 
@@ -47,6 +47,8 @@ def register_persistent_store(
         write.unsubscribe()
 
     unsubscribe_event = store.subscribe_event(FinishEvent, unsubscribe)
+
+    return unsubscribe
 
 
 @overload
