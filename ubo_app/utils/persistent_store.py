@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast, overload
 
 import fasteners
-from redux import FinishEvent
 
 from ubo_app.constants import PERSISTENT_STORE_PATH
 
@@ -42,13 +41,7 @@ def register_persistent_store(
             current_state[key] = serialized_value
             Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
 
-    def unsubscribe() -> None:
-        unsubscribe_event()
-        write.unsubscribe()
-
-    unsubscribe_event = store.subscribe_event(FinishEvent, unsubscribe)
-
-    return unsubscribe
+    return write.unsubscribe
 
 
 @overload

@@ -12,7 +12,6 @@ import sys
 import threading
 import traceback
 import uuid
-import warnings
 import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Coroutine, Sequence
@@ -55,13 +54,13 @@ if TYPE_CHECKING:
     )
 
 REGISTERED_PATHS: dict[Path, UboServiceThread] = {}
+SERVICES_BY_ID: dict[str, UboServiceThread] = OrderedDict()
 WHITE_LIST = [*ENABLED_SERVICES]
 ROOT_PATH = Path(__file__).parent
 
 
 # Customized module finder and module loader for ubo services to avoid mistakenly
 # loading conflicting names in different services.
-# This is a temporary hack until each service runs in its own process.
 class UboModuleLoader(SourceFileLoader):
     cache: ClassVar[dict[str, weakref.ReferenceType[ModuleType]]] = {}
 
@@ -104,12 +103,7 @@ class UboServiceLoader(importlib.abc.Loader):
         cast(Any, module).label = self.service.label
         cast(Any, module).service_id = self.service.service_id
         cast(Any, module).path = self.service.path
-        cast(Any, module)._create_task = (  # noqa: SLF001
-            lambda task, callback=None: self.service.run_task(
-                task,
-                callback,
-            )
-        )
+        cast(Any, module).run_task = self.service.run_task
 
     def __repr__(self: UboServiceLoader) -> str:
         return f'{self.service.path}:ServiceLoader'
@@ -138,12 +132,13 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
             module_name = f'{service.service_uid}:{fullname}'
 
             if not service.is_alive():
+                if service.is_started:
+                    msg = 'No import is allowed after the service is finished.'
+                    raise ImportError(msg)
                 msg = (
-                    'No import other than `ubo_app.services` is allowed in the global'
-                    ' scope of `ubo_handle.py` files.'
+                    'No import is allowed in the global scope of `ubo_handle.py` files.'
                 )
-                warnings.warn(msg, RuntimeWarning, stacklevel=2)
-                return None
+                raise ImportError(msg)
 
             if fullname == 'ubo_app.service':
                 return importlib.util.spec_from_loader(
@@ -262,14 +257,6 @@ class UboServiceThread(threading.Thread):
             },
         )
 
-        from redux import FinishEvent
-
-        from ubo_app.store.main import store
-
-        self.subscriptions = [
-            store.subscribe_event(FinishEvent, self.stop),
-        ]
-
     def initiate(self: UboServiceThread) -> None:
         try:
             if self.path.exists():
@@ -301,7 +288,24 @@ class UboServiceThread(threading.Thread):
                 del REGISTERED_PATHS[self.path]
                 logger.exception('Error loading service', extra={'path': self.path})
 
+    def start(self: UboServiceThread) -> None:
+        if not hasattr(self, 'setup'):
+            return
+
+        super().start()
+
+    def stop(self: UboServiceThread) -> None:
+        self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
+
     def run(self: UboServiceThread) -> None:
+        from redux import FinishEvent
+
+        from ubo_app.store.main import store
+
+        self.subscriptions = [
+            store.subscribe_event(FinishEvent, self.stop),
+        ]
+
         self.loop = asyncio.new_event_loop()
         self.loop.set_exception_handler(loop_exception_handler)
 
@@ -319,24 +323,34 @@ class UboServiceThread(threading.Thread):
 
         async def setup_wrapper() -> None:
             result = None
-            if len(inspect.signature(self.setup).parameters) == 0:
-                result = cast(
-                    Callable[[], 'SetupFunctionReturnType'],
-                    self.setup,
-                )()
-            elif len(inspect.signature(self.setup).parameters) == 1:
-                result = cast(
-                    Callable[[UboServiceThread], 'SetupFunctionReturnType'],
-                    self.setup,
-                )(self)
+            try:
+                if len(inspect.signature(self.setup).parameters) == 0:
+                    result = cast(
+                        Callable[[], 'SetupFunctionReturnType'],
+                        self.setup,
+                    )()
+                elif len(inspect.signature(self.setup).parameters) == 1:
+                    result = cast(
+                        Callable[[UboServiceThread], 'SetupFunctionReturnType'],
+                        self.setup,
+                    )(self)
 
-            if asyncio.iscoroutine(result):
-                result = await result
+                if asyncio.iscoroutine(result):
+                    result = await result
+            except Exception:
+                logger.exception(
+                    'Error during setup',
+                    extra={
+                        'service_id': self.service_id,
+                        'label': self.label,
+                    },
+                )
+                raise
 
             self.is_started = True
 
             if result:
-                self.subscriptions += result
+                self.subscriptions += list(result)
 
             store.dispatch(
                 SettingsServiceSetStatusAction(
@@ -392,7 +406,7 @@ class UboServiceThread(threading.Thread):
         from ubo_app.logger import logger
 
         logger.debug(
-            'Stopping service thread',
+            'Shutting down service thread',
             extra={
                 'thread_native_id': self.native_id,
                 'service_label': self.label,
@@ -400,7 +414,7 @@ class UboServiceThread(threading.Thread):
             },
         )
 
-        self._cleanup()
+        await self._cleanup_1()
         while True:
             tasks = [
                 task
@@ -414,6 +428,8 @@ class UboServiceThread(threading.Thread):
                 extra={
                     'tasks': tasks,
                     'thread_': self,
+                    'service_id': self.service_id,
+                    'service_label': self.label,
                 },
             )
             if not tasks:
@@ -428,11 +444,17 @@ class UboServiceThread(threading.Thread):
                 )
             await asyncio.sleep(0.1)
 
+        self._cleanup_2()
+
         self.loop.stop()
 
-    def _cleanup(self: UboServiceThread) -> None:
-        if self.path not in REGISTERED_PATHS:
-            return
+    async def _cleanup_1(self: UboServiceThread) -> None:
+        subscriptions = [*self.subscriptions]
+        self.subscriptions.clear()
+        for unsubscribe in subscriptions:
+            result = unsubscribe()
+            if asyncio.iscoroutine(result):
+                await asyncio.wait_for(result, timeout=SERVICES_LOOP_GRACE_PERIOD)
 
         if self.has_reducer:
             from ubo_app.store.main import root_reducer_id, store
@@ -445,6 +467,7 @@ class UboServiceThread(threading.Thread):
             )
             self.has_reducer = False
 
+    def _cleanup_2(self: UboServiceThread) -> None:
         from ubo_app.utils import bus_provider
 
         if self in bus_provider.system_buses:
@@ -458,17 +481,12 @@ class UboServiceThread(threading.Thread):
 
         if self.path in REGISTERED_PATHS:
             del REGISTERED_PATHS[self.path]
-        for unsubscribe in self.subscriptions:
-            unsubscribe()
-        self.subscriptions.clear()
-
-    def stop(self: UboServiceThread) -> None:
-        self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
     def kill(self: UboServiceThread) -> None:
         if not self.is_alive() or self.ident is None:
             return
-        self._cleanup()
+        self.run_task(self._cleanup_1())
+        self._cleanup_2()
         tid = ctypes.c_long(self.ident)
         res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
             tid,
@@ -480,45 +498,42 @@ class UboServiceThread(threading.Thread):
             raise RuntimeError(msg)
 
 
-services_by_id: dict[str, UboServiceThread] = OrderedDict()
-
-
 async def start(event: SettingsStartServiceEvent) -> None:
     if (
-        event.service_id in services_by_id
+        event.service_id in SERVICES_BY_ID
+        and not SERVICES_BY_ID[event.service_id].is_started
         and (not WHITE_LIST or event.service_id in WHITE_LIST)
-        and not services_by_id[event.service_id].is_alive()
     ):
         await asyncio.sleep(event.delay)
-        services_by_id[event.service_id].start()
+        SERVICES_BY_ID[event.service_id].start()
 
 
 async def stop(event: SettingsStopServiceEvent) -> None:
     if (
-        event.service_id in services_by_id
-        and services_by_id[event.service_id].is_alive()
+        event.service_id in SERVICES_BY_ID
+        and SERVICES_BY_ID[event.service_id].is_alive()
     ):
         logger.debug(
             'Stopping service',
             extra={
                 'service_id': event.service_id,
-                'label': services_by_id[event.service_id].label,
+                'label': SERVICES_BY_ID[event.service_id].label,
             },
         )
-        path = services_by_id[event.service_id].path
-        services_by_id[event.service_id].stop()
-        await asyncio.to_thread(services_by_id[event.service_id].join, timeout=3)
-        if services_by_id[event.service_id].is_alive():
+        path = SERVICES_BY_ID[event.service_id].path
+        SERVICES_BY_ID[event.service_id].stop()
+        await asyncio.to_thread(SERVICES_BY_ID[event.service_id].join, timeout=3)
+        if SERVICES_BY_ID[event.service_id].is_alive():
             logger.warning(
                 'Service thread did not stop gracefully, killing it',
                 extra={
                     'service_id': event.service_id,
-                    'label': services_by_id[event.service_id].label,
+                    'label': SERVICES_BY_ID[event.service_id].label,
                 },
             )
-            services_by_id[event.service_id].kill()
-            await asyncio.to_thread(services_by_id[event.service_id].join, timeout=3)
-        del services_by_id[event.service_id]
+            SERVICES_BY_ID[event.service_id].kill()
+            await asyncio.to_thread(SERVICES_BY_ID[event.service_id].join, timeout=3)
+        del SERVICES_BY_ID[event.service_id]
 
         import gc
 
@@ -526,11 +541,11 @@ async def stop(event: SettingsStopServiceEvent) -> None:
 
         service = UboServiceThread(path)
         service.initiate()
-        services_by_id[service.service_id] = service
+        SERVICES_BY_ID[service.service_id] = service
 
 
 def clear() -> None:
-    services_by_id.clear()
+    SERVICES_BY_ID.clear()
 
 
 def load_services(
@@ -555,7 +570,7 @@ def load_services(
                     continue
                 service = UboServiceThread(service_path.absolute())
                 service.initiate()
-                services_by_id[service.service_id] = service
+                SERVICES_BY_ID[service.service_id] = service
 
     store.subscribe_event(SettingsStartServiceEvent, start)
     store.subscribe_event(SettingsStopServiceEvent, stop)
@@ -568,14 +583,14 @@ def load_services(
             is_active=service.is_alive(),
             is_enabled=True,
         )
-        for service in services_by_id.values()
+        for service in SERVICES_BY_ID.values()
     }
 
     for service in read_from_persistent_store(
         'services',
         default={},
     ):
-        if service['id'] in services_by_id:
+        if service['id'] in SERVICES_BY_ID:
             services[service['id']] = replace(
                 services[service['id']],
                 is_enabled=service['is_enabled'],

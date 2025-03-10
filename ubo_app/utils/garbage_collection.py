@@ -13,12 +13,12 @@ if TYPE_CHECKING:
     import weakref
     from collections.abc import Callable
 
-SHORT_PRINT_LENGTH = 60
+SHORT_PRINT_LENGTH = 420
 
 
-def short_print(obj: object) -> None:
+def short_print(depth: int, obj: object) -> None:
     """Print the object."""
-    stdout.write(str(type(obj)))
+    stdout.write(str(depth) + ': ' + str(type(obj)))
     try:
         stdout.write(
             str(obj)[:SHORT_PRINT_LENGTH] + '...'
@@ -56,14 +56,13 @@ def examine(
                 stdout.write('Found\n')
                 stdout.flush()
                 for i in path:
-                    short_print(i)
+                    short_print(depth, i)
                 break
         try:
             referrers = [
                 i
                 for i in gc.get_referrers(obj)
                 if i not in island
-                and i not in to_check
                 and i is not path
                 and i is not island
                 and i is not to_check
@@ -74,7 +73,7 @@ def examine(
         for i in referrers:
             island.append(i)
             if filter_(i):
-                short_print(i)
+                short_print(depth, i)
             if depth < depth_limit:
                 to_check.append((i, depth + 1))
         del referrers

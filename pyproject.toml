@@ -279,7 +279,6 @@ filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
   "ignore:'imghdr' is deprecated:DeprecationWarning",
 ]
-timeout = 40
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:"]

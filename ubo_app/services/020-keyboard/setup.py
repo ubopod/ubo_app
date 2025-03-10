@@ -4,9 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 from kivy.core.window import Keyboard, Window, WindowBase
-from redux import FinishEvent
 
-from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioDevice, AudioToggleMuteStatusAction
 from ubo_app.store.services.keypad import (
     Key,
@@ -15,6 +13,8 @@ from ubo_app.store.services.keypad import (
 )
 
 if TYPE_CHECKING:
+    from ubo_app.utils.types import Subscriptions
+
     Modifier = Literal['ctrl', 'alt', 'meta', 'shift']
 
 KEY_MAP = {
@@ -151,7 +151,7 @@ def on_keyboard(
         store.dispatch(KEY_MAP['shift'][key])
 
 
-def init_service() -> None:
+def init_service() -> Subscriptions:
     Window.bind(on_keyboard=on_keyboard)
 
-    store.subscribe_event(FinishEvent, lambda: Window.unbind(on_keyboard=on_keyboard))
+    return [lambda: Window.unbind(on_keyboard=on_keyboard)]

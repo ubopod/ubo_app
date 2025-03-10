@@ -11,7 +11,6 @@ from commands import check_status, restart, uninstall_service
 from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
-from redux import FinishEvent
 from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
@@ -245,7 +244,6 @@ def init_service() -> Subscriptions:
     create_task(check_status())
     return [
         clock_event.cancel,
-        store.subscribe_event(FinishEvent, clock_event.cancel),
         store.subscribe_event(VSCodeRestartEvent, restart),
     ]
 
