@@ -571,6 +571,15 @@ def load_services(
         for service in services_by_id.values()
     }
 
+    for service in read_from_persistent_store(
+        'services',
+        default={},
+    ):
+        if service['id'] in services_by_id:
+            services[service['id']] = replace(
+                services[service['id']],
+                is_enabled=service['is_enabled'],
+            )
 
     store.dispatch(
         SettingsSetServicesAction(services=services, gap_duration=gap_duration),

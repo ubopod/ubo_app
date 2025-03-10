@@ -37,6 +37,7 @@ from ubo_app.store.update_manager.utils import check_version, update
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI, initialize_board
 from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
+from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.store import replay_actions
 
 if TYPE_CHECKING:
@@ -161,6 +162,19 @@ async def check_wifi() -> None:
 def setup_side_effects() -> None:
     """Set up the side effects for the application."""
     initialize_board()
+
+    register_persistent_store(
+        'services',
+        lambda state: None
+        if state.settings.services is None
+        else [
+            {
+                'id': service.id,
+                'is_enabled': service.is_enabled,
+            }
+            for service in state.settings.services.values()
+        ],
+    )
 
     store.subscribe_event(FinishEvent, display.turn_off)
     store.subscribe_event(PowerOffEvent, power_off)
