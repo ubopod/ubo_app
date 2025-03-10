@@ -276,9 +276,9 @@ async def app_context(
 
     import os
 
-    from ubo_app.logger import setup_logging
+    from ubo_app.logger import setup_loggers
 
-    setup_logging()
+    logger_cleanups = setup_loggers()
 
     os.environ['TEST_ROOT_PATH'] = Path().absolute().as_posix()
     should_use_fake_fs = (
@@ -298,6 +298,8 @@ async def app_context(
         yield context
 
         await context.clean_up()
+        for cleanup in logger_cleanups:
+            cleanup()
     del patcher
 
     assert not hasattr(context, 'app'), 'App not cleaned up'

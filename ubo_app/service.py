@@ -123,11 +123,8 @@ def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
     unsubscribe = store.subscribe_event(FinishEvent, stop)
 
 
-def _create_task(
+def run_task(
     task: Coroutine,
     callback: TaskCreatorCallback | None = None,
 ) -> Handle:
     return worker_thread.run_task(task, callback)
-
-
-_ = _create_task

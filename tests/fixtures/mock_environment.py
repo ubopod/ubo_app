@@ -7,6 +7,7 @@ import sys
 import tracemalloc
 from typing import Any, cast
 
+import numpy as np
 import pytest
 
 from ubo_app.store.services.ethernet import NetState
@@ -139,6 +140,12 @@ def _monkeypatch_rpi_modules() -> None:
     sys.modules['i2c'] = Fake()
 
 
+def _monkeypatch_piper() -> None:
+    from fake import Fake
+
+    sys.modules['piper.voice'] = Fake()
+
+
 def _monkeypatch_aiohttp() -> None:
     from fake import Fake
 
@@ -202,7 +209,7 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(subprocess, 'run', fake_subprocess_run)
 
 
-async def _fake_create_subprocess_exec(
+async def _fake_create_subprocess_exec(  # noqa: C901
     *_args: str,
     **kwargs: Any,  # noqa: ANN401
 ) -> object:
@@ -228,6 +235,9 @@ async def _fake_create_subprocess_exec(
 
         if args[0] in ('is-active', 'is-enabled'):
             expected = True
+
+    if command in ('ip', 'nmcli', 'which') or command.endswith('/code'):
+        expected = True
 
     if command == 'dpkg-query' and args[-1] in (
         'docker',
@@ -294,11 +304,21 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         _Fake__attrs={'read_secret': lambda _: None},
     )
 
+    # picamera2 takes too long to get imported, slowing down tests
+    sys.modules['picamera2.picamera2'] = Fake(
+        _Fake__attrs={
+            'capture_array': Fake(
+                _Fake__return_value=np.zeros((1, 1, 3), dtype=np.uint8),
+            ),
+        },
+    )
+
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)
     _monkeypatch_docker(monkeypatch)
     _monkeypatch_uuid(monkeypatch)
     _monkeypatch_aiohttp()
+    _monkeypatch_piper()
     _monkeypatch_rpi_modules()
     _monkeypatch_subprocess(monkeypatch)
     _monkeypatch_asyncio_subprocess(monkeypatch)

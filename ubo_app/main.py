@@ -8,7 +8,7 @@ from pathlib import Path
 import dotenv
 
 from ubo_app.error_handlers import setup_error_handling
-from ubo_app.logger import setup_logging
+from ubo_app.logger import setup_loggers
 from ubo_app.setup import setup
 from ubo_app.utils import IS_RPI
 
@@ -34,7 +34,7 @@ def main() -> None:
 
     # `setup_logging` needs to be called before anything else to initialize the rotating
     # log files
-    setup_logging()
+    logger_cleanups = setup_loggers()
 
     # `setup_error_handling` needs to be called before anything else and after
     # `setup_logging`
@@ -89,6 +89,9 @@ def main() -> None:
         from ubo_app.store.main import store
 
         store.dispatch(FinishAction())
+    finally:
+        for cleanup in logger_cleanups:
+            cleanup()
 
 
 if __name__ == '__main__':

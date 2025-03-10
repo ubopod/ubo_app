@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Literal, cast
 
 from quart import Quart, Response, render_template, request
-from redux import FinishEvent
 from werkzeug.datastructures import FileStorage
 
 from ubo_app.constants import (
@@ -50,6 +49,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.network import has_gateway
 from ubo_app.utils.pod_id import get_pod_id
 from ubo_app.utils.server import send_command
+from ubo_app.utils.types import Subscriptions
 
 ENVOY_IMAGE_NAME = 'thegrandpkizzle/envoy:1.26.1'
 
@@ -123,11 +123,11 @@ async def _get_envoy_status() -> str:
         return 'failed'
 
 
-async def initialize(event: WebUIInitializeEvent) -> None:
+async def initialize_hotspot(event: WebUIInitializeEvent) -> None:
     """Start the hotspot if there is no network connection."""
     is_connected = await has_gateway()
     logger.info(
-        'web-ui - initialize',
+        'web-ui - initialize hotspot',
         extra={
             'is_connected': is_connected,
             'description': event.description,
@@ -182,11 +182,11 @@ async def initialize(event: WebUIInitializeEvent) -> None:
     )
 
 
-async def stop() -> None:
+async def stop_hotspot(*, silence: bool = False) -> None:
     """Start the hotspot if there is no network connection."""
-    logger.info('web-ui - stop')
+    logger.info('web-ui - stop hotspot')
     result = await send_command('hotspot', 'stop', has_output=True)
-    if result != 'done':
+    if result != 'done' and not silence:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
@@ -202,7 +202,7 @@ async def stop() -> None:
         )
 
 
-def init_service() -> None:  # noqa: C901
+async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
     """Initialize the web-ui service."""
     _ = []
     app = Quart(
@@ -314,13 +314,15 @@ def init_service() -> None:  # noqa: C901
 
         _.append(handle_error)
 
-    store.subscribe_event(FinishEvent, shutdown_event.set)
+    store.subscribe_event(WebUIInitializeEvent, initialize_hotspot)
+    store.subscribe_event(WebUIStopEvent, stop_hotspot)
 
-    store.subscribe_event(WebUIInitializeEvent, initialize)
-    store.subscribe_event(WebUIStopEvent, stop)
+    start_event = asyncio.Event()
 
     async def wait_for_shutdown() -> None:
         await shutdown_event.wait()
+
+    app.before_serving(start_event.set)
 
     create_task(
         app.run_task(
@@ -330,3 +332,11 @@ def init_service() -> None:  # noqa: C901
             shutdown_trigger=wait_for_shutdown,
         ),
     )
+
+    await start_event.wait()
+
+    async def cleanup() -> None:
+        shutdown_event.set()
+        await stop_hotspot(silence=True)
+
+    return [cleanup]
