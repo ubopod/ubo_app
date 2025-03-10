@@ -46,6 +46,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.network import has_gateway
 from ubo_app.utils.pod_id import get_pod_id
 from ubo_app.utils.server import send_command
@@ -201,7 +202,7 @@ async def stop() -> None:
         )
 
 
-async def init_service() -> None:  # noqa: C901
+def init_service() -> None:  # noqa: C901
     """Initialize the web-ui service."""
     _ = []
     app = Quart(
@@ -321,9 +322,11 @@ async def init_service() -> None:  # noqa: C901
     async def wait_for_shutdown() -> None:
         await shutdown_event.wait()
 
-    await app.run_task(
-        host=WEB_UI_LISTEN_ADDRESS,
-        port=WEB_UI_LISTEN_PORT,
-        debug=WEB_UI_DEBUG_MODE,
-        shutdown_trigger=wait_for_shutdown,
+    create_task(
+        app.run_task(
+            host=WEB_UI_LISTEN_ADDRESS,
+            port=WEB_UI_LISTEN_PORT,
+            debug=WEB_UI_DEBUG_MODE,
+            shutdown_trigger=wait_for_shutdown,
+        ),
     )

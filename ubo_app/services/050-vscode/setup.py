@@ -39,6 +39,8 @@ CODE_TUNNEL_URL_PREFIX = 'https://vscode.dev/tunnel/'
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from ubo_app.utils.types import Subscriptions
+
 
 def download_code() -> None:
     CODE_BINARY_PATH.unlink(missing_ok=True)
@@ -231,7 +233,7 @@ def generate_vscode_menu() -> Callable[[], HeadedMenu]:
     return vscode_menu
 
 
-async def init_service() -> None:
+def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             menu_item=ActionItem(label='VSCode', icon='󰨞', action=generate_vscode_menu),
@@ -240,9 +242,12 @@ async def init_service() -> None:
     )
 
     clock_event = Clock.schedule_interval(lambda _: create_task(check_status()), 1)
-    store.subscribe_event(FinishEvent, clock_event.cancel)
-    store.subscribe_event(VSCodeRestartEvent, restart)
-    await check_status()
+    create_task(check_status())
+    return [
+        clock_event.cancel,
+        store.subscribe_event(FinishEvent, clock_event.cancel),
+        store.subscribe_event(VSCodeRestartEvent, restart),
+    ]
 
 
 Builder.load_file(

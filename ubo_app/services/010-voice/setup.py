@@ -36,6 +36,8 @@ from ubo_app.utils.persistent_store import register_persistent_store
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from ubo_app.utils.types import Subscriptions
+
 
 class _Context:
     picovoice_instance: pvorca.Orca | None = None
@@ -254,7 +256,7 @@ def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
     ]
 
 
-def init_service() -> None:
+def init_service() -> Subscriptions:
     """Initialize voice service."""
     access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY)
     if access_key:
@@ -268,11 +270,6 @@ def init_service() -> None:
     )
 
     to_thread(_context.load_piper)
-
-    store.subscribe_event(
-        VoiceSynthesizeTextEvent,
-        lambda event: to_thread(synthesize_and_play, event),
-    )
 
     store.dispatch(
         RegisterSettingAppAction(
@@ -308,4 +305,10 @@ def init_service() -> None:
         ),
     )
 
-    store.subscribe_event(FinishEvent, _context.cleanup)
+    return [
+        store.subscribe_event(
+            VoiceSynthesizeTextEvent,
+            lambda event: to_thread(synthesize_and_play, event),
+        ),
+        store.subscribe_event(FinishEvent, _context.cleanup),
+    ]

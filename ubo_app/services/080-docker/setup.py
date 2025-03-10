@@ -83,6 +83,8 @@ from ubo_app.utils.server import send_command
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from ubo_app.utils.types import Subscriptions
+
 
 def install_docker() -> None:
     """Install docker."""
@@ -529,12 +531,14 @@ def _load_images() -> None:
     )
 
 
-def init_service() -> None:
+def init_service() -> Subscriptions:
     """Initialize the service."""
-    register_persistent_store(
-        'docker_usernames',
-        lambda state: state.docker.service.usernames,
-    )
+    subscriptions = [
+        register_persistent_store(
+            'docker_usernames',
+            lambda state: state.docker.service.usernames,
+        ),
+    ]
     store.dispatch(
         RegisterRegularAppAction(
             priority=1,
@@ -574,26 +578,26 @@ def init_service() -> None:
         ),
     )
 
-    store.subscribe_event(DockerLoadImagesEvent, _load_images)
-    store.subscribe_event(
-        DockerImageRegisterAppEvent,
-        _register_image_app_entry,
-    )
-
-    store.subscribe_event(DockerInstallEvent, install_docker)
-    store.subscribe_event(DockerStartEvent, start_docker)
-    store.subscribe_event(DockerStopEvent, stop_docker)
-
-    store.subscribe_event(DockerImageFetchCompositionEvent, pull_composition)
-    store.subscribe_event(DockerImageFetchEvent, fetch_image)
-    store.subscribe_event(DockerImageRemoveCompositionEvent, remove_composition)
-    store.subscribe_event(DockerImageRemoveEvent, remove_image)
-    store.subscribe_event(DockerImageRunCompositionEvent, run_composition)
-    store.subscribe_event(DockerImageRunContainerEvent, run_container)
-    store.subscribe_event(DockerImageStopCompositionEvent, stop_composition)
-    store.subscribe_event(DockerImageStopContainerEvent, stop_container)
-    store.subscribe_event(DockerImageReleaseCompositionEvent, release_composition)
-    store.subscribe_event(DockerImageRemoveContainerEvent, remove_container)
+    subscriptions += [
+        store.subscribe_event(DockerLoadImagesEvent, _load_images),
+        store.subscribe_event(
+            DockerImageRegisterAppEvent,
+            _register_image_app_entry,
+        ),
+        store.subscribe_event(DockerInstallEvent, install_docker),
+        store.subscribe_event(DockerStartEvent, start_docker),
+        store.subscribe_event(DockerStopEvent, stop_docker),
+        store.subscribe_event(DockerImageFetchCompositionEvent, pull_composition),
+        store.subscribe_event(DockerImageFetchEvent, fetch_image),
+        store.subscribe_event(DockerImageRemoveCompositionEvent, remove_composition),
+        store.subscribe_event(DockerImageRemoveEvent, remove_image),
+        store.subscribe_event(DockerImageRunCompositionEvent, run_composition),
+        store.subscribe_event(DockerImageRunContainerEvent, run_container),
+        store.subscribe_event(DockerImageStopCompositionEvent, stop_composition),
+        store.subscribe_event(DockerImageStopContainerEvent, stop_container),
+        store.subscribe_event(DockerImageReleaseCompositionEvent, release_composition),
+        store.subscribe_event(DockerImageRemoveContainerEvent, remove_container),
+    ]
 
     create_task(
         monitor_unit(
@@ -607,3 +611,5 @@ def init_service() -> None:
             ),
         ),
     )
+
+    return subscriptions

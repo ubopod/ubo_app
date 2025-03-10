@@ -44,7 +44,7 @@ class AudioManager:
         self.has_microphones = False
 
         async def initialize_audio() -> None:
-            for _ in range(20):
+            for _ in range(5):
                 try:
                     cards = alsaaudio.cards()
                     self.card_index = cards.index(
