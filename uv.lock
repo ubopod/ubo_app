@@ -1401,15 +1401,15 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.20.1"
+version = "0.20.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-immutable" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6f/fe/a3bd24037ea6fa41dfee677343e48f657522a53ff049c1e9e6c4129fe5cc/python_redux-0.20.1.tar.gz", hash = "sha256:e2ab6001c2482c365fe9fd3e709b275f380b4b91ed674009cfd744169011944f", size = 20926 }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/ba/72c458367401c300fb4aa69a854aaaf1d0435d85baf55a18211f14f8514b/python_redux-0.20.2.tar.gz", hash = "sha256:47176050b0cd7edbb85d3a180f998682ed2c40ec1b6dce5b8b0a63a6ea62daf5", size = 21129 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/0d/678397e38a9e3009974a773b598658364a155efb16b8aa8e8810fd77387d/python_redux-0.20.1-py3-none-any.whl", hash = "sha256:5f97d9aadc66099292d041efed17319b624c32838202ccdb9e41a7e3d4a77af9", size = 26542 },
+    { url = "https://files.pythonhosted.org/packages/8f/27/e73c1d9c061ab173276cb51a7a6f3cf726ad68a5bde91a91a25c445ef071/python_redux-0.20.2-py3-none-any.whl", hash = "sha256:a993d321c155bfc58b812ad701dff293197f53e66f2cc761ca6cbb0b173bc398", size = 26784 },
 ]
 
 [[package]]
@@ -1803,7 +1803,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.1.3" },
-    { name = "python-redux", specifier = ">=0.20.1" },
+    { name = "python-redux", specifier = ">=0.20.2" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
     { name = "pythonping", specifier = ">=1.1.4" },
     { name = "pyzbar", specifier = ">=0.1.9" },

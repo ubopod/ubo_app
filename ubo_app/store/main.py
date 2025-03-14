@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import functools
+import inspect
 import sys
 import threading
-from asyncio import Handle
+import weakref
+from asyncio import Handle, iscoroutine
 from datetime import datetime
 from pathlib import Path
 from types import GenericAlias
@@ -24,6 +27,7 @@ from redux import (
     Store,
     combine_reducers,
 )
+from redux.basic_types import SubscribeEventCleanup
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logger import logger
@@ -59,12 +63,18 @@ from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.status_icons.types import StatusIconsAction
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 from ubo_app.store.update_manager.types import UpdateManagerAction
+from ubo_app.utils.async_ import get_task_runner
 from ubo_app.utils.serializer import add_type_field
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-    from redux.basic_types import SnapshotAtom, TaskCreatorCallback
+    from redux.basic_types import (
+        EventHandler,
+        SnapshotAtom,
+        StrictEvent,
+        TaskCreatorCallback,
+    )
 
     from ubo_app.store.core.types import MainState
     from ubo_app.store.services.audio import AudioState
@@ -295,6 +305,82 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         msg = f'Invalid data type {type(data)}'
         raise TypeError(msg)
 
+    def subscribe_event(  # noqa: C901
+        self: UboStore,
+        event_type: type[StrictEvent],
+        handler: EventHandler[StrictEvent],
+        *,
+        keep_ref: bool = True,
+    ) -> SubscribeEventCleanup:
+        task_runner = get_task_runner()
+        if keep_ref:
+            handler_ref = handler
+        elif inspect.ismethod(handler):
+            handler_ref = weakref.WeakMethod(handler)
+        else:
+            handler_ref = weakref.ref(handler)
+
+        def in_thread_handler(event: StrictEvent) -> None:
+            async def wrapper() -> None:
+                if isinstance(handler_ref, weakref.ref):
+                    handler = cast('EventHandler[StrictEvent]', handler_ref())
+                    if not handler:
+                        return
+                else:
+                    handler = handler_ref
+
+                parameters = 1
+                with contextlib.suppress(Exception):
+                    parameters = len(
+                        [
+                            param
+                            for param in inspect.signature(handler).parameters.values()
+                            if param.kind
+                            in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
+                        ],
+                    )
+
+                if parameters == 0:
+                    result = cast('Callable[[], Any]', handler)()
+                else:
+                    result = cast('Callable[[StrictEvent], Any]', handler)(event)
+                if iscoroutine(result):
+                    await result
+
+            task_runner(wrapper())
+
+        if keep_ref:
+            return super().subscribe_event(
+                event_type,
+                in_thread_handler,
+                keep_ref=keep_ref,
+            )
+
+        # Put the in_thread_handler in the handler's reference island to tie their
+        # lifetimes together
+        key = f'__ubo_store_in_thread_handler:{event_type.__name__}'
+
+        unsubscribe = super().subscribe_event(
+            event_type,
+            in_thread_handler,
+            keep_ref=keep_ref,
+        )
+
+        def unsubscribe_() -> None:
+            unsubscribe()
+            handlers.remove(in_thread_handler)
+
+        if not hasattr(handler, key):
+            handler.__dict__[key] = []
+
+        handlers = handler.__dict__[key]
+        handlers.append(in_thread_handler)
+
+        return SubscribeEventCleanup(
+            unsubscribe=unsubscribe_,
+            handler=in_thread_handler,
+        )
+
 
 def create_task(
     coro: Coroutine,
@@ -355,6 +441,6 @@ store.subscribe_event(FinishEvent, lambda: _is_finalizing.set())
 store.dispatch(InitAction())
 
 if DEBUG_MODE:
-    store.subscribe(
+    store._subscribe(  # noqa: SLF001
         lambda state: logger.verbose('State updated', extra={'state': state}),
     )

@@ -79,7 +79,7 @@ def snapshot_prefix() -> str:
     return 'desktop'
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def app_context(original_app_context: AppContext) -> AppContext:
     """Set defaults for app-context for tests."""
     original_app_context.set_persistent_storage_value(
