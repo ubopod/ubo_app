@@ -7,7 +7,7 @@ import contextlib
 import functools
 import json
 import uuid
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import docker
 import docker.errors
@@ -293,18 +293,24 @@ default.""",
             )[1]
             if not credentials:
                 return
-            username = credentials.data.get(
-                'Username',
-                credentials.data.get('Username_', ''),
+            username = (
+                credentials.data.get(
+                    'Username',
+                    credentials.data.get('Username_', ''),
+                )
+                or ''
             )
-            password = credentials.data.get(
-                'Password',
-                credentials.data.get('Password_', ''),
+            password = (
+                credentials.data.get(
+                    'Password',
+                    credentials.data.get('Password_', ''),
+                )
+                or ''
             )
-            registry = credentials.data.get('Service', 'docker.io')
-            username = cast(str, username).strip()
-            password = cast(str, password).strip()
-            registry = cast(str, registry).strip()
+            registry = credentials.data.get('Service', 'docker.io') or ''
+            username = username.strip()
+            password = password.strip()
+            registry = registry.strip()
             docker_client = docker.from_env()
             docker_client.login(
                 username=username,

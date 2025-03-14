@@ -68,7 +68,7 @@ logging.setLoggerClass(UboLogger)
 
 
 def get_logger(name: str) -> UboLogger:
-    logger = cast(UboLogger, logging.getLogger(name))
+    logger = cast('UboLogger', logging.getLogger(name))
     logger.propagate = False
     return logger
 

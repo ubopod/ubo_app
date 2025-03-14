@@ -2,7 +2,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING, cast
@@ -14,6 +13,7 @@ from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
 from ubo_gui.page import PageWidget
 
+from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
@@ -65,10 +65,10 @@ def initialize_camera() -> Picamera2 | None:
     try:
         picamera2 = Picamera2()
     except IndexError:
-        logging.exception('Camera not found, using fake camera.')
+        logger.exception('Camera not found, using fake camera.')
         return None
     preview_config = cast(
-        str,
+        'str',
         picamera2.create_still_configuration(
             {
                 'format': 'RGB888',

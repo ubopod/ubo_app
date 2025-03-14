@@ -73,7 +73,7 @@ def rebuild_object(  # noqa: C901
         message,
         betterproto.Enum,
     ):
-        return cast(ReturnType, message)
+        return cast('ReturnType', message)
 
     if isinstance(message, list):
         return [rebuild_object(item) for item in message]

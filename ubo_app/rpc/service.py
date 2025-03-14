@@ -51,7 +51,7 @@ class StoreService(StoreServiceBase):
                     'action': action,
                 },
             )
-            store.dispatch(cast(UboAction, action))
+            store.dispatch(cast('UboAction', action))
         return DispatchActionResponse()
 
     async def subscribe_event(
@@ -77,7 +77,7 @@ class StoreService(StoreServiceBase):
                         **{
                             betterproto.casing.snake_case(
                                 type(event).__name__,
-                            ): cast(Any, build_message(event)),
+                            ): cast('Any', build_message(event)),
                         },
                     ),
                 )

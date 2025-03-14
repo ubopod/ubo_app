@@ -1,9 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import replace
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from redux import (
     CompleteReducerResult,
@@ -49,6 +48,9 @@ from ubo_app.store.core.types import (
     ToggleRecordingAction,
 )
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def reducer(
@@ -168,12 +170,12 @@ def reducer(
             return state
         root_menu_items = menu_items(menu)
         main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-        main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
+        main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
         settings_menu_item = find_sub_menu_item(main_menu_items, 'settings')
-        settings_menu_items = menu_items(cast(Menu, settings_menu_item.sub_menu))
+        settings_menu_items = menu_items(cast('Menu', settings_menu_item.sub_menu))
 
         category_menu_item = cast(
-            SubMenuItem,
+            'SubMenuItem',
             next(item for item in settings_menu_items if item.label == action.category),
         )
 
@@ -193,8 +195,8 @@ def reducer(
         if any(
             item.key == key
             for item in cast(
-                Sequence[Item],
-                cast(Menu, category_menu_item.sub_menu).items,
+                'Sequence[Item]',
+                cast('Menu', category_menu_item.sub_menu).items,
             )
         ):
             msg = f"""Settings application with key "{key}", in category \
@@ -205,7 +207,10 @@ for the `RegisterSettingAppAction` instance."""
         menu_item = replace(action.menu_item, key=key)
         new_items = sorted(
             [
-                *cast(Sequence[Item], cast(Menu, category_menu_item.sub_menu).items),
+                *cast(
+                    'Sequence[Item]',
+                    cast('Menu', category_menu_item.sub_menu).items,
+                ),
                 menu_item,
             ],
             key=sort_key,
@@ -214,7 +219,7 @@ for the `RegisterSettingAppAction` instance."""
         new_category_menu_item = replace(
             category_menu_item,
             sub_menu=replace(
-                cast(Menu, category_menu_item.sub_menu),
+                cast('Menu', category_menu_item.sub_menu),
                 items=new_items,
             ),
         )
@@ -222,7 +227,7 @@ for the `RegisterSettingAppAction` instance."""
         new_settings_menu_item = replace(
             settings_menu_item,
             sub_menu=replace(
-                cast(Menu, settings_menu_item.sub_menu),
+                cast('Menu', settings_menu_item.sub_menu),
                 items=[
                     new_category_menu_item if item == category_menu_item else item
                     for item in settings_menu_items
@@ -233,7 +238,7 @@ for the `RegisterSettingAppAction` instance."""
         new_main_menu_item = replace(
             main_menu_item,
             sub_menu=replace(
-                cast(Menu, main_menu_item.sub_menu),
+                cast('Menu', main_menu_item.sub_menu),
                 items=[
                     new_settings_menu_item if item == settings_menu_item else item
                     for item in main_menu_items
@@ -259,9 +264,9 @@ for the `RegisterSettingAppAction` instance."""
             return state
         root_menu_items = menu_items(menu)
         main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-        main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
+        main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
         apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
-        apps_menu_items = menu_items(cast(Menu, apps_menu_item.sub_menu))
+        apps_menu_items = menu_items(cast('Menu', apps_menu_item.sub_menu))
 
         key = f'{action.service}:'
         if action.key is not None:
@@ -283,7 +288,7 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         menu_item = replace(action.menu_item, key=key)
         new_items = sorted(
             [
-                *cast(Sequence[Item], apps_menu_items),
+                *cast('Sequence[Item]', apps_menu_items),
                 menu_item,
             ],
             key=sort_key,
@@ -292,7 +297,7 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         apps_menu_item = replace(
             apps_menu_item,
             sub_menu=replace(
-                cast(Menu, apps_menu_item.sub_menu),
+                cast('Menu', apps_menu_item.sub_menu),
                 items=new_items,
             ),
         )
@@ -300,7 +305,7 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         main_menu_item = replace(
             main_menu_item,
             sub_menu=replace(
-                cast(Menu, main_menu_item.sub_menu),
+                cast('Menu', main_menu_item.sub_menu),
                 items=[
                     apps_menu_item if item.key == 'apps' else item
                     for item in main_menu_items
@@ -332,16 +337,16 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
             return state
         root_menu_items = menu_items(menu)
         main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-        main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
+        main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
         apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
-        apps_menu_items = menu_items(cast(Menu, apps_menu_item.sub_menu))
+        apps_menu_items = menu_items(cast('Menu', apps_menu_item.sub_menu))
 
         new_items = [item for item in apps_menu_items if item.key != key]
 
         new_apps_menu_item = replace(
             apps_menu_item,
             sub_menu=replace(
-                cast(Menu, apps_menu_item.sub_menu),
+                cast('Menu', apps_menu_item.sub_menu),
                 items=new_items,
             ),
         )
@@ -349,7 +354,7 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         new_main_menu_item = replace(
             main_menu_item,
             sub_menu=replace(
-                cast(Menu, main_menu_item.sub_menu),
+                cast('Menu', main_menu_item.sub_menu),
                 items=[
                     new_apps_menu_item if item == apps_menu_item else item
                     for item in main_menu_items
@@ -405,16 +410,16 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
                 return state
             root_menu_items = menu_items(menu)
             main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-            main_menu_items = menu_items(cast(Menu, main_menu_item.sub_menu))
+            main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
             apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
-            apps_menu_items = menu_items(cast(Menu, apps_menu_item.sub_menu))
+            apps_menu_items = menu_items(cast('Menu', apps_menu_item.sub_menu))
             settings_menu_item = find_sub_menu_item(main_menu_items, 'settings')
-            settings_menu_items = menu_items(cast(Menu, settings_menu_item.sub_menu))
+            settings_menu_items = menu_items(cast('Menu', settings_menu_item.sub_menu))
 
             new_apps_menu_item = replace(
                 apps_menu_item,
                 sub_menu=replace(
-                    cast(Menu, apps_menu_item.sub_menu),
+                    cast('Menu', apps_menu_item.sub_menu),
                     items=[
                         item
                         for item in apps_menu_items
@@ -427,16 +432,16 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
             new_settings_menu_item = replace(
                 settings_menu_item,
                 sub_menu=replace(
-                    cast(Menu, settings_menu_item.sub_menu),
+                    cast('Menu', settings_menu_item.sub_menu),
                     items=[
                         replace(
                             category_menu_item,
                             sub_menu=replace(
-                                cast(Menu, category_menu_item.sub_menu),
+                                cast('Menu', category_menu_item.sub_menu),
                                 items=[
                                     item
                                     for item in menu_items(
-                                        cast(Menu, category_menu_item.sub_menu),
+                                        cast('Menu', category_menu_item.sub_menu),
                                     )
                                     if item.key is None
                                     or not item.key.startswith(f'{action.service_id}:')
@@ -453,7 +458,7 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
             new_main_menu_item = replace(
                 main_menu_item,
                 sub_menu=replace(
-                    cast(Menu, main_menu_item.sub_menu),
+                    cast('Menu', main_menu_item.sub_menu),
                     items=[
                         new_apps_menu_item
                         if item == apps_menu_item

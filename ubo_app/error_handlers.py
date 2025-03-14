@@ -106,7 +106,7 @@ def loop_exception_handler(  # noqa: C901
     exception = context.get('exception')
 
     if DEBUG_MODE_TASKS:
-        task = cast(asyncio.Task, context.get('future') or context.get('task'))
+        task = cast('asyncio.Task', context.get('future') or context.get('task'))
         parent_stack = STACKS.get(task, '<unavailable>') if task else '<unavailable>'
     else:
         parent_stack = None
@@ -133,7 +133,7 @@ def loop_exception_handler(  # noqa: C901
                 'future': context.get('future'),
                 'parent_stack': parent_stack,
             },
-            exc_info=cast(Exception, exception),
+            exc_info=cast('Exception', exception),
         )
         logger.verbose(
             'Event loop exception',
@@ -152,7 +152,7 @@ def loop_exception_handler(  # noqa: C901
                 'threads': threads_info,
                 'parent_stack': parent_stack,
             },
-            exc_info=cast(Exception, exception),
+            exc_info=cast('Exception', exception),
         )
     else:
         logger.error(

@@ -245,7 +245,7 @@ def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
             label=ENGINE_LABELS[engine],
             action=create_engine_selector(engine),
             **cast(
-                Any,
+                'Any',
                 selected_engine_parameters
                 if engine == selected_engine
                 else unselected_engine_parameters,

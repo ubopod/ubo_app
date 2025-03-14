@@ -6,10 +6,9 @@ import functools
 import json
 import re
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from quart import Quart, Response, render_template, request
-from werkzeug.datastructures import FileStorage
 
 from ubo_app.constants import (
     GRPC_ENVOY_LISTEN_PORT,
@@ -50,6 +49,9 @@ from ubo_app.utils.network import has_gateway
 from ubo_app.utils.pod_id import get_pod_id
 from ubo_app.utils.server import send_command
 from ubo_app.utils.types import Subscriptions
+
+if TYPE_CHECKING:
+    from werkzeug.datastructures import FileStorage
 
 ENVOY_IMAGE_NAME = 'thegrandpkizzle/envoy:1.26.1'
 
@@ -224,7 +226,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
         if request.method == 'POST':
             data = dict(await request.form)
             files = {
-                key: cast(FileStorage, value).stream
+                key: cast('FileStorage', value).stream
                 for key, value in (await request.files).items()
             }
 

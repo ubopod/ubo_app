@@ -288,9 +288,9 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         if isinstance(object_type, GenericAlias):
             origin = get_origin(object_type)
             if isinstance(data, origin):
-                return cast(T, data)
+                return cast('T', data)
         elif not object_type or isinstance(data, object_type):
-            return cast(T, data)
+            return cast('T', data)
 
         msg = f'Invalid data type {type(data)}'
         raise TypeError(msg)

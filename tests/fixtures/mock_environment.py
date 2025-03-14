@@ -96,12 +96,13 @@ def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
     def debug_uuid4() -> uuid.UUID:
         nonlocal counter
         counter += 1
-        import logging
         import traceback
+
+        from ubo_app.logger import logger
 
         generated_uuid = uuid.UUID(int=random.getrandbits(128))
 
-        logging.debug(
+        logger.debug(
             '`uuid.uuid4` is being called',
             extra={
                 'traceback': '\n'.join(traceback.format_stack()[:-1]),
@@ -197,12 +198,12 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
                 and command[2].startswith('tests/')
                 and command[2].endswith('setup.sh')
             ):
-                return original_subprocess_run(command, *cast(Any, args), **kwargs)
+                return original_subprocess_run(command, *cast('Any', args), **kwargs)
             # Reboot and poweroff
             if command[1] == 'systemctl' and command[2] in {'reboot', 'poweroff'}:
                 return Fake()
         if command[0] in {'cat', 'file'}:
-            return original_subprocess_run(command, *cast(Any, args), **kwargs)
+            return original_subprocess_run(command, *cast('Any', args), **kwargs)
         msg = f'Unexpected `subprocess.run` command in test environment: {command}'
         raise ValueError(msg)
 
@@ -220,7 +221,7 @@ async def _fake_create_subprocess_exec(  # noqa: C901
             super().__init__(_Fake__attrs={'output': output})
 
         async def communicate(self: FakeAsyncProcess) -> tuple[bytes, bytes]:
-            return cast(bytes, self.output), b''
+            return cast('bytes', self.output), b''
 
     _ = kwargs
     command, *args = _args
@@ -249,10 +250,10 @@ async def _fake_create_subprocess_exec(  # noqa: C901
     if command == 'pulseaudio':
         return FakeAsyncProcess()
 
-    import logging
+    from ubo_app.logger import logger
 
     if not expected:
-        logging.info(
+        logger.info(
             'Unexpected `async_create_subprocess_exec` command in test environment:',
             extra={
                 'args_': _args,
