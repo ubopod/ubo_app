@@ -100,7 +100,10 @@ def _logger() -> None:
     for handler in logging.getLogger().handlers:
         if handler.formatter:
             handler.formatter.format = extra_formatter.format
-            cast(ExtraFormatter, handler.formatter).def_keys = extra_formatter.def_keys
+            cast(
+                'ExtraFormatter',
+                handler.formatter,
+            ).def_keys = extra_formatter.def_keys
 
 
 @pytest.fixture(autouse=True)

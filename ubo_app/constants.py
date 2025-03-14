@@ -15,8 +15,8 @@ INSTALLER_URL = os.environ.get(
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
 DEBUG_MODE = str_to_bool(os.environ.get('UBO_DEBUG', 'False'))
 DEBUG_MODE_TASKS = str_to_bool(os.environ.get('UBO_DEBUG_TASKS', 'False'))
-LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else None)
-GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else None)
+LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else '')
+GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else '')
 SERVICES_PATH = (
     os.environ.get('UBO_SERVICES_PATH', '').split(':')
     if os.environ.get('UBO_SERVICES_PATH')
@@ -50,10 +50,10 @@ UPDATE_LOCK_PATH = UPDATE_ASSETS_PATH / 'update_is_ready.lock'
 DEBUG_MODE_MENU = str_to_bool(os.environ.get('UBO_DEBUG_MENU', 'False'))
 
 SERVICES_LOOP_GRACE_PERIOD = float(
-    os.environ.get('UBO_SERVICES_LOOP_GRACE_PERIOD', 0.1),
+    os.environ.get('UBO_SERVICES_LOOP_GRACE_PERIOD', '0.1'),
 )
-MAIN_LOOP_GRACE_PERIOD = int(os.environ.get('UBO_MAIN_LOOP_GRACE_PERIOD', 1))
-STORE_GRACE_PERIOD = int(os.environ.get('UBO_STORE_GRACE_PERIOD', 1))
+MAIN_LOOP_GRACE_PERIOD = int(os.environ.get('UBO_MAIN_LOOP_GRACE_PERIOD', '1'))
+STORE_GRACE_PERIOD = int(os.environ.get('UBO_STORE_GRACE_PERIOD', '1'))
 
 # Enable it to replace UUIDs with numerical counters in tests and log the traceback
 # each time a UUID is generated.

@@ -14,7 +14,6 @@ import traceback
 import uuid
 import weakref
 from collections import OrderedDict
-from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import replace
 from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
@@ -45,6 +44,7 @@ from ubo_app.store.settings.types import (
 
 if TYPE_CHECKING:
     from asyncio.tasks import Task
+    from collections.abc import Callable, Coroutine, Sequence
     from importlib.machinery import ModuleSpec
     from types import ModuleType
 
@@ -98,12 +98,12 @@ class UboServiceLoader(importlib.abc.Loader):
         self.service = service
 
     def exec_module(self: UboServiceLoader, module: ModuleType) -> None:
-        cast(Any, module).name = self.service.name
-        cast(Any, module).service_uid = self.service.service_uid
-        cast(Any, module).label = self.service.label
-        cast(Any, module).service_id = self.service.service_id
-        cast(Any, module).path = self.service.path
-        cast(Any, module).run_task = self.service.run_task
+        cast('Any', module).name = self.service.name
+        cast('Any', module).service_uid = self.service.service_uid
+        cast('Any', module).label = self.service.label
+        cast('Any', module).service_id = self.service.service_id
+        cast('Any', module).path = self.service.path
+        cast('Any', module).run_task = self.service.run_task
 
     def __repr__(self: UboServiceLoader) -> str:
         return f'{self.service.path}:ServiceLoader'
@@ -282,7 +282,7 @@ class UboServiceThread(threading.Thread):
         if self.module and self.spec and self.spec.loader:
             REGISTERED_PATHS[self.path] = self
             try:
-                cast(UboServiceThread, self.module).register = self.register
+                cast('UboServiceThread', self.module).register = self.register
                 self.spec.loader.exec_module(self.module)
             except Exception:
                 del REGISTERED_PATHS[self.path]
@@ -326,12 +326,12 @@ class UboServiceThread(threading.Thread):
             try:
                 if len(inspect.signature(self.setup).parameters) == 0:
                     result = cast(
-                        Callable[[], 'SetupFunctionReturnType'],
+                        'Callable[[], SetupFunctionReturnType]',
                         self.setup,
                     )()
                 elif len(inspect.signature(self.setup).parameters) == 1:
                     result = cast(
-                        Callable[[UboServiceThread], 'SetupFunctionReturnType'],
+                        'Callable[[UboServiceThread], SetupFunctionReturnType]',
                         self.setup,
                     )(self)
 

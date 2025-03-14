@@ -118,7 +118,7 @@ async def input_wifi_connection(
     type = result.data.get('Type') or result.data.get('Type_')
     if type:
         type = type.upper()
-    type = cast(WiFiType, type)
+    type = cast('WiFiType', type)
     hidden = str_to_bool(
         result.data.get('Hidden') or result.data.get('Hidden_') or 'false',
     )

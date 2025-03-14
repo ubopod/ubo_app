@@ -60,7 +60,7 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
         ids = list(service_ids)
 
         @wait_for(
-            run_async=cast(Literal[True], run_async),
+            run_async=cast('Literal[True]', run_async),
             timeout=timeout,
             wait=wait_fixed(1),
         )
@@ -83,6 +83,6 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
 
         return check()
 
-    yield cast(LoadServices, load_services_and_wait)
+    yield cast('LoadServices', load_services_and_wait)
 
     REGISTERED_PATHS.clear()

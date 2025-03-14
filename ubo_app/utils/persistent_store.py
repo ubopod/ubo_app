@@ -91,5 +91,5 @@ def read_from_persistent_store(
         )
     return store.load_object(
         value,
-        object_type=cast(type[T], object_type),
+        object_type=cast('type[T]', object_type),
     )

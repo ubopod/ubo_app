@@ -168,7 +168,7 @@ async def get_active_connection_state() -> ConnectionState:
         return ConnectionState.UNKNOWN
 
     active_connection_state = (
-        cast(SdBusConnectionState, await active_connection.state)
+        cast('SdBusConnectionState', await active_connection.state)
         if active_connection
         else None
     )
