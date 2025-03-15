@@ -34,6 +34,7 @@
 - refactor(core): make `subscribe_event` created in services, run the handler in the event loop of the service instead of the event loop of the main thread - closes #226
 - refactor: add `ubo_app.colors` and move hardcoded color codes to it
 - feat: add menu switch for service threads to enable/disable auto-run and auto-rerun of services - closes #227
+- fix(web-ui): use latest python-redux which reports correct signature for `with_state` wrapped functions, making `subscribe_event` call callbacks with the event instance if they need it - closes #263
 
 ## Version 1.2.2
 
