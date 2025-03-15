@@ -68,25 +68,21 @@ If you want to install the image on an existing operating system, then read on. 
 To install ubo, run this command in a terminal shell:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo bash
 ```
 
 If you want to install docker service and configure ubo to be able to use it run this:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo WITH_DOCKER=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo WITH_DOCKER=true bash
 ```
 
 To allow the installer to install the latest alpha version of ubo run this:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo ALPHA=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo ALPHA=true bash
 # or
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo ALPHA=true WITH_DOCKER=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo ALPHA=true WITH_DOCKER=true bash
 ```
 
 Note that as part of the installation process, these debian packages are installed:
@@ -140,6 +136,12 @@ git lfs install
 git lfs pull
 ```
 
+In environments where some python packages are installed system-wide, like Raspberry Pi OS, you need to run the following command to create a virtual environment with system site packages enabled:
+
+```bash
+uv venv --system-site-packages
+```
+
 Then, navigate to the project directory and install the dependencies:
 
 ```bash
@@ -180,7 +182,7 @@ To run the app on the device, you can use either of these commands:
 
 ```bash
 uv run poe device:deploy:restart # gracefully restart the app with systemctl
-uv run poe device:deploy:kill # kill the process, which will be restarted by systemd if the service is not stopped
+uv run poe device:deploy:kill    # kill the process, which will be restarted by systemd if the service is not stopped
 ```
 
 #### Running tests on desktop

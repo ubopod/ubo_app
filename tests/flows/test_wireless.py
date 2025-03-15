@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from tenacity import wait_fixed
 
 from ubo_app.utils import IS_RPI
 
@@ -41,6 +40,7 @@ async def test_wireless_flow(
     from sdbus_async.networkmanager import (  # pyright: ignore [reportMissingModuleSource]
         AccessPoint,
     )
+    from tenacity import wait_fixed
 
     async def strength() -> int:
         return 100

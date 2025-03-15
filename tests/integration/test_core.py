@@ -19,11 +19,9 @@ async def test_app_runs_and_exits(
     window_snapshot: WindowSnapshot,
     store_snapshot: StoreSnapshot,
     wait_for: WaitFor,
-    needs_finish: None,
     stability: Stability,
 ) -> None:
     """Test the application starts, runs and quits."""
-    _ = needs_finish
     from ubo_app.menu_app.menu import MenuApp
 
     app = MenuApp()

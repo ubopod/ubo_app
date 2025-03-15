@@ -147,7 +147,9 @@ def main() -> None:
     setup_hostname()
     setup_reset_button()
 
-    led_manager.run_command_thread_safe('spinning_wheel 255 255 255 50 6 100'.split())
+    led_manager.run_command_thread_safe(
+        ['spinning_wheel', '255', '255', '255', '50', '6', '100'],
+    )
 
     uid = pwd.getpwnam('root').pw_uid
     gid = grp.getgrnam(USERNAME).gr_gid

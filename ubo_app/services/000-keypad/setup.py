@@ -147,7 +147,7 @@ class Keypad:
         self.clear_interrupt_flags(new_i2c)
 
         # read register values
-        inputs = cast(int, self.aw.inputs)
+        inputs = cast('int', self.aw.inputs)
         self.logger.debug(
             'Initializing inputs',
             extra={'inputs': f'{inputs:016b}'},
@@ -188,7 +188,7 @@ class Keypad:
         if self.aw is None:
             return
         # read register values
-        inputs = cast(int, self.aw.inputs)
+        inputs = cast('int', self.aw.inputs)
         # append the event to the queue. The queue has a depth of 2 and
         # keeps the current and last event.
         self.logger.debug('Current Inputs', extra={'inputs': f'{inputs:016b}'})

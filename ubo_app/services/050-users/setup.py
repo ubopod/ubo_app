@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 from asyncio import Future
+from typing import TYPE_CHECKING
 
 from sdbus import (  # pyright: ignore [reportMissingModuleSource]
     DbusInterfaceCommonAsync,
@@ -12,7 +13,6 @@ from sdbus import (  # pyright: ignore [reportMissingModuleSource]
     dbus_property_async,
     dbus_signal_async,
 )
-from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_gui.menu.types import (
     HeadedMenu,
     HeadlessMenu,
@@ -20,6 +20,7 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
+from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,
@@ -50,6 +51,9 @@ from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus
 from ubo_app.utils.server import send_command
+
+if TYPE_CHECKING:
+    from ubo_app.utils.types import Subscriptions
 
 
 async def create_account() -> None:
@@ -276,7 +280,7 @@ class _UserInterface(
         raise NotImplementedError
 
 
-async def init_service() -> None:
+async def init_service() -> Subscriptions:
     """Initialize the Users service."""
     store.dispatch(
         RegisterSettingAppAction(
@@ -290,9 +294,11 @@ async def init_service() -> None:
         ),
     )
 
-    store.subscribe_event(UsersCreateUserEvent, create_account)
-    store.subscribe_event(UsersDeleteUserEvent, delete_account)
-    store.subscribe_event(UsersResetPasswordEvent, reset_password)
+    subscriptions = [
+        store.subscribe_event(UsersCreateUserEvent, create_account),
+        store.subscribe_event(UsersDeleteUserEvent, delete_account),
+        store.subscribe_event(UsersResetPasswordEvent, reset_password),
+    ]
 
     bus = get_system_bus()
     accounts_service = _AccountsInterface.new_proxy(
@@ -331,3 +337,5 @@ async def init_service() -> None:
 
     create_task(monitor_user_added())
     create_task(monitor_user_deleted())
+
+    return subscriptions

@@ -18,7 +18,7 @@ async def replay_actions(store: UboStore, path: Path) -> None:
         data = json.load(file)
 
     for item in data:
-        store.dispatch(cast(Any, store.load_object(item)))
+        store.dispatch(cast('Any', store.load_object(item)))
         await asyncio.sleep(0.5)
     await asyncio.sleep(1.5)
     store.dispatch(ReportReplayingDoneAction())

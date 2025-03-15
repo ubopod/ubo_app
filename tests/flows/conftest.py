@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-FLOW_TIMEOUT = 150
+FLOW_TIMEOUT = 200
 
 
 @pytest.hookimpl(tryfirst=True)

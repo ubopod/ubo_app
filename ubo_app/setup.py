@@ -74,20 +74,12 @@ def setup() -> None:
     """Set up for different environments."""
     import sys
 
-    # it should be changed to `Fake()` and  moved inside the `if not IS_RPI` when the
-    # new sdbus is released {-
-    sys.modules['sdbus.utils.inspect'] = Fake(
-        _Fake__attrs={
-            'inspect_dbus_path': lambda obj: obj._dbus.object_path,  # noqa: SLF001
-        },
-    )
-    # -}
-
+    from ubo_app.store.main import store
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
         sys.modules['adafruit_rgb_display.st7789'] = Fake()
-        sys.modules['alsaaudio'] = Fake()
+        sys.modules['alsaaudio'] = Fake(_Fake__attrs={'cards': lambda: ['wm8960']})
         sys.modules['apt'] = Fake()
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()
@@ -104,6 +96,11 @@ def setup() -> None:
                 'capture_array': Fake(
                     _Fake__return_value=np.zeros((1, 1, 3), dtype=np.uint8),
                 ),
+            },
+        )
+        sys.modules['sdbus.utils.inspect'] = Fake(
+            _Fake__attrs={
+                'inspect_dbus_path': lambda obj: obj._dbus.object_path,  # noqa: SLF001
             },
         )
         subprocess.run = _fake_subprocess_run
@@ -124,7 +121,6 @@ def setup() -> None:
         monitor_unit.monitor_unit = fake_monitor_unit
 
     import ubo_app.display as _  # noqa: F401
-    from ubo_app.store.main import store
 
     if not IS_TEST_ENV:
         store.subscribe_event(FinishEvent, _clear_signal_handlers)

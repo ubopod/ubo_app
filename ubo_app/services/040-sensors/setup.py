@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, TypeVar
 import adafruit_pct2075
 import adafruit_veml7700
 import board
-from redux import FinishEvent
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 
 from ubo_app.logger import logger
@@ -19,6 +18,8 @@ from ubo_app.utils.eeprom import get_eeprom_data
 
 if TYPE_CHECKING:
     from adafruit_rgb_display.rgb import busio
+
+    from ubo_app.utils.types import Subscriptions
 
 temperature_sensor: adafruit_pct2075.PCT2075 | None = None
 light_sensor: adafruit_veml7700.VEML7700 | None = None
@@ -57,7 +58,7 @@ def _initialize_device(cls: type[T], address: int, i2c: busio.I2C) -> T:
     return cls(i2c, address)
 
 
-def init_service() -> None:
+def init_service() -> Subscriptions:
     """Initialize the service."""
     from kivy.clock import Clock
 
@@ -97,5 +98,6 @@ def init_service() -> None:
         logger.exception('Error initializing light sensor')
 
     clock_event = Clock.schedule_interval(read_sensors, 1)
-    store.subscribe_event(FinishEvent, clock_event.cancel)
     read_sensors()
+
+    return [clock_event.cancel]

@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast, overload
 
 import fasteners
-from redux import FinishEvent
 
 from ubo_app.constants import PERSISTENT_STORE_PATH
 
@@ -25,7 +24,7 @@ persistent_store_lock = fasteners.ReaderWriterLock()
 def register_persistent_store(
     key: str,
     selector: Callable[[RootState], T],
-) -> None:
+) -> Callable[[], None]:
     """Register a part of the store to be persistent in the filesystem."""
     from ubo_app.store.main import store
 
@@ -42,11 +41,7 @@ def register_persistent_store(
             current_state[key] = serialized_value
             Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
 
-    def unsubscribe() -> None:
-        unsubscribe_event()
-        write.unsubscribe()
-
-    unsubscribe_event = store.subscribe_event(FinishEvent, unsubscribe)
+    return write.unsubscribe
 
 
 @overload
@@ -96,5 +91,5 @@ def read_from_persistent_store(
         )
     return store.load_object(
         value,
-        object_type=cast(type[T], object_type),
+        object_type=cast('type[T]', object_type),
     )

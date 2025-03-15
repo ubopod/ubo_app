@@ -21,6 +21,20 @@
 - refactor(web-ui): use the same mui interface in static server too (instead of jinja-rendered interface) and add action buttons for all status reported by server - closes #224
 - fix(rpi-connect): use `with_state` of the latest python-redux version instead of `view` to avoid memoization of actions - closes #248
 - refactor(core,audio,display,keypad,sensors): read and check content of eeprom to determine if a device/service should be initialized or not - closes #223, #closes #249
+- fix(core): improve syntax of `str_to_bool`, removing all unnecessary `== 1` postfixes
+- feat(core): implement services menu in settings for controlling services - closes #4, closes #226
+- feat(core): store services configuration into and read them from the persistent store
+- refactor: use the new subscriptions return value of the `setup` function for different services to report subscriptions so that the service manager can clean up the subscriptions when the service is stopped
+- fix(core): remove the reference of the async task handle after it is done to avoid memory leaks
+- feat(core): clean up status icons of a service when it stops
+- refactor(tests): make different parts of code explicitly return their cleanup functions and make test_services wait until all services are completely loaded without any errors plus small improvements to logs
+- chore(lint): update ruff to the latest version and update codebase to be compatible with it
+- build(installation): remove the line in install.sh uninstalling `RPI.GPIO` as it is no longer needed with the latest release of adafruit-blinka
+- build(installation): remove the raspberry pi's ssh daemon banner warning about setting a valid user
+- refactor(core): make `subscribe_event` created in services, run the handler in the event loop of the service instead of the event loop of the main thread - closes #226
+- refactor: add `ubo_app.colors` and move hardcoded color codes to it
+- feat: add menu switch for service threads to enable/disable auto-run and auto-rerun of services - closes #227
+- fix(web-ui): use latest python-redux which reports correct signature for `with_state` wrapped functions, making `subscribe_event` call callbacks with the event instance if they need it - closes #263
 
 ## Version 1.2.2
 
@@ -425,7 +439,7 @@
 
 - feat(docker): add ngrok service (currently serves port 22 with no auth token)
 - refactor(style): update `ubo-gui` to the latest version and change all icons to use nerd font icons
-- refactor(serviceS): change the loading order of the services
+- refactor(services): change the loading order of the services
 - feat(ssh): add ssh service to create and remove temporary ssh target users
 - fix(server): it would miss commands coming together in a single packet, now it waits for the next packet if the current packet is not a complete command and it doesn't miss extra commands in the packet if it has multiple commands.
 

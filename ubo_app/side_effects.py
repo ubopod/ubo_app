@@ -34,9 +34,11 @@ from ubo_app.store.update_manager.types import (
     UpdateStatus,
 )
 from ubo_app.store.update_manager.utils import check_version, update
+from ubo_app.utils import bus_provider
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI, initialize_board
 from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
+from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.store import replay_actions
 
 if TYPE_CHECKING:
@@ -158,19 +160,47 @@ async def check_wifi() -> None:
         store.dispatch(WiFiInputConnectionAction())
 
 
+def cleanup() -> None:
+    """Clean up the application."""
+    display.turn_off()
+    bus_provider.clean_up()
+
+
 def setup_side_effects() -> None:
     """Set up the side effects for the application."""
     initialize_board()
 
-    store.subscribe_event(FinishEvent, display.turn_off)
-    store.subscribe_event(PowerOffEvent, power_off)
-    store.subscribe_event(RebootEvent, reboot)
-    store.subscribe_event(UpdateManagerUpdateEvent, update)
-    store.subscribe_event(UpdateManagerCheckEvent, check_version)
-    store.subscribe_event(ScreenshotEvent, take_screenshot)
-    store.subscribe_event(SnapshotEvent, take_snapshot)
-    store.subscribe_event(StoreRecordedSequenceEvent, store_recorded_sequence)
-    store.subscribe_event(ReplayRecordedSequenceEvent, replay_recorded_sequence)
+    register_persistent_store(
+        'services',
+        lambda state: None
+        if state.settings.services is None
+        else [
+            {
+                'id': service.id,
+                'is_enabled': service.is_enabled,
+                'should_auto_restart': service.should_auto_restart,
+            }
+            for service in state.settings.services.values()
+        ],
+    )
+
+    store.subscribe_event(FinishEvent, cleanup, keep_ref=False)
+    store.subscribe_event(PowerOffEvent, power_off, keep_ref=False)
+    store.subscribe_event(RebootEvent, reboot, keep_ref=False)
+    store.subscribe_event(UpdateManagerUpdateEvent, update, keep_ref=False)
+    store.subscribe_event(UpdateManagerCheckEvent, check_version, keep_ref=False)
+    store.subscribe_event(ScreenshotEvent, take_screenshot, keep_ref=False)
+    store.subscribe_event(SnapshotEvent, take_snapshot, keep_ref=False)
+    store.subscribe_event(
+        StoreRecordedSequenceEvent,
+        store_recorded_sequence,
+        keep_ref=False,
+    )
+    store.subscribe_event(
+        ReplayRecordedSequenceEvent,
+        replay_recorded_sequence,
+        keep_ref=False,
+    )
 
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
 

@@ -12,10 +12,10 @@ import aiohttp
 import requests
 from kivy.clock import Clock
 from redux import FinishEvent
-from ubo_gui.constants import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_gui.menu.menu_widget import math
 from ubo_gui.menu.types import Item
 
+from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_app.constants import (
     INSTALLATION_PATH,
     INSTALLER_URL,

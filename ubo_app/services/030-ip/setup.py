@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
@@ -20,6 +20,7 @@ from ubo_app.store.services.ip import (
     IpUpdateInterfacesAction,
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ IpMainMenu = SubMenuItem(
 )
 
 
-async def init_service() -> None:
+def init_service() -> None:
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
@@ -117,4 +118,4 @@ async def init_service() -> None:
         ),
     )
 
-    await check_connection()
+    create_task(check_connection())

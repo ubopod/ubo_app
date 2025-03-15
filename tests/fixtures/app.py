@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import gc
 import json
-import logging
 import sys
 import weakref
 from pathlib import Path
@@ -15,6 +14,8 @@ import dotenv
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
+
+from ubo_app.logger import logger
 
 modules_snapshot = set(sys.modules).union(
     {
@@ -97,7 +98,7 @@ class AppContext:
         app = app_ref()
 
         if app is not None and self.request.session.testsfailed == 0:
-            logging.info(
+            logger.info(
                 'Memory leak: failed to release app for test.',
                 extra={
                     'refcount': sys.getrefcount(app),
@@ -110,7 +111,7 @@ class AppContext:
                 if type(cell).__name__ == 'cell':
                     from ubo_app.utils.garbage_collection import examine
 
-                    logging.debug(
+                    logger.debug(
                         'CELL EXAMINATION',
                         extra={'cell': cell},
                     )
@@ -276,17 +277,17 @@ async def app_context(
 
     import os
 
-    from ubo_app.logger import setup_logging
+    from ubo_app.logger import setup_loggers
 
-    setup_logging()
+    logger_cleanups = setup_loggers()
 
     os.environ['TEST_ROOT_PATH'] = Path().absolute().as_posix()
     should_use_fake_fs = (
         request.config.getoption(
             '--use-fakefs',
             default=cast(
-                Any,
-                str_to_bool(os.environ.get('UBO_TEST_USE_FAKEFS', 'false')) == 1,
+                'Any',
+                str_to_bool(os.environ.get('UBO_TEST_USE_FAKEFS', 'false')),
             ),
         )
         is True
@@ -298,6 +299,8 @@ async def app_context(
         yield context
 
         await context.clean_up()
+        for cleanup in logger_cleanups:
+            cleanup()
     del patcher
 
     assert not hasattr(context, 'app'), 'App not cleaned up'

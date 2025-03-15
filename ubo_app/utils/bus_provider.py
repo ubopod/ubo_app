@@ -5,10 +5,7 @@ from __future__ import annotations
 
 from threading import Thread, current_thread
 
-from redux import FinishEvent
 from sdbus import SdBus, sd_bus_open_system, sd_bus_open_user, set_default_bus
-
-from ubo_app.store.main import store
 
 system_buses: dict[Thread, SdBus] = {}
 user_buses: dict[Thread, SdBus] = {}
@@ -39,6 +36,3 @@ def get_user_bus() -> SdBus:
     if thread not in user_buses:
         user_buses[thread] = sd_bus_open_user()
     return user_buses[thread]
-
-
-store.subscribe_event(FinishEvent, clean_up, keep_ref=False)

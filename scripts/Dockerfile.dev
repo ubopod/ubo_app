@@ -2,7 +2,23 @@ FROM ubuntu:noble
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt -y update
-RUN apt -y install gcc curl git libasound2-dev libcap-dev libegl1 libgl1 libmtdev1 libzbar0 python3 python3-dev file ca-certificates --no-install-recommends --no-install-suggests
+RUN apt -y install \
+  ca-certificates \
+  curl \
+  file \
+  gcc \
+  git \
+  libasound2-dev \
+  libcap-dev \
+  libegl1 \
+  libgl1 \
+  libmtdev1 \
+  libzbar0 \
+  net-tools \
+  python3 \
+  python3-dev \
+  --no-install-recommends \
+  --no-install-suggests
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="${PATH}:/root/.local/bin"
 ENV UV_PROJECT_ENVIRONMENT=/venv

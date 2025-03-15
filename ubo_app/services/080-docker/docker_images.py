@@ -206,7 +206,7 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
                 f'{ENVOY_CONFIG_PATH}:/envoy.yaml',
             ],
             **cast(
-                Any,
+                'Any',
                 {'network_mode': 'host'}
                 if IS_RPI
                 else {

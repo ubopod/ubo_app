@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from threading import current_thread
 from typing import TYPE_CHECKING, ParamSpec
 
 from typing_extensions import TypeVar
@@ -13,21 +14,46 @@ if TYPE_CHECKING:
     from redux.basic_types import TaskCreatorCallback
 
 
-background_tasks = []
+tasks: list[Handle] = []
+
+
+def get_task_runner() -> Callable[..., Handle]:
+    import ubo_app.service
+    from ubo_app.service_thread import UboServiceThread
+
+    thread = current_thread()
+
+    if isinstance(thread, UboServiceThread):
+        return thread.run_task
+
+    return ubo_app.service.run_task
 
 
 def create_task(
     task: Coroutine,
     callback: TaskCreatorCallback | None = None,
 ) -> Handle:
-    import ubo_app.service
-
     def callback_(task: asyncio.Task) -> None:
         if callback:
             callback(task)
 
-    handle = ubo_app.service._create_task(task, callback_)  # noqa: SLF001
-    background_tasks.append(handle)
+    handle: Handle | None = None
+    signal = asyncio.Event()
+
+    async def wrapper() -> None:
+        try:
+            await task
+        finally:
+            await signal.wait()
+            if handle in tasks:
+                tasks.remove(handle)
+
+    task_runner = get_task_runner()
+
+    handle = task_runner(wrapper(), callback_) if callback else task_runner(wrapper())
+
+    tasks.append(handle)
+    signal.set()
     return handle
 
 
@@ -40,8 +66,6 @@ def to_thread(
     *args: T_params.args,
     **kwargs: T_params.kwargs,
 ) -> Handle:
-    import ubo_app.service
+    task_runner = get_task_runner()
 
-    return ubo_app.service._create_task(  # noqa: SLF001
-        asyncio.to_thread(task, *args, **kwargs),
-    )
+    return task_runner(asyncio.to_thread(task, *args, **kwargs))

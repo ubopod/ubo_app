@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 
 from kivy.clock import Clock, mainthread
 from ubo_gui.app import UboApp
-from ubo_gui.constants import DANGER_COLOR, INFO_COLOR
 from ubo_gui.menu.stack_item import StackApplicationItem
 from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PAGE_MAX_ITEMS
 
+from ubo_app.colors import DANGER_COLOR, INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.menu_app.notification_info import NotificationInfo
 from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction

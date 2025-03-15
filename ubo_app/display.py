@@ -54,7 +54,7 @@ if IS_RPI:
     else:
         display = None
 else:
-    display = cast(ST7789, Fake())
+    display = cast('ST7789', Fake())
 
 
 def render_on_display(*, regions: list[Region]) -> None:
