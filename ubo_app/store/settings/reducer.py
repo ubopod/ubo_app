@@ -15,6 +15,8 @@ from ubo_app.store.settings.types import (
     SettingsAction,
     SettingsEvent,
     SettingsReportServiceErrorAction,
+    SettingsServiceSetIsEnabledAction,
+    SettingsServiceSetShouldRestartAction,
     SettingsServiceSetStatusAction,
     SettingsSetDebugModeEvent,
     SettingsSetServicesAction,
@@ -52,7 +54,11 @@ def reducer(
                     service_id=service.id,
                     delay=index * action.gap_duration,
                 )
-                for index, service in enumerate(action.services.values())
+                for index, service in enumerate(
+                    service
+                    for service in action.services.values()
+                    if service.is_enabled
+                )
             ],
         )
 
@@ -70,18 +76,33 @@ def reducer(
 
     if isinstance(action, SettingsServiceSetStatusAction):  # noqa: SIM102
         if state.services:
-            return CompleteReducerResult(
-                state=replace(
-                    state,
-                    services={
-                        **state.services,
-                        action.service_id: replace(
-                            state.services[action.service_id],
-                            is_active=action.is_active,
+            service = state.services.get(action.service_id)
+            if service:
+                events: list[SettingsEvent] = []
+                if (
+                    not action.is_active
+                    and service.is_active
+                    and service.should_auto_restart
+                ):
+                    events = [
+                        SettingsStartServiceEvent(
+                            service_id=action.service_id,
+                            delay=2,
                         ),
-                    },
-                ),
-            )
+                    ]
+                return CompleteReducerResult(
+                    state=replace(
+                        state,
+                        services={
+                            **state.services,
+                            action.service_id: replace(
+                                state.services[action.service_id],
+                                is_active=action.is_active,
+                            ),
+                        },
+                    ),
+                    events=events,
+                )
 
     if isinstance(action, SettingsReportServiceErrorAction):
         return replace(
@@ -91,6 +112,34 @@ def reducer(
                 if key == action.service_id
                 else value
                 for key, value in state.services.items()
+            }
+            if state.services
+            else {},
+        )
+
+    if isinstance(action, SettingsServiceSetIsEnabledAction):
+        return replace(
+            state,
+            services={
+                **state.services,
+                action.service_id: replace(
+                    state.services[action.service_id],
+                    is_enabled=action.is_enabled,
+                ),
+            }
+            if state.services
+            else {},
+        )
+
+    if isinstance(action, SettingsServiceSetShouldRestartAction):
+        return replace(
+            state,
+            services={
+                **state.services,
+                action.service_id: replace(
+                    state.services[action.service_id],
+                    should_auto_restart=action.should_auto_restart,
+                ),
             }
             if state.services
             else {},

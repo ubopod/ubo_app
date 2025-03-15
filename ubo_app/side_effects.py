@@ -178,6 +178,7 @@ def setup_side_effects() -> None:
             {
                 'id': service.id,
                 'is_enabled': service.is_enabled,
+                'should_auto_restart': service.should_auto_restart,
             }
             for service in state.settings.services.values()
         ],

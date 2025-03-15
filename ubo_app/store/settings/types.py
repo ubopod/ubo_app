@@ -26,36 +26,46 @@ class SettingsSetServicesAction(SettingsAction):
     gap_duration: float
 
 
-class SettingsStartServiceAction(SettingsAction):
+class SettingsServiceAction(SettingsAction):
+    """Service action."""
+
+    service_id: str
+
+
+class SettingsStartServiceAction(SettingsServiceAction):
     """Start service action."""
 
-    service_id: str
 
-
-class SettingsStopServiceAction(SettingsAction):
+class SettingsStopServiceAction(SettingsServiceAction):
     """Stop service action."""
 
-    service_id: str
 
-
-class SettingsServiceSetStatusAction(SettingsAction):
+class SettingsServiceSetStatusAction(SettingsServiceAction):
     """Set service status action."""
 
-    service_id: str
     is_active: bool
 
 
-class SettingsReportServiceErrorAction(SettingsAction):
+class SettingsServiceSetIsEnabledAction(SettingsServiceAction):
+    """Set service enabled action."""
+
+    is_enabled: bool
+
+
+class SettingsServiceSetShouldRestartAction(SettingsServiceAction):
+    """Set service should restart action."""
+
+    should_auto_restart: bool
+
+
+class SettingsReportServiceErrorAction(SettingsServiceAction):
     """Report service error action."""
 
-    service_id: str
     error: ErrorReport
 
 
-class SettingsClearServiceErrorsAction(SettingsAction):
+class SettingsClearServiceErrorsAction(SettingsServiceAction):
     """Clear service errors action."""
-
-    service_id: str
 
 
 class SettingsEvent(BaseEvent):
@@ -68,17 +78,20 @@ class SettingsSetDebugModeEvent(SettingsEvent):
     is_enabled: bool
 
 
-class SettingsStartServiceEvent(SettingsEvent):
-    """Start service event."""
+class SettingsServiceEvent(SettingsEvent):
+    """Service event."""
 
     service_id: str
+
+
+class SettingsStartServiceEvent(SettingsServiceEvent):
+    """Start service event."""
+
     delay: float = 0
 
 
-class SettingsStopServiceEvent(SettingsEvent):
+class SettingsStopServiceEvent(SettingsServiceEvent):
     """Stop service event."""
-
-    service_id: str
 
 
 class ErrorReport(Immutable):
@@ -95,6 +108,7 @@ class ServiceState(Immutable):
     label: str
     is_active: bool
     is_enabled: bool
+    should_auto_restart: bool
     errors: list[ErrorReport] = field(default_factory=list)
 
 
