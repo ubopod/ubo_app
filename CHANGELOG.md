@@ -29,6 +29,7 @@
 - feat(core): clean up status icons of a service when it stops
 - refactor(tests): make different parts of code explicitly return their cleanup functions and make test_services wait until all services are completely loaded without any errors plus small improvements to logs
 - chore(lint): update ruff to the latest version and update codebase to be compatible with it
+- build(installation): remove the line in install.sh uninstalling `RPI.GPIO` as it is no longer needed with the latest release of adafruit-blinka
 
 ## Version 1.2.2
 

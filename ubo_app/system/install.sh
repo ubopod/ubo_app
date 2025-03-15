@@ -16,37 +16,36 @@ SOURCE=${SOURCE:-"ubo-app"}
 export DEBIAN_FRONTEND=noninteractive
 
 # Parse arguments
-for arg in "$@"
-do
-    case $arg in
-        --update)
-        UPDATE=true
-        shift # Remove --update from processing
-        ;;
-        --wait-for-app)
-        WAIT_FOR_APP=true
-        shift # Remove --wait-for-app from processing
-        ;;
-        --alpha)
-        ALPHA=true
-        shift # Remove --alpha from processing
-        ;;
-        --with-docker)
-        WITH_DOCKER=true
-        shift # Remove --with-docker from processing
-        ;;
-        --in-packer)
-        IN_PACKER=true
-        shift # Remove --in-packer from processing
-        ;;
-        --source=*)
-        SOURCE="${arg#*=}"
-        shift # Remove --source from processing
-        ;;
-        *)
-        # Unknown option
-        ;;
-    esac
+for arg in "$@"; do
+  case $arg in
+  --update)
+    UPDATE=true
+    shift # Remove --update from processing
+    ;;
+  --wait-for-app)
+    WAIT_FOR_APP=true
+    shift # Remove --wait-for-app from processing
+    ;;
+  --alpha)
+    ALPHA=true
+    shift # Remove --alpha from processing
+    ;;
+  --with-docker)
+    WITH_DOCKER=true
+    shift # Remove --with-docker from processing
+    ;;
+  --in-packer)
+    IN_PACKER=true
+    shift # Remove --in-packer from processing
+    ;;
+  --source=*)
+    SOURCE="${arg#*=}"
+    shift # Remove --source from processing
+    ;;
+  *)
+    # Unknown option
+    ;;
+  esac
 done
 
 echo "----------------------------------------------"
@@ -74,7 +73,7 @@ usermod -aG adm,audio,video,gpio,i2c,spi,kmem,render $USERNAME
 
 echo "User $USERNAME created successfully."
 
-echo "export XDG_RUNTIME_DIR=/run/user/$(id -u $USERNAME)" >> /home/$USERNAME/.bashrc
+echo "export XDG_RUNTIME_DIR=/run/user/$(id -u $USERNAME)" >>/home/$USERNAME/.bashrc
 
 # Install required packages
 apt-get -fy install
@@ -133,14 +132,12 @@ if [ "$UPDATE" = true ]; then
   fi
 else
   if [ "$ALPHA" = true ]; then
-    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre "$SOURCE" | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
+    "$INSTALLATION_PATH/env/bin/python" -m pip install --pre "$SOURCE" | grep -c '^Collecting ' >$INSTALLATION_PATH/.packages-count
   else
     # Count number of Collecting instances
-    "$INSTALLATION_PATH/env/bin/python" -m pip install "$SOURCE" | grep -c '^Collecting ' > $INSTALLATION_PATH/.packages-count
+    "$INSTALLATION_PATH/env/bin/python" -m pip install "$SOURCE" | grep -c '^Collecting ' >$INSTALLATION_PATH/.packages-count
   fi
 fi
-
-$INSTALLATION_PATH/env/bin/pip uninstall -y RPi.GPIO
 
 # Set the ownership of the installation path
 chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
