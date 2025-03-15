@@ -8,8 +8,8 @@ import uuid
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
-from ubo_gui.constants import DANGER_COLOR
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.notifications import (

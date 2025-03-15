@@ -32,6 +32,7 @@
 - build(installation): remove the line in install.sh uninstalling `RPI.GPIO` as it is no longer needed with the latest release of adafruit-blinka
 - build(installation): remove the raspberry pi's ssh daemon banner warning about setting a valid user
 - refactor(core): make `subscribe_event` created in services, run the handler in the event loop of the service instead of the event loop of the main thread - closes #226
+- refactor: add `ubo_app.colors` and move hardcoded color codes to it
 
 ## Version 1.2.2
 

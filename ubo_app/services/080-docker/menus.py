@@ -12,7 +12,6 @@ from docker_container import (
 )
 from docker_images import IMAGES
 from docker_qrcode_page import DockerQRCodePage
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import (
     ActionItem,
     HeadedMenu,
@@ -21,6 +20,7 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (

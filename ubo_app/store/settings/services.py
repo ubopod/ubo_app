@@ -12,6 +12,7 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
+from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.menu_app.notification_info import NotificationInfo
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
@@ -93,6 +94,7 @@ def _callbacks(service_id: str) -> _Callbacks:
                     label='Stop',
                     store_action=SettingsStopServiceAction(service_id=service_id),
                     icon='',
+                    background_color=DANGER_COLOR,
                 ),
             )
         else:
@@ -101,7 +103,7 @@ def _callbacks(service_id: str) -> _Callbacks:
                     key='start',
                     label='Start',
                     store_action=SettingsStartServiceAction(service_id=service_id),
-                    icon='',
+                    icon=f'[color={RUNNING_COLOR}][/color]',
                 ),
             )
 
@@ -111,7 +113,7 @@ def _callbacks(service_id: str) -> _Callbacks:
                     SubMenuItem(
                         key='errors',
                         label='Errors',
-                        icon='[color=#880000][/color]',
+                        icon=f'[color={DANGER_COLOR}][/color]',
                         sub_menu=HeadedMenu(
                             title='Errors',
                             heading='Errors',
@@ -124,7 +126,7 @@ def _callbacks(service_id: str) -> _Callbacks:
                                     )
                                     .astimezone()
                                     .strftime('%Y-%m-%d %H:%M:%S'),
-                                    icon='[color=#880000][/color]',
+                                    icon=f'[color={DANGER_COLOR}][/color]',
                                     application=_generate_error_report_app(error),
                                 )
                                 for index, error in enumerate(errors)
@@ -167,9 +169,13 @@ def service_icon(service_id: str) -> Callable[[], str]:
             return ''
         is_active, errors = data
         return (
-            ('[color=#aa8800]󰪥[/color]' if errors else '[color=#008000]󰪥[/color]')
+            (
+                f'[color={WARNING_COLOR}]󰪥[/color]'
+                if errors
+                else f'[color={SUCCESS_COLOR}]󰪥[/color]'
+            )
             if is_active
-            else '[color=#880000]󰪥[/color]'
+            else f'[color={DANGER_COLOR}]󰪥[/color]'
         )
 
     return icon

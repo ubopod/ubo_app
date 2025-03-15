@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, cast
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
 from str_to_bool import str_to_bool
-from ubo_gui.constants import SUCCESS_COLOR, WARNING_COLOR
 from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
+from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.input.types import (

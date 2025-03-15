@@ -11,10 +11,10 @@ from commands import check_status, restart, uninstall_service
 from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
