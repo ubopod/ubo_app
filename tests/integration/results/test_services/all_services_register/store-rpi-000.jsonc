@@ -853,12 +853,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Audio",
+                                    "heading": "[color=#008000]󰪥[/color] Audio",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -874,6 +874,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "audio"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "audio"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "audio",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -899,12 +943,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Camera",
+                                    "heading": "[color=#008000]󰪥[/color] Camera",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -920,6 +964,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "camera"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "camera"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "camera",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -945,12 +1033,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Display",
+                                    "heading": "[color=#008000]󰪥[/color] Display",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -966,6 +1054,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "display"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "display"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "display",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -991,12 +1123,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Docker",
+                                    "heading": "[color=#008000]󰪥[/color] Docker",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1012,6 +1144,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "docker"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "docker"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "docker",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1037,12 +1213,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Ethernet",
+                                    "heading": "[color=#008000]󰪥[/color] Ethernet",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1058,6 +1234,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "ethernet"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "ethernet"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "ethernet",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1083,12 +1303,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "IP",
+                                    "heading": "[color=#008000]󰪥[/color] IP",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1104,6 +1324,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "ip"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "ip"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "ip",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1129,12 +1393,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Keyboard",
+                                    "heading": "[color=#008000]󰪥[/color] Keyboard",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1150,6 +1414,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "keyboard"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "keyboard"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "keyboard",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1175,12 +1483,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Keypad",
+                                    "heading": "[color=#008000]󰪥[/color] Keypad",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1196,6 +1504,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "keypad"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "keypad"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "keypad",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1221,12 +1573,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "LightDM",
+                                    "heading": "[color=#008000]󰪥[/color] LightDM",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1242,6 +1594,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "lightdm"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "lightdm"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "lightdm",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1267,12 +1663,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Notifications",
+                                    "heading": "[color=#008000]󰪥[/color] Notifications",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1288,6 +1684,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "notifications"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "notifications"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "notifications",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1313,12 +1753,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "RGB Ring",
+                                    "heading": "[color=#008000]󰪥[/color] RGB Ring",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1334,6 +1774,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "rgb_ring"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "rgb_ring"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "rgb_ring",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1359,12 +1843,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "RPi Connect",
+                                    "heading": "[color=#008000]󰪥[/color] RPi Connect",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1380,6 +1864,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "rpi_connect"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "rpi_connect"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "rpi_connect",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1405,12 +1933,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "SSH",
+                                    "heading": "[color=#008000]󰪥[/color] SSH",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1426,6 +1954,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "ssh"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "ssh"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "ssh",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1451,12 +2023,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Sensors",
+                                    "heading": "[color=#008000]󰪥[/color] Sensors",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1472,6 +2044,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "sensors"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "sensors"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "sensors",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1497,12 +2113,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Users",
+                                    "heading": "[color=#008000]󰪥[/color] Users",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1518,6 +2134,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "users"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "users"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "users",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1543,12 +2203,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "VSCode",
+                                    "heading": "[color=#008000]󰪥[/color] VSCode",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1564,6 +2224,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "vscode"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "vscode"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "vscode",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1589,12 +2293,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Voice",
+                                    "heading": "[color=#008000]󰪥[/color] Voice",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1610,6 +2314,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "voice"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "voice"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "voice",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1635,12 +2383,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "Web UI",
+                                    "heading": "[color=#008000]󰪥[/color] Web UI",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1656,6 +2404,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "web_ui"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "web_ui"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "web_ui",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -1681,12 +2473,12 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "WiFi",
+                                    "heading": "[color=#008000]󰪥[/color] WiFi",
                                     "items": [
                                       {
                                         "_type": "DispatchItem",
                                         "action": "<function:<lambda>>",
-                                        "background_color": "#68B7FF",
+                                        "background_color": "#FF3F51",
                                         "color": [
                                           1,
                                           1,
@@ -1702,6 +2494,50 @@
                                         "store_action": {
                                           "_type": "SettingsStopServiceAction",
                                           "service_id": "wifi"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "wifi"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:<lambda>>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "wifi",
+                                          "should_auto_restart": true
                                         }
                                       }
                                     ],
@@ -2115,7 +2951,8 @@
         "id": "audio",
         "is_active": true,
         "is_enabled": true,
-        "label": "Audio"
+        "label": "Audio",
+        "should_auto_restart": false
       },
       "camera": {
         "_type": "ServiceState",
@@ -2123,7 +2960,8 @@
         "id": "camera",
         "is_active": true,
         "is_enabled": true,
-        "label": "Camera"
+        "label": "Camera",
+        "should_auto_restart": false
       },
       "display": {
         "_type": "ServiceState",
@@ -2131,7 +2969,8 @@
         "id": "display",
         "is_active": true,
         "is_enabled": true,
-        "label": "Display"
+        "label": "Display",
+        "should_auto_restart": false
       },
       "docker": {
         "_type": "ServiceState",
@@ -2139,7 +2978,8 @@
         "id": "docker",
         "is_active": true,
         "is_enabled": true,
-        "label": "Docker"
+        "label": "Docker",
+        "should_auto_restart": false
       },
       "ethernet": {
         "_type": "ServiceState",
@@ -2147,7 +2987,8 @@
         "id": "ethernet",
         "is_active": true,
         "is_enabled": true,
-        "label": "Ethernet"
+        "label": "Ethernet",
+        "should_auto_restart": false
       },
       "ip": {
         "_type": "ServiceState",
@@ -2155,7 +2996,8 @@
         "id": "ip",
         "is_active": true,
         "is_enabled": true,
-        "label": "IP"
+        "label": "IP",
+        "should_auto_restart": false
       },
       "keyboard": {
         "_type": "ServiceState",
@@ -2163,7 +3005,8 @@
         "id": "keyboard",
         "is_active": true,
         "is_enabled": true,
-        "label": "Keyboard"
+        "label": "Keyboard",
+        "should_auto_restart": false
       },
       "keypad": {
         "_type": "ServiceState",
@@ -2171,7 +3014,8 @@
         "id": "keypad",
         "is_active": true,
         "is_enabled": true,
-        "label": "Keypad"
+        "label": "Keypad",
+        "should_auto_restart": false
       },
       "lightdm": {
         "_type": "ServiceState",
@@ -2179,7 +3023,8 @@
         "id": "lightdm",
         "is_active": true,
         "is_enabled": true,
-        "label": "LightDM"
+        "label": "LightDM",
+        "should_auto_restart": false
       },
       "notifications": {
         "_type": "ServiceState",
@@ -2187,7 +3032,8 @@
         "id": "notifications",
         "is_active": true,
         "is_enabled": true,
-        "label": "Notifications"
+        "label": "Notifications",
+        "should_auto_restart": false
       },
       "rgb_ring": {
         "_type": "ServiceState",
@@ -2195,7 +3041,8 @@
         "id": "rgb_ring",
         "is_active": true,
         "is_enabled": true,
-        "label": "RGB Ring"
+        "label": "RGB Ring",
+        "should_auto_restart": false
       },
       "rpi_connect": {
         "_type": "ServiceState",
@@ -2203,7 +3050,8 @@
         "id": "rpi_connect",
         "is_active": true,
         "is_enabled": true,
-        "label": "RPi Connect"
+        "label": "RPi Connect",
+        "should_auto_restart": false
       },
       "sensors": {
         "_type": "ServiceState",
@@ -2211,7 +3059,8 @@
         "id": "sensors",
         "is_active": true,
         "is_enabled": true,
-        "label": "Sensors"
+        "label": "Sensors",
+        "should_auto_restart": false
       },
       "ssh": {
         "_type": "ServiceState",
@@ -2219,7 +3068,8 @@
         "id": "ssh",
         "is_active": true,
         "is_enabled": true,
-        "label": "SSH"
+        "label": "SSH",
+        "should_auto_restart": false
       },
       "users": {
         "_type": "ServiceState",
@@ -2227,7 +3077,8 @@
         "id": "users",
         "is_active": true,
         "is_enabled": true,
-        "label": "Users"
+        "label": "Users",
+        "should_auto_restart": false
       },
       "voice": {
         "_type": "ServiceState",
@@ -2235,7 +3086,8 @@
         "id": "voice",
         "is_active": true,
         "is_enabled": true,
-        "label": "Voice"
+        "label": "Voice",
+        "should_auto_restart": false
       },
       "vscode": {
         "_type": "ServiceState",
@@ -2243,7 +3095,8 @@
         "id": "vscode",
         "is_active": true,
         "is_enabled": true,
-        "label": "VSCode"
+        "label": "VSCode",
+        "should_auto_restart": false
       },
       "web_ui": {
         "_type": "ServiceState",
@@ -2251,7 +3104,8 @@
         "id": "web_ui",
         "is_active": true,
         "is_enabled": true,
-        "label": "Web UI"
+        "label": "Web UI",
+        "should_auto_restart": false
       },
       "wifi": {
         "_type": "ServiceState",
@@ -2259,7 +3113,8 @@
         "id": "wifi",
         "is_active": true,
         "is_enabled": true,
-        "label": "WiFi"
+        "label": "WiFi",
+        "should_auto_restart": false
       }
     }
   },

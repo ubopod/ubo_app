@@ -33,6 +33,7 @@
 - build(installation): remove the raspberry pi's ssh daemon banner warning about setting a valid user
 - refactor(core): make `subscribe_event` created in services, run the handler in the event loop of the service instead of the event loop of the main thread - closes #226
 - refactor: add `ubo_app.colors` and move hardcoded color codes to it
+- feat: add menu switch for service threads to enable/disable auto-run and auto-rerun of services - closes #227
 
 ## Version 1.2.2
 

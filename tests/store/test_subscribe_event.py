@@ -81,7 +81,7 @@ async def test_subscribe_event_runs_handler_in_service_thread(
         setup=service_setup,
     )
     REGISTERED_PATHS[service_thread.path] = service_thread
-    SERVICES_BY_ID[service_thread.service_id] = service_thread
+    SERVICES_BY_ID[service_thread.service_id] = service_thread.path
 
     await load_services(service_ids=['test'], run_async=True)
 
