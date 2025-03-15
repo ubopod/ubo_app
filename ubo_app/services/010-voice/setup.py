@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Any, cast
 import fasteners
 import pvorca
 from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource]
-from ubo_gui.constants import SUCCESS_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
+from ubo_app.colors import SUCCESS_COLOR
 from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType

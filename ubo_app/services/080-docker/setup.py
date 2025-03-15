@@ -27,9 +27,9 @@ from docker_images import IMAGES
 from menus import docker_item_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
-from ubo_gui.constants import DANGER_COLOR, WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
+from ubo_app.colors import DANGER_COLOR, WARNING_COLOR
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (

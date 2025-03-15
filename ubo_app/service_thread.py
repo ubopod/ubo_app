@@ -184,6 +184,8 @@ class UboServiceThread(threading.Thread):
         self.service_uid = f'{uuid.uuid4().hex}:{self.name}'
         self.label = '<NOT SET>'
         self.service_id = ''
+        self.should_auto_restart = False
+        self.is_enabled = False
 
         self.path = path
 
@@ -222,6 +224,8 @@ class UboServiceThread(threading.Thread):
         service_id: str,
         label: str,
         setup: SetupFunction,
+        is_enabled: bool = True,
+        should_auto_restart: bool = False,
     ) -> None:
         if service_id in DISABLED_SERVICES:
             logger.debug(
@@ -248,6 +252,8 @@ class UboServiceThread(threading.Thread):
         self.label = label
         self.service_id = service_id
         self.setup = setup
+        self.is_enabled = is_enabled
+        self.should_auto_restart = should_auto_restart
 
         logger.debug(
             'Ubo service registered!',
@@ -452,9 +458,19 @@ class UboServiceThread(threading.Thread):
         subscriptions = [*self.subscriptions]
         self.subscriptions.clear()
         for unsubscribe in subscriptions:
-            result = unsubscribe()
-            if asyncio.iscoroutine(result):
-                await asyncio.wait_for(result, timeout=SERVICES_LOOP_GRACE_PERIOD)
+            try:
+                result = unsubscribe()
+                if asyncio.iscoroutine(result):
+                    await asyncio.wait_for(result, timeout=SERVICES_LOOP_GRACE_PERIOD)
+            except Exception:
+                logger.exception(
+                    'Error during cleanup',
+                    extra={
+                        'service_id': self.service_id,
+                        'label': self.label,
+                        'cleanup_callback': unsubscribe,
+                    },
+                )
 
         if self.has_reducer:
             from ubo_app.store.main import root_reducer_id, store
@@ -581,7 +597,7 @@ def load_services(
             id=service.service_id,
             label=service.label,
             is_active=service.is_alive(),
-            is_enabled=True,
+            is_enabled=service.is_enabled,
         )
         for service in SERVICES_BY_ID.values()
     }
@@ -593,7 +609,10 @@ def load_services(
         if service['id'] in SERVICES_BY_ID:
             services[service['id']] = replace(
                 services[service['id']],
-                is_enabled=service['is_enabled'],
+                is_enabled=service.get(
+                    'is_enabled',
+                    services[service['id']].is_enabled,
+                ),
             )
 
     store.dispatch(

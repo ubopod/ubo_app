@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from pages import create_wireless_connection, main
 from redux import AutorunOptions
-from ubo_gui.constants import INFO_COLOR
 from wifi_manager import (
     get_connections,
     get_wifi_device,
@@ -14,6 +13,7 @@ from wifi_manager import (
     request_scan,
 )
 
+from ubo_app.colors import INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,

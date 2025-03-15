@@ -10,9 +10,9 @@ from commands import check_status
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import NumericProperty, StringProperty
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.page import PageWidget
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store

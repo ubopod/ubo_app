@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState

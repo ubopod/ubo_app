@@ -13,7 +13,6 @@ from sdbus import (  # pyright: ignore [reportMissingModuleSource]
     dbus_property_async,
     dbus_signal_async,
 )
-from ubo_gui.constants import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_gui.menu.types import (
     HeadedMenu,
     HeadlessMenu,
@@ -21,6 +20,7 @@ from ubo_gui.menu.types import (
     SubMenuItem,
 )
 
+from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,
