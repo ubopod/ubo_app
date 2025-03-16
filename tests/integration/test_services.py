@@ -6,33 +6,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from ubo_app.constants import CORE_SERVICE_IDS
+
 if TYPE_CHECKING:
     from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot
 
     from tests.fixtures import AppContext, LoadServices, Stability
-
-ALL_SERVICES_IDS = [
-    'audio',
-    'camera',
-    'display',
-    'docker',
-    'ethernet',
-    'ip',
-    'keyboard',
-    'keypad',
-    'lightdm',
-    'notifications',
-    'rgb_ring',
-    'rpi_connect',
-    'sensors',
-    'ssh',
-    'users',
-    'voice',
-    'vscode',
-    'web_ui',
-    'wifi',
-]
 
 
 @pytest.mark.timeout(80)
@@ -48,7 +28,9 @@ async def test_all_services_register(
 
     app = MenuApp()
     app_context.set_app(app)
-    await load_services(ALL_SERVICES_IDS, timeout=40, run_async=True)
+    unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=40, run_async=True)
     await stability(attempts=2, wait=2)
     store_snapshot.take()
     window_snapshot.take()
+    app_context.dispatch_finish()
+    await unload_waiter(timeout=30)

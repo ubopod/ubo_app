@@ -309,7 +309,7 @@ class UboServiceThread(threading.Thread):
         from ubo_app.store.main import store
 
         self.subscriptions = [
-            store.subscribe_event(FinishEvent, self.kill),
+            store.subscribe_event(FinishEvent, self.stop),
         ]
 
         self.loop = asyncio.new_event_loop()
@@ -387,6 +387,7 @@ class UboServiceThread(threading.Thread):
                 },
                 exc_info=True,
             )
+            self.kill()
             raise
         finally:
             store.dispatch(
@@ -395,7 +396,6 @@ class UboServiceThread(threading.Thread):
                     is_active=False,
                 ),
             )
-            self.kill()
 
     def __repr__(self: UboServiceThread) -> str:
         return (
@@ -531,7 +531,9 @@ class UboServiceThread(threading.Thread):
     def kill(self: UboServiceThread) -> None:
         if self.ident is None:
             return
-        with contextlib.suppress(BaseException):
+        if self.loop.is_running():
+            self.loop.create_task(self.shutdown())
+        else:
             asyncio.new_event_loop().run_until_complete(self.shutdown())
         if not self.is_alive():
             return
@@ -576,8 +578,11 @@ async def stop(event: SettingsStopServiceEvent) -> None:
                 'label': service.label,
             },
         )
-        service.kill()
+        service.stop()
         await asyncio.to_thread(service.join, timeout=3)
+        if service.is_alive():
+            service.kill()
+            await asyncio.to_thread(service.join, timeout=3)
 
         import gc
 
