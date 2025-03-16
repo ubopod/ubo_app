@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from fake import Fake
-from redux import FinishAction, FinishEvent
+from redux import FinishAction
 
 from ubo_app.utils import IS_TEST_ENV
 
@@ -74,7 +74,6 @@ def setup() -> None:
     """Set up for different environments."""
     import sys
 
-    from ubo_app.store.main import store
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
@@ -123,8 +122,6 @@ def setup() -> None:
     import ubo_app.display as _  # noqa: F401
 
     if not IS_TEST_ENV:
-        store.subscribe_event(FinishEvent, _clear_signal_handlers)
-
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
 
@@ -133,14 +130,14 @@ def setup() -> None:
     setup_ubo_gui()
 
 
-def _clear_signal_handlers() -> None:
-    from kivy.clock import mainthread
-
-    mainthread(clear_signal_handlers)()
-
-
 def clear_signal_handlers() -> None:
     """Clear the signal handlers."""
+    from kivy.clock import mainthread
+
+    mainthread(_clear_signal_handlers)()
+
+
+def _clear_signal_handlers() -> None:
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 

@@ -73,12 +73,7 @@ class AppContext:
 
     async def clean_up(self: AppContext) -> None:
         """Clean up the application."""
-        from redux import FinishAction
-
         import ubo_app.service
-        from ubo_app.store.main import store
-
-        store.dispatch(FinishAction())
 
         assert hasattr(self, 'task'), 'App not set for test'
 
@@ -128,6 +123,14 @@ class AppContext:
             from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
 
             GPIO.cleanup(17)
+
+    def dispatch_finish(self: AppContext) -> None:
+        """Finish the application."""
+        from redux import FinishAction
+
+        from ubo_app.store.main import store
+
+        store.dispatch(FinishAction())
 
 
 class ConditionalFSWrapper:
@@ -211,10 +214,8 @@ class ConditionalFSWrapper:
         return None
 
 
-def _setup_headless_kivy() -> None:
+def _setup_kivy() -> None:
     import os
-
-    from ubo_app.constants import HEIGHT, WIDTH
 
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
@@ -247,8 +248,11 @@ def _setup_headless_kivy() -> None:
         Config.set('graphics', 'multisamples', '1')
         Config.set('graphics', 'vsync', '0')
 
+
+def _setup_headless_kivy() -> None:
     import headless_kivy.config
 
+    from ubo_app.constants import HEIGHT, WIDTH
     from ubo_app.display import render_on_display
 
     headless_kivy.config.setup_headless_kivy(
@@ -272,6 +276,7 @@ async def app_context(
     from ubo_app.setup import setup
 
     dotenv.load_dotenv(Path(__file__).parent / '.env')
+    _setup_kivy()
     setup()
     _setup_headless_kivy()
 
@@ -298,9 +303,11 @@ async def app_context(
 
         yield context
 
+        context.dispatch_finish()
         await context.clean_up()
         for cleanup in logger_cleanups:
             cleanup()
+
     del patcher
 
     assert not hasattr(context, 'app'), 'App not cleaned up'

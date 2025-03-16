@@ -71,13 +71,13 @@ def render_on_display(*, regions: list[Region]) -> None:
             color.astype(np.uint16).view(np.uint8).reshape(-1, 2)[:, ::-1].tobytes()
         )
         render_block(
-            (
+            rectangle=(
                 rectangle[1],
                 rectangle[0],
                 rectangle[3] - 1,
                 rectangle[2] - 1,
             ),
-            data_bytes,
+            data_bytes=data_bytes,
         )
 
     from kivy.metrics import dp
@@ -115,9 +115,9 @@ original_block = display._block if display is not None else None  # noqa: SLF001
 )
 def render_block(
     is_paused: bool,  # noqa: FBT001
+    *,
     rectangle: tuple[int, int, int, int],
     data_bytes: bytes,
-    *,
     bypass_pause: bool = False,
 ) -> None:
     """Block the display."""
@@ -142,6 +142,6 @@ def render_blank() -> None:
 
 splash_screen = None
 if splash_screen:
-    render_block((0, 0, WIDTH - 1, HEIGHT - 1), splash_screen)
+    render_block(rectangle=(0, 0, WIDTH - 1, HEIGHT - 1), data_bytes=splash_screen)
 else:
     render_blank()

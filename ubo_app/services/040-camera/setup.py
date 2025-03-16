@@ -165,8 +165,8 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
         from ubo_app import display
 
         display.render_block(
-            (0, 0, width - 1, height - 1),
-            data_bytes,
+            rectangle=(0, 0, width - 1, height - 1),
+            data_bytes=data_bytes,
             bypass_pause=True,
         )
 

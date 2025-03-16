@@ -73,3 +73,26 @@ HEIGHT = 240
 BYTES_PER_PIXEL = 2
 
 NOTIFICATIONS_FLASH_TIME = 4
+
+
+CORE_SERVICE_IDS = [
+    'audio',
+    'camera',
+    'display',
+    'docker',
+    'ethernet',
+    'ip',
+    'keyboard',
+    'keypad',
+    'lightdm',
+    'notifications',
+    'rgb_ring',
+    'rpi_connect',
+    'sensors',
+    'ssh',
+    'users',
+    'voice',
+    'vscode',
+    'web_ui',
+    'wifi',
+]

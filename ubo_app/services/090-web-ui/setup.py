@@ -246,7 +246,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                         ),
                     ),
                 )
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.1)
         return await render_template(
             'index.jinja2',
             inputs=UboStore.serialize_value(inputs()),

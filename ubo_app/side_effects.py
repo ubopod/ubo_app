@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from redux import FinishAction, FinishEvent
 
-from ubo_app import display
+from ubo_app import display, setup
 from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -164,6 +164,7 @@ def cleanup() -> None:
     """Clean up the application."""
     display.turn_off()
     bus_provider.clean_up()
+    setup.clear_signal_handlers()
 
 
 def setup_side_effects() -> None:

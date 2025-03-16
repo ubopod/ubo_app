@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import (
     TYPE_CHECKING,
     Literal,
@@ -19,6 +20,21 @@ if TYPE_CHECKING:
     from tests.conftest import WaitFor
 
 
+class UnloadWaiter(Protocol):
+    """Wait for services to be unloaded."""
+
+    def __call__(self, *, timeout: float | None = None) -> None:
+        """Wait for services to be unloaded."""
+
+
+class AsyncUnloadWaiter(Protocol):
+    """Wait for services to be unloaded."""
+
+    async def __call__(self, *, timeout: float | None = None) -> None:  # noqa: ASYNC109
+        """Wait for services to be unloaded."""
+        ...
+
+
 class LoadServices(Protocol):
     """Load services and wait for them to be ready."""
 
@@ -29,7 +45,7 @@ class LoadServices(Protocol):
         *,
         timeout: float | None = None,
         gap_duration: float = 0.4,
-    ) -> None: ...
+    ) -> UnloadWaiter: ...
 
     @overload
     def __call__(
@@ -39,7 +55,7 @@ class LoadServices(Protocol):
         run_async: Literal[True],
         timeout: float | None = None,
         gap_duration: float = 0.4,
-    ) -> Coroutine[None, None, None]: ...
+    ) -> Coroutine[None, None, AsyncUnloadWaiter]: ...
 
 
 @pytest.fixture
@@ -53,7 +69,7 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
         run_async: bool = False,
         timeout: float | None = None,
         gap_duration: float = 0.4,
-    ) -> Coroutine[None, None, None] | None:
+    ) -> UnloadWaiter | Coroutine[None, None, AsyncUnloadWaiter]:
         from ubo_app.service_thread import load_services
 
         load_services(service_ids, gap_duration=gap_duration)
@@ -71,7 +87,7 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
                     for service in REGISTERED_PATHS.values()
                 ), f'{service_id} not loaded'
                 assert any(
-                    service.service_id == service_id and service.is_alive()
+                    service.service_id == service_id
                     for service in REGISTERED_PATHS.values()
                 ), f'{service_id} not alive'
                 assert any(
@@ -81,7 +97,27 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
 
                 ids.remove(service_id)
 
-        return check()
+        def stop(*, timeout: float | None = None) -> Coroutine[None, None, None]:
+            @wait_for(run_async=cast('Literal[True]', run_async), timeout=timeout)
+            def _() -> None:
+                for service in REGISTERED_PATHS.values():
+                    if service.service_id in service_ids:
+                        assert not service.is_alive()
+                REGISTERED_PATHS.clear()
+
+            return _()
+
+        result = check()
+
+        if asyncio.iscoroutine(result):
+
+            async def wrapper() -> AsyncUnloadWaiter:
+                await result
+                return cast('AsyncUnloadWaiter', stop)
+
+            return wrapper()
+
+        return cast('UnloadWaiter', stop)
 
     yield cast('LoadServices', load_services_and_wait)
 

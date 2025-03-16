@@ -35,6 +35,7 @@
 - refactor: add `ubo_app.colors` and move hardcoded color codes to it
 - feat: add menu switch for service threads to enable/disable auto-run and auto-rerun of services - closes #227
 - build(install): avoid swallowing stdout of the `pip install` command in the `install.sh`, lock onnxruntime to 1.20.1, related: <https://github.com/microsoft/onnxruntime/issues/23957>
+- test: improve cleanup and add explicit wait for loaded services to unload at the end of `test_services` test
 
 ## Version 1.2.2
 
