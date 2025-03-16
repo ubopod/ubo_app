@@ -12,6 +12,7 @@ dependencies = [
   "aiohttp>=3.9.1",
   "dill>=0.3.8",
   "docker>=7.1.0",
+  "fasteners>=0.19",
   "headless-kivy>=0.12.2",
   "netifaces>=0.11.0",
   "platformdirs>=4.2.0",
@@ -41,9 +42,9 @@ dependencies = [
   "adafruit-circuitpython-rgb-display>=3.11.0",
   "adafruit-circuitpython-veml7700>=1.1.22",
   # RPi dependencies
-  "fasteners>=0.19",
   "piper-tts>=1.2.0 ; sys_platform=='linux'",
   "rpi-lgpio>=0.6 ; platform_machine=='aarch64'",
+  "onnxruntime==1.20.1 ; platform_machine == 'aarch64'",
   # gRPC
   "betterproto [compiler]>=2.0.0b7",
   "gpiozero>=2.0.1 ; platform_machine != 'aarch64'",
