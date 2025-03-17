@@ -36,6 +36,7 @@
 - feat: add menu switch for service threads to enable/disable auto-run and auto-rerun of services - closes #227
 - build(install): avoid swallowing stdout of the `pip install` command in the `install.sh`, lock onnxruntime to 1.20.1, related: <https://github.com/microsoft/onnxruntime/issues/23957>
 - test: improve cleanup and add explicit wait for loaded services to unload at the end of `test_services` test
+- feat(core): add a barrier for services after they register their reducer, they will pass it only when the rest of them have registered their reducer - closes #163
 
 ## Version 1.2.2
 

@@ -41,7 +41,7 @@ def main() -> None:
     setup_error_handling()
 
     # This should be imported early to set the custom loader
-    from ubo_app.service_thread import load_services
+    from ubo_app.service_thread import load_services, stop_services
 
     setup()
 
@@ -90,6 +90,15 @@ def main() -> None:
 
         store.dispatch(FinishAction())
     finally:
+        stop_services()
+
+        from ubo_app import display
+        from ubo_app.setup import clear_signal_handlers
+        from ubo_app.utils import bus_provider
+
+        display.turn_off()
+        bus_provider.clean_up()
+        clear_signal_handlers()
         for cleanup in logger_cleanups:
             cleanup()
 

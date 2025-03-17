@@ -24,12 +24,12 @@ persistent_store_lock = fasteners.ReaderWriterLock()
 def register_persistent_store(
     key: str,
     selector: Callable[[RootState], T],
-) -> Callable[[], None]:
+) -> None:
     """Register a part of the store to be persistent in the filesystem."""
     from ubo_app.store.main import store
 
     @store.autorun(selector)
-    async def write(value: T) -> None:
+    async def _(value: T) -> None:
         if value is None:
             return
         with persistent_store_lock.write_lock():
@@ -40,8 +40,6 @@ def register_persistent_store(
             serialized_value = store.serialize_value(value)
             current_state[key] = serialized_value
             Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
-
-    return write.unsubscribe
 
 
 @overload

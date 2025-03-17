@@ -51,7 +51,6 @@ async def test_wireless_flow(
         property(lambda self: (self, strength())[1]),
     )
 
-    from ubo_app.menu_app.menu import MenuApp
     from ubo_app.store.core.types import (
         MenuChooseByIconAction,
         MenuChooseByLabelAction,
@@ -62,8 +61,7 @@ async def test_wireless_flow(
     def store_snapshot_selector(state: RootState) -> WiFiState:
         return state.wifi
 
-    app = MenuApp()
-    app_context.set_app(app)
+    app_context.set_app()
     await load_services(['camera', 'display', 'notifications', 'wifi'], run_async=True)
 
     @wait_for(wait=wait_fixed(1), run_async=True)

@@ -29,8 +29,6 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
-from ubo_app.store.update_manager.types import UpdateManagerSetUpdateServiceStatusAction
-from ubo_app.utils.async_ import create_task
 
 from .home_page import HomePage
 
@@ -86,17 +84,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         root = super().build()
         self.menu_widget.padding_top = root.ids.header_layout.height
         self.menu_widget.padding_bottom = root.ids.footer_layout.height
-
-        def check_update(status: str) -> None:
-            store.dispatch(
-                UpdateManagerSetUpdateServiceStatusAction(
-                    is_active=status in ('active', 'activating', 'reloading'),
-                ),
-            )
-
-        from ubo_app.utils.monitor_unit import monitor_unit
-
-        create_task(monitor_unit('ubo-update.service', check_update))
 
         return root
 

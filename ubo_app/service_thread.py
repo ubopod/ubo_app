@@ -49,12 +49,16 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from ubo_handle import (  # pyright: ignore [reportMissingModuleSource]
+        ReducerRegistrar,
         SetupFunction,
         SetupFunctionReturnType,
     )
 
-REGISTERED_PATHS: dict[Path, UboServiceThread] = {}
-SERVICES_BY_ID: dict[str, Path] = OrderedDict()
+    from ubo_app.utils.types import Subscriptions
+
+
+SERVICES_BY_PATH: dict[Path, UboServiceThread] = {}
+SERVICE_PATHS_BY_ID: dict[str, Path] = OrderedDict()
 WHITE_LIST = [*ENABLED_SERVICES]
 ROOT_PATH = Path(__file__).parent
 
@@ -121,14 +125,14 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
             (
                 registered_path
                 for frame in stack[-2::-1]
-                for registered_path in REGISTERED_PATHS.copy()
+                for registered_path in SERVICES_BY_PATH.copy()
                 if frame.filename.startswith(registered_path.as_posix())
             ),
             None,
         )
 
-        if matching_path in REGISTERED_PATHS:
-            service = REGISTERED_PATHS[matching_path]
+        if matching_path in SERVICES_BY_PATH:
+            service = SERVICES_BY_PATH[matching_path]
             module_name = f'{service.service_uid}:{fullname}'
 
             if not service.is_alive():
@@ -175,10 +179,7 @@ sys.meta_path.insert(0, UboServiceFinder())
 
 
 class UboServiceThread(threading.Thread):
-    def __init__(
-        self: UboServiceThread,
-        path: Path,
-    ) -> None:
+    def __init__(self: UboServiceThread, path: Path) -> None:
         super().__init__()
         self.name = path.name
         self.service_uid = f'{uuid.uuid4().hex}:{self.name}'
@@ -192,6 +193,14 @@ class UboServiceThread(threading.Thread):
         self.module = None
         self.is_started = False
         self.has_reducer = False
+
+        self.subscriptions: Subscriptions = []
+
+    def set_reducer_barrier(
+        self: UboServiceThread,
+        reducer_barrier: threading.Barrier,
+    ) -> None:
+        self._reducer_barrier = reducer_barrier
 
     def register_reducer(self: UboServiceThread, reducer: ReducerType) -> None:
         if self.has_reducer:
@@ -218,6 +227,13 @@ class UboServiceThread(threading.Thread):
             ),
         )
 
+        self._wait_for_reducers()
+
+    def _wait_for_reducers(self: UboServiceThread) -> None:
+        if self._reducer_barrier:
+            with contextlib.suppress(threading.BrokenBarrierError):
+                self._reducer_barrier.wait()
+
     def register(
         self: UboServiceThread,
         *,
@@ -234,17 +250,6 @@ class UboServiceThread(threading.Thread):
                     'service_id': service_id,
                     'label': label,
                     'disabled_services': DISABLED_SERVICES,
-                },
-            )
-            return
-
-        if WHITE_LIST and service_id not in WHITE_LIST:
-            logger.debug(
-                'Service is not in services white list',
-                extra={
-                    'service_id': service_id,
-                    'label': label,
-                    'white_list': WHITE_LIST,
                 },
             )
             return
@@ -286,13 +291,15 @@ class UboServiceThread(threading.Thread):
             return
 
         if self.module and self.spec and self.spec.loader:
-            REGISTERED_PATHS[self.path] = self
+            SERVICES_BY_PATH[self.path] = self
             try:
                 cast('UboServiceThread', self.module).register = self.register
                 self.spec.loader.exec_module(self.module)
             except Exception:
-                del REGISTERED_PATHS[self.path]
+                del SERVICES_BY_PATH[self.path]
                 logger.exception('Error loading service', extra={'path': self.path})
+            else:
+                SERVICE_PATHS_BY_ID[self.service_id] = self.path
 
     def start(self: UboServiceThread) -> None:
         if not hasattr(self, 'setup'):
@@ -304,13 +311,7 @@ class UboServiceThread(threading.Thread):
         self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
     def run(self: UboServiceThread) -> None:
-        from redux import FinishEvent
-
         from ubo_app.store.main import store
-
-        self.subscriptions = [
-            store.subscribe_event(FinishEvent, self.stop),
-        ]
 
         self.loop = asyncio.new_event_loop()
         self.loop.set_exception_handler(loop_exception_handler)
@@ -325,21 +326,20 @@ class UboServiceThread(threading.Thread):
         )
         asyncio.set_event_loop(self.loop)
 
-        from ubo_app.store.main import store
-
         async def setup_wrapper() -> None:
             result = None
             try:
                 if len(inspect.signature(self.setup).parameters) == 0:
+                    self._wait_for_reducers()
                     result = cast(
                         'Callable[[], SetupFunctionReturnType]',
                         self.setup,
                     )()
                 elif len(inspect.signature(self.setup).parameters) == 1:
                     result = cast(
-                        'Callable[[UboServiceThread], SetupFunctionReturnType]',
+                        'Callable[[ReducerRegistrar], SetupFunctionReturnType]',
                         self.setup,
-                    )(self)
+                    )(self.register_reducer)
 
                 if asyncio.iscoroutine(result):
                     result = await result
@@ -356,7 +356,7 @@ class UboServiceThread(threading.Thread):
             self.is_started = True
 
             if result:
-                self.subscriptions += list(result)
+                self.subscriptions = result
 
             store.dispatch(
                 SettingsServiceSetStatusAction(
@@ -438,8 +438,8 @@ class UboServiceThread(threading.Thread):
         self._cleanup()
 
     async def _clean_subscriptions(self: UboServiceThread) -> None:
-        subscriptions = [*self.subscriptions]
-        self.subscriptions.clear()
+        subscriptions = self.subscriptions
+        self.subscriptions = []
         tasks = []
         for unsubscribe in subscriptions:
             try:
@@ -525,8 +525,8 @@ class UboServiceThread(threading.Thread):
             if name.startswith(f'{self.service_uid}:'):
                 del UboModuleLoader.cache[name]
 
-        if self.path in REGISTERED_PATHS:
-            del REGISTERED_PATHS[self.path]
+        if self.path in SERVICES_BY_PATH:
+            del SERVICES_BY_PATH[self.path]
 
     def kill(self: UboServiceThread) -> None:
         if self.ident is None:
@@ -550,27 +550,27 @@ class UboServiceThread(threading.Thread):
 
 async def start(event: SettingsStartServiceEvent) -> None:
     if (
-        event.service_id in SERVICES_BY_ID
+        event.service_id in SERVICE_PATHS_BY_ID
         and (
-            SERVICES_BY_ID[event.service_id] not in REGISTERED_PATHS
-            or not REGISTERED_PATHS[SERVICES_BY_ID[event.service_id]].is_started
+            SERVICE_PATHS_BY_ID[event.service_id] not in SERVICES_BY_PATH
+            or not SERVICES_BY_PATH[SERVICE_PATHS_BY_ID[event.service_id]].is_started
         )
         and (not WHITE_LIST or event.service_id in WHITE_LIST)
     ):
         await asyncio.sleep(event.delay)
-        if SERVICES_BY_ID[event.service_id] not in REGISTERED_PATHS:
-            service = UboServiceThread(SERVICES_BY_ID[event.service_id])
+        if SERVICE_PATHS_BY_ID[event.service_id] not in SERVICES_BY_PATH:
+            service = UboServiceThread(SERVICE_PATHS_BY_ID[event.service_id])
             service.initiate()
-        REGISTERED_PATHS[SERVICES_BY_ID[event.service_id]].start()
+        SERVICES_BY_PATH[SERVICE_PATHS_BY_ID[event.service_id]].start()
 
 
 async def stop(event: SettingsStopServiceEvent) -> None:
     if (
-        event.service_id in SERVICES_BY_ID
-        and SERVICES_BY_ID[event.service_id] in REGISTERED_PATHS
-        and REGISTERED_PATHS[SERVICES_BY_ID[event.service_id]].is_alive()
+        event.service_id in SERVICE_PATHS_BY_ID
+        and SERVICE_PATHS_BY_ID[event.service_id] in SERVICES_BY_PATH
+        and SERVICES_BY_PATH[SERVICE_PATHS_BY_ID[event.service_id]].is_alive()
     ):
-        service = REGISTERED_PATHS[SERVICES_BY_ID[event.service_id]]
+        service = SERVICES_BY_PATH[SERVICE_PATHS_BY_ID[event.service_id]]
         logger.debug(
             'Stopping service',
             extra={
@@ -589,20 +589,30 @@ async def stop(event: SettingsStopServiceEvent) -> None:
         gc.collect()
 
 
-def clear() -> None:
-    SERVICES_BY_ID.clear()
+def _report_successful_reducer_registration(services: list[UboServiceThread]) -> None:
+    logger.info(
+        'All reducers registered successfully',
+        extra={
+            'service_ids': [service.service_id for service in services],
+        },
+    )
+
+
+def stop_services(
+    service_ids: Sequence[str] | None = None,
+) -> None:
+    for service in list(SERVICES_BY_PATH.values()):
+        if service_ids and service.service_id not in service_ids:
+            continue
+        service.stop()
 
 
 def load_services(
     service_ids: Sequence[str] | None = None,
     gap_duration: float = 0,
 ) -> None:
-    from redux import FinishEvent
-
     from ubo_app.store.main import store
     from ubo_app.utils.persistent_store import read_from_persistent_store
-
-    WHITE_LIST.extend(service_ids or [])
 
     for services_directory_path in [
         ROOT_PATH.joinpath('services').as_posix(),
@@ -611,15 +621,13 @@ def load_services(
         directory_path = Path(services_directory_path).absolute()
         if directory_path.is_dir():
             for service_path in sorted(directory_path.iterdir()):
-                if not service_path.is_dir() or service_path in REGISTERED_PATHS.copy():
+                if not service_path.is_dir() or service_path in SERVICES_BY_PATH.copy():
                     continue
                 service = UboServiceThread(service_path.absolute())
                 service.initiate()
-                SERVICES_BY_ID[service.service_id] = service.path
 
     store.subscribe_event(SettingsStartServiceEvent, start)
     store.subscribe_event(SettingsStopServiceEvent, stop)
-    store.subscribe_event(FinishEvent, clear)
 
     services = {
         service.service_id: ServiceState(
@@ -629,21 +637,57 @@ def load_services(
             is_enabled=service.is_enabled,
             should_auto_restart=service.should_auto_restart,
         )
-        for service in REGISTERED_PATHS.values()
+        for service in SERVICES_BY_PATH.values()
     }
 
     for service in read_from_persistent_store(
         'services',
         default={},
     ):
-        if service['id'] in SERVICES_BY_ID:
+        if service['id'] in SERVICE_PATHS_BY_ID:
             services[service['id']] = replace(
                 services[service['id']],
                 is_enabled=service.get(
                     'is_enabled',
                     services[service['id']].is_enabled,
                 ),
+                should_auto_restart=service.get(
+                    'should_auto_restart',
+                    services[service['id']].should_auto_restart,
+                ),
             )
+
+    for service in services.values():
+        if (WHITE_LIST and service.id not in WHITE_LIST) or (
+            service_ids and service.id not in service_ids
+        ):
+            logger.debug(
+                'Disabling service not in white list',
+                extra={
+                    'service_id': service.id,
+                    'label': service.label,
+                    'white_list': WHITE_LIST,
+                },
+            )
+            services[service.id] = replace(
+                service,
+                is_enabled=False,
+            )
+
+    to_run_services = [
+        service
+        for service in SERVICES_BY_PATH.values()
+        if service.is_enabled and (not service_ids or service.service_id in service_ids)
+    ]
+
+    reducer_barrier = threading.Barrier(
+        len(to_run_services),
+        action=lambda: _report_successful_reducer_registration(to_run_services),
+        timeout=10,
+    )
+
+    for service in to_run_services:
+        service.set_reducer_barrier(reducer_barrier)
 
     store.dispatch(
         SettingsSetServicesAction(services=services, gap_duration=gap_duration),

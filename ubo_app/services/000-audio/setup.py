@@ -41,7 +41,6 @@ def _run_async_in_thread(
 
 
 def init_service() -> Subscriptions:
-    subscriptions = []
     audio_manager = AudioManager()
 
     store.dispatch(
@@ -92,28 +91,24 @@ def init_service() -> Subscriptions:
             width=event.width,
         )
 
-    subscriptions += [
-        set_playback_volume.unsubscribe,
-        set_capture_valume.unsubscribe,
-        set_playback_mute.unsubscribe,
+    register_persistent_store(
+        'audio_state:playback_volume',
+        lambda state: state.audio.playback_volume,
+    )
+    register_persistent_store(
+        'audio_state:is_playback_mute',
+        lambda state: state.audio.is_playback_mute,
+    )
+    register_persistent_store(
+        'audio_state:capture_volume',
+        lambda state: state.audio.capture_volume,
+    )
+    register_persistent_store(
+        'audio_state:is_capture_mute',
+        lambda state: state.audio.is_capture_mute,
+    )
+
+    return [
         store.subscribe_event(AudioPlayChimeEvent, play_chime),
         store.subscribe_event(AudioPlayAudioEvent, play_audio),
-        register_persistent_store(
-            'audio_state:playback_volume',
-            lambda state: state.audio.playback_volume,
-        ),
-        register_persistent_store(
-            'audio_state:is_playback_mute',
-            lambda state: state.audio.is_playback_mute,
-        ),
-        register_persistent_store(
-            'audio_state:capture_volume',
-            lambda state: state.audio.capture_volume,
-        ),
-        register_persistent_store(
-            'audio_state:is_capture_mute',
-            lambda state: state.audio.is_capture_mute,
-        ),
     ]
-
-    return subscriptions

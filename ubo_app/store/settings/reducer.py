@@ -47,6 +47,9 @@ def reducer(
         )
 
     if isinstance(action, SettingsSetServicesAction):
+        enabled_services = [
+            service for service in action.services.values() if service.is_enabled
+        ]
         return CompleteReducerResult(
             state=replace(state, services=action.services),
             events=[
@@ -54,11 +57,7 @@ def reducer(
                     service_id=service.id,
                     delay=index * action.gap_duration,
                 )
-                for index, service in enumerate(
-                    service
-                    for service in action.services.values()
-                    if service.is_enabled
-                )
+                for index, service in enumerate(enabled_services)
             ],
         )
 

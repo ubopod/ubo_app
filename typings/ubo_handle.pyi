@@ -5,15 +5,16 @@ from redux import ReducerType
 
 from ubo_app.utils.types import Subscriptions
 
-class Service(Protocol):
-    def register_reducer(self: Service, reducer: ReducerType) -> None: ...
+class ReducerRegistrar(Protocol):
+    def __call__(self: ReducerRegistrar, reducer: ReducerType) -> None: ...
 
 SetupFunctionReturnType: TypeAlias = (
     Coroutine[None, None, Subscriptions | None] | Subscriptions | None
 )
 
 SetupFunction: TypeAlias = (
-    Callable[[Service], SetupFunctionReturnType] | Callable[[], SetupFunctionReturnType]
+    Callable[[ReducerRegistrar], SetupFunctionReturnType]
+    | Callable[[], SetupFunctionReturnType]
 )
 
 def register(
