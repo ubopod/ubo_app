@@ -149,7 +149,7 @@ def signal_handler(signum: int, _: object) -> None:
 
     logger.info('Received signal %s, turning off the display...', signum)
 
-    clear_signal_handlers()
+    _clear_signal_handlers()
 
     display.turn_off()
 

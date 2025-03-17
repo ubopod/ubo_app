@@ -116,4 +116,4 @@ class SettingsState(Immutable):
     """Settings state."""
 
     is_debug_enabled: bool = False
-    services: dict[str, ServiceState] | None = None
+    services: dict[str, ServiceState] = field(default_factory=dict)

@@ -413,6 +413,10 @@ def action_middleware(action: UboAction) -> UboAction:
 
 def event_middleware(event: UboEvent) -> UboEvent | None:
     if _is_finalizing.is_set():
+        logger.debug(
+            'Store is finalizing, ignoring event',
+            extra={'event': event},
+        )
         return None
     logger.debug(
         'Event dispatched',
@@ -436,7 +440,7 @@ store = UboStore(
 
 _is_finalizing = threading.Event()
 
-store.subscribe_event(FinishEvent, lambda: _is_finalizing.set())
+store.subscribe_event(FinishEvent, _is_finalizing.set)
 
 store.dispatch(InitAction())
 

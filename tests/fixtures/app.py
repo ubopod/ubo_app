@@ -43,6 +43,7 @@ class AppContext:
         """Initialize the context."""
         self.request = request
         self.persistent_store_data = {}
+        self._cleanup_is_called = False
 
     def set_persistent_storage_value(
         self: AppContext,
@@ -57,9 +58,13 @@ class AppContext:
         ), "Can't set persistent storage values after app has been set"
         self.persistent_store_data[key] = value
 
-    def set_app(self: AppContext, app: MenuApp) -> None:
+    def set_app(self: AppContext, app: MenuApp | None = None) -> None:
         """Set the application."""
         from ubo_app.constants import PERSISTENT_STORE_PATH
+        from ubo_app.menu_app.menu import MenuApp
+
+        if app is None:
+            app = MenuApp()
 
         PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
@@ -71,8 +76,17 @@ class AppContext:
 
         start_event_loop_thread(asyncio.new_event_loop())
 
-    async def clean_up(self: AppContext) -> None:
+    async def cleanup(self: AppContext) -> None:
         """Clean up the application."""
+        if self._cleanup_is_called:
+            return
+        self._cleanup_is_called = True
+        from redux import FinishAction
+
+        from ubo_app.store.main import store
+
+        store.dispatch(FinishAction())
+
         import ubo_app.service
 
         assert hasattr(self, 'task'), 'App not set for test'
@@ -123,14 +137,6 @@ class AppContext:
             from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
 
             GPIO.cleanup(17)
-
-    def dispatch_finish(self: AppContext) -> None:
-        """Finish the application."""
-        from redux import FinishAction
-
-        from ubo_app.store.main import store
-
-        store.dispatch(FinishAction())
 
 
 class ConditionalFSWrapper:
@@ -242,7 +248,11 @@ def _setup_kivy() -> None:
     if not IS_RPI:
         from kivy.config import Config
 
-        Config.set('graphics', 'window_state', 'hidden')
+        Config.set(
+            'graphics',
+            'window_state',
+            'hidden',
+        )
         Config.set('graphics', 'fbo', 'force-hardware')
         Config.set('graphics', 'fullscreen', '0')
         Config.set('graphics', 'multisamples', '1')
@@ -303,8 +313,10 @@ async def app_context(
 
         yield context
 
-        context.dispatch_finish()
-        await context.clean_up()
+        from ubo_app import display
+
+        display.turn_off()
+        await context.cleanup()
         for cleanup in logger_cleanups:
             cleanup()
 

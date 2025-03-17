@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ubo_handle import Service  # pyright: ignore [reportMissingModuleSource]
+    from ubo_handle import (  # pyright: ignore [reportMissingModuleSource]
+        ReducerRegistrar,
+    )
 
-    from tests.fixtures.app import AppContext
-    from tests.fixtures.load_services import LoadServices
+    from tests.fixtures import AppContext, LoadServices
     from ubo_app.utils.types import Subscriptions
 
 
@@ -30,22 +31,18 @@ async def test_subscribe_event_runs_handler_in_service_thread(
         ReducerResult,
     )
 
-    from ubo_app.menu_app.menu import MenuApp
     from ubo_app.service_thread import (
-        REGISTERED_PATHS,
-        SERVICES_BY_ID,
+        SERVICE_PATHS_BY_ID,
+        SERVICES_BY_PATH,
         UboServiceThread,
     )
     from ubo_app.store.core.types import MainEvent
 
-    class DummyEvent(MainEvent):
-        """A dummy event for testing purposes."""
+    class DummyEvent(MainEvent): ...
 
-    class DummyState(Immutable):
-        """A dummy state for testing purposes."""
+    class DummyState(Immutable): ...
 
-    app = MenuApp()
-    app_context.set_app(app)
+    app_context.set_app()
 
     from ubo_app.store.main import store
 
@@ -70,8 +67,8 @@ async def test_subscribe_event_runs_handler_in_service_thread(
 
         return state
 
-    def service_setup(service: Service) -> Subscriptions:
-        service.register_reducer(reducer)
+    def service_setup(register_reducer: ReducerRegistrar) -> Subscriptions:
+        register_reducer(reducer)
         return [store.subscribe_event(DummyEvent, check)]
 
     service_thread = UboServiceThread(path=Path('/ubo-services/test'))
@@ -80,8 +77,8 @@ async def test_subscribe_event_runs_handler_in_service_thread(
         label='Test Service',
         setup=service_setup,
     )
-    REGISTERED_PATHS[service_thread.path] = service_thread
-    SERVICES_BY_ID[service_thread.service_id] = service_thread.path
+    SERVICES_BY_PATH[service_thread.path] = service_thread
+    SERVICE_PATHS_BY_ID[service_thread.service_id] = service_thread.path
 
     await load_services(service_ids=['test'], run_async=True)
 

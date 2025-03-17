@@ -29,7 +29,7 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         """Start the application."""
         from ubo_app.side_effects import setup_side_effects
 
-        setup_side_effects()
+        self.subscriptions = setup_side_effects()
 
         store.subscribe_event(
             SettingsSetDebugModeEvent,
@@ -37,3 +37,9 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
             keep_ref=False,
         )
         store.subscribe_event(DisplayRerenderEvent, self.rerender, keep_ref=False)
+
+    @override
+    def on_stop(self: MenuApp) -> None:
+        """Stop the application."""
+        for cleanup in self.subscriptions:
+            cleanup()

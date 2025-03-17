@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
@@ -30,12 +31,14 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.wifi import (
     ConnectionState,
+    WiFiInputConnectionAction,
     WiFiInputConnectionEvent,
     WiFiSetHasVisitedOnboardingAction,
     WiFiUpdateAction,
     WiFiUpdateRequestEvent,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
 from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
     register_persistent_store,
@@ -107,6 +110,21 @@ ONBOARDING_NOTIFICATION = Notification(
 )
 
 
+async def _check_connection() -> None:
+    """Dispatch the Wi-Fi input action if needed."""
+    await asyncio.sleep(2)
+    logger.info(
+        'Checking Wi-Fi',
+        extra={
+            'has_gateway': await has_gateway(),
+            'saved_wifi_ssids': await get_saved_wifi_ssids(),
+        },
+    )
+    if not await has_gateway() and not await get_saved_wifi_ssids():
+        logger.info('No network connection found, prompting for Wi-Fi input')
+        store.dispatch(WiFiInputConnectionAction())
+
+
 def show_onboarding_notification() -> None:
     store.dispatch(
         NotificationsAddAction(
@@ -119,12 +137,10 @@ def init_service() -> Subscriptions:
     create_task(update_wifi_list())
     create_task(setup_listeners())
 
-    subscriptions = [
-        register_persistent_store(
-            'wifi_has_visited_onboarding',
-            lambda state: state.wifi.has_visited_onboarding,
-        ),
-    ]
+    register_persistent_store(
+        'wifi_has_visited_onboarding',
+        lambda state: state.wifi.has_visited_onboarding,
+    )
 
     store.dispatch(
         RegisterSettingAppAction(
@@ -157,7 +173,7 @@ def init_service() -> Subscriptions:
         if is_connected is not None:
             check_onboarding.unsubscribe()
 
-    subscriptions += [
+    subscriptions = [
         store.subscribe_event(WiFiUpdateRequestEvent, request_scan),
         store.subscribe_event(
             WiFiInputConnectionEvent,
@@ -165,5 +181,7 @@ def init_service() -> Subscriptions:
         ),
         check_onboarding.unsubscribe,
     ]
+
+    create_task(_check_connection())
 
     return subscriptions

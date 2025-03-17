@@ -194,7 +194,7 @@
                             "progress": null,
                             "sub_menu": {
                               "_type": "HeadlessMenu",
-                              "items": null,
+                              "items": [],
                               "placeholder": null,
                               "title": "Services"
                             }
@@ -390,7 +390,7 @@
   "settings": {
     "_type": "SettingsState",
     "is_debug_enabled": false,
-    "services": null
+    "services": {}
   },
   "status_icons": {
     "_type": "StatusIconsState",

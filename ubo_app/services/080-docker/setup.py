@@ -539,12 +539,11 @@ def _load_images() -> None:
 
 def init_service() -> Subscriptions:
     """Initialize the service."""
-    subscriptions = [
-        register_persistent_store(
-            'docker_usernames',
-            lambda state: state.docker.service.usernames,
-        ),
-    ]
+    register_persistent_store(
+        'docker_usernames',
+        lambda state: state.docker.service.usernames,
+    )
+
     store.dispatch(
         RegisterRegularAppAction(
             priority=1,
@@ -584,7 +583,7 @@ def init_service() -> Subscriptions:
         ),
     )
 
-    subscriptions += [
+    subscriptions = [
         store.subscribe_event(DockerLoadImagesEvent, _load_images),
         store.subscribe_event(
             DockerImageRegisterAppEvent,

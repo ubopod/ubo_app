@@ -22,15 +22,11 @@ async def test_app_runs_and_exits(
     stability: Stability,
 ) -> None:
     """Test the application starts, runs and quits."""
-    from ubo_app.menu_app.menu import MenuApp
-
-    app = MenuApp()
-
-    app_context.set_app(app)
+    app_context.set_app()
 
     @wait_for(run_async=True, stop=stop_after_attempt(5))
     def stack_is_loaded() -> None:
-        assert len(app.menu_widget.stack) > 0, 'Menu stack not loaded yet'
+        assert len(app_context.app.menu_widget.stack) > 0, 'Menu stack not loaded yet'
 
     await stack_is_loaded()
 

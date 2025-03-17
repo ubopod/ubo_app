@@ -72,7 +72,9 @@ artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
 dev-dependencies = [
   "grpcio-tools>=1.66.1",
   "headless-kivy [test]>=0.12.1",
+  "ipdb>=0.13.13",
   "ipython>=8.23.0",
+  "pdbpp>=0.10.3",
   "poethepoet>=0.24.4",
   "pyfakefs>=5.7.4",
   "pyright>=1.1.396",
@@ -280,6 +282,7 @@ filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
   "ignore:'imghdr' is deprecated:DeprecationWarning",
 ]
+timeout = 40
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:"]
