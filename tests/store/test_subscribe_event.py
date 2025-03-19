@@ -36,9 +36,11 @@ async def test_subscribe_event_runs_handler_in_service_thread(
         SERVICES_BY_PATH,
         UboServiceThread,
     )
-    from ubo_app.store.core.types import MainEvent
+    from ubo_app.store.core.types import MainAction, MainEvent
 
     class DummyEvent(MainEvent): ...
+
+    class DummyAction(MainAction): ...
 
     class DummyState(Immutable): ...
 
@@ -56,14 +58,13 @@ async def test_subscribe_event_runs_handler_in_service_thread(
         state: DummyState | None,
         action: BaseAction,
     ) -> ReducerResult[DummyState, None, DummyEvent]:
-        if isinstance(action, InitAction):
-            return CompleteReducerResult(
-                state=DummyState(),
-                events=[DummyEvent()],
-            )
-
         if state is None:
+            if isinstance(action, InitAction):
+                return DummyState()
             raise InitializationActionError(action)
+
+        if isinstance(action, DummyAction):
+            return CompleteReducerResult(state=state, events=[DummyEvent()])
 
         return state
 
@@ -80,6 +81,10 @@ async def test_subscribe_event_runs_handler_in_service_thread(
     SERVICES_BY_PATH[service_thread.path] = service_thread
     SERVICE_PATHS_BY_ID[service_thread.service_id] = service_thread.path
 
-    await load_services(service_ids=['test'], run_async=True)
+    unload_waiter = await load_services(service_ids=['test'], run_async=True)
+
+    store.dispatch(DummyAction())
 
     assert await result, 'handler for subscribe event did not run in service thread'
+
+    await unload_waiter()

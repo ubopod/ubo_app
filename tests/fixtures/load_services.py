@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 from typing import (
     TYPE_CHECKING,
     Literal,
@@ -19,7 +18,7 @@ from ubo_app.logger import logger
 from ubo_app.service_thread import SERVICE_PATHS_BY_ID
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine, Generator, Sequence
+    from collections.abc import AsyncGenerator, Coroutine, Sequence
 
     from tests.conftest import WaitFor
 
@@ -84,7 +83,7 @@ def _unload_waiter(
     wait_for: WaitFor,
     run_async: bool,
     timeout: float | None = None,
-) -> Coroutine[None, None, None]:
+) -> Coroutine[None, None, None] | None:
     from ubo_app.service_thread import SERVICES_BY_PATH, stop_services
 
     services = [
@@ -124,9 +123,11 @@ def _unload_waiter(
 
 
 @pytest.fixture
-def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
+async def load_services(wait_for: WaitFor) -> AsyncGenerator[LoadServices, None]:
     """Load services and wait for them to be ready."""
     from ubo_app.service_thread import SERVICES_BY_PATH
+
+    unload_waiter: UnloadWaiter | AsyncUnloadWaiter | None = None
 
     def load_services_and_wait(
         service_ids: Sequence[str],
@@ -164,12 +165,21 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
 
         result = load_waiter()
 
-        unload_waiter = functools.partial(
-            _unload_waiter,
-            service_ids=service_ids,
-            wait_for=wait_for,
-            run_async=run_async,
-        )
+        def __unload_waiter(
+            timeout: float | None = None,
+        ) -> Coroutine[None, None, None] | None:
+            nonlocal unload_waiter
+            unload_waiter = None
+
+            return _unload_waiter(
+                service_ids=service_ids,
+                wait_for=wait_for,
+                run_async=run_async,
+                timeout=timeout,
+            )
+
+        nonlocal unload_waiter
+        unload_waiter = cast('UnloadWaiter | AsyncUnloadWaiter', __unload_waiter)
 
         if asyncio.iscoroutine(result):
 
@@ -184,3 +194,8 @@ def load_services(wait_for: WaitFor) -> Generator[LoadServices, None, None]:
     yield cast('LoadServices', load_services_and_wait)
 
     SERVICE_PATHS_BY_ID.clear()
+
+    if unload_waiter:
+        result = unload_waiter()
+        if asyncio.iscoroutine(result):
+            await result

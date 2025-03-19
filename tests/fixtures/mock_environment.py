@@ -202,7 +202,7 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
             # Reboot and poweroff
             if command[1] == 'systemctl' and command[2] in {'reboot', 'poweroff'}:
                 return Fake()
-        if command[0] in {'cat', 'file'}:
+        if command[0] in {'cat', 'file', 'route'}:
             return original_subprocess_run(command, *cast('Any', args), **kwargs)
         msg = f'Unexpected `subprocess.run` command in test environment: {command}'
         raise ValueError(msg)
@@ -244,6 +244,7 @@ async def _fake_create_subprocess_exec(  # noqa: C901
         'docker',
         'raspberrypi-ui-mods',
         'rpi-connect',
+        'route',
     ):
         expected = True
 

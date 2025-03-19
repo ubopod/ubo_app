@@ -32,7 +32,6 @@ async def test_all_services_register(
     await stability(attempts=2, wait=2)
     store_snapshot.take()
     window_snapshot.take()
-    await app_context.cleanup()
     await unload_waiter(timeout=30)
 
 
@@ -97,8 +96,7 @@ async def test_reducer_barrier(
         timeout=10,
     )
 
-    await app_context.cleanup()
-    await unload_waiter(timeout=5)
+    await unload_waiter()
 
     assert len(calls) == services_count * services_count, (
         f'All {services_count} services should have called the reducer x each action '

@@ -59,8 +59,11 @@ if TYPE_CHECKING:
 
 SERVICES_BY_PATH: dict[Path, UboServiceThread] = {}
 SERVICE_PATHS_BY_ID: dict[str, Path] = OrderedDict()
-WHITE_LIST = [*ENABLED_SERVICES]
 ROOT_PATH = Path(__file__).parent
+
+
+class DisabledServiceError(Exception):
+    """Raised when a service is disabled."""
 
 
 # Customized module finder and module loader for ubo services to avoid mistakenly
@@ -179,7 +182,14 @@ sys.meta_path.insert(0, UboServiceFinder())
 
 
 class UboServiceThread(threading.Thread):
-    def __init__(self: UboServiceThread, path: Path) -> None:
+    def __init__(
+        self: UboServiceThread,
+        path: Path,
+        *,
+        allowed_service_ids: Sequence[str] | None = [],
+    ) -> None:
+        self.allowed_service_ids = allowed_service_ids
+
         super().__init__()
         self.name = path.name
         self.service_uid = f'{uuid.uuid4().hex}:{self.name}'
@@ -243,16 +253,23 @@ class UboServiceThread(threading.Thread):
         is_enabled: bool = True,
         should_auto_restart: bool = False,
     ) -> None:
-        if service_id in DISABLED_SERVICES:
+        if (
+            service_id in DISABLED_SERVICES
+            or (ENABLED_SERVICES and service_id not in ENABLED_SERVICES)
+            or (self.allowed_service_ids and service_id not in self.allowed_service_ids)
+        ):
             logger.debug(
                 'Skipping disabled ubo service',
                 extra={
                     'service_id': service_id,
                     'label': label,
-                    'disabled_services': DISABLED_SERVICES,
+                    'enabled services': ENABLED_SERVICES,
+                    'disabled services': DISABLED_SERVICES,
+                    'allowed service ids': self.allowed_service_ids,
                 },
             )
-            return
+            msg = f'Service {service_id} is disabled'
+            raise DisabledServiceError(msg)
 
         self.label = label
         self.service_id = service_id
@@ -295,6 +312,8 @@ class UboServiceThread(threading.Thread):
             try:
                 cast('UboServiceThread', self.module).register = self.register
                 self.spec.loader.exec_module(self.module)
+            except DisabledServiceError:
+                del SERVICES_BY_PATH[self.path]
             except Exception:
                 del SERVICES_BY_PATH[self.path]
                 logger.exception('Error loading service', extra={'path': self.path})
@@ -369,6 +388,18 @@ class UboServiceThread(threading.Thread):
 
         try:
             self.loop.run_forever()
+        except Exception:
+            logger.exception(
+                'Ubo service thread ran into an error and stopped',
+                extra={
+                    'thread_native_id': self.native_id,
+                    'service_label': self.label,
+                    'service_id': self.service_id,
+                },
+            )
+            self.kill()
+            raise
+        else:
             logger.info(
                 'Ubo service thread stopped gracefully',
                 extra={
@@ -377,18 +408,6 @@ class UboServiceThread(threading.Thread):
                     'service_id': self.service_id,
                 },
             )
-        except Exception:
-            logger.info(
-                'Ubo service thread ran into an error and stopped',
-                extra={
-                    'thread_native_id': self.native_id,
-                    'service_label': self.label,
-                    'service_id': self.service_id,
-                },
-                exc_info=True,
-            )
-            self.kill()
-            raise
         finally:
             store.dispatch(
                 SettingsServiceSetStatusAction(
@@ -549,13 +568,9 @@ class UboServiceThread(threading.Thread):
 
 
 async def start(event: SettingsStartServiceEvent) -> None:
-    if (
-        event.service_id in SERVICE_PATHS_BY_ID
-        and (
-            SERVICE_PATHS_BY_ID[event.service_id] not in SERVICES_BY_PATH
-            or not SERVICES_BY_PATH[SERVICE_PATHS_BY_ID[event.service_id]].is_started
-        )
-        and (not WHITE_LIST or event.service_id in WHITE_LIST)
+    if event.service_id in SERVICE_PATHS_BY_ID and (
+        SERVICE_PATHS_BY_ID[event.service_id] not in SERVICES_BY_PATH
+        or not SERVICES_BY_PATH[SERVICE_PATHS_BY_ID[event.service_id]].is_started
     ):
         await asyncio.sleep(event.delay)
         if SERVICE_PATHS_BY_ID[event.service_id] not in SERVICES_BY_PATH:
@@ -623,7 +638,10 @@ def load_services(
             for service_path in sorted(directory_path.iterdir()):
                 if not service_path.is_dir() or service_path in SERVICES_BY_PATH.copy():
                     continue
-                service = UboServiceThread(service_path.absolute())
+                service = UboServiceThread(
+                    service_path.absolute(),
+                    allowed_service_ids=service_ids,
+                )
                 service.initiate()
 
     store.subscribe_event(SettingsStartServiceEvent, start)
@@ -655,23 +673,6 @@ def load_services(
                     'should_auto_restart',
                     services[service['id']].should_auto_restart,
                 ),
-            )
-
-    for service in services.values():
-        if (WHITE_LIST and service.id not in WHITE_LIST) or (
-            service_ids and service.id not in service_ids
-        ):
-            logger.debug(
-                'Disabling service not in white list',
-                extra={
-                    'service_id': service.id,
-                    'label': service.label,
-                    'white_list': WHITE_LIST,
-                },
-            )
-            services[service.id] = replace(
-                service,
-                is_enabled=False,
             )
 
     to_run_services = [

@@ -48,9 +48,13 @@ def create_task(
             if handle in tasks:
                 tasks.remove(handle)
 
+    result = wrapper()
+    result.__name__ = f'task_wrapper_coroutine:{task.__name__}'
+    result.__qualname__ = f'task_wrapper_coroutine:{task.__qualname__}'
+
     task_runner = get_task_runner()
 
-    handle = task_runner(wrapper(), callback_) if callback else task_runner(wrapper())
+    handle = task_runner(result, callback_) if callback else task_runner(result)
 
     tasks.append(handle)
     signal.set()

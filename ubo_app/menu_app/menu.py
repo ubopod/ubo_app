@@ -27,6 +27,8 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
     @override
     def on_start(self: MenuApp) -> None:
         """Start the application."""
+        self.is_stopped = False
+
         from ubo_app.side_effects import setup_side_effects
 
         self.subscriptions = setup_side_effects()
@@ -43,3 +45,4 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         """Stop the application."""
         for cleanup in self.subscriptions:
             cleanup()
+        self.is_stopped = True

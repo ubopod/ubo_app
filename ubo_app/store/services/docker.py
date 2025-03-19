@@ -39,6 +39,10 @@ class DockerAction(BaseAction):
     """Docker action."""
 
 
+class DockerLoadImagesAction(DockerAction):
+    """Signal showing docker reducer is registered and ready for loading images."""
+
+
 class DockerInstallAction(DockerAction):
     """Install docker."""
 

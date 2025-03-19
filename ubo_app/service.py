@@ -32,11 +32,14 @@ class WorkerThread(threading.Thread):
 
     def __init__(self: WorkerThread) -> None:
         super().__init__()
+        self.name = 'Worker Thread'
 
         self.is_finished = threading.Event()
+        self.is_started = threading.Event()
 
     def run(self: WorkerThread) -> None:
         if not self.loop.is_running():
+            self.is_started.set()
             self.loop.run_forever()
 
     def run_task(
@@ -64,7 +67,7 @@ class WorkerThread(threading.Thread):
         from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD
         from ubo_app.logger import logger
 
-        logger.info('Stopping worker thread')
+        logger.info('Stopping the worker thread')
 
         while True:
             tasks = [
@@ -93,9 +96,10 @@ class WorkerThread(threading.Thread):
                 )
             await asyncio.sleep(0.1)
 
-        logger.debug('Stopping event loop', extra={'thread_': self})
+        logger.debug('Stopping event loop of the worker thread')
         self.loop.stop()
         self.is_finished.set()
+        logger.info('The worker thread is done')
 
     def stop(self: WorkerThread) -> None:
         self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
@@ -116,11 +120,9 @@ def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
 
     from ubo_app.store.main import store
 
-    def stop() -> None:
-        unsubscribe()
-        worker_thread.stop()
+    store.subscribe_event(FinishEvent, worker_thread.stop)
 
-    unsubscribe = store.subscribe_event(FinishEvent, stop)
+    worker_thread.is_started.wait()
 
 
 def run_task(
