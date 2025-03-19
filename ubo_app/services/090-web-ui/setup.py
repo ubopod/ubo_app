@@ -195,7 +195,7 @@ async def stop_hotspot(*, silence: bool = False) -> None:
                     id='web_ui:hotspot_error',
                     icon='󱋆',
                     title='Web UI Error',
-                    content='Failed to stop the hotspot property, '
+                    content='Failed to stop the hotspot properly, '
                     'please check the logs.',
                     display_type=NotificationDisplayType.STICKY,
                     importance=Importance.HIGH,

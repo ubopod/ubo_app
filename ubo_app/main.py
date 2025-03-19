@@ -80,13 +80,17 @@ def main() -> None:
     load_services()
     app = MenuApp()
 
+    from kivy.clock import mainthread
+    from redux import FinishAction, FinishEvent
+
+    from ubo_app.store.main import store
+
+    store.subscribe_event(FinishEvent, mainthread(app.stop))
+
     try:
         app.run()
     except Exception:
         logger.exception('An error occurred while running the app.')
-        from redux import FinishAction
-
-        from ubo_app.store.main import store
 
         store.dispatch(FinishAction())
     finally:

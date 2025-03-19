@@ -62,7 +62,10 @@ async def test_wireless_flow(
         return state.wifi
 
     app_context.set_app()
-    await load_services(['camera', 'display', 'notifications', 'wifi'], run_async=True)
+    unload_waiter = await load_services(
+        ['camera', 'display', 'notifications', 'wifi'],
+        run_async=True,
+    )
 
     @wait_for(wait=wait_fixed(1), run_async=True)
     def check_icon(expected_icon: str) -> None:
@@ -194,3 +197,5 @@ async def test_wireless_flow(
     await wait_for_empty_menu(placeholder='No Wi-Fi connections found')
     window_snapshot.take()
     store_snapshot.take(selector=store_snapshot_selector)
+
+    await unload_waiter()

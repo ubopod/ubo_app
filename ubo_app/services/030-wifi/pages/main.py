@@ -150,6 +150,7 @@ def wireless_connections_menu(
     items = (
         [
             ApplicationItem(
+                key=connection.ssid,
                 label=connection.ssid,
                 application=wifi_network_creator(connection.ssid),
                 icon=get_signal_icon(connection.signal_strength)

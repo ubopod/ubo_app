@@ -22,7 +22,6 @@ from redux import (
     CombineReducerAction,
     CreateStoreOptions,
     FinishAction,
-    FinishEvent,
     InitAction,
     Store,
     combine_reducers,
@@ -38,6 +37,7 @@ from ubo_app.store.input.types import (
     InputAction,
     InputResolveEvent,
 )
+from ubo_app.store.schedular import Scheduler
 from ubo_app.store.services.audio import AudioAction, AudioEvent
 from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.display import DisplayAction, DisplayEvent
@@ -141,16 +141,6 @@ UboEvent: TypeAlias = (
 if threading.current_thread() is not threading.main_thread():
     msg = 'Store should be created in the main thread'
     raise RuntimeError(msg)
-
-triggers = []
-
-
-def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
-    from kivy.clock import Clock
-
-    trigger = Clock.create_trigger(lambda _: callback(), 0, interval=interval)
-    trigger()
-    triggers.append(trigger)
 
 
 class RootState(BaseCombineReducerState):
@@ -320,34 +310,44 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         else:
             handler_ref = weakref.ref(handler)
 
-        def in_thread_handler(event: StrictEvent) -> None:
-            async def wrapper() -> None:
-                if isinstance(handler_ref, weakref.ref):
-                    handler = cast('EventHandler[StrictEvent]', handler_ref())
-                    if not handler:
-                        return
-                else:
-                    handler = handler_ref
+        handler_str = str(handler)
 
-                parameters = 1
-                with contextlib.suppress(Exception):
-                    parameters = len(
-                        [
-                            param
-                            for param in inspect.signature(handler).parameters.values()
-                            if param.kind
-                            in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
-                        ],
-                    )
+        class InThreadHandler:
+            def __call__(self: InThreadHandler, event: StrictEvent) -> None:
+                async def wrapper() -> None:
+                    if isinstance(handler_ref, weakref.ref):
+                        handler = cast('EventHandler[StrictEvent]', handler_ref())
+                        if not handler:
+                            return
+                    else:
+                        handler = handler_ref
 
-                if parameters == 0:
-                    result = cast('Callable[[], Any]', handler)()
-                else:
-                    result = cast('Callable[[StrictEvent], Any]', handler)(event)
-                if iscoroutine(result):
-                    await result
+                    parameters = 1
+                    with contextlib.suppress(Exception):
+                        parameters = len(
+                            [
+                                param
+                                for param in inspect.signature(
+                                    handler,
+                                ).parameters.values()
+                                if param.kind
+                                in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
+                            ],
+                        )
 
-            task_runner(wrapper())
+                    if parameters == 0:
+                        result = cast('Callable[[], Any]', handler)()
+                    else:
+                        result = cast('Callable[[StrictEvent], Any]', handler)(event)
+                    if iscoroutine(result):
+                        await result
+
+                task_runner(wrapper())
+
+            def __repr__(self: InThreadHandler) -> str:
+                return f'<InThreadHandler:{handler_str}>'
+
+        in_thread_handler = InThreadHandler()
 
         if keep_ref:
             return super().subscribe_event(
@@ -392,17 +392,6 @@ def create_task(
     create_task(coro, callback)
 
 
-def stop_app() -> None:
-    from kivy.app import App
-    from kivy.clock import mainthread
-
-    for trigger in triggers:
-        trigger.cancel()
-
-    if App.get_running_app():
-        mainthread(App.get_running_app().stop)()
-
-
 def action_middleware(action: UboAction) -> UboAction:
     logger.debug(
         'Action dispatched',
@@ -412,12 +401,6 @@ def action_middleware(action: UboAction) -> UboAction:
 
 
 def event_middleware(event: UboEvent) -> UboEvent | None:
-    if _is_finalizing.is_set():
-        logger.debug(
-            'Store is finalizing, ignoring event',
-            extra={'event': event},
-        )
-        return None
     logger.debug(
         'Event dispatched',
         extra={'event': event},
@@ -425,22 +408,22 @@ def event_middleware(event: UboEvent) -> UboEvent | None:
     return event
 
 
+scheduler = Scheduler()
+scheduler.start()
+
+
 store = UboStore(
     root_reducer,
     CreateStoreOptions(
         auto_init=False,
-        scheduler=scheduler,
+        scheduler=scheduler.set,
         action_middlewares=[action_middleware],
         event_middlewares=[event_middleware],
         task_creator=create_task,
-        on_finish=stop_app,
+        on_finish=scheduler.stop,
         grace_time_in_seconds=STORE_GRACE_PERIOD,
     ),
 )
-
-_is_finalizing = threading.Event()
-
-store.subscribe_event(FinishEvent, _is_finalizing.set)
 
 store.dispatch(InitAction())
 

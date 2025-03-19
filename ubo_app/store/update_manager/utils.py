@@ -364,27 +364,28 @@ This may take around 20 minutes to complete.""",
     )
 
 
-update_clock_event = Clock.create_trigger(
-    dispatch_notification,
-    timeout=2,
-    interval=True,
-)
+def sync_with_update_service() -> None:
+    """Run an autorun to show a notification when the update service is running."""
+    update_clock_event = Clock.create_trigger(
+        dispatch_notification,
+        timeout=2,
+        interval=True,
+    )
 
-store.subscribe_event(FinishEvent, update_clock_event.cancel)
+    store.subscribe_event(FinishEvent, update_clock_event.cancel)
 
-
-@store.autorun(
-    lambda state: state.update_manager.is_update_service_active,
-)
-async def _(is_running: bool) -> None:  # noqa: FBT001
-    if is_running:
-        dispatch_notification()
-        update_clock_event()
-    else:
-        update_clock_event.cancel()
-        await asyncio.sleep(0.2)
-        store.dispatch(
-            NotificationsClearByIdAction(
-                id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
-            ),
-        )
+    @store.autorun(
+        lambda state: state.update_manager.is_update_service_active,
+    )
+    async def _(is_running: bool) -> None:  # noqa: FBT001
+        if is_running:
+            dispatch_notification()
+            update_clock_event()
+        else:
+            update_clock_event.cancel()
+            await asyncio.sleep(0.2)
+            store.dispatch(
+                NotificationsClearByIdAction(
+                    id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
+                ),
+            )

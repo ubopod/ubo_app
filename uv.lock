@@ -1468,15 +1468,15 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.20.2"
+version = "0.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-immutable" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d8/ba/72c458367401c300fb4aa69a854aaaf1d0435d85baf55a18211f14f8514b/python_redux-0.20.2.tar.gz", hash = "sha256:47176050b0cd7edbb85d3a180f998682ed2c40ec1b6dce5b8b0a63a6ea62daf5", size = 21129 }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/03/d1e094f5ea91e8aa619f12c9d704cb73daecab4ead532acd599d08c32947/python_redux-0.22.0.tar.gz", hash = "sha256:d441eebad71b9370112b0787137c82fae04c48b6040a472ade95003cc70626f4", size = 21824 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/27/e73c1d9c061ab173276cb51a7a6f3cf726ad68a5bde91a91a25c445ef071/python_redux-0.20.2-py3-none-any.whl", hash = "sha256:a993d321c155bfc58b812ad701dff293197f53e66f2cc761ca6cbb0b173bc398", size = 26784 },
+    { url = "https://files.pythonhosted.org/packages/2e/b8/2423be99036106acb5fad33014ae3bdf551db48ae45c278eb8efb4e1a9fe/python_redux-0.22.0-py3-none-any.whl", hash = "sha256:dd971a27d59e3be49c0dc469ef99f96d15eecfc80e36c1350d194fa13c646bb6", size = 27952 },
 ]
 
 [[package]]
@@ -1874,7 +1874,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.1.3" },
-    { name = "python-redux", specifier = ">=0.20.2" },
+    { name = "python-redux", specifier = ">=0.22.0" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
     { name = "pythonping", specifier = ">=1.1.4" },
     { name = "pyzbar", specifier = ">=0.1.9" },
@@ -1886,7 +1886,7 @@ requires-dist = [
     { name = "sentry-sdk", specifier = ">=1.43.0" },
     { name = "simpleaudio", specifier = ">=1.0.4" },
     { name = "tenacity", specifier = ">=8.2.3" },
-    { name = "ubo-gui", specifier = ">=0.13.10" },
+    { name = "ubo-gui", specifier = ">=0.13.11" },
 ]
 
 [package.metadata.requires-dev]
@@ -1911,16 +1911,16 @@ dev = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.13.10"
+version = "0.13.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "headless-kivy" },
     { name = "python-immutable" },
     { name = "qrcode" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/75/3a3bf3606f10c5da781638c7bbf123e1d7ec6b7ca986945695021f31b54b/ubo_gui-0.13.10.tar.gz", hash = "sha256:10790f4d075de23d012106cc3a9a6aee24b280416892a18e13f7020ef0d0d6e9", size = 8579328 }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/84/d92b1e6a1eaac750f93a4a54d5a6cfe116582ae902b282a20bef69e796c1/ubo_gui-0.13.11.tar.gz", hash = "sha256:0e1841764852339d48a33ba7e1aa841db7cdab066390a6c1a6f6847545b74558", size = 8579364 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c6/9c/d3023381f48b819d8ec4d36cae9155510e35510a0d6f656753f0d446e82f/ubo_gui-0.13.10-py3-none-any.whl", hash = "sha256:536af69b671892211683a56a0ad21f9b359a1699755e9ad7b18ce433a2732fff", size = 8602521 },
+    { url = "https://files.pythonhosted.org/packages/c3/ee/a71ece0412566c2eaa040a17598562d8ac793a4bc18b06985d0d3460cd2a/ubo_gui-0.13.11-py3-none-any.whl", hash = "sha256:e63c193a62bf93a0a300b3b905c0385d77719f1b1f8ab7541224940111476746", size = 8602584 },
 ]
 
 [[package]]

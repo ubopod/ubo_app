@@ -54,6 +54,7 @@ from ubo_app.store.services.docker import (
     DockerImageStopContainerEvent,
     DockerInstallAction,
     DockerInstallEvent,
+    DockerLoadImagesAction,
     DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
@@ -616,5 +617,7 @@ def init_service() -> Subscriptions:
             ),
         ),
     )
+
+    store.dispatch(DockerLoadImagesAction())
 
     return subscriptions

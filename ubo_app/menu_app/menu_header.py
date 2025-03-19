@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from kivy.animation import Animation
+from kivy.clock import mainthread
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -27,6 +28,7 @@ class MenuAppHeader(UboApp):
     notification_widgets: dict[str, tuple[Notification, Widget]]
     progress_layout: BoxLayout
 
+    @mainthread
     def set_notification_widgets(
         self: MenuAppHeader,
         notifications: list[Notification],
@@ -89,6 +91,7 @@ class MenuAppHeader(UboApp):
 
         self.progress_layout.width = self.progress_layout.minimum_width
 
+    @mainthread
     def handle_is_header_visible_change(
         self: MenuAppHeader,
         is_header_visible: bool,  # noqa: FBT001
@@ -99,6 +102,7 @@ class MenuAppHeader(UboApp):
         elif self.header_content in self.header_layout.children:
             self.header_layout.remove_widget(self.header_content)
 
+    @mainthread
     def handle_is_recording_change(
         self: MenuAppHeader,
         is_recording: bool,  # noqa: FBT001
@@ -111,6 +115,7 @@ class MenuAppHeader(UboApp):
             self.header_content.remove_widget(self.recording_sign)
             self.sign_animation.cancel(self.recording_sign)
 
+    @mainthread
     def handle_is_replaying_change(
         self: MenuAppHeader,
         is_replaying: bool,  # noqa: FBT001

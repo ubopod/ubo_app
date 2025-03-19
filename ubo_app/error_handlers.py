@@ -94,7 +94,7 @@ def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
 STACKS = weakref.WeakKeyDictionary(dict[asyncio.Task, str]())
 
 
-def loop_exception_handler(  # noqa: C901
+def loop_exception_handler(
     loop: asyncio.AbstractEventLoop,
     context: dict[str, object],
 ) -> None:
@@ -117,24 +117,25 @@ def loop_exception_handler(  # noqa: C901
     service_path = getattr(thread, 'path', None)
 
     if exception:
-        logger.exception(
-            'Event loop exception',
-            extra={
-                'service': label,
-                **(
-                    {
-                        'service_id': service_id,
-                    }
-                    if service_id
-                    else {'service_path': service_path}
-                ),
-                'loop': loop,
-                'error_message': context.get('message'),
-                'future': context.get('future'),
-                'parent_stack': parent_stack,
-            },
-            exc_info=cast('Exception', exception),
-        )
+        if not isinstance(exception, asyncio.CancelledError):
+            logger.exception(
+                'Event loop exception',
+                extra={
+                    'service': label,
+                    **(
+                        {
+                            'service_id': service_id,
+                        }
+                        if service_id
+                        else {'service_path': service_path}
+                    ),
+                    'loop': loop,
+                    'error_message': context.get('message'),
+                    'future': context.get('future'),
+                    'parent_stack': parent_stack,
+                },
+                exc_info=cast('Exception', exception),
+            )
         logger.verbose(
             'Event loop exception',
             extra={
@@ -173,47 +174,60 @@ def loop_exception_handler(  # noqa: C901
         )
 
     if service_id is not None:
-        from ubo_app.store.settings.types import (
-            ErrorReport,
-            SettingsReportServiceErrorAction,
+        report_service_error(
+            service_id=service_id,
+            exception=exception,
+            context=context,
         )
 
-        message = ''
 
-        if exception and isinstance(exception, Exception):
-            message += '[b]exception:[/b] ' + ''.join(
-                traceback.format_exception(
-                    type(exception),
-                    exception,
-                    exception.__traceback__,
+def report_service_error(
+    *,
+    service_id: str,
+    exception: object,
+    context: dict[str, object],
+) -> None:
+    from ubo_app.store.settings.types import (
+        ErrorReport,
+        SettingsReportServiceErrorAction,
+    )
+
+    message = ''
+
+    if exception and isinstance(exception, Exception):
+        message += '[b]exception:[/b] ' + ''.join(
+            traceback.format_exception(
+                type(exception),
+                exception,
+                exception.__traceback__,
+            ),
+        )
+
+    if context.get('message'):
+        message += '\n\n[b]message:[/b] ' + str(context.get('message'))
+
+    if context.get('task'):
+        message += '\n\n[b]task:[/b] ' + str(context.get('task'))
+
+    if context.get('future'):
+        message += '\n\n[b]future:[/b] ' + str(context.get('future'))
+
+    try:
+        from ubo_app.store.main import store
+
+    except RuntimeError as exception_:
+        if exception_.args[0] != 'Store should be created in the main thread':
+            raise
+    else:
+        store.dispatch(
+            SettingsReportServiceErrorAction(
+                service_id=service_id,
+                error=ErrorReport(
+                    message=message,
+                    timestamp=time.time(),
                 ),
-            )
-
-        if context.get('message'):
-            message += '\n\n[b]message:[/b] ' + str(context.get('message'))
-
-        if context.get('task'):
-            message += '\n\n[b]task:[/b] ' + str(context.get('task'))
-
-        if context.get('future'):
-            message += '\n\n[b]future:[/b] ' + str(context.get('future'))
-
-        try:
-            from ubo_app.store.main import store
-
-        except RuntimeError as exception:
-            if exception.args[0] != 'Store should be created in the main thread':
-                raise
-        else:
-            store.dispatch(
-                SettingsReportServiceErrorAction(
-                    service_id=service_id,
-                    error=ErrorReport(
-                        message=message,
-                        timestamp=time.time(),
-                    ),
-                ),
-            )
+            ),
+        )
 
 
 def setup_error_handling() -> None:

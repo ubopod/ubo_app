@@ -61,20 +61,22 @@ class AppContext:
     def set_app(self: AppContext, app: MenuApp | None = None) -> None:
         """Set the application."""
         from ubo_app.constants import PERSISTENT_STORE_PATH
+
+        PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
+
+        from ubo_app.service import start_event_loop_thread
+
+        start_event_loop_thread(asyncio.new_event_loop())
+
         from ubo_app.menu_app.menu import MenuApp
 
         if app is None:
             app = MenuApp()
 
-        PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
         self.app = app
         self.loop = asyncio.get_event_loop()
         self.task = self.loop.create_task(self.app.async_run(async_lib='asyncio'))
-
-        from ubo_app.service import start_event_loop_thread
-
-        start_event_loop_thread(asyncio.new_event_loop())
 
     async def cleanup(self: AppContext) -> None:
         """Clean up the application."""
@@ -86,24 +88,38 @@ class AppContext:
         from ubo_app.store.main import store
 
         store.dispatch(FinishAction())
+        store.wait_for_event_handlers()
 
         import ubo_app.service
 
         assert hasattr(self, 'task'), 'App not set for test'
 
-        self.app.stop()
+        from kivy.clock import Clock
+
+        for event in [*Clock.get_events()]:
+            event.cancel()
+
+        await asyncio.sleep(3)
+        self.app.root.clear_widgets()
+        if not self.app.is_stopped:
+            self.app.stop()
 
         await self.task
 
         app_ref = weakref.ref(self.app)
-        self.app.root.clear_widgets()
 
         ubo_app.service.worker_thread.is_finished.wait()
 
         del self.app
         del self.task
 
-        gc.collect()
+        for _ in range(3):
+            gc.collect()
+            app = app_ref()
+            if app is None:
+                break
+            await asyncio.sleep(1)
+
         app = app_ref()
 
         if app is not None and self.request.session.testsfailed == 0:

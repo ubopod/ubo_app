@@ -37,6 +37,7 @@
 - build(install): avoid swallowing stdout of the `pip install` command in the `install.sh`, lock onnxruntime to 1.20.1, related: <https://github.com/microsoft/onnxruntime/issues/23957>
 - test: improve cleanup and add explicit wait for loaded services to unload at the end of `test_services` test
 - feat(core): add a barrier for services after they register their reducer, they will pass it only when the rest of them have registered their reducer - closes #163
+- refactor(core): replace `kivy.clock.Clock.create_trigger` as the scheduler of the store with a new in house implementation of a scheduler using `asyncio` running in a separate thread and multiple improvements in resource cleanup, test utilities to ensure tests are reproducible and don't fail randomly
 
 ## Version 1.2.2
 

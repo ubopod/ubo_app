@@ -30,7 +30,11 @@ from ubo_app.store.update_manager.types import (
     UpdateManagerUpdateEvent,
     UpdateStatus,
 )
-from ubo_app.store.update_manager.utils import check_version, update
+from ubo_app.store.update_manager.utils import (
+    check_version,
+    sync_with_update_service,
+    update,
+)
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI, initialize_board
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -189,5 +193,7 @@ def setup_side_effects() -> Subscriptions:
     if IS_RPI:
         Path(INSTALLATION_PATH).mkdir(parents=True, exist_ok=True)
         (Path(INSTALLATION_PATH) / 'app_ready').touch()
+
+    sync_with_update_service()
 
     return subscriptions

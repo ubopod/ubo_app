@@ -179,7 +179,6 @@ def init_service() -> Subscriptions:
             WiFiInputConnectionEvent,
             create_wireless_connection.input_wifi_connection,
         ),
-        check_onboarding.unsubscribe,
     ]
 
     create_task(_check_connection())
