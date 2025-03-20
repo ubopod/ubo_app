@@ -16,25 +16,32 @@ if TYPE_CHECKING:
 VERBOSE = 5
 
 
-def handle_circular_references(obj: object, seen: set[int] | None = None) -> object:
+def handle_circular_references(
+    obj: object,
+    seen: dict[int, str | dict | list | tuple] | None = None,
+) -> object:
     if seen is None:
-        seen = set()
+        seen = {}
 
     obj_id = id(obj)
     if obj_id in seen:
         return None
 
-    seen.add(obj_id)
+    seen[obj_id] = '<circular reference>'
 
     if isinstance(obj, dict):
-        return {
+        result = {
             key: handle_circular_references(value, seen) for key, value in obj.items()
         }
-    if isinstance(obj, list):
-        return [handle_circular_references(item, seen) for item in obj]
-    if isinstance(obj, tuple):
-        return tuple(handle_circular_references(item, seen) for item in obj)
-    return str(obj)
+    elif isinstance(obj, list):
+        result = [handle_circular_references(item, seen) for item in obj]
+    elif isinstance(obj, tuple):
+        result = tuple(handle_circular_references(item, seen) for item in obj)
+    else:
+        result = str(obj)
+
+    seen[obj_id] = result
+    return result
 
 
 class UboLogger(logging.getLoggerClass()):
@@ -112,7 +119,7 @@ class ExtraFormatter(logging.Formatter):
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
 
         if len(extra) > 0:
-            string += ' - extra: ' + json.dumps(
+            string += ' - ' + json.dumps(
                 handle_circular_references(extra),
                 sort_keys=True,
                 indent=2,
