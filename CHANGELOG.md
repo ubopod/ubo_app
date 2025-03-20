@@ -39,6 +39,7 @@
 - feat(core): add a barrier for services after they register their reducer, they will pass it only when the rest of them have registered their reducer - closes #163
 - refactor(core): replace `kivy.clock.Clock.create_trigger` as the scheduler of the store with a new in house implementation of a scheduler using `asyncio` running in a separate thread and multiple improvements in resource cleanup, test utilities to ensure tests are reproducible and don't fail randomly
 - docs: add a section for adding new services, mentioning general patterns, to avoid common mistakes
+- refactor(core): better handle circular references in formatting log messages
 
 ## Version 1.2.2
 
