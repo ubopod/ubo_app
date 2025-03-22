@@ -384,7 +384,10 @@ class UboServiceThread(threading.Thread):
                 ),
             )
 
-        self.loop.create_task(setup_wrapper(), name=f'Setup task for {self.label}')
+            del self.setup_task
+
+        self.setup_task = setup_wrapper()
+        self.loop.create_task(self.setup_task, name=f'Setup task for {self.label}')
 
         try:
             self.loop.run_forever()

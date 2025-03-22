@@ -119,6 +119,23 @@ def setup() -> None:
 
         monitor_unit.monitor_unit = fake_monitor_unit
 
+        from ubo_app.store.services.ethernet import NetState
+        from ubo_app.utils import server
+
+        server.send_command = lambda command, *_, has_output: Fake(
+            _Fake__await_value={
+                'connection': NetState.CONNECTED,
+            }.get(command, 'done')
+            if has_output
+            else 0,  # python-fake will ignore `await_value` if it is `None`
+        )
+
+        from ubo_app.utils import network
+
+        network.has_gateway = Fake(
+            _Fake__return_value=Fake(_Fake__await_value=True),
+        )
+
     import ubo_app.display as _  # noqa: F401
 
     if not IS_TEST_ENV:

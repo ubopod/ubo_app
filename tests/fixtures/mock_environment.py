@@ -10,8 +10,6 @@ from typing import Any, cast
 import numpy as np
 import pytest
 
-from ubo_app.store.services.ethernet import NetState
-
 originals = {}
 
 
@@ -285,8 +283,10 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     from fake import Fake
 
     import ubo_app.constants
+    import ubo_app.utils.network
     import ubo_app.utils.serializer
     import ubo_app.utils.server
+    from ubo_app.store.services.ethernet import NetState
 
     tracemalloc.start()
 
@@ -299,7 +299,18 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         ubo_app.utils.server,
         'send_command',
-        Fake(_Fake__return_value=Fake(_Fake__await_value=NetState.CONNECTED)),
+        lambda command, *_, has_output=False: Fake(
+            _Fake__await_value={'connection': NetState.CONNECTED}.get(command, 'done')
+            if has_output
+            else 0,  # python-fake will ignore `await_value` if it is `None`
+        ),
+    )
+    monkeypatch.setattr(
+        ubo_app.utils.network,
+        'has_gateway',
+        Fake(
+            _Fake__return_value=Fake(_Fake__await_value=True),
+        ),
     )
 
     sys.modules['ubo_app.utils.secrets'] = Fake(
