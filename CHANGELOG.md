@@ -42,6 +42,7 @@
 - refactor(core): better handle circular references in formatting log messages
 - fix(core): wrap `callback` call of the scheduler in `try` to avoid the scheduler stopping when an exception is raised in its thread
 - refactor(docker): make docker container menus load even if `ip` service is not available
+- test: mock `has_gateway` and better mock `send_command` to make it return `done` instead of `Connected` when the command is not `connection`
 
 ## Version 1.2.2
 

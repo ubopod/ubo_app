@@ -26,6 +26,8 @@ from ubo_app.utils.server import send_command
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from ubo_app.utils.types import Subscriptions
+
 
 @store.autorun(lambda state: state.ip.interfaces)
 def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuItem]:
@@ -74,28 +76,32 @@ def load_ip_addresses() -> None:
     )
 
 
-async def check_connection() -> bool:
-    while True:
-        load_ip_addresses()
-        if await send_command('connection', has_output=True) == NetState.CONNECTED:
-            store.dispatch(
-                StatusIconsRegisterAction(
-                    icon='󰖟',
-                    priority=INTERNET_STATE_ICON_PRIORITY,
-                    id=INTERNET_STATE_ICON_ID,
-                ),
-                IpSetIsConnectedAction(is_connected=True),
-            )
-        else:
-            store.dispatch(
-                StatusIconsRegisterAction(
-                    icon=f'[color={DANGER_COLOR}]󰪎[/color]',
-                    priority=INTERNET_STATE_ICON_PRIORITY,
-                    id=INTERNET_STATE_ICON_ID,
-                ),
-                IpSetIsConnectedAction(is_connected=False),
-            )
-        await asyncio.sleep(1)
+async def check_connection() -> None:
+    load_ip_addresses()
+    if await send_command('connection', has_output=True) == NetState.CONNECTED:
+        store.dispatch(
+            StatusIconsRegisterAction(
+                icon='󰖟',
+                priority=INTERNET_STATE_ICON_PRIORITY,
+                id=INTERNET_STATE_ICON_ID,
+            ),
+            IpSetIsConnectedAction(is_connected=True),
+        )
+    else:
+        store.dispatch(
+            StatusIconsRegisterAction(
+                icon=f'[color={DANGER_COLOR}]󰪎[/color]',
+                priority=INTERNET_STATE_ICON_PRIORITY,
+                id=INTERNET_STATE_ICON_ID,
+            ),
+            IpSetIsConnectedAction(is_connected=False),
+        )
+    await asyncio.sleep(1)
+
+
+async def monitor_connections(end_event: asyncio.Event) -> None:
+    while not end_event.is_set():
+        await check_connection()
 
 
 IpMainMenu = SubMenuItem(
@@ -109,7 +115,7 @@ IpMainMenu = SubMenuItem(
 )
 
 
-def init_service() -> None:
+async def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
@@ -118,4 +124,9 @@ def init_service() -> None:
         ),
     )
 
-    create_task(check_connection())
+    await check_connection()
+
+    end_event = asyncio.Event()
+    create_task(monitor_connections(end_event))
+
+    return [end_event.set]
