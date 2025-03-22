@@ -154,7 +154,7 @@
                               "items": [
                                 {
                                   "_type": "DispatchItem",
-                                  "action": "<function:<lambda>>",
+                                  "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -274,7 +274,7 @@
                   "items": [
                     {
                       "_type": "DispatchItem",
-                      "action": "<function:<lambda>>",
+                      "action": "<function:action>",
                       "background_color": "#03F7AE",
                       "color": "#000000",
                       "icon": "󰄬",
@@ -336,7 +336,7 @@
             "items": [
               {
                 "_type": "DispatchItem",
-                "action": "<function:<lambda>>",
+                "action": "<function:action>",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -356,7 +356,7 @@
               },
               {
                 "_type": "DispatchItem",
-                "action": "<function:<lambda>>",
+                "action": "<function:action>",
                 "background_color": "#68B7FF",
                 "color": [
                   1,

@@ -175,7 +175,7 @@ def add_stdout_handler(
         '%Y-%m-%d %H:%M:%S',
     )
     if level <= logging.DEBUG:
-        formatter.max_length = 1000
+        formatter.max_length = 10000
     stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
