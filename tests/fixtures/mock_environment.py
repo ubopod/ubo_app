@@ -10,8 +10,6 @@ from typing import Any, cast
 import numpy as np
 import pytest
 
-from ubo_app.store.services.ethernet import NetState
-
 originals = {}
 
 
@@ -285,6 +283,7 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     from fake import Fake
 
     import ubo_app.constants
+    import ubo_app.utils.network
     import ubo_app.utils.serializer
     import ubo_app.utils.server
 
@@ -296,11 +295,6 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ubo_app.constants, 'STORE_GRACE_PERIOD', 0.1)
     monkeypatch.setattr(ubo_app.constants, 'NOTIFICATIONS_FLASH_TIME', 1000)
     monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', lambda _, obj: obj)
-    monkeypatch.setattr(
-        ubo_app.utils.server,
-        'send_command',
-        Fake(_Fake__return_value=Fake(_Fake__await_value=NetState.CONNECTED)),
-    )
 
     sys.modules['ubo_app.utils.secrets'] = Fake(
         _Fake__attrs={'read_secret': lambda _: None},

@@ -58,6 +58,9 @@ class WorkerThread(threading.Thread):
             if callback:
                 callback(task)
 
+        task_wrapper.__name__ = f'run_task:{coroutine.__name__}'
+        task_wrapper.__qualname__ = f'run_task:{coroutine.__qualname__}'
+
         return self.loop.call_soon_threadsafe(
             task_wrapper,
             ''.join(traceback.format_stack()[:-3]) if DEBUG_MODE_TASKS else '',
