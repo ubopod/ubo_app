@@ -18,7 +18,6 @@ from ubo_app.colors import (
     STOPPED_COLOR,
     WARNING_COLOR,
 )
-from ubo_app.menu_app.notification_info import NotificationInfo
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.settings.types import (
@@ -45,6 +44,8 @@ class _Callbacks(TypedDict):
 
 
 def _generate_error_report_app(error: ErrorReport) -> type[PageWidget]:
+    from ubo_app.menu_app.notification_info import NotificationInfo
+
     class ErrorReport(NotificationInfo):
         text = error.message
 

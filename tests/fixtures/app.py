@@ -259,11 +259,11 @@ def _setup_kivy() -> None:
 
         Config.set = patched_config_set
 
+    from kivy.config import Config
+
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
-        from kivy.config import Config
-
         Config.set(
             'graphics',
             'window_state',
