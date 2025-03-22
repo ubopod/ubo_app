@@ -40,6 +40,7 @@
 - refactor(core): replace `kivy.clock.Clock.create_trigger` as the scheduler of the store with a new in house implementation of a scheduler using `asyncio` running in a separate thread and multiple improvements in resource cleanup, test utilities to ensure tests are reproducible and don't fail randomly
 - docs: add a section for adding new services, mentioning general patterns, to avoid common mistakes
 - refactor(core): better handle circular references in formatting log messages
+- fix(core): wrap `callback` call of the scheduler in `try` to avoid the scheduler stopping when an exception is raised in its thread
 
 ## Version 1.2.2
 
