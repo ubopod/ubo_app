@@ -7,9 +7,7 @@ from typing import TYPE_CHECKING
 from docker_composition import (
     check_composition,
 )
-from docker_container import (
-    check_container,
-)
+from docker_container import check_container
 from docker_images import IMAGES
 from docker_qrcode_page import DockerQRCodePage
 from ubo_gui.menu.types import (
@@ -57,12 +55,13 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-@store.with_state(lambda state: state.ip.interfaces)
+@store.with_state(lambda state: state.ip.interfaces if hasattr(state, 'ip') else None)
 def image_menu(  # noqa: C901
-    interfaces: Sequence[IpNetworkInterface],
+    interfaces: Sequence[IpNetworkInterface] | None,
     image: ImageState,
 ) -> HeadedMenu:
     """Get the menu for the docker image."""
+    interfaces = []
     ip_addresses = [
         ip for interface in interfaces or [] for ip in interface.ip_addresses
     ]
@@ -239,5 +238,8 @@ def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
 
     return store.autorun(
         lambda state: getattr(state.docker, image_id),
-        lambda state: (getattr(state.docker, image_id), state.ip.interfaces),
+        lambda state: (
+            getattr(state.docker, image_id),
+            state.ip.interfaces if hasattr(state, 'ip') else None,
+        ),
     )(image_menu)
