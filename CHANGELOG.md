@@ -41,6 +41,7 @@
 - docs: add a section for adding new services, mentioning general patterns, to avoid common mistakes
 - refactor(core): better handle circular references in formatting log messages
 - fix(core): wrap `callback` call of the scheduler in `try` to avoid the scheduler stopping when an exception is raised in its thread
+- refactor(docker): make docker container menus load even if `ip` service is not available
 
 ## Version 1.2.2
 
