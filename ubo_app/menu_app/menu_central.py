@@ -6,7 +6,6 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
-from kivy.clock import mainthread
 from ubo_gui.app import UboApp
 from ubo_gui.menu.menu_widget import MenuWidget
 from ubo_gui.menu.stack_item import StackItem, StackMenuItem
@@ -73,7 +72,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         @store.autorun(lambda state: state.main.menu)
         @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
-        @mainthread
         def _(menu: Menu | None) -> None:
             self = _self()
             if not self or not menu:
@@ -173,23 +171,18 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         return self.menu_widget
 
-    @mainthread
     def open_application(self: MenuAppCentral, event: OpenApplicationEvent) -> None:
         self.menu_widget.open_application(event.application)
 
-    @mainthread
     def close_application(self: MenuAppCentral, event: CloseApplicationEvent) -> None:
         self.menu_widget.close_application(event.application)
 
-    @mainthread
     def go_home(self: MenuAppCentral, _: MenuGoHomeEvent) -> None:
         self.menu_widget.go_home()
 
-    @mainthread
     def go_back(self: MenuAppCentral, _: MenuGoBackEvent) -> None:
         self.menu_widget.go_back()
 
-    @mainthread
     def select_by_icon(self: MenuAppCentral, event: MenuChooseByIconEvent) -> None:
         current_page = self.menu_widget.current_screen
         if current_page is None:
@@ -208,7 +201,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             raise ValueError(msg)
         self.menu_widget.select_item(filtered_items[0], parent=self.menu_widget.top)
 
-    @mainthread
     def select_by_label(
         self: MenuAppCentral,
         event: MenuChooseByLabelEvent,
@@ -230,14 +222,12 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             raise ValueError(msg)
         self.menu_widget.select_item(filtered_items[0], parent=self.menu_widget.top)
 
-    @mainthread
     def select_by_index(
         self: MenuAppCentral,
         event: MenuChooseByIndexEvent,
     ) -> None:
         self.menu_widget.select(event.index)
 
-    @mainthread
     def scroll(self: MenuAppCentral, event: MenuScrollEvent) -> None:
         if event.direction == MenuScrollDirection.UP:
             self.menu_widget.go_up()
