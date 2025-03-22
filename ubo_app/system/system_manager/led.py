@@ -9,7 +9,6 @@ from threading import Thread
 from typing import TYPE_CHECKING, cast
 
 import board
-from adafruit_blinka.microcontroller.generic_micropython import Pin
 from fake import Fake
 
 from ubo_app.logger import add_file_handler, add_stdout_handler, get_logger
@@ -23,6 +22,8 @@ import neopixel
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from adafruit_blinka.microcontroller.generic_micropython import Pin
 
     from ubo_app.store.services.rgb_ring import RgbColor
 
@@ -56,7 +57,7 @@ class LEDManager:
         self.num_leds = NUM_LEDS
 
         self.pixels = neopixel.NeoPixel(
-            pin=cast(Pin, board.D12),
+            pin=cast('Pin', board.D12),
             n=self.num_leds,
             brightness=1,
             bpp=3,

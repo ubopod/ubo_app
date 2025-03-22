@@ -54,11 +54,11 @@ def build_message(
     if expected_type and issubclass(expected_type, betterproto.Enum):
         return getattr(
             expected_type,
-            cast(str, 'UNSPECIFIED' if object_ is None else str(object_)),
+            cast('str', 'UNSPECIFIED' if object_ is None else str(object_)),
         )
 
     if isinstance(object_, int | float | str | bytes | bool | None):
-        return cast(ReturnType, object_)
+        return cast('ReturnType', object_)
 
     if isinstance(object_, list | tuple):
         return [build_message(item) for item in object_]

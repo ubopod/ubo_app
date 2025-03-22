@@ -2,7 +2,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING, cast
@@ -14,6 +13,7 @@ from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
 from ubo_gui.page import PageWidget
 
+from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
@@ -27,6 +27,8 @@ from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from numpy._typing import NDArray
+
+    from ubo_app.utils.types import Subscriptions
 
 from picamera2.picamera2 import Picamera2
 
@@ -63,10 +65,10 @@ def initialize_camera() -> Picamera2 | None:
     try:
         picamera2 = Picamera2()
     except IndexError:
-        logging.exception('Camera not found, using fake camera.')
+        logger.exception('Camera not found, using fake camera.')
         return None
     preview_config = cast(
-        str,
+        'str',
         picamera2.create_still_configuration(
             {
                 'format': 'RGB888',
@@ -163,8 +165,8 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
         from ubo_app import display
 
         display.render_block(
-            (0, 0, width - 1, height - 1),
-            data_bytes,
+            rectangle=(0, 0, width - 1, height - 1),
+            data_bytes=data_bytes,
             bypass_pause=True,
         )
 
@@ -210,8 +212,10 @@ def start_camera_viewfinder() -> None:
     )
 
 
-def init_service() -> None:
-    store.subscribe_event(
-        CameraStartViewfinderEvent,
-        start_camera_viewfinder,
-    )
+def init_service() -> Subscriptions:
+    return [
+        store.subscribe_event(
+            CameraStartViewfinderEvent,
+            start_camera_viewfinder,
+        ),
+    ]

@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import functools
+import inspect
 import sys
 import threading
-from asyncio import Handle
+import weakref
+from asyncio import Handle, iscoroutine
 from datetime import datetime
 from pathlib import Path
 from types import GenericAlias
@@ -19,11 +22,11 @@ from redux import (
     CombineReducerAction,
     CreateStoreOptions,
     FinishAction,
-    FinishEvent,
     InitAction,
     Store,
     combine_reducers,
 )
+from redux.basic_types import SubscribeEventCleanup
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logger import logger
@@ -34,6 +37,7 @@ from ubo_app.store.input.types import (
     InputAction,
     InputResolveEvent,
 )
+from ubo_app.store.schedular import Scheduler
 from ubo_app.store.services.audio import AudioAction, AudioEvent
 from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.display import DisplayAction, DisplayEvent
@@ -59,12 +63,18 @@ from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.status_icons.types import StatusIconsAction
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 from ubo_app.store.update_manager.types import UpdateManagerAction
+from ubo_app.utils.async_ import get_task_runner
 from ubo_app.utils.serializer import add_type_field
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-    from redux.basic_types import SnapshotAtom, TaskCreatorCallback
+    from redux.basic_types import (
+        EventHandler,
+        SnapshotAtom,
+        StrictEvent,
+        TaskCreatorCallback,
+    )
 
     from ubo_app.store.core.types import MainState
     from ubo_app.store.services.audio import AudioState
@@ -131,16 +141,6 @@ UboEvent: TypeAlias = (
 if threading.current_thread() is not threading.main_thread():
     msg = 'Store should be created in the main thread'
     raise RuntimeError(msg)
-
-triggers = []
-
-
-def scheduler(callback: Callable[[], None], *, interval: bool) -> None:
-    from kivy.clock import Clock
-
-    trigger = Clock.create_trigger(lambda _: callback(), 0, interval=interval)
-    trigger()
-    triggers.append(trigger)
 
 
 class RootState(BaseCombineReducerState):
@@ -215,9 +215,13 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             if file_path and ubo_app_path:
                 root_path = Path(ubo_app_path).parent
                 path = Path(file_path)
-                return f"""{(path.relative_to(root_path)
-                             if file_path.startswith(root_path.as_posix())
-                             else path.absolute()).as_posix()}:{obj.__name__}"""
+                return f"""{
+                    (
+                        path.relative_to(root_path)
+                        if file_path.startswith(root_path.as_posix())
+                        else path.absolute()
+                    ).as_posix()
+                }:{obj.__name__}"""
             return f'{obj.__module__}:{obj.__name__}'
         if isinstance(obj, functools.partial):
             return f'<functools.partial:{cls.serialize_value(obj.func)}>'
@@ -284,12 +288,98 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         if isinstance(object_type, GenericAlias):
             origin = get_origin(object_type)
             if isinstance(data, origin):
-                return cast(T, data)
+                return cast('T', data)
         elif not object_type or isinstance(data, object_type):
-            return cast(T, data)
+            return cast('T', data)
 
         msg = f'Invalid data type {type(data)}'
         raise TypeError(msg)
+
+    def subscribe_event(  # noqa: C901
+        self: UboStore,
+        event_type: type[StrictEvent],
+        handler: EventHandler[StrictEvent],
+        *,
+        keep_ref: bool = True,
+    ) -> SubscribeEventCleanup:
+        task_runner = get_task_runner()
+        if keep_ref:
+            handler_ref = handler
+        elif inspect.ismethod(handler):
+            handler_ref = weakref.WeakMethod(handler)
+        else:
+            handler_ref = weakref.ref(handler)
+
+        handler_str = str(handler)
+
+        class InThreadHandler:
+            def __call__(self: InThreadHandler, event: StrictEvent) -> None:
+                async def wrapper() -> None:
+                    if isinstance(handler_ref, weakref.ref):
+                        handler = cast('EventHandler[StrictEvent]', handler_ref())
+                        if not handler:
+                            return
+                    else:
+                        handler = handler_ref
+
+                    parameters = 1
+                    with contextlib.suppress(Exception):
+                        parameters = len(
+                            [
+                                param
+                                for param in inspect.signature(
+                                    handler,
+                                ).parameters.values()
+                                if param.kind
+                                in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
+                            ],
+                        )
+
+                    if parameters == 0:
+                        result = cast('Callable[[], Any]', handler)()
+                    else:
+                        result = cast('Callable[[StrictEvent], Any]', handler)(event)
+                    if iscoroutine(result):
+                        await result
+
+                task_runner(wrapper())
+
+            def __repr__(self: InThreadHandler) -> str:
+                return f'<InThreadHandler:{handler_str}>'
+
+        in_thread_handler = InThreadHandler()
+
+        if keep_ref:
+            return super().subscribe_event(
+                event_type,
+                in_thread_handler,
+                keep_ref=keep_ref,
+            )
+
+        # Put the in_thread_handler in the handler's reference island to tie their
+        # lifetimes together
+        key = f'__ubo_store_in_thread_handler:{event_type.__name__}'
+
+        unsubscribe = super().subscribe_event(
+            event_type,
+            in_thread_handler,
+            keep_ref=keep_ref,
+        )
+
+        def unsubscribe_() -> None:
+            unsubscribe()
+            handlers.remove(in_thread_handler)
+
+        if not hasattr(handler, key):
+            handler.__dict__[key] = []
+
+        handlers = handler.__dict__[key]
+        handlers.append(in_thread_handler)
+
+        return SubscribeEventCleanup(
+            unsubscribe=unsubscribe_,
+            handler=in_thread_handler,
+        )
 
 
 def create_task(
@@ -302,17 +392,6 @@ def create_task(
     create_task(coro, callback)
 
 
-def stop_app() -> None:
-    from kivy.app import App
-    from kivy.clock import mainthread
-
-    for trigger in triggers:
-        trigger.cancel()
-
-    if App.get_running_app():
-        mainthread(App.get_running_app().stop)()
-
-
 def action_middleware(action: UboAction) -> UboAction:
     logger.debug(
         'Action dispatched',
@@ -322,8 +401,6 @@ def action_middleware(action: UboAction) -> UboAction:
 
 
 def event_middleware(event: UboEvent) -> UboEvent | None:
-    if _is_finalizing.is_set():
-        return None
     logger.debug(
         'Event dispatched',
         extra={'event': event},
@@ -331,26 +408,26 @@ def event_middleware(event: UboEvent) -> UboEvent | None:
     return event
 
 
+scheduler = Scheduler()
+scheduler.start()
+
+
 store = UboStore(
     root_reducer,
     CreateStoreOptions(
         auto_init=False,
-        scheduler=scheduler,
+        scheduler=scheduler.set,
         action_middlewares=[action_middleware],
         event_middlewares=[event_middleware],
         task_creator=create_task,
-        on_finish=stop_app,
+        on_finish=scheduler.stop,
         grace_time_in_seconds=STORE_GRACE_PERIOD,
     ),
 )
 
-_is_finalizing = threading.Event()
-
-store.subscribe_event(FinishEvent, lambda: _is_finalizing.set())
-
 store.dispatch(InitAction())
 
 if DEBUG_MODE:
-    store.subscribe(
+    store._subscribe(  # noqa: SLF001
         lambda state: logger.verbose('State updated', extra={'state': state}),
     )

@@ -7,8 +7,8 @@ import subprocess
 from typing import TypedDict
 
 from debouncer import DebounceOptions, debounce
-from ubo_gui.constants import DANGER_COLOR
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (

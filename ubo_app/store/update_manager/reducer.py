@@ -11,8 +11,8 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
-from ubo_gui.constants import SECONDARY_COLOR
 
+from ubo_app.colors import SECONDARY_COLOR
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,

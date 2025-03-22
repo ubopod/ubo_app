@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from fake import Fake
-from redux import FinishAction, FinishEvent
+from redux import FinishAction
 
 from ubo_app.utils import IS_TEST_ENV
 
@@ -74,20 +74,11 @@ def setup() -> None:
     """Set up for different environments."""
     import sys
 
-    # it should be changed to `Fake()` and  moved inside the `if not IS_RPI` when the
-    # new sdbus is released {-
-    sys.modules['sdbus.utils.inspect'] = Fake(
-        _Fake__attrs={
-            'inspect_dbus_path': lambda obj: obj._dbus.object_path,  # noqa: SLF001
-        },
-    )
-    # -}
-
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
         sys.modules['adafruit_rgb_display.st7789'] = Fake()
-        sys.modules['alsaaudio'] = Fake()
+        sys.modules['alsaaudio'] = Fake(_Fake__attrs={'cards': lambda: ['wm8960']})
         sys.modules['apt'] = Fake()
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()
@@ -104,6 +95,11 @@ def setup() -> None:
                 'capture_array': Fake(
                     _Fake__return_value=np.zeros((1, 1, 3), dtype=np.uint8),
                 ),
+            },
+        )
+        sys.modules['sdbus.utils.inspect'] = Fake(
+            _Fake__attrs={
+                'inspect_dbus_path': lambda obj: obj._dbus.object_path,  # noqa: SLF001
             },
         )
         subprocess.run = _fake_subprocess_run
@@ -123,12 +119,26 @@ def setup() -> None:
 
         monitor_unit.monitor_unit = fake_monitor_unit
 
+        from ubo_app.store.services.ethernet import NetState
+        from ubo_app.utils import server
+
+        server.send_command = lambda command, *_, has_output: Fake(
+            _Fake__await_value={
+                'connection': NetState.CONNECTED,
+            }.get(command, 'done')
+            if has_output
+            else 0,  # python-fake will ignore `await_value` if it is `None`
+        )
+
+        from ubo_app.utils import network
+
+        network.has_gateway = Fake(
+            _Fake__return_value=Fake(_Fake__await_value=True),
+        )
+
     import ubo_app.display as _  # noqa: F401
-    from ubo_app.store.main import store
 
     if not IS_TEST_ENV:
-        store.subscribe_event(FinishEvent, _clear_signal_handlers)
-
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
 
@@ -137,14 +147,14 @@ def setup() -> None:
     setup_ubo_gui()
 
 
-def _clear_signal_handlers() -> None:
-    from kivy.clock import mainthread
-
-    mainthread(clear_signal_handlers)()
-
-
 def clear_signal_handlers() -> None:
     """Clear the signal handlers."""
+    from kivy.clock import mainthread
+
+    mainthread(_clear_signal_handlers)()
+
+
+def _clear_signal_handlers() -> None:
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -152,11 +162,20 @@ def clear_signal_handlers() -> None:
 def signal_handler(signum: int, _: object) -> None:
     """Handle the signal."""
     from ubo_app import display
+    from ubo_app.error_handlers import get_all_thread_stacks
     from ubo_app.logger import logger
+
+    for thread_name, stack in get_all_thread_stacks().items():
+        logger.debug(thread_name)
+        logger.debug('-----')
+        logger.debug('\n'.join(stack))
+        logger.debug(
+            '------------------------------------------------------------------',
+        )
 
     logger.info('Received signal %s, turning off the display...', signum)
 
-    clear_signal_handlers()
+    _clear_signal_handlers()
 
     display.turn_off()
 

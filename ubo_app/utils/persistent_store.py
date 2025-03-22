@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, cast, overload
 
 import fasteners
-from redux import FinishEvent
 
 from ubo_app.constants import PERSISTENT_STORE_PATH
 
@@ -30,7 +29,7 @@ def register_persistent_store(
     from ubo_app.store.main import store
 
     @store.autorun(selector)
-    async def write(value: T) -> None:
+    async def _(value: T) -> None:
         if value is None:
             return
         with persistent_store_lock.write_lock():
@@ -41,12 +40,6 @@ def register_persistent_store(
             serialized_value = store.serialize_value(value)
             current_state[key] = serialized_value
             Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
-
-    def unsubscribe() -> None:
-        unsubscribe_event()
-        write.unsubscribe()
-
-    unsubscribe_event = store.subscribe_event(FinishEvent, unsubscribe)
 
 
 @overload
@@ -96,5 +89,5 @@ def read_from_persistent_store(
         )
     return store.load_object(
         value,
-        object_type=cast(type[T], object_type),
+        object_type=cast('type[T]', object_type),
     )

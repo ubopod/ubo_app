@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, Menu
 
+from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, STOPPED_COLOR
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.lightdm import (
@@ -86,7 +86,11 @@ def enable_lightdm_service() -> None:
 @store.autorun(lambda state: state.lightdm)
 def lightdm_icon(state: LightDMState) -> str:
     """Get the LightDM icon."""
-    return '[color=#008000]󰪥[/color]' if state.is_active else '[color=#ffff00]󰝦[/color]'
+    return (
+        f'[color={RUNNING_COLOR}]󰪥[/color]'
+        if state.is_active
+        else f'[color={STOPPED_COLOR}]󰝦[/color]'
+    )
 
 
 @store.autorun(lambda state: state.lightdm)
@@ -147,13 +151,13 @@ def lightdm_menu(state: LightDMState) -> Menu:
             if state.is_enabled is None
             else ActionItem(
                 label='Disable',
-                icon='[color=#008000]󰯄[/color]',
+                icon=f'[color={RUNNING_COLOR}]󰯄[/color]',
                 action=disable_lightdm_service,
             )
             if state.is_enabled
             else ActionItem(
                 label='Enable',
-                icon='[color=#ffff00]󰯅[/color]',
+                icon=f'[color={STOPPED_COLOR}]󰯅[/color]',
                 action=enable_lightdm_service,
             ),
         ],

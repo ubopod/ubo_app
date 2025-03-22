@@ -8,7 +8,7 @@ from pathlib import Path
 import dotenv
 
 from ubo_app.error_handlers import setup_error_handling
-from ubo_app.logger import setup_logging
+from ubo_app.logger import setup_loggers
 from ubo_app.setup import setup
 from ubo_app.utils import IS_RPI
 
@@ -34,14 +34,14 @@ def main() -> None:
 
     # `setup_logging` needs to be called before anything else to initialize the rotating
     # log files
-    setup_logging()
+    logger_cleanups = setup_loggers()
 
     # `setup_error_handling` needs to be called before anything else and after
     # `setup_logging`
     setup_error_handling()
 
     # This should be imported early to set the custom loader
-    from ubo_app.load_services import load_services
+    from ubo_app.service_thread import load_services, stop_services
 
     setup()
 
@@ -80,15 +80,31 @@ def main() -> None:
     load_services()
     app = MenuApp()
 
+    from kivy.clock import mainthread
+    from redux import FinishAction, FinishEvent
+
+    from ubo_app.store.main import store
+
+    store.subscribe_event(FinishEvent, mainthread(app.stop))
+
     try:
         app.run()
     except Exception:
         logger.exception('An error occurred while running the app.')
-        from redux import FinishAction
-
-        from ubo_app.store.main import store
 
         store.dispatch(FinishAction())
+    finally:
+        stop_services()
+
+        from ubo_app import display
+        from ubo_app.setup import clear_signal_handlers
+        from ubo_app.utils import bus_provider
+
+        display.turn_off()
+        bus_provider.clean_up()
+        clear_signal_handlers()
+        for cleanup in logger_cleanups:
+            cleanup()
 
 
 if __name__ == '__main__':

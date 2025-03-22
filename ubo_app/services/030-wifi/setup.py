@@ -1,10 +1,12 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+import asyncio
+from typing import TYPE_CHECKING
+
 from debouncer import DebounceOptions, debounce
 from pages import create_wireless_connection, main
 from redux import AutorunOptions
-from ubo_gui.constants import INFO_COLOR
 from wifi_manager import (
     get_connections,
     get_wifi_device,
@@ -12,6 +14,7 @@ from wifi_manager import (
     request_scan,
 )
 
+from ubo_app.colors import INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,
@@ -28,16 +31,21 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.wifi import (
     ConnectionState,
+    WiFiInputConnectionAction,
     WiFiInputConnectionEvent,
     WiFiSetHasVisitedOnboardingAction,
     WiFiUpdateAction,
     WiFiUpdateRequestEvent,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
 from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
     register_persistent_store,
 )
+
+if TYPE_CHECKING:
+    from ubo_app.utils.types import Subscriptions
 
 
 @debounce(
@@ -102,6 +110,21 @@ ONBOARDING_NOTIFICATION = Notification(
 )
 
 
+async def _check_connection() -> None:
+    """Dispatch the Wi-Fi input action if needed."""
+    await asyncio.sleep(2)
+    logger.info(
+        'Checking Wi-Fi',
+        extra={
+            'has_gateway': await has_gateway(),
+            'saved_wifi_ssids': await get_saved_wifi_ssids(),
+        },
+    )
+    if not await has_gateway() and not await get_saved_wifi_ssids():
+        logger.info('No network connection found, prompting for Wi-Fi input')
+        store.dispatch(WiFiInputConnectionAction())
+
+
 def show_onboarding_notification() -> None:
     store.dispatch(
         NotificationsAddAction(
@@ -110,7 +133,7 @@ def show_onboarding_notification() -> None:
     )
 
 
-async def init_service() -> None:
+def init_service() -> Subscriptions:
     create_task(update_wifi_list())
     create_task(setup_listeners())
 
@@ -125,12 +148,6 @@ async def init_service() -> None:
             category=SettingsCategory.NETWORK,
             menu_item=main.WiFiMainMenu,
         ),
-    )
-
-    store.subscribe_event(WiFiUpdateRequestEvent, request_scan)
-    store.subscribe_event(
-        WiFiInputConnectionEvent,
-        create_wireless_connection.input_wifi_connection,
     )
 
     @store.autorun(
@@ -155,3 +172,15 @@ async def init_service() -> None:
 
         if is_connected is not None:
             check_onboarding.unsubscribe()
+
+    subscriptions = [
+        store.subscribe_event(WiFiUpdateRequestEvent, request_scan),
+        store.subscribe_event(
+            WiFiInputConnectionEvent,
+            create_wireless_connection.input_wifi_connection,
+        ),
+    ]
+
+    create_task(_check_connection())
+
+    return subscriptions

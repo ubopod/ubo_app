@@ -7,7 +7,7 @@ import contextlib
 import functools
 import json
 import uuid
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import docker
 import docker.errors
@@ -27,9 +27,9 @@ from docker_images import IMAGES
 from menus import docker_item_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
-from ubo_gui.constants import DANGER_COLOR, WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
+from ubo_app.colors import DANGER_COLOR, WARNING_COLOR
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -54,6 +54,7 @@ from ubo_app.store.services.docker import (
     DockerImageStopContainerEvent,
     DockerInstallAction,
     DockerInstallEvent,
+    DockerLoadImagesAction,
     DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
@@ -82,6 +83,8 @@ from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+
+    from ubo_app.utils.types import Subscriptions
 
 
 def install_docker() -> None:
@@ -291,18 +294,24 @@ default.""",
             )[1]
             if not credentials:
                 return
-            username = credentials.data.get(
-                'Username',
-                credentials.data.get('Username_', ''),
+            username = (
+                credentials.data.get(
+                    'Username',
+                    credentials.data.get('Username_', ''),
+                )
+                or ''
             )
-            password = credentials.data.get(
-                'Password',
-                credentials.data.get('Password_', ''),
+            password = (
+                credentials.data.get(
+                    'Password',
+                    credentials.data.get('Password_', ''),
+                )
+                or ''
             )
-            registry = credentials.data.get('Service', 'docker.io')
-            username = cast(str, username).strip()
-            password = cast(str, password).strip()
-            registry = cast(str, registry).strip()
+            registry = credentials.data.get('Service', 'docker.io') or ''
+            username = username.strip()
+            password = password.strip()
+            registry = registry.strip()
             docker_client = docker.from_env()
             docker_client.login(
                 username=username,
@@ -529,12 +538,13 @@ def _load_images() -> None:
     )
 
 
-def init_service() -> None:
+def init_service() -> Subscriptions:
     """Initialize the service."""
     register_persistent_store(
         'docker_usernames',
         lambda state: state.docker.service.usernames,
     )
+
     store.dispatch(
         RegisterRegularAppAction(
             priority=1,
@@ -574,26 +584,26 @@ def init_service() -> None:
         ),
     )
 
-    store.subscribe_event(DockerLoadImagesEvent, _load_images)
-    store.subscribe_event(
-        DockerImageRegisterAppEvent,
-        _register_image_app_entry,
-    )
-
-    store.subscribe_event(DockerInstallEvent, install_docker)
-    store.subscribe_event(DockerStartEvent, start_docker)
-    store.subscribe_event(DockerStopEvent, stop_docker)
-
-    store.subscribe_event(DockerImageFetchCompositionEvent, pull_composition)
-    store.subscribe_event(DockerImageFetchEvent, fetch_image)
-    store.subscribe_event(DockerImageRemoveCompositionEvent, remove_composition)
-    store.subscribe_event(DockerImageRemoveEvent, remove_image)
-    store.subscribe_event(DockerImageRunCompositionEvent, run_composition)
-    store.subscribe_event(DockerImageRunContainerEvent, run_container)
-    store.subscribe_event(DockerImageStopCompositionEvent, stop_composition)
-    store.subscribe_event(DockerImageStopContainerEvent, stop_container)
-    store.subscribe_event(DockerImageReleaseCompositionEvent, release_composition)
-    store.subscribe_event(DockerImageRemoveContainerEvent, remove_container)
+    subscriptions = [
+        store.subscribe_event(DockerLoadImagesEvent, _load_images),
+        store.subscribe_event(
+            DockerImageRegisterAppEvent,
+            _register_image_app_entry,
+        ),
+        store.subscribe_event(DockerInstallEvent, install_docker),
+        store.subscribe_event(DockerStartEvent, start_docker),
+        store.subscribe_event(DockerStopEvent, stop_docker),
+        store.subscribe_event(DockerImageFetchCompositionEvent, pull_composition),
+        store.subscribe_event(DockerImageFetchEvent, fetch_image),
+        store.subscribe_event(DockerImageRemoveCompositionEvent, remove_composition),
+        store.subscribe_event(DockerImageRemoveEvent, remove_image),
+        store.subscribe_event(DockerImageRunCompositionEvent, run_composition),
+        store.subscribe_event(DockerImageRunContainerEvent, run_container),
+        store.subscribe_event(DockerImageStopCompositionEvent, stop_composition),
+        store.subscribe_event(DockerImageStopContainerEvent, stop_container),
+        store.subscribe_event(DockerImageReleaseCompositionEvent, release_composition),
+        store.subscribe_event(DockerImageRemoveContainerEvent, remove_container),
+    ]
 
     create_task(
         monitor_unit(
@@ -607,3 +617,7 @@ def init_service() -> None:
             ),
         ),
     )
+
+    store.dispatch(DockerLoadImagesAction())
+
+    return subscriptions

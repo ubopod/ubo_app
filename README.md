@@ -68,25 +68,21 @@ If you want to install the image on an existing operating system, then read on. 
 To install ubo, run this command in a terminal shell:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo bash
 ```
 
 If you want to install docker service and configure ubo to be able to use it run this:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo WITH_DOCKER=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo WITH_DOCKER=true bash
 ```
 
 To allow the installer to install the latest alpha version of ubo run this:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo ALPHA=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo ALPHA=true bash
 # or
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh\
-  | sudo ALPHA=true WITH_DOCKER=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo ALPHA=true WITH_DOCKER=true bash
 ```
 
 Note that as part of the installation process, these debian packages are installed:
@@ -140,6 +136,12 @@ git lfs install
 git lfs pull
 ```
 
+In environments where some python packages are installed system-wide, like Raspberry Pi OS, you need to run the following command to create a virtual environment with system site packages enabled:
+
+```bash
+uv venv --system-site-packages
+```
+
 Then, navigate to the project directory and install the dependencies:
 
 ```bash
@@ -180,7 +182,7 @@ To run the app on the device, you can use either of these commands:
 
 ```bash
 uv run poe device:deploy:restart # gracefully restart the app with systemctl
-uv run poe device:deploy:kill # kill the process, which will be restarted by systemd if the service is not stopped
+uv run poe device:deploy:kill    # kill the process, which will be restarted by systemd if the service is not stopped
 ```
 
 #### Running tests on desktop
@@ -258,6 +260,14 @@ To run the type checker run the following command:
 ```bash
 uv run poe type-check
 ```
+
+#### Adding new services
+
+It is not documented at the moment, but you can see examples in `ubo_app/services` directory.
+
+⚠️*Note: To make sure your async tasks are running in your service's event loop and not in the main event loop, you should use the `create_task` function imported from `ubo_app.utils.async_` to create a new task. Using `await` inside `async` functions is always fine and doesn't need any special attention.*
+
+⚠️*Note: Your service's setup function, if async, should finish at some point, this is needed so that ubo can know the service has finished its initialization and ready to be used. So it should not run forever, by having a loop at the end, or awaiting an ongoing async function or similar patterns. Running a never-ending async function using `create_task` imported from `ubo_app.utils.async_` is alright.
 
 #### QR code
 

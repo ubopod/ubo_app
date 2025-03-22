@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from tenacity import wait_fixed
 
 from ubo_app.utils import IS_RPI
 
@@ -41,6 +40,7 @@ async def test_wireless_flow(
     from sdbus_async.networkmanager import (  # pyright: ignore [reportMissingModuleSource]
         AccessPoint,
     )
+    from tenacity import wait_fixed
 
     async def strength() -> int:
         return 100
@@ -51,7 +51,6 @@ async def test_wireless_flow(
         property(lambda self: (self, strength())[1]),
     )
 
-    from ubo_app.menu_app.menu import MenuApp
     from ubo_app.store.core.types import (
         MenuChooseByIconAction,
         MenuChooseByLabelAction,
@@ -62,9 +61,11 @@ async def test_wireless_flow(
     def store_snapshot_selector(state: RootState) -> WiFiState:
         return state.wifi
 
-    app = MenuApp()
-    app_context.set_app(app)
-    await load_services(['camera', 'display', 'notifications', 'wifi'], run_async=True)
+    app_context.set_app()
+    unload_waiter = await load_services(
+        ['camera', 'display', 'notifications', 'wifi'],
+        run_async=True,
+    )
 
     @wait_for(wait=wait_fixed(1), run_async=True)
     def check_icon(expected_icon: str) -> None:
@@ -196,3 +197,5 @@ async def test_wireless_flow(
     await wait_for_empty_menu(placeholder='No Wi-Fi connections found')
     window_snapshot.take()
     store_snapshot.take(selector=store_snapshot_selector)
+
+    await unload_waiter()

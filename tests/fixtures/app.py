@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import gc
 import json
-import logging
 import sys
 import weakref
 from pathlib import Path
@@ -15,6 +14,8 @@ import dotenv
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
+
+from ubo_app.logger import logger
 
 modules_snapshot = set(sys.modules).union(
     {
@@ -42,6 +43,7 @@ class AppContext:
         """Initialize the context."""
         self.request = request
         self.persistent_store_data = {}
+        self._cleanup_is_called = False
 
     def set_persistent_storage_value(
         self: AppContext,
@@ -56,48 +58,72 @@ class AppContext:
         ), "Can't set persistent storage values after app has been set"
         self.persistent_store_data[key] = value
 
-    def set_app(self: AppContext, app: MenuApp) -> None:
+    def set_app(self: AppContext, app: MenuApp | None = None) -> None:
         """Set the application."""
         from ubo_app.constants import PERSISTENT_STORE_PATH
 
         PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
-        self.app = app
-        self.loop = asyncio.get_event_loop()
-        self.task = self.loop.create_task(self.app.async_run(async_lib='asyncio'))
 
         from ubo_app.service import start_event_loop_thread
 
         start_event_loop_thread(asyncio.new_event_loop())
 
-    async def clean_up(self: AppContext) -> None:
+        from ubo_app.menu_app.menu import MenuApp
+
+        if app is None:
+            app = MenuApp()
+
+        self.app = app
+        self.loop = asyncio.get_event_loop()
+        self.task = self.loop.create_task(self.app.async_run(async_lib='asyncio'))
+
+    async def cleanup(self: AppContext) -> None:
         """Clean up the application."""
+        if self._cleanup_is_called:
+            return
+        self._cleanup_is_called = True
         from redux import FinishAction
 
-        import ubo_app.service
         from ubo_app.store.main import store
 
         store.dispatch(FinishAction())
+        store.wait_for_event_handlers()
+
+        import ubo_app.service
 
         assert hasattr(self, 'task'), 'App not set for test'
 
-        self.app.stop()
+        from kivy.clock import Clock
+
+        for event in [*Clock.get_events()]:
+            event.cancel()
+
+        await asyncio.sleep(3)
+        self.app.root.clear_widgets()
+        if not self.app.is_stopped:
+            self.app.stop()
 
         await self.task
 
         app_ref = weakref.ref(self.app)
-        self.app.root.clear_widgets()
 
         ubo_app.service.worker_thread.is_finished.wait()
 
         del self.app
         del self.task
 
-        gc.collect()
+        for _ in range(3):
+            gc.collect()
+            app = app_ref()
+            if app is None:
+                break
+            await asyncio.sleep(1)
+
         app = app_ref()
 
         if app is not None and self.request.session.testsfailed == 0:
-            logging.info(
+            logger.info(
                 'Memory leak: failed to release app for test.',
                 extra={
                     'refcount': sys.getrefcount(app),
@@ -110,7 +136,7 @@ class AppContext:
                 if type(cell).__name__ == 'cell':
                     from ubo_app.utils.garbage_collection import examine
 
-                    logging.debug(
+                    logger.debug(
                         'CELL EXAMINATION',
                         extra={'cell': cell},
                     )
@@ -210,10 +236,8 @@ class ConditionalFSWrapper:
         return None
 
 
-def _setup_headless_kivy() -> None:
+def _setup_kivy() -> None:
     import os
-
-    from ubo_app.constants import HEIGHT, WIDTH
 
     os.environ['KIVY_NO_FILELOG'] = '1'
     os.environ['KIVY_NO_CONSOLELOG'] = '1'
@@ -240,14 +264,21 @@ def _setup_headless_kivy() -> None:
     if not IS_RPI:
         from kivy.config import Config
 
-        Config.set('graphics', 'window_state', 'hidden')
+        Config.set(
+            'graphics',
+            'window_state',
+            'hidden',
+        )
         Config.set('graphics', 'fbo', 'force-hardware')
         Config.set('graphics', 'fullscreen', '0')
         Config.set('graphics', 'multisamples', '1')
         Config.set('graphics', 'vsync', '0')
 
+
+def _setup_headless_kivy() -> None:
     import headless_kivy.config
 
+    from ubo_app.constants import HEIGHT, WIDTH
     from ubo_app.display import render_on_display
 
     headless_kivy.config.setup_headless_kivy(
@@ -271,22 +302,23 @@ async def app_context(
     from ubo_app.setup import setup
 
     dotenv.load_dotenv(Path(__file__).parent / '.env')
+    _setup_kivy()
     setup()
     _setup_headless_kivy()
 
     import os
 
-    from ubo_app.logger import setup_logging
+    from ubo_app.logger import setup_loggers
 
-    setup_logging()
+    logger_cleanups = setup_loggers()
 
     os.environ['TEST_ROOT_PATH'] = Path().absolute().as_posix()
     should_use_fake_fs = (
         request.config.getoption(
             '--use-fakefs',
             default=cast(
-                Any,
-                str_to_bool(os.environ.get('UBO_TEST_USE_FAKEFS', 'false')) == 1,
+                'Any',
+                str_to_bool(os.environ.get('UBO_TEST_USE_FAKEFS', 'false')),
             ),
         )
         is True
@@ -297,7 +329,13 @@ async def app_context(
 
         yield context
 
-        await context.clean_up()
+        from ubo_app import display
+
+        display.turn_off()
+        await context.cleanup()
+        for cleanup in logger_cleanups:
+            cleanup()
+
     del patcher
 
     assert not hasattr(context, 'app'), 'App not cleaned up'

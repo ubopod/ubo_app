@@ -1,7 +1,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import atexit
 import json
 import logging
 import logging.handlers
@@ -12,28 +11,37 @@ from typing import TYPE_CHECKING, ClassVar, cast
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from ubo_app.utils.types import Subscriptions
+
 VERBOSE = 5
 
 
-def handle_circular_references(obj: object, seen: set[int] | None = None) -> object:
+def handle_circular_references(
+    obj: object,
+    seen: dict[int, str | dict | list | tuple] | None = None,
+) -> object:
     if seen is None:
-        seen = set()
+        seen = {}
 
     obj_id = id(obj)
     if obj_id in seen:
         return None
 
-    seen.add(obj_id)
+    seen[obj_id] = '<circular reference>'
 
     if isinstance(obj, dict):
-        return {
+        result = {
             key: handle_circular_references(value, seen) for key, value in obj.items()
         }
-    if isinstance(obj, list):
-        return [handle_circular_references(item, seen) for item in obj]
-    if isinstance(obj, tuple):
-        return tuple(handle_circular_references(item, seen) for item in obj)
-    return str(obj)
+    elif isinstance(obj, list):
+        result = [handle_circular_references(item, seen) for item in obj]
+    elif isinstance(obj, tuple):
+        result = tuple(handle_circular_references(item, seen) for item in obj)
+    else:
+        result = str(obj)
+
+    seen[obj_id] = result
+    return result
 
 
 class UboLogger(logging.getLoggerClass()):
@@ -67,7 +75,7 @@ logging.setLoggerClass(UboLogger)
 
 
 def get_logger(name: str) -> UboLogger:
-    logger = cast(UboLogger, logging.getLogger(name))
+    logger = cast('UboLogger', logging.getLogger(name))
     logger.propagate = False
     return logger
 
@@ -111,7 +119,7 @@ class ExtraFormatter(logging.Formatter):
         extra = {k: v for k, v in record.__dict__.items() if k not in self.def_keys}
 
         if len(extra) > 0:
-            string += ' - extra: ' + json.dumps(
+            string += ' - ' + json.dumps(
                 handle_circular_references(extra),
                 sort_keys=True,
                 indent=2,
@@ -156,7 +164,10 @@ class StdOutExtraFormatter(ExtraFormatter):
         return f'{color}{string}{self.RESET}'
 
 
-def add_stdout_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
+def add_stdout_handler(
+    logger: UboLogger,
+    level: int = logging.DEBUG,
+) -> Subscriptions:
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setLevel(level)
     formatter = StdOutExtraFormatter(
@@ -164,14 +175,22 @@ def add_stdout_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
         '%Y-%m-%d %H:%M:%S',
     )
     if level <= logging.DEBUG:
-        formatter.max_length = 400
+        formatter.max_length = 1000
     stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
-    atexit.register(stdout_handler.flush)
+    def cleanup() -> None:
+        stdout_handler.flush()
+        stdout_handler.close()
+        logger.removeHandler(stdout_handler)
+
+    return [cleanup]
 
 
-def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
+def add_file_handler(
+    logger: UboLogger,
+    level: int = logging.DEBUG,
+) -> Subscriptions:
     file_handler = logging.handlers.RotatingFileHandler(
         f'{logger.name}.log',
         backupCount=3,
@@ -186,7 +205,12 @@ def add_file_handler(logger: UboLogger, level: int = logging.DEBUG) -> None:
     )
     logger.addHandler(file_handler)
 
-    atexit.register(file_handler.flush)
+    def cleanup() -> None:
+        file_handler.flush()
+        file_handler.close()
+        logger.removeHandler(file_handler)
+
+    return [cleanup]
 
 
 def get_log_level() -> int | None:
@@ -218,13 +242,14 @@ def get_gui_log_level() -> int | None:
     return None
 
 
-def setup_logging() -> None:
+def setup_loggers() -> Subscriptions:
     level = get_log_level()
+    subscriptions: Subscriptions = []
 
     if level is not None:
         logger.setLevel(level)
-        add_file_handler(logger, level)
-        add_stdout_handler(logger, level)
+        subscriptions.extend(add_file_handler(logger, level))
+        subscriptions.extend(add_stdout_handler(logger, level))
 
     gui_level = get_gui_log_level()
 
@@ -235,5 +260,7 @@ def setup_logging() -> None:
         ubo_gui.logger.add_file_handler(gui_level)
         ubo_gui.logger.add_stdout_handler(gui_level)
 
+    return subscriptions
 
-__all__ = ('add_file_handler', 'add_stdout_handler', 'logger', 'setup_logging')
+
+__all__ = ('add_file_handler', 'add_stdout_handler', 'logger', 'setup_loggers')

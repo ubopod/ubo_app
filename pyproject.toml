@@ -12,6 +12,7 @@ dependencies = [
   "aiohttp>=3.9.1",
   "dill>=0.3.8",
   "docker>=7.1.0",
+  "fasteners>=0.19",
   "headless-kivy>=0.12.2",
   "netifaces>=0.11.0",
   "platformdirs>=4.2.0",
@@ -22,7 +23,7 @@ dependencies = [
   "python-debouncer>=0.1.5",
   "python-dotenv>=1.0.1",
   "python-fake>=0.1.3",
-  "python-redux>=0.20.0",
+  "python-redux>=0.22.0",
   "python-strtobool>=1.0.0",
   "pythonping>=1.1.4",
   "pyzbar>=0.1.9",
@@ -33,7 +34,7 @@ dependencies = [
   "sentry-sdk>=1.43.0",
   "simpleaudio>=1.0.4",
   "tenacity>=8.2.3",
-  "ubo-gui>=0.13.10",
+  "ubo-gui>=0.13.11",
   # Adafruit dependencies
   "adafruit-circuitpython-aw9523>=1.1.7",
   "adafruit-circuitpython-neopixel>=6.3.11",
@@ -41,9 +42,9 @@ dependencies = [
   "adafruit-circuitpython-rgb-display>=3.11.0",
   "adafruit-circuitpython-veml7700>=1.1.22",
   # RPi dependencies
-  "fasteners>=0.19",
   "piper-tts>=1.2.0 ; sys_platform=='linux'",
   "rpi-lgpio>=0.6 ; platform_machine=='aarch64'",
+  "onnxruntime==1.20.1 ; platform_machine == 'aarch64'",
   # gRPC
   "betterproto [compiler]>=2.0.0b7",
   "gpiozero>=2.0.1 ; platform_machine != 'aarch64'",
@@ -71,7 +72,9 @@ artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
 dev-dependencies = [
   "grpcio-tools>=1.66.1",
   "headless-kivy [test]>=0.12.1",
+  "ipdb>=0.13.13",
   "ipython>=8.23.0",
+  "pdbpp>=0.10.3",
   "poethepoet>=0.24.4",
   "pyfakefs>=5.7.4",
   "pyright>=1.1.396",
@@ -81,7 +84,7 @@ dev-dependencies = [
   "pytest-mock>=3.14.0",
   "pytest-timeout>=2.3.1",
   "pytest-xdist>=3.5.0",
-  "ruff>=0.9.10",
+  "ruff>=0.10.0",
   "toml>=0.10.2",
 ]
 

@@ -6,11 +6,9 @@ import functools
 import json
 import re
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from quart import Quart, Response, render_template, request
-from redux import FinishEvent
-from werkzeug.datastructures import FileStorage
 
 from ubo_app.constants import (
     GRPC_ENVOY_LISTEN_PORT,
@@ -46,9 +44,14 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.network import has_gateway
 from ubo_app.utils.pod_id import get_pod_id
 from ubo_app.utils.server import send_command
+from ubo_app.utils.types import Subscriptions
+
+if TYPE_CHECKING:
+    from werkzeug.datastructures import FileStorage
 
 ENVOY_IMAGE_NAME = 'thegrandpkizzle/envoy:1.26.1'
 
@@ -122,11 +125,11 @@ async def _get_envoy_status() -> str:
         return 'failed'
 
 
-async def initialize(event: WebUIInitializeEvent) -> None:
+async def initialize_hotspot(event: WebUIInitializeEvent) -> None:
     """Start the hotspot if there is no network connection."""
     is_connected = await has_gateway()
     logger.info(
-        'web-ui - initialize',
+        'web-ui - initialize hotspot',
         extra={
             'is_connected': is_connected,
             'description': event.description,
@@ -181,18 +184,18 @@ async def initialize(event: WebUIInitializeEvent) -> None:
     )
 
 
-async def stop() -> None:
+async def stop_hotspot(*, silence: bool = False) -> None:
     """Start the hotspot if there is no network connection."""
-    logger.info('web-ui - stop')
+    logger.info('web-ui - stop hotspot')
     result = await send_command('hotspot', 'stop', has_output=True)
-    if result != 'done':
+    if result != 'done' and not silence:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     id='web_ui:hotspot_error',
                     icon='󱋆',
                     title='Web UI Error',
-                    content='Failed to stop the hotspot property, '
+                    content='Failed to stop the hotspot properly, '
                     'please check the logs.',
                     display_type=NotificationDisplayType.STICKY,
                     importance=Importance.HIGH,
@@ -201,7 +204,7 @@ async def stop() -> None:
         )
 
 
-async def init_service() -> None:  # noqa: C901
+async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
     """Initialize the web-ui service."""
     _ = []
     app = Quart(
@@ -223,7 +226,7 @@ async def init_service() -> None:  # noqa: C901
         if request.method == 'POST':
             data = dict(await request.form)
             files = {
-                key: cast(FileStorage, value).stream
+                key: cast('FileStorage', value).stream
                 for key, value in (await request.files).items()
             }
 
@@ -243,7 +246,7 @@ async def init_service() -> None:  # noqa: C901
                         ),
                     ),
                 )
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.1)
         return await render_template(
             'index.jinja2',
             inputs=UboStore.serialize_value(inputs()),
@@ -313,17 +316,29 @@ async def init_service() -> None:  # noqa: C901
 
         _.append(handle_error)
 
-    store.subscribe_event(FinishEvent, shutdown_event.set)
+    store.subscribe_event(WebUIInitializeEvent, initialize_hotspot)
+    store.subscribe_event(WebUIStopEvent, stop_hotspot)
 
-    store.subscribe_event(WebUIInitializeEvent, initialize)
-    store.subscribe_event(WebUIStopEvent, stop)
+    start_event = asyncio.Event()
 
     async def wait_for_shutdown() -> None:
         await shutdown_event.wait()
 
-    await app.run_task(
-        host=WEB_UI_LISTEN_ADDRESS,
-        port=WEB_UI_LISTEN_PORT,
-        debug=WEB_UI_DEBUG_MODE,
-        shutdown_trigger=wait_for_shutdown,
+    app.before_serving(start_event.set)
+
+    create_task(
+        app.run_task(
+            host=WEB_UI_LISTEN_ADDRESS,
+            port=WEB_UI_LISTEN_PORT,
+            debug=WEB_UI_DEBUG_MODE,
+            shutdown_trigger=wait_for_shutdown,
+        ),
     )
+
+    await start_event.wait()
+
+    async def cleanup() -> None:
+        shutdown_event.set()
+        await stop_hotspot(silence=True)
+
+    return [cleanup]

@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import psutil
 from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
@@ -20,10 +20,13 @@ from ubo_app.store.services.ip import (
     IpUpdateInterfacesAction,
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from ubo_app.utils.types import Subscriptions
 
 
 @store.autorun(lambda state: state.ip.interfaces)
@@ -73,28 +76,32 @@ def load_ip_addresses() -> None:
     )
 
 
-async def check_connection() -> bool:
-    while True:
-        load_ip_addresses()
-        if await send_command('connection', has_output=True) == NetState.CONNECTED:
-            store.dispatch(
-                StatusIconsRegisterAction(
-                    icon='󰖟',
-                    priority=INTERNET_STATE_ICON_PRIORITY,
-                    id=INTERNET_STATE_ICON_ID,
-                ),
-                IpSetIsConnectedAction(is_connected=True),
-            )
-        else:
-            store.dispatch(
-                StatusIconsRegisterAction(
-                    icon=f'[color={DANGER_COLOR}]󰪎[/color]',
-                    priority=INTERNET_STATE_ICON_PRIORITY,
-                    id=INTERNET_STATE_ICON_ID,
-                ),
-                IpSetIsConnectedAction(is_connected=False),
-            )
-        await asyncio.sleep(1)
+async def check_connection() -> None:
+    load_ip_addresses()
+    if await send_command('connection', has_output=True) == NetState.CONNECTED:
+        store.dispatch(
+            StatusIconsRegisterAction(
+                icon='󰖟',
+                priority=INTERNET_STATE_ICON_PRIORITY,
+                id=INTERNET_STATE_ICON_ID,
+            ),
+            IpSetIsConnectedAction(is_connected=True),
+        )
+    else:
+        store.dispatch(
+            StatusIconsRegisterAction(
+                icon=f'[color={DANGER_COLOR}]󰪎[/color]',
+                priority=INTERNET_STATE_ICON_PRIORITY,
+                id=INTERNET_STATE_ICON_ID,
+            ),
+            IpSetIsConnectedAction(is_connected=False),
+        )
+    await asyncio.sleep(1)
+
+
+async def monitor_connections(end_event: asyncio.Event) -> None:
+    while not end_event.is_set():
+        await check_connection()
 
 
 IpMainMenu = SubMenuItem(
@@ -108,7 +115,7 @@ IpMainMenu = SubMenuItem(
 )
 
 
-async def init_service() -> None:
+async def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
@@ -118,3 +125,8 @@ async def init_service() -> None:
     )
 
     await check_connection()
+
+    end_event = asyncio.Event()
+    create_task(monitor_connections(end_event))
+
+    return [end_event.set]

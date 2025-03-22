@@ -33,7 +33,6 @@ from redux_pytest.fixtures import (  # noqa: E402
     StoreMonitor,
     Waiter,
     WaitFor,
-    needs_finish,
     store_monitor,
     store_snapshot,
     wait_for,
@@ -53,7 +52,6 @@ fixtures = (
     load_services,
     camera,
     mock_environment,
-    needs_finish,
     stability,
     store,
     store_monitor,
@@ -81,7 +79,7 @@ def snapshot_prefix() -> str:
     return 'desktop'
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def app_context(original_app_context: AppContext) -> AppContext:
     """Set defaults for app-context for tests."""
     original_app_context.set_persistent_storage_value(
@@ -102,7 +100,10 @@ def _logger() -> None:
     for handler in logging.getLogger().handlers:
         if handler.formatter:
             handler.formatter.format = extra_formatter.format
-            cast(ExtraFormatter, handler.formatter).def_keys = extra_formatter.def_keys
+            cast(
+                'ExtraFormatter',
+                handler.formatter,
+            ).def_keys = extra_formatter.def_keys
 
 
 @pytest.fixture(autouse=True)

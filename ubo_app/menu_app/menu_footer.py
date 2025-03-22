@@ -5,7 +5,7 @@ import datetime
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 
 class MenuAppFooter(UboApp):
+    @mainthread
     def set_temperature_value(self: MenuAppFooter, value: float | None = None) -> None:
         if value is None:
             self.temperature.text = '-'
@@ -35,6 +36,7 @@ class MenuAppFooter(UboApp):
             orientation='horizontal',
             spacing=0,
             padding=0,
+            width=dp(12),
             size_hint=(None, 1),
         )
 
@@ -66,6 +68,7 @@ class MenuAppFooter(UboApp):
 
         return layout
 
+    @mainthread
     def set_light_value(self: MenuAppFooter, value: float | None = None) -> None:
         if value is None:
             self.light.color = (0.5, 0, 0, 1)
@@ -128,6 +131,7 @@ class MenuAppFooter(UboApp):
 
         return clock
 
+    @mainthread
     def render_icons(
         self: MenuAppFooter,
         selector_result: Sequence[IconState],
@@ -148,6 +152,7 @@ class MenuAppFooter(UboApp):
         self.icons_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
         self.icons_layout.bind(minimum_width=self.icons_layout.setter('width'))
 
+    @mainthread
     def handle_is_footer_visible_change(
         self: MenuAppFooter,
         is_footer_visible: bool,  # noqa: FBT001

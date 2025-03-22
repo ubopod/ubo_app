@@ -11,11 +11,10 @@ from commands import check_status, restart, uninstall_service
 from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
-from redux import FinishEvent
-from ubo_gui.constants import DANGER_COLOR
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
 
+from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
@@ -38,6 +37,8 @@ CODE_TUNNEL_URL_PREFIX = 'https://vscode.dev/tunnel/'
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from ubo_app.utils.types import Subscriptions
 
 
 def download_code() -> None:
@@ -231,7 +232,7 @@ def generate_vscode_menu() -> Callable[[], HeadedMenu]:
     return vscode_menu
 
 
-async def init_service() -> None:
+def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             menu_item=ActionItem(label='VSCode', icon='󰨞', action=generate_vscode_menu),
@@ -240,9 +241,11 @@ async def init_service() -> None:
     )
 
     clock_event = Clock.schedule_interval(lambda _: create_task(check_status()), 1)
-    store.subscribe_event(FinishEvent, clock_event.cancel)
-    store.subscribe_event(VSCodeRestartEvent, restart)
-    await check_status()
+    create_task(check_status())
+    return [
+        clock_event.cancel,
+        store.subscribe_event(VSCodeRestartEvent, restart),
+    ]
 
 
 Builder.load_file(

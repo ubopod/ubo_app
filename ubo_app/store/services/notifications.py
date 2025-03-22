@@ -11,9 +11,9 @@ from uuid import uuid4
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
-from ubo_gui.constants import SECONDARY_COLOR_LIGHT
 from ubo_gui.menu.types import ActionItem
 
+from ubo_app.colors import SECONDARY_COLOR_LIGHT
 from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
 from ubo_app.store.dispatch_action import DispatchItem
 
