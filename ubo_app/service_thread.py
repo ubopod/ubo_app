@@ -204,6 +204,7 @@ class UboServiceThread(threading.Thread):
         self.is_started = False
         self.has_reducer = False
 
+        self._reducer_barrier = None
         self.subscriptions: Subscriptions = []
 
     def set_reducer_barrier(
@@ -460,8 +461,10 @@ class UboServiceThread(threading.Thread):
         self._cleanup()
 
     async def _clean_subscriptions(self: UboServiceThread) -> None:
+        if not hasattr(self, 'subscriptions'):
+            return
         subscriptions = self.subscriptions
-        self.subscriptions = []
+        del self.subscriptions
         tasks = []
         for unsubscribe in subscriptions:
             try:
@@ -549,6 +552,8 @@ class UboServiceThread(threading.Thread):
 
         if self.path in SERVICES_BY_PATH:
             del SERVICES_BY_PATH[self.path]
+
+        del self.module
 
     def kill(self: UboServiceThread) -> None:
         if self.ident is None:

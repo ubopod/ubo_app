@@ -18,7 +18,6 @@ def _default_action() -> Callable[[], None]:
     # WARNING: Dirty hack ahead
     # This is to set the default value of `icon` based on the provided/default value of
     # `importance`
-    from ubo_app.store.main import store
 
     parent_frame = sys._getframe().f_back  # noqa: SLF001
     if not parent_frame or not (
@@ -26,7 +25,13 @@ def _default_action() -> Callable[[], None]:
     ):
         msg = 'No store_action provided for `DispatchItem`'
         raise ValueError(msg)
-    return lambda: store.dispatch(store_action)
+
+    def action() -> None:
+        from ubo_app.store.main import store
+
+        store.dispatch(store_action)
+
+    return action
 
 
 class DispatchItem(ActionItem):
