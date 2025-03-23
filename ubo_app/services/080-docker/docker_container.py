@@ -11,6 +11,7 @@ import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
 from docker_images import IMAGES
+from redux import FinishEvent
 
 from ubo_app.logger import logger
 from ubo_app.store.main import store
@@ -32,8 +33,6 @@ from ubo_app.utils.async_ import to_thread
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
-
-    from ubo_app.utils.types import Subscriptions
 
 
 def find_container(client: docker.DockerClient, *, image: str) -> Container | None:
@@ -235,12 +234,16 @@ def update_container(*, image_id: str, container: Container) -> None:
 def _monitor_events(  # noqa: C901
     image_id: str,
     get_docker_id: Callable[[], str],
-) -> list[Callable[[], None]]:
+) -> None:
     path = IMAGES[image_id].path
     docker_client = docker.from_env()
     events = docker_client.events(
         decode=True,
         filters={'type': ['image', 'container']},
+    )
+    store.subscribe_event(
+        FinishEvent,
+        events.close,
     )
     for event in events:
         logger.verbose('Docker image event', extra={'event': event})
@@ -298,13 +301,11 @@ def _monitor_events(  # noqa: C901
                         status=DockerItemStatus.AVAILABLE,
                     ),
                 )
-    return [events.close]
 
 
-def check_container(*, image_id: str) -> Subscriptions:
+def check_container(*, image_id: str) -> None:
     """Check the container status."""
     path = IMAGES[image_id].path
-    subscriptions: list[Callable[[], None]] = []
 
     def act() -> None:
         logger.debug('Checking image', extra={'image': image_id, 'path': path})
@@ -368,12 +369,6 @@ def check_container(*, image_id: str) -> Subscriptions:
             def get_docker_id(docker_id: str) -> str:
                 return docker_id
 
-            subscriptions.extend(_monitor_events(image_id, get_docker_id))
+            _monitor_events(image_id, get_docker_id)
 
     to_thread(act)
-
-    def cleanup() -> None:
-        for subscription in subscriptions:
-            subscription()
-
-    return [cleanup]

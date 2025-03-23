@@ -30,7 +30,8 @@ class RgbRingClient:
     async def send(self: RgbRingClient, cmd: Sequence[str]) -> None:
         try:
             await send_command('led', *cmd)
-            store.dispatch(RgbRingSetIsConnectedAction(is_connected=True))
         except Exception:
             store.dispatch(RgbRingSetIsConnectedAction(is_connected=False))
             logger.exception('Unable to connect to the socket')
+        else:
+            store.dispatch(RgbRingSetIsConnectedAction(is_connected=True))

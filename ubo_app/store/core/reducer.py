@@ -10,7 +10,9 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
+from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
+from ubo_app.store.core.menus import HOME_MENU
 from ubo_app.store.core.types import (
     CloseApplicationAction,
     CloseApplicationEvent,
@@ -53,32 +55,21 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
+def find_sub_menu_item(items: Sequence[Item], key: str) -> SubMenuItem:
+    item = next((item for item in items if item.key == key), None)
+    if not isinstance(item, SubMenuItem):
+        msg = f'{key.capitalize()} menu item is not a `SubMenuItem`'
+        raise TypeError(msg)
+    return item
+
+
 def reducer(
     state: MainState | None,
     action: MainAction,
 ) -> ReducerResult[MainState, None, InitEvent | MainEvent]:
-    from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
-
-    def find_sub_menu_item(items: Sequence[Item], key: str) -> SubMenuItem:
-        item = next((item for item in items if item.key == key), None)
-        if not isinstance(item, SubMenuItem):
-            msg = f'{key.capitalize()} menu item is not a `SubMenuItem`'
-            raise TypeError(msg)
-        return item
-
     if state is None:
         if isinstance(action, InitAction):
-            from .menus import HOME_MENU
-
-            return CompleteReducerResult(
-                state=MainState(menu=HOME_MENU),
-                events=[
-                    # This is required for redux store to initialize as it is set to not
-                    # initialize automatically with `auto_init` being set to `False` in
-                    # `CreateStoreOptions`
-                    InitEvent(),
-                ],
-            )
+            return MainState(menu=HOME_MENU)
         raise InitializationActionError(action)
 
     if state.is_recording:

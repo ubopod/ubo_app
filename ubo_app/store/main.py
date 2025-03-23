@@ -12,7 +12,16 @@ from asyncio import Handle, iscoroutine
 from datetime import datetime
 from pathlib import Path
 from types import GenericAlias
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar, cast, get_origin, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    TypeAlias,
+    TypeVar,
+    cast,
+    get_origin,
+    overload,
+)
 
 import dill
 from fake import Fake
@@ -20,17 +29,17 @@ from immutable import Immutable
 from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
+    CombineReducerRegisterAction,
     CreateStoreOptions,
     FinishAction,
     InitAction,
     Store,
     combine_reducers,
 )
-from redux.basic_types import SubscribeEventCleanup
+from redux.basic_types import StrictEvent, SubscribeEventCleanup
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logger import logger
-from ubo_app.store.core.reducer import reducer as main_reducer
 from ubo_app.store.core.types import MainAction, MainEvent
 from ubo_app.store.input.reducer import reducer as input_reducer
 from ubo_app.store.input.types import (
@@ -72,7 +81,6 @@ if TYPE_CHECKING:
     from redux.basic_types import (
         EventHandler,
         SnapshotAtom,
-        StrictEvent,
         TaskCreatorCallback,
     )
 
@@ -171,7 +179,6 @@ root_reducer, root_reducer_id = combine_reducers(
     state_type=RootState,
     action_type=UboAction,  # pyright: ignore [reportArgumentType]
     event_type=UboEvent,  # pyright: ignore [reportArgumentType]
-    main=main_reducer,
     settings=settings_reducer,
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
@@ -190,6 +197,60 @@ LoadedObject = (
     | list['LoadedObject']
     | set['LoadedObject']
 )
+
+
+class InThreadEventHandler(Generic[StrictEvent]):
+    def __init__(
+        self: InThreadEventHandler,
+        handler: EventHandler[StrictEvent],
+        *,
+        keep_ref: bool = True,
+    ) -> None:
+        self.handler_str = str(handler)
+        self.__name__ = f'InThreadHandler:{self.handler_str}'
+        if keep_ref:
+            self.handler_ref = handler
+        elif inspect.ismethod(handler):
+            self.handler_ref = weakref.WeakMethod(handler)
+        else:
+            self.handler_ref = weakref.ref(handler)
+
+        self.task_runner = get_task_runner()
+
+    def __call__(self: InThreadEventHandler, event: StrictEvent) -> None:
+        async def wrapper() -> None:
+            if isinstance(self.handler_ref, weakref.ref):
+                handler = cast('EventHandler[StrictEvent]', self.handler_ref())
+                if not handler:
+                    return
+            else:
+                handler = self.handler_ref
+
+            parameters = 1
+            with contextlib.suppress(Exception):
+                parameters = len(
+                    [
+                        param
+                        for param in inspect.signature(
+                            handler,
+                        ).parameters.values()
+                        if param.kind
+                        in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
+                    ],
+                )
+
+            if parameters == 0:
+                result = cast('Callable[[], Any]', handler)()
+            else:
+                result = cast('Callable[[StrictEvent], Any]', handler)(event)
+            if iscoroutine(result):
+                await result
+
+        self.task_runner(wrapper())
+
+    def __repr__(self: InThreadEventHandler) -> str:
+        """Return a string representation of the instance containing the handler."""
+        return f'<InThreadHandler:{self.handler_str}>'
 
 
 class UboStore(Store[RootState, UboAction, UboEvent]):
@@ -295,59 +356,14 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         msg = f'Invalid data type {type(data)}'
         raise TypeError(msg)
 
-    def subscribe_event(  # noqa: C901
+    def subscribe_event(
         self: UboStore,
         event_type: type[StrictEvent],
         handler: EventHandler[StrictEvent],
         *,
         keep_ref: bool = True,
     ) -> SubscribeEventCleanup:
-        task_runner = get_task_runner()
-        if keep_ref:
-            handler_ref = handler
-        elif inspect.ismethod(handler):
-            handler_ref = weakref.WeakMethod(handler)
-        else:
-            handler_ref = weakref.ref(handler)
-
-        handler_str = str(handler)
-
-        class InThreadHandler:
-            def __call__(self: InThreadHandler, event: StrictEvent) -> None:
-                async def wrapper() -> None:
-                    if isinstance(handler_ref, weakref.ref):
-                        handler = cast('EventHandler[StrictEvent]', handler_ref())
-                        if not handler:
-                            return
-                    else:
-                        handler = handler_ref
-
-                    parameters = 1
-                    with contextlib.suppress(Exception):
-                        parameters = len(
-                            [
-                                param
-                                for param in inspect.signature(
-                                    handler,
-                                ).parameters.values()
-                                if param.kind
-                                in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
-                            ],
-                        )
-
-                    if parameters == 0:
-                        result = cast('Callable[[], Any]', handler)()
-                    else:
-                        result = cast('Callable[[StrictEvent], Any]', handler)(event)
-                    if iscoroutine(result):
-                        await result
-
-                task_runner(wrapper())
-
-            def __repr__(self: InThreadHandler) -> str:
-                return f'<InThreadHandler:{handler_str}>'
-
-        in_thread_handler = InThreadHandler()
+        in_thread_handler = InThreadEventHandler(handler, keep_ref=keep_ref)
 
         if keep_ref:
             return super().subscribe_event(
@@ -425,7 +441,17 @@ store = UboStore(
     ),
 )
 
+
+from ubo_app.store.core.reducer import reducer as main_reducer  # noqa: E402
+
 store.dispatch(InitAction())
+store.dispatch(
+    CombineReducerRegisterAction(
+        _id=root_reducer_id,
+        key='main',
+        reducer=main_reducer,
+    ),
+)
 
 if DEBUG_MODE:
     store._subscribe(  # noqa: SLF001
