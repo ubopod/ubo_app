@@ -45,15 +45,6 @@ APPS_MENU = HeadlessMenu(
     placeholder='No apps',
 )
 
-
-SETTINGS_ITEMS: dict[SettingsCategory, Sequence[Item]] = {
-    SettingsCategory.NETWORK: [],
-    SettingsCategory.REMOTE: [],
-    SettingsCategory.SYSTEM: SYSTEM_MENU,
-    SettingsCategory.SPEECH: [],
-    SettingsCategory.DOCKER: [],
-}
-
 SETTINGS_MENU = HeadlessMenu(
     title='Settings',
     items=[
@@ -63,14 +54,13 @@ SETTINGS_MENU = HeadlessMenu(
             icon=SETTINGS_ICONS[category],
             sub_menu=HeadlessMenu(
                 title=SETTINGS_ICONS[category] + category,
-                items=SETTINGS_ITEMS[category],
+                items=SYSTEM_MENU if category is SettingsCategory.SYSTEM else [],
                 placeholder='No settings in this category',
             ),
         )
         for category in SettingsCategory
     ],
 )
-
 
 MAIN_MENU = HeadlessMenu(
     title='󰍜Main',

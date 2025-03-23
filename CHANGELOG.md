@@ -45,6 +45,7 @@
 - test: mock `has_gateway` and better mock `send_command` to make it return `done` instead of `Connected` when the command is not `connection`
 - refactor(core): use latest version of `python-redux` and `ubo-gui` and remove all `@mainthread` decorators for actions on the menu as `ubo-gui` now takes care of running them in the main thread itself
 - fix(core): improve resource cleanup of service threads so that they can be restarted after being stopped
+- refactor(core): defer attaching the main reducer to the root reducer using `CombineReducerRegisterAction` to avoid circular imports or sacrificing the purity of reducers.
 
 ## Version 1.2.2
 

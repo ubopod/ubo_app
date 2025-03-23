@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-import zlib
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -87,6 +86,8 @@ def render_on_display(*, regions: list[Region]) -> None:
     def generate_render_actions(
         region: Region,
     ) -> tuple[DisplayRenderEvent, DisplayCompressedRenderEvent]:
+        import zlib
+
         data = region['data'].tobytes()
         compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
         return (
