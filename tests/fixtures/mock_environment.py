@@ -249,9 +249,9 @@ async def _fake_create_subprocess_exec(  # noqa: C901
     if command == 'pulseaudio':
         return FakeAsyncProcess()
 
-    from ubo_app.logger import logger
-
     if not expected:
+        from ubo_app.logger import logger
+
         logger.info(
             'Unexpected `async_create_subprocess_exec` command in test environment:',
             extra={

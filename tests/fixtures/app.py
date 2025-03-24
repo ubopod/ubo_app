@@ -21,7 +21,6 @@ modules_snapshot = set(sys.modules).union(
     {
         'kivy.cache',
         'numpy',
-        'ubo_app.display',
         'ubo_app.utils.monitor_unit',
     },
 )
@@ -146,13 +145,6 @@ class AppContext:
         from kivy.core.window import Window
 
         Window.close()
-
-        from ubo_app.utils import IS_RPI
-
-        if IS_RPI:
-            from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
-
-            GPIO.cleanup(17)
 
 
 class ConditionalFSWrapper:
@@ -329,9 +321,6 @@ async def app_context(
 
         yield context
 
-        from ubo_app import display
-
-        display.turn_off()
         await context.cleanup()
         for cleanup in logger_cleanups:
             cleanup()

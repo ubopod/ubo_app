@@ -43,6 +43,7 @@ KEY_INDEX = {
     6: Key.HOME,
 }
 MIC_INDEX = 7
+BUS_ADDRESS = 0x58
 
 
 class Keypad:
@@ -63,9 +64,6 @@ class Keypad:
         self.logger.info('Initialising keypad...')
         self.previous_inputs = 0
         self.aw = None
-        self.bus_address = 0x58
-        self.model = 'aw9523'
-        self.enabled = True
         self.init_i2c()
 
     @staticmethod
@@ -112,7 +110,7 @@ class Keypad:
         import adafruit_aw9523
 
         # Search for the GPIO expander address on the I2C bus
-        aw = adafruit_aw9523.AW9523(i2c, self.bus_address)
+        aw = adafruit_aw9523.AW9523(i2c, BUS_ADDRESS)
         return aw, aw.i2c_device
 
     def init_i2c(self: Keypad) -> None:
@@ -123,14 +121,16 @@ class Keypad:
 
         i2c = board.I2C()
         # Set this to the GPIO of the interrupt:
-        btn = Button(INT_EXPANDER)
+        button = Button(INT_EXPANDER)
 
         try:
             self.aw, new_i2c = self._initialize_i2c(i2c)
         except Exception as e:
-            self.bus_address = False
-            self.logger.exception('Failed to initialize I2C Bus on address 0x58')
-            msg = 'Failed to initialize I2C Bus on address 0x58'
+            self.logger.exception(
+                'Failed to initialize I2C Bus on address',
+                extra={'bus_address': BUS_ADDRESS},
+            )
+            msg = f'Failed to initialize I2C Bus on address {BUS_ADDRESS}'
             raise KeypadError(msg) from e
 
         # Perform soft reset of the expander
@@ -156,7 +156,7 @@ class Keypad:
         time.sleep(0.5)
 
         # Interrupt callback when any button is pressed
-        btn.when_pressed = self.key_press_cb
+        button.when_pressed = self.key_press_cb
 
         is_mic_active = inputs & 1 << MIC_INDEX != 0
         self.on_button_event(
