@@ -132,6 +132,12 @@ def turn_off() -> None:
         display._block = lambda *args, **kwargs: (args, kwargs)  # noqa: SLF001
     render_blank()
 
+    if IS_RPI and display:
+        cs_pin.deinit()
+        dc_pin.deinit()
+        reset_pin.deinit()
+        spi.deinit()
+
 
 def render_blank() -> None:
     """Render a blank screen."""

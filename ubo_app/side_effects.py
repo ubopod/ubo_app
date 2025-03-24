@@ -36,7 +36,7 @@ from ubo_app.store.update_manager.utils import (
     update,
 )
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.hardware import IS_RPI, initialize_board
+from ubo_app.utils.hardware import IS_RPI, deinitalize_board, initialize_board
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.store import replay_actions
 
@@ -157,6 +157,8 @@ async def _replay_recorded_sequence() -> None:
 
 def setup_side_effects() -> Subscriptions:
     """Set up the side effects for the application."""
+    from ubo_app import display
+
     initialize_board()
 
     register_persistent_store(
@@ -181,6 +183,8 @@ def setup_side_effects() -> Subscriptions:
         store.subscribe_event(SnapshotEvent, _take_snapshot),
         store.subscribe_event(StoreRecordedSequenceEvent, _store_recorded_sequence),
         store.subscribe_event(ReplayRecordedSequenceEvent, _replay_recorded_sequence),
+        display.turn_off,
+        deinitalize_board,
     ]
 
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
