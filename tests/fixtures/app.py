@@ -84,7 +84,7 @@ class AppContext:
         self._cleanup_is_called = True
         from redux import FinishAction
 
-        from ubo_app.store.main import store
+        from ubo_app.store.main import scheduler, store
 
         store.dispatch(FinishAction())
         store.wait_for_event_handlers()
@@ -98,7 +98,8 @@ class AppContext:
         for event in [*Clock.get_events()]:
             event.cancel()
 
-        await asyncio.sleep(3)
+        scheduler.join()
+
         self.app.root.clear_widgets()
         if not self.app.is_stopped:
             self.app.stop()
@@ -112,26 +113,20 @@ class AppContext:
         del self.app
         del self.task
 
-        for _ in range(3):
-            gc.collect()
-            app = app_ref()
-            if app is None:
-                break
-            await asyncio.sleep(1)
+        await asyncio.sleep(1)
+        gc.collect()
 
-        app = app_ref()
-
-        if app is not None and self.request.session.testsfailed == 0:
+        if app_ref() is not None and self.request.session.testsfailed == 0:
             logger.info(
                 'Memory leak: failed to release app for test.',
                 extra={
-                    'refcount': sys.getrefcount(app),
-                    'referrers': gc.get_referrers(app),
+                    'refcount': sys.getrefcount(app_ref()),
+                    'referrers': gc.get_referrers(app_ref()),
                     'ref': app_ref,
                 },
             )
             gc.collect()
-            for cell in gc.get_referrers(app):
+            for cell in gc.get_referrers(app_ref()):
                 if type(cell).__name__ == 'cell':
                     from ubo_app.utils.garbage_collection import examine
 
@@ -140,7 +135,7 @@ class AppContext:
                         extra={'cell': cell},
                     )
                     examine(cell, depth_limit=2)
-            assert app is None, 'Memory leak: failed to release app for test'
+            assert app_ref() is None, 'Memory leak: failed to release app for test'
 
         from kivy.core.window import Window
 

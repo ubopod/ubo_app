@@ -18,42 +18,114 @@ from ubo_app.utils import IS_RPI
 from ubo_app.utils.eeprom import get_eeprom_data
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from headless_kivy.config import Region
 
 
 from ubo_app.constants import HEIGHT, WIDTH
 
-if IS_RPI:
-    eeprom_data = get_eeprom_data()
 
-    if (
-        eeprom_data is not None
-        and 'lcd' in eeprom_data
-        and eeprom_data['lcd'] is not None
-        and eeprom_data['lcd']['model'] == 'st7789'
-    ):
-        import board
-        import digitalio
+class Display:
+    """Display class."""
 
-        cs_pin = digitalio.DigitalInOut(board.CE0)
-        dc_pin = digitalio.DigitalInOut(board.D25)
-        reset_pin = digitalio.DigitalInOut(board.D24)
-        spi = board.SPI()
-        display = ST7789(
-            spi,
-            height=HEIGHT,
-            width=WIDTH,
-            y_offset=80,
-            x_offset=0,
-            cs=cs_pin,
-            dc=dc_pin,
-            rst=reset_pin,
-            baudrate=70_000_000,
+    def __init__(self: Display) -> None:
+        """Initialize the display."""
+        if IS_RPI:
+            eeprom_data = get_eeprom_data()
+
+            if (
+                eeprom_data is not None
+                and 'lcd' in eeprom_data
+                and eeprom_data['lcd'] is not None
+                and eeprom_data['lcd']['model'] == 'st7789'
+            ):
+                import board
+                import digitalio
+
+                self.cs_pin = digitalio.DigitalInOut(board.CE0)
+                self.dc_pin = digitalio.DigitalInOut(board.D25)
+                self.reset_pin = digitalio.DigitalInOut(board.D24)
+                self.spi = board.SPI()
+                self.display = ST7789(
+                    self.spi,
+                    height=HEIGHT,
+                    width=WIDTH,
+                    y_offset=80,
+                    x_offset=0,
+                    cs=self.cs_pin,
+                    dc=self.dc_pin,
+                    rst=self.reset_pin,
+                    baudrate=70_000_000,
+                )
+            else:
+                self.display = None
+        else:
+            self.display = cast('ST7789', Fake())
+
+    def turn_off(self: Display) -> None:
+        """Turn off the display and free resources."""
+        if self.display:
+            render = self.display._block  # noqa: SLF001
+            self.display = None
+            self.render_blank(render)
+            del render
+
+            if IS_RPI:
+                self.cs_pin.deinit()
+                self.dc_pin.deinit()
+                self.reset_pin.deinit()
+                self.spi.deinit()
+
+                import lgpio  # pyright: ignore [reportMissingModuleSource]
+                from adafruit_blinka.microcontroller.generic_linux.lgpio_pin import CHIP
+
+                lgpio.gpiochip_close(CHIP)
+
+    def render_blank(self: Display, render_function: Callable | None = None) -> None:
+        """Render a blank screen."""
+        if IS_RPI:
+            if not render_function and self.display is not None:
+                render_function = self.display._block  # noqa: SLF001
+            if render_function:
+                render_function(
+                    0,
+                    0,
+                    WIDTH - 1,
+                    HEIGHT - 1,
+                    b'\x00\x00' * WIDTH * HEIGHT,
+                )
+                time.sleep(0.2)
+                render_function(
+                    0,
+                    0,
+                    WIDTH - 1,
+                    HEIGHT - 1,
+                    b'\x00\x00' * WIDTH * HEIGHT,
+                )
+
+    def render_block(
+        self: Display,
+        *,
+        rectangle: tuple[int, int, int, int],
+        data_bytes: bytes,
+        bypass_pause: bool = False,
+    ) -> None:
+        """Block the display."""
+
+        @store.with_state(
+            lambda state: state.display.is_paused
+            if hasattr(state, 'display')
+            else False,
         )
-    else:
-        display = None
-else:
-    display = cast('ST7789', Fake())
+        def render(is_paused: bool) -> None:  # noqa: FBT001
+            if self.display is not None and (not is_paused or bypass_pause):
+                self.display._block(*rectangle, data_bytes)  # noqa: SLF001
+
+        render()
+
+
+display = Display()
 
 
 def render_on_display(*, regions: list[Region]) -> None:
@@ -69,7 +141,7 @@ def render_on_display(*, regions: list[Region]) -> None:
         data_bytes = (
             color.astype(np.uint16).view(np.uint8).reshape(-1, 2)[:, ::-1].tobytes()
         )
-        render_block(
+        display.render_block(
             rectangle=(
                 rectangle[1],
                 rectangle[0],
@@ -108,47 +180,11 @@ def render_on_display(*, regions: list[Region]) -> None:
     )
 
 
-original_block = display._block if display is not None else None  # noqa: SLF001
-
-
-@store.with_state(
-    lambda state: state.display.is_paused if hasattr(state, 'display') else False,
-)
-def render_block(
-    is_paused: bool,  # noqa: FBT001
-    *,
-    rectangle: tuple[int, int, int, int],
-    data_bytes: bytes,
-    bypass_pause: bool = False,
-) -> None:
-    """Block the display."""
-    if display is not None and (not is_paused or bypass_pause):
-        display._block(*rectangle, data_bytes)  # noqa: SLF001
-
-
-def turn_off() -> None:
-    """Turn off the display."""
-    if display is not None:
-        display._block = lambda *args, **kwargs: (args, kwargs)  # noqa: SLF001
-    render_blank()
-
-    if IS_RPI and display:
-        cs_pin.deinit()
-        dc_pin.deinit()
-        reset_pin.deinit()
-        spi.deinit()
-
-
-def render_blank() -> None:
-    """Render a blank screen."""
-    if IS_RPI and original_block is not None:
-        original_block(0, 0, WIDTH - 1, HEIGHT - 1, b'\x00\x00' * WIDTH * HEIGHT)
-        time.sleep(0.2)
-        original_block(0, 0, WIDTH - 1, HEIGHT - 1, b'\x00\x00' * WIDTH * HEIGHT)
-
-
 splash_screen = None
 if splash_screen:
-    render_block(rectangle=(0, 0, WIDTH - 1, HEIGHT - 1), data_bytes=splash_screen)
+    display.render_block(
+        rectangle=(0, 0, WIDTH - 1, HEIGHT - 1),
+        data_bytes=splash_screen,
+    )
 else:
-    render_blank()
+    display.render_blank()

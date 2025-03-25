@@ -161,7 +161,7 @@ jobs:
           THREADS: ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
         run: |
           mkdir -p $HOME/.kivy/mods
-          uv run --frozen poe test --verbosity=2 --make-screenshots --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n "$THREADS"
+          uv run --frozen poe test --verbosity=2 --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n "$THREADS"
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4

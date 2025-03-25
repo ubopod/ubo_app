@@ -161,7 +161,7 @@ def _clear_signal_handlers() -> None:
 
 def signal_handler(signum: int, _: object) -> None:
     """Handle the signal."""
-    from ubo_app import display
+    from ubo_app.display import display
     from ubo_app.error_handlers import get_all_thread_stacks
     from ubo_app.logger import logger
 

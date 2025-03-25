@@ -5,6 +5,8 @@ from ubo_app.utils import IS_RPI
 
 
 def initialize_board() -> None:
+    import ubo_app.display as _  # noqa: F401
+
     if not IS_RPI:
         return
 
@@ -22,15 +24,9 @@ def deinitalize_board() -> None:
 
     GPIO.cleanup(17)
 
-    import board
-    from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
+    from ubo_app.display import display
 
-    if board.CE0.id:
-        GPIO.cleanup(board.CE0.id)
-    if board.D25.id:
-        GPIO.cleanup(board.D25.id)
-    if board.D24.id:
-        GPIO.cleanup(board.D24.id)
+    display.turn_off()
 
     from gpiozero.devices import _shutdown
 

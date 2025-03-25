@@ -162,7 +162,7 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
             np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
         )
 
-        from ubo_app import display
+        from ubo_app.display import display
 
         display.render_block(
             rectangle=(0, 0, width - 1, height - 1),
