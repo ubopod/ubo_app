@@ -47,6 +47,7 @@
 - fix(core): improve resource cleanup of service threads so that they can be restarted after being stopped
 - refactor(core): defer attaching the main reducer to the root reducer using `CombineReducerRegisterAction` to avoid circular imports or sacrificing the purity of reducers.
 - fix(core): add cleanup for gpio pins including display pins and run `gpiozero.devices._shutdown` as part of the cleanup process
+- test: wait for scheduler to completely stop before stopping the kivy app to make sure no `kivy.clock.Clock` event gets scheduled after the app is stopped
 
 ## Version 1.2.2
 

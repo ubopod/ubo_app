@@ -63,6 +63,8 @@ def init_service() -> Subscriptions:
     def set_playback_mute(is_mute: bool) -> None:  # noqa: FBT001
         audio_manager.set_playback_mute(mute=is_mute)
 
+    _ = set_playback_volume, set_capture_valume, set_playback_mute
+
     def play_chime(event: AudioPlayChimeEvent) -> None:
         filename = Path(__file__).parent.joinpath(f'sounds/{event.name}.wav').as_posix()
         with wave.open(filename, 'rb') as wave_file:
