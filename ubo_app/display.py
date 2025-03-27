@@ -31,6 +31,11 @@ class Display:
 
     def __init__(self: Display) -> None:
         """Initialize the display."""
+        self.cs_pin = None
+        self.dc_pin = None
+        self.reset_pin = None
+        self.spi = None
+        self.display = None
         if IS_RPI:
             eeprom_data = get_eeprom_data()
 
@@ -58,8 +63,6 @@ class Display:
                     rst=self.reset_pin,
                     baudrate=70_000_000,
                 )
-            else:
-                self.display = None
         else:
             self.display = cast('ST7789', Fake())
 
@@ -72,15 +75,23 @@ class Display:
             del render
 
             if IS_RPI:
-                self.cs_pin.deinit()
-                self.dc_pin.deinit()
-                self.reset_pin.deinit()
-                self.spi.deinit()
+                from adafruit_blinka.agnostic import detector
 
-                import lgpio  # pyright: ignore [reportMissingModuleSource]
-                from adafruit_blinka.microcontroller.generic_linux.lgpio_pin import CHIP
+                if detector.board.any_raspberry_pi_5_board:
+                    import lgpio  # pyright: ignore [reportMissingModuleSource]
+                    from adafruit_blinka.microcontroller.generic_linux import lgpio_pin
 
-                lgpio.gpiochip_close(CHIP)
+                    lgpio.gpiochip_close(lgpio_pin.CHIP)
+                else:
+                    import board
+                    from RPi import GPIO  # pyright: ignore [reportMissingModuleSource]
+
+                    if board.CE0.id:
+                        GPIO.cleanup(board.CE0.id)
+                    if board.D25.id:
+                        GPIO.cleanup(board.D25.id)
+                    if board.D24.id:
+                        GPIO.cleanup(board.D24.id)
 
     def render_blank(self: Display, render_function: Callable | None = None) -> None:
         """Render a blank screen."""

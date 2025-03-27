@@ -17,17 +17,17 @@ def initialize_board() -> None:
 
 
 def deinitalize_board() -> None:
-    if not IS_RPI:
-        return
-
-    from RPi import GPIO
-
-    GPIO.cleanup(17)
-
     from ubo_app.display import display
 
     display.turn_off()
 
+    if not IS_RPI:
+        return
+
     from gpiozero.devices import _shutdown
 
     _shutdown()
+
+    from RPi import GPIO
+
+    GPIO.cleanup(17)
