@@ -96,12 +96,12 @@ async def check_connection() -> None:
             ),
             IpSetIsConnectedAction(is_connected=False),
         )
-    await asyncio.sleep(1)
 
 
 async def monitor_connections(end_event: asyncio.Event) -> None:
     while not end_event.is_set():
         await check_connection()
+        await asyncio.sleep(1)
 
 
 IpMainMenu = SubMenuItem(

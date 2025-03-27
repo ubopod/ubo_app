@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from _constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
 from commands import check_status, restart, uninstall_service
-from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from login_page import LoginPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
@@ -232,7 +231,13 @@ def generate_vscode_menu() -> Callable[[], HeadedMenu]:
     return vscode_menu
 
 
-def init_service() -> Subscriptions:
+async def _monitor_status(end_event: asyncio.Event) -> None:
+    while not end_event.is_set():
+        await check_status()
+        await asyncio.sleep(1)
+
+
+async def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             menu_item=ActionItem(label='VSCode', icon='󰨞', action=generate_vscode_menu),
@@ -240,11 +245,14 @@ def init_service() -> Subscriptions:
         ),
     )
 
-    clock_event = Clock.schedule_interval(lambda _: create_task(check_status()), 1)
-    create_task(check_status())
+    await check_status()
+
+    end_event = asyncio.Event()
+    create_task(_monitor_status(end_event))
+
     return [
-        clock_event.cancel,
         store.subscribe_event(VSCodeRestartEvent, restart),
+        end_event.set,
     ]
 
 
