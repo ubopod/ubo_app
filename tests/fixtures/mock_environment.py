@@ -129,7 +129,6 @@ def _monkeypatch_rpi_modules() -> None:
     class FakeSensor(Fake):
         lux = 0.0
         temperature = 0.0
-        ALS_50MS = 0
 
     class FakeSensorModule(Fake):
         PCT2075 = FakeSensor

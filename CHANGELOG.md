@@ -54,7 +54,6 @@
 - refactor: avoid using `Clock.schedule_interval` and replace it with `asyncio.sleep` in services needing to periodically run a function
 - test: add `test_menu`, as the first in a category of tests purposed to reproduce rare and hard-to-reproduce bugs: these tests run a few times normally, but when `UBO_TEST_INVESTIGATION_MODE` environment variable is set, they repeat the expected reproduction steps thousands of times until the bug is reproduced, and then run a pdb session for investigation
 - refactor(services): better error representation containing more content in a single page
-- fix(sensors): explicitly set the `light_integration_time` for the light sensor - closes #269
 
 ## Version 1.2.2
 

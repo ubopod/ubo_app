@@ -40,7 +40,7 @@ dependencies = [
   "adafruit-circuitpython-neopixel>=6.3.11",
   "adafruit-circuitpython-pct2075>=1.1.21",
   "adafruit-circuitpython-rgb-display>=3.11.0",
-  "adafruit-circuitpython-veml7700>=2.1.2",
+  "adafruit-circuitpython-veml7700>=1.1.22",
   # RPi dependencies
   "piper-tts>=1.2.0 ; sys_platform=='linux'",
   "rpi-lgpio>=0.6 ; platform_machine=='aarch64'",
