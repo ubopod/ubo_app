@@ -6,21 +6,11 @@ import asyncio
 import subprocess
 from typing import TYPE_CHECKING
 
-from sdbus import DbusInterfaceCommonAsync, dbus_property_async
-
 from ubo_app.utils.bus_provider import get_system_bus
+from ubo_app.utils.dbus_interfaces import SystemdUnitInterface
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-
-class SystemdUnitInterface(
-    DbusInterfaceCommonAsync,
-    interface_name='org.freedesktop.systemd1.Unit',
-):
-    @dbus_property_async(property_signature='s')
-    def active_state(self: SystemdUnitInterface) -> str:
-        raise NotImplementedError
 
 
 def to_dbus_string(string: str) -> str:

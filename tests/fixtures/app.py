@@ -23,7 +23,8 @@ modules_snapshot = set(sys.modules).union(
     {
         'kivy.cache',
         'numpy',
-        'ubo_app.utils.monitor_unit',
+        # This need to persist because sdbus interfaces can't be unloaded
+        'ubo_app.utils.dbus_interfaces',
     },
 )
 
@@ -85,7 +86,7 @@ class AppContext:
         self.loop = asyncio.get_event_loop()
         self.task = self.loop.create_task(self.app.async_run(async_lib='asyncio'))
 
-    async def cleanup(self: AppContext) -> None:
+    async def _cleanup(self: AppContext) -> None:
         """Clean up the application."""
         if self._cleanup_is_called:
             return
@@ -107,6 +108,10 @@ class AppContext:
             event.cancel()
 
         scheduler.join()
+
+        from ubo_app.utils import bus_provider
+
+        bus_provider.clean_up()
 
         self.app.root.clear_widgets()
         if not self.app.is_stopped:
@@ -357,7 +362,7 @@ async def app_context(
 
             yield context
 
-            await context.cleanup()
+            await context._cleanup()  # noqa: SLF001
             for cleanup in logger_cleanups:
                 cleanup()
 
