@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import errno
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, TypeVar
@@ -14,6 +15,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.eeprom import get_eeprom_data
 
 if TYPE_CHECKING:
@@ -26,7 +28,7 @@ light_sensor: adafruit_veml7700.VEML7700 | None = None
 
 
 def read_sensors(_: float | None = None) -> None:
-    """Read the sensor."""
+    """Read the sensors."""
     temperature = 0.0 if temperature_sensor is None else temperature_sensor.temperature
     light = 0.0 if light_sensor is None else light_sensor.lux
     store.dispatch(
@@ -58,10 +60,14 @@ def _initialize_device(cls: type[T], address: int, i2c: busio.I2C) -> T:
     return cls(i2c, address)
 
 
+async def _monitor_sensors(end_event: asyncio.Event) -> None:
+    while not end_event.is_set():
+        read_sensors()
+        await asyncio.sleep(1)
+
+
 def init_service() -> Subscriptions:
     """Initialize the service."""
-    from kivy.clock import Clock
-
     eeprom_data = get_eeprom_data()
 
     global temperature_sensor, light_sensor  # noqa: PLW0603
@@ -97,7 +103,9 @@ def init_service() -> Subscriptions:
     except Exception:
         logger.exception('Error initializing light sensor')
 
-    clock_event = Clock.schedule_interval(read_sensors, 1)
     read_sensors()
 
-    return [clock_event.cancel]
+    end_event = asyncio.Event()
+    create_task(_monitor_sensors(end_event))
+
+    return [end_event.set]

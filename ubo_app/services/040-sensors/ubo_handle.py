@@ -6,14 +6,16 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ubo_handle import ReducerRegistrar, register
 
+    from ubo_app.utils.types import Subscriptions
 
-def setup(register_reducer: ReducerRegistrar) -> None:
+
+def setup(register_reducer: ReducerRegistrar) -> Subscriptions:
     from reducer import reducer
     from setup import init_service
 
     register_reducer(reducer)
 
-    init_service()
+    return init_service()
 
 
 register(
