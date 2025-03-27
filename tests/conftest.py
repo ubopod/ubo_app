@@ -10,6 +10,7 @@ import dotenv
 import pytest
 
 dotenv.load_dotenv(Path(__file__).parent / '.env')
+dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 
 pytest.register_assert_rewrite('tests.fixtures')
 

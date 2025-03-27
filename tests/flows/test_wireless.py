@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.wifi import WiFiState
 
 
+@pytest.mark.timeout(200)
 @pytest.mark.skipif(not IS_RPI, reason='Only runs on Raspberry Pi')
 async def test_wireless_flow(
     app_context: AppContext,

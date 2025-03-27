@@ -96,3 +96,7 @@ CORE_SERVICE_IDS = [
     'web_ui',
     'wifi',
 ]
+
+TEST_INVESTIGATION_MODE = str_to_bool(
+    os.environ.get('UBO_TEST_INVESTIGATION_MODE', 'False'),
+)

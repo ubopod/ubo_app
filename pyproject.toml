@@ -68,6 +68,9 @@ packages = ["ubo_app"]
 exclude = ["ubo_app/services/090-web-ui/web-app/node_modules"]
 artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
 
+[project.optional-dependencies]
+test-investigation = ["graphviz>=0.20.3", "objgraph>=3.6.2"]
+
 [tool.uv]
 dev-dependencies = [
   "grpcio-tools>=1.66.1",
@@ -100,7 +103,7 @@ ubo-redirect-server = "ubo_app.system.redirect_server:main"
 lint = "ruff check ."
 "lint:fix" = "ruff check . --fix --unsafe-fixes"
 typecheck = "pyright -p pyproject.toml ."
-test = "pytest --cov=ubo_app"
+test = "pytest"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
 build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install --include=dev && npm run compile && npm run build'"
@@ -282,7 +285,7 @@ filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
   "ignore:'imghdr' is deprecated:DeprecationWarning",
 ]
-timeout = 40
+timeout = 160
 
 [tool.coverage.report]
 exclude_also = ["if TYPE_CHECKING:"]

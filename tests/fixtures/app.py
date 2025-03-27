@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import gc
 import json
 import sys
@@ -15,6 +16,7 @@ import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
 
+from ubo_app.constants import TEST_INVESTIGATION_MODE
 from ubo_app.logger import logger
 
 modules_snapshot = set(sys.modules).union(
@@ -33,16 +35,22 @@ if TYPE_CHECKING:
     from _pytest.fixtures import SubRequest
 
     from ubo_app.menu_app.menu import MenuApp
+    from ubo_app.utils.garbage_collection import ClosureTracker
 
 
 class AppContext:
     """Context object for tests running a menu application."""
 
-    def __init__(self: AppContext, request: SubRequest) -> None:
+    def __init__(
+        self: AppContext,
+        request: SubRequest,
+        tracker: ClosureTracker | None = None,
+    ) -> None:
         """Initialize the context."""
         self.request = request
         self.persistent_store_data = {}
         self._cleanup_is_called = False
+        self.tracker = tracker
 
     def set_persistent_storage_value(
         self: AppContext,
@@ -126,6 +134,31 @@ class AppContext:
                 },
             )
             gc.collect()
+
+            if TEST_INVESTIGATION_MODE and self.tracker:
+                logger.info(
+                    'Cells info',
+                    extra={
+                        'cells': [
+                            self.tracker.get_cell_info(cell)
+                            for cell in gc.get_referrers(app_ref())
+                            if type(cell).__name__ == 'cell'
+                        ],
+                    },
+                )
+                with contextlib.suppress(ImportError):
+                    import objgraph
+
+                    objgraph.show_refs(
+                        [app_ref()],
+                        filename='/tmp/app_referrers.png',  # noqa: S108
+                    )
+
+                with contextlib.suppress(ImportError):
+                    import ipdb  # noqa: T100
+
+                    ipdb.set_trace()  # noqa: T100
+
             for cell in gc.get_referrers(app_ref()):
                 if type(cell).__name__ == 'cell':
                     from ubo_app.utils.garbage_collection import examine
@@ -311,23 +344,34 @@ async def app_context(
         is True
     )
 
-    with ConditionalFSWrapper(use_fake_fs=should_use_fake_fs) as patcher:
-        context = AppContext(request)
+    tracker = None
+    if TEST_INVESTIGATION_MODE:
+        from ubo_app.utils.garbage_collection import ClosureTracker
 
-        yield context
+        tracker = ClosureTracker()
+        tracker.start_tracking()
 
-        await context.cleanup()
-        for cleanup in logger_cleanups:
-            cleanup()
+    try:
+        with ConditionalFSWrapper(use_fake_fs=should_use_fake_fs) as patcher:
+            context = AppContext(request, tracker)
 
-    del patcher
+            yield context
 
-    assert not hasattr(context, 'app'), 'App not cleaned up'
+            await context.cleanup()
+            for cleanup in logger_cleanups:
+                cleanup()
 
-    del context
+        del patcher
 
-    for module_name in set(sys.modules) - modules_snapshot:
-        if not module_name.startswith('sdbus'):
-            del sys.modules[module_name]
+        assert not hasattr(context, 'app'), 'App not cleaned up'
 
-    gc.collect()
+        del context
+
+        for module_name in set(sys.modules) - modules_snapshot:
+            if not module_name.startswith('sdbus'):
+                del sys.modules[module_name]
+
+        gc.collect()
+    finally:
+        if TEST_INVESTIGATION_MODE and tracker:
+            tracker.stop_tracking()
