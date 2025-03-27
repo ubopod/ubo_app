@@ -56,7 +56,7 @@ T = TypeVar('T', bound=adafruit_pct2075.PCT2075 | adafruit_veml7700.VEML7700)
     ),
 )
 def _initialize_device(cls: type[T], address: int, i2c: busio.I2C) -> T:
-    """Initialize the I2C."""
+    """Initialize the I2C device."""
     return cls(i2c, address)
 
 
@@ -100,6 +100,7 @@ def init_service() -> Subscriptions:
                 int(eeprom_data['ambient']['bus_address'], 16),
                 i2c,
             )
+            light_sensor.light_integration_time = adafruit_veml7700.VEML7700.ALS_50MS
     except Exception:
         logger.exception('Error initializing light sensor')
 
