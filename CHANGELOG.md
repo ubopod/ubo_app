@@ -49,6 +49,7 @@
 - fix(core): add cleanup for gpio pins including display pins and run `gpiozero.devices._shutdown` as part of the cleanup process
 - test: wait for scheduler to completely stop before stopping the kivy app to make sure no `kivy.clock.Clock` event gets scheduled after the app is stopped
 - fix(core): add display cleanup for raspberry pi 4 as adafruit uses `RPi.GPIO` in pi 4 instead of `lgpio` which it uses for pi 5 and we already have a cleanup for it
+- test: add `UBO_TEST_INVESTIGATION_MODE` to enable advanced and costly tools like recording stack-trace of `cell`s, generating dependency graph using `objgraph` and running pdb session when memory leak is found to better investigate memory leaks
 
 ## Version 1.2.2
 

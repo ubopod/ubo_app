@@ -580,6 +580,15 @@ wheels = [
 ]
 
 [[package]]
+name = "graphviz"
+version = "0.20.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/83/5a40d19b8347f017e417710907f824915fba411a9befd092e52746b63e9f/graphviz-0.20.3.zip", hash = "sha256:09d6bc81e6a9fa392e7ba52135a9d49f1ed62526f96499325930e87ca1b5925d", size = 256455 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/be/d59db2d1d52697c6adc9eacaf50e8965b6345cc143f671e1ed068818d5cf/graphviz-0.20.3-py3-none-any.whl", hash = "sha256:81f848f2904515d8cd359cc611faba817598d2feaac4027b266aa3eda7b3dde5", size = 47126 },
+]
+
+[[package]]
 name = "grpcio"
 version = "1.71.0"
 source = { registry = "https://pypi.org/simple" }
@@ -994,6 +1003,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/df/a0/4e0f14d847cfc2a633a1c8621d00724f3206cfeddeb66d35698c4e2cf3d2/numpy-1.26.4-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:60dedbb91afcbfdc9bc0b1f3f402804070deed7392c23eb7a7f07fa857868e8a", size = 18093567 },
     { url = "https://files.pythonhosted.org/packages/d2/b7/a734c733286e10a7f1a8ad1ae8c90f2d33bf604a96548e0a4a3a6739b468/numpy-1.26.4-cp311-cp311-win32.whl", hash = "sha256:1af303d6b2210eb850fcf03064d364652b7120803a0b872f5211f5234b399f20", size = 5968812 },
     { url = "https://files.pythonhosted.org/packages/3f/6b/5610004206cf7f8e7ad91c5a85a8c71b2f2f8051a0c0c4d5916b76d6cbb2/numpy-1.26.4-cp311-cp311-win_amd64.whl", hash = "sha256:cd25bcecc4974d09257ffcd1f098ee778f7834c3ad767fe5db785be9a4aa9cb2", size = 15811913 },
+]
+
+[[package]]
+name = "objgraph"
+version = "3.6.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/74/60dfb345ca493d69551dd1ba599ceb6fe325527fedabe4217d6e030449e2/objgraph-3.6.2.tar.gz", hash = "sha256:00b9f2f40f7422e3c7f45a61c4dafdaf81f03ff0649d6eaec866f01030e51ad8", size = 759524 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/67/7bffbb861cb8a0a62b7df50738d35812bf40dc8bcc1559c04bdf593f1164/objgraph-3.6.2-py3-none-any.whl", hash = "sha256:8114c97712291c3ba30d882406a384d0a7651b307ea9a06e0d83836ccde85e15", size = 17667 },
 ]
 
 [[package]]
@@ -1829,6 +1847,12 @@ dependencies = [
     { name = "ubo-gui" },
 ]
 
+[package.optional-dependencies]
+test-investigation = [
+    { name = "graphviz" },
+    { name = "objgraph" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "grpcio-tools" },
@@ -1862,8 +1886,10 @@ requires-dist = [
     { name = "docker", specifier = ">=7.1.0" },
     { name = "fasteners", specifier = ">=0.19" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = ">=2.0.1" },
+    { name = "graphviz", marker = "extra == 'test-investigation'", specifier = ">=0.20.3" },
     { name = "headless-kivy", specifier = ">=0.12.2" },
     { name = "netifaces", specifier = ">=0.11.0" },
+    { name = "objgraph", marker = "extra == 'test-investigation'", specifier = ">=3.6.2" },
     { name = "onnxruntime", marker = "platform_machine == 'aarch64'", specifier = "==1.20.1" },
     { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = ">=1.2.0" },
     { name = "platformdirs", specifier = ">=4.2.0" },
@@ -1888,6 +1914,7 @@ requires-dist = [
     { name = "tenacity", specifier = ">=8.2.3" },
     { name = "ubo-gui", specifier = ">=0.13.14" },
 ]
+provides-extras = ["test-investigation"]
 
 [package.metadata.requires-dev]
 dev = [
