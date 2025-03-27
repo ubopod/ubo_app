@@ -1,0 +1,32 @@
+#:kivy 2.3.0
+
+<ErrorReportPage>:
+  BoxLayout:
+    orientation: 'horizontal'
+    padding: 0, dp(5), 0, root.padding_bottom
+
+    StencilView:
+      id: container
+      size_hint: 1, 1
+
+      BoxLayout:
+        pos: container.pos
+        orientation: 'vertical'
+        height: max(container.height, self.minimum_height)
+        width: container.width
+        y: container.y - (self.height - container.height)
+        id: scrollable_widget
+
+        Label:
+          text: root.text
+          markup: True
+          height: self.texture_size[1]
+          text_size: self.size[0], None
+          font_size: dp(14)
+          halign: 'left'
+          valign: 'top'
+          size_hint: 1, None
+
+        Widget:
+          size_hint: 1, 1
+          height: max(container.height - scrollable_widget.minimum_height, 0)

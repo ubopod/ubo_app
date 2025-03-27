@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import datetime
+import pathlib
 from typing import TYPE_CHECKING, TypedDict
 
+from kivy.lang.builder import Builder
+from kivy.metrics import dp
+from kivy.properties import StringProperty
 from ubo_gui.menu.types import (
     ApplicationItem,
     HeadedMenu,
     Item,
     SubMenuItem,
 )
+from ubo_gui.page import PageWidget
 
 from ubo_app.colors import (
     DANGER_COLOR,
@@ -32,8 +37,6 @@ from ubo_app.store.settings.types import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_gui.page import PageWidget
-
     from ubo_app.store.settings.types import ServiceState
 
 
@@ -43,13 +46,26 @@ class _Callbacks(TypedDict):
     items: Callable[[], list[Item]]
 
 
-def _generate_error_report_app(error: ErrorReport) -> type[PageWidget]:
-    from ubo_app.menu_app.notification_info import NotificationInfo
+def _generate_error_report_app(error: ErrorReport) -> PageWidget:
+    class ErrorReportPage(PageWidget):
+        text: str = StringProperty(error.message)
 
-    class ErrorReport(NotificationInfo):
-        text = error.message
+        def go_up(self: ErrorReportPage) -> None:
+            """Scroll up the error report."""
+            self.ids.scrollable_widget.y = max(
+                self.ids.scrollable_widget.y - dp(100),
+                self.ids.container.y
+                - (self.ids.scrollable_widget.height - self.ids.container.height),
+            )
 
-    return ErrorReport
+        def go_down(self: ErrorReportPage) -> None:
+            """Scroll down the error report."""
+            self.ids.scrollable_widget.y = min(
+                self.ids.scrollable_widget.y + dp(100),
+                self.ids.container.y,
+            )
+
+    return ErrorReportPage
 
 
 def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
@@ -57,16 +73,21 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
         lambda state: (
             state.settings.services[service_id].label,
             state.settings.services[service_id].is_active,
+            state.settings.services[service_id].errors,
         )
         if state.settings.services is not None and service_id in state.settings.services
         else None,
     )
-    def heading(data: tuple[str, bool] | None) -> str:
+    def heading(data: tuple[str, bool, list] | None) -> str:
         if data is None:
             return ''
-        label, is_active = data
+        label, is_active, errors = data
         return (
-            f'[color={RUNNING_COLOR}]󰪥[/color] {label}'
+            (
+                f'[color={WARNING_COLOR}]󰪥[/color] {label}'
+                if errors
+                else f'[color={RUNNING_COLOR}]󰪥[/color] {label}'
+            )
             if is_active
             else f'[color={STOPPED_COLOR}]󰝦[/color] {label}'
         )
@@ -267,3 +288,8 @@ def service_items(services: dict[str, ServiceState] | None) -> list[SubMenuItem]
         )
         for service in sorted(services.values(), key=lambda x: x.label)
     ]
+
+
+Builder.load_file(
+    pathlib.Path(__file__).parent.joinpath('error_report.kv').resolve().as_posix(),
+)
