@@ -50,6 +50,7 @@
 - test: wait for scheduler to completely stop before stopping the kivy app to make sure no `kivy.clock.Clock` event gets scheduled after the app is stopped
 - fix(core): add display cleanup for raspberry pi 4 as adafruit uses `RPi.GPIO` in pi 4 instead of `lgpio` which it uses for pi 5 and we already have a cleanup for it
 - test: add `UBO_TEST_INVESTIGATION_MODE` to enable advanced and costly tools like recording stack-trace of `cell`s, generating dependency graph using `objgraph` and running pdb session when memory leak is found to better investigate memory leaks
+- test: move all dbus custom interfaces in `ubo_app.utils.dbus_interfaces` and preserve it in test cleanup, this is due to sdbus having a hidden mapping of dbus interfaces to their implementations in the C code and it doesn't clean up the mapping when the interface is removed
 
 ## Version 1.2.2
 

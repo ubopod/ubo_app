@@ -7,12 +7,6 @@ import datetime
 from asyncio import Future
 from typing import TYPE_CHECKING
 
-from sdbus import (  # pyright: ignore [reportMissingModuleSource]
-    DbusInterfaceCommonAsync,
-    dbus_method_async,
-    dbus_property_async,
-    dbus_signal_async,
-)
 from ubo_gui.menu.types import (
     HeadedMenu,
     HeadlessMenu,
@@ -50,6 +44,7 @@ from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus
+from ubo_app.utils.dbus_interfaces import AccountsInterface, UserInterface
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -254,32 +249,6 @@ def users_menu(state: UsersState) -> Menu:
     )
 
 
-class _AccountsInterface(
-    DbusInterfaceCommonAsync,
-    interface_name='org.freedesktop.Accounts',
-):
-    @dbus_method_async(result_signature='ao')
-    async def list_cached_users(self: _AccountsInterface) -> list[str]:
-        raise NotImplementedError
-
-    @dbus_signal_async('o')
-    def user_added(self) -> str:
-        raise NotImplementedError
-
-    @dbus_signal_async('o')
-    def user_deleted(self) -> str:
-        raise NotImplementedError
-
-
-class _UserInterface(
-    DbusInterfaceCommonAsync,
-    interface_name='org.freedesktop.Accounts.User',
-):
-    @dbus_property_async(property_signature='s')
-    def user_name(self: _UserInterface) -> str:
-        raise NotImplementedError
-
-
 async def init_service() -> Subscriptions:
     """Initialize the Users service."""
     store.dispatch(
@@ -294,14 +263,8 @@ async def init_service() -> Subscriptions:
         ),
     )
 
-    subscriptions = [
-        store.subscribe_event(UsersCreateUserEvent, create_account),
-        store.subscribe_event(UsersDeleteUserEvent, delete_account),
-        store.subscribe_event(UsersResetPasswordEvent, reset_password),
-    ]
-
     bus = get_system_bus()
-    accounts_service = _AccountsInterface.new_proxy(
+    accounts_service = AccountsInterface.new_proxy(
         bus=bus,
         service_name='org.freedesktop.Accounts',
         object_path='/org/freedesktop/Accounts',
@@ -312,7 +275,7 @@ async def init_service() -> Subscriptions:
         return [
             UserState(
                 id=(
-                    user_name := await _UserInterface.new_proxy(
+                    user_name := await UserInterface.new_proxy(
                         bus=bus,
                         service_name='org.freedesktop.Accounts',
                         object_path=path,
@@ -335,7 +298,10 @@ async def init_service() -> Subscriptions:
             logger.info('User deleted', extra={'path': path})
             store.dispatch(UsersSetUsersAction(users=await get_users()))
 
-    create_task(monitor_user_added())
-    create_task(monitor_user_deleted())
-
-    return subscriptions
+    return [
+        store.subscribe_event(UsersCreateUserEvent, create_account),
+        store.subscribe_event(UsersDeleteUserEvent, delete_account),
+        store.subscribe_event(UsersResetPasswordEvent, reset_password),
+        create_task(monitor_user_added()).cancel,
+        create_task(monitor_user_deleted()).cancel,
+    ]
