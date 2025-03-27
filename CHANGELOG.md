@@ -48,6 +48,7 @@
 - refactor(core): defer attaching the main reducer to the root reducer using `CombineReducerRegisterAction` to avoid circular imports or sacrificing the purity of reducers.
 - fix(core): add cleanup for gpio pins including display pins and run `gpiozero.devices._shutdown` as part of the cleanup process
 - test: wait for scheduler to completely stop before stopping the kivy app to make sure no `kivy.clock.Clock` event gets scheduled after the app is stopped
+- fix(core): add display cleanup for raspberry pi 4 as adafruit uses `RPi.GPIO` in pi 4 instead of `lgpio` which it uses for pi 5 and we already have a cleanup for it
 
 ## Version 1.2.2
 
