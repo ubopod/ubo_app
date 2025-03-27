@@ -1892,7 +1892,7 @@ requires-dist = [
     { name = "adafruit-circuitpython-neopixel", specifier = ">=6.3.11" },
     { name = "adafruit-circuitpython-pct2075", specifier = ">=1.1.21" },
     { name = "adafruit-circuitpython-rgb-display", specifier = ">=3.11.0" },
-    { name = "adafruit-circuitpython-veml7700", specifier = ">=1.1.22" },
+    { name = "adafruit-circuitpython-veml7700", specifier = ">=2.1.2" },
     { name = "aiohttp", specifier = ">=3.9.1" },
     { name = "betterproto", extras = ["compiler"], specifier = ">=2.0.0b7" },
     { name = "dill", specifier = ">=0.3.8" },
