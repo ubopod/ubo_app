@@ -240,10 +240,6 @@ async def test_wireless_web_ui_flow(
     def store_snapshot_selector(state: RootState) -> WiFiState:
         return state.wifi
 
-    # Set the snapshot directory for this test
-    store_snapshot.directory = 'test_wireless/wireless_web_ui_flow'
-    window_snapshot.directory = 'test_wireless/wireless_web_ui_flow'
-
     app_context.set_app()
     unload_waiter = await load_services(
         ['display', 'notifications', 'wifi'],
