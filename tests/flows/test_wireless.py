@@ -293,16 +293,21 @@ async def test_wireless_web_ui_flow(
     window_snapshot.take()
 
     # Simulate web UI input
-    from ubo_app.store.input.types import InputResult
+    from ubo_app.store.input.types import InputProvideAction, InputResult
     store.dispatch(
-        InputResult(
-            method=InputMethod.WEB_DASHBOARD,
-            data={
-                'SSID': 'ubo-test-ssid',
-                'Password': 'test-password',
-                'Type': 'WPA2',
-                'Hidden': 'false',
-            },
+        InputProvideAction(
+            id='wifi-connection',
+            value='',
+            result=InputResult(
+                method=InputMethod.WEB_DASHBOARD,
+                data={
+                    'SSID': 'ubo-test-ssid',
+                    'Password': 'test-password',
+                    'Type': 'WPA2',
+                    'Hidden': 'false',
+                },
+                files={},
+            ),
         ),
     )
 
