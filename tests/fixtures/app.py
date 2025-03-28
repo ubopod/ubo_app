@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
     from types import TracebackType
 
-    from _pytest.fixtures import SubRequest
+    from _pytest.fixtures import SubRequest  # pyright: ignore[reportPrivateImportUsage]
 
     from ubo_app.menu_app.menu import MenuApp
     from ubo_app.utils.garbage_collection import ClosureTracker

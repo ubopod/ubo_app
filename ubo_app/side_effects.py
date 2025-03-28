@@ -41,7 +41,7 @@ from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.store import replay_actions
 
 if TYPE_CHECKING:
-    from numpy._typing import NDArray
+    from numpy._typing._array_like import NDArray
 
     from ubo_app.utils.types import Subscriptions
 

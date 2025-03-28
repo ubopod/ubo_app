@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
     from headless_kivy_pytest.fixtures import WindowSnapshot
-    from numpy._typing import NDArray
+    from numpy._typing import NDArray  # pyright: ignore[reportPrivateImportUsage]
     from redux_pytest.fixtures import StoreSnapshot
     from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
 
