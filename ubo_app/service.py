@@ -128,8 +128,8 @@ def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
     worker_thread.is_started.wait()
 
 
-def run_task(
-    task: Coroutine,
+def run_coroutine(
+    coroutine: Coroutine,
     callback: TaskCreatorCallback | None = None,
 ) -> Handle:
-    return worker_thread.run_task(task, callback)
+    return worker_thread.run_task(coroutine, callback)

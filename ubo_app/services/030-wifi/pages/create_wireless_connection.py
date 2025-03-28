@@ -103,6 +103,9 @@ async def input_wifi_connection(
     except asyncio.CancelledError:
         logger.debug('wifi connection input - cancelled')
         return
+    except Exception:
+        logger.exception('wifi connection input - error')
+        return
 
     logger.debug('wifi connection input - result', extra={'result': result})
 

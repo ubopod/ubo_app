@@ -125,14 +125,6 @@ async def _check_connection() -> None:
         store.dispatch(WiFiInputConnectionAction())
 
 
-def show_onboarding_notification() -> None:
-    store.dispatch(
-        NotificationsAddAction(
-            notification=ONBOARDING_NOTIFICATION,
-        ),
-    )
-
-
 def init_service() -> Subscriptions:
     create_task(update_wifi_list())
     create_task(setup_listeners())
@@ -165,8 +157,10 @@ def init_service() -> Subscriptions:
             default=False,
         ):
             logger.info('No internet connection, showing WiFi onboarding.')
-            show_onboarding_notification()
             store.dispatch(
+                NotificationsAddAction(
+                    notification=ONBOARDING_NOTIFICATION,
+                ),
                 WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True),
             )
 

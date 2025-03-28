@@ -110,7 +110,7 @@ class UboServiceLoader(importlib.abc.Loader):
         cast('Any', module).label = self.service.label
         cast('Any', module).service_id = self.service.service_id
         cast('Any', module).path = self.service.path
-        cast('Any', module).run_task = self.service.run_task
+        cast('Any', module).run_coroutine = self.service.run_coroutine
 
     def __repr__(self: UboServiceLoader) -> str:
         return f'{self.service.path}:ServiceLoader'
@@ -426,7 +426,7 @@ class UboServiceThread(threading.Thread):
             f'{self.service_id} label={self.label} name={self.name}>'
         )
 
-    def run_task(
+    def run_coroutine(
         self: UboServiceThread,
         coroutine: Coroutine,
         callback: Callable[[Task], None] | None = None,
