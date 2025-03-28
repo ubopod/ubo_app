@@ -8,8 +8,29 @@ import uuid
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
+from sdbus import dbus_exceptions
+from sdbus.utils.inspect import (
+    inspect_dbus_path,  # pyright: ignore [reportMissingImports]
+)
+from sdbus_async.networkmanager import (
+    AccessPoint,
+    ActiveConnection,
+    DeviceState,
+    NetworkConnectionSettings,
+    NetworkDeviceGeneric,
+    NetworkDeviceWireless,
+    NetworkManager,
+    NetworkManagerConnectionProperties,
+    NetworkManagerSettings,
+    NmDeviceNotAllowedError,
+)
+from sdbus_async.networkmanager.enums import (
+    ConnectionState as SdBusConnectionState,
+)
+from sdbus_async.networkmanager.enums import DeviceType
+from ubo_gui.constants import DANGER_COLOR
 
-from ubo_app.colors import DANGER_COLOR
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.notifications import (
@@ -24,26 +45,6 @@ from ubo_app.utils.bus_provider import get_system_bus
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
     from collections.abc import Coroutine
-
-from sdbus import dbus_exceptions
-from sdbus.utils.inspect import (  # pyright: ignore [reportMissingImports]
-    inspect_dbus_path,
-)
-from sdbus_async.networkmanager import (
-    AccessPoint,
-    ActiveConnection,
-    DeviceState,
-    NetworkConnectionSettings,
-    NetworkDeviceGeneric,
-    NetworkDeviceWireless,
-    NetworkManager,
-    NetworkManagerConnectionProperties,
-    NetworkManagerSettings,
-)
-from sdbus_async.networkmanager.enums import (
-    ConnectionState as SdBusConnectionState,
-)
-from sdbus_async.networkmanager.enums import DeviceType
 
 RETRIES = 3
 
@@ -104,8 +105,17 @@ async def get_wifi_device_state() -> NetState:
 @debounce(wait=0.5, options=DebounceOptions(trailing=True, time_window=2))
 async def request_scan() -> None:
     wifi_device = await get_wifi_device()
-    if wifi_device:
+    if wifi_device is None:
+        logger.warning('Cannot scan: WiFi device not found')
+        return
+    try:
         await wait_for(wifi_device.request_scan({}))
+    except NmDeviceNotAllowedError as e:
+        logger.exception('WiFi scan not allowed', extra={'error': e})
+    except TimeoutError:
+        logger.exception('WiFi scan timed out')
+    except Exception as e:
+        logger.exception('Unexpected error during WiFi scan', extra={'error': e})
 
 
 async def get_access_points() -> list[AccessPoint]:
@@ -226,7 +236,9 @@ async def add_wireless_connection(
     hidden: bool | None = False,
 ) -> None:
     network_manager = NetworkManager(get_system_bus())
-    await network_manager.wireless_enabled.set_async(True)
+    if not await network_manager.wireless_enabled.get_async():
+        await network_manager.wireless_enabled.set_async(True)
+        await asyncio.sleep(3)
 
     wifi_device = await get_wifi_device()
     if not wifi_device:
@@ -267,7 +279,6 @@ async def add_wireless_connection(
             'auth-alg': ('s', 'open'),
             'psk': ('s', password),
         }
-    from ubo_app.logger import logger
 
     properties: NetworkManagerConnectionProperties = {
         'connection': {
@@ -300,7 +311,9 @@ async def add_wireless_connection(
 
 async def connect_wireless_connection(ssid: str) -> None:
     network_manager = NetworkManager(get_system_bus())
-    await network_manager.wireless_enabled.set_async(True)
+    if not await network_manager.wireless_enabled.get_async():
+        await network_manager.wireless_enabled.set_async(True)
+        await asyncio.sleep(3)
 
     wifi_device = await get_wifi_device()
 

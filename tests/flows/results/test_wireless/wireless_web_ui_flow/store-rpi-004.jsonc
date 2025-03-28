@@ -1,0 +1,8 @@
+// store-rpi-004
+{
+  "_type": "WiFiState",
+  "connections": [],
+  "current_connection": null,
+  "has_visited_onboarding": null,
+  "state": "Disconnected"
+} 
