@@ -233,10 +233,9 @@ async def test_wireless_web_ui_flow(
     from ubo_app.store.core.types import (
         MenuChooseByIconAction,
         MenuChooseByLabelAction,
-        MenuGoBackAction,
     )
-    from ubo_app.store.main import store
     from ubo_app.store.input.types import InputMethod
+    from ubo_app.store.main import store
 
     def store_snapshot_selector(state: RootState) -> WiFiState:
         return state.wifi
