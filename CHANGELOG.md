@@ -57,6 +57,7 @@
 - fix(sensors): explicitly set the `light_integration_time` for the light sensor - closes #269
 - fix(core): add `task_runner` parameter to `async_.create_task` and use it with `async_.get_task_runner` in store event handlers instead of directly calling the task runner to make sure a reference to tasks are stored in the memory until they are finished, handle by `async_.create_task` - closes #247, closes #266
 - chore: update pyright and fix/silent newly reported type errors
+- fix(core): improve `has_gateway` utility function to ignore default routes with local scope - closes #251
 
 ## Version 1.2.2
 
