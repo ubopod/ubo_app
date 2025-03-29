@@ -23,13 +23,22 @@ async def has_gateway() -> bool:
             process = await asyncio.create_subprocess_exec(
                 'ip',
                 'route',
+                'show',
+                'default',
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
             await process.wait()
             if process.returncode == 0 and process.stdout:
                 for line in (await process.stdout.read()).splitlines():
-                    if line.startswith(b'default'):
+                    if (
+                        line.startswith(b'default')
+                        and b'scope link' not in line
+                        and b'127.' not in line
+                        and b'169.254.' not in line
+                        and b'::1' not in line
+                        and b'fe80::' not in line
+                    ):
                         return True
         else:
             # For macOS

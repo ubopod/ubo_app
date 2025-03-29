@@ -26,7 +26,7 @@ from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
-    from numpy._typing import NDArray
+    from numpy._typing._array_like import NDArray
 
     from ubo_app.utils.types import Subscriptions
 
