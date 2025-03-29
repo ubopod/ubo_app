@@ -16,9 +16,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Event, Thread
-
-from pythonping import ping
+from threading import Thread
 
 from ubo_app.constants import USERNAME
 from ubo_app.error_handlers import setup_error_handling
@@ -56,23 +54,6 @@ class ConnectionState:
     state: NetState = NetState.UNKNOWN
 
 
-connection_state = ConnectionState()
-
-finish_event = Event()
-
-
-def check_connection() -> None:
-    while not finish_event.is_set():
-        try:
-            response = ping('1.1.1.1', timeout=1, count=1, out=None)
-            connection_state.state = (
-                NetState.CONNECTED if response.success() else NetState.DISCONNECTED
-            )
-        except OSError:
-            connection_state.state = NetState.DISCONNECTED
-        time.sleep(0.25)
-
-
 def handle_command(command: str) -> str | None:
     header, *arguments = command.split()
     if header == 'led':
@@ -88,8 +69,6 @@ def handle_command(command: str) -> str | None:
         }
         if header in handlers:
             return handlers[header](*arguments)
-        if header == 'connection':
-            return connection_state.state
 
     return None
 
@@ -158,9 +137,6 @@ def _initialize() -> socket.socket:
     SOCKET_PATH.unlink(missing_ok=True)
     SOCKET_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    check_connection_thread = Thread(target=check_connection, name='Check connection')
-    check_connection_thread.start()
-
     logger.info('System Manager opening socket...')
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(SOCKET_PATH.as_posix())
@@ -186,8 +162,8 @@ def main() -> None:
     server = _initialize()
 
     remaining = b''
-    while True:
-        try:
+    try:
+        while True:
             connection, client_address = server.accept()
             try:
                 logger.debug(
@@ -218,13 +194,13 @@ def main() -> None:
                         connection.close()
                 raise
 
-        except (KeyboardInterrupt, SystemExit):
-            logger.exception('Interrupted')
-            logger.info('Shutting down...')
-            SOCKET_PATH.unlink()
-            try:
-                sys.exit(0)
-            except SystemExit:
-                os._exit(0)
-        except Exception:
-            logger.exception('Error in socket handling')
+    except (KeyboardInterrupt, SystemExit):
+        logger.exception('Interrupted')
+        logger.info('Shutting down...')
+        SOCKET_PATH.unlink()
+        try:
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0)
+    except Exception:
+        logger.exception('Error in socket handling')

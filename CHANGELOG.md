@@ -61,6 +61,7 @@
 - fix(display): decrease baudrate from 70,000,000 to 60,000,000 to avoid residual noise on the display - closes #236
 - fix(web-ui): don't interpret keys pressed outside the `#web-app-root`, or keys pressed on `HTMLInputElement`, `HTMLTextAreaElement`, `HTMLSelectElement` and `HTMLButtonElement` as interactions with the pod
 - fix(system): make system process completely exit when it's done so that systemd can restart it, the exit used to get blocked by the `check_connection` thread, also make it not exit simply because a client sends an empty datagram, the client may have crashed but system process doesn't need to exit - closes #272
+- refactor(ip): remove python-ping package and the connection monitoring code in the system-manager, use system ping command instead, this is because none of the python packages providing ping functionality are actively maintained and ping command has the benefit of not needing to run as root, lowering the communication traffic between the system process and the main process - closes #267
 
 ## Version 1.2.2
 

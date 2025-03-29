@@ -209,18 +209,11 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(subprocess, 'run', fake_subprocess_run)
 
 
-async def _fake_create_subprocess_exec(  # noqa: C901
+async def _fake_create_subprocess_exec(
     *_args: str,
     **kwargs: Any,  # noqa: ANN401
 ) -> object:
     from fake import Fake
-
-    class FakeAsyncProcess(Fake):
-        def __init__(self: FakeAsyncProcess, output: bytes = b'') -> None:
-            super().__init__(_Fake__attrs={'output': output})
-
-        async def communicate(self: FakeAsyncProcess) -> tuple[bytes, bytes]:
-            return cast('bytes', self.output), b''
 
     _ = kwargs
     command, *args = _args
@@ -239,6 +232,9 @@ async def _fake_create_subprocess_exec(  # noqa: C901
     if command in ('ip', 'nmcli', 'which') or command.endswith('/code'):
         expected = True
 
+    if command == 'ping' and args[0] == '8.8.8.8':
+        return Fake(_Fake__return_value=Fake(_Fake__await_value=True))
+
     if command == 'dpkg-query' and args[-1] in (
         'docker',
         'raspberrypi-ui-mods',
@@ -246,9 +242,6 @@ async def _fake_create_subprocess_exec(  # noqa: C901
         'route',
     ):
         expected = True
-
-    if command == 'pulseaudio':
-        return FakeAsyncProcess()
 
     if not expected:
         from ubo_app.logger import logger
@@ -260,6 +253,11 @@ async def _fake_create_subprocess_exec(  # noqa: C901
                 'kwargs': kwargs,
             },
         )
+        msg = (
+            'Unexpected `async_create_subprocess_exec` command in test '
+            f'environment: {command}'
+        )
+        raise ValueError(msg)
 
     return await originals['async_create_subprocess_exec'](*_args, **kwargs)
 
