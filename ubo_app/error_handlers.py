@@ -44,6 +44,16 @@ def get_all_thread_stacks() -> dict[str, list[str]]:
     return thread_stacks
 
 
+def get_all_thread_stacks_string() -> str:
+    result = ''
+    for thread_name, stack in get_all_thread_stacks().items():
+        result += thread_name + '\n'
+        result += '-----\n'
+        result += '\n'.join(stack) + '\n'
+        result += '------------------------------------------------------------------\n'
+    return result
+
+
 def global_exception_handler(
     exception_type: type[BaseException],
     exception_value: BaseException,

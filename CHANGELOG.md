@@ -60,6 +60,7 @@
 - fix(core): improve `has_gateway` utility function to ignore default routes with local scope - closes #251
 - fix(display): decrease baudrate from 70,000,000 to 60,000,000 to avoid residual noise on the display - closes #236
 - fix(web-ui): don't interpret keys pressed outside the `#web-app-root`, or keys pressed on `HTMLInputElement`, `HTMLTextAreaElement`, `HTMLSelectElement` and `HTMLButtonElement` as interactions with the pod
+- fix(system): make system process completely exit when it's done so that systemd can restart it, the exit used to get blocked by the `check_connection` thread, also make it not exit simply because a client sends an empty datagram, the client may have crashed but system process doesn't need to exit - closes #272
 
 ## Version 1.2.2
 

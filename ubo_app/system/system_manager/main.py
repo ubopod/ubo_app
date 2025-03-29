@@ -1,6 +1,8 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, PLR2004
 from __future__ import annotations
 
+import atexit
+import contextlib
 import grp
 import logging
 import os
@@ -14,7 +16,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Thread
+from threading import Event, Thread
 
 from pythonping import ping
 
@@ -22,7 +24,6 @@ from ubo_app.constants import USERNAME
 from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logger import (
     add_file_handler,
-    add_stdout_handler,
     get_log_level,
     get_logger,
 )
@@ -47,7 +48,6 @@ led_manager = LEDManager()
 logger = get_logger('system-manager')
 log_level = get_log_level() or logging.INFO
 add_file_handler(logger, log_level)
-add_stdout_handler(logger, log_level)
 logger.setLevel(log_level)
 
 
@@ -58,9 +58,11 @@ class ConnectionState:
 
 connection_state = ConnectionState()
 
+finish_event = Event()
+
 
 def check_connection() -> None:
-    while True:
+    while not finish_event.is_set():
         try:
             response = ping('1.1.1.1', timeout=1, count=1, out=None)
             connection_state.state = (
@@ -106,9 +108,6 @@ def setup_hostname() -> None:
     """Set the hostname to 'ubo'."""
     logger.info('Setting hostname...')
 
-    thread = Thread(target=check_connection)
-    thread.start()
-
     available_letters = list(
         set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
     )
@@ -138,9 +137,14 @@ def setup_hostname() -> None:
     )
     logger.info('Hostname set to %s', id)
 
+    # Add it to the hosts file
+    with Path('/etc/hosts').open('a+') as hosts_file:
+        if f'{id}\n' not in hosts_file.read():
+            hosts_file.write(f'127.0.0.1 {id}\n')
+            logger.info('Added %s to /etc/hosts', id)
 
-def main() -> None:
-    """Initialise the System-Manager."""
+
+def _initialize() -> socket.socket:
     setup_error_handling()
     logger.info('Initialising System-Manager...')
 
@@ -151,15 +155,17 @@ def main() -> None:
         ['spinning_wheel', '255', '255', '255', '50', '6', '100'],
     )
 
-    uid = pwd.getpwnam('root').pw_uid
-    gid = grp.getgrnam(USERNAME).gr_gid
-
     SOCKET_PATH.unlink(missing_ok=True)
     SOCKET_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    check_connection_thread = Thread(target=check_connection, name='Check connection')
+    check_connection_thread.start()
 
     logger.info('System Manager opening socket...')
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(SOCKET_PATH.as_posix())
+
+    atexit.register(server.close)
 
     server.listen()
     permission = (
@@ -167,34 +173,58 @@ def main() -> None:
     )
     SOCKET_PATH.chmod(permission)
 
+    uid = pwd.getpwnam('root').pw_uid
+    gid = grp.getgrnam(USERNAME).gr_gid
     os.chown(SOCKET_PATH, uid, gid)
-
     logger.info('System Manager Listening...')
+
+    return server
+
+
+def main() -> None:
+    """Run the system manager."""
+    server = _initialize()
+
     remaining = b''
     while True:
         try:
             connection, client_address = server.accept()
-            logger.debug('New connection:', extra={'client_address': client_address})
-            datagram = remaining + connection.recv(1024)
-            if not datagram:
-                break
-            if b'\0' not in datagram:
-                remaining = datagram
-                continue
+            try:
+                logger.debug(
+                    'New connection:',
+                    extra={'client_address': client_address},
+                )
+                datagram = remaining + connection.recv(1024)
+                if not datagram:
+                    connection.close()
+                    time.sleep(0.05)
+                    continue
+                if b'\0' not in datagram:
+                    remaining = datagram
+                    continue
 
-            command, remaining = datagram.split(b'\0', 1)
+                command, remaining = datagram.split(b'\0', 1)
 
-            logger.debug('Received command:', extra={'command': command})
-            thread = Thread(target=process_request, args=(command, connection))
-            thread.start()
+                logger.debug('Received command:', extra={'command': command})
+                thread = Thread(
+                    target=process_request,
+                    args=(command, connection),
+                    name=f'Thread to process command {command}',
+                )
+                thread.start()
+            except Exception:
+                with contextlib.suppress(Exception):
+                    if connection:
+                        connection.close()
+                raise
 
-        except KeyboardInterrupt:
-            logger.warning('Interrupted')
-            server.close()
+        except (KeyboardInterrupt, SystemExit):
+            logger.exception('Interrupted')
+            logger.info('Shutting down...')
+            SOCKET_PATH.unlink()
             try:
                 sys.exit(0)
             except SystemExit:
                 os._exit(0)
-    logger.info('Shutting down...')
-    server.close()
-    SOCKET_PATH.unlink()
+        except Exception:
+            logger.exception('Error in socket handling')
