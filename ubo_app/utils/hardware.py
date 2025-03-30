@@ -5,15 +5,8 @@ from ubo_app.utils import IS_RPI
 
 
 def initialize_board() -> None:
+    # Display will be initialized in the display module after importing it
     import ubo_app.display as _  # noqa: F401
-
-    if not IS_RPI:
-        return
-
-    from RPi import GPIO
-
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 
 def deinitalize_board() -> None:
@@ -27,7 +20,3 @@ def deinitalize_board() -> None:
     from gpiozero.devices import _shutdown
 
     _shutdown()
-
-    from RPi import GPIO
-
-    GPIO.cleanup(17)
