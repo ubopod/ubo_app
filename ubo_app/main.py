@@ -63,8 +63,8 @@ def main() -> None:
     headless_kivy.config.setup_headless_kivy(
         headless_kivy.config.SetupHeadlessConfig(
             bandwidth_limit=DISPLAY_BAUDRATE // BYTES_PER_PIXEL // 8 if IS_RPI else 0,
-            bandwidth_limit_window=0.03,
-            bandwidth_limit_overhead=10000,
+            bandwidth_limit_window=0.025,
+            bandwidth_limit_overhead=1000,
             region_size=60,
             callback=render_on_display,
             flip_vertical=True,

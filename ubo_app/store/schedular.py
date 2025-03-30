@@ -61,11 +61,21 @@ class Scheduler(threading.Thread):
         *,
         interval: bool,
         delay_duration: float | None,
+        last_call: float | None = None,
     ) -> None:
         """Call the callback function."""
         if self.stopped:
             return
-        await asyncio.sleep(delay_duration or 0.02)
+        if delay_duration is None:
+            delay_duration = 0.025
+        now = self.loop.time()
+        if last_call is None:
+            last_call = now
+        required_sleep = max(
+            delay_duration - max(now - last_call - delay_duration, 0),
+            0,
+        )
+        await asyncio.sleep(required_sleep)
         try:
             callback()
         except Exception:
@@ -79,6 +89,7 @@ class Scheduler(threading.Thread):
                         callback,
                         interval=interval,
                         delay_duration=delay_duration,
+                        last_call=now,
                     ),
                 ),
             )
