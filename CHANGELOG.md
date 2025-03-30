@@ -59,6 +59,7 @@
 - chore: update pyright and fix/silent newly reported type errors
 - fix(core): improve `has_gateway` utility function to ignore default routes with local scope - closes #251
 - fix(display): decrease baudrate from 70,000,000 to 60,000,000 to avoid residual noise on the display - closes #236
+- fix(web-ui): don't interpret keys pressed outside the `#web-app-root`, or keys pressed on `HTMLInputElement`, `HTMLTextAreaElement`, `HTMLSelectElement` and `HTMLButtonElement` as interactions with the pod
 
 ## Version 1.2.2
 

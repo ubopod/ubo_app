@@ -25,14 +25,32 @@ export function subscribeToBrowserEvents({
     return key in KEYS;
   }
 
-  function keyUpHandler({ key }: KeyboardEvent) {
-    if (isValidKey(key)) {
+  function keyUpHandler({ target, key }: KeyboardEvent) {
+    if (
+      target &&
+      target instanceof HTMLElement &&
+      (target.closest("#web-app-root") ||
+        target.querySelector("#web-app-root")) &&
+      !(target instanceof HTMLInputElement) &&
+      !(target instanceof HTMLTextAreaElement) &&
+      !(target instanceof HTMLSelectElement) &&
+      isValidKey(key)
+    ) {
       onKeyUp(KEYS[key]);
     }
   }
 
-  function keyDownHandler({ key }: KeyboardEvent) {
-    if (isValidKey(key)) {
+  function keyDownHandler({ target, key }: KeyboardEvent) {
+    if (
+      target &&
+      target instanceof HTMLElement &&
+      (target.closest("#web-app-root") ||
+        target.querySelector("#web-app-root")) &&
+      !(target instanceof HTMLInputElement) &&
+      !(target instanceof HTMLTextAreaElement) &&
+      !(target instanceof HTMLSelectElement) &&
+      isValidKey(key)
+    ) {
       onKeyDown(KEYS[key]);
     }
   }
