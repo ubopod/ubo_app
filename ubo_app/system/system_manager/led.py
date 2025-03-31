@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, cast
 import board
 from fake import Fake
 
-from ubo_app.logger import add_file_handler, add_stdout_handler, get_logger
+from ubo_app.logger import get_logger
 
 if Path('/proc/device-tree/model').read_text().startswith('Raspberry Pi 5'):
     import sys
@@ -36,8 +36,6 @@ class LEDManager:
     def __init__(self: LEDManager) -> None:
         self.logger = get_logger('system-manager')
         self._last_thread = None
-        add_file_handler(self.logger, logging.DEBUG)
-        add_stdout_handler(self.logger, logging.DEBUG)
         self.logger.setLevel(logging.DEBUG)
         self.logger.info('Initialising LEDManager...')
 
@@ -94,6 +92,11 @@ class LEDManager:
         if not self.led_ring_present:
             return
         self.set_all((0, 0, 0))
+
+    def run_initialization_loop(self: LEDManager) -> None:
+        self.run_command_thread_safe(
+            ['spinning_wheel', '255', '255', '255', '50', '6', '100'],
+        )
 
     def fill_upto(
         self: LEDManager,

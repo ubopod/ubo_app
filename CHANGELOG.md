@@ -65,6 +65,7 @@
 - refactor(core): move setting gpio 17 to `config.txt` so that it happens on boot and remove it from `hardware_initialization`
 - refactor(core): make the scheduler compensate for the time it took to run the last scheduled event, by waiting less time in the next scheduled event, also sync its frequency with the frequency of the display updates
 - feat(core): handle system signal `USR1` as the signal to initiate `ipdb` only if `DEBUG_MODE_PDB_SIGNAL` is set
+- refactor(system): improve the user experience of the reset button, add a pattern for restarting the app without killing it
 
 ## Version 1.2.2
 

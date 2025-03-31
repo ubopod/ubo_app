@@ -128,11 +128,9 @@ def _initialize() -> socket.socket:
     logger.info('Initialising System-Manager...')
 
     setup_hostname()
-    setup_reset_button()
+    setup_reset_button(led_manager)
 
-    led_manager.run_command_thread_safe(
-        ['spinning_wheel', '255', '255', '255', '50', '6', '100'],
-    )
+    led_manager.run_initialization_loop()
 
     SOCKET_PATH.unlink(missing_ok=True)
     SOCKET_PATH.parent.mkdir(parents=True, exist_ok=True)
