@@ -46,7 +46,7 @@ from ubo_app.store.input.types import (
     InputAction,
     InputResolveEvent,
 )
-from ubo_app.store.schedular import Scheduler
+from ubo_app.store.scheduler import Scheduler
 from ubo_app.store.services.audio import AudioAction, AudioEvent
 from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.display import DisplayAction, DisplayEvent

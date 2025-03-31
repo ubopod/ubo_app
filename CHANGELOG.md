@@ -64,6 +64,7 @@
 - refactor(ip): remove python-ping package and the connection monitoring code in the system-manager, use system ping command instead, this is because none of the python packages providing ping functionality are actively maintained and ping command has the benefit of not needing to run as root, lowering the communication traffic between the system process and the main process - closes #267
 - refactor(core): move setting gpio 17 to `config.txt` so that it happens on boot and remove it from `hardware_initialization`
 - refactor(core): make the scheduler compensate for the time it took to run the last scheduled event, by waiting less time in the next scheduled event, also sync its frequency with the frequency of the display updates
+- feat(core): handle system signal `USR1` as the signal to initiate `ipdb` only if `DEBUG_MODE_PDB_SIGNAL` is set
 
 ## Version 1.2.2
 

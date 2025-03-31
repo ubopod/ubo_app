@@ -56,9 +56,9 @@ true"
 
 if [ "$bootstrap" == "True" ] || [ "$env" == "True" ] || [ "$restart" == "True" ]; then
   run_on_pod_as_root "$(if [ "$bootstrap" == "True" ]; then echo "/opt/ubo/env/bin/ubo-bootstrap && systemctl daemon-reload && systemctl restart ubo-system.service &&"; fi)
-$(if [ "$env" == "True" ]; then echo "cat <<'EOF' > /tmp/.dev.env
-$(cat ubo_app/.dev.env)
-EOF &&
+$(if [ "$env" == "True" ]; then echo "cat <<EOF > /tmp/.dev.env
+$(cat ubo_app/.pod.dev.env)
+EOF
 chown ubo:ubo /tmp/.dev.env &&
 mv /tmp/.dev.env /opt/ubo/env/lib/python3.*/site-packages/ubo_app/ &&"; fi)
 $(if [ "$restart" == "True" ]; then echo "systemctl restart ubo-system.service &&"; fi)

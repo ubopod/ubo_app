@@ -65,7 +65,7 @@ tests/**/results/**/*mismatch.hash
 
 # Environments
 .venv
-.dev.env
+*.dev.env
 env/
 venv/
 ENV/
