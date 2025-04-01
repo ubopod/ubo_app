@@ -9,16 +9,18 @@ from typing import TYPE_CHECKING, TypeVarTuple
 
 from typing_extensions import TypeVar
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 service_id: str
 service_uid: str
 name: str
 label: str
-path: str
+path: Path
 
 if TYPE_CHECKING:
     from asyncio import Handle
-    from asyncio.tasks import Task
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Coroutine
 
     from redux.basic_types import TaskCreatorCallback
 
@@ -42,10 +44,10 @@ class WorkerThread(threading.Thread):
             self.is_started.set()
             self.loop.run_forever()
 
-    def run_task(
+    def run_coroutine(
         self: WorkerThread,
         coroutine: Coroutine,
-        callback: Callable[[Task], None] | None = None,
+        callback: TaskCreatorCallback | None = None,
     ) -> Handle:
         from ubo_app.constants import DEBUG_MODE_TASKS
 
@@ -132,4 +134,4 @@ def run_coroutine(
     coroutine: Coroutine,
     callback: TaskCreatorCallback | None = None,
 ) -> Handle:
-    return worker_thread.run_task(coroutine, callback)
+    return worker_thread.run_coroutine(coroutine, callback)

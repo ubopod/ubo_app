@@ -81,7 +81,7 @@ def main() -> None:
     if not DISABLE_GRPC:
         from ubo_app.rpc.server import serve as grpc_serve
 
-        worker_thread.run_task(grpc_serve())
+        worker_thread.run_coroutine(grpc_serve())
 
     load_services()
     app = MenuApp()

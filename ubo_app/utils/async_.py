@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import asyncio
-from threading import current_thread
-from typing import TYPE_CHECKING, ParamSpec, Protocol
+from typing import TYPE_CHECKING, ParamSpec
 
 from typing_extensions import TypeVar
+
+from ubo_app.utils.service import get_coroutine_runner
 
 if TYPE_CHECKING:
     from asyncio import Handle
@@ -13,36 +14,16 @@ if TYPE_CHECKING:
 
     from redux.basic_types import TaskCreatorCallback
 
+    from ubo_app.utils.types import CoroutineRunner
+
 
 tasks: list[Handle] = []
-
-TaskType = TypeVar('TaskType', infer_variance=True)
-
-
-class TaskRunner(Protocol):
-    def __call__(
-        self,
-        coroutine: Coroutine[None, None, TaskType],
-        callback: TaskCreatorCallback | None = None,
-    ) -> Handle: ...
-
-
-def _get_task_runner() -> TaskRunner:
-    import ubo_app.service
-    from ubo_app.service_thread import UboServiceThread
-
-    thread = current_thread()
-
-    if isinstance(thread, UboServiceThread):
-        return thread.run_coroutine
-
-    return ubo_app.service.run_coroutine
 
 
 def create_task(
     task: Coroutine,
     callback: TaskCreatorCallback | None = None,
-    task_runner: TaskRunner | None = None,
+    coroutine_runner: CoroutineRunner | None = None,
 ) -> Handle:
     def callback_(task: asyncio.Task) -> None:
         if callback:
@@ -63,10 +44,12 @@ def create_task(
     result.__name__ = f'task_wrapper_coroutine:{task.__name__}'
     result.__qualname__ = f'task_wrapper_coroutine:{task.__qualname__}'
 
-    if task_runner is None:
-        task_runner = _get_task_runner()
+    if coroutine_runner is None:
+        coroutine_runner = get_coroutine_runner()
 
-    handle = task_runner(result, callback_) if callback else task_runner(result)
+    handle = (
+        coroutine_runner(result, callback_) if callback else coroutine_runner(result)
+    )
 
     tasks.append(handle)
     signal.set()
@@ -82,6 +65,6 @@ def to_thread(
     *args: T_params.args,
     **kwargs: T_params.kwargs,
 ) -> Handle:
-    task_runner = _get_task_runner()
+    coroutine_runner = get_coroutine_runner()
 
-    return task_runner(asyncio.to_thread(task, *args, **kwargs))
+    return coroutine_runner(asyncio.to_thread(task, *args, **kwargs))

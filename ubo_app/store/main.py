@@ -72,8 +72,8 @@ from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.status_icons.types import StatusIconsAction
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 from ubo_app.store.update_manager.types import UpdateManagerAction
-from ubo_app.utils.async_ import _get_task_runner
 from ubo_app.utils.serializer import add_type_field
+from ubo_app.utils.service import get_coroutine_runner
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -217,7 +217,7 @@ class InThreadEventHandler(Generic[StrictEvent]):
         else:
             self.handler_ref = weakref.ref(handler)
 
-        self.task_runner = _get_task_runner()
+        self.coroutine_runner = get_coroutine_runner()
 
     def __call__(self: InThreadEventHandler, event: StrictEvent) -> None:
         async def wrapper() -> None:
@@ -257,7 +257,7 @@ class InThreadEventHandler(Generic[StrictEvent]):
         )
         from ubo_app.utils.async_ import create_task
 
-        create_task(coroutine, task_runner=self.task_runner)
+        create_task(coroutine, coroutine_runner=self.coroutine_runner)
 
     def __repr__(self: InThreadEventHandler) -> str:
         """Return a string representation of the instance containing the handler."""

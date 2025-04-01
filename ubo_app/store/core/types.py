@@ -3,13 +3,10 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
-from threading import current_thread
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
-
-from ubo_app.service_thread import UboServiceThread
 
 
 class SettingsCategory(StrEnum):
@@ -50,17 +47,9 @@ class UpdateLightDMState(MainAction):
 
 
 def service_default_factory() -> str:
-    thread = current_thread()
-    if isinstance(thread, UboServiceThread):
-        return thread.service_id
+    from ubo_app.utils.service import get_service
 
-    try:
-        from ubo_app.service import service_id
-    except ImportError as exception:
-        msg = 'Service ID is not available.'
-        raise ValueError(msg) from exception
-    else:
-        return service_id
+    return get_service().service_id
 
 
 class RegisterAppAction(MainAction):

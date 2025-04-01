@@ -17,7 +17,7 @@ from collections import OrderedDict
 from dataclasses import replace
 from importlib.machinery import PathFinder, SourceFileLoader
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from redux import (
     CombineReducerRegisterAction,
@@ -41,13 +41,14 @@ from ubo_app.store.settings.types import (
     SettingsStartServiceEvent,
     SettingsStopServiceEvent,
 )
+from ubo_app.utils.service import ServiceUnavailableError, get_service
 
 if TYPE_CHECKING:
-    from asyncio.tasks import Task
     from collections.abc import Callable, Coroutine, Sequence
     from importlib.machinery import ModuleSpec
     from types import ModuleType
 
+    from redux.basic_types import TaskCreatorCallback
     from ubo_handle import (  # pyright: ignore [reportMissingModuleSource]
         ReducerRegistrar,
         SetupFunction,
@@ -100,42 +101,21 @@ class UboModuleLoader(SourceFileLoader):
         return super().get_filename(name.split(':')[-1] if name else name)
 
 
-class UboServiceLoader(importlib.abc.Loader):
-    def __init__(self: UboServiceLoader, service: UboServiceThread) -> None:
-        self.service = service
-
-    def exec_module(self: UboServiceLoader, module: ModuleType) -> None:
-        cast('Any', module).name = self.service.name
-        cast('Any', module).service_uid = self.service.service_uid
-        cast('Any', module).label = self.service.label
-        cast('Any', module).service_id = self.service.service_id
-        cast('Any', module).path = self.service.path
-        cast('Any', module).run_coroutine = self.service.run_coroutine
-
-    def __repr__(self: UboServiceLoader) -> str:
-        return f'{self.service.path}:ServiceLoader'
-
-
 class UboServiceFinder(importlib.abc.MetaPathFinder):
     def find_spec(
         self: UboServiceFinder,
         fullname: str,
-        path: Sequence[str] | None,
+        _: Sequence[str] | None,
         target: ModuleType | None = None,
     ) -> ModuleSpec | None:
-        stack = traceback.extract_stack()
-        matching_path = next(
-            (
-                registered_path
-                for frame in stack[-2::-1]
-                for registered_path in SERVICES_BY_PATH.copy()
-                if frame.filename.startswith(registered_path.as_posix())
-            ),
-            None,
-        )
+        if fullname.startswith('ubo_app'):
+            return None
 
-        if matching_path in SERVICES_BY_PATH:
-            service = SERVICES_BY_PATH[matching_path]
+        try:
+            service = get_service()
+        except ServiceUnavailableError:
+            pass
+        else:
             module_name = f'{service.service_uid}:{fullname}'
 
             if not service.is_alive():
@@ -147,27 +127,9 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
                 )
                 raise ImportError(msg)
 
-            if fullname == 'ubo_app.service':
-                return importlib.util.spec_from_loader(
-                    module_name,
-                    UboServiceLoader(service),
-                )
-
             spec = PathFinder.find_spec(
                 fullname,
-                [matching_path.as_posix()],
-                target,
-            )
-            if spec and spec.origin:
-                spec.name = module_name
-                spec.loader = UboModuleLoader(fullname, spec.origin)
-            return spec
-
-        if fullname == 'ubo_app.service':
-            module_name = f'_:{fullname}'
-            spec = PathFinder.find_spec(
-                fullname,
-                path,
+                [service.path.as_posix()],
                 target,
             )
             if spec and spec.origin:
@@ -429,7 +391,7 @@ class UboServiceThread(threading.Thread):
     def run_coroutine(
         self: UboServiceThread,
         coroutine: Coroutine,
-        callback: Callable[[Task], None] | None = None,
+        callback: TaskCreatorCallback | None = None,
     ) -> asyncio.Handle:
         def task_wrapper(stack: str) -> None:
             task = self.loop.create_task(coroutine)
