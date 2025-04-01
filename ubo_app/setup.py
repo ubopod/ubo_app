@@ -137,15 +137,14 @@ def setup() -> None:
         )
 
     import ubo_app.display as _  # noqa: F401
+    from ubo_app.constants import DEBUG_MODE_PDB_SIGNAL
 
     if not IS_TEST_ENV:
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
 
-    from ubo_app.constants import DEBUG_MODE_PDB_SIGNAL
-
-    if DEBUG_MODE_PDB_SIGNAL:
-        signal.signal(signal.SIGUSR1, signal_handler)
+        if DEBUG_MODE_PDB_SIGNAL:
+            signal.signal(signal.SIGUSR1, signal_handler)
 
     from ubo_gui import setup as setup_ubo_gui
 

@@ -102,12 +102,12 @@ class AppContext:
 
         assert hasattr(self, 'task'), 'App not set for test'
 
+        scheduler.join()
+
         from kivy.clock import Clock
 
         for event in [*Clock.get_events()]:
             event.cancel()
-
-        scheduler.join()
 
         from ubo_app.utils import bus_provider
 

@@ -68,6 +68,7 @@
 - refactor(system): improve the user experience of the reset button, add a pattern for restarting the app without killing it
 - refactor(core): add unified API to access “current service” via thread-local, parent thread, or call stack
 - refactor(core): better representation of errors in logs and service menus
+- fix(ip): make sure the connection status is set to not-connected when ping is not generating any output
 
 ## Version 1.2.2
 

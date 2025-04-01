@@ -23,6 +23,8 @@ function subscribeToRenderEvents(
 
   const stream = store.subscribeEvent(subscribeEventRequest);
 
+  let context = canvas?.getContext("2d");
+
   stream.on("error", () =>
     setTimeout(() => subscribeToRenderEvents(store, canvas), 1000),
   );
@@ -39,20 +41,19 @@ function subscribeToRenderEvents(
     }
     const width = Math.round(240 * renderEvent.getDensity());
     const height = Math.round(240 * renderEvent.getDensity());
-    if (width !== canvas.width) canvas.width = width;
-    if (height !== canvas.height) canvas.height = height;
+    if (width !== canvas.width || height !== canvas.height) {
+      canvas.width = width;
+      canvas.height = height;
+      context = canvas.getContext("2d");
+    }
     inflate(compressedData, (error, data) => {
       if (error) {
         console.error(error);
         return;
       }
-      if (data) {
+      if (context && data) {
         const [y1, x1, y2, x2] = rectangle;
         const [width, height] = [x2 - x1, y2 - y1];
-
-        const context = canvas.getContext("2d");
-
-        if (!context) return;
 
         context.putImageData(
           new ImageData(new Uint8ClampedArray(data), width, height),

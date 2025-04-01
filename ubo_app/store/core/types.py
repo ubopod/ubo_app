@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
+from ubo_app.utils.service import ServiceUnavailableError
+
 
 class SettingsCategory(StrEnum):
     NETWORK = 'Network'
@@ -46,15 +48,18 @@ class UpdateLightDMState(MainAction):
     is_enable: bool
 
 
-def service_default_factory() -> str:
+def service_default_factory() -> str | None:
     from ubo_app.utils.service import get_service
 
-    return get_service().service_id
+    try:
+        return get_service().service_id
+    except ServiceUnavailableError:
+        return None
 
 
 class RegisterAppAction(MainAction):
     menu_item: Item
-    service: str = field(default_factory=service_default_factory)
+    service: str | None = field(default_factory=service_default_factory)
     key: str | None = None
 
 
@@ -63,7 +68,7 @@ class RegisterRegularAppAction(RegisterAppAction):
 
 
 class DeregisterRegularAppAction(MainAction):
-    service: str = field(default_factory=service_default_factory)
+    service: str | None = field(default_factory=service_default_factory)
     key: str | None = None
 
 

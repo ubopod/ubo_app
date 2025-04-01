@@ -5,10 +5,13 @@ from __future__ import annotations
 import random
 import sys
 import tracemalloc
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 originals = {}
 
@@ -209,7 +212,7 @@ def _monkeypatch_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(subprocess, 'run', fake_subprocess_run)
 
 
-async def _fake_create_subprocess_exec(
+async def _fake_create_subprocess_exec(  # noqa: C901
     *_args: str,
     **kwargs: Any,  # noqa: ANN401
 ) -> object:
@@ -233,7 +236,27 @@ async def _fake_create_subprocess_exec(
         expected = True
 
     if command == 'ping' and args[0] == '8.8.8.8':
-        return Fake(_Fake__return_value=Fake(_Fake__await_value=True))
+        import asyncio
+
+        packet_size_index = args.index('-s') + 1
+        if packet_size_index < len(args):
+            packet_size = int(args[packet_size_index])
+        else:
+            packet_size = 56
+
+        class PingResponse:
+            def __aiter__(self: PingResponse) -> AsyncIterator[bytes]:
+                return self
+
+            async def __anext__(self: PingResponse) -> bytes:
+                await asyncio.sleep(1)
+                return f'{packet_size + 8} bytes from'.encode()
+
+        return Fake(
+            _Fake__attrs={
+                'stdout': Fake(_Fake__aiter=PingResponse()),
+            },
+        )
 
     if command == 'dpkg-query' and args[-1] in (
         'docker',

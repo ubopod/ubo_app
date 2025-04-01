@@ -33,4 +33,4 @@ class StatusIconsRegisterAction(StatusIconsAction):
     color: str = 'white'
     priority: int = 0
     id: str | None = None
-    service: str = field(default_factory=service_default_factory)
+    service: str | None = field(default_factory=service_default_factory)

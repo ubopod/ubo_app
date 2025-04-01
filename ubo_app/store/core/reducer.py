@@ -157,7 +157,7 @@ def reducer(
 
     if isinstance(action, RegisterSettingAppAction):
         menu = state.menu
-        if not menu:
+        if not menu or not action.service:
             return state
         root_menu_items = menu_items(menu)
         main_menu_item = find_sub_menu_item(root_menu_items, 'main')
@@ -251,7 +251,7 @@ for the `RegisterSettingAppAction` instance."""
 
     if isinstance(action, RegisterRegularAppAction):
         menu = state.menu
-        if not menu:
+        if not menu or not action.service:
             return state
         root_menu_items = menu_items(menu)
         main_menu_item = find_sub_menu_item(root_menu_items, 'main')
@@ -316,12 +316,11 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         )
 
     if isinstance(action, DeregisterRegularAppAction):
+        if action.service is None:
+            return state
         key = f'{action.service}:'
         if action.key is not None:
             key += action.key
-
-        if key is None:
-            return state
 
         menu = state.menu
         if not menu:

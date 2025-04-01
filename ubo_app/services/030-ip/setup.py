@@ -8,10 +8,8 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import psutil
-from constants import INTERNET_STATE_ICON_ID, INTERNET_STATE_ICON_PRIORITY
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
@@ -20,13 +18,14 @@ from ubo_app.store.services.ip import (
     IpSetIsConnectedAction,
     IpUpdateInterfacesAction,
 )
-from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_app.utils.types import Subscriptions
+
+PING_TIMEOUT = 3.0
 
 
 @store.autorun(lambda state: state.ip.interfaces)
@@ -87,41 +86,39 @@ async def monitor_interfaces(end_event: asyncio.Event) -> None:
 
 
 async def monitor_connections(end_event: asyncio.Event) -> None:
-    process = await asyncio.create_subprocess_exec(
-        '/usr/bin/env',
-        'ping',
-        '8.8.8.8',
-        '-s',
-        '0',
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    received_lines: list[tuple[bytes, float]] = []
+    loop = asyncio.get_event_loop()
 
-    if process.stdout:
-        async for line in process.stdout:
-            if end_event.is_set():
-                process.kill()
-                break
-            if line.startswith(b'8 bytes from'):
-                store.dispatch(
-                    StatusIconsRegisterAction(
-                        icon='󰖟',
-                        priority=INTERNET_STATE_ICON_PRIORITY,
-                        id=INTERNET_STATE_ICON_ID,
-                    ),
-                    IpSetIsConnectedAction(is_connected=True),
-                )
-            else:
-                store.dispatch(
-                    StatusIconsRegisterAction(
-                        icon=f'[color={DANGER_COLOR}]󰪎[/color]',
-                        priority=INTERNET_STATE_ICON_PRIORITY,
-                        id=INTERNET_STATE_ICON_ID,
-                    ),
-                    IpSetIsConnectedAction(is_connected=False),
-                )
+    async def ping_process() -> None:
+        process = await asyncio.create_subprocess_exec(
+            '/usr/bin/env',
+            'ping',
+            '8.8.8.8',
+            '-s',
+            '0',
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        if process.stdout:
+            async for line in process.stdout:
+                if end_event.is_set():
+                    return
+                received_lines.append((line, loop.time()))
 
-        await asyncio.sleep(1)
+    create_task(ping_process())
+
+    while not end_event.is_set():
+        received_lines = [
+            line
+            for line in received_lines
+            if loop.time() - line[1] < PING_TIMEOUT
+            and line[0].startswith(b'8 bytes from')
+        ]
+        if received_lines and received_lines[-1][0].startswith(b'8 bytes from'):
+            store.dispatch(IpSetIsConnectedAction(is_connected=True))
+        else:
+            store.dispatch(IpSetIsConnectedAction(is_connected=False))
+        await asyncio.sleep(0.25)
 
 
 IpMainMenu = SubMenuItem(

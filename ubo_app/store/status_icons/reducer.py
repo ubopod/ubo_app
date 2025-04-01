@@ -22,7 +22,7 @@ def reducer(
         if isinstance(action, InitAction):
             return StatusIconsState(icons=[])
         raise InitializationActionError(action)
-    if isinstance(action, StatusIconsRegisterAction):
+    if isinstance(action, StatusIconsRegisterAction) and action.service is not None:
         return replace(
             state,
             icons=sorted(
