@@ -74,6 +74,7 @@ async def check_status() -> None:
                 ),
             ),
         )
+        raise
     else:
         try:
             if is_binary_installed:
@@ -104,6 +105,7 @@ async def check_status() -> None:
                     ),
                 ),
             )
+            raise
     logger.debug(
         'Checked VSCode Tunnel Status',
         extra={
@@ -160,6 +162,7 @@ async def set_name() -> None:
                 ),
             ),
         )
+        raise
     finally:
         await check_status()
 
@@ -191,6 +194,7 @@ async def install_service() -> None:
                 ),
             ),
         )
+        raise
     finally:
         await check_status()
 
@@ -224,6 +228,7 @@ async def uninstall_service() -> None:
                 ),
             ),
         )
+        raise
     finally:
         await check_status()
 
@@ -256,5 +261,6 @@ async def restart() -> None:
                 ),
             ),
         )
+        raise
     finally:
         await check_status()

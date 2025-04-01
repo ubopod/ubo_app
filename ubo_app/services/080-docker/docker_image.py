@@ -49,16 +49,13 @@ def fetch_image(
             docker_client.images.pull(IMAGES[id].path)
             docker_client.close()
         except docker.errors.DockerException:
-            logger.exception(
-                'Image error',
-                extra={'image': id, 'path': IMAGES[id].path},
-            )
             store.dispatch(
                 DockerImageSetStatusAction(
                     image=id,
                     status=DockerItemStatus.ERROR,
                 ),
             )
+            raise
 
     to_thread(act)
 

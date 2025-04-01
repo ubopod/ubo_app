@@ -109,6 +109,22 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
 
         return f'{len(errors)} errors raised in this service'
 
+    @store.autorun(lambda state: state.settings.services[service_id].errors)
+    def error_items(errors: list[ErrorReport]) -> list[Item]:
+        return [
+            ApplicationItem(
+                key=str(index),
+                label=datetime.datetime.fromtimestamp(
+                    error.timestamp,
+                )
+                .astimezone()
+                .strftime('%Y-%m-%d %H:%M:%S'),
+                icon=f'[color={DANGER_COLOR}][/color]',
+                application=_generate_error_report_app(error),
+            )
+            for index, error in enumerate(errors)
+        ]
+
     @store.autorun(
         lambda state: (
             state.settings.services[service_id].errors,
@@ -210,19 +226,7 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
                             title='Errors',
                             heading='Errors',
                             sub_heading='Errors raised in this service',
-                            items=[
-                                ApplicationItem(
-                                    key=str(index),
-                                    label=datetime.datetime.fromtimestamp(
-                                        error.timestamp,
-                                    )
-                                    .astimezone()
-                                    .strftime('%Y-%m-%d %H:%M:%S'),
-                                    icon=f'[color={DANGER_COLOR}][/color]',
-                                    application=_generate_error_report_app(error),
-                                )
-                                for index, error in enumerate(errors)
-                            ],
+                            items=error_items,
                         ),
                     ),
                     DispatchItem(

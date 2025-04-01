@@ -93,7 +93,6 @@ class LoginPage(PageWidget):
                     ),
                 )
         except subprocess.CalledProcessError:
-            logger.exception('Failed to login')
             store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
@@ -107,6 +106,7 @@ class LoginPage(PageWidget):
                     ),
                 ),
             )
+            raise
         finally:
             await install_service()
 

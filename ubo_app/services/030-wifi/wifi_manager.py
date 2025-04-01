@@ -20,6 +20,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.wifi import ConnectionState, WiFiConnection, WiFiType
 from ubo_app.utils.bus_provider import get_system_bus
+from ubo_app.utils.error_handlers import report_service_error
 
 if TYPE_CHECKING:
     from asyncio.tasks import _FutureLike
@@ -194,6 +195,7 @@ async def get_active_connection_ssid() -> str | None:
         settings = await connection.get_settings()
         return settings['802-11-wireless']['ssid'][1].decode('utf-8')
     except dbus_exceptions.DbusUnknownMethodError:
+        report_service_error()
         return None
 
 

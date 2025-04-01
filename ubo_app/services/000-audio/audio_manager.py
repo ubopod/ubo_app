@@ -16,6 +16,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlaybackDoneAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.eeprom import get_eeprom_data
+from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.server import send_command
 
 CHUNK_SIZE = 1024
@@ -140,14 +141,11 @@ class AudioManager:
                     play_object = wave_object.play()
                     play_object.wait_done()
                 except _simpleaudio.SimpleaudioError:
-                    logger.exception(
-                        'Error while playing audio file',
-                        extra={'trial': trial},
-                    )
                     logger.info(
                         'Reporting the playback issue to ubo-system',
                         extra={'trial': trial},
                     )
+                    report_service_error()
                     await send_command('audio', 'failure_report', has_output=True)
                 else:
                     break

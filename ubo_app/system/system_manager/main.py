@@ -14,7 +14,6 @@ import string
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from threading import Thread
 
@@ -24,7 +23,6 @@ from ubo_app.logger import (
     get_log_level,
     get_logger,
 )
-from ubo_app.store.services.ethernet import NetState
 from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.hotspot import hotspot_handler
@@ -47,11 +45,6 @@ logger = get_logger('system-manager')
 log_level = get_log_level() or logging.INFO
 add_file_handler(logger, log_level)
 logger.setLevel(log_level)
-
-
-@dataclass(kw_only=True)
-class ConnectionState:
-    state: NetState = NetState.UNKNOWN
 
 
 def handle_command(command: str) -> str | None:

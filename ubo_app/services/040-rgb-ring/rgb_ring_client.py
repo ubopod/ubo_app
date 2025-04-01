@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.rgb_ring import RgbRingSetIsConnectedAction
 from ubo_app.utils.server import send_command
@@ -32,6 +31,6 @@ class RgbRingClient:
             await send_command('led', *cmd)
         except Exception:
             store.dispatch(RgbRingSetIsConnectedAction(is_connected=False))
-            logger.exception('Unable to connect to the socket')
+            raise
         else:
             store.dispatch(RgbRingSetIsConnectedAction(is_connected=True))

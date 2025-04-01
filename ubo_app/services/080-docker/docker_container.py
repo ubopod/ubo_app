@@ -271,6 +271,7 @@ def _monitor_events(  # noqa: C901
                             status=DockerItemStatus.NOT_AVAILABLE,
                         ),
                     )
+                    raise
             elif event['status'] == 'delete' and event['id'] == get_docker_id():
                 store.dispatch(
                     DockerImageSetStatusAction(
@@ -340,28 +341,21 @@ def check_container(*, image_id: str) -> None:
                 ),
             )
         except docker.errors.ImageNotFound:
-            logger.debug(
-                'Image not found',
-                extra={'image': image_id, 'path': path},
-                exc_info=True,
-            )
             store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
                     status=DockerItemStatus.NOT_AVAILABLE,
                 ),
             )
+            raise
         except docker.errors.DockerException:
-            logger.exception(
-                'Image error',
-                extra={'image': image_id, 'path': path},
-            )
             store.dispatch(
                 DockerImageSetStatusAction(
                     image=image_id,
                     status=DockerItemStatus.ERROR,
                 ),
             )
+            raise
         finally:
             docker_client.close()
 

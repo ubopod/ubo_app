@@ -45,6 +45,7 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.network import has_gateway
 from ubo_app.utils.pod_id import get_pod_id
 from ubo_app.utils.server import send_command
@@ -78,6 +79,7 @@ async def _get_docker_status() -> str:
         return 'failed'
     else:
         logger.warning('Docker process returned non-zero exit code')
+        report_service_error()
         return 'not running'
 
 
@@ -122,6 +124,7 @@ async def _get_envoy_status() -> str:
             return 'not downloaded'
     except Exception:
         logger.exception('Failed to check if envoy is running')
+        report_service_error()
         return 'failed'
 
 

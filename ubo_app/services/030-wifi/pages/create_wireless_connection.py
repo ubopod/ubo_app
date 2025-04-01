@@ -105,7 +105,7 @@ async def input_wifi_connection(
         return
     except Exception:
         logger.exception('wifi connection input - error')
-        return
+        raise
 
     logger.debug('wifi connection input - result', extra={'result': result})
 
@@ -170,7 +170,7 @@ async def input_wifi_connection(
         )
     except Exception:
         logger.exception('wifi connection input - error while creating connection')
-        return
+        raise
 
     logger.info(
         'Wireless connection created',

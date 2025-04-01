@@ -128,6 +128,7 @@ def logout() -> None:
                     ),
                 ),
             )
+            raise
 
     create_task(act())
 

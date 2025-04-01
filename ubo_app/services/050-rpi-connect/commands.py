@@ -29,6 +29,7 @@ from ubo_app.store.services.rpi_connect import (
 from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.monitor_unit import is_unit_active
 from ubo_app.utils.server import send_command
 
@@ -92,6 +93,7 @@ Remote shell: (allowed|unavailable)(?: \((\d+) sessions? active\))?)?""",
                 ),
             ),
         )
+        report_service_error()
     logger.info(
         'Checked RPi Connect Status',
         extra=status_data,
@@ -194,6 +196,7 @@ def sign_out() -> None:
                     ),
                 ),
             )
+            raise
 
     create_task(act())
 

@@ -24,6 +24,7 @@ from ubo_app.store.services.camera import (
 from ubo_app.store.services.display import DisplayPauseAction, DisplayResumeAction
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.error_handlers import report_service_error
 
 if TYPE_CHECKING:
     from numpy._typing._array_like import NDArray
@@ -65,7 +66,8 @@ def initialize_camera() -> Picamera2 | None:
     try:
         picamera2 = Picamera2()
     except IndexError:
-        logger.exception('Camera not found, using fake camera.')
+        report_service_error()
+        logger.exception('Camera not found.')
         return None
     preview_config = cast(
         'str',

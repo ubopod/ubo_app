@@ -343,6 +343,7 @@ default.""",
                     ),
                 ),
             )
+            raise
 
     create_task(act())
 

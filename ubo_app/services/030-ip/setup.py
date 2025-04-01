@@ -19,6 +19,7 @@ from ubo_app.store.services.ip import (
     IpUpdateInterfacesAction,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.error_handlers import report_service_error
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -81,6 +82,7 @@ async def monitor_interfaces(end_event: asyncio.Event) -> None:
             load_network_interfaces()
         except Exception:
             logger.exception('Failed to load network interfaces')
+            report_service_error()
         finally:
             await asyncio.sleep(1)
 

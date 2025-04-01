@@ -17,6 +17,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.eeprom import get_eeprom_data
+from ubo_app.utils.error_handlers import report_service_error
 
 if TYPE_CHECKING:
     from adafruit_rgb_display.rgb import busio
@@ -87,6 +88,7 @@ def init_service() -> Subscriptions:
             )
     except Exception:
         logger.exception('Error initializing temperature sensor')
+        report_service_error()
 
     try:
         if (
@@ -103,6 +105,7 @@ def init_service() -> Subscriptions:
             light_sensor.light_integration_time = adafruit_veml7700.VEML7700.ALS_50MS
     except Exception:
         logger.exception('Error initializing light sensor')
+        report_service_error()
 
     read_sensors()
 

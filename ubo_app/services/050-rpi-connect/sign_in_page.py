@@ -82,7 +82,6 @@ class SignInPage(PageWidget):
                     ),
                 )
         except subprocess.CalledProcessError:
-            logger.exception('Failed to login')
             store.dispatch(
                 NotificationsAddAction(
                     notification=Notification(
@@ -95,6 +94,7 @@ class SignInPage(PageWidget):
                     ),
                 ),
             )
+            raise
         finally:
             await check_status()
 
