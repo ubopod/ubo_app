@@ -45,7 +45,7 @@ class AudioManager:
         self.has_microphones = False
 
         async def initialize_audio() -> None:
-            for _ in range(5):
+            for _ in range(TRIALS):
                 try:
                     cards = alsaaudio.cards()
                     self.card_index = cards.index(
@@ -53,6 +53,7 @@ class AudioManager:
                     )
                 except StopIteration:
                     logger.exception('No audio card found')
+                    await send_command('audio', 'failure_report', has_output=True)
                 else:
                     break
                 await asyncio.sleep(1)

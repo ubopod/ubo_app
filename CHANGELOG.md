@@ -70,6 +70,7 @@
 - refactor(core): better representation of errors in logs and service menus
 - fix(ip): make sure the connection status is set to not-connected when ping is not generating any output
 - refactor(services): avoid silencing caught exceptions in services by either reraising them so that they are caught and reported by the global exception handler or directly reporting them
+- fix(audio): make audio run the `unbind` and `bind` sequence if the audio card is not listed by `alsaaudio.cards`
 
 ## Version 1.2.2
 
