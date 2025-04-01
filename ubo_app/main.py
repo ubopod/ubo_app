@@ -7,10 +7,10 @@ from pathlib import Path
 
 import dotenv
 
-from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logger import setup_loggers
 from ubo_app.setup import setup
 from ubo_app.utils import IS_RPI
+from ubo_app.utils.error_handlers import setup_error_handling
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')

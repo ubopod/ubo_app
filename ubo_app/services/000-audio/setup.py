@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, ParamSpec
 from audio_manager import AudioManager
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 
-from ubo_app.error_handlers import loop_exception_handler
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioPlayAudioAction,
@@ -18,6 +17,7 @@ from ubo_app.store.services.audio import (
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.async_ import to_thread
+from ubo_app.utils.error_handlers import loop_exception_handler
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:

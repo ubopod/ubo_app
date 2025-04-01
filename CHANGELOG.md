@@ -67,6 +67,7 @@
 - feat(core): handle system signal `USR1` as the signal to initiate `ipdb` only if `DEBUG_MODE_PDB_SIGNAL` is set
 - refactor(system): improve the user experience of the reset button, add a pattern for restarting the app without killing it
 - refactor(core): add unified API to access “current service” via thread-local, parent thread, or call stack
+- refactor(core): better representation of errors in logs and service menus
 
 ## Version 1.2.2
 

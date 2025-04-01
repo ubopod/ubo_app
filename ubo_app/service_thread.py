@@ -32,7 +32,6 @@ from ubo_app.constants import (
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
 )
-from ubo_app.error_handlers import STACKS, loop_exception_handler
 from ubo_app.logger import logger
 from ubo_app.store.settings.types import (
     ServiceState,
@@ -41,6 +40,7 @@ from ubo_app.store.settings.types import (
     SettingsStartServiceEvent,
     SettingsStopServiceEvent,
 )
+from ubo_app.utils.error_handlers import STACKS, loop_exception_handler
 from ubo_app.utils.service import ServiceUnavailableError, get_service
 
 if TYPE_CHECKING:

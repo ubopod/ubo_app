@@ -7,7 +7,7 @@ import contextlib
 import threading
 from typing import TYPE_CHECKING
 
-from ubo_app.error_handlers import loop_exception_handler
+from ubo_app.utils.error_handlers import loop_exception_handler
 
 if TYPE_CHECKING:
     from collections.abc import Callable

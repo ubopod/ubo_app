@@ -83,11 +83,22 @@ def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
     threads_info = get_all_thread_stacks()
 
     _, exception_value, _, thread = args
+    label = getattr(thread, 'label', None)
+    service_id = getattr(thread, 'service_id', None)
+    service_path = getattr(thread, 'path', None)
 
     logger.exception(
         'Thread exception',
         extra={
             'exception_thread': thread,
+            'service': label,
+            **(
+                {
+                    'service_id': service_id,
+                }
+                if service_id
+                else {'service_path': service_path}
+            ),
         },
         exc_info=exception_value,
     )
@@ -96,6 +107,14 @@ def thread_exception_handler(args: threading.ExceptHookArgs) -> None:
         extra={
             'exception_thread': thread,
             'threads': threads_info,
+            'service': label,
+            **(
+                {
+                    'service_id': service_id,
+                }
+                if service_id
+                else {'service_path': service_path}
+            ),
         },
         exc_info=exception_value,
     )
@@ -193,10 +212,20 @@ def loop_exception_handler(
 
 def report_service_error(
     *,
-    service_id: str,
-    exception: object,
-    context: dict[str, object],
+    service_id: str | None = None,
+    exception: object | None = None,
+    context: dict[str, object] | None = None,
 ) -> None:
+    context = context or {}
+
+    if service_id is None:
+        from ubo_app.utils.service import get_service
+
+        service_id = get_service().service_id
+
+    if exception is None:
+        _, exception, _ = sys.exc_info()
+
     from ubo_app.store.settings.types import (
         ErrorReport,
         SettingsReportServiceErrorAction,
@@ -204,7 +233,7 @@ def report_service_error(
 
     message = ''
 
-    if exception and isinstance(exception, Exception):
+    if isinstance(exception, Exception):
         message += '[b]exception:[/b] ' + ''.join(
             traceback.format_exception(
                 type(exception),
@@ -213,14 +242,8 @@ def report_service_error(
             ),
         )
 
-    if context.get('message'):
-        message += '\n\n[b]message:[/b] ' + str(context.get('message'))
-
-    if context.get('task'):
-        message += '\n\n[b]task:[/b] ' + str(context.get('task'))
-
-    if context.get('future'):
-        message += '\n\n[b]future:[/b] ' + str(context.get('future'))
+    for key in context:
+        message += f'\n\n[b]{key}:[/b] {context.get(key)}'
 
     try:
         from ubo_app.store.main import store

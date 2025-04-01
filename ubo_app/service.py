@@ -54,7 +54,7 @@ class WorkerThread(threading.Thread):
         def task_wrapper(stack: str) -> None:
             task = self.loop.create_task(coroutine)
             if DEBUG_MODE_TASKS:
-                from ubo_app.error_handlers import STACKS
+                from ubo_app.utils.error_handlers import STACKS
 
                 STACKS[task] = stack
             if callback:
@@ -114,7 +114,7 @@ worker_thread = WorkerThread()
 
 
 def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
-    from ubo_app.error_handlers import loop_exception_handler
+    from ubo_app.utils.error_handlers import loop_exception_handler
 
     loop.set_exception_handler(loop_exception_handler)
 

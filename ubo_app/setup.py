@@ -172,8 +172,8 @@ def _clear_signal_handlers() -> None:
 def signal_handler(signum: int, _: object) -> None:
     """Handle the signal."""
     from ubo_app.display import display
-    from ubo_app.error_handlers import get_all_thread_stacks_string
     from ubo_app.logger import logger
+    from ubo_app.utils.error_handlers import get_all_thread_stacks_string
 
     logger.debug(get_all_thread_stacks_string())
     logger.info('Received signal %s, turning off the display...', signum)

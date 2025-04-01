@@ -19,7 +19,6 @@ from pathlib import Path
 from threading import Thread
 
 from ubo_app.constants import USERNAME
-from ubo_app.error_handlers import setup_error_handling
 from ubo_app.logger import (
     add_file_handler,
     get_log_level,
@@ -35,6 +34,7 @@ from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
 from ubo_app.system.system_manager.users import users_handler
 from ubo_app.utils.eeprom import read_serial_number
+from ubo_app.utils.error_handlers import setup_error_handling
 from ubo_app.utils.pod_id import get_pod_id, set_pod_id
 
 SOCKET_PATH = Path(os.environ.get('RUNTIME_DIRECTORY', '/run/ubo')).joinpath(
