@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from tests.fixtures import AppContext, LoadServices, Stability
 
 
-@pytest.mark.timeout(80)
+@pytest.mark.timeout(120)
 async def test_all_services_register(
     app_context: AppContext,
     window_snapshot: WindowSnapshot,

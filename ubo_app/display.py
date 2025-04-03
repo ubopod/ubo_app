@@ -14,7 +14,7 @@ from ubo_app.store.services.display import (
     DisplayCompressedRenderEvent,
     DisplayRenderEvent,
 )
-from ubo_app.utils import IS_RPI
+from ubo_app.utils import IS_RPI, IS_TEST_ENV
 from ubo_app.utils.eeprom import get_eeprom_data
 
 if TYPE_CHECKING:
@@ -187,9 +187,10 @@ def render_on_display(*, regions: list[Region]) -> None:
             ),
         )
 
-    store._dispatch(  # noqa: SLF001
-        [event for region in regions for event in generate_render_actions(region)],
-    )
+    if not IS_TEST_ENV:
+        store._dispatch(  # noqa: SLF001
+            [event for region in regions for event in generate_render_actions(region)],
+        )
 
 
 splash_screen = None

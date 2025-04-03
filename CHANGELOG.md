@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- test: improve test logs in the ci
+
 ## Version 1.3.0
 
 - fix: remove dependencies of `publish` job of `publish_to_pypi` workflow
