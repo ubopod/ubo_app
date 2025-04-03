@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     )
 
     from tests.fixtures import AppContext, LoadServices, Stability
+    from ubo_app.store.main import UboStore
+
+MAX_EXPECTED_LISTENERS = 200
+MAX_EXPECTED_EVENT_HANDLERS = 60
 
 
 @pytest.mark.timeout(120)
@@ -23,15 +27,22 @@ async def test_all_services_register(
     store_snapshot: StoreSnapshot,
     load_services: LoadServices,
     stability: Stability,
+    store: UboStore,
 ) -> None:
     """Test all services load."""
     from ubo_app.constants import CORE_SERVICE_IDS
 
     app_context.set_app()
     unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=40, run_async=True)
+
     await stability(attempts=2, wait=2)
+
+    assert len(store._listeners) < MAX_EXPECTED_LISTENERS  # noqa: SLF001
+    assert len(store._event_handlers) < MAX_EXPECTED_EVENT_HANDLERS  # noqa: SLF001
+
     store_snapshot.take()
     window_snapshot.take()
+
     await unload_waiter(timeout=30)
 
 

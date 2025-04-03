@@ -6,6 +6,7 @@
 - refactor(docker): since service setup functions are now run after reducers are initialized, we don't need to pass the signal for loading docker applications through the docker reducer
 - refactor(voice): make the menu `Item` parameters like icon and background color, used to show it's selectable and selected/unselected reusable by putting them in `ubo_app/utils/gui.py`
 - feat(services): add log level selection sub menu to each service menu and sync it with persistent storage - closes #164
+- test(services): set limits for the number of registered listeners and event handlers after all services are loaded in `test_all_services_register`
 
 ## Version 1.3.0
 
