@@ -33,7 +33,7 @@ from ubo_app.constants import (
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
 )
-from ubo_app.logger import get_log_level, logger
+from ubo_app.logger import ThreadLevelFilter, get_log_level, logger
 from ubo_app.store.settings.types import (
     ServiceState,
     SettingsServiceSetStatusAction,
@@ -299,6 +299,14 @@ class UboServiceThread(threading.Thread):
         self.loop = asyncio.new_event_loop()
         self.loop.set_exception_handler(loop_exception_handler)
 
+        @store.autorun(
+            lambda state: state.settings.services[self.service_id].log_level
+            if self.service_id in state.settings.services
+            else None,
+        )
+        def set_log_level(log_level: int | None) -> None:
+            ThreadLevelFilter.set_thread_level(self.name, log_level)
+
         logger.info(
             'Starting service thread',
             extra={
@@ -376,6 +384,7 @@ class UboServiceThread(threading.Thread):
                 },
             )
         finally:
+            ThreadLevelFilter.set_thread_level(self.name, None)
             store.dispatch(
                 SettingsServiceSetStatusAction(
                     service_id=self.service_id,

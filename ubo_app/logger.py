@@ -6,7 +6,7 @@ import logging
 import logging.handlers
 import os
 import sys
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -176,6 +176,28 @@ class StdOutExtraFormatter(ExtraFormatter):
         return f'{color}{string}{ANSI_RESET}'
 
 
+class ThreadLevelFilter(logging.Filter):
+    thread_levels: ClassVar[dict[str, int]] = {}
+
+    @classmethod
+    def set_thread_level(cls, thread_name: str, level: int | None) -> None:
+        if level is None:
+            if thread_name in cls.thread_levels:
+                del cls.thread_levels[thread_name]
+        else:
+            cls.thread_levels[thread_name] = level
+
+    def filter(self: ThreadLevelFilter, record: logging.LogRecord) -> bool:
+        thread_name = record.threadName
+        if thread_name is None:
+            return True
+        level = self.thread_levels.get(thread_name, logging.NOTSET)
+        return record.levelno >= level
+
+
+thread_level_filter = ThreadLevelFilter()
+
+
 def add_stdout_handler(
     logger: UboLogger,
     level: int = logging.DEBUG,
@@ -189,6 +211,7 @@ def add_stdout_handler(
     if level <= logging.DEBUG:
         formatter.max_length = 10000
     stdout_handler.setFormatter(formatter)
+    stdout_handler.addFilter(thread_level_filter)
     logger.addHandler(stdout_handler)
 
     def cleanup() -> None:
@@ -215,6 +238,7 @@ def add_file_handler(
             '%Y-%m-%d %H:%M:%S',
         ),
     )
+    file_handler.addFilter(thread_level_filter)
     logger.addHandler(file_handler)
 
     def cleanup() -> None:
