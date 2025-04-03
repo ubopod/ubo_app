@@ -420,7 +420,7 @@ def create_task(
 
 
 def action_middleware(action: UboAction) -> UboAction:
-    logger.debug(
+    logger.verbose(
         'Action dispatched',
         extra={'action': action},
     )
@@ -428,7 +428,7 @@ def action_middleware(action: UboAction) -> UboAction:
 
 
 def event_middleware(event: UboEvent) -> UboEvent | None:
-    logger.debug(
+    logger.verbose(
         'Event dispatched',
         extra={'event': event},
     )
