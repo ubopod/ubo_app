@@ -9,6 +9,7 @@
 - test(services): set limits for the number of registered listeners and event handlers after all services are loaded in `test_all_services_register`
 - refactor(core): wait for all service threads to join before running cleanup functions for dbus connections and the logger
 - feat(services): apply log levels set in service settings for each service using `logging.Filter`
+- feat(ci): make the build job fail if grpc bindings are not up to date with code
 
 ## Version 1.3.0
 
