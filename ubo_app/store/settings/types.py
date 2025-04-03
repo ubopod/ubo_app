@@ -52,6 +52,12 @@ class SettingsServiceSetIsEnabledAction(SettingsServiceAction):
     is_enabled: bool
 
 
+class SettingsServiceSetLogLevelAction(SettingsServiceAction):
+    """Set service log level action."""
+
+    log_level: int
+
+
 class SettingsServiceSetShouldRestartAction(SettingsServiceAction):
     """Set service should restart action."""
 
@@ -108,6 +114,7 @@ class ServiceState(Immutable):
     label: str
     is_active: bool
     is_enabled: bool
+    log_level: int
     should_auto_restart: bool
     errors: list[ErrorReport] = field(default_factory=list)
 

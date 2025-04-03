@@ -84,11 +84,6 @@ message SubMenuItem {
   optional float progress = 10;
 }
 
-message Subscribable {
-  option (package_info.v1.package_name) = "ubo_gui.menu.types";
-  optional string meta_field_package_name_ubo_gui_dot_menu_dot_types = 1000;
-}
-
 message Menu {
   oneof menu {
     HeadedMenu headed_menu = 1;
@@ -522,6 +517,73 @@ message SettingsToggleDebugModeAction {
   optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
 }
 
+message SettingsSetServicesAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+
+  map<string, ServiceState> services = 2;
+  float gap_duration = 3;
+}
+
+message SettingsServiceAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  string service_id = 2;
+}
+
+message SettingsStartServiceAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  string service_id = 2;
+}
+
+message SettingsStopServiceAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  string service_id = 2;
+}
+
+message SettingsServiceSetStatusAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  bool is_active = 2;
+  string service_id = 3;
+}
+
+message SettingsServiceSetIsEnabledAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  bool is_enabled = 2;
+  string service_id = 3;
+}
+
+message SettingsServiceSetLogLevelAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  int64 log_level = 2;
+  string service_id = 3;
+}
+
+message SettingsServiceSetShouldRestartAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  bool should_auto_restart = 2;
+  string service_id = 3;
+}
+
+message SettingsReportServiceErrorAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  ErrorReport error = 2;
+  string service_id = 3;
+}
+
+message SettingsClearServiceErrorsAction {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  string service_id = 2;
+}
+
 message SettingsEvent {
   option (package_info.v1.package_name) = "ubo_app.store.settings.types";
   optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
@@ -533,10 +595,57 @@ message SettingsSetDebugModeEvent {
   bool is_enabled = 2;
 }
 
+message SettingsServiceEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  string service_id = 2;
+}
+
+message SettingsStartServiceEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  optional float delay = 2;
+  string service_id = 3;
+}
+
+message SettingsStopServiceEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  string service_id = 2;
+}
+
+message ErrorReport {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+  float timestamp = 2;
+  string message = 3;
+}
+
+message ServiceState {
+  option (package_info.v1.package_name) = "ubo_app.store.settings.types";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+
+  message Errors {
+    repeated ErrorReport items = 1;
+  }
+  string id = 2;
+  string label = 3;
+  bool is_active = 4;
+  bool is_enabled = 5;
+  int64 log_level = 6;
+  bool should_auto_restart = 7;
+  optional Errors errors = 8;
+}
+
 message SettingsState {
   option (package_info.v1.package_name) = "ubo_app.store.settings.types";
   optional string meta_field_package_name_ubo_app_dot_store_dot_settings_dot_types = 1000;
+
+  message ServicesDict {
+    map<string, ServiceState> items = 1;
+  }
   optional bool is_debug_enabled = 2;
+  optional ServicesDict services = 3;
 }
 
 message IconState {
@@ -545,7 +654,8 @@ message IconState {
   string symbol = 2;
   string color = 3;
   int64 priority = 4;
-  string id = 5;
+  string service_id = 5;
+  string id = 6;
 }
 
 message StatusIconsState {
@@ -566,6 +676,7 @@ message StatusIconsRegisterAction {
   optional string color = 3;
   optional int64 priority = 4;
   optional string id = 5;
+  optional string service = 6;
 }
 
 enum UpdateStatus {
@@ -842,6 +953,21 @@ message DockerAction {
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 }
 
+message DockerInstallAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.docker";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
+}
+
+message DockerStartAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.docker";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
+}
+
+message DockerStopAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.docker";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
+}
+
 message DockerSetStatusAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
@@ -952,7 +1078,17 @@ message DockerEvent {
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 }
 
-message DockerLoadImagesEvent {
+message DockerInstallEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.docker";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
+}
+
+message DockerStartEvent {
+  option (package_info.v1.package_name) = "ubo_app.store.services.docker";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
+}
+
+message DockerStopEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.docker";
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_docker = 1000;
 }
@@ -1953,106 +2089,119 @@ message Action {
     DockerImageSetStatusAction docker_image_set_status_action = 28;
     DockerImageStopCompositionAction docker_image_stop_composition_action = 29;
     DockerImageStopContainerAction docker_image_stop_container_action = 30;
-    DockerRemoveUsernameAction docker_remove_username_action = 31;
-    DockerSetStatusAction docker_set_status_action = 32;
-    DockerStoreUsernameAction docker_store_username_action = 33;
-    InputAction input_action = 34;
-    InputCancelAction input_cancel_action = 35;
-    InputDemandAction input_demand_action = 36;
-    InputProvideAction input_provide_action = 37;
-    InputResolveAction input_resolve_action = 38;
-    IpAction ip_action = 39;
-    IpSetIsConnectedAction ip_set_is_connected_action = 40;
-    IpUpdateInterfacesAction ip_update_interfaces_action = 41;
-    KeypadAction keypad_action = 42;
-    KeypadKeyDownAction keypad_key_down_action = 43;
-    KeypadKeyPressAction keypad_key_press_action = 44;
-    KeypadKeyReleaseAction keypad_key_release_action = 45;
-    KeypadKeyUpAction keypad_key_up_action = 46;
-    LightDMAction light_dm_action = 47;
-    LightDMClearEnabledStateAction light_dm_clear_enabled_state_action = 48;
-    LightDMUpdateStateAction light_dm_update_state_action = 49;
-    MainAction main_action = 50;
-    MenuAction menu_action = 51;
-    MenuChooseByIconAction menu_choose_by_icon_action = 52;
-    MenuChooseByIndexAction menu_choose_by_index_action = 53;
-    MenuChooseByLabelAction menu_choose_by_label_action = 54;
-    MenuGoBackAction menu_go_back_action = 55;
-    MenuGoHomeAction menu_go_home_action = 56;
-    MenuScrollAction menu_scroll_action = 57;
-    NotificationsAction notifications_action = 58;
-    NotificationsAddAction notifications_add_action = 59;
-    NotificationsClearAction notifications_clear_action = 60;
-    NotificationsClearAllAction notifications_clear_all_action = 61;
-    NotificationsClearByIdAction notifications_clear_by_id_action = 62;
-    NotificationsDisplayAction notifications_display_action = 63;
-    OpenApplicationAction open_application_action = 64;
-    PowerAction power_action = 65;
-    PowerOffAction power_off_action = 66;
-    RPiConnectAction r_pi_connect_action = 67;
-    RPiConnectDoneDownloadingAction r_pi_connect_done_downloading_action = 68;
-    RPiConnectSetPendingAction r_pi_connect_set_pending_action = 69;
-    RPiConnectSetStatusAction r_pi_connect_set_status_action = 70;
-    RPiConnectStartDownloadingAction r_pi_connect_start_downloading_action = 71;
-    RPiConnectUpdateServiceStateAction r_pi_connect_update_service_state_action = 72;
-    RebootAction reboot_action = 73;
-    RegisterAppAction register_app_action = 74;
-    RegisterRegularAppAction register_regular_app_action = 75;
-    RegisterSettingAppAction register_setting_app_action = 76;
-    ReplayRecordedSequenceAction replay_recorded_sequence_action = 77;
-    ReportReplayingDoneAction report_replaying_done_action = 78;
-    RgbRingAction rgb_ring_action = 79;
-    RgbRingBlankAction rgb_ring_blank_action = 80;
-    RgbRingBlinkAction rgb_ring_blink_action = 81;
-    RgbRingColorfulCommandAction rgb_ring_colorful_command_action = 82;
-    RgbRingCommandAction rgb_ring_command_action = 83;
-    RgbRingFillDownfromAction rgb_ring_fill_downfrom_action = 84;
-    RgbRingFillUptoAction rgb_ring_fill_upto_action = 85;
-    RgbRingProgressWheelAction rgb_ring_progress_wheel_action = 86;
-    RgbRingProgressWheelStepAction rgb_ring_progress_wheel_step_action = 87;
-    RgbRingPulseAction rgb_ring_pulse_action = 88;
-    RgbRingRainbowAction rgb_ring_rainbow_action = 89;
-    RgbRingSetAllAction rgb_ring_set_all_action = 90;
-    RgbRingSetBrightnessAction rgb_ring_set_brightness_action = 91;
-    RgbRingSetEnabledAction rgb_ring_set_enabled_action = 92;
-    RgbRingSetIsBusyAction rgb_ring_set_is_busy_action = 93;
-    RgbRingSetIsConnectedAction rgb_ring_set_is_connected_action = 94;
-    RgbRingSpinningWheelAction rgb_ring_spinning_wheel_action = 95;
-    RgbRingWaitableCommandAction rgb_ring_waitable_command_action = 96;
-    SSHAction ssh_action = 97;
-    SSHClearEnabledStateAction ssh_clear_enabled_state_action = 98;
-    SSHUpdateStateAction ssh_update_state_action = 99;
-    SensorsAction sensors_action = 100;
-    SensorsReportReadingAction sensors_report_reading_action = 101;
-    SetAreEnclosuresVisibleAction set_are_enclosures_visible_action = 102;
-    SetMenuPathAction set_menu_path_action = 103;
-    SettingsAction settings_action = 104;
-    SettingsToggleDebugModeAction settings_toggle_debug_mode_action = 105;
-    StatusIconsAction status_icons_action = 106;
-    StatusIconsRegisterAction status_icons_register_action = 107;
-    ToggleRecordingAction toggle_recording_action = 108;
-    UpdateManagerAction update_manager_action = 109;
-    UpdateManagerSetStatusAction update_manager_set_status_action = 110;
-    UpdateManagerSetUpdateServiceStatusAction update_manager_set_update_service_status_action = 111;
-    UpdateManagerSetVersionsAction update_manager_set_versions_action = 112;
-    UsersAction users_action = 113;
-    UsersCreateUserAction users_create_user_action = 114;
-    UsersDeleteUserAction users_delete_user_action = 115;
-    UsersResetPasswordAction users_reset_password_action = 116;
-    UsersSetUsersAction users_set_users_action = 117;
-    VSCodeAction vs_code_action = 118;
-    VSCodeDoneDownloadingAction vs_code_done_downloading_action = 119;
-    VSCodeSetPendingAction vs_code_set_pending_action = 120;
-    VSCodeSetStatusAction vs_code_set_status_action = 121;
-    VSCodeStartDownloadingAction vs_code_start_downloading_action = 122;
-    VoiceAction voice_action = 123;
-    VoiceReadTextAction voice_read_text_action = 124;
-    VoiceSetEngineAction voice_set_engine_action = 125;
-    WiFiAction wi_fi_action = 126;
-    WiFiInputConnectionAction wi_fi_input_connection_action = 127;
-    WiFiSetHasVisitedOnboardingAction wi_fi_set_has_visited_onboarding_action = 128;
-    WiFiUpdateAction wi_fi_update_action = 129;
-    WiFiUpdateRequestAction wi_fi_update_request_action = 130;
+    DockerInstallAction docker_install_action = 31;
+    DockerRemoveUsernameAction docker_remove_username_action = 32;
+    DockerSetStatusAction docker_set_status_action = 33;
+    DockerStartAction docker_start_action = 34;
+    DockerStopAction docker_stop_action = 35;
+    DockerStoreUsernameAction docker_store_username_action = 36;
+    InputAction input_action = 37;
+    InputCancelAction input_cancel_action = 38;
+    InputDemandAction input_demand_action = 39;
+    InputProvideAction input_provide_action = 40;
+    InputResolveAction input_resolve_action = 41;
+    IpAction ip_action = 42;
+    IpSetIsConnectedAction ip_set_is_connected_action = 43;
+    IpUpdateInterfacesAction ip_update_interfaces_action = 44;
+    KeypadAction keypad_action = 45;
+    KeypadKeyDownAction keypad_key_down_action = 46;
+    KeypadKeyPressAction keypad_key_press_action = 47;
+    KeypadKeyReleaseAction keypad_key_release_action = 48;
+    KeypadKeyUpAction keypad_key_up_action = 49;
+    LightDMAction light_dm_action = 50;
+    LightDMClearEnabledStateAction light_dm_clear_enabled_state_action = 51;
+    LightDMUpdateStateAction light_dm_update_state_action = 52;
+    MainAction main_action = 53;
+    MenuAction menu_action = 54;
+    MenuChooseByIconAction menu_choose_by_icon_action = 55;
+    MenuChooseByIndexAction menu_choose_by_index_action = 56;
+    MenuChooseByLabelAction menu_choose_by_label_action = 57;
+    MenuGoBackAction menu_go_back_action = 58;
+    MenuGoHomeAction menu_go_home_action = 59;
+    MenuScrollAction menu_scroll_action = 60;
+    NotificationsAction notifications_action = 61;
+    NotificationsAddAction notifications_add_action = 62;
+    NotificationsClearAction notifications_clear_action = 63;
+    NotificationsClearAllAction notifications_clear_all_action = 64;
+    NotificationsClearByIdAction notifications_clear_by_id_action = 65;
+    NotificationsDisplayAction notifications_display_action = 66;
+    OpenApplicationAction open_application_action = 67;
+    PowerAction power_action = 68;
+    PowerOffAction power_off_action = 69;
+    RPiConnectAction r_pi_connect_action = 70;
+    RPiConnectDoneDownloadingAction r_pi_connect_done_downloading_action = 71;
+    RPiConnectSetPendingAction r_pi_connect_set_pending_action = 72;
+    RPiConnectSetStatusAction r_pi_connect_set_status_action = 73;
+    RPiConnectStartDownloadingAction r_pi_connect_start_downloading_action = 74;
+    RPiConnectUpdateServiceStateAction r_pi_connect_update_service_state_action = 75;
+    RebootAction reboot_action = 76;
+    RegisterAppAction register_app_action = 77;
+    RegisterRegularAppAction register_regular_app_action = 78;
+    RegisterSettingAppAction register_setting_app_action = 79;
+    ReplayRecordedSequenceAction replay_recorded_sequence_action = 80;
+    ReportReplayingDoneAction report_replaying_done_action = 81;
+    RgbRingAction rgb_ring_action = 82;
+    RgbRingBlankAction rgb_ring_blank_action = 83;
+    RgbRingBlinkAction rgb_ring_blink_action = 84;
+    RgbRingColorfulCommandAction rgb_ring_colorful_command_action = 85;
+    RgbRingCommandAction rgb_ring_command_action = 86;
+    RgbRingFillDownfromAction rgb_ring_fill_downfrom_action = 87;
+    RgbRingFillUptoAction rgb_ring_fill_upto_action = 88;
+    RgbRingProgressWheelAction rgb_ring_progress_wheel_action = 89;
+    RgbRingProgressWheelStepAction rgb_ring_progress_wheel_step_action = 90;
+    RgbRingPulseAction rgb_ring_pulse_action = 91;
+    RgbRingRainbowAction rgb_ring_rainbow_action = 92;
+    RgbRingSetAllAction rgb_ring_set_all_action = 93;
+    RgbRingSetBrightnessAction rgb_ring_set_brightness_action = 94;
+    RgbRingSetEnabledAction rgb_ring_set_enabled_action = 95;
+    RgbRingSetIsBusyAction rgb_ring_set_is_busy_action = 96;
+    RgbRingSetIsConnectedAction rgb_ring_set_is_connected_action = 97;
+    RgbRingSpinningWheelAction rgb_ring_spinning_wheel_action = 98;
+    RgbRingWaitableCommandAction rgb_ring_waitable_command_action = 99;
+    SSHAction ssh_action = 100;
+    SSHClearEnabledStateAction ssh_clear_enabled_state_action = 101;
+    SSHUpdateStateAction ssh_update_state_action = 102;
+    SensorsAction sensors_action = 103;
+    SensorsReportReadingAction sensors_report_reading_action = 104;
+    SetAreEnclosuresVisibleAction set_are_enclosures_visible_action = 105;
+    SetMenuPathAction set_menu_path_action = 106;
+    SettingsAction settings_action = 107;
+    SettingsClearServiceErrorsAction settings_clear_service_errors_action = 108;
+    SettingsReportServiceErrorAction settings_report_service_error_action = 109;
+    SettingsServiceAction settings_service_action = 110;
+    SettingsServiceSetIsEnabledAction settings_service_set_is_enabled_action = 111;
+    SettingsServiceSetLogLevelAction settings_service_set_log_level_action = 112;
+    SettingsServiceSetShouldRestartAction settings_service_set_should_restart_action = 113;
+    SettingsServiceSetStatusAction settings_service_set_status_action = 114;
+    SettingsSetServicesAction settings_set_services_action = 115;
+    SettingsStartServiceAction settings_start_service_action = 116;
+    SettingsStopServiceAction settings_stop_service_action = 117;
+    SettingsToggleDebugModeAction settings_toggle_debug_mode_action = 118;
+    StatusIconsAction status_icons_action = 119;
+    StatusIconsRegisterAction status_icons_register_action = 120;
+    ToggleRecordingAction toggle_recording_action = 121;
+    UpdateManagerAction update_manager_action = 122;
+    UpdateManagerSetStatusAction update_manager_set_status_action = 123;
+    UpdateManagerSetUpdateServiceStatusAction update_manager_set_update_service_status_action = 124;
+    UpdateManagerSetVersionsAction update_manager_set_versions_action = 125;
+    UsersAction users_action = 126;
+    UsersCreateUserAction users_create_user_action = 127;
+    UsersDeleteUserAction users_delete_user_action = 128;
+    UsersResetPasswordAction users_reset_password_action = 129;
+    UsersSetUsersAction users_set_users_action = 130;
+    VSCodeAction vs_code_action = 131;
+    VSCodeDoneDownloadingAction vs_code_done_downloading_action = 132;
+    VSCodeSetPendingAction vs_code_set_pending_action = 133;
+    VSCodeSetStatusAction vs_code_set_status_action = 134;
+    VSCodeStartDownloadingAction vs_code_start_downloading_action = 135;
+    VoiceAction voice_action = 136;
+    VoiceReadTextAction voice_read_text_action = 137;
+    VoiceSetEngineAction voice_set_engine_action = 138;
+    WiFiAction wi_fi_action = 139;
+    WiFiInputConnectionAction wi_fi_input_connection_action = 140;
+    WiFiSetHasVisitedOnboardingAction wi_fi_set_has_visited_onboarding_action = 141;
+    WiFiUpdateAction wi_fi_update_action = 142;
+    WiFiUpdateRequestAction wi_fi_update_request_action = 143;
   }
 }
 
@@ -2083,54 +2232,59 @@ message Event {
     DockerImageRunContainerEvent docker_image_run_container_event = 23;
     DockerImageStopCompositionEvent docker_image_stop_composition_event = 24;
     DockerImageStopContainerEvent docker_image_stop_container_event = 25;
-    DockerLoadImagesEvent docker_load_images_event = 26;
-    InitEvent init_event = 27;
-    InputCancelEvent input_cancel_event = 28;
-    InputProvideEvent input_provide_event = 29;
-    InputResolveEvent input_resolve_event = 30;
-    IpEvent ip_event = 31;
-    MainEvent main_event = 32;
-    MenuChooseByIconEvent menu_choose_by_icon_event = 33;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 34;
-    MenuChooseByLabelEvent menu_choose_by_label_event = 35;
-    MenuEvent menu_event = 36;
-    MenuGoBackEvent menu_go_back_event = 37;
-    MenuGoHomeEvent menu_go_home_event = 38;
-    MenuScrollEvent menu_scroll_event = 39;
-    NotificationsClearEvent notifications_clear_event = 40;
-    NotificationsDisplayEvent notifications_display_event = 41;
-    NotificationsEvent notifications_event = 42;
-    OpenApplicationEvent open_application_event = 43;
-    PowerEvent power_event = 44;
-    PowerOffEvent power_off_event = 45;
-    RPiConnectEvent r_pi_connect_event = 46;
-    RPiConnectLoginEvent r_pi_connect_login_event = 47;
-    RebootEvent reboot_event = 48;
-    ReplayRecordedSequenceEvent replay_recorded_sequence_event = 49;
-    RgbRingCommandEvent rgb_ring_command_event = 50;
-    RgbRingEvent rgb_ring_event = 51;
-    ScreenshotEvent screenshot_event = 52;
-    SettingsEvent settings_event = 53;
-    SettingsSetDebugModeEvent settings_set_debug_mode_event = 54;
-    SnapshotEvent snapshot_event = 55;
-    StoreRecordedSequenceEvent store_recorded_sequence_event = 56;
-    UpdateManagerCheckEvent update_manager_check_event = 57;
-    UpdateManagerEvent update_manager_event = 58;
-    UpdateManagerUpdateEvent update_manager_update_event = 59;
-    UsersCreateUserEvent users_create_user_event = 60;
-    UsersDeleteUserEvent users_delete_user_event = 61;
-    UsersEvent users_event = 62;
-    UsersResetPasswordEvent users_reset_password_event = 63;
-    VSCodeEvent vs_code_event = 64;
-    VSCodeLoginEvent vs_code_login_event = 65;
-    VSCodeRestartEvent vs_code_restart_event = 66;
-    VoiceEvent voice_event = 67;
-    VoiceSynthesizeTextEvent voice_synthesize_text_event = 68;
-    WebUIEvent web_ui_event = 69;
-    WebUIInitializeEvent web_ui_initialize_event = 70;
-    WebUIStopEvent web_ui_stop_event = 71;
-    WiFiEvent wi_fi_event = 72;
-    WiFiInputConnectionEvent wi_fi_input_connection_event = 73;
-    WiFiUpdateRequestEvent wi_fi_update_request_event = 74;
+    DockerInstallEvent docker_install_event = 26;
+    DockerStartEvent docker_start_event = 27;
+    DockerStopEvent docker_stop_event = 28;
+    InitEvent init_event = 29;
+    InputCancelEvent input_cancel_event = 30;
+    InputProvideEvent input_provide_event = 31;
+    InputResolveEvent input_resolve_event = 32;
+    IpEvent ip_event = 33;
+    MainEvent main_event = 34;
+    MenuChooseByIconEvent menu_choose_by_icon_event = 35;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 36;
+    MenuChooseByLabelEvent menu_choose_by_label_event = 37;
+    MenuEvent menu_event = 38;
+    MenuGoBackEvent menu_go_back_event = 39;
+    MenuGoHomeEvent menu_go_home_event = 40;
+    MenuScrollEvent menu_scroll_event = 41;
+    NotificationsClearEvent notifications_clear_event = 42;
+    NotificationsDisplayEvent notifications_display_event = 43;
+    NotificationsEvent notifications_event = 44;
+    OpenApplicationEvent open_application_event = 45;
+    PowerEvent power_event = 46;
+    PowerOffEvent power_off_event = 47;
+    RPiConnectEvent r_pi_connect_event = 48;
+    RPiConnectLoginEvent r_pi_connect_login_event = 49;
+    RebootEvent reboot_event = 50;
+    ReplayRecordedSequenceEvent replay_recorded_sequence_event = 51;
+    RgbRingCommandEvent rgb_ring_command_event = 52;
+    RgbRingEvent rgb_ring_event = 53;
+    ScreenshotEvent screenshot_event = 54;
+    SettingsEvent settings_event = 55;
+    SettingsServiceEvent settings_service_event = 56;
+    SettingsSetDebugModeEvent settings_set_debug_mode_event = 57;
+    SettingsStartServiceEvent settings_start_service_event = 58;
+    SettingsStopServiceEvent settings_stop_service_event = 59;
+    SnapshotEvent snapshot_event = 60;
+    StoreRecordedSequenceEvent store_recorded_sequence_event = 61;
+    UpdateManagerCheckEvent update_manager_check_event = 62;
+    UpdateManagerEvent update_manager_event = 63;
+    UpdateManagerUpdateEvent update_manager_update_event = 64;
+    UsersCreateUserEvent users_create_user_event = 65;
+    UsersDeleteUserEvent users_delete_user_event = 66;
+    UsersEvent users_event = 67;
+    UsersResetPasswordEvent users_reset_password_event = 68;
+    VSCodeEvent vs_code_event = 69;
+    VSCodeLoginEvent vs_code_login_event = 70;
+    VSCodeRestartEvent vs_code_restart_event = 71;
+    VoiceEvent voice_event = 72;
+    VoiceSynthesizeTextEvent voice_synthesize_text_event = 73;
+    WebUIEvent web_ui_event = 74;
+    WebUIInitializeEvent web_ui_initialize_event = 75;
+    WebUIStopEvent web_ui_stop_event = 76;
+    WiFiEvent wi_fi_event = 77;
+    WiFiInputConnectionEvent wi_fi_input_connection_event = 78;
+    WiFiUpdateRequestEvent wi_fi_update_request_event = 79;
   }
 }

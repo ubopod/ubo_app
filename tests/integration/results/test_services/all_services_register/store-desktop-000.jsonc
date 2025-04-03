@@ -834,6 +834,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "audio"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "audio"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "audio"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "audio"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "audio"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "audio"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "audio"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -921,6 +1063,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "camera"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "camera"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "camera"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "camera"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "camera"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "camera"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "camera"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "camera"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -1014,6 +1298,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "display"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "display"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "display"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "display"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "display"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "display"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "display"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -1101,6 +1527,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "docker"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "docker"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "docker"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "docker"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "docker"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "docker"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "docker"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "docker"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -1194,6 +1762,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "ethernet"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "ethernet"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "ethernet"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "ethernet"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "ethernet"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "ethernet"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "ethernet"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -1281,6 +1991,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "ip"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "ip"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "ip"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "ip"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "ip"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "ip"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "ip"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "ip"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -1374,6 +2226,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "keyboard"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "keyboard"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "keyboard"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "keyboard"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "keyboard"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "keyboard"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "keyboard"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -1461,6 +2455,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "keypad"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "keypad"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "keypad"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "keypad"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "keypad"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "keypad"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "keypad"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "keypad"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -1554,6 +2690,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "lightdm"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "lightdm"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "lightdm"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "lightdm"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "lightdm"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "lightdm"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "lightdm"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -1641,6 +2919,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "notifications"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "notifications"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "notifications"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "notifications"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "notifications"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "notifications"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "notifications"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "notifications"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -1734,6 +3154,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "rgb_ring"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "rgb_ring"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "rgb_ring"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "rgb_ring"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "rgb_ring"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "rgb_ring"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "rgb_ring"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -1821,6 +3383,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "rpi_connect"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "rpi_connect"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "rpi_connect"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "rpi_connect"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "rpi_connect"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "rpi_connect"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "rpi_connect"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "rpi_connect"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -1914,6 +3618,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "ssh"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "ssh"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "ssh"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "ssh"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "ssh"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "ssh"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "ssh"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -2001,6 +3847,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "sensors"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "sensors"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "sensors"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "sensors"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "sensors"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "sensors"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "sensors"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "sensors"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -2094,6 +4082,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "users"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "users"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "users"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "users"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "users"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "users"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "users"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -2181,6 +4311,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "vscode"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "vscode"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "vscode"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "vscode"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "vscode"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "vscode"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "vscode"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "vscode"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -2274,6 +4546,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "voice"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "voice"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "voice"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "voice"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "voice"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "voice"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "voice"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -2364,6 +4778,148 @@
                                         }
                                       },
                                       {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "web_ui"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "web_ui"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "web_ui"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "web_ui"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "web_ui"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "web_ui"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "web_ui"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
                                         "_type": "DispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
@@ -2451,6 +5007,148 @@
                                           "_type": "SettingsServiceSetIsEnabledAction",
                                           "is_enabled": false,
                                           "service_id": "wifi"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "wifi"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "wifi"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "wifi"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "wifi"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "wifi"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "wifi"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "wifi"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
                                         }
                                       },
                                       {
@@ -2887,6 +5585,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Audio",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "camera": {
@@ -2896,6 +5595,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Camera",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "display": {
@@ -2905,6 +5605,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Display",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "docker": {
@@ -2914,6 +5615,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Docker",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "ethernet": {
@@ -2923,6 +5625,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Ethernet",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "ip": {
@@ -2932,6 +5635,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "IP",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "keyboard": {
@@ -2941,6 +5645,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Keyboard",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "keypad": {
@@ -2950,6 +5655,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Keypad",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "lightdm": {
@@ -2959,6 +5665,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "LightDM",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "notifications": {
@@ -2968,6 +5675,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Notifications",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "rgb_ring": {
@@ -2977,6 +5685,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "RGB Ring",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "rpi_connect": {
@@ -2986,6 +5695,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "RPi Connect",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "sensors": {
@@ -2995,6 +5705,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Sensors",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "ssh": {
@@ -3004,6 +5715,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "SSH",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "users": {
@@ -3013,6 +5725,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Users",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "voice": {
@@ -3022,6 +5735,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Voice",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "vscode": {
@@ -3031,6 +5745,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "VSCode",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "web_ui": {
@@ -3040,6 +5755,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Web UI",
+        "log_level": 10,
         "should_auto_restart": false
       },
       "wifi": {
@@ -3049,6 +5765,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "WiFi",
+        "log_level": 10,
         "should_auto_restart": false
       }
     }
