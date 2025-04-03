@@ -3,6 +3,7 @@
 ## Upcoming
 
 - test: improve test logs in the ci
+- refactor(docker): since service setup functions are now run after reducers are initialized, we don't need to pass the signal for loading docker applications through the docker reducer
 
 ## Version 1.3.0
 

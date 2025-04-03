@@ -39,10 +39,6 @@ class DockerAction(BaseAction):
     """Docker action."""
 
 
-class DockerLoadImagesAction(DockerAction):
-    """Signal showing docker reducer is registered and ready for loading images."""
-
-
 class DockerInstallAction(DockerAction):
     """Install docker."""
 
@@ -148,10 +144,6 @@ class DockerStartEvent(DockerEvent):
 
 class DockerStopEvent(DockerEvent):
     """Signal for stopping docker service."""
-
-
-class DockerLoadImagesEvent(DockerEvent):
-    """Signal for loading images."""
 
 
 class DockerServiceState(Immutable):
