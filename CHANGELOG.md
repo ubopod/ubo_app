@@ -4,6 +4,7 @@
 
 - test: improve test logs in the ci
 - refactor(docker): since service setup functions are now run after reducers are initialized, we don't need to pass the signal for loading docker applications through the docker reducer
+- refactor(voice): make the menu `Item` parameters like icon and background color, used to show it's selectable and selected/unselected reusable by putting them in `ubo_app/utils/gui.py`
 
 ## Version 1.3.0
 

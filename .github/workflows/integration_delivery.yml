@@ -159,7 +159,7 @@ jobs:
       - name: Run Tests
         run: |
           mkdir -p $HOME/.kivy/mods
-          uv run --frozen poe test --showlocals --verbosity=2 --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG
+          uv run --frozen poe test --showlocals --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
