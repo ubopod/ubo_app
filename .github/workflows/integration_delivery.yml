@@ -157,11 +157,9 @@ jobs:
           uv venv --system-site-packages
 
       - name: Run Tests
-        env:
-          THREADS: ${{ startsWith(matrix.runner, 'ubo-pod') && '1' || 'auto' }}
         run: |
           mkdir -p $HOME/.kivy/mods
-          uv run --frozen poe test --verbosity=2 --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG --log-cli-level=5 -n "$THREADS"
+          uv run --frozen poe test --showlocals --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
@@ -242,6 +240,34 @@ jobs:
             echo "SENTRY_RELEASE=ubo-app@$GITHUB_SHA" >>ubo_app/.env
           fi
           cat ubo_app/.env
+
+      - name: System Dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libasound2-dev libegl1 libgl1 libmtdev1 libzbar0
+
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
+
+      - name: Install buf cli
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Build new protobuf files and gRPC bindings
+        run: |
+          uv run --frozen poe proto
+
+      - name: Check if new bindings are different
+        id: check-bindings
+        run: |
+          if [[ $(git status --porcelain ubo_app/rpc) ]]; then
+            echo "Bindings have changed but not updated in the commit."
+            exit 1
+          else
+            echo "No changes to gRPC bindings."
+          fi
 
       - uses: actions/setup-node@v4
         name: Setup Node

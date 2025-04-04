@@ -6,14 +6,13 @@ import pathlib
 import struct
 from asyncio import CancelledError
 from queue import Queue
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import fasteners
 import pvorca
 from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource]
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
-from ubo_app.colors import SUCCESS_COLOR
 from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType
@@ -29,6 +28,7 @@ from ubo_app.store.services.voice import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
+from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 
@@ -235,21 +235,16 @@ def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
 
 @store.autorun(lambda state: state.voice.selected_engine)
 def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
-    selected_engine_parameters = {
-        'background_color': SUCCESS_COLOR,
-        'icon': '󰱒',
-    }
-    unselected_engine_parameters = {'icon': '󰄱'}
     return [
-        ActionItem(
+        (
+            selection_parameters := SELECTED_ITEM_PARAMETERS
+            if engine == selected_engine
+            else UNSELECTED_ITEM_PARAMETERS,
+        )
+        and ActionItem(
             label=ENGINE_LABELS[engine],
             action=create_engine_selector(engine),
-            **cast(
-                'Any',
-                selected_engine_parameters
-                if engine == selected_engine
-                else unselected_engine_parameters,
-            ),
+            **selection_parameters,
         )
         for engine in VoiceEngine
     ]

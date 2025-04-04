@@ -16,6 +16,36 @@ if TYPE_CHECKING:
 VERBOSE = 5
 
 
+COLORS_HEX = {
+    logging.NOTSET: '#545454',  # Very Dark Gray
+    VERBOSE: '#848484',  # Dark Gray
+    logging.DEBUG: '#b6b6b6',  # Light Gray
+    logging.INFO: '#64C864',  # Green
+    logging.WARNING: '#FFA500',  # Orange
+    logging.ERROR: '#FF9696',  # Red
+    logging.CRITICAL: '#FF00FF',  # Magenta
+}
+COLORS_ANSI_RGB = {
+    logging.NOTSET: '\033[38;2;84;84;84m',  # Very Dark Gray (RGB)
+    VERBOSE: '\033[38;2;132;132;132m',  # Dark Gray (RGB)
+    logging.DEBUG: '\033[38;2;182;182;182m',  # Light Gray (RGB)
+    logging.INFO: '\033[38;2;100;200;100m',  # Green (RGB)
+    logging.WARNING: '\033[38;2;255;165;0m',  # Orange (RGB)
+    logging.ERROR: '\033[38;2;255;150;150m',  # Red (RGB)
+    logging.CRITICAL: '\033[38;2;255;0;255m',  # Magenta (RGB)
+}
+COLORS_ANSI_BASIC = {
+    logging.NOTSET: '\033[90m',  # Very Dark Gray (ANSI)
+    VERBOSE: '\033[37m',  # Dark Gray (ANSI)
+    logging.DEBUG: '\033[97m',  # Light Gray (ANSI)
+    logging.INFO: '\033[92m',  # Green (ANSI)
+    logging.WARNING: '\033[93m',  # Yellow (ANSI)
+    logging.ERROR: '\033[91m',  # Red (ANSI)
+    logging.CRITICAL: '\033[95m',  # Magenta (ANSI)
+}
+ANSI_RESET = '\033[0m'  # Reset color
+
+
 def handle_circular_references(
     obj: object,
     seen: dict[int, str | dict | list | tuple] | None = None,
@@ -132,24 +162,6 @@ class ExtraFormatter(logging.Formatter):
 class StdOutExtraFormatter(ExtraFormatter):
     max_length: int | None = None
 
-    COLORS: ClassVar[dict[int, str]] = {
-        VERBOSE: '\033[38;2;100;100;100m',  # Dark Gray (RGB)
-        logging.DEBUG: '\033[38;2;150;150;150m',  # Light Gray (RGB)
-        logging.INFO: '\033[38;2;100;200;100m',  # Green (RGB)
-        logging.WARNING: '\033[38;2;255;165;0m',  # Orange (RGB)
-        logging.ERROR: '\033[38;2;255;150;150m',  # Red (RGB)
-        logging.CRITICAL: '\033[38;2;255;0;255m',  # Magenta (RGB)
-    }
-    ANSI_COLORS: ClassVar[dict[int, str]] = {
-        VERBOSE: '\033[90m',  # Gray (ANSI)
-        logging.DEBUG: '\033[94m',  # Blue (ANSI)
-        logging.INFO: '\033[92m',  # Green (ANSI)
-        logging.WARNING: '\033[93m',  # Yellow (ANSI)
-        logging.ERROR: '\033[91m',  # Red (ANSI)
-        logging.CRITICAL: '\033[95m',  # Magenta (ANSI)
-    }
-    RESET = '\033[0m'  # Reset color
-
     def format(self: StdOutExtraFormatter, record: logging.LogRecord) -> str:
         string = super().format(record)
 
@@ -157,11 +169,33 @@ class StdOutExtraFormatter(ExtraFormatter):
             string = string[: self.max_length - 3] + '...'
 
         # Get the color for the log level and apply it
-        color = (self.COLORS if supports_truecolor() else self.ANSI_COLORS).get(
+        color = (COLORS_ANSI_RGB if supports_truecolor() else COLORS_ANSI_BASIC).get(
             record.levelno,
-            self.RESET,
+            ANSI_RESET,
         )
-        return f'{color}{string}{self.RESET}'
+        return f'{color}{string}{ANSI_RESET}'
+
+
+class ThreadLevelFilter(logging.Filter):
+    thread_levels: ClassVar[dict[str, int]] = {}
+
+    @classmethod
+    def set_thread_level(cls, thread_name: str, level: int | None) -> None:
+        if level is None:
+            if thread_name in cls.thread_levels:
+                del cls.thread_levels[thread_name]
+        else:
+            cls.thread_levels[thread_name] = level
+
+    def filter(self: ThreadLevelFilter, record: logging.LogRecord) -> bool:
+        thread_name = record.threadName
+        if thread_name is None:
+            return True
+        level = self.thread_levels.get(thread_name, logging.NOTSET)
+        return record.levelno >= level
+
+
+thread_level_filter = ThreadLevelFilter()
 
 
 def add_stdout_handler(
@@ -177,6 +211,7 @@ def add_stdout_handler(
     if level <= logging.DEBUG:
         formatter.max_length = 10000
     stdout_handler.setFormatter(formatter)
+    stdout_handler.addFilter(thread_level_filter)
     logger.addHandler(stdout_handler)
 
     def cleanup() -> None:
@@ -203,6 +238,7 @@ def add_file_handler(
             '%Y-%m-%d %H:%M:%S',
         ),
     )
+    file_handler.addFilter(thread_level_filter)
     logger.addHandler(file_handler)
 
     def cleanup() -> None:
@@ -219,10 +255,7 @@ def get_log_level() -> int | None:
     if LOG_LEVEL:
         import logging
 
-        return globals().get(
-            LOG_LEVEL,
-            getattr(logging, LOG_LEVEL, logging.INFO),
-        )
+        return logging.getLevelNamesMapping()[LOG_LEVEL]
     return None
 
 
@@ -232,13 +265,7 @@ def get_gui_log_level() -> int | None:
     if GUI_LOG_LEVEL:
         import logging
 
-        import ubo_gui.logger
-
-        return getattr(
-            ubo_gui.logger,
-            GUI_LOG_LEVEL,
-            getattr(logging, GUI_LOG_LEVEL, logging.INFO),
-        )
+        return logging.getLevelNamesMapping()[GUI_LOG_LEVEL]
     return None
 
 

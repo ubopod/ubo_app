@@ -99,12 +99,12 @@ def _unload_waiter(
         timeout=timeout,
         wait=wait_fixed(1),
     )
-    def _() -> None:
+    def check_services_are_dead() -> None:
         for service in services:
             assert not service.is_alive()
 
     try:
-        result = _()
+        result = check_services_are_dead()
     except RetryError:
         _check_dangling_services(service_ids)
         raise

@@ -45,8 +45,6 @@ from ubo_app.store.services.docker import (
     DockerImageStopContainerEvent,
     DockerInstallAction,
     DockerInstallEvent,
-    DockerLoadImagesAction,
-    DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerServiceState,
     DockerSetStatusAction,
@@ -74,12 +72,6 @@ def service_reducer(
         if isinstance(action, InitAction):
             return DockerServiceState()
         raise InitializationActionError(action)
-
-    if isinstance(action, DockerLoadImagesAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[DockerLoadImagesEvent()],
-        )
 
     if isinstance(action, DockerSetStatusAction):
         return replace(state, status=action.status)

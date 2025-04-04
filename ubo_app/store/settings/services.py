@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import pathlib
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from kivy.lang.builder import Builder
 from kivy.metrics import dp
@@ -12,11 +13,13 @@ from kivy.properties import StringProperty
 from ubo_gui.menu.types import (
     ApplicationItem,
     HeadedMenu,
+    HeadlessMenu,
     Item,
     SubMenuItem,
 )
 from ubo_gui.page import PageWidget
 
+from ubo_app import logger
 from ubo_app.colors import (
     DANGER_COLOR,
     RUNNING_COLOR,
@@ -29,21 +32,36 @@ from ubo_app.store.settings.types import (
     ErrorReport,
     SettingsClearServiceErrorsAction,
     SettingsServiceSetIsEnabledAction,
+    SettingsServiceSetLogLevelAction,
     SettingsServiceSetShouldRestartAction,
     SettingsStartServiceAction,
     SettingsStopServiceAction,
 )
+from ubo_app.utils.gui import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+    ItemParameters,
+)
+
+
+def _get_selected_item_parameters(log_level_: int) -> ItemParameters:
+    return {
+        **SELECTED_ITEM_PARAMETERS,
+        'background_color': logger.COLORS_HEX[log_level_],
+        'color': '#ffffff',
+    }
+
+
+def _get_unselected_item_parameters(log_level_: int) -> ItemParameters:
+    return {
+        **UNSELECTED_ITEM_PARAMETERS,
+        'background_color': '#000000',
+        'color': logger.COLORS_HEX[log_level_],
+    }
+
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from ubo_app.store.settings.types import ServiceState
-
-
-class _Callbacks(TypedDict):
-    heading: Callable[[], str]
-    sub_heading: Callable[[], str]
-    items: Callable[[], list[Item]]
 
 
 def _generate_error_report_app(error: ErrorReport) -> PageWidget:
@@ -68,14 +86,20 @@ def _generate_error_report_app(error: ErrorReport) -> PageWidget:
     return ErrorReportPage
 
 
-def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
+SERVICE_ITEMS: dict[str, SubMenuItem] = {}
+
+
+def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
+    if service.id in SERVICE_ITEMS:
+        return SERVICE_ITEMS[service.id]
+
     @store.autorun(
         lambda state: (
-            state.settings.services[service_id].label,
-            state.settings.services[service_id].is_active,
-            state.settings.services[service_id].errors,
+            state.settings.services[service.id].label,
+            state.settings.services[service.id].is_active,
+            state.settings.services[service.id].errors,
         )
-        if state.settings.services is not None and service_id in state.settings.services
+        if state.settings.services is not None and service.id in state.settings.services
         else None,
     )
     def heading(data: tuple[str, bool, list] | None) -> str:
@@ -93,8 +117,8 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
         )
 
     @store.autorun(
-        lambda state: state.settings.services[service_id].errors
-        if state.settings.services is not None and service_id in state.settings.services
+        lambda state: state.settings.services[service.id].errors
+        if state.settings.services is not None and service.id in state.settings.services
         else None,
     )
     def sub_heading(errors: list[ErrorReport] | None) -> str:
@@ -109,7 +133,9 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
 
         return f'{len(errors)} errors raised in this service'
 
-    @store.autorun(lambda state: state.settings.services[service_id].errors)
+    @store.autorun(
+        lambda state: state.settings.services[service.id].errors,
+    )
     def error_items(errors: list[ErrorReport]) -> list[Item]:
         return [
             ApplicationItem(
@@ -126,29 +152,51 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
         ]
 
     @store.autorun(
-        lambda state: (
-            state.settings.services[service_id].errors,
-            state.settings.services[service_id].is_active,
-            state.settings.services[service_id].is_enabled,
-            state.settings.services[service_id].should_auto_restart,
-        )
-        if state.settings.services is not None and service_id in state.settings.services
+        lambda state: state.settings.services[service.id].log_level,
+    )
+    def log_level_items(log_level: int) -> list[Item]:
+        def create_log_level_item(level: int) -> Item:
+            selection_parameters = (
+                _get_selected_item_parameters(level)
+                if level == log_level
+                else _get_unselected_item_parameters(level)
+            )
+            return DispatchItem(
+                key=logging.getLevelName(level),
+                label=logging.getLevelName(level),
+                store_action=SettingsServiceSetLogLevelAction(
+                    service_id=service.id,
+                    log_level=level,
+                ),
+                **selection_parameters,
+            )
+
+        return [create_log_level_item(level) for level in logger.COLORS_HEX]
+
+    @store.autorun(
+        lambda state: state.settings.services[service.id].log_level,
+    )
+    def log_level_title(log_level: int) -> str:
+        return f'Log Level: {logging.getLevelName(log_level)}'
+
+    @store.autorun(
+        lambda state: state.settings.services[service.id]
+        if state.settings.services is not None and service.id in state.settings.services
         else None,
     )
-    def items(data: tuple[list[ErrorReport], bool, bool, bool] | None) -> list[Item]:
-        if data is None:
+    def items(
+        service_state: ServiceState | None,
+    ) -> list[Item]:
+        if service_state is None:
             return []
-
-        errors, is_active, is_enabled, should_auto_restart = data
-
         items: list[Item] = []
 
-        if is_active:
+        if service_state.is_active:
             items.append(
                 DispatchItem(
                     key='stop',
                     label='Stop',
-                    store_action=SettingsStopServiceAction(service_id=service_id),
+                    store_action=SettingsStopServiceAction(service_id=service.id),
                     icon='',
                     background_color=DANGER_COLOR,
                 ),
@@ -158,22 +206,34 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
                 DispatchItem(
                     key='start',
                     label='Start',
-                    store_action=SettingsStartServiceAction(service_id=service_id),
+                    store_action=SettingsStartServiceAction(service_id=service.id),
                     icon=f'[color={RUNNING_COLOR}][/color]',
                 ),
             )
 
-        if is_enabled:
-            items.append(
-                DispatchItem(
-                    key='enabled',
-                    label='Auto Load',
-                    store_action=SettingsServiceSetIsEnabledAction(
-                        service_id=service_id,
-                        is_enabled=False,
+        if service_state.is_enabled:
+            items.extend(
+                [
+                    DispatchItem(
+                        key='enabled',
+                        label='Auto Load',
+                        store_action=SettingsServiceSetIsEnabledAction(
+                            service_id=service.id,
+                            is_enabled=False,
+                        ),
+                        icon='',
                     ),
-                    icon='',
-                ),
+                    SubMenuItem(
+                        key='log_level',
+                        label=f'Level: {logging.getLevelName(service_state.log_level)}',
+                        background_color=logger.COLORS_HEX[service_state.log_level],
+                        icon='',
+                        sub_menu=HeadlessMenu(
+                            title=log_level_title,
+                            items=log_level_items,
+                        ),
+                    ),
+                ],
             )
         else:
             items.append(
@@ -181,7 +241,7 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
                     key='enabled',
                     label='Auto Load',
                     store_action=SettingsServiceSetIsEnabledAction(
-                        service_id=service_id,
+                        service_id=service.id,
                         is_enabled=True,
                     ),
                     icon='',
@@ -189,13 +249,13 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
                 ),
             )
 
-        if should_auto_restart:
+        if service_state.should_auto_restart:
             items.append(
                 DispatchItem(
                     key='auto_restart',
                     label='Auto Restart',
                     store_action=SettingsServiceSetShouldRestartAction(
-                        service_id=service_id,
+                        service_id=service.id,
                         should_auto_restart=False,
                     ),
                     icon='󰜉',
@@ -207,7 +267,7 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
                     key='auto_restart',
                     label='Auto Restart',
                     store_action=SettingsServiceSetShouldRestartAction(
-                        service_id=service_id,
+                        service_id=service.id,
                         should_auto_restart=True,
                     ),
                     icon='󰶕',
@@ -215,7 +275,7 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
                 ),
             )
 
-        if errors:
+        if service_state.errors:
             items.extend(
                 [
                     SubMenuItem(
@@ -233,7 +293,7 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
                         key='clear_errors',
                         label='Clear errors',
                         store_action=SettingsClearServiceErrorsAction(
-                            service_id=service_id,
+                            service_id=service.id,
                         ),
                         icon='',
                     ),
@@ -242,22 +302,12 @@ def _callbacks(service_id: str) -> _Callbacks:  # noqa: C901
 
         return items
 
-    return {
-        'heading': heading,
-        'sub_heading': sub_heading,
-        'items': items,
-    }
-
-
-def service_icon(service_id: str) -> Callable[[], str]:
-    """Get the icon of a service."""
-
     @store.autorun(
         lambda state: (
-            state.settings.services[service_id].is_active,
-            state.settings.services[service_id].errors,
+            state.settings.services[service.id].is_active,
+            state.settings.services[service.id].errors,
         )
-        if state.settings.services is not None and service_id in state.settings.services
+        if state.settings.services is not None and service.id in state.settings.services
         else None,
     )
     def icon(data: tuple[bool, list[ErrorReport]] | None) -> str:
@@ -274,7 +324,19 @@ def service_icon(service_id: str) -> Callable[[], str]:
             else f'[color={STOPPED_COLOR}]󰝦[/color]'
         )
 
-    return icon
+    SERVICE_ITEMS[service.id] = SubMenuItem(
+        key=service.id,
+        label=service.label,
+        icon=icon,
+        sub_menu=HeadedMenu(
+            title=service.label,
+            heading=heading,
+            sub_heading=sub_heading,
+            items=items,
+        ),
+    )
+
+    return SERVICE_ITEMS[service.id]
 
 
 @store.autorun(lambda state: state.settings.services)
@@ -284,12 +346,7 @@ def service_items(services: dict[str, ServiceState] | None) -> list[SubMenuItem]
         return []
 
     return [
-        SubMenuItem(
-            key=service.id,
-            label=service.label,
-            icon=service_icon(service.id),
-            sub_menu=HeadedMenu(title=service.label, **_callbacks(service.id)),
-        )
+        _create_service_item(service)
         for service in sorted(services.values(), key=lambda x: x.label)
     ]
 

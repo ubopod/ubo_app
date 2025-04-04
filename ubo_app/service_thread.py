@@ -8,6 +8,7 @@ import importlib
 import importlib.abc
 import importlib.util
 import inspect
+import logging
 import sys
 import threading
 import traceback
@@ -32,7 +33,7 @@ from ubo_app.constants import (
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
 )
-from ubo_app.logger import logger
+from ubo_app.logger import ThreadLevelFilter, get_log_level, logger
 from ubo_app.store.settings.types import (
     ServiceState,
     SettingsServiceSetStatusAction,
@@ -298,6 +299,14 @@ class UboServiceThread(threading.Thread):
         self.loop = asyncio.new_event_loop()
         self.loop.set_exception_handler(loop_exception_handler)
 
+        @store.autorun(
+            lambda state: state.settings.services[self.service_id].log_level
+            if self.service_id in state.settings.services
+            else None,
+        )
+        def set_log_level(log_level: int | None) -> None:
+            ThreadLevelFilter.set_thread_level(self.name, log_level)
+
         logger.info(
             'Starting service thread',
             extra={
@@ -375,6 +384,7 @@ class UboServiceThread(threading.Thread):
                 },
             )
         finally:
+            ThreadLevelFilter.set_thread_level(self.name, None)
             store.dispatch(
                 SettingsServiceSetStatusAction(
                     service_id=self.service_id,
@@ -623,6 +633,7 @@ def load_services(
             label=service.label,
             is_active=service.is_alive(),
             is_enabled=service.is_enabled,
+            log_level=get_log_level() or logging.INFO,
             should_auto_restart=service.should_auto_restart,
         )
         for service in SERVICES_BY_PATH.values()
@@ -639,6 +650,7 @@ def load_services(
                     'is_enabled',
                     services[service['id']].is_enabled,
                 ),
+                log_level=service.get('log_level', get_log_level() or logging.INFO),
                 should_auto_restart=service.get(
                     'should_auto_restart',
                     services[service['id']].should_auto_restart,

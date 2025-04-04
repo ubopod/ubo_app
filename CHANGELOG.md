@@ -1,5 +1,17 @@
 # Changelog
 
+## Upcoming
+
+- test: improve test logs in the ci
+- refactor(docker): since service setup functions are now run after reducers are initialized, we don't need to pass the signal for loading docker applications through the docker reducer
+- refactor(voice): make the menu `Item` parameters like icon and background color, used to show it's selectable and selected/unselected reusable by putting them in `ubo_app/utils/gui.py`
+- feat(services): add log level selection sub menu to each service menu and sync it with persistent storage - closes #164
+- test(services): set limits for the number of registered listeners and event handlers after all services are loaded in `test_all_services_register`
+- refactor(core): wait for all service threads to join before running cleanup functions for dbus connections and the logger
+- feat(services): apply log levels set in service settings for each service using `logging.Filter`
+- feat(ci): make the build job fail if grpc bindings are not up to date with code
+- refactor(core): move pod-id generation logic to `set_pod_id` and "unseed" the seeded random after generating pod id
+
 ## Version 1.3.0
 
 - fix: remove dependencies of `publish` job of `publish_to_pypi` workflow

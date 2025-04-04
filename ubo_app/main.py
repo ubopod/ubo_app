@@ -100,7 +100,12 @@ def main() -> None:
 
         store.dispatch(FinishAction())
     finally:
+        from ubo_app.service_thread import SERVICES_BY_PATH
+
         stop_services()
+
+        for service in list(SERVICES_BY_PATH.values()):
+            service.join()
 
         from ubo_app.setup import clear_signal_handlers
         from ubo_app.utils import bus_provider

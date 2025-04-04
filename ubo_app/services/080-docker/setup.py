@@ -54,8 +54,6 @@ from ubo_app.store.services.docker import (
     DockerImageStopContainerEvent,
     DockerInstallAction,
     DockerInstallEvent,
-    DockerLoadImagesAction,
-    DockerLoadImagesEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
     DockerStartAction,
@@ -586,7 +584,6 @@ def init_service() -> Subscriptions:
     )
 
     subscriptions = [
-        store.subscribe_event(DockerLoadImagesEvent, _load_images),
         store.subscribe_event(
             DockerImageRegisterAppEvent,
             _register_image_app_entry,
@@ -619,6 +616,6 @@ def init_service() -> Subscriptions:
         ),
     )
 
-    store.dispatch(DockerLoadImagesAction())
+    _load_images()
 
     return subscriptions

@@ -16,6 +16,7 @@ from ubo_app.store.settings.types import (
     SettingsEvent,
     SettingsReportServiceErrorAction,
     SettingsServiceSetIsEnabledAction,
+    SettingsServiceSetLogLevelAction,
     SettingsServiceSetShouldRestartAction,
     SettingsServiceSetStatusAction,
     SettingsSetDebugModeEvent,
@@ -124,6 +125,20 @@ def reducer(
                 action.service_id: replace(
                     state.services[action.service_id],
                     is_enabled=action.is_enabled,
+                ),
+            }
+            if state.services
+            else {},
+        )
+
+    if isinstance(action, SettingsServiceSetLogLevelAction):
+        return replace(
+            state,
+            services={
+                **state.services,
+                action.service_id: replace(
+                    state.services[action.service_id],
+                    log_level=action.log_level,
                 ),
             }
             if state.services
