@@ -44,6 +44,10 @@ class AudioManager:
         self.has_speakers = False
         self.has_microphones = False
 
+        self.playback_mute = True
+        self.playback_volume = 0.1
+        self.capture_volume = 0.1
+
         async def initialize_audio() -> None:
             for _ in range(TRIALS):
                 try:
@@ -55,6 +59,10 @@ class AudioManager:
                     logger.exception('No audio card found')
                     await send_command('audio', 'failure_report', has_output=True)
                 else:
+                    # In case they were set before the card was initialized
+                    self.set_playback_mute(mute=self.playback_mute)
+                    self.set_playback_volume(self.playback_volume)
+                    self.set_capture_volume(self.capture_volume)
                     break
                 await asyncio.sleep(1)
 
@@ -167,6 +175,7 @@ class AudioManager:
             Mute to set
 
         """
+        self.playback_mute = mute
         try:
             # Assume pulseaudio is installed
             mixer = alsaaudio.Mixer(control='Master')
@@ -196,6 +205,7 @@ class AudioManager:
             Volume to set, a float between 0 and 1
 
         """
+        self.playback_volume = volume
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)
@@ -230,6 +240,7 @@ class AudioManager:
             Volume to set, a float between 0 and 1
 
         """
+        self.capture_volume = volume
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)

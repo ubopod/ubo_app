@@ -73,6 +73,7 @@
 - fix(audio): make audio run the `unbind` and `bind` sequence if the audio card is not listed by `alsaaudio.cards`
 - fix(audio): replace wareshare repo with ubopod fork
 - refactor(wifi): show wifi onboarding only on ubo-pod, and initiate the wifi input over hotspot on non-ubo-pods
+- fix(audio): make sure `set_playback_mute`, `set_playback_volume` and `set_capture_volume` are applied on the audio card, even if audio manager is not initialized when these methods are called
 
 ## Version 1.2.2
 
