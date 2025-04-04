@@ -18,10 +18,11 @@ fi
 
 #download the archive
 rm -rf WM8960-Audio-HAT
-git clone https://github.com/waveshare/WM8960-Audio-HAT
+git clone https://github.com/ubopod/WM8960-Audio-HAT
 cd WM8960-Audio-HAT
 
 apt-get -y update
+apt-get -y upgrade
 apt-get -y install raspberrypi-kernel-headers --no-install-recommends --no-install-suggests
 apt-get -y install dkms git i2c-tools libasound2-plugins --no-install-recommends --no-install-suggests
 apt-get -y clean
@@ -52,8 +53,8 @@ function install_module {
   dkms add -m $mod -v $ver
   for kernel in $kernels
   do
-    # It works for kernels greater than or equal 6.5
-    if [ $(echo "$kernel 6.5" | awk '{if ($1 >= $2) print 1; else print 0}') -eq 0 ]; then
+    # It works for kernels greater than or equal 6.12
+    if [ "$(printf '%s\n' "$kernel" "6.12" | sort -V | head -n1)" = "$kernel" ]; then
       continue
     fi
     dkms build "$kernel" -k "$kernel" --kernelsourcedir "/lib/modules/$kernel/build" -m $mod -v $ver &&
