@@ -1,6 +1,6 @@
 # Changelog
 
-## Upcoming
+## Version 1.3.0
 
 - fix: remove dependencies of `publish` job of `publish_to_pypi` workflow
 - fix: vscode binary now needs to be instructed about the location of the binary with `version use` sub-command - closes #217
