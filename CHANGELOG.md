@@ -72,6 +72,7 @@
 - refactor(services): avoid silencing caught exceptions in services by either reraising them so that they are caught and reported by the global exception handler or directly reporting them
 - fix(audio): make audio run the `unbind` and `bind` sequence if the audio card is not listed by `alsaaudio.cards`
 - fix(audio): replace wareshare repo with ubopod fork
+- refactor(wifi): show wifi onboarding only on ubo-pod, and initiate the wifi input over hotspot on non-ubo-pods
 
 ## Version 1.2.2
 

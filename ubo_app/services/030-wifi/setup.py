@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from pages import create_wireless_connection, main
-from redux import AutorunOptions
 from wifi_manager import (
     get_connections,
     get_wifi_device,
@@ -38,6 +37,7 @@ from ubo_app.store.services.wifi import (
     WiFiUpdateRequestEvent,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.eeprom import get_eeprom_data
 from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
 from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
@@ -121,8 +121,21 @@ async def _check_connection() -> None:
         },
     )
     if not await has_gateway() and not await get_saved_wifi_ssids():
-        logger.info('No network connection found, prompting for Wi-Fi input')
-        store.dispatch(WiFiInputConnectionAction())
+        if get_eeprom_data() is not None:
+            if not read_from_persistent_store(
+                key='wifi_has_visited_onboarding',
+                default=False,
+            ):
+                logger.info('No network connection found, showing WiFi onboarding.')
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=ONBOARDING_NOTIFICATION,
+                    ),
+                    WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True),
+                )
+        else:
+            logger.info('No network connection found, prompting for Wi-Fi input.')
+            store.dispatch(WiFiInputConnectionAction())
 
 
 def init_service() -> Subscriptions:
@@ -142,34 +155,12 @@ def init_service() -> Subscriptions:
         ),
     )
 
-    @store.autorun(
-        lambda state: state.ip.is_connected,
-        options=AutorunOptions(default_value=None),
-    )
-    def check_onboarding(is_connected: bool | None) -> None:
-        if is_connected is False and not read_from_persistent_store(
-            key='wifi_has_visited_onboarding',
-            default=False,
-        ):
-            logger.info('No internet connection, showing WiFi onboarding.')
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=ONBOARDING_NOTIFICATION,
-                ),
-                WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True),
-            )
+    create_task(_check_connection())
 
-        if is_connected is not None:
-            check_onboarding.unsubscribe()
-
-    subscriptions = [
+    return [
         store.subscribe_event(WiFiUpdateRequestEvent, request_scan),
         store.subscribe_event(
             WiFiInputConnectionEvent,
             create_wireless_connection.input_wifi_connection,
         ),
     ]
-
-    create_task(_check_connection())
-
-    return subscriptions
