@@ -10,6 +10,7 @@
 - refactor(core): wait for all service threads to join before running cleanup functions for dbus connections and the logger
 - feat(services): apply log levels set in service settings for each service using `logging.Filter`
 - feat(ci): make the build job fail if grpc bindings are not up to date with code
+- refactor(core): move pod-id generation logic to `set_pod_id` and "unseed" the seeded random after generating pod id
 
 ## Version 1.3.0
 

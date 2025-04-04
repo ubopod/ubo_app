@@ -7,10 +7,8 @@ import grp
 import logging
 import os
 import pwd
-import random
 import socket
 import stat
-import string
 import subprocess
 import sys
 import time
@@ -31,7 +29,6 @@ from ubo_app.system.system_manager.package import package_handler
 from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
 from ubo_app.system.system_manager.users import users_handler
-from ubo_app.utils.eeprom import read_serial_number
 from ubo_app.utils.error_handlers import setup_error_handling
 from ubo_app.utils.pod_id import get_pod_id, set_pod_id
 
@@ -80,16 +77,8 @@ def setup_hostname() -> None:
     """Set the hostname to 'ubo'."""
     logger.info('Setting hostname...')
 
-    available_letters = list(
-        set(string.ascii_lowercase + string.digits + '-') - set('I1lO'),
-    )
-
     if not get_pod_id():
-        serial_number = read_serial_number()
-        random.seed(serial_number)
-        # Generate 2 letters random id
-        id = f'ubo-{"".join(random.sample(available_letters, 2))}'
-        set_pod_id(id)
+        set_pod_id()
 
     id = get_pod_id()
 
