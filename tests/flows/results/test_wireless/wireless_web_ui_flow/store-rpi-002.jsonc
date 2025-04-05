@@ -1,0 +1,18 @@
+// store-rpi-002
+{
+  "_type": "WiFiState",
+  "connections": [
+    {
+      "_type": "WiFiConnection",
+      "hidden": false,
+      "password": null,
+      "signal_strength": 100,
+      "ssid": "ubo-test-ssid",
+      "state": "Disconnected",
+      "type": null
+    }
+  ],
+  "current_connection": null,
+  "has_visited_onboarding": null,
+  "state": "Disconnected"
+} 
