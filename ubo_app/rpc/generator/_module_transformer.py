@@ -200,14 +200,22 @@ class _ProtoGenerator(ast.NodeVisitor):
                     return _SetType(type=self.get_field_type(value=value.slice))
 
                 if value.value.id == 'tuple' and isinstance(value.slice, ast.Tuple):
+                    if (
+                        len(value.slice.elts) == 2  # noqa: PLR2004
+                        and isinstance(value.slice.elts[1], ast.Constant)
+                        and value.slice.elts[1].value is ...
+                    ):
+                        types = [self.get_field_type(value=value.slice.elts[0])]
+                    else:
+                        types = list(
+                            {
+                                self.get_field_type(value=elt)
+                                for elt in value.slice.elts
+                            },
+                        )
                     return _ListType(
                         type=_UnionType.from_(
-                            types=list(
-                                {
-                                    self.get_field_type(value=elt)
-                                    for elt in value.slice.elts
-                                },
-                            ),
+                            types=types,
                         ),
                     )
 

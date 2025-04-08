@@ -51,6 +51,7 @@ from ubo_app.store.services.audio import AudioAction, AudioEvent
 from ubo_app.store.services.camera import CameraAction, CameraEvent
 from ubo_app.store.services.display import DisplayAction, DisplayEvent
 from ubo_app.store.services.docker import DockerAction
+from ubo_app.store.services.infrared import InfraredAction, InfraredEvent, InfraredState
 from ubo_app.store.services.ip import IpAction, IpEvent
 from ubo_app.store.services.keypad import KeypadAction
 from ubo_app.store.services.lightdm import LightDMAction
@@ -119,6 +120,7 @@ UboAction: TypeAlias = (
     | CameraAction
     | DisplayAction
     | DockerAction
+    | InfraredAction
     | IpAction
     | KeypadAction
     | LightDMAction
@@ -140,6 +142,7 @@ UboEvent: TypeAlias = (
     | AudioEvent
     | CameraEvent
     | DisplayEvent
+    | InfraredEvent
     | IpEvent
     | NotificationsEvent
     | UsersEvent
@@ -161,6 +164,7 @@ class RootState(BaseCombineReducerState):
     camera: CameraState
     display: DisplayState
     docker: DockerState
+    infrared: InfraredState
     ip: IpState
     lightdm: LightDMState
     notifications: NotificationsState

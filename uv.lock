@@ -59,6 +59,15 @@ wheels = [
 ]
 
 [[package]]
+name = "adafruit-circuitpython-irremote"
+version = "5.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/69/1e27275dd958a80bae77a2809c3ebea920f33afb619700377eb93675db85/adafruit_circuitpython_irremote-5.0.3.tar.gz", hash = "sha256:ef24dc73a97fe76828616b562eb3484c6d08efc4d9ff80e53309bef225fb9486", size = 29367 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/fe/fe1ca85f393dc68ccaf28cf2e36ba94f26e4a51befaaeedc255272641761/adafruit_circuitpython_irremote-5.0.3-py3-none-any.whl", hash = "sha256:310d1684af8cfc5fad68949f9cd0411f37bef3649f7d27eb7696a5c4db1653d2", size = 8142 },
+]
+
+[[package]]
 name = "adafruit-circuitpython-neopixel"
 version = "6.3.15"
 source = { registry = "https://pypi.org/simple" }
@@ -1813,6 +1822,7 @@ name = "ubo-app"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-circuitpython-aw9523" },
+    { name = "adafruit-circuitpython-irremote" },
     { name = "adafruit-circuitpython-neopixel" },
     { name = "adafruit-circuitpython-pct2075" },
     { name = "adafruit-circuitpython-rgb-display" },
@@ -1879,6 +1889,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "adafruit-circuitpython-aw9523", specifier = ">=1.1.7" },
+    { name = "adafruit-circuitpython-irremote", specifier = ">=5.0.3" },
     { name = "adafruit-circuitpython-neopixel", specifier = ">=6.3.11" },
     { name = "adafruit-circuitpython-pct2075", specifier = ">=1.1.21" },
     { name = "adafruit-circuitpython-rgb-display", specifier = ">=3.11.0" },

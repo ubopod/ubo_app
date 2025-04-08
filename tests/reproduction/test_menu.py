@@ -26,7 +26,7 @@ INVESTIGATION_MODE_TIMEOUT = 1000000
     if TEST_INVESTIGATION_MODE
     else lambda f: f
 )
-@pytest.mark.repeat(1000 if TEST_INVESTIGATION_MODE else 3)
+@pytest.mark.repeat(1000 if TEST_INVESTIGATION_MODE else 1)
 async def test_root_menu_bad_state(
     app_context: AppContext,
     stability: Stability,

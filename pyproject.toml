@@ -47,6 +47,7 @@ dependencies = [
   # gRPC
   "betterproto [compiler]>=2.0.0b7",
   "gpiozero>=2.0.1 ; platform_machine != 'aarch64'",
+  "adafruit-circuitpython-irremote>=5.0.3",
 ]
 
 [build-system]
@@ -275,6 +276,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/080-docker"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-infrared"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

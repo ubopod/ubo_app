@@ -45,7 +45,7 @@ async def _fake_create_subprocess_exec(
         command, *args = args
     if isinstance(command, Path):
         command = command.as_posix()
-    if any(i in command for i in ('reboot', 'poweroff')):
+    if any(i in command for i in ('reboot', 'poweroff', 'ir-ctl')):
         return Fake()
     if command in {'curl', 'tar'} or command.endswith('/code'):
         return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
@@ -73,10 +73,23 @@ async def _fake_create_subprocess_exec(
 def setup() -> None:
     """Set up for different environments."""
     import sys
+    import time
 
     from ubo_app.utils import IS_RPI
 
     if not IS_RPI:
+        sys.modules['adafruit_irremote'] = Fake(
+            _Fake__attrs={
+                'GenericDecode': Fake(
+                    _Fake__return_value=Fake(
+                        _Fake__attrs={
+                            'read_pulses': lambda *args, **kwargs: (args, kwargs)
+                            and time.sleep(1),
+                        },
+                    ),
+                ),
+            },
+        )
         sys.modules['adafruit_rgb_display.st7789'] = Fake()
         sys.modules['alsaaudio'] = Fake(_Fake__attrs={'cards': lambda: ['wm8960']})
         sys.modules['apt'] = Fake()
@@ -86,6 +99,7 @@ def setup() -> None:
             _Fake__attrs={'synthesize_stream_raw': lambda _: [b'']},
         )
         sys.modules['pulsectl'] = Fake()
+        sys.modules['pulseio'] = Fake()
         sys.modules['sdbus'] = Fake()
         sys.modules['sdbus_async'] = Fake()
         sys.modules['sdbus_async.networkmanager'] = Fake()

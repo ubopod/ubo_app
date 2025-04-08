@@ -158,15 +158,19 @@ def enable_services() -> None:
 
 def configure_fan() -> None:
     """Configure the behavior of the fan."""
-    if (
-        'dtoverlay=gpio-fan,gpiopin=22,temp=60000'
-        in Path('/boot/firmware/config.txt').read_text()
-    ):
-        return
+    current_content = Path('/boot/firmware/config.txt').read_text()
     with Path('/boot/firmware/config.txt').open('a') as config_file:
-        config_file.write('dtoverlay=gpio-fan,gpiopin=22,temp=60000\n')
-        config_file.write('dtoverlay=spi0-0cs\n')
-        config_file.write('gpio=17=op,dl\n')
+        if 'dtoverlay=gpio-fan,gpiopin=22,temp=60000' not in current_content:
+            config_file.write('dtoverlay=gpio-fan,gpiopin=22,temp=60000\n')
+
+        if 'dtoverlay=spi0-0cs' not in current_content:
+            config_file.write('dtoverlay=spi0-0cs\n')
+
+        if 'gpio=17=op,dl' not in current_content:
+            config_file.write('gpio=17=op,dl\n')
+
+        if 'dtoverlay=gpio-ir-tx,gpio_pin=23' not in current_content:
+            config_file.write('dtoverlay=gpio-ir-tx,gpio_pin=23\n')
 
 
 def setup_polkit() -> None:

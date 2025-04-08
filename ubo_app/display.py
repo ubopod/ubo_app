@@ -50,7 +50,6 @@ class Display:
 
                 self.cs_pin = digitalio.DigitalInOut(board.CE0)
                 self.dc_pin = digitalio.DigitalInOut(board.D25)
-                self.reset_pin = digitalio.DigitalInOut(board.D24)
                 self.spi = board.SPI()
                 self.display = ST7789(
                     self.spi,
@@ -60,7 +59,6 @@ class Display:
                     x_offset=0,
                     cs=self.cs_pin,
                     dc=self.dc_pin,
-                    rst=self.reset_pin,
                     baudrate=DISPLAY_BAUDRATE,
                 )
         else:
@@ -90,8 +88,6 @@ class Display:
                         GPIO.cleanup(board.CE0.id)
                     if board.D25.id:
                         GPIO.cleanup(board.D25.id)
-                    if board.D24.id:
-                        GPIO.cleanup(board.D24.id)
 
     def render_blank(self: Display, render_function: Callable | None = None) -> None:
         """Render a blank screen."""

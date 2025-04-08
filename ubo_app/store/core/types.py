@@ -15,6 +15,7 @@ class SettingsCategory(StrEnum):
     NETWORK = 'Network'
     REMOTE = 'Remote'
     SYSTEM = 'System'
+    HARDWARE = 'Hardware'
     SPEECH = 'Speech'
     DOCKER = 'Docker'
 
@@ -28,6 +29,7 @@ SETTINGS_ICONS = {
     SettingsCategory.NETWORK: '󰛳',
     SettingsCategory.REMOTE: '󰑔',
     SettingsCategory.SYSTEM: '󰒔',
+    SettingsCategory.HARDWARE: '',
     SettingsCategory.SPEECH: '󰔊',
     SettingsCategory.DOCKER: '󰡨',
 }

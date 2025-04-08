@@ -20,7 +20,7 @@
     "is_paused": false
   },
   "docker": {
-    "_id": "d3fbf47a7e5b1e7f9ca5499d004ae545",
+    "_id": "baf3897a3e70f16a55485822de1b372a",
     "_type": "DockerState",
     "envoy_grpc": {
       "_type": "ImageState",
@@ -107,6 +107,11 @@
       "status": "running",
       "usernames": {}
     }
+  },
+  "infrared": {
+    "_type": "InfraredState",
+    "should_propagate_keypad_actions": false,
+    "should_receive_keypad_actions": false
   },
   "input": null,
   "ip": {
@@ -2161,6 +2166,238 @@
                                     "placeholder": null,
                                     "sub_heading": "No errors raised in this service",
                                     "title": "IP"
+                                  }
+                                },
+                                {
+                                  "_type": "SubMenuItem",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "[color=#008000]󰪥[/color]",
+                                  "is_short": false,
+                                  "key": "infrared",
+                                  "label": "Infrared",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "_type": "HeadedMenu",
+                                    "heading": "[color=#008000]󰪥[/color] Infrared",
+                                    "items": [
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#FF3F51",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "stop",
+                                        "label": "Stop",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsStopServiceAction",
+                                          "service_id": "infrared"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "infrared"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "infrared"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "infrared"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "infrared"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "infrared"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "infrared"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "infrared"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "infrared"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "infrared",
+                                          "should_auto_restart": true
+                                        }
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "sub_heading": "No errors raised in this service",
+                                    "title": "Infrared"
                                   }
                                 },
                                 {
@@ -5198,6 +5435,94 @@
                         1,
                         1
                       ],
+                      "icon": "",
+                      "is_short": false,
+                      "key": "Hardware",
+                      "label": "Hardware",
+                      "opacity": null,
+                      "progress": null,
+                      "sub_menu": {
+                        "_type": "HeadlessMenu",
+                        "items": [
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰻅",
+                            "is_short": false,
+                            "key": "infrared:infrared",
+                            "label": "Infrared",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadlessMenu",
+                              "items": [
+                                {
+                                  "_type": "DispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "propagate_keys",
+                                  "label": "Propagate Keys",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "InfraredSetShouldPropagateAction",
+                                    "should_propagate": true
+                                  }
+                                },
+                                {
+                                  "_type": "DispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "receive_keys",
+                                  "label": "Receive Keys",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "InfraredSetShouldReceiveAction",
+                                    "should_receive": true
+                                  }
+                                }
+                              ],
+                              "placeholder": null,
+                              "title": "󰻅Infrared"
+                            }
+                          }
+                        ],
+                        "placeholder": "No settings in this category",
+                        "title": "Hardware"
+                      }
+                    },
+                    {
+                      "_type": "SubMenuItem",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
                       "icon": "󰔊",
                       "is_short": false,
                       "key": "Speech",
@@ -5533,6 +5858,7 @@
     "settings_items_priorities": {
       "docker:registries": 2,
       "docker:service": 1,
+      "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
       "rpi_connect:": null,
@@ -5625,6 +5951,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Ethernet",
+        "log_level": 10,
+        "should_auto_restart": false
+      },
+      "infrared": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "infrared",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Infrared",
         "log_level": 10,
         "should_auto_restart": false
       },
