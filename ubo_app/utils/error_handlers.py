@@ -50,7 +50,7 @@ def get_all_thread_stacks_string() -> str:
         result += thread_name + '\n'
         result += '-----\n'
         result += '\n'.join(stack) + '\n'
-        result += '------------------------------------------------------------------\n'
+        result += '-' * 70 + '\n'
     return result
 
 

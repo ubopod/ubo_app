@@ -9,9 +9,11 @@ if TYPE_CHECKING:
 
 async def setup(register_reducer: ReducerRegistrar) -> None:
     from reducer import reducer
-    from setup import init_service
 
     register_reducer(reducer)
+
+    from setup import init_service
+
     await init_service()
 
 

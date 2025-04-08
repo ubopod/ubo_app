@@ -80,36 +80,6 @@ async def setup_listeners() -> None:
         create_task(update_wifi_list())
 
 
-ONBOARDING_NOTIFICATION = Notification(
-    title='No internet connection',
-    content='Press middle button "󱚾" to add WiFi network',
-    importance=Importance.MEDIUM,
-    icon='󱚵',
-    display_type=NotificationDisplayType.STICKY,
-    actions=[
-        NotificationActionItem(
-            action=lambda: (create_wireless_connection.CreateWirelessConnectionPage),
-            icon='󱚾',
-            background_color=INFO_COLOR,
-            dismiss_notification=True,
-        ),
-    ],
-    extra_information=ReadableInformation(
-        text='Press middle button to add WiFi network with QR code.\n'
-        'If you dismiss this, you can always add WiFi network through '
-        'Settings → Network → WiFi',
-        piper_text='Press middle button to add WiFi network with QR code.\n'
-        'If you dismiss this, you can always add WiFi network through '
-        'Settings menu, by navigating to Network, and then WiFi',
-        picovoice_text='Press middle button to add {WiFi|W AY F AY} '
-        'network with {QR|K Y UW AA R} code.\n'
-        'If you dismiss this, you can always add {WiFi|W AY F AY} network '
-        'through Settings → Network → {WiFi|W AY F AY}',
-    ),
-    color=INFO_COLOR,
-)
-
-
 async def _check_connection() -> None:
     """Dispatch the Wi-Fi input action if needed."""
     await asyncio.sleep(2)
@@ -120,6 +90,35 @@ async def _check_connection() -> None:
             'saved_wifi_ssids': await get_saved_wifi_ssids(),
         },
     )
+    onboarding_notification = Notification(
+        title='No internet connection',
+        content='Press middle button "󱚾" to add WiFi network',
+        importance=Importance.MEDIUM,
+        icon='󱚵',
+        display_type=NotificationDisplayType.STICKY,
+        actions=[
+            NotificationActionItem(
+                action=lambda: (
+                    create_wireless_connection.CreateWirelessConnectionPage
+                ),
+                icon='󱚾',
+                background_color=INFO_COLOR,
+                dismiss_notification=True,
+            ),
+        ],
+        extra_information=ReadableInformation(
+            text='Press middle button to add a WiFi connection.\n'
+            'If you dismiss this, you can always add WiFi through Settings → Network → '
+            'WiFi.',
+            piper_text='Press middle button to add a WiFi connection. '
+            'If you dismiss this, you can always add WiFi through Settings menu, by '
+            'navigating to Network, and then WiFi.',
+            picovoice_text='Press middle button to add a {WiFi|W AY F AY} connection. '
+            'If you dismiss this, you can always add {WiFi|W AY F AY} through Settings '
+            '→ Network → {WiFi|W AY F AY}.',
+        ),
+        color=INFO_COLOR,
+    )
     if not await has_gateway() and not await get_saved_wifi_ssids():
         if get_eeprom_data() is not None:
             if not read_from_persistent_store(
@@ -129,7 +128,7 @@ async def _check_connection() -> None:
                 logger.info('No network connection found, showing WiFi onboarding.')
                 store.dispatch(
                     NotificationsAddAction(
-                        notification=ONBOARDING_NOTIFICATION,
+                        notification=onboarding_notification,
                     ),
                     WiFiSetHasVisitedOnboardingAction(has_visited_onboarding=True),
                 )
