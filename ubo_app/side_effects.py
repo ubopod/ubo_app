@@ -35,6 +35,7 @@ from ubo_app.store.update_manager.utils import (
     sync_with_update_service,
     update,
 )
+from ubo_app.utils import bus_provider
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI, deinitalize_board, initialize_board
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -183,6 +184,7 @@ def setup_side_effects() -> Subscriptions:
         store.subscribe_event(StoreRecordedSequenceEvent, _store_recorded_sequence),
         store.subscribe_event(ReplayRecordedSequenceEvent, _replay_recorded_sequence),
         deinitalize_board,
+        bus_provider.clean_up,
     ]
 
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))

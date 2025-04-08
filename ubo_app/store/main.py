@@ -210,6 +210,7 @@ class InThreadEventHandler(Generic[StrictEvent]):
         self.handler_name = handler.__name__
         self.handler_qualname = handler.__qualname__
         self.__name__ = f'InThreadHandler:{self.handler_str}'
+        self.__qualname__ = f'InThreadHandler:{self.handler_qualname}'
         if keep_ref:
             self.handler_ref = handler
         elif inspect.ismethod(handler):

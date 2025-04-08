@@ -25,12 +25,6 @@ class KeypadAction(BaseAction):
     time: float = field(default_factory=time.time)
 
 
-class KeypadKeyUpAction(KeypadAction): ...
-
-
-class KeypadKeyDownAction(KeypadAction): ...
-
-
 class KeypadKeyPressAction(KeypadAction): ...
 
 

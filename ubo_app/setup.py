@@ -170,15 +170,22 @@ def _clear_signal_handlers() -> None:
 
 def signal_handler(signum: int, _: object) -> None:
     """Handle the signal."""
-    from ubo_app.display import display
     from ubo_app.logger import logger
     from ubo_app.utils.error_handlers import get_all_thread_stacks_string
 
     logger.debug(get_all_thread_stacks_string())
-    logger.info('Received signal %s, turning off the display...', signum)
+
+    if signum == signal.SIGUSR1:
+        import ipdb  # noqa: T100
+
+        ipdb.set_trace()  # noqa: T100
+        return
+
+    from ubo_app.display import display
 
     _clear_signal_handlers()
 
+    logger.info('Received signal %s, turning off the display...', signum)
     display.turn_off()
 
     if signum == signal.SIGINT:
@@ -193,7 +200,3 @@ def signal_handler(signum: int, _: object) -> None:
         import os
 
         os.kill(os.getpid(), signal.SIGTERM)
-    elif signum == signal.SIGUSR1:
-        import ipdb  # noqa: T100
-
-        ipdb.set_trace()  # noqa: T100

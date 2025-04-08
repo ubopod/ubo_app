@@ -13,6 +13,7 @@
 - refactor(core): move pod-id generation logic to `set_pod_id` and "unseed" the seeded random after generating pod id
 - refactor(services): make sure services do not do anything, including importing their `setup.py` which can potentially run code in its module scope, by moving `register_reducer(reducer)` write after reducer import, before `init_service` is imported
 - chore(scripts): add `--index` for `device:` poe scripts, allowing deployment and tests on multiple devices without the need to constantly change `ubo-development-pod`
+- chore: housekeeping, update dependencies, remove unused code, etc
 
 ## Version 1.3.0
 

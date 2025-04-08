@@ -106,12 +106,9 @@ class AppContext:
 
         from kivy.clock import Clock
 
-        for event in [*Clock.get_events()]:
-            event.cancel()
-
-        from ubo_app.utils import bus_provider
-
-        bus_provider.clean_up()
+        while events := Clock.get_events():
+            for event in list(events):
+                event.cancel()
 
         self.app.root.clear_widgets()
         if not self.app.is_stopped:

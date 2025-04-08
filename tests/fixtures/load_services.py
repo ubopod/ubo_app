@@ -47,7 +47,7 @@ class LoadServices(Protocol):
         service_ids: Sequence[str],
         *,
         timeout: float | None = None,
-        gap_duration: float = 0.3,
+        gap_duration: float = 0.2,
     ) -> UnloadWaiter: ...
 
     @overload
@@ -57,7 +57,7 @@ class LoadServices(Protocol):
         *,
         run_async: Literal[True],
         timeout: float | None = None,
-        gap_duration: float = 0.3,
+        gap_duration: float = 0.2,
     ) -> Coroutine[None, None, AsyncUnloadWaiter]: ...
 
 
@@ -134,7 +134,7 @@ async def load_services(wait_for: WaitFor) -> AsyncGenerator[LoadServices, None]
         *,
         run_async: bool = False,
         timeout: float | None = None,
-        gap_duration: float = 0.3,
+        gap_duration: float = 0.2,
     ) -> UnloadWaiter | Coroutine[None, None, AsyncUnloadWaiter]:
         from ubo_app.service_thread import load_services
 

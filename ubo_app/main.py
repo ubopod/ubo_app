@@ -108,9 +108,7 @@ def main() -> None:
             service.join()
 
         from ubo_app.setup import clear_signal_handlers
-        from ubo_app.utils import bus_provider
 
-        bus_provider.clean_up()
         clear_signal_handlers()
         for cleanup in logger_cleanups:
             cleanup()
