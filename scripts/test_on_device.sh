@@ -23,7 +23,7 @@ function run_on_pod() {
   fi
 
   # Use SSH to execute commands read from stdin
-  ssh ubo-development-pod "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -s" <<EOF
+  ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -s" <<EOF
 cd
 source /etc/profile
 source "\$HOME/.profile"
@@ -37,7 +37,7 @@ function run_on_pod_as_root() {
     return 1
   fi
   if [ $# -eq 1 ]; then
-    ssh ubo-development-pod "sudo bash -c '$1'"
+    ssh ubo-development-pod-$index "sudo bash -c '$1'"
     return 0
   fi
   return 1
@@ -45,7 +45,7 @@ function run_on_pod_as_root() {
 
 if [ "$copy" == "True" ]; then
   # Since rsync is not called with -r, it treats ./scripts as an empty directory and its content are ignored, it could be any other random directory inside "./". It is needed solely to create the root directory with ubo:ubo ownership.
-  (echo ./scripts; echo ./ubo_app/_version.py; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ ubo-development-pod:/home/ubo/test-runner/ --chown ubo:ubo
+  (echo ./scripts; echo ./ubo_app/_version.py; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ ubo-development-pod-$index:/home/ubo/test-runner/ --chown ubo:ubo
 fi
 
 if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
@@ -90,5 +90,5 @@ fi
 
 if [ "$run" == "True" ] || [ "$results" == True ]; then
   rm -rf tests/**/results/
-  run_on_pod "find ~/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --rsync-path="sudo rsync" --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args ubo-development-pod:/home/ubo/test-runner ./
+  run_on_pod "find ~/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --rsync-path="sudo rsync" --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args ubo-development-pod-$index:/home/ubo/test-runner ./
 fi

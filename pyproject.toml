@@ -136,6 +136,7 @@ args = [
   { name = "copy", type = "boolean" },
   { name = "run", type = "boolean" },
   { name = "results", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
 ]
 cmd = "scripts/test_on_device.sh"
 
@@ -146,6 +147,7 @@ args = [
   { name = "restart", type = "boolean" },
   { name = "bootstrap", type = "boolean" },
   { name = "env", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
 ]
 cmd = "scripts/deploy.sh"
 

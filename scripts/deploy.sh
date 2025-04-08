@@ -11,11 +11,13 @@ function cleanup() {
 trap cleanup ERR
 trap cleanup EXIT
 
+echo $0
+
 deps=${deps:-"False"}
 bootstrap=${bootstrap:-"False"}
 kill=${kill:-"False"}
 restart=${restart:-"False"}
-env=${env:-"False"}
+env=${env:-"True"}
 
 perl -i -pe 's/^exclude = \[(.*)\]$/exclude = ["ubo_app\/services\/*-voice\/models\/*", \1]/' pyproject.toml
 uv build
@@ -28,7 +30,7 @@ function run_on_pod() {
     return 1
   fi
   if [ $# -eq 1 ]; then
-    ssh ubo-development-pod "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
+    ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
     return 0
   fi
   return 1
@@ -40,17 +42,18 @@ function run_on_pod_as_root() {
     return 1
   fi
   if [ $# -eq 1 ]; then
-    ssh ubo-development-pod "sudo bash -c '$1'"
+    ssh ubo-development-pod-$index "sudo bash -c '$1'"
     return 0
   fi
   return 1
 }
 
-scp dist/$LATEST_VERSION ubo-development-pod:/tmp/
+scp dist/$LATEST_VERSION ubo-development-pod-$index:/tmp/
 
 run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION &&"; fi)
 mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/models /tmp/
 pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION
+[ -e /opt/ubo/env/bin/ipdb3 ] || pip install ipdb
 mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/
 true"
 
