@@ -42,6 +42,7 @@
 - refactor(core): refetch pypi index whenever user opens the about menu - with debouncing
 - fix(core): use latest ubo-gui which adds bad-state-recovery for when menu-screen doesn't update - closes #235
 - chore(ci): rename `ubo-pod` runner label to `ubo-pod-pi4` for clarity
+- refactor(core): replace uuid4 with service path as the unique identifier of ubo services
 
 ## Version 1.3.0
 

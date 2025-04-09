@@ -462,12 +462,21 @@ providing a unique `key` field for the `RegisterRegularAppAction` instance."""
 
             events: list[MenuGoBackEvent] = []
 
-            if state.path[:2] == ['main', 'apps'] and state.path[2].startswith(
-                f'{action.service_id}:',
+            # Exit open menus of the deregistered app
+            if (
+                state.path[:2] == ['main', 'apps']
+                and len(state.path) > 2  # noqa: PLR2004
+                and state.path[2].startswith(
+                    f'{action.service_id}:',
+                )
             ):
                 events = [MenuGoBackEvent()] * (len(state.path) - 2)
-            if state.path[:2] == ['main', 'settings'] and state.path[3].startswith(
-                f'{action.service_id}:',
+            if (
+                state.path[:2] == ['main', 'settings']
+                and len(state.path) > 3  # noqa: PLR2004
+                and state.path[3].startswith(
+                    f'{action.service_id}:',
+                )
             ):
                 events = [MenuGoBackEvent()] * (len(state.path) - 3)
 

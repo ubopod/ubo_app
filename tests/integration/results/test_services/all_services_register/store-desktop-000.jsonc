@@ -20,7 +20,7 @@
     "is_paused": false
   },
   "docker": {
-    "_id": "38c1962e9148624feac1c14f30e9c5cc",
+    "_id": "eb1167b367a9c3787c65c1e582e2e662",
     "_type": "DockerState",
     "envoy_grpc": {
       "_type": "ImageState",
