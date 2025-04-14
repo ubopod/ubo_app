@@ -48,8 +48,8 @@ class SignInPage(PageWidget):
                 '/usr/bin/env',
                 'rpi-connect',
                 'signin',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             if self.process.stdout is None:
                 return

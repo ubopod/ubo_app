@@ -14,8 +14,8 @@ async def has_gateway() -> bool:
         process = await asyncio.create_subprocess_exec(
             'which',
             'ip',
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         await process.wait()
         if process.returncode == 0:
@@ -25,8 +25,8 @@ async def has_gateway() -> bool:
                 'route',
                 'show',
                 'default',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
             await process.wait()
             if process.returncode == 0 and process.stdout:
@@ -47,8 +47,8 @@ async def has_gateway() -> bool:
                 '-n',
                 'get',
                 'default',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
             await process.wait()
             if process.returncode == 0 and process.stdout:
@@ -77,8 +77,8 @@ async def get_saved_wifi_ssids() -> list[str]:
             'NAME,TYPE',
             'connection',
             'show',
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         await process.wait()
         if process.returncode == 0 and process.stdout:

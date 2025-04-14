@@ -53,8 +53,8 @@ async def _check_status() -> None:
             '/usr/bin/env',
             'rpi-connect',
             'status',
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         await asyncio.wait_for(process.wait(), timeout=3)
         if process.returncode is None:
@@ -178,8 +178,8 @@ def sign_out() -> None:
                 '/usr/bin/env',
                 'rpi-connect',
                 'signout',
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
             await check_status()

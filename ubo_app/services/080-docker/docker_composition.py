@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-import subprocess
 
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.store.core.types import DeregisterRegularAppAction
@@ -37,14 +36,16 @@ def stop_composition(event: DockerImageStopCompositionEvent) -> None:
             'compose',
             'stop',
             cwd=COMPOSITIONS_PATH / id,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         await stop_process.wait()
-        await log_async_process(
-            stop_process,
-            title='Docker Composition Error',
-            message='Failed to stop composition.',
+        store.dispatch(
+            await log_async_process(
+                stop_process,
+                title='Docker Composition Error',
+                message='Failed to stop composition.',
+            ),
         )
         await check_composition(id=id)
 
@@ -65,14 +66,16 @@ def run_composition(event: DockerImageRunCompositionEvent) -> None:
             'up',
             '-d',
             cwd=COMPOSITIONS_PATH / id,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         await run_process.wait()
-        await log_async_process(
-            run_process,
-            title='Docker Composition Error',
-            message='Failed to run composition.',
+        store.dispatch(
+            await log_async_process(
+                run_process,
+                title='Docker Composition Error',
+                message='Failed to run composition.',
+            ),
         )
         await check_composition(id=id)
 
@@ -92,14 +95,16 @@ def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
             'compose',
             'pull',
             cwd=COMPOSITIONS_PATH / id,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         await run_process.wait()
-        await log_async_process(
-            run_process,
-            title='Docker Composition Error',
-            message='Failed to run composition.',
+        store.dispatch(
+            await log_async_process(
+                run_process,
+                title='Docker Composition Error',
+                message='Failed to run composition.',
+            ),
         )
         await check_composition(id=id)
 
@@ -115,14 +120,16 @@ async def _release_composition(id: str) -> None:
         'compose',
         'down',
         cwd=COMPOSITIONS_PATH / id,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     await check_process.wait()
-    await log_async_process(
-        check_process,
-        title='Docker Composition Error',
-        message='Failed to release resources.',
+    store.dispatch(
+        await log_async_process(
+            check_process,
+            title='Docker Composition Error',
+            message='Failed to release resources.',
+        ),
     )
     await check_composition(id=id)
 
@@ -141,8 +148,8 @@ async def check_composition(*, id: str) -> None:
         'ps',
         '--quiet',
         cwd=COMPOSITIONS_PATH / id,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     images_process = await asyncio.subprocess.create_subprocess_exec(
         'docker',
@@ -150,24 +157,26 @@ async def check_composition(*, id: str) -> None:
         'images',
         '--quiet',
         cwd=COMPOSITIONS_PATH / id,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     await asyncio.gather(
         ps_process.wait(),
         images_process.wait(),
         return_exceptions=True,
     )
-    await asyncio.gather(
-        log_async_process(
-            ps_process,
-            title='Docker Composition Error',
-            message='Failed to check composition status.',
-        ),
-        log_async_process(
-            images_process,
-            title='Docker Composition Error',
-            message='Failed to check composition images.',
+    store.dispatch(
+        *await asyncio.gather(
+            log_async_process(
+                ps_process,
+                title='Docker Composition Error',
+                message='Failed to check composition status.',
+            ),
+            log_async_process(
+                images_process,
+                title='Docker Composition Error',
+                message='Failed to check composition images.',
+            ),
         ),
     )
     if ps_process.stdout and await ps_process.stdout.read():

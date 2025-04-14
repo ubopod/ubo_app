@@ -51,8 +51,8 @@ async def check_status() -> None:
                 'tunnel',
                 '--accept-server-license-terms',
                 'status',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await asyncio.wait_for(process.wait(), timeout=3)
             if process.returncode is None:
@@ -84,8 +84,8 @@ async def check_status() -> None:
                     '--accept-server-license-terms',
                     'user',
                     'show',
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
                 )
                 await asyncio.wait_for(process.wait(), timeout=3)
                 if process.returncode is None:
@@ -142,8 +142,8 @@ async def set_name() -> None:
             '--accept-server-license-terms',
             'rename',
             hostname,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         await asyncio.wait_for(process.wait(), timeout=3)
         if process.returncode is None:
@@ -208,8 +208,8 @@ async def uninstall_service() -> None:
             '--accept-server-license-terms',
             'service',
             'uninstall',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         await asyncio.wait_for(process.wait(), timeout=3)
         if process.returncode is None:
@@ -241,8 +241,8 @@ async def restart() -> None:
             'tunnel',
             '--accept-server-license-terms',
             'restart',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         await asyncio.wait_for(process.wait(), timeout=3)
         if process.returncode is None:

@@ -2,13 +2,15 @@
 
 from asyncio.subprocess import Process
 
-from ubo_app.store.main import store
+from redux import DispatchParameters
+
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.utils.error_handlers import report_service_error
 
 
 async def log_async_process(
@@ -16,7 +18,7 @@ async def log_async_process(
     *,
     title: str = 'Error',
     message: str,
-) -> None:
+) -> DispatchParameters:
     """Log the output of the process if it fails.
 
     Arguments:
@@ -27,20 +29,25 @@ async def log_async_process(
 
     """
     if process.returncode != 0:
-        logs = ''
+        logs = '\n'
         if process.stdout:
-            logs += '---\nstdout:\n' + (await process.stdout.read()).decode()
+            logs += '------\nstdout:\n' + (await process.stdout.read()).decode()
         if process.stderr:
-            logs += '---\nstderr:\n' + (await process.stderr.read()).decode()
-        store.dispatch(
+            logs += '------\nstderr:\n' + (await process.stderr.read()).decode()
+        report_service_error(context={'message': logs})
+        return (
             NotificationsAddAction(
                 notification=Notification(
                     title=title,
                     content=message,
                     extra_information=ReadableInformation(
                         text=logs,
+                        piper_text='',
+                        picovoice_text='',
                     ),
                     importance=Importance.HIGH,
                 ),
             ),
         )
+
+    return []

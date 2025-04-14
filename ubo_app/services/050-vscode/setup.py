@@ -53,8 +53,8 @@ def download_code() -> None:
                 CODE_BINARY_URL,
                 '--output',
                 DOWNLOAD_PATH,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
             process = await asyncio.create_subprocess_exec(
@@ -64,8 +64,8 @@ def download_code() -> None:
                 DOWNLOAD_PATH,
                 '-C',
                 INSTALLATION_PATH,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
             process = await asyncio.create_subprocess_exec(
@@ -75,8 +75,8 @@ def download_code() -> None:
                 'stable',
                 '--install-dir',
                 './code',
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
             )
         except subprocess.CalledProcessError:
             store.dispatch(
@@ -94,6 +94,8 @@ def download_code() -> None:
             )
             CODE_BINARY_PATH.unlink(missing_ok=True)
             raise
+        finally:
+            DOWNLOAD_PATH.unlink(missing_ok=True)
         store.dispatch(VSCodeDoneDownloadingAction())
         await check_status()
 
@@ -109,8 +111,8 @@ def logout() -> None:
                 '--accept-server-license-terms',
                 'user',
                 'logout',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
             await uninstall_service()
