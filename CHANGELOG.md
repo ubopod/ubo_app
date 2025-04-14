@@ -17,6 +17,7 @@
 - feat(infrared): add infrared service with settings menu to enable/disable propagating keypad actions as ir commands and receiving ir commands and translating them to keypad actions - closes #160
 - refactor(speech-synthesis): rename `voice` service to `speech_synthesis` to make room for a separate `speech_recognition` service
 - refactor(core): make `log_process` report errors for the service using `report_service_error` and some general housekeeping
+- refactor(vscode): use data dir as reported by `platformdirs.user_data_path` to store downloaded assets like vscode binary
 
 ## Version 1.3.0
 

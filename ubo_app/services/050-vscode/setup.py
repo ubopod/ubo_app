@@ -6,7 +6,7 @@ import pathlib
 import subprocess
 from typing import TYPE_CHECKING
 
-from _constants import CODE_BINARY_PATH, CODE_BINARY_URL, DOWNLOAD_PATH
+from _constants import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
 from commands import check_status, restart, uninstall_service
 from kivy.lang.builder import Builder
 from login_page import LoginPage
@@ -14,7 +14,6 @@ from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -31,6 +30,7 @@ from ubo_app.store.services.vscode import (
     VSCodeStatus,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.log_process import log_async_process
 
 CODE_TUNNEL_URL_PREFIX = 'https://vscode.dev/tunnel/'
 
@@ -52,31 +52,41 @@ def download_code() -> None:
                 '-Lk',
                 CODE_BINARY_URL,
                 '--output',
-                DOWNLOAD_PATH,
+                CODE_DOWNLOAD_PATH,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
+            store.dispatch(
+                await log_async_process(process, message='Downloading VSCode'),
+            )
+
             process = await asyncio.create_subprocess_exec(
                 '/usr/bin/env',
                 'tar',
                 'zxf',
-                DOWNLOAD_PATH,
+                CODE_DOWNLOAD_PATH,
                 '-C',
-                INSTALLATION_PATH,
+                CODE_BINARY_PATH.parent,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
+            store.dispatch(await log_async_process(process, message='Unpacking VSCode'))
+
             process = await asyncio.create_subprocess_exec(
-                './code',
+                CODE_BINARY_PATH,
                 'version',
                 'use',
                 'stable',
                 '--install-dir',
-                './code',
+                CODE_BINARY_PATH,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
+            )
+            await process.wait()
+            store.dispatch(
+                await log_async_process(process, message='Installing VSCode'),
             )
         except subprocess.CalledProcessError:
             store.dispatch(
@@ -95,9 +105,9 @@ def download_code() -> None:
             CODE_BINARY_PATH.unlink(missing_ok=True)
             raise
         finally:
-            DOWNLOAD_PATH.unlink(missing_ok=True)
-        store.dispatch(VSCodeDoneDownloadingAction())
-        await check_status()
+            CODE_DOWNLOAD_PATH.unlink(missing_ok=True)
+            store.dispatch(VSCodeDoneDownloadingAction())
+            await check_status()
 
     create_task(act())
 

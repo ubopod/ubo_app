@@ -1,8 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 import platform
-from pathlib import Path
 
-from ubo_app.constants import INSTALLATION_PATH
+from ubo_app.constants import DATA_PATH
 
 
 def get_cli_tool_name() -> str:  # noqa: C901
@@ -39,5 +38,5 @@ CODE_BINARY_URL = (
     f'https://code.visualstudio.com/sha/download?build=stable&os={get_cli_tool_name()}'
 )
 
-CODE_BINARY_PATH = Path(INSTALLATION_PATH) / 'code'
-DOWNLOAD_PATH = CODE_BINARY_PATH.parent / 'code.tar.gz'
+CODE_BINARY_PATH = DATA_PATH / 'code'
+CODE_DOWNLOAD_PATH = CODE_BINARY_PATH.parent / 'code.tar.gz'

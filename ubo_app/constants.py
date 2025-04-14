@@ -69,6 +69,8 @@ CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)
 SECRETS_PATH = CONFIG_PATH / '.secrets.env'
 PERSISTENT_STORE_PATH = CONFIG_PATH / 'state.json'
 
+DATA_PATH = platformdirs.user_data_path(appname='ubo', ensure_exists=True)
+
 DISPLAY_BAUDRATE = int(os.environ.get('UBO_DISPLAY_BAUDRATE', '60_000_000'))
 WIDTH = 240
 HEIGHT = 240
