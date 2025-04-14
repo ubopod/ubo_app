@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:

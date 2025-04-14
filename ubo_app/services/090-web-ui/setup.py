@@ -42,7 +42,7 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error

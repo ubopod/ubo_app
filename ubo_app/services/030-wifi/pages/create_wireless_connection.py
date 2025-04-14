@@ -27,7 +27,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
     NotificationsClearByIdAction,
 )
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input

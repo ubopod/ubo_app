@@ -131,8 +131,8 @@ class Sensor(betterproto.Enum):
     LIGHT = 2
 
 
-class VoiceEngine(betterproto.Enum):
-    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_VOICE_UNSPECIFIED = 0
+class SpeechSynthesisEngine(betterproto.Enum):
+    UBO_APP_DOT_STORE_DOT_SERVICES_DOT_SPEECH_SYNTHESIS_UNSPECIFIED = 0
     PIPER = 1
     PICOVOICE = 2
 
@@ -2322,6 +2322,76 @@ class SensorsState(betterproto.Message):
 
 
 @dataclass(eq=False, repr=False)
+class SpeechSynthesisAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechSynthesisEvent(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechSynthesisUpdateAccessKeyStatus(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    is_access_key_set: bool = betterproto.bool_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechSynthesisSetEngineAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    engine: 'SpeechSynthesisEngine' = betterproto.enum_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class ReadableInformation(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    text: str = betterproto.string_field(2)
+    piper_text: 'str | None' = betterproto.string_field(3, optional=True)
+    picovoice_text: 'str | None' = betterproto.string_field(4, optional=True)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechSynthesisReadTextAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    information: 'ReadableInformation' = betterproto.message_field(2)
+    speech_rate: 'float | None' = betterproto.float_field(3, optional=True)
+    engine: 'SpeechSynthesisEngine | None' = betterproto.enum_field(4, optional=True)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechSynthesisSynthesizeTextEvent(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    information: 'ReadableInformation' = betterproto.message_field(2)
+    speech_rate: 'float | None' = betterproto.float_field(3, optional=True)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechSynthesisState(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    is_access_key_set: 'bool | None' = betterproto.bool_field(2, optional=True)
+    selected_engine: 'SpeechSynthesisEngine | None' = betterproto.enum_field(
+        3, optional=True,
+    )
+
+
+@dataclass(eq=False, repr=False)
 class SshAction(betterproto.Message):
     meta_field_package_name_ubo_app_dot_store_dot_services_dot_ssh: 'str | None' = (
         betterproto.string_field(1000, optional=True)
@@ -2441,74 +2511,6 @@ class UsersState(betterproto.Message):
 @dataclass(eq=False, repr=False)
 class UsersStateUsers(betterproto.Message):
     items: 'list[UserState]' = betterproto.message_field(1)
-
-
-@dataclass(eq=False, repr=False)
-class VoiceAction(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-
-
-@dataclass(eq=False, repr=False)
-class VoiceEvent(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-
-
-@dataclass(eq=False, repr=False)
-class VoiceUpdateAccessKeyStatus(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    is_access_key_set: bool = betterproto.bool_field(2)
-
-
-@dataclass(eq=False, repr=False)
-class VoiceSetEngineAction(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    engine: 'VoiceEngine' = betterproto.enum_field(2)
-
-
-@dataclass(eq=False, repr=False)
-class ReadableInformation(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    text: str = betterproto.string_field(2)
-    piper_text: 'str | None' = betterproto.string_field(3, optional=True)
-    picovoice_text: 'str | None' = betterproto.string_field(4, optional=True)
-
-
-@dataclass(eq=False, repr=False)
-class VoiceReadTextAction(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    information: 'ReadableInformation' = betterproto.message_field(2)
-    speech_rate: 'float | None' = betterproto.float_field(3, optional=True)
-    engine: 'VoiceEngine | None' = betterproto.enum_field(4, optional=True)
-
-
-@dataclass(eq=False, repr=False)
-class VoiceSynthesizeTextEvent(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    information: 'ReadableInformation' = betterproto.message_field(2)
-    speech_rate: 'float | None' = betterproto.float_field(3, optional=True)
-
-
-@dataclass(eq=False, repr=False)
-class VoiceState(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_voice: 'str | None' = (
-        betterproto.string_field(1000, optional=True)
-    )
-    is_access_key_set: 'bool | None' = betterproto.bool_field(2, optional=True)
-    selected_engine: 'VoiceEngine | None' = betterproto.enum_field(3, optional=True)
 
 
 @dataclass(eq=False, repr=False)
@@ -3036,59 +3038,61 @@ class Action(betterproto.Message):
     settings_toggle_debug_mode_action: 'SettingsToggleDebugModeAction' = (
         betterproto.message_field(121, group='action')
     )
-    status_icons_action: 'StatusIconsAction' = betterproto.message_field(
+    speech_synthesis_action: 'SpeechSynthesisAction' = betterproto.message_field(
         122, group='action',
     )
-    status_icons_register_action: 'StatusIconsRegisterAction' = (
+    speech_synthesis_read_text_action: 'SpeechSynthesisReadTextAction' = (
         betterproto.message_field(123, group='action')
     )
-    toggle_recording_action: 'ToggleRecordingAction' = betterproto.message_field(
-        124, group='action',
+    speech_synthesis_set_engine_action: 'SpeechSynthesisSetEngineAction' = (
+        betterproto.message_field(124, group='action')
     )
-    update_manager_action: 'UpdateManagerAction' = betterproto.message_field(
+    status_icons_action: 'StatusIconsAction' = betterproto.message_field(
         125, group='action',
     )
-    update_manager_set_status_action: 'UpdateManagerSetStatusAction' = (
+    status_icons_register_action: 'StatusIconsRegisterAction' = (
         betterproto.message_field(126, group='action')
+    )
+    toggle_recording_action: 'ToggleRecordingAction' = betterproto.message_field(
+        127, group='action',
+    )
+    update_manager_action: 'UpdateManagerAction' = betterproto.message_field(
+        128, group='action',
+    )
+    update_manager_set_status_action: 'UpdateManagerSetStatusAction' = (
+        betterproto.message_field(129, group='action')
     )
     update_manager_set_update_service_status_action: (
         'UpdateManagerSetUpdateServiceStatusAction'
-    ) = betterproto.message_field(127, group='action')
+    ) = betterproto.message_field(130, group='action')
     update_manager_set_versions_action: 'UpdateManagerSetVersionsAction' = (
-        betterproto.message_field(128, group='action')
+        betterproto.message_field(131, group='action')
     )
-    users_action: 'UsersAction' = betterproto.message_field(129, group='action')
+    users_action: 'UsersAction' = betterproto.message_field(132, group='action')
     users_create_user_action: 'UsersCreateUserAction' = betterproto.message_field(
-        130, group='action',
-    )
-    users_delete_user_action: 'UsersDeleteUserAction' = betterproto.message_field(
-        131, group='action',
-    )
-    users_reset_password_action: 'UsersResetPasswordAction' = betterproto.message_field(
-        132, group='action',
-    )
-    users_set_users_action: 'UsersSetUsersAction' = betterproto.message_field(
         133, group='action',
     )
-    vs_code_action: 'VsCodeAction' = betterproto.message_field(134, group='action')
-    vs_code_done_downloading_action: 'VsCodeDoneDownloadingAction' = (
-        betterproto.message_field(135, group='action')
+    users_delete_user_action: 'UsersDeleteUserAction' = betterproto.message_field(
+        134, group='action',
     )
-    vs_code_set_pending_action: 'VsCodeSetPendingAction' = betterproto.message_field(
+    users_reset_password_action: 'UsersResetPasswordAction' = betterproto.message_field(
+        135, group='action',
+    )
+    users_set_users_action: 'UsersSetUsersAction' = betterproto.message_field(
         136, group='action',
     )
-    vs_code_set_status_action: 'VsCodeSetStatusAction' = betterproto.message_field(
-        137, group='action',
-    )
-    vs_code_start_downloading_action: 'VsCodeStartDownloadingAction' = (
+    vs_code_action: 'VsCodeAction' = betterproto.message_field(137, group='action')
+    vs_code_done_downloading_action: 'VsCodeDoneDownloadingAction' = (
         betterproto.message_field(138, group='action')
     )
-    voice_action: 'VoiceAction' = betterproto.message_field(139, group='action')
-    voice_read_text_action: 'VoiceReadTextAction' = betterproto.message_field(
+    vs_code_set_pending_action: 'VsCodeSetPendingAction' = betterproto.message_field(
+        139, group='action',
+    )
+    vs_code_set_status_action: 'VsCodeSetStatusAction' = betterproto.message_field(
         140, group='action',
     )
-    voice_set_engine_action: 'VoiceSetEngineAction' = betterproto.message_field(
-        141, group='action',
+    vs_code_start_downloading_action: 'VsCodeStartDownloadingAction' = (
+        betterproto.message_field(141, group='action')
     )
     wi_fi_action: 'WiFiAction' = betterproto.message_field(142, group='action')
     wi_fi_input_connection_action: 'WiFiInputConnectionAction' = (
@@ -3251,37 +3255,39 @@ class Event(betterproto.Message):
         61, group='event',
     )
     snapshot_event: 'SnapshotEvent' = betterproto.message_field(62, group='event')
+    speech_synthesis_event: 'SpeechSynthesisEvent' = betterproto.message_field(
+        63, group='event',
+    )
+    speech_synthesis_synthesize_text_event: 'SpeechSynthesisSynthesizeTextEvent' = (
+        betterproto.message_field(64, group='event')
+    )
     store_recorded_sequence_event: 'StoreRecordedSequenceEvent' = (
-        betterproto.message_field(63, group='event')
+        betterproto.message_field(65, group='event')
     )
     update_manager_check_event: 'UpdateManagerCheckEvent' = betterproto.message_field(
-        64, group='event',
-    )
-    update_manager_event: 'UpdateManagerEvent' = betterproto.message_field(
-        65, group='event',
-    )
-    update_manager_update_event: 'UpdateManagerUpdateEvent' = betterproto.message_field(
         66, group='event',
     )
-    users_create_user_event: 'UsersCreateUserEvent' = betterproto.message_field(
+    update_manager_event: 'UpdateManagerEvent' = betterproto.message_field(
         67, group='event',
     )
-    users_delete_user_event: 'UsersDeleteUserEvent' = betterproto.message_field(
+    update_manager_update_event: 'UpdateManagerUpdateEvent' = betterproto.message_field(
         68, group='event',
     )
-    users_event: 'UsersEvent' = betterproto.message_field(69, group='event')
-    users_reset_password_event: 'UsersResetPasswordEvent' = betterproto.message_field(
+    users_create_user_event: 'UsersCreateUserEvent' = betterproto.message_field(
+        69, group='event',
+    )
+    users_delete_user_event: 'UsersDeleteUserEvent' = betterproto.message_field(
         70, group='event',
     )
-    vs_code_event: 'VsCodeEvent' = betterproto.message_field(71, group='event')
-    vs_code_login_event: 'VsCodeLoginEvent' = betterproto.message_field(
+    users_event: 'UsersEvent' = betterproto.message_field(71, group='event')
+    users_reset_password_event: 'UsersResetPasswordEvent' = betterproto.message_field(
         72, group='event',
     )
-    vs_code_restart_event: 'VsCodeRestartEvent' = betterproto.message_field(
-        73, group='event',
+    vs_code_event: 'VsCodeEvent' = betterproto.message_field(73, group='event')
+    vs_code_login_event: 'VsCodeLoginEvent' = betterproto.message_field(
+        74, group='event',
     )
-    voice_event: 'VoiceEvent' = betterproto.message_field(74, group='event')
-    voice_synthesize_text_event: 'VoiceSynthesizeTextEvent' = betterproto.message_field(
+    vs_code_restart_event: 'VsCodeRestartEvent' = betterproto.message_field(
         75, group='event',
     )
     web_ui_event: 'WebUiEvent' = betterproto.message_field(76, group='event')

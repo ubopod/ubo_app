@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from kivy.graphics.context_instructions import Color
 
-    from ubo_app.store.services.voice import ReadableInformation
+    from ubo_app.store.services.speech_synthesis import ReadableInformation
 
 
 class Importance(StrEnum):

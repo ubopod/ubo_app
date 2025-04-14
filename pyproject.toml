@@ -223,7 +223,7 @@ root = "ubo_app/services/010-notifications"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
-root = "ubo_app/services/010-voice"
+root = "ubo_app/services/010-speech-synthesis"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

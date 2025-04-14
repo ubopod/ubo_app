@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from ubo_app.store.settings.types import ServiceState
 
 
-def _generate_error_report_app(error: ErrorReport) -> PageWidget:
+def _generate_error_report_app(error: ErrorReport) -> type[PageWidget]:
     class ErrorReportPage(PageWidget):
         text: str = StringProperty(error.message)
 

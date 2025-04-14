@@ -8,7 +8,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationsAddAction,
 )
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 
 
 async def log_async_process(

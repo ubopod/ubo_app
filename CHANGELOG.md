@@ -15,6 +15,7 @@
 - chore(scripts): add `--index` for `device:` poe scripts, allowing deployment and tests on multiple devices without the need to constantly change `ubo-development-pod`
 - chore: housekeeping, update dependencies, remove unused code, etc
 - feat(infrared): add infrared service with settings menu to enable/disable propagating keypad actions as ir commands and receiving ir commands and translating them to keypad actions - closes #160
+- refactor(speech-synthesis): rename `voice` service to `speech_synthesis` to make room for a separate `speech_recognition` service
 
 ## Version 1.3.0
 

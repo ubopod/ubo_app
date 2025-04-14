@@ -29,7 +29,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -18,13 +18,13 @@ from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
-from ubo_app.store.services.voice import (
+from ubo_app.store.services.speech_synthesis import (
     ReadableInformation,
-    VoiceEngine,
-    VoiceReadTextAction,
-    VoiceSetEngineAction,
-    VoiceSynthesizeTextEvent,
-    VoiceUpdateAccessKeyStatus,
+    SpeechSynthesisEngine,
+    SpeechSynthesisReadTextAction,
+    SpeechSynthesisSetEngineAction,
+    SpeechSynthesisSynthesizeTextEvent,
+    SpeechSynthesisUpdateAccessKeyStatus,
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
@@ -44,14 +44,14 @@ class _Context:
     picovoice_lock = fasteners.ReaderWriterLock()
 
     def cleanup(self: _Context) -> None:
-        store.dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=False))
+        store.dispatch(SpeechSynthesisUpdateAccessKeyStatus(is_access_key_set=False))
         with self.picovoice_lock.write_lock():
             if self.picovoice_instance:
                 self.picovoice_instance.delete()
                 self.picovoice_instance = None
 
     def set_access_key(self: _Context, access_key: str) -> None:
-        store.dispatch(VoiceUpdateAccessKeyStatus(is_access_key_set=True))
+        store.dispatch(SpeechSynthesisUpdateAccessKeyStatus(is_access_key_set=True))
         with self.picovoice_lock.write_lock():
             if access_key:
                 if self.picovoice_instance:
@@ -116,18 +116,18 @@ def clear_access_key() -> None:
     to_thread(_context.cleanup)
 
 
-@store.with_state(lambda state: state.voice.selected_engine)
-def _engine(engine: VoiceEngine) -> VoiceEngine:
+@store.with_state(lambda state: state.speech_synthesis.selected_engine)
+def _engine(engine: SpeechSynthesisEngine) -> SpeechSynthesisEngine:
     return engine
 
 
 piper_cache: dict[str, list[bytes]] = {}
 
 
-def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
+def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
     """Synthesize the text."""
     engine = _engine()
-    if engine == VoiceEngine.PIPER:
+    if engine == SpeechSynthesisEngine.PIPER:
         text = event.information.piper_text
         if not _context.piper_voice:
             return
@@ -161,7 +161,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
                 ),
             )
         unsubscribe()
-    elif engine == VoiceEngine.PICOVOICE:
+    elif engine == SpeechSynthesisEngine.PICOVOICE:
         with _context.picovoice_lock.read_lock():
             if not _context.picovoice_instance:
                 return
@@ -182,7 +182,7 @@ def synthesize_and_play(event: VoiceSynthesizeTextEvent) -> None:
         )
 
 
-@store.autorun(lambda state: state.voice.is_access_key_set)
+@store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
 def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
     if is_access_key_set:
         return [
@@ -201,29 +201,31 @@ def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
     ]
 
 
-@store.autorun(lambda state: state.voice.is_access_key_set)
+@store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
 def _menu_sub_heading(_: bool | None) -> str:
     return f"""Set the access key
 Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}"""
 
 
 ENGINE_LABELS = {
-    VoiceEngine.PIPER: 'Piper',
-    VoiceEngine.PICOVOICE: 'Picovoice',
+    SpeechSynthesisEngine.PIPER: 'Piper',
+    SpeechSynthesisEngine.PICOVOICE: 'Picovoice',
 }
 
 
-def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
-    """Select the voice engine."""
+def create_engine_selector(engine: SpeechSynthesisEngine) -> Callable[[], None]:
+    """Select the speech synthesis engine."""
 
     def _engine_selector() -> None:
         store.dispatch(
-            VoiceSetEngineAction(engine=engine),
-            VoiceReadTextAction(
+            SpeechSynthesisSetEngineAction(engine=engine),
+            SpeechSynthesisReadTextAction(
                 information=ReadableInformation(
                     text={
-                        VoiceEngine.PIPER: 'Piper voice engine selected',
-                        VoiceEngine.PICOVOICE: 'Picovoice voice engine selected',
+                        SpeechSynthesisEngine.PIPER: 'Piper speech synthesis engine '
+                        'selected',
+                        SpeechSynthesisEngine.PICOVOICE: 'Picovoice speech synthesis '
+                        'engine selected',
                     }[engine],
                 ),
                 engine=engine,
@@ -233,8 +235,10 @@ def create_engine_selector(engine: VoiceEngine) -> Callable[[], None]:
     return _engine_selector
 
 
-@store.autorun(lambda state: state.voice.selected_engine)
-def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
+@store.autorun(lambda state: state.speech_synthesis.selected_engine)
+def _speech_synthesis_engine_items(
+    selected_engine: SpeechSynthesisEngine,
+) -> Sequence[ActionItem]:
     return [
         (
             selection_parameters := SELECTED_ITEM_PARAMETERS
@@ -246,12 +250,12 @@ def _voice_engine_items(selected_engine: VoiceEngine) -> Sequence[ActionItem]:
             action=create_engine_selector(engine),
             **selection_parameters,
         )
-        for engine in VoiceEngine
+        for engine in SpeechSynthesisEngine
     ]
 
 
 def init_service() -> Subscriptions:
-    """Initialize voice service."""
+    """Initialize speech synthesis service."""
     access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY)
     if access_key:
         to_thread(_context.set_access_key, access_key)
@@ -259,8 +263,8 @@ def init_service() -> Subscriptions:
         to_thread(_context.cleanup)
 
     register_persistent_store(
-        'voice_engine',
-        lambda state: state.voice.selected_engine,
+        'speech_synthesis_engine',
+        lambda state: state.speech_synthesis.selected_engine,
     )
 
     to_thread(_context.load_piper)
@@ -270,11 +274,11 @@ def init_service() -> Subscriptions:
             category=SettingsCategory.SPEECH,
             priority=1,
             menu_item=SubMenuItem(
-                label='Voice Engine',
+                label='Speech Synthesis',
                 icon='󰱑',
                 sub_menu=HeadlessMenu(
-                    title='󰱑Voice Engine',
-                    items=_voice_engine_items,
+                    title='󰱑Speech Synthesis',
+                    items=_speech_synthesis_engine_items,
                 ),
             ),
             key='engines',
@@ -301,7 +305,7 @@ def init_service() -> Subscriptions:
 
     return [
         store.subscribe_event(
-            VoiceSynthesizeTextEvent,
+            SpeechSynthesisSynthesizeTextEvent,
             lambda event: to_thread(synthesize_and_play, event),
         ),
         _context.cleanup,

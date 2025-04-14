@@ -25,7 +25,7 @@ from ubo_app.store.services.notifications import (
     NotificationsClearEvent,
     NotificationsDisplayEvent,
 )
-from ubo_app.store.services.voice import VoiceReadTextAction
+from ubo_app.store.services.speech_synthesis import SpeechSynthesisReadTextAction
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -121,7 +121,7 @@ class MenuNotificationHandler(UboApp):
             ):
                 notification.is_initialized = True
                 store.dispatch(
-                    VoiceReadTextAction(
+                    SpeechSynthesisReadTextAction(
                         information=event.notification.extra_information,
                     ),
                 )

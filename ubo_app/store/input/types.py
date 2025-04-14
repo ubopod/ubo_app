@@ -11,7 +11,7 @@ from redux import BaseAction, BaseEvent
 if TYPE_CHECKING:
     from io import BytesIO
 
-    from ubo_app.store.services.voice import ReadableInformation
+    from ubo_app.store.services.speech_synthesis import ReadableInformation
 
 
 class InputResult(Immutable):

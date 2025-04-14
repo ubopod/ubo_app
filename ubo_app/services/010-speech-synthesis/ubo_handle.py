@@ -20,7 +20,7 @@ def setup(register_reducer: ReducerRegistrar) -> Subscriptions:
 
 
 register(
-    service_id='voice',
-    label='Voice',
+    service_id='speech_synthesis',
+    label='Speech Synthesis',
     setup=setup,
 )
