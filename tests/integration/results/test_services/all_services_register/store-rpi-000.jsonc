@@ -20,7 +20,7 @@
     "is_paused": false
   },
   "docker": {
-    "_id": "baf3897a3e70f16a55485822de1b372a",
+    "_id": "101fbcccded733e8b421eaeb534097ca",
     "_type": "DockerState",
     "envoy_grpc": {
       "_type": "ImageState",
@@ -4332,6 +4332,238 @@
                                   ],
                                   "icon": "[color=#008000]󰪥[/color]",
                                   "is_short": false,
+                                  "key": "speech_recognition",
+                                  "label": "Speech Recognition",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "_type": "HeadedMenu",
+                                    "heading": "[color=#008000]󰪥[/color] Speech Recognition",
+                                    "items": [
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#FF3F51",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "stop",
+                                        "label": "Stop",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsStopServiceAction",
+                                          "service_id": "speech_recognition"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "speech_recognition"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "speech_recognition"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "speech_recognition"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "speech_recognition"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "speech_recognition"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "speech_recognition"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "speech_recognition"
+                                              }
+                                            },
+                                            {
+                                              "_type": "DispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "speech_recognition"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
+                                        "_type": "DispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "speech_recognition",
+                                          "should_auto_restart": true
+                                        }
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "sub_heading": "No errors raised in this service",
+                                    "title": "Speech Recognition"
+                                  }
+                                },
+                                {
+                                  "_type": "SubMenuItem",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "[color=#008000]󰪥[/color]",
+                                  "is_short": false,
                                   "key": "speech_synthesis",
                                   "label": "Speech Synthesis",
                                   "opacity": null,
@@ -5606,7 +5838,47 @@
                               1,
                               1
                             ],
-                            "icon": "󰱑",
+                            "icon": "󰗋",
+                            "is_short": false,
+                            "key": "speech_recognition:",
+                            "label": "Speech Recognition",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadlessMenu",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:download_vosk_model>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰇚",
+                                  "is_short": false,
+                                  "key": "download",
+                                  "label": "Download Vosk Model",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "title": "󰗋Speech Recognition"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰔊",
                             "is_short": false,
                             "key": "speech_synthesis:engines",
                             "label": "Speech Synthesis",
@@ -5651,7 +5923,7 @@
                                 }
                               ],
                               "placeholder": null,
-                              "title": "󰱑Speech Synthesis"
+                              "title": "󰔊Speech Synthesis"
                             }
                           },
                           {
@@ -5663,7 +5935,7 @@
                               1,
                               1
                             ],
-                            "icon": "󰔊",
+                            "icon": "PV",
                             "is_short": false,
                             "key": "speech_synthesis:settings",
                             "label": "Picovoice Settings",
@@ -5671,7 +5943,7 @@
                             "progress": null,
                             "sub_menu": {
                               "_type": "HeadedMenu",
-                              "heading": "󰔊 Picovoice",
+                              "heading": "Picovoice",
                               "items": [
                                 {
                                   "_type": "ActionItem",
@@ -5927,6 +6199,7 @@
       "ip:": 0,
       "lightdm:": 0,
       "rpi_connect:": null,
+      "speech_recognition:": 1,
       "speech_synthesis:engines": 1,
       "speech_synthesis:settings": 0,
       "ssh:": 1,
@@ -6109,6 +6382,16 @@
         "log_level": 10,
         "should_auto_restart": false
       },
+      "speech_recognition": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "speech_recognition",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Speech Recognition",
+        "log_level": 10,
+        "should_auto_restart": false
+      },
       "speech_synthesis": {
         "_type": "ServiceState",
         "errors": [],
@@ -6170,6 +6453,10 @@
         "should_auto_restart": false
       }
     }
+  },
+  "speech_recognition": {
+    "_type": "SpeechRecognitionState",
+    "is_active": false
   },
   "speech_synthesis": {
     "_type": "SpeechSynthesisState",

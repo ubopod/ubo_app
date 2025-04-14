@@ -1,4 +1,4 @@
-"""Implement `init_service` for vocie module."""
+"""Implement `init_service` for speech synthesis service."""
 
 from __future__ import annotations
 
@@ -275,9 +275,9 @@ def init_service() -> Subscriptions:
             priority=1,
             menu_item=SubMenuItem(
                 label='Speech Synthesis',
-                icon='󰱑',
+                icon='󰔊',
                 sub_menu=HeadlessMenu(
-                    title='󰱑Speech Synthesis',
+                    title='󰔊Speech Synthesis',
                     items=_speech_synthesis_engine_items,
                 ),
             ),
@@ -291,10 +291,10 @@ def init_service() -> Subscriptions:
             priority=0,
             menu_item=SubMenuItem(
                 label='Picovoice Settings',
-                icon='󰔊',
+                icon='PV',
                 sub_menu=HeadedMenu(
                     title='Picovoice Settings',
-                    heading='󰔊 Picovoice',
+                    heading='Picovoice',
                     sub_heading=_menu_sub_heading,
                     items=_menu_items,
                 ),

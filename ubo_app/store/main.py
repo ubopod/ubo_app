@@ -63,6 +63,10 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
 from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
 from ubo_app.store.services.sensors import SensorsAction, SensorsState
+from ubo_app.store.services.speech_recognition import (
+    SpeechRecognitionAction,
+    SpeechRecognitionState,
+)
 from ubo_app.store.services.speech_synthesis import (
     SpeechSynthesisAction,
     SpeechSynthesisState,
@@ -114,9 +118,10 @@ UboAction: TypeAlias = (
     | RgbRingAction
     | RPiConnectAction
     | SensorsAction
+    | SpeechRecognitionAction
+    | SpeechSynthesisAction
     | SSHAction
     | UsersAction
-    | SpeechSynthesisAction
     | VSCodeAction
     | WiFiAction
 )
@@ -157,9 +162,10 @@ class RootState(BaseCombineReducerState):
     rgb_ring: RgbRingState
     rpi_connect: RPiConnectState
     sensors: SensorsState
+    speech_recognition: SpeechRecognitionState
+    speech_synthesis: SpeechSynthesisState
     ssh: SSHState
     users: UsersState
-    speech_synthesis: SpeechSynthesisState
     vscode: VSCodeState
     web_ui: WebUIState
     wifi: WiFiState

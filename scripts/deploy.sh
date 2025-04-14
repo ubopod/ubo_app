@@ -6,7 +6,7 @@ set -o nounset
 
 # Signal handler
 function cleanup() {
-  perl -i -pe 's/^exclude = \["ubo_app\/services\/\*-voice\/models\/\*", (.*)\]$/exclude = [\1]/' pyproject.toml
+  perl -i -pe 's/^exclude = \["ubo_app\/services\/\*-speech-synthesis\/models\/\*", (.*)\]$/exclude = [\1]/' pyproject.toml
 }
 trap cleanup ERR
 trap cleanup EXIT
@@ -19,7 +19,7 @@ kill=${kill:-"False"}
 restart=${restart:-"False"}
 env=${env:-"True"}
 
-perl -i -pe 's/^exclude = \[(.*)\]$/exclude = ["ubo_app\/services\/*-voice\/models\/*", \1]/' pyproject.toml
+perl -i -pe 's/^exclude = \[(.*)\]$/exclude = ["ubo_app\/services\/*-speech-synthesis\/models\/*", \1]/' pyproject.toml
 uv build
 cleanup
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
@@ -51,10 +51,10 @@ function run_on_pod_as_root() {
 scp dist/$LATEST_VERSION ubo-development-pod-$index:/tmp/
 
 run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION &&"; fi)
-mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/models /tmp/
+mv /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-speech-synthesis/models /tmp/
 pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION
 [ -e /opt/ubo/env/bin/ipdb3 ] || pip install ipdb
-mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-voice/
+mv /tmp/models /opt/ubo/env/lib/python3.*/site-packages/ubo_app/services/*-speech-synthesis/
 true"
 
 if [ "$bootstrap" == "True" ] || [ "$env" == "True" ] || [ "$restart" == "True" ]; then

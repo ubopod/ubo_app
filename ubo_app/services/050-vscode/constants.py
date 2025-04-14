@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 import platform
 
-from ubo_app.constants import DATA_PATH
+from ubo_app.constants import CACHE_PATH, DATA_PATH
 
 
 def get_cli_tool_name() -> str:  # noqa: C901
@@ -39,4 +39,4 @@ CODE_BINARY_URL = (
 )
 
 CODE_BINARY_PATH = DATA_PATH / 'code'
-CODE_DOWNLOAD_PATH = CODE_BINARY_PATH.parent / 'code.tar.gz'
+CODE_DOWNLOAD_PATH = CACHE_PATH / 'code.tar.gz'

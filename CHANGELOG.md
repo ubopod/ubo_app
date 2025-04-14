@@ -18,6 +18,7 @@
 - refactor(speech-synthesis): rename `voice` service to `speech_synthesis` to make room for a separate `speech_recognition` service
 - refactor(core): make `log_process` report errors for the service using `report_service_error` and some general housekeeping
 - refactor(vscode): use data dir as reported by `platformdirs.user_data_path` to store downloaded assets like vscode binary
+- feat(speech-recognition): add `speech-recognition` service with settings menu to download the vosk model and activate/deactivate the listener - closes #284
 
 ## Version 1.3.0
 

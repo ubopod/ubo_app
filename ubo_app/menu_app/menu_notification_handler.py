@@ -30,6 +30,7 @@ from ubo_app.store.services.speech_synthesis import SpeechSynthesisReadTextActio
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from kivy._clock import ClockEvent
     from ubo_gui.menu.menu_widget import MenuWidget
     from ubo_gui.menu.types import PageWidget
 
@@ -37,7 +38,9 @@ if TYPE_CHECKING:
 class NotificationReference:
     def __init__(self: NotificationReference, notification: Notification) -> None:
         self.value = notification
+        self.dismiss_on_close = notification.dismiss_on_close
         self.is_initialized = False
+        self.flash_event: ClockEvent | None = None
 
 
 class MenuNotificationHandler(UboApp):
@@ -84,7 +87,7 @@ class MenuNotificationHandler(UboApp):
                 unsubscribe()
             notification_application.unbind(on_close=close)
             store.dispatch(CloseApplicationAction(application=notification_application))
-            if notification.value.dismiss_on_close:
+            if notification.dismiss_on_close:
                 store.dispatch(
                     NotificationsClearAction(notification=notification.value),
                 )
@@ -98,18 +101,32 @@ class MenuNotificationHandler(UboApp):
         _self = weakref.ref(self)
 
         def renew_notification(event: NotificationsDisplayEvent) -> None:
-            logger.debug('Renewing notification %s', notification.value.id)
+            logger.verbose('Renewing notification', extra={'notification': event})
             self = _self()
             if self is None:
                 return
             if event.notification.id == notification.value.id:
                 notification.value = event.notification
+                notification.dismiss_on_close = event.notification.dismiss_on_close
                 self._update_notification_widget(
                     notification_application,
                     event,
                     notification,
                     close,
                 )
+
+                if notification.flash_event:
+                    notification.flash_event.cancel()
+                    notification.flash_event = None
+
+                if (
+                    event.notification.display_type is NotificationDisplayType.FLASH
+                    and event.index is None
+                ):
+                    notification.flash_event = Clock.schedule_once(
+                        close,
+                        notification.value.flash_time,
+                    )
 
             if event.notification.extra_information and (
                 not notification.is_initialized
@@ -128,12 +145,6 @@ class MenuNotificationHandler(UboApp):
 
         notification_application = NotificationWidget(items=[None] * PAGE_MAX_ITEMS)
         notification_application.notification_id = notification.value.id
-
-        if (
-            notification.value.display_type is NotificationDisplayType.FLASH
-            and event.index is None
-        ):
-            Clock.schedule_once(close, notification.value.flash_time)
 
         notification_application.bind(on_close=close)
 
@@ -162,7 +173,7 @@ class MenuNotificationHandler(UboApp):
     ) -> list[NotificationActionItem | None]:
         def dismiss(_: object = None) -> None:
             close()
-            if not notification.value.dismiss_on_close:
+            if not notification.dismiss_on_close:
                 store.dispatch(
                     NotificationsClearAction(notification=notification.value),
                 )

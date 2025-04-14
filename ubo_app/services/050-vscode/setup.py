@@ -6,8 +6,8 @@ import pathlib
 import subprocess
 from typing import TYPE_CHECKING
 
-from _constants import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
 from commands import check_status, restart, uninstall_service
+from constants import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
 from kivy.lang.builder import Builder
 from login_page import LoginPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu

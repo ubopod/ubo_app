@@ -2322,6 +2322,29 @@ class SensorsState(betterproto.Message):
 
 
 @dataclass(eq=False, repr=False)
+class SpeechRecognitionAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_recognition: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechRecognitionSetIsActiveAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_recognition: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    is_active: bool = betterproto.bool_field(2)
+
+
+@dataclass(eq=False, repr=False)
+class SpeechRecognitionState(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_recognition: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    is_active: 'bool | None' = betterproto.bool_field(2, optional=True)
+
+
+@dataclass(eq=False, repr=False)
 class SpeechSynthesisAction(betterproto.Message):
     meta_field_package_name_ubo_app_dot_store_dot_services_dot_speech_synthesis: (
         'str | None'
@@ -3038,74 +3061,80 @@ class Action(betterproto.Message):
     settings_toggle_debug_mode_action: 'SettingsToggleDebugModeAction' = (
         betterproto.message_field(121, group='action')
     )
-    speech_synthesis_action: 'SpeechSynthesisAction' = betterproto.message_field(
+    speech_recognition_action: 'SpeechRecognitionAction' = betterproto.message_field(
         122, group='action',
     )
-    speech_synthesis_read_text_action: 'SpeechSynthesisReadTextAction' = (
+    speech_recognition_set_is_active_action: 'SpeechRecognitionSetIsActiveAction' = (
         betterproto.message_field(123, group='action')
     )
+    speech_synthesis_action: 'SpeechSynthesisAction' = betterproto.message_field(
+        124, group='action',
+    )
+    speech_synthesis_read_text_action: 'SpeechSynthesisReadTextAction' = (
+        betterproto.message_field(125, group='action')
+    )
     speech_synthesis_set_engine_action: 'SpeechSynthesisSetEngineAction' = (
-        betterproto.message_field(124, group='action')
-    )
-    status_icons_action: 'StatusIconsAction' = betterproto.message_field(
-        125, group='action',
-    )
-    status_icons_register_action: 'StatusIconsRegisterAction' = (
         betterproto.message_field(126, group='action')
     )
-    toggle_recording_action: 'ToggleRecordingAction' = betterproto.message_field(
+    status_icons_action: 'StatusIconsAction' = betterproto.message_field(
         127, group='action',
     )
+    status_icons_register_action: 'StatusIconsRegisterAction' = (
+        betterproto.message_field(128, group='action')
+    )
+    toggle_recording_action: 'ToggleRecordingAction' = betterproto.message_field(
+        129, group='action',
+    )
     update_manager_action: 'UpdateManagerAction' = betterproto.message_field(
-        128, group='action',
+        130, group='action',
     )
     update_manager_set_status_action: 'UpdateManagerSetStatusAction' = (
-        betterproto.message_field(129, group='action')
+        betterproto.message_field(131, group='action')
     )
     update_manager_set_update_service_status_action: (
         'UpdateManagerSetUpdateServiceStatusAction'
-    ) = betterproto.message_field(130, group='action')
+    ) = betterproto.message_field(132, group='action')
     update_manager_set_versions_action: 'UpdateManagerSetVersionsAction' = (
-        betterproto.message_field(131, group='action')
+        betterproto.message_field(133, group='action')
     )
-    users_action: 'UsersAction' = betterproto.message_field(132, group='action')
+    users_action: 'UsersAction' = betterproto.message_field(134, group='action')
     users_create_user_action: 'UsersCreateUserAction' = betterproto.message_field(
-        133, group='action',
-    )
-    users_delete_user_action: 'UsersDeleteUserAction' = betterproto.message_field(
-        134, group='action',
-    )
-    users_reset_password_action: 'UsersResetPasswordAction' = betterproto.message_field(
         135, group='action',
     )
-    users_set_users_action: 'UsersSetUsersAction' = betterproto.message_field(
+    users_delete_user_action: 'UsersDeleteUserAction' = betterproto.message_field(
         136, group='action',
     )
-    vs_code_action: 'VsCodeAction' = betterproto.message_field(137, group='action')
+    users_reset_password_action: 'UsersResetPasswordAction' = betterproto.message_field(
+        137, group='action',
+    )
+    users_set_users_action: 'UsersSetUsersAction' = betterproto.message_field(
+        138, group='action',
+    )
+    vs_code_action: 'VsCodeAction' = betterproto.message_field(139, group='action')
     vs_code_done_downloading_action: 'VsCodeDoneDownloadingAction' = (
-        betterproto.message_field(138, group='action')
+        betterproto.message_field(140, group='action')
     )
     vs_code_set_pending_action: 'VsCodeSetPendingAction' = betterproto.message_field(
-        139, group='action',
+        141, group='action',
     )
     vs_code_set_status_action: 'VsCodeSetStatusAction' = betterproto.message_field(
-        140, group='action',
+        142, group='action',
     )
     vs_code_start_downloading_action: 'VsCodeStartDownloadingAction' = (
-        betterproto.message_field(141, group='action')
-    )
-    wi_fi_action: 'WiFiAction' = betterproto.message_field(142, group='action')
-    wi_fi_input_connection_action: 'WiFiInputConnectionAction' = (
         betterproto.message_field(143, group='action')
     )
+    wi_fi_action: 'WiFiAction' = betterproto.message_field(144, group='action')
+    wi_fi_input_connection_action: 'WiFiInputConnectionAction' = (
+        betterproto.message_field(145, group='action')
+    )
     wi_fi_set_has_visited_onboarding_action: 'WiFiSetHasVisitedOnboardingAction' = (
-        betterproto.message_field(144, group='action')
+        betterproto.message_field(146, group='action')
     )
     wi_fi_update_action: 'WiFiUpdateAction' = betterproto.message_field(
-        145, group='action',
+        147, group='action',
     )
     wi_fi_update_request_action: 'WiFiUpdateRequestAction' = betterproto.message_field(
-        146, group='action',
+        148, group='action',
     )
 
 
