@@ -6216,8 +6216,7 @@
   },
   "rgb_ring": {
     "_type": "RgbRingState",
-    "is_busy": false,
-    "is_connected": true
+    "is_busy": false
   },
   "rpi_connect": {
     "_type": "RPiConnectState",

@@ -1539,12 +1539,6 @@ message RgbRingEvent {
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
 }
 
-message RgbRingSetIsConnectedAction {
-  option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
-  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
-  optional bool is_connected = 2;
-}
-
 message RgbRingSetIsBusyAction {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
@@ -1652,6 +1646,12 @@ message RgbRingFillDownfromAction {
   optional RgbColor color = 4;
 }
 
+message RgbRingSequenceAction {
+  option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
+  optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
+  repeated RgbRingCommandAction sequence = 2;
+}
+
 message RgbRingCommandEvent {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
@@ -1661,8 +1661,7 @@ message RgbRingCommandEvent {
 message RgbRingState {
   option (package_info.v1.package_name) = "ubo_app.store.services.rgb_ring";
   optional string meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring = 1000;
-  bool is_connected = 2;
-  bool is_busy = 3;
+  bool is_busy = 2;
 }
 
 message RgbColorElement {
@@ -2195,11 +2194,11 @@ message Action {
     RgbRingProgressWheelStepAction rgb_ring_progress_wheel_step_action = 93;
     RgbRingPulseAction rgb_ring_pulse_action = 94;
     RgbRingRainbowAction rgb_ring_rainbow_action = 95;
-    RgbRingSetAllAction rgb_ring_set_all_action = 96;
-    RgbRingSetBrightnessAction rgb_ring_set_brightness_action = 97;
-    RgbRingSetEnabledAction rgb_ring_set_enabled_action = 98;
-    RgbRingSetIsBusyAction rgb_ring_set_is_busy_action = 99;
-    RgbRingSetIsConnectedAction rgb_ring_set_is_connected_action = 100;
+    RgbRingSequenceAction rgb_ring_sequence_action = 96;
+    RgbRingSetAllAction rgb_ring_set_all_action = 97;
+    RgbRingSetBrightnessAction rgb_ring_set_brightness_action = 98;
+    RgbRingSetEnabledAction rgb_ring_set_enabled_action = 99;
+    RgbRingSetIsBusyAction rgb_ring_set_is_busy_action = 100;
     RgbRingSpinningWheelAction rgb_ring_spinning_wheel_action = 101;
     RgbRingWaitableCommandAction rgb_ring_waitable_command_action = 102;
     SSHAction ssh_action = 103;

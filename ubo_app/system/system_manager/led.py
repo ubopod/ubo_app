@@ -300,64 +300,67 @@ class LEDManager:
         self.logger.info('Executing LED command', extra={'incoming': incoming})
         self.incoming = incoming
         self._stop = False
-        if incoming[0] == 'set_enabled' and len(incoming) == 2:
-            self.set_enabled(enabled=incoming[1] == '1')
-        # set brightness of LEDs
-        if incoming[0] == 'set_brightness' and len(incoming) == 2:
-            brightness_value = float(incoming[1])
-            if 0 < brightness_value <= 1:
-                self.set_brightness(brightness_value)
-        if incoming[0] == 'set_all' and len(incoming) == 4:
-            self.set_all((int(incoming[1]), int(incoming[2]), int(incoming[3])))
-        if incoming[0] == 'blank':
-            self.blank()
-        if incoming[0] == 'rainbow' and len(incoming) == 3:
-            self.rainbow(int(incoming[1]), float(incoming[2]))
-        if incoming[0] == 'pulse' and len(incoming) == 6:
-            # pulse(self, color, wait, repetitions):
-            self.pulse(
-                (int(incoming[1]), int(incoming[2]), int(incoming[3])),
-                wait=int(incoming[4]),
-                repetitions=int(incoming[5]),
-            )
-        if incoming[0] == 'blink' and len(incoming) == 6:
-            # blink(self, color, wait, repetitions):
-            self.blink(
-                (int(incoming[1]), int(incoming[2]), int(incoming[3])),
-                wait=int(incoming[4]),
-                repetitions=int(incoming[5]),
-            )
-        if incoming[0] == 'progress_wheel_step' and len(incoming) == 4:
-            self.progress_wheel_step(
-                (int(incoming[1]), int(incoming[2]), int(incoming[3])),
-            )
-        if incoming[0] == 'spinning_wheel':  # noqa: SIM102
-            # spinning_wheel(self, color, wait, length, repetitions):
-            if len(incoming) == 7:
-                self.spinning_wheel(
-                    (int(incoming[1]), int(incoming[2]), int(incoming[3])),
-                    wait=int(incoming[4]),
-                    length=int(incoming[5]),
-                    repetitions=int(incoming[6]),
+        sequence = ' '.join(incoming)
+        for command_string in sequence.split('|'):
+            command = command_string.strip().split()
+            if command[0] == 'set_enabled' and len(command) == 2:
+                self.set_enabled(enabled=command[1] == '1')
+            # set brightness of LEDs
+            if command[0] == 'set_brightness' and len(command) == 2:
+                brightness_value = float(command[1])
+                if 0 < brightness_value <= 1:
+                    self.set_brightness(brightness_value)
+            if command[0] == 'set_all' and len(command) == 4:
+                self.set_all((int(command[1]), int(command[2]), int(command[3])))
+            if command[0] == 'blank':
+                self.blank()
+            if command[0] == 'rainbow' and len(command) == 3:
+                self.rainbow(int(command[1]), float(command[2]))
+            if command[0] == 'pulse' and len(command) == 6:
+                # pulse(self, color, wait, repetitions):
+                self.pulse(
+                    (int(command[1]), int(command[2]), int(command[3])),
+                    wait=int(command[4]),
+                    repetitions=int(command[5]),
                 )
-        if incoming[0] == 'progress_wheel' and len(incoming) == 5:
-            # progress_wheel(self, color, percentage):
-            self.progress_wheel(
-                (int(incoming[1]), int(incoming[2]), int(incoming[3])),
-                percentage=float(incoming[4]),
-            )
-        if incoming[0] == 'fill_upto' and len(incoming) == 6:
-            # fill_upto(self, color, percentage, wait):
-            self.fill_upto(
-                (int(incoming[1]), int(incoming[2]), int(incoming[3])),
-                percentage=float(incoming[4]),
-                wait=int(incoming[5]),
-            )
-        if incoming[0] == 'fill_downfrom' and len(incoming) == 6:
-            # fill_upto(self, color, percentage, wait):
-            self.fill_downfrom(
-                (int(incoming[1]), int(incoming[2]), int(incoming[3])),
-                percentage=float(incoming[4]),
-                wait=int(incoming[5]),
-            )
+            if command[0] == 'blink' and len(command) == 6:
+                # blink(self, color, wait, repetitions):
+                self.blink(
+                    (int(command[1]), int(command[2]), int(command[3])),
+                    wait=int(command[4]),
+                    repetitions=int(command[5]),
+                )
+            if command[0] == 'progress_wheel_step' and len(command) == 4:
+                self.progress_wheel_step(
+                    (int(command[1]), int(command[2]), int(command[3])),
+                )
+            if command[0] == 'spinning_wheel':  # noqa: SIM102
+                # spinning_wheel(self, color, wait, length, repetitions):
+                if len(command) == 7:
+                    self.spinning_wheel(
+                        (int(command[1]), int(command[2]), int(command[3])),
+                        wait=int(command[4]),
+                        length=int(command[5]),
+                        repetitions=int(command[6]),
+                    )
+            if command[0] == 'progress_wheel' and len(command) == 5:
+                # progress_wheel(self, color, percentage):
+                self.progress_wheel(
+                    (int(command[1]), int(command[2]), int(command[3])),
+                    percentage=float(command[4]),
+                )
+            if command[0] == 'fill_upto' and len(command) == 6:
+                # fill_upto(self, color, percentage, wait):
+                self.fill_upto(
+                    (int(command[1]), int(command[2]), int(command[3])),
+                    wait=int(command[4]),
+                    percentage=float(command[5]),
+                )
+            if command[0] == 'fill_downfrom' and len(command) == 6:
+                # fill_upto(self, color, percentage, wait):
+                self.fill_downfrom(
+                    (int(command[1]), int(command[2]), int(command[3])),
+                    wait=int(command[4]),
+                    percentage=float(command[5]),
+                )
         self._stop = False

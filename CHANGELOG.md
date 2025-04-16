@@ -19,6 +19,7 @@
 - refactor(core): make `log_process` report errors for the service using `report_service_error` and some general housekeeping
 - refactor(vscode): use data dir as reported by `platformdirs.user_data_path` to store downloaded assets like vscode binary
 - feat(speech-recognition): add `speech-recognition` service with settings menu to download the vosk model and activate/deactivate the listener - closes #284
+- refactor(rgb-ring): add `RgbRingSequenceAction`, add `as_command` to all `RgbRingCommandAction`s
 
 ## Version 1.3.0
 

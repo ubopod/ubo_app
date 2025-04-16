@@ -2032,14 +2032,6 @@ class RgbRingEvent(betterproto.Message):
 
 
 @dataclass(eq=False, repr=False)
-class RgbRingSetIsConnectedAction(betterproto.Message):
-    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
-        'str | None'
-    ) = betterproto.string_field(1000, optional=True)
-    is_connected: 'bool | None' = betterproto.bool_field(2, optional=True)
-
-
-@dataclass(eq=False, repr=False)
 class RgbRingSetIsBusyAction(betterproto.Message):
     meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
         'str | None'
@@ -2179,6 +2171,14 @@ class RgbRingFillDownfromAction(betterproto.Message):
 
 
 @dataclass(eq=False, repr=False)
+class RgbRingSequenceAction(betterproto.Message):
+    meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
+        'str | None'
+    ) = betterproto.string_field(1000, optional=True)
+    sequence: 'list[RgbRingCommandAction]' = betterproto.message_field(2)
+
+
+@dataclass(eq=False, repr=False)
 class RgbRingCommandEvent(betterproto.Message):
     meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
         'str | None'
@@ -2191,8 +2191,7 @@ class RgbRingState(betterproto.Message):
     meta_field_package_name_ubo_app_dot_store_dot_services_dot_rgb_ring: (
         'str | None'
     ) = betterproto.string_field(1000, optional=True)
-    is_connected: bool = betterproto.bool_field(2)
-    is_busy: bool = betterproto.bool_field(3)
+    is_busy: bool = betterproto.bool_field(2)
 
 
 @dataclass(eq=False, repr=False)
@@ -2989,20 +2988,20 @@ class Action(betterproto.Message):
     rgb_ring_rainbow_action: 'RgbRingRainbowAction' = betterproto.message_field(
         95, group='action',
     )
-    rgb_ring_set_all_action: 'RgbRingSetAllAction' = betterproto.message_field(
+    rgb_ring_sequence_action: 'RgbRingSequenceAction' = betterproto.message_field(
         96, group='action',
     )
+    rgb_ring_set_all_action: 'RgbRingSetAllAction' = betterproto.message_field(
+        97, group='action',
+    )
     rgb_ring_set_brightness_action: 'RgbRingSetBrightnessAction' = (
-        betterproto.message_field(97, group='action')
+        betterproto.message_field(98, group='action')
     )
     rgb_ring_set_enabled_action: 'RgbRingSetEnabledAction' = betterproto.message_field(
-        98, group='action',
-    )
-    rgb_ring_set_is_busy_action: 'RgbRingSetIsBusyAction' = betterproto.message_field(
         99, group='action',
     )
-    rgb_ring_set_is_connected_action: 'RgbRingSetIsConnectedAction' = (
-        betterproto.message_field(100, group='action')
+    rgb_ring_set_is_busy_action: 'RgbRingSetIsBusyAction' = betterproto.message_field(
+        100, group='action',
     )
     rgb_ring_spinning_wheel_action: 'RgbRingSpinningWheelAction' = (
         betterproto.message_field(101, group='action')
