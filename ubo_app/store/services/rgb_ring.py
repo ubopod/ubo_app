@@ -72,6 +72,7 @@ class RgbRingBlankAction(RgbRingCommandAction):
 
 
 class RgbRingRainbowAction(RgbRingWaitableCommandAction):
+    wait: int = 1
     rounds: int
 
     def as_command(self) -> str:

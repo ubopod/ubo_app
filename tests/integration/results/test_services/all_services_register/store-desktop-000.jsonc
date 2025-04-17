@@ -6390,7 +6390,241 @@
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
-    "is_active": false
+    "intents": [
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            255,
+            255,
+            255
+          ]
+        },
+        "phrase": "Turn on Lights"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            0,
+            0,
+            0
+          ]
+        },
+        "phrase": "Turn off Lights"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            255,
+            0,
+            0
+          ]
+        },
+        "phrase": "Turn Lights Red"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            0,
+            255,
+            0
+          ]
+        },
+        "phrase": "Turn Lights Green"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            0,
+            0,
+            255
+          ]
+        },
+        "phrase": "Turn Lights Blue"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            255,
+            255,
+            0
+          ]
+        },
+        "phrase": "Turn Lights Yellow"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            255,
+            0,
+            255
+          ]
+        },
+        "phrase": "Turn Lights Purple"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            0,
+            255,
+            255
+          ]
+        },
+        "phrase": "Turn Lights Cyan"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            255,
+            100,
+            0
+          ]
+        },
+        "phrase": "Turn Lights Orange"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingSetAllAction",
+          "color": [
+            255,
+            255,
+            255
+          ]
+        },
+        "phrase": "Turn Lights White"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "RgbRingRainbowAction",
+          "rounds": 0,
+          "wait": 2500
+        },
+        "phrase": "Turn Lights Rainbow"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "AudioChangeVolumeAction",
+          "amount": 0.1,
+          "device": "Output"
+        },
+        "phrase": "Turn Volume Up"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "AudioChangeVolumeAction",
+          "amount": -0.1,
+          "device": "Output"
+        },
+        "phrase": "Turn Volume Down"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "AudioSetMuteStatusAction",
+          "device": "Output",
+          "is_mute": true
+        },
+        "phrase": "Mute Volume"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "AudioSetMuteStatusAction",
+          "device": "Output",
+          "is_mute": false
+        },
+        "phrase": "Unmute Volume"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "MenuChooseByIndexAction",
+          "index": 0
+        },
+        "phrase": "Activate Button One"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "MenuChooseByIndexAction",
+          "index": 1
+        },
+        "phrase": "Activate Button Two"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "MenuChooseByIndexAction",
+          "index": 1
+        },
+        "phrase": "Activate Button Three"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "MenuGoBackAction"
+        },
+        "phrase": [
+          "Activate Back Button",
+          "Go Back"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "MenuGoHomeAction"
+        },
+        "phrase": [
+          "Activate Home Button",
+          "Go Home"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "MenuScrollAction",
+          "direction": "up"
+        },
+        "phrase": [
+          "Activate Up Button",
+          "Scroll Up"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "MenuScrollAction",
+          "direction": "down"
+        },
+        "phrase": [
+          "Activate Down Button",
+          "Scroll Down"
+        ]
+      }
+    ],
+    "is_active": false,
+    "is_waiting": false
   },
   "speech_synthesis": {
     "_type": "SpeechSynthesisState",

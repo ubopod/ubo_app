@@ -224,23 +224,6 @@ jobs:
           echo "NAME=$(uvx hatch project metadata | jq -r .name)" >>"$GITHUB_OUTPUT"
           echo "NAME=$(uvx hatch project metadata | jq -r .name)"
 
-      - name: Configure Sentry
-        env:
-          VERSION: ${{ steps.extract-version.outputs.VERSION }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_SHA: ${{ github.sha }}
-        run: |
-          echo "SENTRY_DSN=$SENTRY_DSN" >>ubo_app/.env
-          # conditionally set it based on whether it's a tag or not using github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-          if [ "$GITHUB_EVENT_NAME" == "push" ] && [ "$(echo $GITHUB_REF | grep -c 'refs/tags/v')" -eq 1 ]; then
-            echo "SENTRY_RELEASE=ubo-app@$VERSION" >>ubo_app/.env
-          else
-            echo "SENTRY_RELEASE=ubo-app@$GITHUB_SHA" >>ubo_app/.env
-          fi
-          cat ubo_app/.env
-
       - name: Create virtualenv
         run: |
           uv venv --system-site-packages
@@ -257,7 +240,8 @@ jobs:
       - name: Check if new bindings are different
         id: check-bindings
         run: |
-          if [[ $(git status --porcelain ubo_app/rpc) ]]; then
+          if ! git diff --exit-code --quiet; then
+            git diff
             echo "Bindings have changed but not updated in the commit."
             exit 1
           else
@@ -275,6 +259,23 @@ jobs:
           npm install
           npm run proto:compile
           npm run build
+
+      - name: Configure Sentry
+        env:
+          VERSION: ${{ steps.extract-version.outputs.VERSION }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          echo "SENTRY_DSN=$SENTRY_DSN" >>ubo_app/.env
+          # conditionally set it based on whether it's a tag or not using github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+          if [ "$GITHUB_EVENT_NAME" == "push" ] && [ "$(echo $GITHUB_REF | grep -c 'refs/tags/v')" -eq 1 ]; then
+            echo "SENTRY_RELEASE=ubo-app@$VERSION" >>ubo_app/.env
+          else
+            echo "SENTRY_RELEASE=ubo-app@$GITHUB_SHA" >>ubo_app/.env
+          fi
+          cat ubo_app/.env
 
       - name: Build
         env:

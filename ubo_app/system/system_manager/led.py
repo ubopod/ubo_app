@@ -158,7 +158,7 @@ class LEDManager:
 
     def wheel(self: LEDManager, pos: int) -> RgbColor:
         # Input a value 0 to 255 to get a color value.
-        # The colours are a transition r - g - b - back to r.
+        # The colors are a transition r - g - b - back to r.
         if pos < 0 or pos > 0b11111111:
             r = g = b = 0
         elif pos < 0b01010101:
@@ -185,7 +185,8 @@ class LEDManager:
     ) -> None:
         if not self.led_ring_present:
             return
-        for _ in range(rounds):
+        counter = 0
+        while True:
             for j in range(255):
                 if self._stop is True:
                     self.blank()
@@ -199,7 +200,10 @@ class LEDManager:
                         b * self.brightness,
                     )
                 self.pixels.show()
-                time.sleep(wait / 1000)
+                time.sleep(wait / 1000 / 256)
+            counter += 1
+            if counter == rounds:
+                break
         self.blank()
 
     def pulse(self: LEDManager, color: RgbColor, wait: float, repetitions: int) -> None:
@@ -209,7 +213,8 @@ class LEDManager:
             return
         dim_steps = 10
         color = self.adjust_brightness(color)
-        for _ in range(repetitions):
+        counter = 0
+        while True:
             for i in range(dim_steps):
                 if self._stop is True:
                     self.blank()
@@ -226,6 +231,9 @@ class LEDManager:
                 self.pixels.fill((color[0] * j, color[1] * j, color[2] * j))
                 self.pixels.show()
                 time.sleep(wait / 10000)
+            counter += 1
+            if counter == repetitions:
+                break
         self.blank()
 
     def blink(self: LEDManager, color: RgbColor, wait: float, repetitions: int) -> None:
@@ -234,7 +242,8 @@ class LEDManager:
         if not self.led_ring_present:
             return
         color = self.adjust_brightness(color)
-        for _ in range(repetitions):
+        counter = 0
+        while True:
             if self._stop is True:
                 self.blank()
                 return
@@ -243,6 +252,9 @@ class LEDManager:
             time.sleep(wait / 1000)
             self.blank()
             time.sleep(1.5 * wait / 1000)
+            counter += 1
+            if counter == repetitions:
+                break
 
     def spinning_wheel(
         self: LEDManager,
@@ -263,7 +275,8 @@ class LEDManager:
                 stacklevel=2,
             )
             return
-        for _ in range(repetitions):
+        counter = 0
+        while True:
             for i in range(self.num_leds):
                 if self._stop is True:
                     self.blank()
@@ -273,6 +286,9 @@ class LEDManager:
                 self.pixels[:] = shifted
                 self.pixels.show()
                 time.sleep(wait / 1000)
+            counter += 1
+            if counter == repetitions:
+                break
         self.blank()
 
     def progress_wheel(self: LEDManager, color: RgbColor, percentage: float) -> None:
