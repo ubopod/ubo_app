@@ -71,7 +71,7 @@ local_scheme = "setup_scm_schemes:local_scheme"
 [tool.hatch.build]
 packages = ["ubo_app"]
 exclude = ["ubo_app/services/090-web-ui/web-app/node_modules"]
-artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
+artifacts = ["ubo_app/services/090-web-ui/web-app/dist", "/ubo_app/rpc"]
 
 [project.optional-dependencies]
 test-investigation = ["graphviz>=0.20.3", "objgraph>=3.6.2"]

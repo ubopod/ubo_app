@@ -94,6 +94,11 @@ jobs:
         run: |
           uv run --frozen pyright --createstub kivy
 
+      - name: Build protobuf files and gRPC bindings
+        run: |
+          uv run --frozen poe proto:generate:raw
+          uv run --frozen poe proto:compile:raw
+
       - name: Type Check
         run: |
           uv run --frozen poe typecheck
@@ -233,20 +238,9 @@ jobs:
         with:
           setup_only: true
 
-      - name: Build new protobuf files and gRPC bindings
+      - name: Build protobuf files and gRPC bindings
         run: |
           uv run --frozen poe proto
-
-      - name: Check if new bindings are different
-        id: check-bindings
-        run: |
-          if ! git diff --exit-code --quiet; then
-            git diff
-            echo "Bindings have changed but not updated in the commit."
-            exit 1
-          else
-            echo "No changes to gRPC bindings."
-          fi
 
       - uses: actions/setup-node@v4
         name: Setup Node

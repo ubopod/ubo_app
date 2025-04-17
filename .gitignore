@@ -89,6 +89,10 @@ scripts/packer/output-*
 # hatch
 ubo_app/_version.py
 
+# grpc
+/ubo_app/rpc/proto/ubo
+/ubo_app/rpc/generated
+
 /screenshots
 /snapshots
 /recordings

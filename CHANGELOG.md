@@ -21,6 +21,7 @@
 - feat(speech-recognition): add `speech-recognition` service with settings menu to download the vosk model and activate/deactivate the listener - closes #284
 - refactor(rgb-ring): add `RgbRingSequenceAction`, add `as_command` to all `RgbRingCommandAction`s
 - feat(speech-recognition): implement wake word detection, the wake word can be set with `UBO_WAKE_WORD` environment variable, the default is `hey pod` - closes #284
+- chore(rpc): remove protobuf files and generated code from the repository, they are now generated in ci/cd pipeline and added to the package and iso files.
 
 ## Version 1.3.0
 
