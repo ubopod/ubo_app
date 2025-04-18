@@ -23,6 +23,7 @@
 - feat(speech-recognition): implement wake word detection, the wake word can be set with `UBO_WAKE_WORD` environment variable, the default is `hey pod` - closes #284
 - chore(rpc): remove protobuf files and generated code from the repository, they are now generated in ci/cd pipeline and added to the package and iso files.
 - refactor(speech-recognition): support multiple actions in an intent
+- fix(core): update headless_kivy to the latest version, it should fix the glitches on the display and the web-ui - closes #275
 
 ## Version 1.3.0
 

@@ -695,16 +695,16 @@ wheels = [
 
 [[package]]
 name = "headless-kivy"
-version = "0.12.2"
+version = "0.12.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kivy" },
     { name = "numpy" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/35/76f66467e0534319fdb001febfd54b681a478cb966d0617ebb242e8ec2d0/headless_kivy-0.12.2.tar.gz", hash = "sha256:14a6db1c8af3e5dcd5cd71296d053ff4465c1fa8f54f093105fd7a68c0a953df", size = 16288 }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/45/8b1cb7f6fd33e9c13b986aba66b60572621a093a0e5e4d04d0c975c0b634/headless_kivy-0.12.3.tar.gz", hash = "sha256:824994965432c84dce56f56b28c5ccf7e2be7166a5cf895b8e32d583a2f0b2f4", size = 16430 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/d3/a75a04872c96a5d52eb1b6ba37cead0e036aba4e479cc69aab52041598b2/headless_kivy-0.12.2-py3-none-any.whl", hash = "sha256:d91d90304bc333cb24a36720a1caf21856cb6b050523dd38a01a9f78b626fe5a", size = 19926 },
+    { url = "https://files.pythonhosted.org/packages/df/96/6ff0a3c55a59a92e616a2e0195fad9e1aa1e040bcffe7f1475a3125304b5/headless_kivy-0.12.3-py3-none-any.whl", hash = "sha256:95ee0efafa1a87bcda45342a379618bef3215be13bb1736db861a10798cd2714", size = 20126 },
 ]
 
 [package.optional-dependencies]
@@ -2002,7 +2002,7 @@ provides-extras = ["test-investigation"]
 [package.metadata.requires-dev]
 dev = [
     { name = "grpcio-tools", specifier = ">=1.66.1" },
-    { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.1" },
+    { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.3" },
     { name = "ipdb", specifier = ">=0.13.13" },
     { name = "ipython", specifier = ">=8.23.0" },
     { name = "pdbpp", specifier = ">=0.10.3" },
