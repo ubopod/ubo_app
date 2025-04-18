@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import importlib.metadata
 import shutil
-import subprocess
 from pathlib import Path
 
 import aiohttp
@@ -35,7 +34,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
     NotificationsClearByIdAction,
 )
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
     UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
@@ -150,8 +149,8 @@ Then another reboot will be done to complete the update process.""",
             INSTALLER_URL,
             '--output',
             UPDATE_ASSETS_PATH / 'install.sh',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         await process.wait()
         (UPDATE_ASSETS_PATH / 'install.sh').chmod(0o755)
@@ -182,8 +181,8 @@ Then another reboot will be done to complete the update process.""",
             'setuptools',
             'wheel',
             'ubo-app',
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         if process.stdout is None:
             logger.info('Failed to update (pip has no stdout)')

@@ -2,6 +2,7 @@
 from ubo_app.store.main import store
 from ubo_app.store.services.rgb_ring import RgbRingCommandEvent, RgbRingPulseAction
 from ubo_app.utils.eeprom import get_eeprom_data
+from ubo_app.utils.server import send_command
 
 
 def init_service() -> None:
@@ -15,12 +16,8 @@ def init_service() -> None:
     ):
         return
 
-    from rgb_ring_client import RgbRingClient
-
-    rgb_ring_client = RgbRingClient()
-
     async def handle_rgb_ring_command(event: RgbRingCommandEvent) -> None:
-        await rgb_ring_client.send(event.command)
+        await send_command('led', *event.command)
 
     store.subscribe_event(RgbRingCommandEvent, handle_rgb_ring_command)
 

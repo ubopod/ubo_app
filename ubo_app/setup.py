@@ -136,7 +136,7 @@ def setup() -> None:
         from ubo_app.store.services.ethernet import NetState
         from ubo_app.utils import server
 
-        server.send_command = lambda command, *_, has_output: Fake(
+        server.send_command = lambda command, *_, has_output=False: Fake(
             _Fake__await_value={
                 'connection': NetState.CONNECTED,
             }.get(command, 'done')

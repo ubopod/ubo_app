@@ -15,6 +15,13 @@
 - chore(scripts): add `--index` for `device:` poe scripts, allowing deployment and tests on multiple devices without the need to constantly change `ubo-development-pod`
 - chore: housekeeping, update dependencies, remove unused code, etc
 - feat(infrared): add infrared service with settings menu to enable/disable propagating keypad actions as ir commands and receiving ir commands and translating them to keypad actions - closes #160
+- refactor(speech-synthesis): rename `voice` service to `speech_synthesis` to make room for a separate `speech_recognition` service
+- refactor(core): make `log_process` report errors for the service using `report_service_error` and some general housekeeping
+- refactor(vscode): use data dir as reported by `platformdirs.user_data_path` to store downloaded assets like vscode binary
+- feat(speech-recognition): add `speech-recognition` service with settings menu to download the vosk model and activate/deactivate the listener - closes #284
+- refactor(rgb-ring): add `RgbRingSequenceAction`, add `as_command` to all `RgbRingCommandAction`s
+- feat(speech-recognition): implement wake word detection, the wake word can be set with `UBO_WAKE_WORD` environment variable, the default is `hey pod` - closes #284
+- chore(rpc): remove protobuf files and generated code from the repository, they are now generated in ci/cd pipeline and added to the package and iso files.
 
 ## Version 1.3.0
 

@@ -26,7 +26,7 @@ from ubo_app.store.services.rpi_connect import (
     RPiConnectStatus,
     RPiConnectUpdateServiceStateAction,
 )
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
@@ -53,8 +53,8 @@ async def _check_status() -> None:
             '/usr/bin/env',
             'rpi-connect',
             'status',
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         await asyncio.wait_for(process.wait(), timeout=3)
         if process.returncode is None:
@@ -178,8 +178,8 @@ def sign_out() -> None:
                 '/usr/bin/env',
                 'rpi-connect',
                 'signout',
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
             await check_status()

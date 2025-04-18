@@ -94,6 +94,11 @@ jobs:
         run: |
           uv run --frozen pyright --createstub kivy
 
+      - name: Build protobuf files and gRPC bindings
+        run: |
+          uv run --frozen poe proto:generate:raw
+          uv run --frozen poe proto:compile:raw
+
       - name: Type Check
         run: |
           uv run --frozen poe typecheck
@@ -224,6 +229,31 @@ jobs:
           echo "NAME=$(uvx hatch project metadata | jq -r .name)" >>"$GITHUB_OUTPUT"
           echo "NAME=$(uvx hatch project metadata | jq -r .name)"
 
+      - name: Create virtualenv
+        run: |
+          uv venv --system-site-packages
+
+      - name: Install buf cli
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Build protobuf files and gRPC bindings
+        run: |
+          uv run --frozen poe proto
+
+      - uses: actions/setup-node@v4
+        name: Setup Node
+        with:
+          node-version: '20'
+
+      - name: Build Web Application
+        run: |
+          cd ubo_app/services/090-web-ui/web-app
+          npm install
+          npm run proto:compile
+          npm run build
+
       - name: Configure Sentry
         env:
           VERSION: ${{ steps.extract-version.outputs.VERSION }}
@@ -240,41 +270,6 @@ jobs:
             echo "SENTRY_RELEASE=ubo-app@$GITHUB_SHA" >>ubo_app/.env
           fi
           cat ubo_app/.env
-
-      - name: Create virtualenv
-        run: |
-          uv venv --system-site-packages
-
-      - name: Install buf cli
-        uses: bufbuild/buf-action@v1
-        with:
-          setup_only: true
-
-      - name: Build new protobuf files and gRPC bindings
-        run: |
-          uv run --frozen poe proto
-
-      - name: Check if new bindings are different
-        id: check-bindings
-        run: |
-          if [[ $(git status --porcelain ubo_app/rpc) ]]; then
-            echo "Bindings have changed but not updated in the commit."
-            exit 1
-          else
-            echo "No changes to gRPC bindings."
-          fi
-
-      - uses: actions/setup-node@v4
-        name: Setup Node
-        with:
-          node-version: '20'
-
-      - name: Build Web Application
-        run: |
-          cd ubo_app/services/090-web-ui/web-app
-          npm install
-          npm run proto:compile
-          npm run build
 
       - name: Build
         env:

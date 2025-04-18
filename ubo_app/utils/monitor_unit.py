@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import subprocess
 from typing import TYPE_CHECKING
 
 from ubo_app.utils.bus_provider import get_system_bus
@@ -48,8 +47,8 @@ async def is_unit_active(unit: str, *, is_user_service: bool = False) -> bool:
         *(['--user'] if is_user_service else []),
         'is-active',
         unit,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
     )
     stdout, _ = await process.communicate()
     return stdout.decode().strip() in ('active', 'activating', 'reloading')
@@ -63,8 +62,8 @@ async def is_unit_enabled(unit: str, *, is_user_service: bool = False) -> bool:
         *(['--user'] if is_user_service else []),
         'is-enabled',
         unit,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
     )
     stdout, _ = await process.communicate()
     return stdout.decode().strip() == 'enabled'

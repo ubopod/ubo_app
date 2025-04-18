@@ -12,23 +12,23 @@ from redux import BaseAction, BaseEvent
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
-class VoiceAction(BaseAction): ...
+class SpeechSynthesisAction(BaseAction): ...
 
 
-class VoiceEvent(BaseEvent): ...
+class SpeechSynthesisEvent(BaseEvent): ...
 
 
-class VoiceUpdateAccessKeyStatus(VoiceAction):
+class SpeechSynthesisUpdateAccessKeyStatus(SpeechSynthesisAction):
     is_access_key_set: bool
 
 
-class VoiceEngine(StrEnum):
+class SpeechSynthesisEngine(StrEnum):
     PIPER = 'piper'
     PICOVOICE = 'picovoice'
 
 
-class VoiceSetEngineAction(VoiceAction):
-    engine: VoiceEngine
+class SpeechSynthesisSetEngineAction(SpeechSynthesisAction):
+    engine: SpeechSynthesisEngine
 
 
 def _default_text() -> str:
@@ -73,22 +73,22 @@ class ReadableInformation(Immutable):
         )
 
 
-class VoiceReadTextAction(VoiceAction):
+class SpeechSynthesisReadTextAction(SpeechSynthesisAction):
     information: ReadableInformation
     speech_rate: float | None = None
-    engine: VoiceEngine | None = None
+    engine: SpeechSynthesisEngine | None = None
 
 
-class VoiceSynthesizeTextEvent(VoiceEvent):
+class SpeechSynthesisSynthesizeTextEvent(SpeechSynthesisEvent):
     information: ReadableInformation
     speech_rate: float | None = None
 
 
-class VoiceState(Immutable):
+class SpeechSynthesisState(Immutable):
     is_access_key_set: bool | None = None
-    selected_engine: VoiceEngine = field(
+    selected_engine: SpeechSynthesisEngine = field(
         default_factory=lambda: read_from_persistent_store(
-            key='voice_engine',
-            default=VoiceEngine.PIPER,
+            key='speech_synthesis_engine',
+            default=SpeechSynthesisEngine.PIPER,
         ),
     )

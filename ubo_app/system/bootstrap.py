@@ -34,8 +34,8 @@ SERVICES: list[Service] = [
     Service(name='ubo-app', scope='user', enabled=True),
 ]
 
-uid = pwd.getpwnam(USERNAME).pw_uid
-gid = grp.getgrnam(USERNAME).gr_gid
+USER_UID = pwd.getpwnam(USERNAME).pw_uid
+USER_GID = grp.getgrnam(USERNAME).gr_gid
 
 
 def create_user_service_directory() -> None:
@@ -43,7 +43,7 @@ def create_user_service_directory() -> None:
     path = Path(f'/home/{USERNAME}/.config/systemd/user')
     path.mkdir(parents=True, exist_ok=True)
     while path != Path(f'/home/{USERNAME}'):
-        os.chown(path, uid, gid)
+        os.chown(path, USER_UID, USER_GID)
         path = path.parent
 
 
@@ -79,7 +79,7 @@ def create_service_file(service: Service) -> None:
     with Path(service_file_path).open('w') as file:
         file.write(content)
         if service['scope'] == 'user':
-            os.chown(service_file_path, uid, gid)
+            os.chown(service_file_path, USER_UID, USER_GID)
 
 
 def reload_daemon() -> None:
@@ -94,7 +94,7 @@ def reload_daemon() -> None:
                 [
                     '/usr/bin/env',
                     'sudo',
-                    f'XDG_RUNTIME_DIR=/run/user/{uid}',
+                    f'XDG_RUNTIME_DIR=/run/user/{USER_UID}',
                     '-u',
                     USERNAME,
                     'systemctl',
@@ -129,7 +129,7 @@ def enable_services() -> None:
                 [
                     '/usr/bin/env',
                     'sudo',
-                    f'XDG_RUNTIME_DIR=/run/user/{uid}',
+                    f'XDG_RUNTIME_DIR=/run/user/{USER_UID}',
                     '-u',
                     USERNAME,
                     'systemctl',

@@ -39,7 +39,7 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationsAddAction,
 )
-from ubo_app.store.services.voice import ReadableInformation
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:

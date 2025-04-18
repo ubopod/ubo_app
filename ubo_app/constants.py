@@ -69,6 +69,9 @@ CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)
 SECRETS_PATH = CONFIG_PATH / '.secrets.env'
 PERSISTENT_STORE_PATH = CONFIG_PATH / 'state.json'
 
+CACHE_PATH = platformdirs.user_cache_path(appname='ubo', ensure_exists=True)
+DATA_PATH = platformdirs.user_data_path(appname='ubo', ensure_exists=True)
+
 DISPLAY_BAUDRATE = int(os.environ.get('UBO_DISPLAY_BAUDRATE', '60_000_000'))
 WIDTH = 240
 HEIGHT = 240
@@ -92,9 +95,10 @@ CORE_SERVICE_IDS = [
     'rgb_ring',
     'rpi_connect',
     'sensors',
+    'speech_recognition',
+    'speech_synthesis',
     'ssh',
     'users',
-    'voice',
     'vscode',
     'web_ui',
     'wifi',
@@ -103,3 +107,5 @@ CORE_SERVICE_IDS = [
 TEST_INVESTIGATION_MODE = str_to_bool(
     os.environ.get('UBO_TEST_INVESTIGATION_MODE', 'False'),
 )
+
+WAKE_WORD = os.environ.get('UBO_WAKE_WORD', 'hey pod')

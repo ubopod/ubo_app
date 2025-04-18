@@ -29,6 +29,7 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.services.users import (
     UsersCreateUserAction,
     UsersCreateUserEvent,
@@ -40,7 +41,6 @@ from ubo_app.store.services.users import (
     UsersState,
     UserState,
 )
-from ubo_app.store.services.voice import ReadableInformation
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus

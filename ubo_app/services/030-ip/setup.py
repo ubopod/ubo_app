@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import socket
-import subprocess
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
@@ -98,8 +97,8 @@ async def monitor_connections(end_event: asyncio.Event) -> None:
             '8.8.8.8',
             '-s',
             '0',
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
         )
         if process.stdout:
             async for line in process.stdout:

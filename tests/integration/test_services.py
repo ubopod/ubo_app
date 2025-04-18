@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from tests.fixtures import AppContext, LoadServices, Stability
     from ubo_app.store.main import UboStore
 
-MAX_EXPECTED_LISTENERS = 210
+MAX_EXPECTED_LISTENERS = 230
 MAX_EXPECTED_EVENT_HANDLERS = 60
 
 
