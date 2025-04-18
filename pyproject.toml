@@ -79,7 +79,7 @@ test-investigation = ["graphviz>=0.20.3", "objgraph>=3.6.2"]
 [tool.uv]
 dev-dependencies = [
   "grpcio-tools>=1.66.1",
-  "headless-kivy [test]>=0.12.1",
+  "headless-kivy [test]>=0.12.3",
   "ipdb>=0.13.13",
   "ipython>=8.23.0",
   "pdbpp>=0.10.3",
