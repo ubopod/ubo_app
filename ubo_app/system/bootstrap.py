@@ -172,6 +172,9 @@ def configure_fan() -> None:
         if 'dtoverlay=gpio-ir-tx,gpio_pin=23' not in current_content:
             config_file.write('dtoverlay=gpio-ir-tx,gpio_pin=23\n')
 
+        if 'dtoverlay=gpio-ir,gpio_pin=24' not in current_content:
+            config_file.write('dtoverlay=gpio-ir,gpio_pin=24\n')
+
 
 def setup_polkit() -> None:
     """Create the polkit rules file."""

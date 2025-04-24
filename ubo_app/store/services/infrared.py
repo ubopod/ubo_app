@@ -20,13 +20,15 @@ class InfraredEvent(BaseEvent):
 class InfraredHandleReceivedCodeAction(InfraredAction):
     """Carries the received infrared code."""
 
-    code: tuple[int, ...]
+    protocol: str
+    scancode: str
 
 
 class InfraredSendCodeAction(InfraredAction):
     """Action to send an infrared code."""
 
-    code: tuple[int, ...]
+    protocol: str
+    scancode: str
 
 
 class InfraredSetShouldPropagateAction(InfraredAction):
@@ -44,7 +46,8 @@ class InfraredSetShouldReceiveAction(InfraredAction):
 class InfraredSendCodeEvent(InfraredEvent):
     """Event to send an infrared code."""
 
-    code: tuple[int, ...]
+    protocol: str
+    scancode: str
 
 
 class InfraredState(Immutable):
