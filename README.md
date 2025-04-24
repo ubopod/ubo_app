@@ -93,6 +93,7 @@ Note that as part of the installation process, these debian packages are install
 - git
 - hostapd
 - i2c-tools
+- ir-keytable
 - libasound2-dev
 - libcap-dev
 - libegl1

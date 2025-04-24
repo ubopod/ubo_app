@@ -86,6 +86,7 @@ apt-get -y install \
   git \
   hostapd \
   i2c-tools \
+  ir-keytable \
   libasound2-dev \
   libcap-dev \
   libegl1 \

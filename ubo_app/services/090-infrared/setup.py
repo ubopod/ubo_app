@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import threading
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any
 
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
@@ -18,65 +17,18 @@ from ubo_app.store.services.infrared import (
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
 )
-from ubo_app.utils.async_ import to_thread
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.persistent_store import register_persistent_store
-
-EXPECTED_NEC_COMMAND_LENGTH = 4
+from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
 
 
-def _reverse_bits(n: int, bit_size: int = 8) -> int:
-    result = 0
-    for _ in range(bit_size):
-        result = (result << 1) | (n & 1)
-        n >>= 1
-    return result
-
-
 @store.with_state(lambda state: state.infrared.should_receive_keypad_actions)
 def _should_receive_keypad_actions(value: bool) -> bool:  # noqa: FBT001
     return value
-
-
-def _monitor_ir(end_event: threading.Event) -> None:
-    """Monitor infrared signals and decode them."""
-    import adafruit_irremote
-    import board
-    import pulseio
-
-    pulsein = pulseio.PulseIn(board.D24, maxlen=120, idle_state=True)
-    try:
-        decoder = adafruit_irremote.GenericDecode()
-        while not end_event.is_set() and _should_receive_keypad_actions():
-            pulses = decoder.read_pulses(cast('list', pulsein), blocking=False)
-            if pulses:
-                logger.verbose(
-                    'Infrared: Heard pulses.',
-                    extra={'length': len(pulses), 'pulses': pulses},
-                )
-                try:
-                    code = tuple(decoder.decode_bits(pulses))
-                    logger.debug(
-                        'Infrared: Decoded code.',
-                        extra={'code': code},
-                    )
-                    if len(code) == EXPECTED_NEC_COMMAND_LENGTH:
-                        store.dispatch(
-                            InfraredHandleReceivedCodeAction(code=code),
-                        )
-                except adafruit_irremote.IRNECRepeatException:
-                    logger.verbose('Infrared: Received NEC repeat code.', exc_info=True)
-                except adafruit_irremote.IRDecodeException:
-                    logger.verbose(
-                        'Infrared: Failed to decode infrared code.',
-                        exc_info=True,
-                    )
-
-    finally:
-        pulsein.deinit()
 
 
 ir_ctl_lock = asyncio.Lock()
@@ -87,12 +39,15 @@ async def _send_code(action: InfraredSendCodeEvent) -> None:
     await ir_commands_queue.put(action)
     async with ir_ctl_lock:
         action = await ir_commands_queue.get()
-        logger.debug('Sending infrared code.', extra={'code': action.code})
+        logger.debug('Sending infrared code.',
+                     extra={'protocol': action.protocol,
+                     'scancode': action.scancode},
+                     )
 
         process = await asyncio.create_subprocess_exec(
             'ir-ctl',
             '-S',
-            f'nec:0x{"".join(f"{_reverse_bits(x):02x}" for x in action.code)}',
+            f'{action.protocol}:{action.scancode}',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -104,16 +59,44 @@ async def _send_code(action: InfraredSendCodeEvent) -> None:
         await asyncio.sleep(0.25)
 
 
+async def _wait_for_ir_code() -> None:
+    """Wait for IR codes from the system manager and dispatch them to the store."""
+    while _should_receive_keypad_actions():
+        try:
+            response = await send_command('infrared', 'receive', has_output=True)
+            if response == 'nocode':
+                continue
+            logger.debug('Received response from infrared command: %s', response)
+        except Exception:
+            logger.exception('Failed to send infrared receive command')
+            raise
+        if response:
+            protocol, scancode = response.split(':')
+            logger.info('Received IR code from system manager: %s:%s',
+                        protocol, scancode)
+            store.dispatch(
+                InfraredHandleReceivedCodeAction(
+                    protocol=protocol,
+                    scancode=scancode,
+                ),
+            )
+
+
 def init_service() -> Subscriptions:
     """Initialize the infrared service."""
-    end_event = threading.Event()
+    ir_code_task: Any = None
 
-    # TODO(@sassanh): This is to avoid cpu load until we replace  # noqa: FIX002
-    # adafruit ir receiver with an event driven library
     @store.autorun(lambda state: state.infrared.should_receive_keypad_actions)
-    def run_monitor_ir(value: bool) -> None:  # noqa: FBT001
+    async def run_monitor_ir(value: bool) -> None:  # noqa: FBT001
+        nonlocal ir_code_task
         if value:
-            to_thread(_monitor_ir, end_event)
+            await send_command('infrared', 'start', has_output=True)
+            if ir_code_task is None or ir_code_task.done():
+                ir_code_task = create_task(_wait_for_ir_code())
+        else:
+            await send_command('infrared', 'stop', has_output=True)
+            if ir_code_task is not None:
+                ir_code_task.cancel()
 
     register_persistent_store(
         'infrared_state:should_propagate_keypad_actions',
@@ -174,4 +157,6 @@ def init_service() -> Subscriptions:
         ),
     )
 
-    return [store.subscribe_event(InfraredSendCodeEvent, _send_code), end_event.set]
+    return [
+        store.subscribe_event(InfraredSendCodeEvent, _send_code),
+    ]
