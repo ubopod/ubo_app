@@ -1,9 +1,9 @@
 """Infrared receiver for system manager."""
 
 import asyncio
+import functools
 import queue
 import re
-import time
 from threading import Thread
 
 from ubo_app.logger import get_logger
@@ -16,65 +16,53 @@ class InfraredManager:
 
     def __init__(self) -> None:
         """Initialize the infrared manager."""
-        self.process: asyncio.subprocess.Process | None = None
         self.loop = asyncio.new_event_loop()
-        Thread(target=self.loop.run_forever, daemon=True).start()
-        self.ir_code_queue = queue.Queue()  # Simple thread-safe queue for IR codes
-        self.ir_monitor_running = False
-        self.monitor_task = None
-        self.stdout_task = None
-        self.stderr_task = None
+        self.event_loop_thread: Thread | None = None
+        self.ir_code_queue = queue.Queue(1)
+        self.stop_event = asyncio.Event()
 
     def handle_command(self, command: str) -> str | None:
         """Handle infrared commands."""
-        logger.info('Infrared command received: %s', command)
+        logger.info('Infrared command received', extra={'command': command})
         if command == 'start':
-            if not self.ir_monitor_running:
-                logger.info('Starting IR monitoring process')
-                self.monitor_task = asyncio.run_coroutine_threadsafe(
-                    self._monitor_ir(),
-                    self.loop,
+            if not self.event_loop_thread:
+                self.stop_event.clear()
+                self.event_loop_thread = Thread(
+                    target=functools.partial(
+                        self.loop.run_until_complete,
+                        self._monitor_ir(),
+                    ),
+                    daemon=True,
                 )
-                self.ir_monitor_running = True
+                self.event_loop_thread.start()
+                logger.info('Starting IR monitoring process')
             else:
                 logger.info('IR monitoring process already running')
             return 'started'
         if command == 'stop':
-            if self.monitor_task is not None:
+            if self.event_loop_thread:
+                self.stop_event.set()
                 logger.info('Stopping IR monitoring process')
-                self.monitor_task.cancel()
-                self.ir_monitor_running = False
-                # Also terminate the process if it's running
-                if self.process and self.process.returncode is None:
-                    self.process.terminate()
+                self.event_loop_thread.join()
+                self.event_loop_thread = None
+
             return 'stopped'
         if command == 'receive':
             logger.info('Processing receive command')
             try:
-                # Start the IR monitoring process if it's not already running
-                if not self.ir_monitor_running:
-                    logger.info('Starting IR monitoring process')
-                    self.monitor_task = asyncio.run_coroutine_threadsafe(
-                        self._monitor_ir(),
-                        self.loop,
-                    )
-                    self.ir_monitor_running = True
-
-                while self.ir_code_queue.empty():
-                    time.sleep(0.1)
                 code = self.ir_code_queue.get()
-                logger.info('Retrieved IR code from queue: %s', code)
-                return code  # noqa: TRY300
-            except Exception as e:
-                logger.exception('Error retrieving IR code from queue', exc_info=e)
+            except Exception:
+                logger.exception('Error retrieving IR code from queue')
                 return 'nocode'
+            else:
+                logger.debug('Retrieved IR code from queue', extra={'code': code})
+                return code
         return None
 
     async def _monitor_ir(self) -> None:
         """Monitor infrared signals and put received IR codes in the queue."""
         logger.info('Starting ir-keytable process')
-        self.process = await asyncio.create_subprocess_exec(
-            'sudo',
+        process = await asyncio.create_subprocess_exec(
             'stdbuf',
             '-i0',
             '-o0',
@@ -87,79 +75,52 @@ class InfraredManager:
             '-s',
             'rc1',
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
         )
 
-        if not self.process.stdout or not self.process.stderr:
-            logger.error('Failed to start ir-keytable process - no stdout/stderr pipes')
-            self.process = None
+        if not process.stdout:
+            logger.error('Failed to start ir-keytable process - no stdout pipe')
             return
 
-        logger.info('Started ir-keytable process with PID %d', self.process.pid)
+        logger.info('Started ir-keytable process with PID %d', process.pid)
 
-        try:
-            while True:
-                # Check if process is still running
-                if self.process.returncode is not None:
-                    logger.info('ir-keytable process exited with code %d',
-                              self.process.returncode)
-                    break
-                line = await self.process.stdout.readline()
-                if line:
-                    line_str = line.decode().strip()
-                    logger.info('Raw IR output: %s', line_str)
+        while True:
+            result = await next(
+                asyncio.as_completed(
+                    (
+                        self.stop_event.wait(),
+                        process.stdout.readline(),
+                    ),
+                ),
+            )
+            if result is True:
+                logger.info('Stopping IR monitoring process')
+                process.kill()
+                break
 
-                    # Parse lirc protocol lines
-                    if 'lirc protocol' in line_str:
-                        self._parse_and_queue_ir_code(line_str)
-                else:
-                    logger.debug('No more stdout output')
-                    break
+            line = result.decode().strip()
+            logger.debug('Raw IR output', extra={'line': line})
 
-        except Exception as e:
-            logger.exception('Error in IR monitoring', exc_info=e)
-        finally:
-            if self.process and self.process.returncode is None:
-                logger.info('Terminating ir-keytable process')
-                self.process.terminate()
-                try:
-                    await asyncio.wait_for(self.process.wait(), timeout=1)
-                except TimeoutError:
-                    logger.warning('Process did not terminate, killing it')
-                    self.process.kill()
-            self.process = None
+            # Parse lirc protocol lines except repeat codes
+            if 'lirc protocol' not in line or 'repeat' in line:
+                continue
 
+            match = re.search(
+                r'lirc protocol\((\w+)\).*scancode = (0x[0-9a-fA-F]+)',
+                line,
+            )
+            if not match:
+                logger.warning('Failed to parse IR code', extra={'line': line})
+                continue
 
-    def _parse_and_queue_ir_code(self, line_str: str) -> None:
-        """Parse an IR code from a line and add it to the queue if valid.
+            protocol, scancode = match.group(1), match.group(2)
 
-        Args:
-            line_str: The line to parse for IR codes
-
-        """
-        protocol_match = re.search(r'lirc protocol\((\w+)\)', line_str)
-        scancode_match = re.search(r'scancode = (0x[0-9a-fA-F]+)', line_str)
-        is_repeat = 'repeat' in line_str
-
-        if not (protocol_match and scancode_match):
-            logger.warning('Failed to parse IR code: %s', line_str)
-            return
-
-        protocol = protocol_match.group(1)
-        scancode = scancode_match.group(1)
-
-        logger.info(
-            'IR code received: protocol=%s, scancode=%s, repeat=%s',
-            protocol,
-            scancode,
-            is_repeat,
-        )
-
-        # Only process non-repeat codes
-        if not is_repeat:
-            logger.info('IR code received: %s:%s', protocol, scancode)
-            # Put the code in the queue
+            logger.info(
+                'IR code received',
+                extra={'protocol': protocol, 'scancode': scancode},
+            )
             code_str = f'{protocol}:{scancode}'
+            # Put the code in the queue
             self.ir_code_queue.put(code_str)
 
 
