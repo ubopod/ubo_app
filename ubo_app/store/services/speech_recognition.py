@@ -30,7 +30,7 @@ class SpeechRecognitionIntent(Immutable):
     """Intent for speech recognition service."""
 
     phrase: str | Sequence[str]
-    action: UboAction
+    action: UboAction | Sequence[UboAction]
 
 
 class SpeechRecognitionReportWakeWordDetectionAction(SpeechRecognitionAction):

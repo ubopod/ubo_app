@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107, N999
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
@@ -166,15 +167,25 @@ def reducer(
         )
 
     if isinstance(action, SpeechRecognitionReportIntentDetectionAction):
+        actions = (
+            action.intent.action
+            if isinstance(action.intent.action, Sequence)
+            else [action.intent.action]
+        )
+        rgb_ring_actions = [
+            action for action in actions if isinstance(action, RgbRingCommandAction)
+        ]
+        non_rgb_ring_actions = [
+            action for action in actions if not isinstance(action, RgbRingCommandAction)
+        ]
         return CompleteReducerResult(
             state=replace(state, is_waiting=False),
             actions=[
                 RgbRingSequenceAction(
-                    sequence=[ACKNOWLEDGMENT_ACTION, action.intent.action],
+                    sequence=[ACKNOWLEDGMENT_ACTION, *rgb_ring_actions],
                 ),
-            ]
-            if isinstance(action.intent.action, RgbRingCommandAction)
-            else [ACKNOWLEDGMENT_ACTION, action.intent.action],
+                *non_rgb_ring_actions,
+            ],
         )
 
     return state
