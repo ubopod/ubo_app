@@ -19,6 +19,7 @@ from ubo_app.store.services.audio import (
     AudioDevice,
     AudioSetMuteStatusAction,
 )
+from ubo_app.store.services.infrared import InfraredSendCodeAction
 from ubo_app.store.services.rgb_ring import (
     RgbRingBlankAction,
     RgbRingCommandAction,
@@ -52,6 +53,13 @@ def reducer(
         if isinstance(action, InitAction):
             return SpeechRecognitionState(
                 intents=[
+                    SpeechRecognitionIntent(
+                        phrase=['Turn on the light strip', 'Turn off the light strip'],
+                        action=InfraredSendCodeAction(
+                            protocol='nec',
+                            scancode='0x40',
+                        ),
+                    ),
                     SpeechRecognitionIntent(
                         phrase='Turn on Lights',
                         action=RgbRingSetAllAction(color=(255, 255, 255)),

@@ -9,6 +9,7 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.logger import logger
 from ubo_app.store.services.infrared import (
     InfraredAction,
     InfraredHandleReceivedCodeAction,
@@ -27,30 +28,30 @@ from ubo_app.store.services.keypad import (
 
 KeyActionType = type[KeypadKeyPressAction] | type[KeypadKeyReleaseAction]
 
-KEY_TO_INFRARED_CODES: dict[KeyActionType, dict[Key, tuple[int, ...]]] = {
+KEY_TO_INFRARED_CODES: dict[KeyActionType, dict[Key, tuple[str, str]]] = {
     KeypadKeyPressAction: {
-        Key.L1: (0x00, 0xFD, 0x08, 0xF7),
-        Key.L2: (0x00, 0xFD, 0x88, 0x77),
-        Key.L3: (0x00, 0xFD, 0x08, 0xB7),
-        Key.UP: (0x00, 0xFD, 0xA0, 0x5F),
-        Key.DOWN: (0x00, 0xFD, 0xB0, 0x5F),
-        Key.BACK: (0x00, 0xFE, 0x30, 0x9F),
-        Key.HOME: (0x00, 0xFE, 0x60, 0x9F),
+        Key.L1: ('necx', '0x7076c'),
+        Key.L2: ('necx', '0x70714'),
+        Key.L3: ('necx', '0x70715'),
+        Key.UP: ('necx', '0x70760'),
+        Key.DOWN: ('necx', '0x70761'),
+        Key.BACK: ('necx', '0x70757'),
+        Key.HOME: ('necx', '0x70778'),
     },
     KeypadKeyReleaseAction: {
-        Key.L1: (0x00, 0xFE, 0x08, 0xF7),
-        Key.L2: (0x00, 0xFE, 0x88, 0x77),
-        Key.L3: (0x00, 0xFE, 0x08, 0xB7),
-        Key.UP: (0x00, 0xFE, 0xA0, 0x5F),
-        Key.DOWN: (0x00, 0xFE, 0xB0, 0x5F),
-        Key.BACK: (0x00, 0xFD, 0x30, 0x9F),
-        Key.HOME: (0x00, 0xFD, 0x60, 0x9F),
+        Key.L1: ('necx', '0x7076d'),
+        Key.L2: ('necx', '0x70716'),
+        Key.L3: ('necx', '0x70716'),
+        Key.UP: ('necx', '0xbf06'),
+        Key.DOWN: ('necx', '0x00feb05f'),
+        Key.BACK: ('necx', '0x70758'),
+        Key.HOME: ('necx', '0x70779'),
     },
 }
-INFRARED_CODES_TO_KEY: dict[tuple[int, ...], tuple[KeyActionType, Key]] = {
-    code: (action_type, key)
+INFRARED_CODES_TO_KEY: dict[tuple[str, str], tuple[KeyActionType, Key]] = {
+    (protocol, scancode): (action_type, key)
     for action_type in KEY_TO_INFRARED_CODES
-    for key, code in KEY_TO_INFRARED_CODES[action_type].items()
+    for key, (protocol, scancode) in KEY_TO_INFRARED_CODES[action_type].items()
 }
 
 
@@ -72,7 +73,8 @@ def reducer(
     if isinstance(action, InfraredSendCodeAction):
         return CompleteReducerResult(
             state=state,
-            events=[InfraredSendCodeEvent(code=action.code)],
+            events=[InfraredSendCodeEvent(protocol=action.protocol,
+                                          scancode=action.scancode)],
         )
 
     if isinstance(action, InfraredSetShouldPropagateAction):
@@ -89,7 +91,8 @@ def reducer(
             state=state,
             actions=[
                 InfraredSendCodeAction(
-                    code=KEY_TO_INFRARED_CODES[type(action)][action.key],
+                    protocol=KEY_TO_INFRARED_CODES[type(action)][action.key][0],
+                    scancode=KEY_TO_INFRARED_CODES[type(action)][action.key][1],
                 ),
             ],
         )
@@ -98,10 +101,11 @@ def reducer(
         isinstance(action, InfraredHandleReceivedCodeAction)
         and state.should_receive_keypad_actions
     ):
-        if action.code not in INFRARED_CODES_TO_KEY:
+        logger.info('Received infrared code: %s, %s', action.protocol, action.scancode)
+        if (action.protocol, action.scancode) not in INFRARED_CODES_TO_KEY:
             return state
 
-        key_action_type, key = INFRARED_CODES_TO_KEY[action.code]
+        key_action_type, key = INFRARED_CODES_TO_KEY[(action.protocol, action.scancode)]
 
         if key_action_type is KeypadKeyPressAction:
             return CompleteReducerResult(

@@ -93,6 +93,7 @@ Note that as part of the installation process, these debian packages are install
 - git
 - hostapd
 - i2c-tools
+- ir-keytable
 - libasound2-dev
 - libcap-dev
 - libegl1
@@ -258,7 +259,7 @@ uv run poe lint --fix
 To run the type checker run the following command:
 
 ```bash
-uv run poe type-check
+uv run poe typecheck
 ```
 
 #### Adding new services
