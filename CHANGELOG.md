@@ -24,6 +24,7 @@
 - chore(rpc): remove protobuf files and generated code from the repository, they are now generated in ci/cd pipeline and added to the package and iso files.
 - refactor(speech-recognition): support multiple actions in an intent
 - fix(core): update headless_kivy to the latest version, it should fix the glitches on the display and the web-ui - closes #275
+- fix(web-ui): add the missing read command for the file input values in html forms
 
 ## Version 1.3.0
 
