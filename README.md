@@ -167,6 +167,43 @@ Host ubo-development-pod
 
 ⚠️*Note: You may want to add the ssh public key to the device's authorized keys (`~/.ssh/authorized_keys`) so that you don't need to enter the password each time you ssh into the device. If you decide to use password instead,  you need to reset the password for Pi user first using the GUI on the device by going to Hamburger Menu -> Settings -> System -> Users and select pi user*
 
+Before you deploy the code onto the pod, you have to run the following command to generate the protobuf files and compile the web application.
+
+##### Generating the protobuf files
+
+Please make sure you have [buf](https://github.com/bufbuild/buf) library installed locally. If you are developing on a Mac or Linux, you can install it using Homebrew:
+
+```bash
+brew install bufbuild/buf/buf
+```
+
+Then, run the following command to generate the protobuf files whenever an action or
+
+```bash
+uv run poe proto
+```
+
+This is a shortcut for running the following commands:
+
+```bash
+uv run poe proto:generate # generate the protobuf files based on the actions/events defined in python files
+uv run poe proto:compile  # compile the protobuf files to python files
+```
+
+##### Compiling the web application
+
+```bash
+cd ubo_app/services/090-web-ui/web-app
+npm run proto:compile
+npm run build
+```
+
+If you are modifying web-app typescript files, run `npm run build:watch` and let it stay running in a terminal. This way, whenever you modify web-app files, it will automatically update the built files in `dist` directory as long as it’s running.
+
+If you ever add, modify or remove an action or an event you need to run `poe proto` and `npm run proto:compile` again manually.
+
+---
+
 Then you need to run this command once to set up the pod for development:
 
 ```bash
@@ -256,11 +293,15 @@ uv run poe lint --fix
 
 #### Running type checker
 
-To run the type checker run the following command:
+To run the type checker run the following command on the pod:
 
 ```bash
 uv run poe typecheck
 ```
+
+⚠️*Note: Please note typecheck needs all packages to be present. To run the above command on the pod, you need to clone the ubo-app repository on the pod, apply your changes on it, have uv installed on the pod and install the dependencies.*
+
+If you prefer to run typecheck on the local machine, clone [stubs repository](https://github.com/ubopod/ubo-non-rpi-stubs) (which includes typing stubs for third-party packages) and place the files under `typings` directory. Then run `poe typecheck` command.
 
 #### Adding new services
 

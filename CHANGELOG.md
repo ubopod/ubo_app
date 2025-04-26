@@ -26,6 +26,7 @@
 - fix(core): update headless_kivy to the latest version, it should fix the glitches on the display and the web-ui - closes #275
 - refactor(infrared): replace `adafruit-ir-remote` with `ir-keytable` to lower CPU usage and improve code compatibility
 - fix(web-ui): add the missing read command for the file input values in html forms
+- docs: update README.md to add instructions for generating protobufs, web static assets, and running typecheck
 
 ## Version 1.3.0
 
