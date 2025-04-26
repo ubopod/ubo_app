@@ -25,6 +25,7 @@
 - refactor(speech-recognition): support multiple actions in an intent
 - fix(core): update headless_kivy to the latest version, it should fix the glitches on the display and the web-ui - closes #275
 - refactor(infrared): replace `adafruit-ir-remote` with `ir-keytable` to lower CPU usage and improve code compatibility
+- fix(web-ui): add the missing read command for the file input values in html forms
 
 ## Version 1.3.0
 

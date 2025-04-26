@@ -76,6 +76,11 @@ export function Inputs({
                   reject(new Error("Invalid file type"));
                 }
               };
+              reader.onerror = (error) => {
+                console.error("FileReader error", error);
+                reject(new Error("Failed to read file"));
+              };
+              reader.readAsArrayBuffer(value);
             });
             filesValue.setBytes(bytes);
             fileMap.set(name, filesValue);
