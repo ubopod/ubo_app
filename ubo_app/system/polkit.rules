@@ -1,10 +1,19 @@
 polkit.addRule(function(action, subject) {
-    if ((action.id == "org.freedesktop.login1.reboot" ||
-         action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
-         action.id == "org.freedesktop.login1.power-off" ||
-         action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
-         action.id.startsWith("org.freedesktop.NetworkManager.")) &&
-        subject.user == "{{USERNAME}}") {
-        return polkit.Result.YES;
+    if (subject.user == "{{USERNAME}}") {
+        // Special handling for settings.modify.system when user is in sudo group
+        if (action.id == "org.freedesktop.NetworkManager.settings.modify.system" &&
+            subject.isInGroup("sudo")) {
+            // Ensure we explicitly grant this permission regardless of local/active status
+            return polkit.Result.YES;
+        }
+        // All other NetworkManager and login1 actions
+        if (action.id == "org.freedesktop.login1.reboot" ||
+            action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+            action.id == "org.freedesktop.login1.power-off" ||
+            action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+            action.id.indexOf("org.freedesktop.NetworkManager.") == 0) {
+            return polkit.Result.YES;
+        }
     }
+    return polkit.Result.NOT_HANDLED;
 });
