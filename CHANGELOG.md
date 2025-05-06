@@ -27,6 +27,7 @@
 - refactor(infrared): replace `adafruit-ir-remote` with `ir-keytable` to lower CPU usage and improve code compatibility
 - fix(web-ui): add the missing read command for the file input values in html forms
 - docs: update README.md to add instructions for generating protobufs, web static assets, and running typecheck
+- refactor(core): use the new `StoreOptions.autorun_class` of `python-redux` to make sure they run in the service thread they were defined in - closes #286
 
 ## Version 1.3.0
 

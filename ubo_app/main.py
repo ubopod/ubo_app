@@ -1,7 +1,6 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import asyncio
 import os
 from pathlib import Path
 
@@ -45,10 +44,6 @@ def main() -> None:
 
     setup()
 
-    from ubo_app.service import start_event_loop_thread, worker_thread
-
-    start_event_loop_thread(asyncio.get_event_loop())
-
     import headless_kivy.config
 
     from ubo_app.constants import (
@@ -80,6 +75,7 @@ def main() -> None:
 
     if not DISABLE_GRPC:
         from ubo_app.rpc.server import serve as grpc_serve
+        from ubo_app.service import worker_thread
 
         worker_thread.run_coroutine(grpc_serve())
 

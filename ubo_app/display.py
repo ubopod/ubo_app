@@ -9,7 +9,6 @@ import numpy as np
 from adafruit_rgb_display.st7789 import ST7789
 from fake import Fake
 
-from ubo_app.store.main import store
 from ubo_app.store.services.display import (
     DisplayCompressedRenderEvent,
     DisplayRenderEvent,
@@ -119,6 +118,7 @@ class Display:
         bypass_pause: bool = False,
     ) -> None:
         """Block the display."""
+        from ubo_app.store.main import store
 
         @store.with_state(
             lambda state: state.display.is_paused
@@ -184,6 +184,8 @@ def render_on_display(*, regions: list[Region]) -> None:
         )
 
     if not IS_TEST_ENV:
+        from ubo_app.store.main import store
+
         store._dispatch(  # noqa: SLF001
             [event for region in regions for event in generate_render_actions(region)],
         )

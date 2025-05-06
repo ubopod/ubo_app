@@ -76,12 +76,7 @@ class Scheduler(threading.Thread):
             0,
         )
         await asyncio.sleep(required_sleep)
-        try:
-            callback()
-        except Exception:
-            from ubo_app.logger import logger
-
-            logger.exception('Error in scheduler callback')
+        callback()
         if interval:
             self.tasks.add(
                 self.loop.create_task(

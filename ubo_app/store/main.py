@@ -15,7 +15,9 @@ from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
     Any,
+    Concatenate,
     Generic,
+    Self,
     TypeAlias,
     TypeVar,
     cast,
@@ -30,13 +32,23 @@ from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
     CombineReducerRegisterAction,
-    CreateStoreOptions,
     FinishAction,
+    FinishEvent,
     InitAction,
     Store,
+    StoreOptions,
     combine_reducers,
 )
-from redux.basic_types import StrictEvent, SubscribeEventCleanup
+from redux.autorun import Autorun
+from redux.basic_types import (
+    Args,
+    AutoAwait,
+    AutorunOptionsType,
+    ReturnType,
+    SelectorOutput,
+    StrictEvent,
+    SubscribeEventCleanup,
+)
 
 from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
 from ubo_app.logger import logger
@@ -81,6 +93,7 @@ from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.status_icons.types import StatusIconsAction, StatusIconsState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
 from ubo_app.store.update_manager.types import UpdateManagerAction, UpdateManagerState
+from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.serializer import add_type_field
 from ubo_app.utils.service import get_coroutine_runner
 
@@ -195,9 +208,9 @@ LoadedObject = (
 )
 
 
-class InThreadEventHandler(Generic[StrictEvent]):
+class _UboEventHandler(Generic[StrictEvent]):
     def __init__(
-        self: InThreadEventHandler,
+        self: Self,
         handler: EventHandler[StrictEvent],
         *,
         keep_ref: bool = True,
@@ -205,8 +218,8 @@ class InThreadEventHandler(Generic[StrictEvent]):
         self.handler_str = str(handler)
         self.handler_name = handler.__name__
         self.handler_qualname = handler.__qualname__
-        self.__name__ = f'InThreadHandler:{self.handler_str}'
-        self.__qualname__ = f'InThreadHandler:{self.handler_qualname}'
+        self.__name__ = f'UboEventHandler:{self.handler_str}'
+        self.__qualname__ = f'UboEventHandler:{self.handler_qualname}'
         if keep_ref:
             self.handler_ref = handler
         elif inspect.ismethod(handler):
@@ -216,7 +229,7 @@ class InThreadEventHandler(Generic[StrictEvent]):
 
         self.coroutine_runner = get_coroutine_runner()
 
-    def __call__(self: InThreadEventHandler, event: StrictEvent) -> None:
+    def __call__(self: Self, event: StrictEvent) -> None:
         async def wrapper() -> None:
             if isinstance(self.handler_ref, weakref.ref):
                 handler = cast('EventHandler[StrictEvent]', self.handler_ref())
@@ -246,19 +259,17 @@ class InThreadEventHandler(Generic[StrictEvent]):
                 await result
 
         coroutine = wrapper()
-        coroutine.__name__ = (
-            f'InThreadEventHandler:wrapped-coroutine:{self.handler_name}'
-        )
+        coroutine.__name__ = f'UboEventHandler:wrapped-coroutine:{self.handler_name}'
         coroutine.__qualname__ = (
-            f'InThreadEventHandler:wrapped-coroutine:{self.handler_qualname}'
+            f'UboEventHandler:wrapped-coroutine:{self.handler_qualname}'
         )
         from ubo_app.utils.async_ import create_task
 
         create_task(coroutine, coroutine_runner=self.coroutine_runner)
 
-    def __repr__(self: InThreadEventHandler) -> str:
+    def __repr__(self: Self) -> str:
         """Return a string representation of the instance containing the handler."""
-        return f'<InThreadHandler:{self.handler_str}>'
+        return f'<UboEventHandler:{self.handler_str}>'
 
 
 class UboStore(Store[RootState, UboAction, UboEvent]):
@@ -312,19 +323,19 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
 
     @overload
     def load_object(
-        self: UboStore,
+        self: Self,
         data: SnapshotAtom,
     ) -> int | float | str | bool | None | Immutable: ...
     @overload
     def load_object(
-        self: UboStore,
+        self: Self,
         data: SnapshotAtom,
         *,
         object_type: type[T],
     ) -> T: ...
 
     def load_object(  # noqa: C901
-        self: UboStore,
+        self: Self,
         data: Any,
         *,
         object_type: GenericAlias | type[T] | None = None,
@@ -365,13 +376,13 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         raise TypeError(msg)
 
     def subscribe_event(
-        self: UboStore,
+        self: Self,
         event_type: type[StrictEvent],
         handler: EventHandler[StrictEvent],
         *,
         keep_ref: bool = True,
     ) -> SubscribeEventCleanup:
-        in_thread_handler = InThreadEventHandler(handler, keep_ref=keep_ref)
+        in_thread_handler = _UboEventHandler(handler, keep_ref=keep_ref)
 
         if keep_ref:
             return super().subscribe_event(
@@ -406,7 +417,89 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         )
 
 
-def create_task(
+class _UboAutorun(
+    Autorun[
+        RootState,
+        UboAction,
+        UboEvent,
+        SelectorOutput,
+        Any,
+        Args,
+        ReturnType,
+    ],
+    Generic[
+        SelectorOutput,
+        Args,
+        ReturnType,
+    ],
+):
+    def __init__(
+        self: Self,
+        *,
+        store: UboStore,
+        selector: Callable[[RootState], SelectorOutput],
+        comparator: Callable[[RootState], Any] | None,
+        func: Callable[
+            Concatenate[SelectorOutput, Args],
+            ReturnType,
+        ],
+        options: AutorunOptionsType[ReturnType, AutoAwait],
+    ) -> None:
+        self.handler_str = str(func)
+        self.handler_name = func.__name__
+        self.handler_qualname = func.__qualname__
+        self.__name__ = f'UboAutorun:{self.handler_str}'
+        self.__qualname__ = f'UboAutorun:{self.handler_qualname}'
+        if options.keep_ref:
+            self.handler_ref = func
+        elif inspect.ismethod(func):
+            self.handler_ref = weakref.WeakMethod(func)
+        else:
+            self.handler_ref = weakref.ref(func)
+
+        self.coroutine_runner = get_coroutine_runner()
+        self.call_event = threading.Event()
+
+        super().__init__(
+            store=store,
+            selector=selector,
+            comparator=comparator,
+            func=func,
+            options=options,
+        )
+
+    def call(
+        self: Self,
+        *args: Args.args,
+        **kwargs: Args.kwargs,
+    ) -> None:
+        def wrapper(super_: Autorun) -> None:
+            try:
+                super_.call(*args, **kwargs)
+            except Exception:  # noqa: BLE001
+                report_service_error()
+            finally:
+                self.call_event.set()
+
+        from ubo_app.utils.async_ import to_thread_with_coroutine_runner
+
+        to_thread_with_coroutine_runner(
+            wrapper,
+            coroutine_runner=self.coroutine_runner,
+            super_=super(),
+        )
+
+    def __call__(
+        self: Self,
+        *args: Args.args,
+        **kwargs: Args.kwargs,
+    ) -> ReturnType:
+        self.call_event.clear()
+        super().__call__(*args, **kwargs)
+        return self._latest_value
+
+
+def ubo_create_task(
     coro: Coroutine,
     *,
     callback: TaskCreatorCallback | None = None,
@@ -424,7 +517,7 @@ def action_middleware(action: UboAction) -> UboAction:
     return action
 
 
-def event_middleware(event: UboEvent) -> UboEvent | None:
+def event_middleware(event: UboEvent | FinishEvent) -> UboEvent | FinishEvent | None:
     logger.verbose(
         'Event dispatched',
         extra={'event': event},
@@ -438,14 +531,15 @@ scheduler.start()
 
 store = UboStore(
     root_reducer,
-    CreateStoreOptions(
+    StoreOptions(
         auto_init=False,
         scheduler=scheduler.set,
         action_middlewares=[action_middleware],
         event_middlewares=[event_middleware],
-        task_creator=create_task,
+        task_creator=ubo_create_task,
         on_finish=scheduler.stop,
         grace_time_in_seconds=STORE_GRACE_PERIOD,
+        autorun_class=_UboAutorun,
     ),
 )
 

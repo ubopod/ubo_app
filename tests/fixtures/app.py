@@ -73,10 +73,6 @@ class AppContext:
         PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
 
-        from ubo_app.service import start_event_loop_thread
-
-        start_event_loop_thread(asyncio.new_event_loop())
-
         from ubo_app.menu_app.menu import MenuApp
 
         if app is None:

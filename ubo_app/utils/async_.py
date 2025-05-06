@@ -68,3 +68,12 @@ def to_thread(
     coroutine_runner = get_coroutine_runner()
 
     return coroutine_runner(asyncio.to_thread(task, *args, **kwargs))
+
+
+def to_thread_with_coroutine_runner(
+    task: Callable[T_params, T],
+    coroutine_runner: CoroutineRunner,
+    *args: T_params.args,
+    **kwargs: T_params.kwargs,
+) -> Handle:
+    return coroutine_runner(asyncio.to_thread(task, *args, **kwargs))

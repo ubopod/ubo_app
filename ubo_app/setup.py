@@ -164,6 +164,10 @@ def setup() -> None:
 
     setup_ubo_gui()
 
+    from ubo_app.service import start_event_loop_thread
+
+    start_event_loop_thread(asyncio.new_event_loop())
+
 
 def clear_signal_handlers() -> None:
     """Clear the signal handlers."""
