@@ -140,7 +140,7 @@ else
 fi
 
 # Remove the Raspberry Pi's SSH daemon banner warning about setting a valid user
-sed -i '/^Banner /d' /etc/ssh/sshd_config.d/rename_user.conf
+sed -i '/^Banner /d' /etc/ssh/sshd_config.d/rename_user.conf || true
 
 # Set the ownership of the installation path
 chown -R $USERNAME:$USERNAME "$INSTALLATION_PATH"
