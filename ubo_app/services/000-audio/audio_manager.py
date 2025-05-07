@@ -11,8 +11,6 @@ import simpleaudio
 from simpleaudio import _simpleaudio  # pyright: ignore [reportAttributeAccessIssue]
 from tenacity import (
     AsyncRetrying,
-    RetryCallState,
-    retry,
     retry_if_exception,
     stop_after_attempt,
     wait_fixed,
@@ -21,6 +19,7 @@ from tenacity import (
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlaybackDoneAction
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.eeprom import get_eeprom_data
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.server import send_command
@@ -45,33 +44,12 @@ class AudioManager:
     def __init__(self: AudioManager) -> None:
         """Initialize the audio manager."""
         # create an audio object
-        self.card_index = None
         self.has_speakers = False
         self.has_microphones = False
 
         self.playback_mute = True
         self.playback_volume = 0.1
         self.capture_volume = 0.1
-
-        async def report_error(_: RetryCallState) -> None:
-            """Restart the audio system."""
-            await send_command('audio', 'failure_report', has_output=True)
-
-        @retry(
-            stop=stop_after_attempt(3),
-            wait=wait_fixed(1),
-            retry=retry_if_exception(lambda e: isinstance(e, StopIteration)),
-            after=report_error,
-        )
-        def initialize_audio() -> None:
-            cards = alsaaudio.cards()
-            self.card_index = cards.index(
-                next(card for card in cards if 'wm8960' in card),
-            )
-            # In case they were set before the card was initialized
-            self.set_playback_mute(mute=self.playback_mute)
-            self.set_playback_volume(self.playback_volume)
-            self.set_capture_volume(self.capture_volume)
 
         eeprom_data = get_eeprom_data()
 
@@ -89,8 +67,45 @@ class AudioManager:
         ):
             self.has_microphones = True
 
-        if self.has_speakers or self.has_microphones:
-            initialize_audio()
+        create_task(self.find_card_index())
+
+    async def find_card_index(self: AudioManager) -> None:
+        """Find the card index of the audio device."""
+        self.card_index = None
+        if not self.has_speakers and not self.has_microphones:
+            return
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(1),
+            retry=retry_if_exception(lambda e: isinstance(e, StopIteration)),
+        ):
+            with attempt:
+                # Get the card index of the audio device
+                cards = alsaaudio.cards()
+                self.card_index = cards.index(
+                    next(card for card in cards if 'wm8960' in card),
+                )
+            if attempt.retry_state.outcome and isinstance(
+                attempt.retry_state.outcome.exception(),
+                StopIteration,
+            ):
+                report_service_error(exception=attempt.retry_state.outcome.exception())
+                await send_command('audio', 'failure_report', has_output=True)
+            else:
+                break
+        else:
+            logger.error(
+                'Failed to find the card index after multiple trials',
+            )
+            return
+        cards = alsaaudio.cards()
+        self.card_index = cards.index(
+            next(card for card in cards if 'wm8960' in card),
+        )
+        # In case they were set before the card was initialized
+        self.set_playback_mute(mute=self.playback_mute)
+        self.set_playback_volume(self.playback_volume)
+        self.set_capture_volume(self.capture_volume)
 
     async def play_file(self: AudioManager, filename: str) -> None:
         """Play a waveform audio file.
@@ -167,7 +182,9 @@ class AudioManager:
                         'Reporting the playback issue to ubo-system',
                         extra={'attempt': attempt.retry_state.attempt_number},
                     )
-                    report_service_error()
+                    report_service_error(
+                        exception=attempt.retry_state.outcome.exception(),
+                    )
                     await send_command('audio', 'failure_report', has_output=True)
                 else:
                     break
@@ -175,6 +192,7 @@ class AudioManager:
                 logger.error(
                     'Failed to play audio file after multiple trials',
                 )
+                return
         if id is not None:
             store.dispatch(AudioPlaybackDoneAction(id=id))
 
@@ -197,16 +215,19 @@ class AudioManager:
             if self.card_index is None or not self.has_speakers:
                 return
 
-            mixer = alsaaudio.Mixer(
-                control='Right Output Mixer PCM',
-                cardindex=self.card_index,
-            )
-            mixer.setmute(0)
-            mixer = alsaaudio.Mixer(
-                control='Left Output Mixer PCM',
-                cardindex=self.card_index,
-            )
-            mixer.setmute(0)
+            try:
+                mixer = alsaaudio.Mixer(
+                    control='Right Output Mixer PCM',
+                    cardindex=self.card_index,
+                )
+                mixer.setmute(0)
+                mixer = alsaaudio.Mixer(
+                    control='Left Output Mixer PCM',
+                    cardindex=self.card_index,
+                )
+                mixer.setmute(0)
+            except alsaaudio.ALSAAudioError:
+                create_task(self.find_card_index())
 
     def set_playback_volume(self: AudioManager, volume: float = 0.8) -> None:
         """Set the playback volume of the audio output.
@@ -217,10 +238,10 @@ class AudioManager:
             Volume to set, a float between 0 and 1
 
         """
-        self.playback_volume = volume
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)
+        self.playback_volume = volume
         try:
             # Assume pulseaudio is installed
             mixer = alsaaudio.Mixer(control='Master')
@@ -230,18 +251,21 @@ class AudioManager:
             if self.card_index is None or not self.has_speakers:
                 return
 
-            mixer = alsaaudio.Mixer(control='Speaker', cardindex=self.card_index)
-            mixer.setvolume(
-                _linear_to_logarithmic(volume),
-                alsaaudio.MIXER_CHANNEL_ALL,
-                alsaaudio.PCM_PLAYBACK,
-            )
-            mixer = alsaaudio.Mixer(control='Playback', cardindex=self.card_index)
-            mixer.setvolume(
-                100,
-                alsaaudio.MIXER_CHANNEL_ALL,
-                alsaaudio.PCM_PLAYBACK,
-            )
+            try:
+                mixer = alsaaudio.Mixer(control='Speaker', cardindex=self.card_index)
+                mixer.setvolume(
+                    _linear_to_logarithmic(volume),
+                    alsaaudio.MIXER_CHANNEL_ALL,
+                    alsaaudio.PCM_PLAYBACK,
+                )
+                mixer = alsaaudio.Mixer(control='Playback', cardindex=self.card_index)
+                mixer.setvolume(
+                    100,
+                    alsaaudio.MIXER_CHANNEL_ALL,
+                    alsaaudio.PCM_PLAYBACK,
+                )
+            except alsaaudio.ALSAAudioError:
+                create_task(self.find_card_index())
 
     def set_capture_volume(self: AudioManager, volume: float = 0.8) -> None:
         """Set the capture volume of the audio output.
@@ -252,10 +276,10 @@ class AudioManager:
             Volume to set, a float between 0 and 1
 
         """
-        self.capture_volume = volume
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)
+        self.capture_volume = volume
         try:
             # Assume pulseaudio is installed
             mixer = alsaaudio.Mixer(control='Capture')
@@ -265,9 +289,12 @@ class AudioManager:
             if self.card_index is None or not self.has_microphones:
                 return
 
-            mixer = alsaaudio.Mixer(control='Capture', cardindex=self.card_index)
-            mixer.setvolume(
-                _linear_to_logarithmic(volume),
-                alsaaudio.MIXER_CHANNEL_ALL,
-                alsaaudio.PCM_CAPTURE,
-            )
+            try:
+                mixer = alsaaudio.Mixer(control='Capture', cardindex=self.card_index)
+                mixer.setvolume(
+                    _linear_to_logarithmic(volume),
+                    alsaaudio.MIXER_CHANNEL_ALL,
+                    alsaaudio.PCM_CAPTURE,
+                )
+            except alsaaudio.ALSAAudioError:
+                create_task(self.find_card_index())

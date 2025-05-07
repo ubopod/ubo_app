@@ -30,6 +30,7 @@
 - refactor(core): use the new `StoreOptions.autorun_class` of `python-redux` to make sure they run in the service thread they were defined in - closes #286
 - fix(audio): use `tenacity` for retry logic and add a one second delay between retries when playback fails
 - fix(installation): gracefully handle missing file in sed command with || true - closes #281
+- refactor(audio): make setter functions in audio manager try finding card index again and rebind in case of failure
 
 ## Version 1.3.0
 
