@@ -28,6 +28,7 @@
 - fix(web-ui): add the missing read command for the file input values in html forms
 - docs: update README.md to add instructions for generating protobufs, web static assets, and running typecheck
 - refactor(core): use the new `StoreOptions.autorun_class` of `python-redux` to make sure they run in the service thread they were defined in - closes #286
+- fix(audio): use `tenacity` for retry logic and add a one second delay between retries when playback fails
 
 ## Version 1.3.0
 

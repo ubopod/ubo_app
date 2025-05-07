@@ -3,24 +3,29 @@
 
 from __future__ import annotations
 
-import asyncio
 import math
 import wave
 
 import alsaaudio
 import simpleaudio
 from simpleaudio import _simpleaudio  # pyright: ignore [reportAttributeAccessIssue]
+from tenacity import (
+    AsyncRetrying,
+    RetryCallState,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlaybackDoneAction
-from ubo_app.utils.async_ import create_task
 from ubo_app.utils.eeprom import get_eeprom_data
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.server import send_command
 
 CHUNK_SIZE = 1024
-TRIALS = 3
 
 
 def _linear_to_logarithmic(volume_linear: float) -> int:
@@ -48,23 +53,25 @@ class AudioManager:
         self.playback_volume = 0.1
         self.capture_volume = 0.1
 
-        async def initialize_audio() -> None:
-            for _ in range(TRIALS):
-                try:
-                    cards = alsaaudio.cards()
-                    self.card_index = cards.index(
-                        next(card for card in cards if 'wm8960' in card),
-                    )
-                except StopIteration:
-                    logger.exception('No audio card found')
-                    await send_command('audio', 'failure_report', has_output=True)
-                else:
-                    # In case they were set before the card was initialized
-                    self.set_playback_mute(mute=self.playback_mute)
-                    self.set_playback_volume(self.playback_volume)
-                    self.set_capture_volume(self.capture_volume)
-                    break
-                await asyncio.sleep(1)
+        async def report_error(_: RetryCallState) -> None:
+            """Restart the audio system."""
+            await send_command('audio', 'failure_report', has_output=True)
+
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(1),
+            retry=retry_if_exception(lambda e: isinstance(e, StopIteration)),
+            after=report_error,
+        )
+        def initialize_audio() -> None:
+            cards = alsaaudio.cards()
+            self.card_index = cards.index(
+                next(card for card in cards if 'wm8960' in card),
+            )
+            # In case they were set before the card was initialized
+            self.set_playback_mute(mute=self.playback_mute)
+            self.set_playback_volume(self.playback_volume)
+            self.set_capture_volume(self.capture_volume)
 
         eeprom_data = get_eeprom_data()
 
@@ -83,7 +90,7 @@ class AudioManager:
             self.has_microphones = True
 
         if self.has_speakers or self.has_microphones:
-            create_task(initialize_audio())
+            initialize_audio()
 
     async def play_file(self: AudioManager, filename: str) -> None:
         """Play a waveform audio file.
@@ -139,8 +146,11 @@ class AudioManager:
 
         """
         if data != b'':
-            for trial in range(TRIALS):
-                try:
+            async for attempt in AsyncRetrying(
+                stop=stop_after_attempt(3),
+                wait=wait_fixed(1),
+            ):
+                with attempt:
                     wave_object = simpleaudio.WaveObject(
                         audio_data=data,
                         num_channels=channels,
@@ -149,10 +159,13 @@ class AudioManager:
                     )
                     play_object = wave_object.play()
                     play_object.wait_done()
-                except _simpleaudio.SimpleaudioError:
+                if attempt.retry_state.outcome and isinstance(
+                    attempt.retry_state.outcome.exception(),
+                    _simpleaudio.SimpleaudioError,
+                ):
                     logger.info(
                         'Reporting the playback issue to ubo-system',
-                        extra={'trial': trial},
+                        extra={'attempt': attempt.retry_state.attempt_number},
                     )
                     report_service_error()
                     await send_command('audio', 'failure_report', has_output=True)
@@ -161,7 +174,6 @@ class AudioManager:
             else:
                 logger.error(
                     'Failed to play audio file after multiple trials',
-                    extra={'tried_times': TRIALS},
                 )
         if id is not None:
             store.dispatch(AudioPlaybackDoneAction(id=id))

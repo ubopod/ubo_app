@@ -124,6 +124,10 @@ def setup() -> None:
             Fake(_Fake__return_value=Fake(_Fake__await_value=(Fake(), Fake()))),
         )
 
+        from ubo_app.utils import eeprom
+
+        eeprom.get_eeprom_data = lambda: {'speakers': {'model': 'wm8960'}}
+
         from ubo_app.utils import monitor_unit
 
         async def fake_monitor_unit(unit: str, callback: Callable[[str], None]) -> None:
