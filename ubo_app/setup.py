@@ -155,14 +155,10 @@ def setup() -> None:
         )
 
     import ubo_app.display as _  # noqa: F401
-    from ubo_app.constants import DEBUG_MODE_PDB_SIGNAL
 
     if not IS_TEST_ENV:
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
-
-        if DEBUG_MODE_PDB_SIGNAL:
-            signal.signal(signal.SIGUSR1, signal_handler)
 
     from ubo_gui import setup as setup_ubo_gui
 
@@ -183,11 +179,7 @@ def clear_signal_handlers() -> None:
 def _clear_signal_handlers() -> None:
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    from ubo_app.constants import DEBUG_MODE_PDB_SIGNAL
-
-    if DEBUG_MODE_PDB_SIGNAL:
-        signal.signal(signal.SIGUSR1, signal.SIG_DFL)
+    signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 
 
 def signal_handler(signum: int, _: object) -> None:
@@ -196,12 +188,6 @@ def signal_handler(signum: int, _: object) -> None:
     from ubo_app.utils.error_handlers import get_all_thread_stacks_string
 
     logger.debug(get_all_thread_stacks_string())
-
-    if signum == signal.SIGUSR1:
-        import ipdb  # noqa: T100
-
-        ipdb.set_trace()  # noqa: T100
-        return
 
     from ubo_app.display import display
 

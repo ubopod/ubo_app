@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import atexit
 import json
+import signal
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -174,6 +175,14 @@ def setup_side_effects() -> Subscriptions:
             for service in state.settings.services.values()
         ],
     )
+    register_persistent_store(
+        'settings:pdb_signal',
+        lambda state: state.settings.pdb_signal,
+    )
+    register_persistent_store(
+        'settings:visual_debug',
+        lambda state: state.settings.visual_debug,
+    )
     subscriptions = [
         store.subscribe_event(PowerOffEvent, _power_off),
         store.subscribe_event(RebootEvent, _reboot),
@@ -186,6 +195,25 @@ def setup_side_effects() -> Subscriptions:
         deinitalize_board,
         bus_provider.clean_up,
     ]
+
+    from kivy.clock import mainthread
+
+    @store.autorun(lambda state: state.settings.pdb_signal)
+    @mainthread
+    def _pdb_debug_mode(pdb_signal: bool) -> None:  # noqa: FBT001
+        """Set the PDB debug mode."""
+
+        def signal_handler(signum: int, _: object) -> None:
+            if signum == signal.SIGUSR1:
+                import ipdb  # noqa: T100
+
+                ipdb.set_trace()  # noqa: T100
+                return
+
+        if pdb_signal:
+            signal.signal(signal.SIGUSR1, signal_handler)
+        else:
+            signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import gc
-import json
 import sys
 import weakref
 from pathlib import Path
@@ -49,30 +48,11 @@ class AppContext:
     ) -> None:
         """Initialize the context."""
         self.request = request
-        self.persistent_store_data = {}
         self._cleanup_is_called = False
         self.tracker = tracker
 
-    def set_persistent_storage_value(
-        self: AppContext,
-        key: str,
-        *,
-        value: object,
-    ) -> None:
-        """Set initial value in persistent store."""
-        assert not hasattr(
-            self,
-            'app',
-        ), "Can't set persistent storage values after app has been set"
-        self.persistent_store_data[key] = value
-
     def set_app(self: AppContext, app: MenuApp | None = None) -> None:
         """Set the application."""
-        from ubo_app.constants import PERSISTENT_STORE_PATH
-
-        PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        PERSISTENT_STORE_PATH.write_text(json.dumps(self.persistent_store_data))
-
         from ubo_app.menu_app.menu import MenuApp
 
         if app is None:

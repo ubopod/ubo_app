@@ -7,12 +7,20 @@ from ubo_gui.menu.types import HeadlessMenu, SubMenuItem
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.settings.services import service_items
-from ubo_app.store.settings.types import SettingsToggleDebugModeAction
+from ubo_app.store.settings.types import (
+    SettingsTogglePdbSignalAction,
+    SettingsToggleVisualDebugAction,
+)
 
 
-@store.autorun(lambda state: state.settings.is_debug_enabled)
-def _debug_icon(is_debug_eanbled: bool) -> str:  # noqa: FBT001
-    return '󰱒' if is_debug_eanbled else '󰄱'
+@store.autorun(lambda state: state.settings.pdb_signal)
+def _pdb_debug_icon(pdb_signal: bool) -> str:  # noqa: FBT001
+    return '󰱒' if pdb_signal else '󰄱'
+
+
+@store.autorun(lambda state: state.settings.visual_debug)
+def _visual_debug_icon(visual_debug: bool) -> str:  # noqa: FBT001
+    return '󰱒' if visual_debug else '󰄱'
 
 
 SYSTEM_MENU: list[SubMenuItem] = [
@@ -24,9 +32,14 @@ SYSTEM_MENU: list[SubMenuItem] = [
             title='󰒓General',
             items=[
                 DispatchItem(
-                    label='Debug',
-                    store_action=SettingsToggleDebugModeAction(),
-                    icon=_debug_icon,
+                    label='PDB Signal',
+                    store_action=SettingsTogglePdbSignalAction(),
+                    icon=_pdb_debug_icon,
+                ),
+                DispatchItem(
+                    label='Visual Debug',
+                    store_action=SettingsToggleVisualDebugAction(),
+                    icon=_visual_debug_icon,
                 ),
             ],
         ),

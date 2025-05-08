@@ -18,7 +18,7 @@ class UpdateManagerSetVersionsAction(UpdateManagerAction):
     current_version: str
     base_image_variant: str
     latest_version: str
-    serial_number: str | None
+    recent_versions: list[str] | None = None
 
 
 class UpdateManagerSetStatusAction(UpdateManagerAction):
@@ -51,7 +51,6 @@ class UpdateStatus(StrEnum):
 class UpdateManagerState(Immutable):
     """Version store."""
 
-    serial_number: str | None = None
     current_version: str | None = None
     base_image_variant: str | None = None
     latest_version: str | None = None

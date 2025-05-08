@@ -114,9 +114,9 @@ def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
 
         return generated_uuid
 
-    from ubo_app.constants import DEBUG_MODE_TEST_UUID
+    from ubo_app.constants import DEBUG_TEST_UUID
 
-    if DEBUG_MODE_TEST_UUID:
+    if DEBUG_TEST_UUID:
         monkeypatch.setattr('uuid.uuid4', debug_uuid4)
     else:
         monkeypatch.setattr(

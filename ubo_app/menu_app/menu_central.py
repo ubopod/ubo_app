@@ -10,7 +10,7 @@ from ubo_gui.app import UboApp
 from ubo_gui.menu.menu_widget import MenuWidget
 from ubo_gui.menu.stack_item import StackItem, StackMenuItem
 
-from ubo_app.constants import DEBUG_MODE_MENU
+from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core.types import (
@@ -64,7 +64,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.menu_widget.bind(title=self.handle_title_change)
         self.menu_widget.bind(stack=self.handle_stack_change)
 
-        if DEBUG_MODE_MENU:
+        if DEBUG_MENU:
             menu_representation = 'Menu:\n' + repr(self.menu_widget)
             self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 

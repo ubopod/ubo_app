@@ -10,7 +10,15 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
+from ubo_gui.constants import SUCCESS_COLOR
 
+from ubo_app.store.services.notifications import (
+    Importance,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.settings.types import (
     SettingsAction,
     SettingsEvent,
@@ -19,21 +27,21 @@ from ubo_app.store.settings.types import (
     SettingsServiceSetLogLevelAction,
     SettingsServiceSetShouldRestartAction,
     SettingsServiceSetStatusAction,
-    SettingsSetDebugModeEvent,
     SettingsSetServicesAction,
     SettingsStartServiceAction,
     SettingsStartServiceEvent,
     SettingsState,
     SettingsStopServiceAction,
     SettingsStopServiceEvent,
-    SettingsToggleDebugModeAction,
+    SettingsTogglePdbSignalAction,
+    SettingsToggleVisualDebugAction,
 )
 
 
 def reducer(
     state: SettingsState | None,
     action: SettingsAction | InitAction,
-) -> ReducerResult[SettingsState, None, SettingsEvent]:
+) -> ReducerResult[SettingsState, NotificationsAddAction, SettingsEvent]:
     """Reducer for the settings state."""
     if state is None:
         if isinstance(action, InitAction):
@@ -41,10 +49,41 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    if isinstance(action, SettingsToggleDebugModeAction):
+    if isinstance(action, SettingsTogglePdbSignalAction):
         return CompleteReducerResult(
-            state=replace(state, is_debug_enabled=not state.is_debug_enabled),
-            events=[SettingsSetDebugModeEvent(is_enabled=not state.is_debug_enabled)],
+            state=replace(
+                state,
+                pdb_signal=not state.pdb_signal,
+            ),
+            actions=[
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='PDB Debug',
+                        content='Instructions',
+                        extra_information=ReadableInformation(
+                            text='First make sure ipdb is installed by running:\n\n'
+                            '/opt/ubo/env/bin/pip install ipdb\n\n'
+                            'You need to run it only once.\n'
+                            'Then send a SIGUSR1 signal to the process:\n\n'
+                            'kill -SIGUSR1 <PID>',
+                            picovoice_text='',
+                            piper_text='',
+                        ),
+                        icon='',
+                        importance=Importance.MEDIUM,
+                        color=SUCCESS_COLOR,
+                        display_type=NotificationDisplayType.STICKY,
+                    ),
+                ),
+            ]
+            if not state.pdb_signal
+            else [],
+        )
+
+    if isinstance(action, SettingsToggleVisualDebugAction):
+        return replace(
+            state,
+            visual_debug=not state.visual_debug,
         )
 
     if isinstance(action, SettingsSetServicesAction):

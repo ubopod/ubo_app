@@ -296,6 +296,7 @@ root = "ubo_app/services/090-web-ui"
 extraPaths = ["."]
 
 [tool.pytest.ini_options]
+markers = ["persistent_store: run test with provided persistent store"]
 asyncio_mode = "auto"
 filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",

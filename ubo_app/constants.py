@@ -13,11 +13,16 @@ INSTALLER_URL = os.environ.get(
     'https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh',
 )
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
-DEBUG_MODE = str_to_bool(os.environ.get('UBO_DEBUG', 'False'))
-DEBUG_MODE_PDB_SIGNAL = str_to_bool(os.environ.get('UBO_DEBUG_PDB_SIGNAL', 'False'))
-DEBUG_MODE_TASKS = str_to_bool(os.environ.get('UBO_DEBUG_TASKS', 'False'))
-LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else '')
-GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'DEBUG' if DEBUG_MODE else '')
+
+DEBUG_VISUAL = str_to_bool(os.environ.get('UBO_DEBUG_VISUAL', 'False'))
+DEBUG_PDB_SIGNAL = str_to_bool(os.environ.get('UBO_DEBUG_PDB_SIGNAL', 'False'))
+DEBUG_TASKS = str_to_bool(os.environ.get('UBO_DEBUG_TASKS', 'False'))
+DEBUG_DOCKER = str_to_bool(os.environ.get('UBO_DEBUG_DOCKER', 'False'))
+DEBUG_TEST_UUID = str_to_bool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False'))
+DEBUG_MENU = str_to_bool(os.environ.get('UBO_DEBUG_MENU', 'False'))
+
+LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'INFO')
+GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'INFO')
 SERVICES_PATH = (
     os.environ.get('UBO_SERVICES_PATH', '').split(':')
     if os.environ.get('UBO_SERVICES_PATH')
@@ -48,8 +53,6 @@ WEB_UI_HOTSPOT_PASSWORD = os.environ.get('UBO_WEB_UI_HOTSPOT_PASSWORD', 'ubopod-
 UPDATE_ASSETS_PATH = Path(f'{INSTALLATION_PATH}/_update/')
 UPDATE_LOCK_PATH = UPDATE_ASSETS_PATH / 'update_is_ready.lock'
 
-DEBUG_MODE_MENU = str_to_bool(os.environ.get('UBO_DEBUG_MENU', 'False'))
-
 SERVICES_LOOP_GRACE_PERIOD = float(
     os.environ.get('UBO_SERVICES_LOOP_GRACE_PERIOD', '0.1'),
 )
@@ -58,11 +61,9 @@ STORE_GRACE_PERIOD = int(os.environ.get('UBO_STORE_GRACE_PERIOD', '1'))
 
 # Enable it to replace UUIDs with numerical counters in tests and log the traceback
 # each time a UUID is generated.
-DEBUG_MODE_TEST_UUID = str_to_bool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False'))
 
 PICOVOICE_ACCESS_KEY = 'PICOVOICE_ACCESS_KEY'
 
-DEBUG_MODE_DOCKER = str_to_bool(os.environ.get('UBO_DEBUG_DOCKER', 'False'))
 DOCKER_CREDENTIALS_TEMPLATE = 'DOCKER_CREDENTIALS_{}'
 
 CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)

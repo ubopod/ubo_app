@@ -127,14 +127,14 @@ def loop_exception_handler(
     loop: asyncio.AbstractEventLoop,
     context: dict[str, object],
 ) -> None:
-    from ubo_app.constants import DEBUG_MODE_TASKS
+    from ubo_app.constants import DEBUG_TASKS
     from ubo_app.logger import logger
 
     threads_info = get_all_thread_stacks()
 
     exception = context.get('exception')
 
-    if DEBUG_MODE_TASKS:
+    if DEBUG_TASKS:
         task = cast('asyncio.Task', context.get('future') or context.get('task'))
         parent_stack = STACKS.get(task, '<unavailable>') if task else '<unavailable>'
     else:

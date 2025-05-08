@@ -31,6 +31,7 @@
 - fix(audio): use `tenacity` for retry logic and add a one second delay between retries when playback fails
 - fix(installation): gracefully handle missing file in sed command with || true - closes #281
 - refactor(audio): make setter functions in audio manager try finding card index again and rebind in case of failure
+- refactor(core): organize debug environment variables and add `UBO_DEBUG_PDB_SIGNAL` to settings menu of the gui and make debug flags set in the settings menu persistent
 
 ## Version 1.3.0
 

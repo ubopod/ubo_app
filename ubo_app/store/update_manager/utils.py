@@ -44,7 +44,6 @@ from ubo_app.store.update_manager.types import (
     UpdateStatus,
 )
 from ubo_app.utils import IS_RPI
-from ubo_app.utils.eeprom import read_serial_number
 
 CURRENT_VERSION = importlib.metadata.version('ubo_app')
 if IS_RPI:
@@ -81,7 +80,6 @@ async def check_version() -> None:
             data = await response.json()
             latest_version = data['info']['version']
 
-            serial_number = read_serial_number()
             store.dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
                     flash_notification=state is None
@@ -89,7 +87,6 @@ async def check_version() -> None:
                     current_version=CURRENT_VERSION,
                     base_image_variant=BASE_IMAGE_VARIANT,
                     latest_version=latest_version,
-                    serial_number=serial_number,
                 ),
             )
     except Exception:
@@ -286,8 +283,9 @@ Then another reboot will be done to complete the update process.""",
 @store.autorun(lambda state: state.update_manager)
 def about_menu_items(state: UpdateManagerState) -> list[Item]:
     """Get the update menu items."""
+    items: list[Item] = []
     if state.update_status is UpdateStatus.CHECKING:
-        return [
+        items = [
             Item(
                 label='Checking for updates...',
                 icon='󰬬',
@@ -295,7 +293,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ),
         ]
     if state.update_status is UpdateStatus.FAILED_TO_CHECK:
-        return [
+        items = [
             DispatchItem(
                 label='Failed to check for updates',
                 store_action=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
@@ -304,7 +302,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ),
         ]
     if state.update_status is UpdateStatus.UP_TO_DATE:
-        return [
+        items = [
             DispatchItem(
                 label='Already up to date!',
                 icon='󰄬',
@@ -314,7 +312,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ),
         ]
     if state.update_status is UpdateStatus.OUTDATED:
-        return [
+        items = [
             DispatchItem(
                 label=f'Update to v{state.latest_version}',
                 store_action=UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
@@ -322,14 +320,15 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             ),
         ]
     if state.update_status is UpdateStatus.UPDATING:
-        return [
+        items = [
             Item(
                 label='Updating...',
                 icon='󰇚',
                 background_color='#00000000',
             ),
         ]
-    return []
+
+    return items
 
 
 @store.view(

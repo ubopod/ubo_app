@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from redux import AutorunOptions
 from typing_extensions import override
 from ubo_gui.app import UboApp
 
@@ -12,7 +13,6 @@ from ubo_app.menu_app.menu_footer import MenuAppFooter
 from ubo_app.menu_app.menu_header import MenuAppHeader
 from ubo_app.store.main import store
 from ubo_app.store.services.display import DisplayRerenderEvent
-from ubo_app.store.settings.types import SettingsSetDebugModeEvent
 
 if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
@@ -27,9 +27,9 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         self.subscriptions: Subscriptions = []
         self.is_stopped = False
 
-    def set_debug_mode(self: MenuApp, event: SettingsSetDebugModeEvent) -> None:
-        """Set the debug mode."""
-        self.root.show_update_regions = event.is_enabled
+    def set_visual_debug_mode(self: MenuApp, visual_debug: bool) -> None:  # noqa: FBT001
+        """Set the visual debug mode."""
+        self.root.show_update_regions = visual_debug
 
     def rerender(self: MenuApp) -> None:
         """Re-render the application."""
@@ -42,11 +42,10 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
 
         self.subscriptions = setup_side_effects()
 
-        store.subscribe_event(
-            SettingsSetDebugModeEvent,
-            self.set_debug_mode,
-            keep_ref=False,
-        )
+        store.autorun(
+            lambda state: state.settings.visual_debug,
+            options=AutorunOptions(keep_ref=False),
+        )(self.set_visual_debug_mode)
         store.subscribe_event(DisplayRerenderEvent, self.rerender, keep_ref=False)
 
     @override

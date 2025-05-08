@@ -50,7 +50,7 @@ from redux.basic_types import (
     SubscribeEventCleanup,
 )
 
-from ubo_app.constants import DEBUG_MODE, STORE_GRACE_PERIOD
+from ubo_app.constants import STORE_GRACE_PERIOD
 from ubo_app.logger import logger
 from ubo_app.store.core.types import MainAction, MainEvent, MainState
 from ubo_app.store.input.reducer import reducer as input_reducer
@@ -555,7 +555,6 @@ store.dispatch(
     ),
 )
 
-if DEBUG_MODE:
-    store._subscribe(  # noqa: SLF001
-        lambda state: logger.verbose('State updated', extra={'state': state}),
-    )
+store._subscribe(  # noqa: SLF001
+    lambda state: logger.verbose('State updated', extra={'state': state}),
+)

@@ -729,11 +729,31 @@
                                   "icon": "󰄱",
                                   "is_short": false,
                                   "key": null,
-                                  "label": "Debug",
+                                  "label": "PDB Signal",
                                   "opacity": null,
                                   "progress": null,
                                   "store_action": {
-                                    "_type": "SettingsToggleDebugModeAction"
+                                    "_type": "SettingsTogglePdbSignalAction"
+                                  }
+                                },
+                                {
+                                  "_type": "DispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Visual Debug",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "SettingsToggleVisualDebugAction"
                                   }
                                 }
                               ],
@@ -6174,7 +6194,7 @@
   },
   "settings": {
     "_type": "SettingsState",
-    "is_debug_enabled": false,
+    "pdb_signal": false,
     "services": {
       "audio": {
         "_type": "ServiceState",
@@ -6386,7 +6406,8 @@
         "log_level": 10,
         "should_auto_restart": false
       }
-    }
+    },
+    "visual_debug": false
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
@@ -6691,7 +6712,6 @@
     "current_version": "0.0.0",
     "is_update_service_active": false,
     "latest_version": "0.0.0",
-    "serial_number": "<not-available>",
     "update_status": "up_to_date"
   },
   "users": {
