@@ -25,7 +25,9 @@ from ubo_app.store.update_manager.types import (
     UpdateManagerAction,
     UpdateManagerCheckEvent,
     UpdateManagerEvent,
-    UpdateManagerSetStatusAction,
+    UpdateManagerReportFailedCheckAction,
+    UpdateManagerRequestCheckAction,
+    UpdateManagerRequestUpdateAction,
     UpdateManagerSetUpdateServiceStatusAction,
     UpdateManagerSetVersionsAction,
     UpdateManagerState,
@@ -39,7 +41,7 @@ def reducer(
     action: UpdateManagerAction,
 ) -> ReducerResult[
     UpdateManagerState,
-    UpdateManagerSetStatusAction | NotificationsAction,
+    NotificationsAction,
     UpdateManagerEvent,
 ]:
     if state is None:
@@ -53,6 +55,7 @@ def reducer(
             current_version=action.current_version,
             base_image_variant=action.base_image_variant,
             latest_version=action.latest_version,
+            recent_versions=action.recent_versions,
         )
         version_comparison = 1
         with contextlib.suppress(ValueError):
@@ -67,9 +70,11 @@ def reducer(
             version_comparison = latest_version.compare(current_version)
         if version_comparison > 0 and not state.is_update_service_active:
             return CompleteReducerResult(
-                state=state,
+                state=replace(
+                    state,
+                    update_status=UpdateStatus.OUTDATED,
+                ),
                 actions=[
-                    UpdateManagerSetStatusAction(status=UpdateStatus.OUTDATED),
                     NotificationsAddAction(
                         notification=Notification(
                             id=UPDATE_MANAGER_NOTIFICATION_ID,
@@ -86,24 +91,23 @@ the About menu to update.""",
                     ),
                 ],
             )
+        return replace(state, update_status=UpdateStatus.UP_TO_DATE)
+
+    if isinstance(action, UpdateManagerRequestCheckAction):
         return CompleteReducerResult(
-            state=state,
-            actions=[UpdateManagerSetStatusAction(status=UpdateStatus.UP_TO_DATE)],
+            state=replace(state, update_status=UpdateStatus.CHECKING),
+            events=[UpdateManagerCheckEvent()],
         )
 
-    if isinstance(action, UpdateManagerSetStatusAction):
-        events = []
-        if action.status == UpdateStatus.CHECKING:
-            events.append(UpdateManagerCheckEvent())
-        elif action.status == UpdateStatus.UPDATING:
-            events.append(UpdateManagerUpdateEvent())
-
+    if isinstance(action, UpdateManagerReportFailedCheckAction):
         return CompleteReducerResult(
-            state=replace(
-                state,
-                update_status=action.status,
-            ),
-            events=events,
+            state=replace(state, update_status=UpdateStatus.FAILED_TO_CHECK),
+        )
+
+    if isinstance(action, UpdateManagerRequestUpdateAction):
+        return CompleteReducerResult(
+            state=replace(state, update_status=UpdateStatus.UPDATING),
+            events=[UpdateManagerUpdateEvent(version=action.version)],
         )
 
     if isinstance(action, UpdateManagerSetUpdateServiceStatusAction):

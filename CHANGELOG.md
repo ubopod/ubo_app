@@ -34,6 +34,7 @@
 - refactor(core): organize debug environment variables and add `UBO_DEBUG_PDB_SIGNAL` to settings menu of the gui and make debug flags set in the settings menu persistent
 - refactor(speech-synthesis): remove piper model from repository and provide download menu item for it - closes #165
 - fix(system): add an `asyncio.sleep` to the read loop to avoid high cpu usage
+- feat(core): let the user upgrade/downgrade to any of the last three release versions, add a menu item in settings to enable beta upgrade/downgrade to beta versions
 
 ## Version 1.3.0
 

@@ -26,10 +26,9 @@ from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
 from ubo_app.store.update_manager.types import (
     UpdateManagerCheckEvent,
-    UpdateManagerSetStatusAction,
+    UpdateManagerRequestCheckAction,
     UpdateManagerSetUpdateServiceStatusAction,
     UpdateManagerUpdateEvent,
-    UpdateStatus,
 )
 from ubo_app.store.update_manager.utils import (
     check_version,
@@ -183,6 +182,10 @@ def setup_side_effects() -> Subscriptions:
         'settings:visual_debug',
         lambda state: state.settings.visual_debug,
     )
+    register_persistent_store(
+        'settings:beta_versions',
+        lambda state: state.settings.beta_versions,
+    )
     subscriptions = [
         store.subscribe_event(PowerOffEvent, _power_off),
         store.subscribe_event(RebootEvent, _reboot),
@@ -215,7 +218,7 @@ def setup_side_effects() -> Subscriptions:
         else:
             signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 
-    store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
+    store.dispatch(UpdateManagerRequestCheckAction())
 
     from ubo_app.utils.monitor_unit import monitor_unit
 

@@ -30,6 +30,7 @@ from ubo_app.constants import (
     DEBUG_TASKS,
     DISABLED_SERVICES,
     ENABLED_SERVICES,
+    PACKAGE_NAME,
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
 )
@@ -109,7 +110,7 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         _: Sequence[str] | None,
         target: ModuleType | None = None,
     ) -> ModuleSpec | None:
-        if fullname.startswith('ubo_app'):
+        if fullname.startswith(PACKAGE_NAME):
             return None
 
         try:

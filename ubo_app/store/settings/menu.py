@@ -8,6 +8,7 @@ from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.settings.services import service_items
 from ubo_app.store.settings.types import (
+    SettingsToggleBetaVersionsAction,
     SettingsTogglePdbSignalAction,
     SettingsToggleVisualDebugAction,
 )
@@ -21,6 +22,11 @@ def _pdb_debug_icon(pdb_signal: bool) -> str:  # noqa: FBT001
 @store.autorun(lambda state: state.settings.visual_debug)
 def _visual_debug_icon(visual_debug: bool) -> str:  # noqa: FBT001
     return '󰱒' if visual_debug else '󰄱'
+
+
+@store.autorun(lambda state: state.settings.beta_versions)
+def _beta_versions_icon(beta_versions: bool) -> str:  # noqa: FBT001
+    return '󰱒' if beta_versions else '󰄱'
 
 
 SYSTEM_MENU: list[SubMenuItem] = [
@@ -40,6 +46,11 @@ SYSTEM_MENU: list[SubMenuItem] = [
                     label='Visual Debug',
                     store_action=SettingsToggleVisualDebugAction(),
                     icon=_visual_debug_icon,
+                ),
+                DispatchItem(
+                    label='Beta Versions',
+                    store_action=SettingsToggleBetaVersionsAction(),
+                    icon=_beta_versions_icon,
                 ),
             ],
         ),

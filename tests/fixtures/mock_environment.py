@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import random
 import sys
 import tracemalloc
@@ -157,6 +158,14 @@ def _monkeypatch_aiohttp() -> None:
             return {
                 'info': {
                     'version': '0.0.0',
+                },
+                'releases': {
+                    '0.0.0': [
+                        {
+                            'upload_time': datetime.datetime.fromordinal(1).isoformat(),
+                            'yanked': False,
+                        },
+                    ],
                 },
             }
 

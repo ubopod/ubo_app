@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 
 async def download_file(
+    *,
     url: str,
     path: Path,
 ) -> AsyncGenerator[tuple[int, int | None], None]:

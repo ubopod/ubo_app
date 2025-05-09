@@ -7,14 +7,15 @@ from pathlib import Path
 import platformdirs
 from str_to_bool import str_to_bool
 
+if __package__ is None:
+    msg = 'The package name is not set.'
+    raise ValueError(msg)
+PACKAGE_NAME = __package__
 USERNAME = os.environ.get('UBO_USERNAME', 'ubo')
-INSTALLER_URL = os.environ.get(
-    'UBO_INSTALLER_URL',
-    'https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh',
-)
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
 
 DEBUG_VISUAL = str_to_bool(os.environ.get('UBO_DEBUG_VISUAL', 'False'))
+DEBUG_BETA_VERSIONS = str_to_bool(os.environ.get('UBO_DEBUG_BETA_VERSIONS', 'False'))
 DEBUG_PDB_SIGNAL = str_to_bool(os.environ.get('UBO_DEBUG_PDB_SIGNAL', 'False'))
 DEBUG_TASKS = str_to_bool(os.environ.get('UBO_DEBUG_TASKS', 'False'))
 DEBUG_DOCKER = str_to_bool(os.environ.get('UBO_DEBUG_DOCKER', 'False'))
