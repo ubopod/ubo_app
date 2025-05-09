@@ -83,8 +83,8 @@ def download_vosk_model() -> None:
             VOSK_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
 
             async for downloaded_bytes, size in download_file(
-                VOSK_MODEL_URL,
-                VOSK_DOWNLOAD_PATH,
+                url=VOSK_MODEL_URL,
+                path=VOSK_DOWNLOAD_PATH,
             ):
                 if size:
                     _update_download_notification(

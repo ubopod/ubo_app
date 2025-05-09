@@ -30,6 +30,7 @@ from ubo_app.system.system_manager.led import LEDManager
 from ubo_app.system.system_manager.package import package_handler
 from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
+from ubo_app.system.system_manager.update_manager import update_handler
 from ubo_app.system.system_manager.users import users_handler
 from ubo_app.utils.error_handlers import setup_error_handling
 from ubo_app.utils.pod_id import get_pod_id, set_pod_id
@@ -60,6 +61,7 @@ def handle_command(command: str, connection: socket.socket) -> None:
                 'audio': audio_handler,
                 'hotspot': hotspot_handler,
                 'infrared': infrared_handler,
+                'update': update_handler,
             }
             if header in handlers:
                 response = handlers[header](*arguments)

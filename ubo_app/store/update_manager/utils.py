@@ -5,47 +5,51 @@ from __future__ import annotations
 import asyncio
 import importlib.metadata
 import shutil
+import tarfile
+from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import aiohttp
 import requests
-from kivy.clock import Clock
-from redux import FinishEvent
-from ubo_gui.menu.menu_widget import math
-from ubo_gui.menu.types import Item
+from debouncer import DebounceOptions, debounce
+from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_app.constants import (
     INSTALLATION_PATH,
-    INSTALLER_URL,
+    PACKAGE_NAME,
     UPDATE_ASSETS_PATH,
-    UPDATE_LOCK_PATH,
 )
 from ubo_app.logger import logger
-from ubo_app.store.core.types import RebootAction
 from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
-    Importance,
     Notification,
     NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
-    NotificationsClearByIdAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
-    UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
-    UpdateManagerSetStatusAction,
+    UpdateManagerReportFailedCheckAction,
+    UpdateManagerRequestCheckAction,
+    UpdateManagerRequestUpdateAction,
     UpdateManagerSetVersionsAction,
     UpdateManagerState,
+    UpdateManagerUpdateEvent,
     UpdateStatus,
 )
 from ubo_app.utils import IS_RPI
+from ubo_app.utils.download import download_file
+from ubo_app.utils.server import send_command
 
-CURRENT_VERSION = importlib.metadata.version('ubo_app')
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+CURRENT_VERSION = importlib.metadata.version(PACKAGE_NAME)
 if IS_RPI:
     try:
         BASE_IMAGE = Path('/etc/ubo_base_image').read_text()
@@ -61,11 +65,12 @@ BASE_IMAGE_VARIANT = (
 )
 
 
-async def check_version() -> None:
+@store.with_state(lambda state: state.settings.beta_versions)
+@debounce(10, options=DebounceOptions(leading=True, trailing=False, time_window=10))
+async def check_version(beta_versions: bool) -> None:  # noqa: FBT001
     """Check for updates."""
-    logger.info('Checking for updates...')
+    logger.info('Checking for updates...', extra={'beta_versions': beta_versions})
 
-    # Check PyPI server for the latest version
     try:
         async with (
             aiohttp.ClientSession() as session,
@@ -78,7 +83,33 @@ async def check_version() -> None:
                 logger.error('Failed to check for updates')
                 return
             data = await response.json()
-            latest_version = data['info']['version']
+            if beta_versions:
+                recent_versions = [
+                    version
+                    for version, data in data['releases'].items()
+                    if not data[0]['yanked']
+                ]
+                recent_versions = sorted(
+                    recent_versions,
+                    key=lambda x: data['releases'][x][0]['upload_time'],
+                    reverse=True,
+                )[:12]
+            else:
+                recent_versions = [
+                    version
+                    for version, data in data['releases'].items()
+                    if '.dev' not in version and not data[0]['yanked']
+                ]
+                recent_versions = sorted(
+                    recent_versions,
+                    key=lambda x: data['releases'][x][0]['upload_time'],
+                    reverse=True,
+                )[:3]
+
+            if beta_versions:
+                latest_version = recent_versions[0]
+            else:
+                latest_version = data['info']['version']
 
             store.dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
@@ -87,181 +118,191 @@ async def check_version() -> None:
                     current_version=CURRENT_VERSION,
                     base_image_variant=BASE_IMAGE_VARIANT,
                     latest_version=latest_version,
+                    recent_versions=recent_versions,
                 ),
             )
     except Exception:
         logger.exception('Failed to check for updates')
-        store.dispatch(
-            UpdateManagerSetStatusAction(status=UpdateStatus.FAILED_TO_CHECK),
-        )
+        store.dispatch(UpdateManagerReportFailedCheckAction())
         return
 
 
-async def update() -> None:
-    """Update the Ubo app."""
-    logger.info('Updating Ubo app...')
-
-    extra_information = ReadableInformation(
+UPDATE_PROGRESS_NOTIFICATION = Notification(
+    id=UPDATE_MANAGER_NOTIFICATION_ID,
+    title='Update in progress',
+    content='Downloading the latest version of the install script...',
+    extra_information=ReadableInformation(
         text="""\
 The download progress is shown in the radial progress bar at the top left corner of \
 the screen.
-Once the download is complete, the system will reboot to apply the update.
-Then another reboot will be done to complete the update process.""",
+Once the download is complete, ubo app will quit and the new version will run.""",
+    ),
+    display_type=NotificationDisplayType.STICKY,
+    color=INFO_COLOR,
+    icon='󰇚',
+    blink=False,
+    progress=0,
+    show_dismiss_action=False,
+)
+
+
+async def _update(target_version: str | None) -> None:
+    store.dispatch(NotificationsAddAction(notification=UPDATE_PROGRESS_NOTIFICATION))
+
+    shutil.rmtree(UPDATE_ASSETS_PATH, ignore_errors=True)
+    UPDATE_ASSETS_PATH.mkdir(parents=True, exist_ok=True)
+
+    packages_count_path = f'{INSTALLATION_PATH}/.packages-count'
+    try:
+        packages_count = int(Path(packages_count_path).read_text(encoding='utf-8'))
+        _ = 1 / packages_count
+    except (FileNotFoundError, ValueError, ZeroDivisionError):
+        packages_count = 112
+    counter = 0
+
+    async for report in download_file(
+        url=f'https://files.pythonhosted.org/packages/source/u/ubo_app/ubo_app-{target_version}.tar.gz',
+        path=UPDATE_ASSETS_PATH / 'package.tar.gz',
+    ):
+        store.dispatch(
+            NotificationsAddAction(
+                notification=replace(
+                    UPDATE_PROGRESS_NOTIFICATION,
+                    progress=(report[0] / report[1]) * 0.05 if report[1] else 0,
+                ),
+            ),
+        )
+
+    with tarfile.open(
+        UPDATE_ASSETS_PATH / 'package.tar.gz',
+        'r:gz',
+    ) as tar:
+        install_file_info = next(
+            (
+                m
+                for m in tar.getmembers()
+                if m.name.endswith('ubo_app/system/scripts/install.sh')
+            ),
+            None,
+        )
+        if not install_file_info:
+            msg = 'Failed to extract install.sh'
+            raise RuntimeError(msg)
+        install_file_info.name = 'install.sh'
+        tar.extract(install_file_info, path=UPDATE_ASSETS_PATH)
+
+    (UPDATE_ASSETS_PATH / 'install.sh').chmod(0o755)
+
+    store.dispatch(
+        NotificationsAddAction(
+            notification=replace(
+                UPDATE_PROGRESS_NOTIFICATION,
+                content='Running the `install.sh` script...',
+                progress=0.06,
+            ),
+        ),
     )
 
-    async def download_files() -> None:
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=UPDATE_MANAGER_NOTIFICATION_ID,
-                    title='Update in progress',
-                    content='Downloading the latest version of the install script...',
-                    extra_information=extra_information,
-                    display_type=NotificationDisplayType.STICKY,
-                    color=INFO_COLOR,
-                    icon='󰇚',
-                    blink=False,
-                    progress=0,
-                    show_dismiss_action=False,
-                ),
-            ),
+    def handle_package_collection_progress(line: str) -> tuple[float, str]:
+        """Handle package collection progress."""
+        nonlocal counter
+        counter += 1
+        package_name = line.partition(' ')[2].strip()
+        return (
+            min((counter + 1) / packages_count, 1) * 0.3 + 0.2,
+            f'Downloading {package_name}',
         )
 
-        shutil.rmtree(UPDATE_ASSETS_PATH, ignore_errors=True)
-        UPDATE_ASSETS_PATH.mkdir(parents=True, exist_ok=True)
+    progress_map: dict[str, tuple[float, str] | Callable[[str], tuple[float, str]]] = {
+        'Installing dependencies...': (0.07, 'Installing system dependencies...'),
+        'Setting up Python virtual environment...': (
+            0.19,
+            'Setting up Python virtual environment...',
+        ),
+        'Installing packages...': (0.2, 'Installing Python packages...'),
+        'Collecting ': handle_package_collection_progress,
+        'Installing collected packages: ': (
+            0.51,
+            'Installing collected packages...',
+        ),
+        'ubo-app installed successfully in ': (
+            0.7,
+            'ubo-app package installed successfully.',
+        ),
+        'Installing WM8960 driver...': (0.71, 'Installing WM8960 driver...'),
+        'WM8960 driver installed successfully.': (
+            0.8,
+            'WM8960 driver installed successfully.',
+        ),
+        'Installing Docker...': (0.81, 'Installing Docker...'),
+        'Docker installed successfully.': (
+            0.9,
+            'Docker installed successfully.',
+        ),
+        'Bootstrapping ubo-app...': (0.9, 'Bootstrapping ubo-app...'),
+        'Bootstrapping completed': (1, 'Bootstrapping completed'),
+    }
 
-        packages_count_path = f'{INSTALLATION_PATH}/.packages-count'
-        try:
-            packages_count = int(Path(packages_count_path).read_text(encoding='utf-8'))
-        except FileNotFoundError:
-            packages_count = 55
-        packages_count *= 2
-        packages_count += 1
-        counter = 0
-
-        process = await asyncio.create_subprocess_exec(
-            '/usr/bin/env',
-            'curl',
-            '-Lk',
-            INSTALLER_URL,
-            '--output',
-            UPDATE_ASSETS_PATH / 'install.sh',
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        await process.wait()
-        (UPDATE_ASSETS_PATH / 'install.sh').chmod(0o755)
-
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=UPDATE_MANAGER_NOTIFICATION_ID,
-                    title='Update in progress',
-                    content='Fetching the latest version of Ubo app...',
-                    extra_information=extra_information,
-                    display_type=NotificationDisplayType.BACKGROUND,
-                    color=INFO_COLOR,
-                    icon='󰇚',
-                    blink=False,
-                    progress=1 / packages_count,
-                    show_dismiss_action=False,
-                ),
-            ),
-        )
-
-        process = await asyncio.create_subprocess_exec(
-            '/usr/bin/env',
-            'pip',
-            'download',
-            '--dest',
-            UPDATE_ASSETS_PATH,
-            'setuptools',
-            'wheel',
-            'ubo-app',
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        if process.stdout is None:
-            logger.info('Failed to update (pip has no stdout)')
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='Failed to update',
-                        content='Failed to download packages',
-                        display_type=NotificationDisplayType.FLASH,
-                        color=DANGER_COLOR,
-                        icon='󰜺',
-                        chime=Chime.FAILURE,
-                    ),
-                ),
-                UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
-            )
-            return
-
-        while True:
-            line = (await process.stdout.readline()).decode()
-            if not line:
-                break
-            if line.startswith(('Collecting', 'Requirement already satisfied')):
-                counter += 1
+    async for line in await send_command(
+        'update',
+        target_version or '',
+        has_output=True,
+    ):
+        for key, report_ in progress_map.items():
+            if line.startswith(key):
+                report = report_(line) if callable(report_) else report_
+                progress, message = report
                 store.dispatch(
                     NotificationsAddAction(
-                        notification=Notification(
-                            id=UPDATE_MANAGER_NOTIFICATION_ID,
-                            title='Update in progress',
-                            content=f'Downloading {line.partition(" ")[2].strip()}',
-                            extra_information=extra_information,
-                            display_type=NotificationDisplayType.BACKGROUND,
-                            color=INFO_COLOR,
-                            icon='󰇚',
-                            blink=False,
-                            progress=min((counter + 1) / packages_count, 1),
-                            show_dismiss_action=False,
+                        notification=replace(
+                            UPDATE_PROGRESS_NOTIFICATION,
+                            content=message,
+                            progress=progress,
                         ),
                     ),
                 )
-        await process.wait()
+                if progress == 1:
+                    await asyncio.sleep(1)
+                    break
+        else:
+            continue
+        break
+    else:
+        msg = 'Failed to update: install script failed, check system manager logs.'
+        logger.info(msg)
+        raise RuntimeError(msg)
 
-        if process.returncode != 0:
-            msg = 'Failed to download packages'
-            raise RuntimeError(msg)
-
-        # Update the packages count estimate for the next update
-        Path(packages_count_path).write_text(str(counter), encoding='utf-8')
-
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=UPDATE_MANAGER_NOTIFICATION_ID,
-                    title='Update in progress',
-                    content="""\
-All packages downloaded successfully.
-Press 󰜉 button to reboot now or dismiss this notification to reboot later.""",
-                    extra_information=ReadableInformation(
-                        text="""\
-After the reboot, the system will apply the update.
-This part may take around 20 minutes to complete.
-Then another reboot will be done to complete the update process.""",
-                    ),
-                    actions=[
-                        NotificationDispatchItem(
-                            icon='󰜉',
-                            store_action=RebootAction(),
-                        ),
-                    ],
-                    display_type=NotificationDisplayType.STICKY,
-                    color=INFO_COLOR,
-                    icon='󰇚',
-                    progress=1,
-                    show_dismiss_action=False,
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id=UPDATE_MANAGER_NOTIFICATION_ID,
+                title='Update Complete',
+                content="""\
+Ubo App will restart now.""",
+                extra_information=ReadableInformation(
+                    text='In a few seconds, the ubo app should restart itself and run '
+                    'the newly installed version.',
                 ),
+                display_type=NotificationDisplayType.STICKY,
+                color=SUCCESS_COLOR,
+                icon='󰄬',
+                progress=1,
+                show_dismiss_action=False,
             ),
-        )
+        ),
+    )
 
-        UPDATE_LOCK_PATH.touch()
+
+async def update(event_request_event: UpdateManagerUpdateEvent) -> None:
+    """Update the Ubo app."""
+    logger.info('Updating Ubo app...')
+    target_version = event_request_event.version
+
+    if target_version is None:
+        return
 
     try:
-        await download_files()
+        await _update(target_version)
     except Exception:
         logger.exception('Failed to update')
         store.dispatch(
@@ -275,7 +316,7 @@ Then another reboot will be done to complete the update process.""",
                     chime=Chime.FAILURE,
                 ),
             ),
-            UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
+            UpdateManagerRequestCheckAction(),
         )
         return
 
@@ -284,6 +325,49 @@ Then another reboot will be done to complete the update process.""",
 def about_menu_items(state: UpdateManagerState) -> list[Item]:
     """Get the update menu items."""
     items: list[Item] = []
+
+    store.dispatch(UpdateManagerRequestCheckAction())
+
+    recent_versions_item = SubMenuItem(
+        key='recent_versions',
+        label='Recent versions',
+        icon='󰜉',
+        sub_menu=HeadlessMenu(
+            title='󰜉Recent versions',
+            items=[
+                DispatchItem(
+                    label=version,
+                    store_action=NotificationsAddAction(
+                        notification=Notification(
+                            title=f'Install {version} now?',
+                            content='Press 󰜉 button to start installation of version '
+                            f'"{version}"',
+                            icon='󰜉',
+                            extra_information=ReadableInformation(
+                                text="""Do you want to replace the current installed \
+version of ubo-app with the selected version?""",
+                            ),
+                            color=INFO_COLOR,
+                            dismiss_on_close=True,
+                            display_type=NotificationDisplayType.STICKY,
+                            show_dismiss_action=True,
+                            actions=[
+                                NotificationDispatchItem(
+                                    icon='󰜉',
+                                    store_action=UpdateManagerRequestUpdateAction(
+                                        version=version,
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                    icon='󰜉',
+                )
+                for version in state.recent_versions
+            ],
+        ),
+    )
+
     if state.update_status is UpdateStatus.CHECKING:
         items = [
             Item(
@@ -296,7 +380,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         items = [
             DispatchItem(
                 label='Failed to check for updates',
-                store_action=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
+                store_action=UpdateManagerRequestCheckAction(),
                 icon='󰜺',
                 background_color=DANGER_COLOR,
             ),
@@ -306,18 +390,48 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             DispatchItem(
                 label='Already up to date!',
                 icon='󰄬',
-                store_action=UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING),
+                store_action=UpdateManagerRequestCheckAction(),
                 background_color=SUCCESS_COLOR,
                 color='#000000',
             ),
+            recent_versions_item,
         ]
     if state.update_status is UpdateStatus.OUTDATED:
         items = [
-            DispatchItem(
-                label=f'Update to v{state.latest_version}',
-                store_action=UpdateManagerSetStatusAction(status=UpdateStatus.UPDATING),
-                icon='󰬬',
+            *(
+                []
+                if state.latest_version is None
+                else [
+                    DispatchItem(
+                        label=f'Update to v{state.latest_version}',
+                        icon='󰬬',
+                        store_action=NotificationsAddAction(
+                            notification=Notification(
+                                title=f'Install {state.latest_version} now?',
+                                content='Press 󰬬 button to start installation of '
+                                f'version "{state.latest_version}"',
+                                icon='󰬬',
+                                extra_information=ReadableInformation(
+                                    text='Do you want to update to the latest version?',
+                                ),
+                                color=INFO_COLOR,
+                                dismiss_on_close=True,
+                                display_type=NotificationDisplayType.STICKY,
+                                show_dismiss_action=True,
+                                actions=[
+                                    NotificationDispatchItem(
+                                        icon='󰬬',
+                                        store_action=UpdateManagerRequestUpdateAction(
+                                            version=state.latest_version,
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ),
+                    ),
+                ]
             ),
+            recent_versions_item,
         ]
     if state.update_status is UpdateStatus.UPDATING:
         items = [
@@ -329,61 +443,3 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
         ]
 
     return items
-
-
-@store.view(
-    lambda state: any(
-        notification.id == UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID
-        for notification in state.notifications.notifications
-    ),
-)
-def dispatch_notification(is_presented: bool, _: float = 0) -> None:  # noqa: FBT001
-    """Dispatch the notification."""
-    store.dispatch(
-        NotificationsAddAction(
-            notification=Notification(
-                id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
-                title='Update in progress',
-                content="""\
-Please keep the device powered on.
-This may take around 20 minutes to complete.""",
-                importance=Importance.LOW,
-                icon='',
-                display_type=NotificationDisplayType.BACKGROUND
-                if is_presented
-                else NotificationDisplayType.STICKY,
-                show_dismiss_action=False,
-                dismiss_on_close=False,
-                color=INFO_COLOR,
-                progress=math.nan,
-                blink=not is_presented,
-            ),
-        ),
-    )
-
-
-def sync_with_update_service() -> None:
-    """Run an autorun to show a notification when the update service is running."""
-    update_clock_event = Clock.create_trigger(
-        dispatch_notification,
-        timeout=2,
-        interval=True,
-    )
-
-    store.subscribe_event(FinishEvent, update_clock_event.cancel)
-
-    @store.autorun(
-        lambda state: state.update_manager.is_update_service_active,
-    )
-    async def _(is_running: bool) -> None:  # noqa: FBT001
-        if is_running:
-            dispatch_notification()
-            update_clock_event()
-        else:
-            update_clock_event.cancel()
-            await asyncio.sleep(0.2)
-            store.dispatch(
-                NotificationsClearByIdAction(
-                    id=UPDATE_MANAGER_SECOND_PHASE_NOTIFICATION_ID,
-                ),
-            )

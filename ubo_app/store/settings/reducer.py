@@ -34,15 +34,21 @@ from ubo_app.store.settings.types import (
     SettingsState,
     SettingsStopServiceAction,
     SettingsStopServiceEvent,
+    SettingsToggleBetaVersionsAction,
     SettingsTogglePdbSignalAction,
     SettingsToggleVisualDebugAction,
 )
+from ubo_app.store.update_manager.types import UpdateManagerRequestCheckAction
 
 
 def reducer(
     state: SettingsState | None,
     action: SettingsAction | InitAction,
-) -> ReducerResult[SettingsState, NotificationsAddAction, SettingsEvent]:
+) -> ReducerResult[
+    SettingsState,
+    UpdateManagerRequestCheckAction | NotificationsAddAction,
+    SettingsEvent,
+]:
     """Reducer for the settings state."""
     if state is None:
         if isinstance(action, InitAction):
@@ -85,6 +91,28 @@ def reducer(
         return replace(
             state,
             visual_debug=not state.visual_debug,
+        )
+
+    if isinstance(action, SettingsToggleBetaVersionsAction):
+        return CompleteReducerResult(
+            state=replace(
+                state,
+                beta_versions=not state.beta_versions,
+            ),
+            actions=[
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Beta Versions',
+                        content='Go to the About menu and select "Recent Versions" to '
+                        'continue.',
+                        icon='󰒓',
+                        color=SUCCESS_COLOR,
+                    ),
+                ),
+                UpdateManagerRequestCheckAction(),
+            ]
+            if not state.beta_versions
+            else [],
         )
 
     if isinstance(action, SettingsSetServicesAction):

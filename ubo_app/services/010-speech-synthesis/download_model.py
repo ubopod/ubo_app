@@ -86,8 +86,11 @@ def download_piper_model(*, callback: Callable[[], None]) -> None:
             PIPER_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
 
             async for download_report in aiostream.stream.ziplatest(
-                download_file(PIPER_MODEL_URL, PIPER_MODEL_PATH),
-                download_file(f'{PIPER_MODEL_URL}.json', PIPER_MODEL_JSON_PATH),
+                download_file(url=PIPER_MODEL_URL, path=PIPER_MODEL_PATH),
+                download_file(
+                    url=f'{PIPER_MODEL_URL}.json',
+                    path=PIPER_MODEL_JSON_PATH,
+                ),
                 default=(0, None),
             ):
                 downloaded_bytes, size = reduce(

@@ -37,6 +37,7 @@
 - refactor(system): allow `send_command` to stay alive and stream responses over time to the client, useful for infrared service for example
 - fix(core): postpone touching `app_ready` signal file until all services' setup functions are done
 - fix(audio): the volume bar sometimes not being in sync with playback volume
+- feat(core): let the user upgrade/downgrade to any of the last three release versions, add a menu item in settings to enable beta upgrade/downgrade to beta versions - closes #260, closes 178
 
 ## Version 1.3.0
 

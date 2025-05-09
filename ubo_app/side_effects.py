@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 from redux import FinishAction
 
-from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store.core.types import (
     PowerOffEvent,
     RebootEvent,
@@ -24,21 +23,13 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
-from ubo_app.store.settings.types import ServicesStatus
 from ubo_app.store.update_manager.types import (
     UpdateManagerCheckEvent,
-    UpdateManagerSetStatusAction,
-    UpdateManagerSetUpdateServiceStatusAction,
+    UpdateManagerRequestCheckAction,
     UpdateManagerUpdateEvent,
-    UpdateStatus,
 )
-from ubo_app.store.update_manager.utils import (
-    check_version,
-    sync_with_update_service,
-    update,
-)
+from ubo_app.store.update_manager.utils import check_version, update
 from ubo_app.utils import bus_provider
-from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI, deinitalize_board, initialize_board
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.store import replay_actions
@@ -79,15 +70,6 @@ def _reboot() -> None:
             )
 
         atexit.register(reboot_system)
-
-
-def _check_update(status: str) -> None:
-    """Check the status of the update service and update the store accordingly."""
-    store.dispatch(
-        UpdateManagerSetUpdateServiceStatusAction(
-            is_active=status in ('active', 'activating', 'reloading'),
-        ),
-    )
 
 
 def _write_image(image_path: Path, array: NDArray) -> None:
@@ -184,6 +166,10 @@ def setup_side_effects() -> Subscriptions:
         'settings:visual_debug',
         lambda state: state.settings.visual_debug,
     )
+    register_persistent_store(
+        'settings:beta_versions',
+        lambda state: state.settings.beta_versions,
+    )
     subscriptions = [
         store.subscribe_event(PowerOffEvent, _power_off),
         store.subscribe_event(RebootEvent, _reboot),
@@ -216,22 +202,6 @@ def setup_side_effects() -> Subscriptions:
         else:
             signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 
-    @store.autorun(
-        lambda state: state.settings.services_status,
-    )
-    def _set_app_ready(services_status: ServicesStatus) -> None:
-        if services_status == ServicesStatus.READY:
-            Path(INSTALLATION_PATH).mkdir(parents=True, exist_ok=True)
-            (Path(INSTALLATION_PATH) / 'app_ready').touch()
-
-        _set_app_ready.unsubscribe()
-
-    store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
-
-    from ubo_app.utils.monitor_unit import monitor_unit
-
-    create_task(monitor_unit('ubo-update.service', _check_update))
-
-    sync_with_update_service()
+    store.dispatch(UpdateManagerRequestCheckAction())
 
     return subscriptions

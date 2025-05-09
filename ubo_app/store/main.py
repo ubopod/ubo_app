@@ -20,6 +20,7 @@ from typing import (
     Self,
     TypeAlias,
     TypeVar,
+    Union,
     cast,
     get_origin,
     overload,
@@ -50,49 +51,13 @@ from redux.basic_types import (
     SubscribeEventCleanup,
 )
 
-from ubo_app.constants import STORE_GRACE_PERIOD
+from ubo_app.constants import PACKAGE_NAME, STORE_GRACE_PERIOD
 from ubo_app.logger import logger
-from ubo_app.store.core.types import MainAction, MainEvent, MainState
 from ubo_app.store.input.reducer import reducer as input_reducer
-from ubo_app.store.input.types import (
-    InputAction,
-    InputResolveEvent,
-)
 from ubo_app.store.scheduler import Scheduler
-from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
-from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
-from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
-from ubo_app.store.services.docker import DockerAction, DockerState
-from ubo_app.store.services.infrared import InfraredAction, InfraredEvent, InfraredState
-from ubo_app.store.services.ip import IpAction, IpEvent, IpState
-from ubo_app.store.services.keypad import KeypadAction
-from ubo_app.store.services.lightdm import LightDMAction, LightDMState
-from ubo_app.store.services.notifications import (
-    NotificationsAction,
-    NotificationsEvent,
-    NotificationsState,
-)
-from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
-from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
-from ubo_app.store.services.sensors import SensorsAction, SensorsState
-from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionAction,
-    SpeechRecognitionState,
-)
-from ubo_app.store.services.speech_synthesis import (
-    SpeechSynthesisAction,
-    SpeechSynthesisState,
-)
-from ubo_app.store.services.ssh import SSHAction, SSHState
-from ubo_app.store.services.users import UsersAction, UsersEvent, UsersState
-from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
-from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
 from ubo_app.store.settings.reducer import reducer as settings_reducer
-from ubo_app.store.settings.types import SettingsAction, SettingsState
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
-from ubo_app.store.status_icons.types import StatusIconsAction, StatusIconsState
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
-from ubo_app.store.update_manager.types import UpdateManagerAction, UpdateManagerState
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.serializer import add_type_field
 from ubo_app.utils.service import get_coroutine_runner
@@ -105,53 +70,97 @@ if TYPE_CHECKING:
         SnapshotAtom,
         TaskCreatorCallback,
     )
+    from store.settings.types import SettingsAction
 
+    from ubo_app.store.core.types import MainAction, MainEvent, MainState
+    from ubo_app.store.input.types import (
+        InputAction,
+        InputResolveEvent,
+    )
+    from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
+    from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
+    from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
+    from ubo_app.store.services.docker import DockerAction, DockerState
+    from ubo_app.store.services.infrared import (
+        InfraredAction,
+        InfraredEvent,
+        InfraredState,
+    )
+    from ubo_app.store.services.ip import IpAction, IpEvent, IpState
+    from ubo_app.store.services.keypad import KeypadAction
+    from ubo_app.store.services.lightdm import LightDMAction, LightDMState
+    from ubo_app.store.services.notifications import (
+        NotificationsAction,
+        NotificationsEvent,
+        NotificationsState,
+    )
+    from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
+    from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
+    from ubo_app.store.services.sensors import SensorsAction, SensorsState
+    from ubo_app.store.services.speech_recognition import (
+        SpeechRecognitionAction,
+        SpeechRecognitionState,
+    )
+    from ubo_app.store.services.speech_synthesis import (
+        SpeechSynthesisAction,
+        SpeechSynthesisState,
+    )
+    from ubo_app.store.services.ssh import SSHAction, SSHState
+    from ubo_app.store.services.users import UsersAction, UsersEvent, UsersState
+    from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
     from ubo_app.store.services.web_ui import WebUIState
+    from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
+    from ubo_app.store.settings.types import SettingsState
+    from ubo_app.store.status_icons.types import StatusIconsAction, StatusIconsState
+    from ubo_app.store.update_manager.types import (
+        UpdateManagerAction,
+        UpdateManagerState,
+    )
 
-UboAction: TypeAlias = (
+UboAction: TypeAlias = Union[
     # Core Actions
-    CombineReducerAction
-    | InitAction
-    | FinishAction
-    | MainAction
-    | SettingsAction
-    | StatusIconsAction
-    | UpdateManagerAction
-    | InputAction
+    'CombineReducerAction',
+    'InitAction',
+    'FinishAction',
+    'MainAction',
+    'SettingsAction',
+    'StatusIconsAction',
+    'UpdateManagerAction',
+    'InputAction',
     # Services Actions
-    | AudioAction
-    | CameraAction
-    | DisplayAction
-    | DockerAction
-    | InfraredAction
-    | IpAction
-    | KeypadAction
-    | LightDMAction
-    | NotificationsAction
-    | RgbRingAction
-    | RPiConnectAction
-    | SensorsAction
-    | SpeechRecognitionAction
-    | SpeechSynthesisAction
-    | SSHAction
-    | UsersAction
-    | VSCodeAction
-    | WiFiAction
-)
-UboEvent: TypeAlias = (
+    'AudioAction',
+    'CameraAction',
+    'DisplayAction',
+    'DockerAction',
+    'InfraredAction',
+    'IpAction',
+    'KeypadAction',
+    'LightDMAction',
+    'NotificationsAction',
+    'RgbRingAction',
+    'RPiConnectAction',
+    'SensorsAction',
+    'SpeechRecognitionAction',
+    'SpeechSynthesisAction',
+    'SSHAction',
+    'UsersAction',
+    'VSCodeAction',
+    'WiFiAction',
+]
+UboEvent: TypeAlias = Union[
     # Core Events
-    MainEvent
-    | InputResolveEvent
+    'MainEvent',
+    'InputResolveEvent',
     # Services Events
-    | AudioEvent
-    | CameraEvent
-    | DisplayEvent
-    | InfraredEvent
-    | IpEvent
-    | NotificationsEvent
-    | UsersEvent
-    | WiFiEvent
-)
+    'AudioEvent',
+    'CameraEvent',
+    'DisplayEvent',
+    'InfraredEvent',
+    'IpEvent',
+    'NotificationsEvent',
+    'UsersEvent',
+    'WiFiEvent',
+]
 
 if threading.current_thread() is not threading.main_thread():
     msg = 'Store should be created in the main thread'
@@ -291,7 +300,7 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
 
             _ = ubo_app
             file_path = sys.modules[obj.__module__].__file__
-            ubo_app_path = sys.modules['ubo_app'].__file__
+            ubo_app_path = sys.modules[PACKAGE_NAME].__file__
             if file_path and ubo_app_path:
                 root_path = Path(ubo_app_path).parent
                 path = Path(file_path)
