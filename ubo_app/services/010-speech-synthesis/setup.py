@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-import pathlib
+import functools
+import hashlib
+import json
 import struct
 from asyncio import CancelledError
 from queue import Queue
@@ -10,7 +12,10 @@ from typing import TYPE_CHECKING
 
 import fasteners
 import pvorca
+from constants import PIPER_MODEL_HASH, PIPER_MODEL_JSON_PATH, PIPER_MODEL_PATH
+from download_model import download_piper_model
 from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource]
+from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
 from ubo_app.constants import PICOVOICE_ACCESS_KEY
@@ -59,12 +64,8 @@ class _Context:
                 self.picovoice_instance = pvorca.create(access_key)
 
     def load_piper(self: _Context) -> None:
-        self.piper_voice = PiperVoice.load(
-            pathlib.Path(__file__)
-            .parent.joinpath('models/kristin/en_US-kristin-medium.onnx')
-            .resolve()
-            .as_posix(),
-        )
+        if _is_piper_downloaded():
+            self.piper_voice = PiperVoice.load(PIPER_MODEL_PATH)
 
 
 _context = _Context()
@@ -235,23 +236,86 @@ def create_engine_selector(engine: SpeechSynthesisEngine) -> Callable[[], None]:
     return _engine_selector
 
 
-@store.autorun(lambda state: state.speech_synthesis.selected_engine)
-def _speech_synthesis_engine_items(
-    selected_engine: SpeechSynthesisEngine,
-) -> Sequence[ActionItem]:
-    return [
-        (
-            selection_parameters := SELECTED_ITEM_PARAMETERS
-            if engine == selected_engine
-            else UNSELECTED_ITEM_PARAMETERS,
-        )
-        and ActionItem(
-            label=ENGINE_LABELS[engine],
-            action=create_engine_selector(engine),
-            **selection_parameters,
-        )
-        for engine in SpeechSynthesisEngine
-    ]
+def _download_model_callback() -> None:
+    _speech_synthesis_menu()
+    _context.load_piper()
+
+
+def _is_piper_downloaded() -> bool:
+    if not PIPER_MODEL_PATH.exists() or not PIPER_MODEL_JSON_PATH.exists():
+        return False
+
+    with PIPER_MODEL_JSON_PATH.open('r') as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError:
+            return False
+        else:
+            if data['dataset'] != 'kristin':
+                return False
+
+    # check checksum
+    with PIPER_MODEL_PATH.open('rb') as f:
+        sha256_hash = hashlib.sha256()
+
+        for chunk in iter(lambda: f.read(4096), b''):
+            sha256_hash.update(chunk)
+
+        if sha256_hash.hexdigest() != PIPER_MODEL_HASH:
+            return False
+
+    return True
+
+
+@store.autorun(
+    lambda state: state.speech_synthesis.selected_engine,
+    options=AutorunOptions(memoization=False),
+)
+def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngine) -> HeadlessMenu:
+    return HeadlessMenu(
+        title='󰔊Speech Synthesis',
+        items=[
+            *(
+                [
+                    ActionItem(
+                        key='download',
+                        label='Download Piper Model',
+                        icon='󰇚',
+                        action=functools.partial(
+                            download_piper_model,
+                            callback=_download_model_callback,
+                        ),
+                    ),
+                ]
+                if not _is_piper_downloaded()
+                else []
+            ),
+            SubMenuItem(
+                key='select_engine',
+                label='Select Engine',
+                icon='󰔊',
+                sub_menu=HeadlessMenu(
+                    title='󰔊Select Engine' + selected_engine,
+                    items=[
+                        (
+                            selection_parameters := SELECTED_ITEM_PARAMETERS
+                            if engine == selected_engine
+                            else UNSELECTED_ITEM_PARAMETERS,
+                        )
+                        and ActionItem(
+                            label=ENGINE_LABELS[engine],
+                            action=create_engine_selector(engine),
+                            key=engine.name,
+                            **selection_parameters,
+                        )
+                        for engine in SpeechSynthesisEngine
+                        if _is_piper_downloaded()
+                        or engine != SpeechSynthesisEngine.PIPER
+                    ],
+                ),
+            ),
+        ],
+    )
 
 
 def init_service() -> Subscriptions:
@@ -276,10 +340,7 @@ def init_service() -> Subscriptions:
             menu_item=SubMenuItem(
                 label='Speech Synthesis',
                 icon='󰔊',
-                sub_menu=HeadlessMenu(
-                    title='󰔊Speech Synthesis',
-                    items=_speech_synthesis_engine_items,
-                ),
+                sub_menu=_speech_synthesis_menu,
             ),
             key='engines',
         ),

@@ -1,4 +1,5 @@
-# ruff: noqa: D100, D101, D102, D103, D104, D107, N999
+"""Constants for the Vosk speech recognition model."""
+
 from ubo_app.constants import CACHE_PATH
 
 VOSK_MODEL = 'vosk-model-en-us-0.22-lgraph'

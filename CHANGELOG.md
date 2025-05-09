@@ -32,6 +32,7 @@
 - fix(installation): gracefully handle missing file in sed command with || true - closes #281
 - refactor(audio): make setter functions in audio manager try finding card index again and rebind in case of failure
 - refactor(core): organize debug environment variables and add `UBO_DEBUG_PDB_SIGNAL` to settings menu of the gui and make debug flags set in the settings menu persistent
+- refactor(speech-synthesis): remove piper model from repository and provide download menu item for it - closes #165
 
 ## Version 1.3.0
 

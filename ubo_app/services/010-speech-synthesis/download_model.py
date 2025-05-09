@@ -1,15 +1,17 @@
-"""Utilities for downloading and extracting the Vosk model."""
+"""Utilities for downloading and extracting the piper model."""
 
 from __future__ import annotations
 
-import asyncio
 import shutil
+from functools import reduce
+from typing import TYPE_CHECKING
 
+import aiostream
 from constants import (
-    VOSK_DOWNLOAD_NOTIFICATION_ID,
-    VOSK_DOWNLOAD_PATH,
-    VOSK_MODEL_PATH,
-    VOSK_MODEL_URL,
+    PIPER_DOWNLOAD_NOTIFICATION_ID,
+    PIPER_MODEL_JSON_PATH,
+    PIPER_MODEL_PATH,
+    PIPER_MODEL_URL,
 )
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR
@@ -20,10 +22,12 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.speech_recognition import SpeechRecognitionSetIsActiveAction
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.download import download_file
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _update_download_notification(*, progress: float) -> None:
@@ -35,9 +39,9 @@ the screen.""",
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
-                id=VOSK_DOWNLOAD_NOTIFICATION_ID,
+                id=PIPER_DOWNLOAD_NOTIFICATION_ID,
                 title=f'Downloading - {progress:.1%}',
-                content='Vosk speech recognition model',
+                content='Piper speech synthesis model',
                 extra_information=extra_information,
                 display_type=NotificationDisplayType.FLASH
                 if progress == 1
@@ -58,8 +62,8 @@ def _handle_error() -> None:
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
-                id=VOSK_DOWNLOAD_NOTIFICATION_ID,
-                title='Vosk',
+                id=PIPER_DOWNLOAD_NOTIFICATION_ID,
+                title='Piper',
                 content='Failed to download',
                 display_type=NotificationDisplayType.STICKY,
                 color=DANGER_COLOR,
@@ -68,47 +72,43 @@ def _handle_error() -> None:
             ),
         ),
     )
-    shutil.rmtree(VOSK_MODEL_PATH, ignore_errors=True)
+    shutil.rmtree(PIPER_MODEL_PATH, ignore_errors=True)
 
 
-def download_vosk_model() -> None:
-    """Download Vosk model."""
-    shutil.rmtree(VOSK_MODEL_PATH, ignore_errors=True)
+def download_piper_model(*, callback: Callable[[], None]) -> None:
+    """Download Piper model."""
+    shutil.rmtree(PIPER_MODEL_PATH, ignore_errors=True)
 
     _update_download_notification(progress=0)
 
     async def act() -> None:
         try:
-            VOSK_DOWNLOAD_PATH.parent.mkdir(parents=True, exist_ok=True)
-            VOSK_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+            PIPER_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-            async for downloaded_bytes, size in download_file(
-                VOSK_MODEL_URL,
-                VOSK_DOWNLOAD_PATH,
+            async for download_report in aiostream.stream.ziplatest(
+                download_file(PIPER_MODEL_URL, PIPER_MODEL_PATH),
+                download_file(f'{PIPER_MODEL_URL}.json', PIPER_MODEL_JSON_PATH),
+                default=(0, None),
             ):
+                downloaded_bytes, size = reduce(
+                    lambda accumulator, report: (
+                        report[0] + accumulator[0],
+                        (report[1] or 1024**2) + accumulator[1],
+                    )
+                    if report
+                    else accumulator,
+                    download_report,
+                    (0, 0),
+                )
                 if size:
                     _update_download_notification(
                         progress=min(1.0, downloaded_bytes / size),
                     )
 
             _update_download_notification(progress=1.0)
-
-            process = await asyncio.create_subprocess_exec(
-                '/usr/bin/env',
-                'unzip',
-                '-o',
-                VOSK_DOWNLOAD_PATH,
-                '-d',
-                VOSK_MODEL_PATH.parent,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await process.wait()
-            store.dispatch(SpeechRecognitionSetIsActiveAction(is_active=True))
+            callback()
         except Exception:
             _handle_error()
             raise
-        finally:
-            VOSK_DOWNLOAD_PATH.unlink(missing_ok=True)
 
     create_task(act())

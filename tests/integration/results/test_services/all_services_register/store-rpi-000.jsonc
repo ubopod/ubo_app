@@ -5909,24 +5909,7 @@
                               "items": [
                                 {
                                   "_type": "ActionItem",
-                                  "action": "<function:_engine_selector>",
-                                  "background_color": "#03F7AE",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰱒",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Piper",
-                                  "opacity": null,
-                                  "progress": null
-                                },
-                                {
-                                  "_type": "ActionItem",
-                                  "action": "<function:_engine_selector>",
+                                  "action": "<functools.partial:<function:download_piper_model>>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -5934,12 +5917,52 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "󰄱",
+                                  "icon": "󰇚",
                                   "is_short": false,
-                                  "key": null,
-                                  "label": "Picovoice",
+                                  "key": "download",
+                                  "label": "Download Piper Model",
                                   "opacity": null,
                                   "progress": null
+                                },
+                                {
+                                  "_type": "SubMenuItem",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰔊",
+                                  "is_short": false,
+                                  "key": "select_engine",
+                                  "label": "Select Engine",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "_type": "HeadlessMenu",
+                                    "items": [
+                                      {
+                                        "_type": "ActionItem",
+                                        "action": "<function:_engine_selector>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰄱",
+                                        "is_short": false,
+                                        "key": "PICOVOICE",
+                                        "label": "Picovoice",
+                                        "opacity": null,
+                                        "progress": null
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "title": "󰔊Select Enginepiper"
+                                  }
                                 }
                               ],
                               "placeholder": null,
