@@ -102,7 +102,8 @@ class InfraredManager:
             logger.debug('Raw IR output', extra={'line': line})
 
             # Parse lirc protocol lines except repeat codes
-            if 'lirc protocol' not in line or 'repeat' in line:
+            if not line or 'lirc protocol' not in line or 'repeat' in line:
+                await asyncio.sleep(0.1)
                 continue
 
             match = re.search(

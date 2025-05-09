@@ -24,7 +24,7 @@ from ubo_app.logger import (
 from ubo_app.system.system_manager.audio import audio_handler
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.hotspot import hotspot_handler
-from ubo_app.system.system_manager.infrared_receive import infrared_handler
+from ubo_app.system.system_manager.infrared import infrared_handler
 from ubo_app.system.system_manager.led import LEDManager
 from ubo_app.system.system_manager.package import package_handler
 from ubo_app.system.system_manager.reset_button import setup_reset_button
