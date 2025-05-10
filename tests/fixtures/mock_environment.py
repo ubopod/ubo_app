@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import random
 import sys
 import tracemalloc
@@ -114,9 +115,9 @@ def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
 
         return generated_uuid
 
-    from ubo_app.constants import DEBUG_MODE_TEST_UUID
+    from ubo_app.constants import DEBUG_TEST_UUID
 
-    if DEBUG_MODE_TEST_UUID:
+    if DEBUG_TEST_UUID:
         monkeypatch.setattr('uuid.uuid4', debug_uuid4)
     else:
         monkeypatch.setattr(
@@ -157,6 +158,14 @@ def _monkeypatch_aiohttp() -> None:
             return {
                 'info': {
                     'version': '0.0.0',
+                },
+                'releases': {
+                    '0.0.0': [
+                        {
+                            'upload_time': datetime.datetime.fromordinal(1).isoformat(),
+                            'yanked': False,
+                        },
+                    ],
                 },
             }
 

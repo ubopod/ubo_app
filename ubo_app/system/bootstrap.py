@@ -47,39 +47,74 @@ def create_user_service_directory() -> None:
         path = path.parent
 
 
-def create_service_file(service: Service) -> None:
-    """Create the service file."""
-    if service['scope'] == 'user':
-        service_file_path = (
-            f'/home/{USERNAME}/.config/systemd/user/{service["name"]}.service'
-        )
-    elif service['scope'] == 'system':
-        service_file_path = f'/etc/systemd/system/{service["name"]}.service'
-    else:
-        msg = f"Service '{service['name']}' has an invalid scope: {service['scope']}"
-        logger.error(msg)
-        raise ValueError(msg)
-
-    template = (
-        Path(__file__)
-        .parent.joinpath(f'services/{service["name"]}.service.tmpl')
-        .open()
-        .read()
-    )
-
-    content = template.replace(
-        '{{INSTALLATION_PATH}}',
-        INSTALLATION_PATH,
-    ).replace(
-        '{{USERNAME}}',
-        USERNAME,
-    )
-
-    # Write the service content to the file
-    with Path(service_file_path).open('w') as file:
-        file.write(content)
+def create_service_files() -> None:
+    """Create the service files."""
+    create_user_service_directory()
+    for service in SERVICES:
         if service['scope'] == 'user':
-            os.chown(service_file_path, USER_UID, USER_GID)
+            service_file_path = (
+                f'/home/{USERNAME}/.config/systemd/user/{service["name"]}.service'
+            )
+        elif service['scope'] == 'system':
+            service_file_path = f'/etc/systemd/system/{service["name"]}.service'
+        else:
+            msg = (
+                f"Service '{service['name']}' has an invalid scope: {service['scope']}"
+            )
+            logger.error(msg)
+            raise ValueError(msg)
+
+        template = (
+            Path(__file__)
+            .parent.joinpath(f'services/{service["name"]}.service.tmpl')
+            .open()
+            .read()
+        )
+
+        content = template.replace(
+            '{{INSTALLATION_PATH}}',
+            INSTALLATION_PATH,
+        ).replace(
+            '{{USERNAME}}',
+            USERNAME,
+        )
+
+        # Write the service content to the file
+        with Path(service_file_path).open('w') as file:
+            file.write(content)
+            if service['scope'] == 'user':
+                os.chown(service_file_path, USER_UID, USER_GID)
+
+        if service['scope'] == 'user':
+            subprocess.run(  # noqa: S603
+                [
+                    '/usr/bin/env',
+                    'sudo',
+                    f'XDG_RUNTIME_DIR=/run/user/{USER_UID}',
+                    '-u',
+                    USERNAME,
+                    'systemctl',
+                    '--user',
+                    'enable',
+                    service['name'],
+                ],
+                check=True,
+            )
+        elif service['scope'] == 'system':
+            subprocess.run(  # noqa: S603
+                [
+                    '/usr/bin/env',
+                    'systemctl',
+                    'enable' if service['enabled'] else 'disable',
+                    service['name'],
+                ],
+                check=True,
+            )
+
+        logger.info(
+            'Service has been created and enabled.',
+            extra={'service': service['name']},
+        )
 
 
 def reload_daemon() -> None:
@@ -120,43 +155,7 @@ def reload_daemon() -> None:
     )
 
 
-def enable_services() -> None:
-    """Enable the services to start on boot."""
-    for service in SERVICES:
-        # Enable the service to start on boot
-        if service['scope'] == 'user':
-            subprocess.run(  # noqa: S603
-                [
-                    '/usr/bin/env',
-                    'sudo',
-                    f'XDG_RUNTIME_DIR=/run/user/{USER_UID}',
-                    '-u',
-                    USERNAME,
-                    'systemctl',
-                    '--user',
-                    'enable',
-                    service['name'],
-                ],
-                check=True,
-            )
-        elif service['scope'] == 'system':
-            subprocess.run(  # noqa: S603
-                [
-                    '/usr/bin/env',
-                    'systemctl',
-                    'enable' if service['enabled'] else 'disable',
-                    service['name'],
-                ],
-                check=True,
-            )
-
-        logger.info(
-            'Service has been created and enabled.',
-            extra={'service': service['name']},
-        )
-
-
-def configure_fan() -> None:
+def configure_firmware() -> None:
     """Configure the behavior of the fan."""
     current_content = Path('/boot/firmware/config.txt').read_text()
     with Path('/boot/firmware/config.txt').open('a') as config_file:
@@ -189,60 +188,12 @@ def setup_polkit() -> None:
         )
 
 
-def install_docker() -> None:
-    """Install docker."""
-    logger.info('Installing docker...')
-    for i in range(RETRIES):
-        time.sleep(1)
-        stdout.write('.')
-        stdout.flush()
-        try:
-            subprocess.run(  # noqa: S603
-                [Path(__file__).parent.joinpath('install_docker.sh').as_posix()],
-                env={'USERNAME': USERNAME},
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            if i < RETRIES - 1:
-                logger.exception('Failed to install docker, retrying...')
-                continue
-        else:
-            break
-    else:
-        logger.error(
-            'Failed to install docker, giving up!',
-            extra={'times tried': RETRIES},
-        )
-        return
-    stdout.flush()
-
-
-def install_audio_driver(*, in_packer: bool) -> None:
-    """Install the audio driver."""
-    stdout.write('Installing wm8960...\n')
-    stdout.flush()
-    subprocess.run(  # noqa: S603
-        [
-            Path(__file__).parent.joinpath('install_wm8960.sh').as_posix(),
-        ]
-        + (['--in-packer'] if in_packer else []),
-        check=True,
-    )
-    stdout.write('Done installing wm8960\n')
-    stdout.flush()
-
-
-def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
+def bootstrap(*, in_packer: bool = False) -> None:
     """Create the service files and enable the services."""
     # Ensure we have the required permissions
     if os.geteuid() != 0:
         logger.error('This script needs to be run with root privileges.')
         return
-
-    create_user_service_directory()
-
-    for service in SERVICES:
-        create_service_file(service)
 
     if in_packer:
         Path('/var/lib/systemd/linger').mkdir(exist_ok=True, parents=True)
@@ -253,10 +204,9 @@ def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
             check=True,
         )
 
-    configure_fan()
-
+    configure_firmware()
     reload_daemon()
-    enable_services()
+    create_service_files()
 
     # TODO(sassanh): Disable lightdm to disable piwiz to avoid its visual # noqa: FIX002
     # instructions as ubo by nature doesn't need mouse/keyboard, this is a temporary
@@ -270,22 +220,10 @@ def bootstrap(*, with_docker: bool = False, in_packer: bool = False) -> None:
 
     setup_polkit()
 
-    if with_docker:
-        stdout.write('Installing docker...\n')
-        stdout.flush()
-        install_docker()
-        stdout.write('Done installing docker\n')
-        stdout.flush()
-
-    install_audio_driver(in_packer=in_packer)
-
 
 def main() -> None:
     """Run the bootstrap script."""
-    bootstrap(
-        with_docker='--with-docker' in sys.argv,
-        in_packer='--in-packer' in sys.argv,
-    )
+    bootstrap(in_packer='--in-packer' in sys.argv)
     sys.stdout.write('Bootstrap completed.\n')
     sys.stdout.flush()
     sys.exit(0)

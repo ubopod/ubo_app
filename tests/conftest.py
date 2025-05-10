@@ -1,13 +1,13 @@
 """Pytest configuration file for the tests."""
 
-from __future__ import annotations
-
+import json
 import subprocess
 from pathlib import Path
 from typing import cast
 
 import dotenv
 import pytest
+from _pytest.fixtures import SubRequest
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')
@@ -20,7 +20,7 @@ from tests.fixtures import (  # noqa: E402, I001
     MockCamera,
     Stability,
     WaitForEmptyMenu,
-    app_context as original_app_context,
+    app_context,
     camera,
     load_services,
     mock_environment,
@@ -39,6 +39,7 @@ from redux_pytest.fixtures import (  # noqa: E402
     wait_for,
 )
 
+
 fixtures = (
     AppContext,
     LoadServices,
@@ -49,7 +50,7 @@ fixtures = (
     WaitForEmptyMenu,
     WindowSnapshot,
     StoreMonitor,
-    original_app_context,
+    app_context,
     load_services,
     camera,
     mock_environment,
@@ -80,14 +81,21 @@ def snapshot_prefix() -> str:
     return 'desktop'
 
 
-@pytest.fixture
-def app_context(original_app_context: AppContext) -> AppContext:
+@pytest.fixture(autouse=True)
+def _persistent_store(request: SubRequest) -> None:
     """Set defaults for app-context for tests."""
-    original_app_context.set_persistent_storage_value(
-        'wifi_has_visited_onboarding',
-        value=True,
-    )
-    return original_app_context
+    persistent_store_marker = request.node.get_closest_marker('persistent_store')
+    persistent_store_data = {'wifi_has_visited_onboarding': True}
+    if persistent_store_marker:
+        persistent_store_data = {
+            **persistent_store_data,
+            **persistent_store_marker.args[0],
+        }
+
+    from ubo_app.constants import PERSISTENT_STORE_PATH
+
+    PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    PERSISTENT_STORE_PATH.write_text(json.dumps(persistent_store_data))
 
 
 @pytest.fixture(autouse=True)

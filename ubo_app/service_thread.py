@@ -27,9 +27,10 @@ from redux import (
 )
 
 from ubo_app.constants import (
-    DEBUG_MODE_TASKS,
+    DEBUG_TASKS,
     DISABLED_SERVICES,
     ENABLED_SERVICES,
+    PACKAGE_NAME,
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
 )
@@ -109,7 +110,7 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         _: Sequence[str] | None,
         target: ModuleType | None = None,
     ) -> ModuleSpec | None:
-        if fullname.startswith('ubo_app'):
+        if fullname.startswith(PACKAGE_NAME):
             return None
 
         try:
@@ -405,14 +406,14 @@ class UboServiceThread(threading.Thread):
     ) -> asyncio.Handle:
         def task_wrapper(stack: str) -> None:
             task = self.loop.create_task(coroutine)
-            if DEBUG_MODE_TASKS:
+            if DEBUG_TASKS:
                 STACKS[task] = stack
             if callback:
                 callback(task)
 
         return self.loop.call_soon_threadsafe(
             task_wrapper,
-            ''.join(traceback.format_stack()[:-3]) if DEBUG_MODE_TASKS else '',
+            ''.join(traceback.format_stack()[:-3]) if DEBUG_TASKS else '',
         )
 
     async def shutdown(self: UboServiceThread) -> None:

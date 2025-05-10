@@ -53,6 +53,7 @@ dependencies = [
   "betterproto [compiler]>=2.0.0b7",
   "gpiozero>=2.0.1 ; platform_machine != 'aarch64'",
   "adafruit-circuitpython-irremote>=5.0.3",
+  "aiostream>=0.6.4",
 ]
 
 [build-system]
@@ -296,6 +297,7 @@ root = "ubo_app/services/090-web-ui"
 extraPaths = ["."]
 
 [tool.pytest.ini_options]
+markers = ["persistent_store: run test with provided persistent store"]
 asyncio_mode = "auto"
 filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",

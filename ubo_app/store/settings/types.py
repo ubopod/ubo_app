@@ -8,6 +8,9 @@ from pathlib import Path
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
+from ubo_app.constants import DEBUG_BETA_VERSIONS, DEBUG_PDB_SIGNAL, DEBUG_VISUAL
+from ubo_app.utils.persistent_store import read_from_persistent_store
+
 ROOT_PATH = Path(__file__).parent.parent.parent
 
 
@@ -15,8 +18,16 @@ class SettingsAction(BaseAction):
     """Settings action."""
 
 
-class SettingsToggleDebugModeAction(SettingsAction):
-    """Toggle debug mode action."""
+class SettingsTogglePdbSignalAction(SettingsAction):
+    """Toggle PDB signal action."""
+
+
+class SettingsToggleVisualDebugAction(SettingsAction):
+    """Toggle visual debug mode action."""
+
+
+class SettingsToggleBetaVersionsAction(SettingsAction):
+    """Toggle beta versions action."""
 
 
 class SettingsSetServicesAction(SettingsAction):
@@ -78,12 +89,6 @@ class SettingsEvent(BaseEvent):
     """Settings event."""
 
 
-class SettingsSetDebugModeEvent(SettingsEvent):
-    """Set debug mode event."""
-
-    is_enabled: bool
-
-
 class SettingsServiceEvent(SettingsEvent):
     """Service event."""
 
@@ -122,5 +127,22 @@ class ServiceState(Immutable):
 class SettingsState(Immutable):
     """Settings state."""
 
-    is_debug_enabled: bool = False
+    pdb_signal: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:pdb_signal',
+            default=DEBUG_PDB_SIGNAL,
+        ),
+    )
+    visual_debug: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:visual_debug',
+            default=DEBUG_VISUAL,
+        ),
+    )
+    beta_versions: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:beta_versions',
+            default=DEBUG_BETA_VERSIONS,
+        ),
+    )
     services: dict[str, ServiceState] = field(default_factory=dict)

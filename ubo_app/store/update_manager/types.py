@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
+from dataclasses import field
 from enum import StrEnum, auto
 
 from immutable import Immutable
@@ -18,11 +19,17 @@ class UpdateManagerSetVersionsAction(UpdateManagerAction):
     current_version: str
     base_image_variant: str
     latest_version: str
-    serial_number: str | None
+    recent_versions: list[str] | None = None
 
 
-class UpdateManagerSetStatusAction(UpdateManagerAction):
-    status: UpdateStatus
+class UpdateManagerRequestCheckAction(UpdateManagerAction): ...
+
+
+class UpdateManagerReportFailedCheckAction(UpdateManagerAction): ...
+
+
+class UpdateManagerRequestUpdateAction(UpdateManagerAction):
+    version: str | None = None
 
 
 class UpdateManagerSetUpdateServiceStatusAction(UpdateManagerAction):
@@ -35,7 +42,8 @@ class UpdateManagerEvent(BaseEvent): ...
 class UpdateManagerCheckEvent(UpdateManagerEvent): ...
 
 
-class UpdateManagerUpdateEvent(UpdateManagerEvent): ...
+class UpdateManagerUpdateEvent(UpdateManagerEvent):
+    version: str | None
 
 
 class UpdateStatus(StrEnum):
@@ -51,9 +59,9 @@ class UpdateStatus(StrEnum):
 class UpdateManagerState(Immutable):
     """Version store."""
 
-    serial_number: str | None = None
     current_version: str | None = None
     base_image_variant: str | None = None
     latest_version: str | None = None
     update_status: UpdateStatus = UpdateStatus.CHECKING
     is_update_service_active: bool = False
+    recent_versions: list[str] = field(default_factory=list)
