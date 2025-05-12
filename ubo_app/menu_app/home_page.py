@@ -5,7 +5,7 @@ import pathlib
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 from kivy.lang.builder import Builder
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu.constants import PAGE_SIZE
@@ -45,6 +45,7 @@ class HomePage(PageWidget):
             self._sync_output_volume,
         )
 
+    @mainthread
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
         self.volume_widget.value = selector_result * 100
 

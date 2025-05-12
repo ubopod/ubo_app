@@ -36,6 +36,7 @@
 - fix(system): add an `asyncio.sleep` to the read loop to avoid high cpu usage
 - refactor(system): allow `send_command` to stay alive and stream responses over time to the client, useful for infrared service for example
 - fix(core): postpone touching `app_ready` signal file until all services' setup functions are done
+- fix(audio): the volume bar sometimes not being in sync with playback volume
 
 ## Version 1.3.0
 

@@ -283,6 +283,7 @@ def _setup_headless_kivy() -> None:
         headless_kivy.config.SetupHeadlessConfig(
             callback=render_on_display,
             flip_vertical=True,
+            is_debug_mode=True,
             width=WIDTH,
             height=HEIGHT,
         ),

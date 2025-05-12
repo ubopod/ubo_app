@@ -35,7 +35,7 @@ async def test_all_services_register(
     app_context.set_app()
     unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=40, run_async=True)
 
-    await stability(initial_wait=2, attempts=2, wait=2)
+    await stability(attempts=2, wait=2)
 
     assert len(store._listeners) < MAX_EXPECTED_LISTENERS  # noqa: SLF001
     assert len(store._event_handlers) < MAX_EXPECTED_EVENT_HANDLERS  # noqa: SLF001
