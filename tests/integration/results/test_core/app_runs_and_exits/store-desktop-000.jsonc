@@ -433,6 +433,7 @@
     "_type": "SettingsState",
     "pdb_signal": false,
     "services": {},
+    "services_status": "loading",
     "visual_debug": false
   },
   "status_icons": {

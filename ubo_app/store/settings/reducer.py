@@ -20,6 +20,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.settings.types import (
+    ServicesStatus,
     SettingsAction,
     SettingsEvent,
     SettingsReportServiceErrorAction,
@@ -129,16 +130,23 @@ def reducer(
                             delay=2,
                         ),
                     ]
+                new_services = {
+                    **state.services,
+                    action.service_id: replace(
+                        state.services[action.service_id],
+                        is_active=action.is_active,
+                    ),
+                }
+                all_services_active = all(
+                    service.is_active for service in new_services.values()
+                )
                 return CompleteReducerResult(
                     state=replace(
                         state,
-                        services={
-                            **state.services,
-                            action.service_id: replace(
-                                state.services[action.service_id],
-                                is_active=action.is_active,
-                            ),
-                        },
+                        services=new_services,
+                        services_status=ServicesStatus.READY
+                        if all_services_active
+                        else ServicesStatus.LOADING,
                     ),
                     events=events,
                 )

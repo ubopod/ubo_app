@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import field
+from enum import StrEnum
 from pathlib import Path
 
 from immutable import Immutable
@@ -12,6 +13,13 @@ from ubo_app.constants import DEBUG_PDB_SIGNAL, DEBUG_VISUAL
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 ROOT_PATH = Path(__file__).parent.parent.parent
+
+
+class ServicesStatus(StrEnum):
+    """Services status enum."""
+
+    LOADING = 'loading'
+    READY = 'ready'
 
 
 class SettingsAction(BaseAction):
@@ -136,3 +144,4 @@ class SettingsState(Immutable):
         ),
     )
     services: dict[str, ServiceState] = field(default_factory=dict)
+    services_status: ServicesStatus = ServicesStatus.LOADING

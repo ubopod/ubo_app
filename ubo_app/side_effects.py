@@ -24,6 +24,7 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
+from ubo_app.store.settings.types import ServicesStatus
 from ubo_app.store.update_manager.types import (
     UpdateManagerCheckEvent,
     UpdateManagerSetStatusAction,
@@ -215,16 +216,21 @@ def setup_side_effects() -> Subscriptions:
         else:
             signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 
+    @store.autorun(
+        lambda state: state.settings.services_status,
+    )
+    def _set_app_ready(services_status: ServicesStatus) -> None:
+        if services_status == ServicesStatus.READY:
+            Path(INSTALLATION_PATH).mkdir(parents=True, exist_ok=True)
+            (Path(INSTALLATION_PATH) / 'app_ready').touch()
+
+        _set_app_ready.unsubscribe()
+
     store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
 
     from ubo_app.utils.monitor_unit import monitor_unit
 
     create_task(monitor_unit('ubo-update.service', _check_update))
-
-    # Create a file signaling that the app is ready
-    if IS_RPI:
-        Path(INSTALLATION_PATH).mkdir(parents=True, exist_ok=True)
-        (Path(INSTALLATION_PATH) / 'app_ready').touch()
 
     sync_with_update_service()
 

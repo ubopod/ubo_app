@@ -35,6 +35,7 @@
 - refactor(speech-synthesis): remove piper model from repository and provide download menu item for it - closes #165
 - fix(system): add an `asyncio.sleep` to the read loop to avoid high cpu usage
 - refactor(system): allow `send_command` to stay alive and stream responses over time to the client, useful for infrared service for example
+- fix(core): postpone touching `app_ready` signal file until all services' setup functions are done
 
 ## Version 1.3.0
 

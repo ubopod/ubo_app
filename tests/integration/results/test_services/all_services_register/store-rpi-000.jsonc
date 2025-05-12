@@ -6495,6 +6495,7 @@
         "should_auto_restart": false
       }
     },
+    "services_status": "ready",
     "visual_debug": false
   },
   "speech_recognition": {
