@@ -4,6 +4,7 @@ import asyncio
 import functools
 import queue
 import re
+from collections.abc import Iterator
 from threading import Thread
 
 from ubo_app.logger import get_logger
@@ -21,7 +22,7 @@ class InfraredManager:
         self.ir_code_queue = queue.Queue(1)
         self.stop_event = asyncio.Event()
 
-    def handle_command(self, command: str) -> str | None:
+    def handle_command(self, command: str) -> Iterator[str] | str | None:
         """Handle infrared commands."""
         logger.info('Infrared command received', extra={'command': command})
         if command == 'start':
@@ -49,15 +50,17 @@ class InfraredManager:
             return 'stopped'
         if command == 'receive':
             logger.info('Processing receive command')
-            try:
-                code = self.ir_code_queue.get()
-            except Exception:
-                logger.exception('Error retrieving IR code from queue')
-                return 'nocode'
-            else:
-                logger.debug('Retrieved IR code from queue', extra={'code': code})
-                return code
-        return None
+            while True:
+                try:
+                    code = self.ir_code_queue.get()
+                except Exception:
+                    logger.exception('Error retrieving IR code from queue')
+                    return 'nocode'
+                else:
+                    logger.debug('Retrieved IR code from queue', extra={'code': code})
+                    yield code
+        else:
+            return None
 
     async def _monitor_ir(self) -> None:
         """Monitor infrared signals and put received IR codes in the queue."""

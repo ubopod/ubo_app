@@ -34,6 +34,7 @@
 - refactor(core): organize debug environment variables and add `UBO_DEBUG_PDB_SIGNAL` to settings menu of the gui and make debug flags set in the settings menu persistent
 - refactor(speech-synthesis): remove piper model from repository and provide download menu item for it - closes #165
 - fix(system): add an `asyncio.sleep` to the read loop to avoid high cpu usage
+- refactor(system): allow `send_command` to stay alive and stream responses over time to the client, useful for infrared service for example
 
 ## Version 1.3.0
 

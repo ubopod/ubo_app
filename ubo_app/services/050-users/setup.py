@@ -41,7 +41,6 @@ from ubo_app.store.services.users import (
     UsersState,
     UserState,
 )
-from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus
 from ubo_app.utils.dbus_interfaces import AccountsInterface, UserInterface
@@ -53,48 +52,45 @@ if TYPE_CHECKING:
 
 async def create_account() -> None:
     """Create a system user account."""
-    if IS_RPI:
-        result = await send_command('users', 'create', has_output=True)
-    else:
-        result = 'username:password'
-    if not result:
+    async for result in await send_command('users', 'create', has_output=True):
+        if not result:
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Failed to create account',
+                        content='An error occurred while creating the user account.',
+                        importance=Importance.MEDIUM,
+                        icon='󰀅',
+                        display_type=NotificationDisplayType.STICKY,
+                        color=DANGER_COLOR,
+                    ),
+                ),
+            )
+
+            return
+        username, password = result.split(':')
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    title='Failed to create account',
-                    content='An error occurred while creating the user account.',
+                    title='Account Info',
+                    content='[size=18dp][b]host:[/b] {{hostname}}\n'
+                    f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
                     importance=Importance.MEDIUM,
-                    icon='󰀅',
+                    icon='󰀈',
                     display_type=NotificationDisplayType.STICKY,
-                    color=DANGER_COLOR,
-                ),
-            ),
-        )
-
-        return
-    username, password = result.split(':')
-    store.dispatch(
-        NotificationsAddAction(
-            notification=Notification(
-                title='Account Info',
-                content='[size=18dp][b]host:[/b] {{hostname}}\n'
-                f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
-                importance=Importance.MEDIUM,
-                icon='󰀈',
-                display_type=NotificationDisplayType.STICKY,
-                extra_information=ReadableInformation(
-                    text="""\
+                    extra_information=ReadableInformation(
+                        text="""\
 Note that in order to make ssh works for you, we had to make sure password \
 authentication for ssh server is enabled, you may want to disable it later.""",
-                    picovoice_text="""\
+                        picovoice_text="""\
 Note that in order to make ssh works for you, we had to make sure password \
 authentication for {ssh|EH S EH S EY CH} server is enabled, you may want to disable it \
 later.""",
+                    ),
+                    color=SUCCESS_COLOR,
                 ),
-                color=SUCCESS_COLOR,
             ),
-        ),
-    )
+        )
 
 
 async def delete_account(event: UsersDeleteUserEvent) -> None:
@@ -151,54 +147,51 @@ async def delete_account(event: UsersDeleteUserEvent) -> None:
 
 async def reset_password(event: UsersResetPasswordEvent) -> None:
     """Reset the password of a user account."""
-    if IS_RPI:
-        result = await send_command(
-            'users',
-            'reset_password',
-            event.id,
-            has_output=True,
-        )
-    else:
-        result = 'username:password'
-    if not result:
+    async for result in await send_command(
+        'users',
+        'reset_password',
+        event.id,
+        has_output=True,
+    ):
+        if not result:
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Failed to reset password',
+                        content='An error occurred while resetting password for '
+                        f'"{event.id}".',
+                        importance=Importance.MEDIUM,
+                        icon='󰀅',
+                        display_type=NotificationDisplayType.STICKY,
+                        color=DANGER_COLOR,
+                    ),
+                ),
+            )
+
+            return
+        username, password = result.split(':')
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
-                    title='Failed to reset password',
-                    content='An error occurred while resetting password for '
-                    f'"{event.id}".',
+                    title='Account Info',
+                    content='[size=18dp][b]host:[/b] {{hostname}}\n'
+                    f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
                     importance=Importance.MEDIUM,
-                    icon='󰀅',
+                    icon='󰀈',
                     display_type=NotificationDisplayType.STICKY,
-                    color=DANGER_COLOR,
-                ),
-            ),
-        )
-
-        return
-    username, password = result.split(':')
-    store.dispatch(
-        NotificationsAddAction(
-            notification=Notification(
-                title='Account Info',
-                content='[size=18dp][b]host:[/b] {{hostname}}\n'
-                f'[b]user:[/b] {username}\n[b]pass:[/b] {password}[/size]',
-                importance=Importance.MEDIUM,
-                icon='󰀈',
-                display_type=NotificationDisplayType.STICKY,
-                extra_information=ReadableInformation(
-                    text="""\
+                    extra_information=ReadableInformation(
+                        text="""\
 Note that in order to make ssh works for you, we had to make sure password \
 authentication for ssh server is enabled, you may want to disable it later.""",
-                    picovoice_text="""\
+                        picovoice_text="""\
 Note that in order to make ssh works for you, we had to make sure password \
 authentication for {ssh|EH S EH S EY CH} server is enabled, you may want to disable it \
 later.""",
+                    ),
+                    color=SUCCESS_COLOR,
                 ),
-                color=SUCCESS_COLOR,
             ),
-        ),
-    )
+        )
 
 
 @store.autorun(lambda state: state.users)

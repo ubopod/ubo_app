@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from threading import Thread
 
@@ -45,34 +46,44 @@ add_file_handler(logger, log_level)
 logger.setLevel(log_level)
 
 
-def handle_command(command: str) -> str | None:
-    header, *arguments = command.split()
-    if header == 'led':
-        led_manager.run_command_thread_safe(arguments)
-    else:
-        handlers = {
-            'docker': docker_handler,
-            'service': service_handler,
-            'users': users_handler,
-            'package': package_handler,
-            'audio': audio_handler,
-            'hotspot': hotspot_handler,
-            'infrared': infrared_handler,
-        }
-        if header in handlers:
-            return handlers[header](*arguments)
-
-    return None
-
-
-def process_request(command: bytes, connection: socket.socket) -> None:
+def handle_command(command: str, connection: socket.socket) -> None:
     try:
-        result = handle_command(command.decode('utf-8'))
+        header, *arguments = command.split()
+        if header == 'led':
+            led_manager.run_command_thread_safe(arguments)
+        else:
+            handlers = {
+                'docker': docker_handler,
+                'service': service_handler,
+                'users': users_handler,
+                'package': package_handler,
+                'audio': audio_handler,
+                'hotspot': hotspot_handler,
+                'infrared': infrared_handler,
+            }
+            if header in handlers:
+                response = handlers[header](*arguments)
+                if isinstance(response, Iterator):
+                    try:
+                        for line in response:
+                            if isinstance(line, bytes):
+                                connection.sendall(line + b'\0')
+                            else:
+                                connection.sendall(line.encode() + b'\0')
+                    finally:
+                        connection.sendall(b'\0\0')
+                elif isinstance(response, bytes):
+                    connection.sendall(response + b'\0\0')
+                elif isinstance(response, str):
+                    connection.sendall(response.encode() + b'\0\0')
     except Exception as exception:
-        logger.exception('Failed to handle command', extra={'exception': exception})
-        result = None
-    if result is not None:
-        connection.sendall(result.encode() + b'\0')
+        logger.exception(
+            'Failed to handle command',
+            extra={
+                'exception': exception,
+                'command': command,
+            },
+        )
 
 
 def setup_hostname() -> None:
@@ -165,8 +176,8 @@ def main() -> None:
 
                 logger.debug('Received command:', extra={'command': command})
                 thread = Thread(
-                    target=process_request,
-                    args=(command, connection),
+                    target=handle_command,
+                    args=(command.decode(), connection),
                     name=f'Thread to process command {command}',
                 )
                 thread.start()

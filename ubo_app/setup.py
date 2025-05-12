@@ -142,7 +142,8 @@ def setup() -> None:
 
         server.send_command = lambda command, *_, has_output=False: Fake(
             _Fake__await_value={
-                'connection': NetState.CONNECTED,
+                'connection': Fake(items=[NetState.CONNECTED]),
+                'users': Fake(items=['username:password']),
             }.get(command, 'done')
             if has_output
             else 0,  # python-fake will ignore `await_value` if it is `None`
