@@ -38,6 +38,7 @@
 - fix(core): postpone touching `app_ready` signal file until all services' setup functions are done
 - fix(audio): the volume bar sometimes not being in sync with playback volume
 - feat(core): let the user upgrade/downgrade to any of the last three release versions, add a menu item in settings to enable beta upgrade/downgrade to beta versions - closes #260, closes 178
+- feat(core): let the user activate a version among their installed versions in a sub-menu of the about menu
 
 ## Version 1.3.0
 

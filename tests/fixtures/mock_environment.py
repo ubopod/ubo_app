@@ -318,6 +318,9 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     import ubo_app.utils.serializer
     import ubo_app.utils.server
     from ubo_app.store.services.ethernet import NetState
+    from ubo_app.store.update_manager import (
+        installed_versions as update_manager_installed_versions,
+    )
 
     tracemalloc.start()
 
@@ -342,6 +345,11 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         Fake(
             _Fake__return_value=Fake(_Fake__await_value=True),
         ),
+    )
+    monkeypatch.setattr(
+        update_manager_installed_versions,
+        'get_installed_versions',
+        list,
     )
 
     sys.modules['ubo_app.utils.secrets'] = Fake(

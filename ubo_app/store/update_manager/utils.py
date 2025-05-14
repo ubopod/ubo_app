@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import importlib.metadata
 import shutil
 import tarfile
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING
 import aiohttp
 import requests
 from debouncer import DebounceOptions, debounce
+from redux import FinishAction
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
@@ -27,11 +29,13 @@ from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
+    NotificationActionItem,
     NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.store.update_manager.installed_versions import get_installed_versions
 from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
     UpdateManagerReportFailedCheckAction,
@@ -44,6 +48,7 @@ from ubo_app.store.update_manager.types import (
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.download import download_file
+from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -321,9 +326,23 @@ async def update(event_request_event: UpdateManagerUpdateEvent) -> None:
         return
 
 
-@store.autorun(lambda state: state.update_manager)
-def about_menu_items(state: UpdateManagerState) -> list[Item]:
+def activate_version(version: Path) -> None:
+    """Activate the selected version."""
+    logger.info('Activating version %s', version.name)
+    if not version.is_dir():
+        return
+
+    env_path = Path(INSTALLATION_PATH) / 'env'
+    env_path.unlink(missing_ok=True)
+    env_path.symlink_to(version, target_is_directory=True)
+
+    store.dispatch(FinishAction())
+
+
+@store.autorun(lambda state: (state.update_manager, state.settings.beta_versions))
+def about_menu_items(data: tuple[UpdateManagerState, bool]) -> list[Item]:
     """Get the update menu items."""
+    state, beta_versions = data
     items: list[Item] = []
 
     store.dispatch(UpdateManagerRequestCheckAction())
@@ -337,6 +356,7 @@ def about_menu_items(state: UpdateManagerState) -> list[Item]:
             items=[
                 DispatchItem(
                     label=version,
+                    icon='󰜉',
                     store_action=NotificationsAddAction(
                         notification=Notification(
                             title=f'Install {version} now?',
@@ -361,9 +381,52 @@ version of ubo-app with the selected version?""",
                             ],
                         ),
                     ),
-                    icon='󰜉',
                 )
                 for version in state.recent_versions
+            ],
+        ),
+    )
+
+    installed_versions_item = SubMenuItem(
+        key='installed_versions',
+        label='Installed versions',
+        icon='󰯍',
+        sub_menu=HeadlessMenu(
+            title='󰯍Installed versions',
+            items=[
+                DispatchItem(
+                    label=item.name,
+                    **(
+                        SELECTED_ITEM_PARAMETERS
+                        if item.name == CURRENT_VERSION
+                        else UNSELECTED_ITEM_PARAMETERS
+                    ),
+                    store_action=NotificationsAddAction(
+                        notification=Notification(
+                            title=f'Activate {item.name} now?',
+                            content=f'Press 󰯍 button to activate version "{item.name}"',
+                            icon='󰯍',
+                            extra_information=ReadableInformation(
+                                text="""Do you want to activate the selected version of
+    ubo-app?""",
+                            ),
+                            color=INFO_COLOR,
+                            dismiss_on_close=True,
+                            display_type=NotificationDisplayType.STICKY,
+                            show_dismiss_action=True,
+                            actions=[
+                                NotificationActionItem(
+                                    icon='󰯍',
+                                    action=functools.partial(
+                                        activate_version,
+                                        version=item,
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                )
+                for item in get_installed_versions()
             ],
         ),
     )
@@ -396,6 +459,8 @@ version of ubo-app with the selected version?""",
             ),
             recent_versions_item,
         ]
+        if beta_versions:
+            items.append(installed_versions_item)
     if state.update_status is UpdateStatus.OUTDATED:
         items = [
             *(
@@ -433,6 +498,8 @@ version of ubo-app with the selected version?""",
             ),
             recent_versions_item,
         ]
+        if beta_versions:
+            items.append(installed_versions_item)
     if state.update_status is UpdateStatus.UPDATING:
         items = [
             Item(
