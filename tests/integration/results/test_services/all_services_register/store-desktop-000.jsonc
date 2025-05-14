@@ -6059,7 +6059,8 @@
                 }
               },
               {
-                "_type": "SubMenuItem",
+                "_type": "ActionItem",
+                "action": "<function:open_about_menu>",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -6072,130 +6073,7 @@
                 "key": "about",
                 "label": "About",
                 "opacity": null,
-                "progress": null,
-                "sub_menu": {
-                  "_type": "HeadedMenu",
-                  "heading": "Ubo v0.0.0",
-                  "items": [
-                    {
-                      "_type": "DispatchItem",
-                      "action": "<function:action>",
-                      "background_color": "#03F7AE",
-                      "color": "#000000",
-                      "icon": "󰄬",
-                      "is_short": false,
-                      "key": null,
-                      "label": "Already up to date!",
-                      "opacity": null,
-                      "progress": null,
-                      "store_action": {
-                        "_type": "UpdateManagerRequestCheckAction"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰜉",
-                      "is_short": false,
-                      "key": "recent_versions",
-                      "label": "Recent versions",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [
-                          {
-                            "_type": "DispatchItem",
-                            "action": "<function:action>",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󰜉",
-                            "is_short": false,
-                            "key": null,
-                            "label": "0.0.0",
-                            "opacity": null,
-                            "progress": null,
-                            "store_action": {
-                              "_type": "NotificationsAddAction",
-                              "notification": {
-                                "_type": "Notification",
-                                "actions": [
-                                  {
-                                    "_type": "NotificationDispatchItem",
-                                    "action": "<function:action>",
-                                    "background_color": "#68B7FF",
-                                    "close_notification": true,
-                                    "color": [
-                                      1,
-                                      1,
-                                      1,
-                                      1
-                                    ],
-                                    "dismiss_notification": false,
-                                    "icon": "󰜉",
-                                    "is_short": false,
-                                    "key": null,
-                                    "label": "",
-                                    "opacity": null,
-                                    "progress": null,
-                                    "store_action": {
-                                      "_type": "UpdateManagerRequestUpdateAction",
-                                      "version": "0.0.0"
-                                    }
-                                  }
-                                ],
-                                "blink": true,
-                                "chime": null,
-                                "color": "#2196F3",
-                                "content": "Press 󰜉 button to start installation of version \"0.0.0\"",
-                                "dismiss_on_close": true,
-                                "display_type": "sticky",
-                                "expiration_timestamp": null,
-                                "extra_information": {
-                                  "_type": "ReadableInformation",
-                                  "picovoice_text": "Do you want to replace the current installed version of ubo-app with the selected version?",
-                                  "piper_text": "Do you want to replace the current installed version of ubo-app with the selected version?",
-                                  "text": "Do you want to replace the current installed version of ubo-app with the selected version?"
-                                },
-                                "flash_time": 1000,
-                                "icon": "󰜉",
-                                "id": "101fbcccded733e8b421eaeb534097ca",
-                                "importance": "low",
-                                "is_read": false,
-                                "on_close": null,
-                                "progress": null,
-                                "progress_weight": 1,
-                                "sender": null,
-                                "show_dismiss_action": true,
-                                "timestamp": {
-                                  "_type": "datetime",
-                                  "value": "2023-01-01T00:00:00+00:00"
-                                },
-                                "title": "Install 0.0.0 now?"
-                              }
-                            }
-                          }
-                        ],
-                        "placeholder": null,
-                        "title": "󰜉Recent versions"
-                      }
-                    }
-                  ],
-                  "placeholder": null,
-                  "sub_heading": "Base image: [unknown]\n",
-                  "title": "About"
-                }
+                "progress": null
               }
             ],
             "placeholder": null,

@@ -15,7 +15,7 @@ import aiohttp
 import requests
 from debouncer import DebounceOptions, debounce
 from redux import FinishAction
-from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
+from ubo_gui.menu.types import HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_app.constants import (
@@ -71,7 +71,7 @@ BASE_IMAGE_VARIANT = (
 
 
 @store.with_state(lambda state: state.settings.beta_versions)
-@debounce(10, options=DebounceOptions(leading=True, trailing=False, time_window=10))
+@debounce(6, options=DebounceOptions(leading=True, trailing=True, time_window=6))
 async def check_version(beta_versions: bool) -> None:  # noqa: FBT001
     """Check for updates."""
     logger.info('Checking for updates...', extra={'beta_versions': beta_versions})
@@ -339,13 +339,23 @@ def activate_version(version: Path) -> None:
     store.dispatch(FinishAction())
 
 
+def open_about_menu() -> HeadedMenu:
+    """Get the about menu items."""
+    store.dispatch(UpdateManagerRequestCheckAction())
+
+    return HeadedMenu(
+        title='About',
+        heading=f'Ubo v{CURRENT_VERSION}',
+        sub_heading=f'Base image: {BASE_IMAGE[:11]}\n{BASE_IMAGE[11:]}',
+        items=about_menu_items,
+    )
+
+
 @store.autorun(lambda state: (state.update_manager, state.settings.beta_versions))
 def about_menu_items(data: tuple[UpdateManagerState, bool]) -> list[Item]:
     """Get the update menu items."""
     state, beta_versions = data
     items: list[Item] = []
-
-    store.dispatch(UpdateManagerRequestCheckAction())
 
     recent_versions_item = SubMenuItem(
         key='recent_versions',

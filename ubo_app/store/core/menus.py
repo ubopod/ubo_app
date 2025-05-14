@@ -8,11 +8,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
-from ubo_gui.menu.types import (
-    HeadedMenu,
-    HeadlessMenu,
-    SubMenuItem,
-)
+from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.store.core.types import (
     SETTINGS_ICONS,
@@ -27,11 +23,7 @@ from ubo_app.store.services.notifications import (
     NotificationsDisplayAction,
 )
 from ubo_app.store.settings.menu import SYSTEM_MENU
-from ubo_app.store.update_manager.utils import (
-    BASE_IMAGE,
-    CURRENT_VERSION,
-    about_menu_items,
-)
+from ubo_app.store.update_manager.utils import open_about_menu
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -77,16 +69,11 @@ MAIN_MENU = HeadlessMenu(
             icon='',
             sub_menu=SETTINGS_MENU,
         ),
-        SubMenuItem(
+        ActionItem(
             key='about',
             label='About',
             icon='',
-            sub_menu=HeadedMenu(
-                title='About',
-                heading=f'Ubo v{CURRENT_VERSION}',
-                sub_heading=f'Base image: {BASE_IMAGE[:11]}\n{BASE_IMAGE[11:]}',
-                items=about_menu_items,
-            ),
+            action=open_about_menu,
         ),
     ],
 )
