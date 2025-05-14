@@ -40,6 +40,7 @@
 - feat(core): let the user upgrade/downgrade to any of the last three release versions, add a menu item in settings to enable beta upgrade/downgrade to beta versions - closes #260, closes 178
 - feat(core): let the user activate a version among their installed versions in a sub-menu of the about menu
 - refactor(core): refetch pypi index whenever user opens the about menu - with debouncing
+- fix(core): use latest ubo-gui which adds bad-state-recovery for when menu-screen doesn't update - closes #235
 
 ## Version 1.3.0
 

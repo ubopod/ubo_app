@@ -42,7 +42,6 @@ async def test_root_menu_bad_state(
     unload_waiter = await load_services(
         CORE_SERVICE_IDS,
         timeout=40,
-        gap_duration=0.4,
         run_async=True,
     )
     logger.info('Services loaded, waiting for stability')

@@ -34,7 +34,7 @@ dependencies = [
   "sentry-sdk>=1.43.0",
   "simpleaudio>=1.0.4",
   "tenacity>=8.2.3",
-  "ubo-gui>=0.13.14",
+  "ubo-gui>=0.13.16",
   "vosk==0.3.44",
   # Adafruit dependencies
   "adafruit-circuitpython-aw9523>=1.1.7",

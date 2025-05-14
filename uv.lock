@@ -2008,7 +2008,7 @@ requires-dist = [
     { name = "sentry-sdk", specifier = ">=1.43.0" },
     { name = "simpleaudio", specifier = ">=1.0.4" },
     { name = "tenacity", specifier = ">=8.2.3" },
-    { name = "ubo-gui", specifier = ">=0.13.14" },
+    { name = "ubo-gui", specifier = ">=0.13.16" },
     { name = "vosk", specifier = "==0.3.44" },
 ]
 provides-extras = ["test-investigation"]
@@ -2036,16 +2036,16 @@ dev = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.13.14"
+version = "0.13.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "headless-kivy" },
     { name = "python-immutable" },
     { name = "qrcode" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/d5/e6af5278f0cb6518265d12b0bed8691970bb4f2264bd7924e3fe78a5f364/ubo_gui-0.13.14.tar.gz", hash = "sha256:889b01796affb7c3842b214b7152d818f425eba8e2592bf31a55609bf9228754", size = 8580175, upload-time = "2025-03-23T11:01:19.217Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/03/0afe4cbf6c261805c36f9b5caff899f5e39ac91a1693e7b56b3f07fa4950/ubo_gui-0.13.16.tar.gz", hash = "sha256:eb7685eff635e09be25a5b1902b2bdc9fa7c6dd41d7c3dca865599b107d76759", size = 8580240, upload-time = "2025-05-16T10:26:12.944Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/f9/11f64bb7dfe6c43d59e49c6da175972caae51ceaf65df56b0f41bbedce37/ubo_gui-0.13.14-py3-none-any.whl", hash = "sha256:b3c31cbd2c529f9d213f08eaf1d744797fc4c36190e1a32c85e8a7457052d8ad", size = 8603294, upload-time = "2025-03-23T11:01:16.574Z" },
+    { url = "https://files.pythonhosted.org/packages/17/ca/162c637c8b7e040067b31019231f4a7f2be375578276c4ad256e2638408e/ubo_gui-0.13.16-py3-none-any.whl", hash = "sha256:9bce45d2cb85facd2dc1a784eeb7711d62a5d86c6e84a8d01ae1fdc4666a41c5", size = 8603392, upload-time = "2025-05-16T10:26:08.948Z" },
 ]
 
 [[package]]

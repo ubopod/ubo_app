@@ -100,7 +100,7 @@ async def stability(
         def check() -> None:
             nonlocal latest_window_hash, latest_store_snapshot
 
-            assert not app_context.app.menu_widget._is_transition_in_progress  # noqa: SLF001
+            assert app_context.app.menu_widget._running_transition_end_time is None  # noqa: SLF001
 
             new_hash = window_snapshot.hash
             new_snapshot = store_snapshot.json_snapshot()

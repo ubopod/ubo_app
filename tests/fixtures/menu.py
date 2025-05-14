@@ -47,7 +47,7 @@ def wait_for_menu_item(
     ) -> None:
         @wait_for(wait=wait_fixed(0.5), run_async=True)
         def check() -> None:
-            assert not app_context.app.menu_widget._is_transition_in_progress  # noqa: SLF001
+            assert app_context.app.menu_widget._running_transition_end_time is None  # noqa: SLF001
             current_page = app_context.app.menu_widget.current_screen
             assert current_page is not None
             items: list[Item | None] = current_page.items
@@ -83,7 +83,7 @@ def wait_for_empty_menu(app_context: AppContext, wait_for: WaitFor) -> WaitForEm
     ) -> None:
         @wait_for(wait=wait_fixed(0.5), run_async=True)
         def check() -> None:
-            assert not app_context.app.menu_widget._is_transition_in_progress  # noqa: SLF001
+            assert app_context.app.menu_widget._running_transition_end_time is None  # noqa: SLF001
             current_page = app_context.app.menu_widget.current_screen
             assert current_page is not None
 
