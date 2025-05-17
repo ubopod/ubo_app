@@ -128,7 +128,7 @@ jobs:
       - ubo-pod-dependencies
     strategy:
       matrix:
-        runner: ['ubo-pod', 'ubo-pod-pi5', 'ubuntu-latest']
+        runner: ['ubo-pod-pi4', 'ubo-pod-pi5', 'ubuntu-latest']
     runs-on: ${{ matrix.runner }}
     environment:
       name: test

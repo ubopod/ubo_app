@@ -41,6 +41,7 @@
 - feat(core): let the user activate a version among their installed versions in a sub-menu of the about menu
 - refactor(core): refetch pypi index whenever user opens the about menu - with debouncing
 - fix(core): use latest ubo-gui which adds bad-state-recovery for when menu-screen doesn't update - closes #235
+- chore(ci): rename `ubo-pod` runner label to `ubo-pod-pi4` for clarity
 
 ## Version 1.3.0
 

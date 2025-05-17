@@ -439,7 +439,7 @@
   },
   "update_manager": {
     "_type": "UpdateManagerState",
-    "base_image_variant": "[unknown]",
+    "base_image_variant": "desktop",
     "current_version": "0.0.0",
     "latest_version": "0.0.0",
     "recent_versions": [
