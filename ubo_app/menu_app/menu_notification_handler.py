@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import functools
+import math
 import weakref
 from dataclasses import replace
 from typing import TYPE_CHECKING
@@ -237,7 +238,12 @@ class MenuNotificationHandler(UboApp):
     ) -> None:
         notification_application.notification_title = notification.value.title
         notification_application.content = notification.value.content
-        notification_application.icon = notification.value.icon
+        notification_application.icon = notification.value.icon + (
+            f'[size=20dp] {notification.value.progress:05.1%}[/size]'
+            if notification.value.progress is not None
+            and not math.isnan(notification.value.progress)
+            else ''
+        )
         notification_application.color = notification.value.color
         notification_application.items = self._notification_items(
             notification,

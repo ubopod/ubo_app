@@ -15,7 +15,6 @@ import pytest
 from tenacity import RetryError, wait_fixed
 
 from ubo_app.logger import logger
-from ubo_app.service_thread import SERVICE_PATHS_BY_ID
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine, Sequence
@@ -192,6 +191,8 @@ async def load_services(wait_for: WaitFor) -> AsyncGenerator[LoadServices, None]
         return cast('UnloadWaiter', unload_waiter)
 
     yield cast('LoadServices', load_services_and_wait)
+
+    from ubo_app.service_thread import SERVICE_PATHS_BY_ID
 
     SERVICE_PATHS_BY_ID.clear()
 

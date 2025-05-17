@@ -68,21 +68,19 @@ If you want to install the image on an existing operating system, then read on. 
 To install ubo, run this command in a terminal shell:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo bash
 ```
 
-If you want to install docker service and configure ubo to be able to use it run this:
+If you don't want to install docker service you can set the `WITH_DOCKER` environment variable to `false`:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo WITH_DOCKER=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo WITHOUT_DOCKER=true bash
 ```
 
-To allow the installer to install the latest alpha version of ubo run this:
+To install a specific version of ubo, you can set the `TARGET_VERSION` environment variable to the desired version:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo ALPHA=true bash
-# or
-curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh | sudo ALPHA=true WITH_DOCKER=true bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo TARGET_VERSION=0.0.1 bash
 ```
 
 Note that as part of the installation process, these debian packages are installed:

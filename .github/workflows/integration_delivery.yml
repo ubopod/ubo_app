@@ -128,7 +128,7 @@ jobs:
       - ubo-pod-dependencies
     strategy:
       matrix:
-        runner: ['ubo-pod', 'ubo-pod-pi5', 'ubuntu-latest']
+        runner: ['ubo-pod-pi4', 'ubo-pod-pi5', 'ubuntu-latest']
     runs-on: ${{ matrix.runner }}
     environment:
       name: test
@@ -263,11 +263,12 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         run: |
           echo "SENTRY_DSN=$SENTRY_DSN" >>ubo_app/.env
-          # conditionally set it based on whether it's a tag or not using github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+          # check whether it's a tag or not
           if [ "$GITHUB_EVENT_NAME" == "push" ] && [ "$(echo $GITHUB_REF | grep -c 'refs/tags/v')" -eq 1 ]; then
             echo "SENTRY_RELEASE=ubo-app@$VERSION" >>ubo_app/.env
           else
             echo "SENTRY_RELEASE=ubo-app@$GITHUB_SHA" >>ubo_app/.env
+            echo "UBO_DEBUG_PDB_SIGNAL=True" >>ubo_app/.env
           fi
           cat ubo_app/.env
 
@@ -332,7 +333,7 @@ jobs:
             SUFFIX="_$MATRIX_SUFFIX"
           fi
           DASHED_SUFFIX=$(echo $SUFFIX | sed 's/_/-/g')
-          IMAGE_DATE='2024-11-19'
+          IMAGE_DATE='2025-05-13'
           IMAGE_NAME="${IMAGE_DATE}-raspios-bookworm-arm64${DASHED_SUFFIX}"
           IMAGE_URL="https://downloads.raspberrypi.com/raspios${SUFFIX}_arm64/images/raspios${SUFFIX}_arm64-${IMAGE_DATE}/${IMAGE_NAME}.img.xz"
           CHECKSUM_URL="${IMAGE_URL}.sha256"

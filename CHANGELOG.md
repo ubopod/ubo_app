@@ -31,6 +31,17 @@
 - fix(audio): use `tenacity` for retry logic and add a one second delay between retries when playback fails
 - fix(installation): gracefully handle missing file in sed command with || true - closes #281
 - refactor(audio): make setter functions in audio manager try finding card index again and rebind in case of failure
+- refactor(core): organize debug environment variables and add `UBO_DEBUG_PDB_SIGNAL` to settings menu of the gui and make debug flags set in the settings menu persistent
+- refactor(speech-synthesis): remove piper model from repository and provide download menu item for it - closes #165
+- fix(system): add an `asyncio.sleep` to the read loop to avoid high cpu usage
+- refactor(system): allow `send_command` to stay alive and stream responses over time to the client, useful for infrared service for example
+- fix(core): postpone touching `app_ready` signal file until all services' setup functions are done
+- fix(audio): the volume bar sometimes not being in sync with playback volume
+- feat(core): let the user upgrade/downgrade to any of the last three release versions, add a menu item in settings to enable beta upgrade/downgrade to beta versions - closes #260, closes 178
+- feat(core): let the user activate a version among their installed versions in a sub-menu of the about menu
+- refactor(core): refetch pypi index whenever user opens the about menu - with debouncing
+- fix(core): use latest ubo-gui which adds bad-state-recovery for when menu-screen doesn't update - closes #235
+- chore(ci): rename `ubo-pod` runner label to `ubo-pod-pi4` for clarity
 
 ## Version 1.3.0
 

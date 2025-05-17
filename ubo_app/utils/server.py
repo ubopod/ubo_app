@@ -3,18 +3,27 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Literal, overload
+from typing import TYPE_CHECKING, Literal, overload
 
 from ubo_app.constants import SERVER_SOCKET_PATH
 from ubo_app.logger import logger
 from ubo_app.utils import IS_RPI
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 @overload
 async def send_command(*command: str) -> None: ...
 @overload
-async def send_command(*command: str, has_output: Literal[True]) -> str | None: ...
-async def send_command(*command_: str, has_output: bool = False) -> str | None:
+async def send_command(
+    *command: str,
+    has_output: Literal[True],
+) -> AsyncIterator[str]: ...
+async def send_command(
+    *command_: str,
+    has_output: bool = False,
+) -> AsyncIterator[str] | None:
     """Send a command to the system manager socket."""
     if not IS_RPI:
         return None
@@ -26,14 +35,23 @@ async def send_command(*command_: str, has_output: bool = False) -> str | None:
 
         logger.debug('Sending command:', extra={'command': command})
 
-        response = None
         writer.write(command.encode() + b'\0')
         if has_output:
-            datagram = (await reader.readuntil(b'\0'))[:-1]
-            if datagram:
-                response = datagram.decode('utf-8')
-                logger.debug('Server response:', extra={'response': response})
-        writer.close()
+
+            async def generator() -> AsyncIterator[str]:
+                while datagram := (await reader.readuntil(b'\0'))[:-1]:
+                    yield datagram.decode('utf-8')
+                    logger.debug(
+                        'Server response:',
+                        extra={
+                            'command': command,
+                            'response': datagram.decode('utf-8'),
+                        },
+                    )
+
+                writer.close()
+
+            return generator()
 
     except Exception:
         logger.exception(
@@ -41,5 +59,3 @@ async def send_command(*command_: str, has_output: bool = False) -> str | None:
             extra={'command': command},
         )
         raise
-    else:
-        return response

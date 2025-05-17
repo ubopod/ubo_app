@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import random
 import sys
 import tracemalloc
@@ -114,9 +115,9 @@ def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
 
         return generated_uuid
 
-    from ubo_app.constants import DEBUG_MODE_TEST_UUID
+    from ubo_app.constants import DEBUG_TEST_UUID
 
-    if DEBUG_MODE_TEST_UUID:
+    if DEBUG_TEST_UUID:
         monkeypatch.setattr('uuid.uuid4', debug_uuid4)
     else:
         monkeypatch.setattr(
@@ -157,6 +158,14 @@ def _monkeypatch_aiohttp() -> None:
             return {
                 'info': {
                     'version': '0.0.0',
+                },
+                'releases': {
+                    '0.0.0': [
+                        {
+                            'upload_time': datetime.datetime.fromordinal(1).isoformat(),
+                            'yanked': False,
+                        },
+                    ],
                 },
             }
 
@@ -309,6 +318,9 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     import ubo_app.utils.serializer
     import ubo_app.utils.server
     from ubo_app.store.services.ethernet import NetState
+    from ubo_app.store.update_manager import (
+        installed_versions as update_manager_installed_versions,
+    )
 
     tracemalloc.start()
 
@@ -333,6 +345,11 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         Fake(
             _Fake__return_value=Fake(_Fake__await_value=True),
         ),
+    )
+    monkeypatch.setattr(
+        update_manager_installed_versions,
+        'get_installed_versions',
+        list,
     )
 
     sys.modules['ubo_app.utils.secrets'] = Fake(

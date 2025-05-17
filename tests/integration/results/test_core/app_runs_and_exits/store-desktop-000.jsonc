@@ -165,11 +165,51 @@
                                   "icon": "󰄱",
                                   "is_short": false,
                                   "key": null,
-                                  "label": "Debug",
+                                  "label": "PDB Signal",
                                   "opacity": null,
                                   "progress": null,
                                   "store_action": {
-                                    "_type": "SettingsToggleDebugModeAction"
+                                    "_type": "SettingsTogglePdbSignalAction"
+                                  }
+                                },
+                                {
+                                  "_type": "DispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Visual Debug",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "SettingsToggleVisualDebugAction"
+                                  }
+                                },
+                                {
+                                  "_type": "DispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Beta Versions",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "SettingsToggleBetaVersionsAction"
                                   }
                                 }
                               ],
@@ -276,7 +316,8 @@
                 }
               },
               {
-                "_type": "SubMenuItem",
+                "_type": "ActionItem",
+                "action": "<function:open_about_menu>",
                 "background_color": "#68B7FF",
                 "color": [
                   1,
@@ -289,32 +330,7 @@
                 "key": "about",
                 "label": "About",
                 "opacity": null,
-                "progress": null,
-                "sub_menu": {
-                  "_type": "HeadedMenu",
-                  "heading": "Ubo v0.0.0",
-                  "items": [
-                    {
-                      "_type": "DispatchItem",
-                      "action": "<function:action>",
-                      "background_color": "#03F7AE",
-                      "color": "#000000",
-                      "icon": "󰄬",
-                      "is_short": false,
-                      "key": null,
-                      "label": "Already up to date!",
-                      "opacity": null,
-                      "progress": null,
-                      "store_action": {
-                        "_type": "UpdateManagerSetStatusAction",
-                        "status": "checking"
-                      }
-                    }
-                  ],
-                  "placeholder": null,
-                  "sub_heading": "Base image: [unknown]\n",
-                  "title": "About"
-                }
+                "progress": null
               }
             ],
             "placeholder": null,
@@ -411,8 +427,11 @@
   },
   "settings": {
     "_type": "SettingsState",
-    "is_debug_enabled": false,
-    "services": {}
+    "beta_versions": false,
+    "pdb_signal": false,
+    "services": {},
+    "services_status": "loading",
+    "visual_debug": false
   },
   "status_icons": {
     "_type": "StatusIconsState",
@@ -422,9 +441,10 @@
     "_type": "UpdateManagerState",
     "base_image_variant": "[unknown]",
     "current_version": "0.0.0",
-    "is_update_service_active": false,
     "latest_version": "0.0.0",
-    "serial_number": "<not-available>",
+    "recent_versions": [
+      "0.0.0"
+    ],
     "update_status": "up_to_date"
   }
 }

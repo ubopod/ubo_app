@@ -11,14 +11,14 @@ build {
   sources = ["source.arm-image.raspberry_pi_os"]
 
   provisioner "file" {
-    source      = "ubo_app/system/install.sh"
+    source      = "ubo_app/system/scripts/install.sh"
     destination = "/install.sh"
   }
 
   provisioner "shell" {
     inline = [
       "chmod +x /install.sh",
-      "/install.sh --in-packer --source /build/wheel/ubo_app-${var.ubo_app_version}-py3-none-any.whl",
+      "/install.sh --in-packer --source /build/wheel/ubo_app-${var.ubo_app_version}-py3-none-any.whl --target-version ${var.ubo_app_version}",
       "rm /install.sh"
     ]
   }

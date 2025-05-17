@@ -49,11 +49,11 @@ class WorkerThread(threading.Thread):
         coroutine: Coroutine,
         callback: TaskCreatorCallback | None = None,
     ) -> Handle:
-        from ubo_app.constants import DEBUG_MODE_TASKS
+        from ubo_app.constants import DEBUG_TASKS
 
         def task_wrapper(stack: str) -> None:
             task = self.loop.create_task(coroutine)
-            if DEBUG_MODE_TASKS:
+            if DEBUG_TASKS:
                 from ubo_app.utils.error_handlers import STACKS
 
                 STACKS[task] = stack
@@ -65,7 +65,7 @@ class WorkerThread(threading.Thread):
 
         return self.loop.call_soon_threadsafe(
             task_wrapper,
-            ''.join(traceback.format_stack()[:-3]) if DEBUG_MODE_TASKS else '',
+            ''.join(traceback.format_stack()[:-3]) if DEBUG_TASKS else '',
         )
 
     async def shutdown(self: WorkerThread) -> None:

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from immutable import Immutable
 
 from ubo_app.constants import (
-    DEBUG_MODE_DOCKER,
+    DEBUG_DOCKER,
     GRPC_ENVOY_LISTEN_PORT,
     GRPC_LISTEN_PORT,
 )
@@ -191,7 +191,7 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
                     registry='docker.io',
                 ),
             ]
-            if DEBUG_MODE_DOCKER
+            if DEBUG_DOCKER
             else []
         ),
         CompositionEntry(

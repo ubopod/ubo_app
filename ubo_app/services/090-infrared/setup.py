@@ -63,26 +63,27 @@ async def _wait_for_ir_code() -> None:
     """Wait for IR codes from the system manager and dispatch them to the store."""
     while _should_receive_keypad_actions():
         try:
-            response = await send_command('infrared', 'receive', has_output=True)
-            if response == 'nocode':
-                continue
-            logger.debug('Received response from infrared command: %s', response)
+            async for response in await send_command(
+                'infrared',
+                'receive',
+                has_output=True,
+            ):
+                if response == 'nocode':
+                    break
+                protocol, scancode = response.split(':')
+                logger.info(
+                    'Received IR code from system manager',
+                    extra={'protocol': protocol, 'scancode': scancode},
+                )
+                store.dispatch(
+                    InfraredHandleReceivedCodeAction(
+                        protocol=protocol,
+                        scancode=scancode,
+                    ),
+                )
         except Exception:
             logger.exception('Failed to send infrared receive command')
             raise
-        if response:
-            protocol, scancode = response.split(':')
-            logger.info(
-                'Received IR code from system manager: %s:%s',
-                protocol,
-                scancode,
-            )
-            store.dispatch(
-                InfraredHandleReceivedCodeAction(
-                    protocol=protocol,
-                    scancode=scancode,
-                ),
-            )
 
 
 def init_service() -> Subscriptions:

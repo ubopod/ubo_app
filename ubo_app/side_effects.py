@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import atexit
 import json
+import signal
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,7 +12,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 from redux import FinishAction
 
-from ubo_app.constants import INSTALLATION_PATH
 from ubo_app.store.core.types import (
     PowerOffEvent,
     RebootEvent,
@@ -25,18 +25,11 @@ from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import Chime
 from ubo_app.store.update_manager.types import (
     UpdateManagerCheckEvent,
-    UpdateManagerSetStatusAction,
-    UpdateManagerSetUpdateServiceStatusAction,
+    UpdateManagerRequestCheckAction,
     UpdateManagerUpdateEvent,
-    UpdateStatus,
 )
-from ubo_app.store.update_manager.utils import (
-    check_version,
-    sync_with_update_service,
-    update,
-)
+from ubo_app.store.update_manager.utils import check_version, update
 from ubo_app.utils import bus_provider
-from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI, deinitalize_board, initialize_board
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.store import replay_actions
@@ -77,15 +70,6 @@ def _reboot() -> None:
             )
 
         atexit.register(reboot_system)
-
-
-def _check_update(status: str) -> None:
-    """Check the status of the update service and update the store accordingly."""
-    store.dispatch(
-        UpdateManagerSetUpdateServiceStatusAction(
-            is_active=status in ('active', 'activating', 'reloading'),
-        ),
-    )
 
 
 def _write_image(image_path: Path, array: NDArray) -> None:
@@ -174,6 +158,18 @@ def setup_side_effects() -> Subscriptions:
             for service in state.settings.services.values()
         ],
     )
+    register_persistent_store(
+        'settings:pdb_signal',
+        lambda state: state.settings.pdb_signal,
+    )
+    register_persistent_store(
+        'settings:visual_debug',
+        lambda state: state.settings.visual_debug,
+    )
+    register_persistent_store(
+        'settings:beta_versions',
+        lambda state: state.settings.beta_versions,
+    )
     subscriptions = [
         store.subscribe_event(PowerOffEvent, _power_off),
         store.subscribe_event(RebootEvent, _reboot),
@@ -187,17 +183,25 @@ def setup_side_effects() -> Subscriptions:
         bus_provider.clean_up,
     ]
 
-    store.dispatch(UpdateManagerSetStatusAction(status=UpdateStatus.CHECKING))
+    from kivy.clock import mainthread
 
-    from ubo_app.utils.monitor_unit import monitor_unit
+    @store.autorun(lambda state: state.settings.pdb_signal)
+    @mainthread
+    def _pdb_debug_mode(pdb_signal: bool) -> None:  # noqa: FBT001
+        """Set the PDB debug mode."""
 
-    create_task(monitor_unit('ubo-update.service', _check_update))
+        def signal_handler(signum: int, _: object) -> None:
+            if signum == signal.SIGUSR1:
+                import ipdb  # noqa: T100
 
-    # Create a file signaling that the app is ready
-    if IS_RPI:
-        Path(INSTALLATION_PATH).mkdir(parents=True, exist_ok=True)
-        (Path(INSTALLATION_PATH) / 'app_ready').touch()
+                ipdb.set_trace()  # noqa: T100
+                return
 
-    sync_with_update_service()
+        if pdb_signal:
+            signal.signal(signal.SIGUSR1, signal_handler)
+        else:
+            signal.signal(signal.SIGUSR1, signal.SIG_DFL)
+
+    store.dispatch(UpdateManagerRequestCheckAction())
 
     return subscriptions
