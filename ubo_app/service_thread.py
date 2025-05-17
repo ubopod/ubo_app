@@ -12,7 +12,6 @@ import logging
 import sys
 import threading
 import traceback
-import uuid
 import weakref
 from collections import OrderedDict
 from dataclasses import replace
@@ -118,8 +117,6 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
         except ServiceUnavailableError:
             pass
         else:
-            module_name = f'{service.service_uid}:{fullname}'
-
             if not service.is_alive():
                 if service.is_started:
                     msg = 'No import is allowed after the service is finished.'
@@ -128,6 +125,8 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
                     'No import is allowed in the global scope of `ubo_handle.py` files.'
                 )
                 raise ImportError(msg)
+
+            module_name = f'{service.service_uid}:{fullname}'
 
             spec = PathFinder.find_spec(
                 fullname,
@@ -152,17 +151,14 @@ class UboServiceThread(threading.Thread):
         *,
         allowed_service_ids: Sequence[str] | None = [],
     ) -> None:
+        self.path = path
         self.allowed_service_ids = allowed_service_ids
 
-        super().__init__()
-        self.name = path.name
-        self.service_uid = f'{uuid.uuid4().hex}:{self.name}'
+        super().__init__(name=path.name)
+        self.service_uid = self.path.as_posix().replace('.', '_')
         self.label = '<NOT SET>'
-        self.service_id = ''
         self.should_auto_restart = False
         self.is_enabled = False
-
-        self.path = path
 
         self.module = None
         self.is_started = False
@@ -253,7 +249,6 @@ class UboServiceThread(threading.Thread):
     def initiate(self: UboServiceThread) -> None:
         try:
             if self.path.exists():
-                module_name = f'{self.service_uid}:ubo_handle'
                 self.spec = PathFinder.find_spec(
                     'ubo_handle',
                     [self.path.as_posix()],
@@ -261,7 +256,7 @@ class UboServiceThread(threading.Thread):
                 )
                 if not self.spec or not self.spec.origin:
                     return
-                self.spec.name = module_name
+                self.spec.name = f'{self.service_uid}:ubo_handle'
                 self.spec.loader = UboModuleLoader(
                     'ubo_handle',
                     self.spec.origin,
