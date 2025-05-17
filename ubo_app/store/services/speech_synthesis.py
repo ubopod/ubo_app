@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import socket
-import sys
 from dataclasses import field
 from enum import StrEnum
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
+from ubo_app.utils.dataclass import default_provider
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
@@ -31,24 +31,20 @@ class SpeechSynthesisSetEngineAction(SpeechSynthesisAction):
     engine: SpeechSynthesisEngine
 
 
-def _default_text() -> str:
-    # WARNING: Dirty hack ahead
-    # This is to set the default value of `piper_text`/`picovoice_text` based on the
-    # provided value of `text`
-    parent_frame = sys._getframe().f_back  # noqa: SLF001
-    if not parent_frame:
-        return ''
-    text = parent_frame.f_locals.get('text') or ''
-    return text.replace(
-        '{{hostname}}',
-        f'{socket.gethostname()}.local',
-    )
-
-
 class ReadableInformation(Immutable):
     text: str
-    piper_text: str = field(default_factory=_default_text)
-    picovoice_text: str = field(default_factory=_default_text)
+    piper_text: str = field(
+        default_factory=default_provider(
+            ['text'],
+            lambda text: text.replace('{{hostname}}', f'{socket.gethostname()}.local'),
+        ),
+    )
+    picovoice_text: str = field(
+        default_factory=default_provider(
+            ['text'],
+            lambda text: text.replace('{{hostname}}', f'{socket.gethostname()}.local'),
+        ),
+    )
 
     def __post_init__(self) -> None:
         """Replace `{{hostname}}` with the current hostname."""

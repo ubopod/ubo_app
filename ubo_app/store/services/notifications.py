@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import socket
-import sys
 from dataclasses import field
 from datetime import UTC, datetime
 from enum import StrEnum, auto
@@ -16,6 +15,7 @@ from ubo_gui.menu.types import ActionItem
 from ubo_app.colors import SECONDARY_COLOR_LIGHT
 from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
 from ubo_app.store.dispatch_action import DispatchItem
+from ubo_app.utils.dataclass import default_provider
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -54,26 +54,6 @@ class NotificationDisplayType(StrEnum):
     STICKY = auto()
 
 
-def _default_icon() -> str:
-    # WARNING: Dirty hack ahead
-    # This is to set the default value of `icon` based on the provided/default value of
-    # `importance`
-    parent_frame = sys._getframe().f_back  # noqa: SLF001
-    if not parent_frame:
-        return ''
-    return IMPORTANCE_ICONS[parent_frame.f_locals.get('importance', Importance.LOW)]
-
-
-def _default_color() -> str:
-    # WARNING: Dirty hack ahead
-    # This is to set the default value of `color` based on the provided/default value of
-    # `importance`
-    parent_frame = sys._getframe().f_back  # noqa: SLF001
-    if not parent_frame:
-        return ''
-    return IMPORTANCE_COLORS[parent_frame.f_locals.get('importance', Importance.LOW)]
-
-
 class Chime(StrEnum):
     ADD = 'add'
     DONE = 'done'
@@ -103,8 +83,18 @@ class Notification(Immutable):
     actions: list[NotificationActionItem | NotificationDispatchItem] = field(
         default_factory=list,
     )
-    icon: str = field(default_factory=_default_icon)
-    color: str = field(default_factory=_default_color)
+    icon: str = field(
+        default_factory=default_provider(
+            ['importance'],
+            lambda importance: IMPORTANCE_ICONS[importance],
+        ),
+    )
+    color: str = field(
+        default_factory=default_provider(
+            ['importance'],
+            lambda importance: IMPORTANCE_COLORS[importance],
+        ),
+    )
     expiration_timestamp: datetime | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = NOTIFICATIONS_FLASH_TIME

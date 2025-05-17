@@ -210,7 +210,10 @@ class MenuNotificationHandler(UboApp):
             replace(
                 action,
                 is_short=True,
-                action=functools.partial(run_notification_action, action),
+                action=(
+                    action_ := functools.partial(run_notification_action, action),
+                    setattr(action_, '_is_default_action_of_ubo_dispatch_item', True),
+                )[0],
             )
             for action in notification.value.actions
         ]
