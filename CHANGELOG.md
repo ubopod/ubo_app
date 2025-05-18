@@ -44,6 +44,7 @@
 - chore(ci): rename `ubo-pod` runner label to `ubo-pod-pi4` for clarity
 - refactor(core): replace uuid4 with service path as the unique identifier of ubo services
 - refactor(core): introduce `utils.dataclass.default_provider` and use it wherever we had that duplicated code for setting the default value of a dataclass field based on other fields
+- refactor: replace all `ApplicationItem`s with the new `UboApplicationItem`, not storing the mutable `PageWidget`  classes in the store, an step towards implementing #261
 
 ## Version 1.3.0
 

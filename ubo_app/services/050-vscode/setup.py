@@ -7,8 +7,9 @@ import subprocess
 from typing import TYPE_CHECKING
 
 from commands import check_status, restart, uninstall_service
-from constants import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
+from constants_ import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
 from kivy.lang.builder import Builder
+from kivy.properties import StringProperty
 from login_page import LoginPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 from ubo_gui.page import PageWidget
@@ -29,8 +30,17 @@ from ubo_app.store.services.vscode import (
     VSCodeState,
     VSCodeStatus,
 )
+from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.log_process import log_async_process
+
+
+class _VSCodeQRCodePage(PageWidget):
+    url = StringProperty()
+
+
+register_application(application=_VSCodeQRCodePage, application_id='vscode:qrcode-page')
+register_application(application=LoginPage, application_id='vscode:login-page')
 
 CODE_TUNNEL_URL_PREFIX = 'https://vscode.dev/tunnel/'
 
@@ -149,12 +159,13 @@ def status_based_actions(status: VSCodeStatus) -> list[ActionItem | ApplicationI
     actions = []
 
     if status.is_running:
-
-        class VSCodeQRCodePage(PageWidget):
-            url = f'{CODE_TUNNEL_URL_PREFIX}{status.name}'
-
         actions.append(
-            ApplicationItem(label='Show URL', icon='󰐲', application=VSCodeQRCodePage),
+            UboApplicationItem(
+                label='Show URL',
+                icon='󰐲',
+                application_id='vscode:qrcode-page',
+                initialization_kwargs={'url': f'{CODE_TUNNEL_URL_PREFIX}{status.name}'},
+            ),
         )
     return actions
 
@@ -173,10 +184,10 @@ def login_actions(*, is_logged_in: bool | None) -> list[ActionItem | Application
         )
     elif is_logged_in is False:
         actions.append(
-            ApplicationItem(
+            UboApplicationItem(
                 label='Login',
                 icon='󰍂',
-                application=LoginPage,
+                application_id='vscode:login-page',
             ),
         )
     return actions

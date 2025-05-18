@@ -7,7 +7,7 @@ import re
 import subprocess
 
 from commands import install_service
-from constants import CODE_BINARY_PATH
+from constants_ import CODE_BINARY_PATH
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import NumericProperty, StringProperty
@@ -54,6 +54,7 @@ class LoginPage(PageWidget):
                 'login',
                 '--provider',
                 'github',
+                stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
             )

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from ubo_gui.menu.types import HeadlessMenu, SubMenuItem
 
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.settings.services import service_items
 from ubo_app.store.settings.types import (
@@ -12,6 +11,7 @@ from ubo_app.store.settings.types import (
     SettingsTogglePdbSignalAction,
     SettingsToggleVisualDebugAction,
 )
+from ubo_app.store.ubo_actions import UboDispatchItem
 
 
 @store.autorun(lambda state: state.settings.pdb_signal)
@@ -37,17 +37,17 @@ SYSTEM_MENU: list[SubMenuItem] = [
         sub_menu=HeadlessMenu(
             title='󰒓General',
             items=[
-                DispatchItem(
+                UboDispatchItem(
                     label='PDB Signal',
                     store_action=SettingsTogglePdbSignalAction(),
                     icon=_pdb_debug_icon,
                 ),
-                DispatchItem(
+                UboDispatchItem(
                     label='Visual Debug',
                     store_action=SettingsToggleVisualDebugAction(),
                     icon=_visual_debug_icon,
                 ),
-                DispatchItem(
+                UboDispatchItem(
                     label='Beta Versions',
                     store_action=SettingsToggleBetaVersionsAction(),
                     icon=_beta_versions_icon,

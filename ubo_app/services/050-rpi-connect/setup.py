@@ -20,6 +20,7 @@ from ubo_gui.page import PageWidget
 
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
+from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
@@ -27,6 +28,19 @@ if TYPE_CHECKING:
         RPiConnectState,
         RPiConnectStatus,
     )
+
+
+class _RPiConnectQRCodePage(PageWidget): ...
+
+
+register_application(
+    application=_RPiConnectQRCodePage,
+    application_id='rpi-connect:qrcode-page',
+)
+register_application(
+    application=SignInPage,
+    application_id='rpi-connect:signin-page',
+)
 
 
 def status_based_actions(
@@ -38,15 +52,11 @@ def status_based_actions(
         status.screen_sharing_sessions is not None
         or status.remote_shell_sessions is not None
     ):
-
-        class RPiConnectQRCodePage(PageWidget):
-            url = 'https://connect.raspberrypi.com/devices'
-
         actions.append(
-            ApplicationItem(
+            UboApplicationItem(
                 label='Show URL',
                 icon='󰐲',
-                application=RPiConnectQRCodePage,
+                application_id='rpi-connect:qrcode-page',
             ),
         )
     return actions
@@ -60,7 +70,11 @@ def login_actions(*, is_signed_in: bool | None) -> list[ActionItem | Application
         )
     elif is_signed_in is False:
         actions.append(
-            ApplicationItem(label='Sign in', icon='󰍂', application=SignInPage),
+            UboApplicationItem(
+                label='Sign in',
+                icon='󰍂',
+                application_id='rpi-connect:signin-page',
+            ),
         )
     return actions
 

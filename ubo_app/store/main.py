@@ -5,12 +5,10 @@ import base64
 import contextlib
 import functools
 import inspect
-import sys
 import threading
 import weakref
 from asyncio import Handle, iscoroutine
 from datetime import datetime
-from pathlib import Path
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -51,7 +49,7 @@ from redux.basic_types import (
     SubscribeEventCleanup,
 )
 
-from ubo_app.constants import PACKAGE_NAME, STORE_GRACE_PERIOD
+from ubo_app.constants import STORE_GRACE_PERIOD
 from ubo_app.logger import logger
 from ubo_app.store.input.reducer import reducer as input_reducer
 from ubo_app.store.scheduler import Scheduler
@@ -283,7 +281,7 @@ class _UboEventHandler(Generic[StrictEvent]):
 
 class UboStore(Store[RootState, UboAction, UboEvent]):
     @classmethod
-    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:  # noqa: C901
+    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
         from redux.autorun import Autorun
         from ubo_gui.page import PageWidget
 
@@ -295,23 +293,6 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             return {'_type': 'bytes', 'value': base64.b64encode(obj).decode('utf-8')}
         if isinstance(obj, datetime):
             return {'_type': 'datetime', 'value': obj.isoformat()}
-        if isinstance(obj, type) and issubclass(obj, PageWidget):
-            import ubo_app
-
-            _ = ubo_app
-            file_path = sys.modules[obj.__module__].__file__
-            ubo_app_path = sys.modules[PACKAGE_NAME].__file__
-            if file_path and ubo_app_path:
-                root_path = Path(ubo_app_path).parent
-                path = Path(file_path)
-                return f"""{
-                    (
-                        path.relative_to(root_path)
-                        if file_path.startswith(root_path.as_posix())
-                        else path.absolute()
-                    ).as_posix()
-                }:{obj.__name__}"""
-            return f'{obj.__module__}:{obj.__name__}'
         if isinstance(obj, functools.partial):
             return f'<functools.partial:{cls.serialize_value(obj.func)}>'
         if callable(obj):

@@ -20,7 +20,6 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
@@ -41,6 +40,7 @@ from ubo_app.store.services.users import (
     UsersState,
     UserState,
 )
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus
 from ubo_app.utils.dbus_interfaces import AccountsInterface, UserInterface
@@ -207,7 +207,7 @@ def users_menu(state: UsersState) -> Menu:
     return HeadlessMenu(
         title='󰡉Users',
         items=[
-            DispatchItem(
+            UboDispatchItem(
                 label='Add',
                 icon='󰀔',
                 store_action=UsersCreateUserAction(),
@@ -221,13 +221,13 @@ def users_menu(state: UsersState) -> Menu:
                     sub_menu=HeadlessMenu(
                         title=user.id,
                         items=[
-                            DispatchItem(
+                            UboDispatchItem(
                                 label='Reset Password',
                                 icon='󰯄',
                                 store_action=UsersResetPasswordAction(id=user.id),
                                 background_color=WARNING_COLOR,
                             ),
-                            DispatchItem(
+                            UboDispatchItem(
                                 label='Delete',
                                 icon='󰀕',
                                 store_action=UsersDeleteUserAction(id=user.id),

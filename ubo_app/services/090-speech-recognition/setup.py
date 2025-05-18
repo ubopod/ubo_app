@@ -17,7 +17,6 @@ from vosk import KaldiRecognizer, Model
 from ubo_app.constants import WAKE_WORD
 from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionIntent,
@@ -25,6 +24,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionSetIsActiveAction,
 )
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -244,7 +244,7 @@ def _vosk_items(is_active: bool) -> list[ActionItem]:  # noqa: FBT001
         ]
 
     return [
-        DispatchItem(
+        UboDispatchItem(
             key='is_active',
             label='Is Active',
             store_action=SpeechRecognitionSetIsActiveAction(

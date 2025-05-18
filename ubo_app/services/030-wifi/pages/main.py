@@ -9,7 +9,6 @@ from kivy.clock import mainthread
 from kivy.properties import StringProperty
 from ubo_gui.menu.types import (
     ActionItem,
-    ApplicationItem,
     HeadlessMenu,
     SubMenuItem,
 )
@@ -30,6 +29,7 @@ from ubo_app.store.services.wifi import (
     WiFiConnection,
     WiFiUpdateRequestAction,
 )
+from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
 
 from .create_wireless_connection import CreateWirelessConnectionPage
@@ -38,25 +38,25 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 
-class WiFiConnectionPage(PromptWidget):
-    ssid: str
+class _WiFiConnectionPage(PromptWidget):
+    ssid: str = StringProperty()
     state: ConnectionState = StringProperty(defaultvalue=ConnectionState.UNKNOWN)
 
-    def first_option_callback(self: WiFiConnectionPage) -> None:
+    def first_option_callback(self) -> None:
         if self.state is ConnectionState.CONNECTED:
             create_task(disconnect_wireless_connection())
         elif self.state is ConnectionState.DISCONNECTED:
             create_task(connect_wireless_connection(self.ssid))
         store.dispatch(WiFiUpdateRequestAction(reset=True))
 
-    def second_option_callback(self: WiFiConnectionPage) -> None:
+    def second_option_callback(self) -> None:
         create_task(forget_wireless_connection(self.ssid))
         store.dispatch(
             CloseApplicationAction(application=self),
             WiFiUpdateRequestAction(reset=True),
         )
 
-    def update(self: WiFiConnectionPage, *_: tuple[Any, ...]) -> None:
+    def update(self, *_: tuple[Any, ...]) -> None:
         if self.state is ConnectionState.CONNECTED:
             self.first_option_label = 'Disconnect'
             self.first_option_icon = '󰖪'
@@ -86,8 +86,9 @@ class WiFiConnectionPage(PromptWidget):
             self.first_option_background_color = 'black'
             self.icon = ''
 
-    def __init__(self: WiFiConnectionPage, **kwargs: object) -> None:
+    def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs, items=None)
+        self.title = None
         self.prompt = f'SSID: {self.ssid}'
         self.first_option_is_short = False
         self.second_option_label = 'Delete'
@@ -121,6 +122,16 @@ class WiFiConnectionPage(PromptWidget):
         create_task(listener())
 
 
+register_application(
+    application=_WiFiConnectionPage,
+    application_id='wifi:connection-page',
+)
+register_application(
+    application=CreateWirelessConnectionPage,
+    application_id='wifi:create-connection-page',
+)
+
+
 @store.autorun(lambda state: state.wifi.connections)
 def wireless_connections_menu(
     connections: Sequence[WiFiConnection] | None,
@@ -132,15 +143,6 @@ def wireless_connections_menu(
             placeholder='Loading...',
         )
 
-    def wifi_network_creator(ssid: str) -> type[WiFiConnectionPage]:
-        class WiFiNetworkPageWithSSID(WiFiConnectionPage):
-            def __init__(self: WiFiNetworkPageWithSSID, **kwargs: object) -> None:
-                self.ssid = ssid
-                self.title = None
-                super().__init__(**kwargs)
-
-        return WiFiNetworkPageWithSSID
-
     icons = {
         ConnectionState.CONNECTED: '󱚽',
         ConnectionState.DISCONNECTED: '󱛅',
@@ -149,13 +151,16 @@ def wireless_connections_menu(
     }
     items = (
         [
-            ApplicationItem(
+            UboApplicationItem(
                 key=connection.ssid,
                 label=connection.ssid,
-                application=wifi_network_creator(connection.ssid),
+                application_id='wifi:connection-page',
                 icon=get_signal_icon(connection.signal_strength)
                 if connection.state == ConnectionState.DISCONNECTED
                 else icons[connection.state],
+                initialization_kwargs={
+                    'ssid': connection.ssid,
+                },
             )
             for connection in connections
         ]
@@ -183,10 +188,10 @@ WiFiMainMenu = SubMenuItem(
     sub_menu=HeadlessMenu(
         title='WiFi Settings',
         items=[
-            ApplicationItem(
+            UboApplicationItem(
                 label='Add',
                 icon='󱛃',
-                application=CreateWirelessConnectionPage,
+                application_id='wifi:create-connection-page',
             ),
             ActionItem(
                 label='Select',

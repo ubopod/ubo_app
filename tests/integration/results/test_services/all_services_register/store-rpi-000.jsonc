@@ -393,8 +393,9 @@
                               "_type": "HeadlessMenu",
                               "items": [
                                 {
-                                  "_type": "ApplicationItem",
-                                  "application": "services/030-wifi/pages/create_wireless_connection.py:CreateWirelessConnectionPage",
+                                  "_type": "UboApplicationItem",
+                                  "application": "<function:<lambda>>",
+                                  "application_id": "wifi:create-connection-page",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -403,6 +404,8 @@
                                     1
                                   ],
                                   "icon": "󱛃",
+                                  "initialization_args": [],
+                                  "initialization_kwargs": null,
                                   "is_short": false,
                                   "key": null,
                                   "label": "Add",
@@ -609,7 +612,7 @@
                               "_type": "HeadlessMenu",
                               "items": [
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#FFC107",
                                   "color": [
@@ -647,7 +650,7 @@
                                     "_type": "HeadlessMenu",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FFC107",
                                         "color": [
@@ -668,7 +671,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -712,7 +715,7 @@
                                     "_type": "HeadlessMenu",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FFC107",
                                         "color": [
@@ -733,7 +736,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -782,7 +785,7 @@
                               "_type": "HeadlessMenu",
                               "items": [
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -802,7 +805,7 @@
                                   }
                                 },
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -822,7 +825,7 @@
                                   }
                                 },
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -901,7 +904,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Audio",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -922,7 +925,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -962,7 +965,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -979,7 +982,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -996,7 +999,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -1013,7 +1016,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -1030,7 +1033,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -1047,7 +1050,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -1064,7 +1067,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -1086,7 +1089,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -1133,7 +1136,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Camera",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -1154,7 +1157,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -1194,7 +1197,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -1211,7 +1214,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -1228,7 +1231,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -1245,7 +1248,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -1262,7 +1265,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -1279,7 +1282,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -1296,7 +1299,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -1318,7 +1321,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -1365,7 +1368,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Display",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -1386,7 +1389,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -1426,7 +1429,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -1443,7 +1446,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -1460,7 +1463,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -1477,7 +1480,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -1494,7 +1497,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -1511,7 +1514,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -1528,7 +1531,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -1550,7 +1553,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -1597,7 +1600,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Docker",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -1618,7 +1621,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -1658,7 +1661,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -1675,7 +1678,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -1692,7 +1695,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -1709,7 +1712,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -1726,7 +1729,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -1743,7 +1746,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -1760,7 +1763,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -1782,7 +1785,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -1829,7 +1832,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Ethernet",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -1850,7 +1853,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -1890,7 +1893,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -1907,7 +1910,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -1924,7 +1927,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -1941,7 +1944,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -1958,7 +1961,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -1975,7 +1978,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -1992,7 +1995,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -2014,7 +2017,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -2061,7 +2064,7 @@
                                     "heading": "[color=#008000]󰪥[/color] IP",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -2082,7 +2085,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -2122,7 +2125,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -2139,7 +2142,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -2156,7 +2159,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -2173,7 +2176,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -2190,7 +2193,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -2207,7 +2210,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -2224,7 +2227,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -2246,7 +2249,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -2293,7 +2296,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Infrared",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -2314,7 +2317,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -2354,7 +2357,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -2371,7 +2374,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -2388,7 +2391,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -2405,7 +2408,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -2422,7 +2425,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -2439,7 +2442,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -2456,7 +2459,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -2478,7 +2481,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -2525,7 +2528,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Keyboard",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -2546,7 +2549,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -2586,7 +2589,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -2603,7 +2606,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -2620,7 +2623,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -2637,7 +2640,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -2654,7 +2657,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -2671,7 +2674,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -2688,7 +2691,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -2710,7 +2713,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -2757,7 +2760,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Keypad",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -2778,7 +2781,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -2818,7 +2821,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -2835,7 +2838,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -2852,7 +2855,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -2869,7 +2872,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -2886,7 +2889,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -2903,7 +2906,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -2920,7 +2923,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -2942,7 +2945,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -2989,7 +2992,7 @@
                                     "heading": "[color=#008000]󰪥[/color] LightDM",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -3010,7 +3013,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -3050,7 +3053,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -3067,7 +3070,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -3084,7 +3087,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -3101,7 +3104,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -3118,7 +3121,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -3135,7 +3138,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -3152,7 +3155,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -3174,7 +3177,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -3221,7 +3224,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Notifications",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -3242,7 +3245,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -3282,7 +3285,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -3299,7 +3302,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -3316,7 +3319,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -3333,7 +3336,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -3350,7 +3353,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -3367,7 +3370,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -3384,7 +3387,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -3406,7 +3409,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -3453,7 +3456,7 @@
                                     "heading": "[color=#008000]󰪥[/color] RGB Ring",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -3474,7 +3477,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -3514,7 +3517,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -3531,7 +3534,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -3548,7 +3551,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -3565,7 +3568,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -3582,7 +3585,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -3599,7 +3602,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -3616,7 +3619,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -3638,7 +3641,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -3685,7 +3688,7 @@
                                     "heading": "[color=#008000]󰪥[/color] RPi Connect",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -3706,7 +3709,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -3746,7 +3749,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -3763,7 +3766,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -3780,7 +3783,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -3797,7 +3800,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -3814,7 +3817,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -3831,7 +3834,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -3848,7 +3851,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -3870,7 +3873,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -3917,7 +3920,7 @@
                                     "heading": "[color=#008000]󰪥[/color] SSH",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -3938,7 +3941,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -3978,7 +3981,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -3995,7 +3998,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -4012,7 +4015,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -4029,7 +4032,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -4046,7 +4049,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -4063,7 +4066,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -4080,7 +4083,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -4102,7 +4105,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -4149,7 +4152,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Sensors",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -4170,7 +4173,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -4210,7 +4213,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -4227,7 +4230,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -4244,7 +4247,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -4261,7 +4264,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -4278,7 +4281,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -4295,7 +4298,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -4312,7 +4315,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -4334,7 +4337,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -4381,7 +4384,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Speech Recognition",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -4402,7 +4405,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -4442,7 +4445,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -4459,7 +4462,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -4476,7 +4479,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -4493,7 +4496,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -4510,7 +4513,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -4527,7 +4530,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -4544,7 +4547,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -4566,7 +4569,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -4613,7 +4616,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Speech Synthesis",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -4634,7 +4637,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -4674,7 +4677,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -4691,7 +4694,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -4708,7 +4711,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -4725,7 +4728,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -4742,7 +4745,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -4759,7 +4762,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -4776,7 +4779,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -4798,7 +4801,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -4845,7 +4848,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Users",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -4866,7 +4869,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -4906,7 +4909,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -4923,7 +4926,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -4940,7 +4943,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -4957,7 +4960,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -4974,7 +4977,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -4991,7 +4994,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -5008,7 +5011,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -5030,7 +5033,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -5077,7 +5080,7 @@
                                     "heading": "[color=#008000]󰪥[/color] VSCode",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -5098,7 +5101,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -5138,7 +5141,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -5155,7 +5158,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -5172,7 +5175,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -5189,7 +5192,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -5206,7 +5209,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -5223,7 +5226,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -5240,7 +5243,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -5262,7 +5265,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -5309,7 +5312,7 @@
                                     "heading": "[color=#008000]󰪥[/color] Web UI",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -5330,7 +5333,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -5370,7 +5373,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -5387,7 +5390,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -5404,7 +5407,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -5421,7 +5424,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -5438,7 +5441,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -5455,7 +5458,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -5472,7 +5475,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -5494,7 +5497,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -5541,7 +5544,7 @@
                                     "heading": "[color=#008000]󰪥[/color] WiFi",
                                     "items": [
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#FF3F51",
                                         "color": [
@@ -5562,7 +5565,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#68B7FF",
                                         "color": [
@@ -5602,7 +5605,7 @@
                                           "_type": "HeadlessMenu",
                                           "items": [
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#545454",
@@ -5619,7 +5622,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#848484",
@@ -5636,7 +5639,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#b6b6b6",
                                               "color": "#ffffff",
@@ -5653,7 +5656,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#64C864",
@@ -5670,7 +5673,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FFA500",
@@ -5687,7 +5690,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF9696",
@@ -5704,7 +5707,7 @@
                                               }
                                             },
                                             {
-                                              "_type": "DispatchItem",
+                                              "_type": "UboDispatchItem",
                                               "action": "<function:action>",
                                               "background_color": "#000000",
                                               "color": "#FF00FF",
@@ -5726,7 +5729,7 @@
                                         }
                                       },
                                       {
-                                        "_type": "DispatchItem",
+                                        "_type": "UboDispatchItem",
                                         "action": "<function:action>",
                                         "background_color": "#000000",
                                         "color": [
@@ -5800,7 +5803,7 @@
                               "_type": "HeadlessMenu",
                               "items": [
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -5821,7 +5824,7 @@
                                   }
                                 },
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -6181,7 +6184,7 @@
             "_type": "HeadlessMenu",
             "items": [
               {
-                "_type": "DispatchItem",
+                "_type": "UboDispatchItem",
                 "action": "<function:action>",
                 "background_color": "#68B7FF",
                 "color": [
@@ -6201,7 +6204,7 @@
                 }
               },
               {
-                "_type": "DispatchItem",
+                "_type": "UboDispatchItem",
                 "action": "<function:action>",
                 "background_color": "#68B7FF",
                 "color": [

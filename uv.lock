@@ -1631,14 +1631,14 @@ wheels = [
 
 [[package]]
 name = "qrcode"
-version = "8.0"
+version = "8.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/db/6fc9631cac1327f609d2c8ae3680ecd987a2e97472437f2de7ead1235156/qrcode-8.0.tar.gz", hash = "sha256:025ce2b150f7fe4296d116ee9bad455a6643ab4f6e7dce541613a4758cbce347", size = 42743, upload-time = "2024-10-01T13:27:55.26Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8f/b2/7fc2931bfae0af02d5f53b174e9cf701adbb35f39d69c2af63d4a39f81a9/qrcode-8.2.tar.gz", hash = "sha256:35c3f2a4172b33136ab9f6b3ef1c00260dd2f66f858f24d88418a015f446506c", size = 43317, upload-time = "2025-05-01T15:44:24.726Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/ab/df8d889fd01139db68ae9e5cb5c8f0ea016823559a6ecb427582d52b07dc/qrcode-8.0-py3-none-any.whl", hash = "sha256:9fc05f03305ad27a709eb742cf3097fa19e6f6f93bb9e2f039c0979190f6f1b1", size = 45710, upload-time = "2024-10-01T13:27:53.212Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/b8/d2d6d731733f51684bbf76bf34dab3b70a9148e8f2cef2bb544fccec681a/qrcode-8.2-py3-none-any.whl", hash = "sha256:16e64e0716c14960108e85d853062c9e8bba5ca8252c0b4d0231b9df4060ff4f", size = 45986, upload-time = "2025-05-01T15:44:22.781Z" },
 ]
 
 [[package]]
@@ -2008,7 +2008,7 @@ requires-dist = [
     { name = "sentry-sdk", specifier = ">=1.43.0" },
     { name = "simpleaudio", specifier = ">=1.0.4" },
     { name = "tenacity", specifier = ">=8.2.3" },
-    { name = "ubo-gui", specifier = ">=0.13.16" },
+    { name = "ubo-gui", specifier = "==0.13.17.dev1250518103975398101" },
     { name = "vosk", specifier = "==0.3.44" },
 ]
 provides-extras = ["test-investigation"]
@@ -2036,16 +2036,16 @@ dev = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.13.16"
+version = "0.13.17.dev1250518103975398101"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "headless-kivy" },
     { name = "python-immutable" },
     { name = "qrcode" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/03/0afe4cbf6c261805c36f9b5caff899f5e39ac91a1693e7b56b3f07fa4950/ubo_gui-0.13.16.tar.gz", hash = "sha256:eb7685eff635e09be25a5b1902b2bdc9fa7c6dd41d7c3dca865599b107d76759", size = 8580240, upload-time = "2025-05-16T10:26:12.944Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/27/38/57ae3b5be90318245becfd52bfabe2bd7ceaf6008dd499dfce212ed86709/ubo_gui-0.13.17.dev1250518103975398101.tar.gz", hash = "sha256:e901f7c5ff1a02c51168118b6dc3b44c34afbf6ef7dc364aa7e67476808dd5e9", size = 8580590, upload-time = "2025-05-18T13:58:32.066Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/ca/162c637c8b7e040067b31019231f4a7f2be375578276c4ad256e2638408e/ubo_gui-0.13.16-py3-none-any.whl", hash = "sha256:9bce45d2cb85facd2dc1a784eeb7711d62a5d86c6e84a8d01ae1fdc4666a41c5", size = 8603392, upload-time = "2025-05-16T10:26:08.948Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/60/fb4a5e0656605b91a1a8b7b5b6d5765acf728c23af957fe42721b014f45d/ubo_gui-0.13.17.dev1250518103975398101-py3-none-any.whl", hash = "sha256:0fa49501de7ebbbc72d511c7591edf7d0f17fca9b54c2e7012a9f47d4f7d3e00", size = 8603690, upload-time = "2025-05-18T13:58:29.223Z" },
 ]
 
 [[package]]

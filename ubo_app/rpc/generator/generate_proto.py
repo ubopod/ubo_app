@@ -67,10 +67,10 @@ if __name__ == '__main__':
     import ubo_gui.menu.types
 
     import ubo_app.store.core.types
-    import ubo_app.store.dispatch_action
     import ubo_app.store.input.types
     import ubo_app.store.settings.types
     import ubo_app.store.status_icons.types
+    import ubo_app.store.ubo_actions
     import ubo_app.store.update_manager.types
 
     generators: list[_ProtoGenerator] = []
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     generators.append(parse(ubo_gui.menu.types, actions, events))
     generators.append(parse(ubo_app.store.core.types, actions, events))
     generators.append(
-        parse(ubo_app.store.dispatch_action, actions, events),
+        parse(ubo_app.store.ubo_actions, actions, events),
     )
     generators.append(parse(ubo_app.store.input.types, actions, events))
     generators.append(parse(ubo_app.store.settings.types, actions, events))

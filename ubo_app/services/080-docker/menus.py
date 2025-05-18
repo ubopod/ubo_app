@@ -19,7 +19,6 @@ from ubo_gui.menu.types import (
 )
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
@@ -40,6 +39,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ def image_menu(  # noqa: C901
 
     if image.status == DockerItemStatus.NOT_AVAILABLE:
         items.append(
-            DispatchItem(
+            UboDispatchItem(
                 label='Fetch',
                 icon='󰇚',
                 store_action=DockerImageFetchAction(image=image.id),
@@ -86,7 +86,7 @@ def image_menu(  # noqa: C901
     elif image.status == DockerItemStatus.AVAILABLE:
         items.extend(
             [
-                DispatchItem(
+                UboDispatchItem(
                     label='Start',
                     icon='󰐊',
                     store_action=DockerImageRunCompositionAction(image=image.id)
@@ -95,7 +95,7 @@ def image_menu(  # noqa: C901
                 ),
                 *(
                     [
-                        DispatchItem(
+                        UboDispatchItem(
                             label='Pull Images',
                             icon='󰇚',
                             store_action=DockerImageFetchCompositionAction(
@@ -106,7 +106,7 @@ def image_menu(  # noqa: C901
                     if image.id.startswith('composition_')
                     else []
                 ),
-                DispatchItem(
+                UboDispatchItem(
                     label='Delete Application'
                     if image.id.startswith('composition_')
                     else 'Remove Image',
@@ -123,14 +123,14 @@ def image_menu(  # noqa: C901
     elif image.status == DockerItemStatus.CREATED:
         items.extend(
             [
-                DispatchItem(
+                UboDispatchItem(
                     label='Start',
                     icon='󰐊',
                     store_action=DockerImageRunCompositionAction(image=image.id)
                     if image.id.startswith('composition_')
                     else DockerImageRunContainerAction(image=image.id),
                 ),
-                DispatchItem(
+                UboDispatchItem(
                     label='Release Resources'
                     if image.id.startswith('composition_')
                     else 'Remove Container',
@@ -143,7 +143,7 @@ def image_menu(  # noqa: C901
         )
     elif image.status == DockerItemStatus.RUNNING:
         items.append(
-            DispatchItem(
+            UboDispatchItem(
                 label='Stop',
                 key='stop',
                 icon='󰓛',
@@ -154,7 +154,7 @@ def image_menu(  # noqa: C901
         )
         if image.id.startswith('composition_'):
             items.append(
-                DispatchItem(
+                UboDispatchItem(
                     label='Instructions',
                     key='instructions',
                     icon='󰋗',

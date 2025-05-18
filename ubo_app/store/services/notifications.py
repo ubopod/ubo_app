@@ -14,7 +14,7 @@ from ubo_gui.menu.types import ActionItem
 
 from ubo_app.colors import SECONDARY_COLOR_LIGHT
 from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
-from ubo_app.store.dispatch_action import DispatchItem
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.dataclass import default_provider
 
 if TYPE_CHECKING:
@@ -67,7 +67,7 @@ class NotificationActionItem(ActionItem):
     close_notification: bool = True
 
 
-class NotificationDispatchItem(DispatchItem, NotificationActionItem): ...
+class NotificationDispatchItem(UboDispatchItem, NotificationActionItem): ...
 
 
 class Notification(Immutable):

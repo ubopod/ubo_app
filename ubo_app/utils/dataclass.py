@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
 T = TypeVar('T', infer_variance=True)
+_NOT_PROVIDED = object()
 
 
 def default_provider(
@@ -26,7 +27,11 @@ def default_provider(
         parent_frame = sys._getframe().f_back  # noqa: SLF001
         values = []
         for field in required_fields:
-            if not parent_frame or (value := parent_frame.f_locals.get(field)) is None:
+            if (
+                not parent_frame
+                or (value := parent_frame.f_locals.get(field, _NOT_PROVIDED))
+                is _NOT_PROVIDED
+            ):
                 msg = f'No {field} provided'
                 raise ValueError(msg)
             values.append(value)

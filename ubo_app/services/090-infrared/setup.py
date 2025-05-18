@@ -9,7 +9,6 @@ from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
     InfraredHandleReceivedCodeAction,
@@ -17,6 +16,7 @@ from ubo_app.store.services.infrared import (
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
 )
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -119,7 +119,7 @@ def init_service() -> Subscriptions:
     def menu_items(data: tuple[bool, bool]) -> list[Item]:
         should_propagate_keypad_actions, should_receive_keypad_actions = data
         return [
-            DispatchItem(
+            UboDispatchItem(
                 key='propagate_keys',
                 label='Propagate Keys',
                 store_action=InfraredSetShouldPropagateAction(
@@ -131,7 +131,7 @@ def init_service() -> Subscriptions:
                     else UNSELECTED_ITEM_PARAMETERS
                 ),
             ),
-            DispatchItem(
+            UboDispatchItem(
                 key='receive_keys',
                 label='Receive Keys',
                 store_action=InfraredSetShouldReceiveAction(

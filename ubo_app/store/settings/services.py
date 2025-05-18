@@ -11,7 +11,6 @@ from kivy.lang.builder import Builder
 from kivy.metrics import dp
 from kivy.properties import StringProperty
 from ubo_gui.menu.types import (
-    ApplicationItem,
     HeadedMenu,
     HeadlessMenu,
     Item,
@@ -26,7 +25,6 @@ from ubo_app.colors import (
     STOPPED_COLOR,
     WARNING_COLOR,
 )
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.settings.types import (
     ErrorReport,
@@ -36,6 +34,11 @@ from ubo_app.store.settings.types import (
     SettingsServiceSetShouldRestartAction,
     SettingsStartServiceAction,
     SettingsStopServiceAction,
+)
+from ubo_app.store.ubo_actions import (
+    UboApplicationItem,
+    UboDispatchItem,
+    register_application,
 )
 from ubo_app.utils.gui import (
     SELECTED_ITEM_PARAMETERS,
@@ -64,26 +67,26 @@ if TYPE_CHECKING:
     from ubo_app.store.settings.types import ServiceState
 
 
-def _generate_error_report_app(error: ErrorReport) -> type[PageWidget]:
-    class ErrorReportPage(PageWidget):
-        text: str = StringProperty(error.message)
+class _ErrorReportPage(PageWidget):
+    text: str = StringProperty()
 
-        def go_up(self: ErrorReportPage) -> None:
-            """Scroll up the error report."""
-            self.ids.scrollable_widget.y = max(
-                self.ids.scrollable_widget.y - dp(100),
-                self.ids.container.y
-                - (self.ids.scrollable_widget.height - self.ids.container.height),
-            )
+    def go_up(self) -> None:
+        """Scroll up the error report."""
+        self.ids.scrollable_widget.y = max(
+            self.ids.scrollable_widget.y - dp(100),
+            self.ids.container.y
+            - (self.ids.scrollable_widget.height - self.ids.container.height),
+        )
 
-        def go_down(self: ErrorReportPage) -> None:
-            """Scroll down the error report."""
-            self.ids.scrollable_widget.y = min(
-                self.ids.scrollable_widget.y + dp(100),
-                self.ids.container.y,
-            )
+    def go_down(self) -> None:
+        """Scroll down the error report."""
+        self.ids.scrollable_widget.y = min(
+            self.ids.scrollable_widget.y + dp(100),
+            self.ids.container.y,
+        )
 
-    return ErrorReportPage
+
+register_application(application=_ErrorReportPage, application_id='ubo:error-report')
 
 
 SERVICE_ITEMS: dict[str, SubMenuItem] = {}
@@ -138,7 +141,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
     )
     def error_items(errors: list[ErrorReport]) -> list[Item]:
         return [
-            ApplicationItem(
+            UboApplicationItem(
                 key=str(index),
                 label=datetime.datetime.fromtimestamp(
                     error.timestamp,
@@ -146,7 +149,10 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
                 .astimezone()
                 .strftime('%Y-%m-%d %H:%M:%S'),
                 icon=f'[color={DANGER_COLOR}][/color]',
-                application=_generate_error_report_app(error),
+                application_id='ubo:error-report',
+                initialization_kwargs={
+                    'text': error.message,
+                },
             )
             for index, error in enumerate(errors)
         ]
@@ -161,7 +167,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
                 if level == log_level
                 else _get_unselected_item_parameters(level)
             )
-            return DispatchItem(
+            return UboDispatchItem(
                 key=logging.getLevelName(level),
                 label=logging.getLevelName(level),
                 store_action=SettingsServiceSetLogLevelAction(
@@ -193,7 +199,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
 
         if service_state.is_active:
             items.append(
-                DispatchItem(
+                UboDispatchItem(
                     key='stop',
                     label='Stop',
                     store_action=SettingsStopServiceAction(service_id=service.id),
@@ -203,7 +209,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
             )
         else:
             items.append(
-                DispatchItem(
+                UboDispatchItem(
                     key='start',
                     label='Start',
                     store_action=SettingsStartServiceAction(service_id=service.id),
@@ -214,7 +220,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
         if service_state.is_enabled:
             items.extend(
                 [
-                    DispatchItem(
+                    UboDispatchItem(
                         key='enabled',
                         label='Auto Load',
                         store_action=SettingsServiceSetIsEnabledAction(
@@ -237,7 +243,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
             )
         else:
             items.append(
-                DispatchItem(
+                UboDispatchItem(
                     key='enabled',
                     label='Auto Load',
                     store_action=SettingsServiceSetIsEnabledAction(
@@ -251,7 +257,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
 
         if service_state.should_auto_restart:
             items.append(
-                DispatchItem(
+                UboDispatchItem(
                     key='auto_restart',
                     label='Auto Restart',
                     store_action=SettingsServiceSetShouldRestartAction(
@@ -263,7 +269,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
             )
         else:
             items.append(
-                DispatchItem(
+                UboDispatchItem(
                     key='auto_restart',
                     label='Auto Restart',
                     store_action=SettingsServiceSetShouldRestartAction(
@@ -289,7 +295,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
                             items=error_items,
                         ),
                     ),
-                    DispatchItem(
+                    UboDispatchItem(
                         key='clear_errors',
                         label='Clear errors',
                         store_action=SettingsClearServiceErrorsAction(

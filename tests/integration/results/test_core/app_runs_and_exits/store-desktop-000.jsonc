@@ -153,7 +153,7 @@
                               "_type": "HeadlessMenu",
                               "items": [
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -173,7 +173,7 @@
                                   }
                                 },
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -193,7 +193,7 @@
                                   }
                                 },
                                 {
-                                  "_type": "DispatchItem",
+                                  "_type": "UboDispatchItem",
                                   "action": "<function:action>",
                                   "background_color": "#68B7FF",
                                   "color": [
@@ -373,7 +373,7 @@
             "_type": "HeadlessMenu",
             "items": [
               {
-                "_type": "DispatchItem",
+                "_type": "UboDispatchItem",
                 "action": "<function:action>",
                 "background_color": "#68B7FF",
                 "color": [
@@ -393,7 +393,7 @@
                 }
               },
               {
-                "_type": "DispatchItem",
+                "_type": "UboDispatchItem",
                 "action": "<function:action>",
                 "background_color": "#68B7FF",
                 "color": [

@@ -16,13 +16,13 @@ from ubo_app.store.core.types import (
     RebootAction,
     SettingsCategory,
 )
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationsDisplayAction,
 )
 from ubo_app.store.settings.menu import SYSTEM_MENU
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.store.update_manager.utils import open_about_menu
 
 if TYPE_CHECKING:
@@ -94,7 +94,7 @@ def _notifications_title(unread_count: int) -> str:
 def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item]:
     """Return a list of menu items for the notification manager."""
     return [
-        DispatchItem(
+        UboDispatchItem(
             key=str(notification.id),
             label=notification.title,
             icon=notification.icon,
@@ -151,12 +151,12 @@ HOME_MENU = HeadlessMenu(
             sub_menu=HeadlessMenu(
                 title='󰐥Power',
                 items=[
-                    DispatchItem(
+                    UboDispatchItem(
                         label='Reboot',
                         store_action=RebootAction(),
                         icon='󰜉',
                     ),
-                    DispatchItem(
+                    UboDispatchItem(
                         label='Power off',
                         store_action=PowerOffAction(),
                         icon='󰐥',

@@ -37,7 +37,6 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType, InputMethod
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
@@ -71,6 +70,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import secrets
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
@@ -184,7 +184,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Docker is not Installed',
             sub_heading='Install it to enjoy the power of Docker on your Ubo pod',
             items=[
-                DispatchItem(
+                UboDispatchItem(
                     label='Install Docker',
                     icon='󰶮',
                     store_action=DockerInstallAction(),
@@ -203,7 +203,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Docker is not Running',
             sub_heading='Run it to enjoy the power of Docker on your Ubo pod',
             items=[
-                DispatchItem(
+                UboDispatchItem(
                     label='Start Docker',
                     icon='󰐊',
                     store_action=DockerStartAction(),
@@ -215,7 +215,7 @@ def setup_menu(status: DockerStatus) -> HeadedMenu:
             heading='Docker is Running',
             sub_heading='Enjoy the power of Docker on your Ubo pod',
             items=[
-                DispatchItem(
+                UboDispatchItem(
                     label='Stop Docker',
                     icon='󰓛',
                     store_action=DockerStopAction(),

@@ -24,7 +24,6 @@ from ubo_app.constants import (
     UPDATE_ASSETS_PATH,
 )
 from ubo_app.logger import logger
-from ubo_app.store.dispatch_action import DispatchItem
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,
@@ -35,6 +34,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.store.update_manager.installed_versions import get_installed_versions
 from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
@@ -364,7 +364,7 @@ def about_menu_items(data: tuple[UpdateManagerState, bool]) -> list[Item]:
         sub_menu=HeadlessMenu(
             title='󰜉Recent versions',
             items=[
-                DispatchItem(
+                UboDispatchItem(
                     label=version,
                     icon='󰜉',
                     store_action=NotificationsAddAction(
@@ -404,7 +404,7 @@ version of ubo-app with the selected version?""",
         sub_menu=HeadlessMenu(
             title='󰯍Installed versions',
             items=[
-                DispatchItem(
+                UboDispatchItem(
                     label=item.name,
                     **(
                         SELECTED_ITEM_PARAMETERS
@@ -451,7 +451,7 @@ version of ubo-app with the selected version?""",
         ]
     if state.update_status is UpdateStatus.FAILED_TO_CHECK:
         items = [
-            DispatchItem(
+            UboDispatchItem(
                 label='Failed to check for updates',
                 store_action=UpdateManagerRequestCheckAction(),
                 icon='󰜺',
@@ -460,7 +460,7 @@ version of ubo-app with the selected version?""",
         ]
     if state.update_status is UpdateStatus.UP_TO_DATE:
         items = [
-            DispatchItem(
+            UboDispatchItem(
                 label='Already up to date!',
                 icon='󰄬',
                 store_action=UpdateManagerRequestCheckAction(),
@@ -477,7 +477,7 @@ version of ubo-app with the selected version?""",
                 []
                 if state.latest_version is None
                 else [
-                    DispatchItem(
+                    UboDispatchItem(
                         label=f'Update to v{state.latest_version}',
                         icon='󰬬',
                         store_action=NotificationsAddAction(
