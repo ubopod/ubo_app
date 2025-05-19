@@ -169,6 +169,14 @@ def setup() -> None:
 
     start_event_loop_thread(asyncio.new_event_loop())
 
+    from ubo_app.store.ubo_actions import register_application
+    from ubo_app.utils.gui import RawContentViewer
+
+    register_application(
+        application=RawContentViewer,
+        application_id='ubo:raw-content-viewer',
+    )
+
 
 def clear_signal_handlers() -> None:
     """Clear the signal handlers."""

@@ -87,6 +87,7 @@ CORE_SERVICE_IDS = [
     'display',
     'docker',
     'ethernet',
+    'file_system',
     'infrared',
     'ip',
     'keyboard',

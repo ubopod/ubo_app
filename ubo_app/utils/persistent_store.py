@@ -25,7 +25,7 @@ def register_persistent_store(
     key: str,
     selector: Callable[[RootState], T],
 ) -> None:
-    """Register a part of the store to be persistent in the filesystem."""
+    """Register a part of the store to be persistent in the file system."""
     from ubo_app.store.main import store
 
     @store.autorun(selector)
@@ -71,7 +71,7 @@ def read_from_persistent_store(
     default: T | None = None,
     object_type: type[T] | None = None,
 ) -> T | None:
-    """Read a part of the store from the filesystem."""
+    """Read a part of the store from the file system."""
     from ubo_app.store.main import store
 
     try:

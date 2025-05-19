@@ -133,6 +133,11 @@ class MenuAppHeader(UboApp):
         self.header_content = RelativeLayout()
 
         original_header = super().header
+        if isinstance(original_header, Label):
+            original_header.bind(size=original_header.setter('text_size'))
+            original_header.halign = 'center'
+            original_header.valign = 'center'
+            original_header.shorten = True
 
         if not original_header:
             return None

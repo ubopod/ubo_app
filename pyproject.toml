@@ -14,7 +14,7 @@ dependencies = [
   "dill>=0.3.8",
   "docker>=7.1.0",
   "fasteners>=0.19",
-  "headless-kivy>=0.12.2",
+  "headless-kivy==0.12.3",
   "netifaces>=0.11.0",
   "platformdirs>=4.2.0",
   "psutil>=6.0.0",
@@ -34,6 +34,7 @@ dependencies = [
   "sentry-sdk>=1.43.0",
   "simpleaudio>=1.0.4",
   "tenacity>=8.2.3",
+  "ubo-gui==0.13.17",
   "vosk==0.3.44",
   # Adafruit dependencies
   "adafruit-circuitpython-aw9523>=1.1.7",
@@ -53,7 +54,6 @@ dependencies = [
   "gpiozero>=2.0.1 ; platform_machine != 'aarch64'",
   "adafruit-circuitpython-irremote>=5.0.3",
   "aiostream>=0.6.4",
-  "ubo-gui==0.13.17.dev1250518103975398101",
 ]
 
 [build-system]
@@ -282,6 +282,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/080-docker"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-file-system"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

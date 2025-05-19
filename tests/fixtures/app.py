@@ -154,7 +154,7 @@ class AppContext:
 
 
 class ConditionalFSWrapper:
-    """Conditional wrapper for the fake filesystem."""
+    """Conditional wrapper for the fake file system."""
 
     def __init__(
         self: ConditionalFSWrapper,

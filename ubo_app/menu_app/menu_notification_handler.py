@@ -8,6 +8,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from kivy.clock import Clock, mainthread
+from kivy.properties import StringProperty
 from ubo_gui.app import UboApp
 from ubo_gui.menu.stack_item import StackApplicationItem
 from ubo_gui.notification import NotificationWidget
@@ -21,6 +22,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
+    NotificationApplicationItem,
     NotificationDisplayType,
     NotificationsClearAction,
     NotificationsClearEvent,
@@ -33,7 +35,7 @@ if TYPE_CHECKING:
 
     from kivy._clock import ClockEvent
     from ubo_gui.menu.menu_widget import MenuWidget
-    from ubo_gui.menu.types import PageWidget
+    from ubo_gui.menu.types import Menu, PageWidget
 
 
 class NotificationReference:
@@ -42,6 +44,12 @@ class NotificationReference:
         self.dismiss_on_close = notification.dismiss_on_close
         self.is_initialized = False
         self.flash_event: ClockEvent | None = None
+
+
+class UboNotificationWidget(NotificationWidget):
+    """renders a notification."""
+
+    notification_id: str = StringProperty()
 
 
 class MenuNotificationHandler(UboApp):
@@ -56,7 +64,7 @@ class MenuNotificationHandler(UboApp):
             event.notification.id
             and any(
                 isinstance(stack_item, StackApplicationItem)
-                and isinstance(stack_item.application, NotificationWidget)
+                and isinstance(stack_item.application, UboNotificationWidget)
                 and stack_item.application.notification_id == event.notification.id
                 for stack_item in self.menu_widget.stack
             )
@@ -144,7 +152,7 @@ class MenuNotificationHandler(UboApp):
                     ),
                 )
 
-        notification_application = NotificationWidget(items=[None] * PAGE_MAX_ITEMS)
+        notification_application = UboNotificationWidget(items=[None] * PAGE_MAX_ITEMS)
         notification_application.notification_id = notification.value.id
 
         notification_application.bind(on_close=close)
@@ -167,11 +175,11 @@ class MenuNotificationHandler(UboApp):
 
         store.dispatch(OpenApplicationAction(application=notification_application))
 
-    def _notification_items(
+    def _notification_items(  # noqa: C901
         self: MenuNotificationHandler,
         notification: NotificationReference,
         close: Callable[[], None],
-    ) -> list[NotificationActionItem | None]:
+    ) -> list[NotificationActionItem | NotificationApplicationItem | None]:
         def dismiss(_: object = None) -> None:
             close()
             if not notification.dismiss_on_close:
@@ -179,7 +187,9 @@ class MenuNotificationHandler(UboApp):
                     NotificationsClearAction(notification=notification.value),
                 )
 
-        def run_notification_action(action: NotificationActionItem) -> None:
+        def run_notification_action(
+            action: NotificationActionItem,
+        ) -> Menu | Callable[[], Menu] | type[PageWidget] | PageWidget | None:
             result = action.action()
             if action.close_notification:
                 if action.dismiss_notification:
@@ -188,7 +198,7 @@ class MenuNotificationHandler(UboApp):
                     close()
             return result
 
-        items: list[NotificationActionItem | None] = []
+        items: list[NotificationActionItem | NotificationApplicationItem | None] = []
 
         if notification.value.extra_information:
             text = notification.value.extra_information.text
@@ -206,6 +216,19 @@ class MenuNotificationHandler(UboApp):
                 ),
             )
 
+        def get_application_runner(
+            action: NotificationApplicationItem,
+        ) -> Callable[[], PageWidget | type[PageWidget]]:
+            def run_application() -> PageWidget | type[PageWidget]:
+                if callable(action.application) and not isinstance(
+                    action.application,
+                    type,
+                ):
+                    return action.application()
+                return action.application
+
+            return run_application
+
         items += [
             replace(
                 action,
@@ -214,6 +237,20 @@ class MenuNotificationHandler(UboApp):
                     action_ := functools.partial(run_notification_action, action),
                     setattr(action_, '_is_default_action_of_ubo_dispatch_item', True),
                 )[0],
+            )
+            if isinstance(action, NotificationActionItem)
+            else NotificationActionItem(
+                action=get_application_runner(action),
+                background_color=action.background_color,
+                close_notification=action.close_notification,
+                color=action.color,
+                dismiss_notification=action.dismiss_notification,
+                icon=action.icon,
+                is_short=True,
+                key=action.key,
+                label=action.label,
+                opacity=action.opacity,
+                progress=action.progress,
             )
             for action in notification.value.actions
         ]
@@ -234,7 +271,7 @@ class MenuNotificationHandler(UboApp):
     @mainthread
     def _update_notification_widget(
         self: MenuNotificationHandler,
-        notification_application: NotificationWidget,
+        notification_application: UboNotificationWidget,
         event: NotificationsDisplayEvent,
         notification: NotificationReference,
         close: Callable[[], None],

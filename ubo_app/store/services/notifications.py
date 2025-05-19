@@ -14,7 +14,7 @@ from ubo_gui.menu.types import ActionItem
 
 from ubo_app.colors import SECONDARY_COLOR_LIGHT
 from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
-from ubo_app.store.ubo_actions import UboDispatchItem
+from ubo_app.store.ubo_actions import UboApplicationItem, UboDispatchItem
 from ubo_app.utils.dataclass import default_provider
 
 if TYPE_CHECKING:
@@ -67,6 +67,12 @@ class NotificationActionItem(ActionItem):
     close_notification: bool = True
 
 
+class NotificationApplicationItem(UboApplicationItem):
+    background_color: Color | Callable[[], Color] = SECONDARY_COLOR_LIGHT
+    dismiss_notification: bool = False
+    close_notification: bool = True
+
+
 class NotificationDispatchItem(UboDispatchItem, NotificationActionItem): ...
 
 
@@ -80,7 +86,7 @@ class Notification(Immutable):
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     is_read: bool = False
     sender: str | None = None
-    actions: list[NotificationActionItem | NotificationDispatchItem] = field(
+    actions: list[NotificationActionItem | NotificationApplicationItem] = field(
         default_factory=list,
     )
     icon: str = field(

@@ -1,6 +1,14 @@
 """Provides reusable gui stuff."""
 
+from __future__ import annotations
+
+import pathlib
 from typing import Literal, TypeAlias
+
+from kivy.lang.builder import Builder
+from kivy.metrics import dp
+from kivy.properties import StringProperty
+from ubo_gui.page import PageWidget
 
 from ubo_app.colors import SUCCESS_COLOR
 
@@ -13,3 +21,32 @@ SELECTED_ITEM_PARAMETERS: ItemParameters = {
 UNSELECTED_ITEM_PARAMETERS: ItemParameters = {
     'icon': '󰄱',
 }
+
+
+class RawContentViewer(PageWidget):
+    """Kivy widget for displaying raw content in a scrollable view."""
+
+    text: str = StringProperty()
+
+    def go_up(self) -> None:
+        """Scroll up the error report."""
+        self.ids.scrollable_widget.y = max(
+            self.ids.scrollable_widget.y - dp(100),
+            self.ids.container.y
+            - (self.ids.scrollable_widget.height - self.ids.container.height),
+        )
+
+    def go_down(self) -> None:
+        """Scroll down the error report."""
+        self.ids.scrollable_widget.y = min(
+            self.ids.scrollable_widget.y + dp(100),
+            self.ids.container.y,
+        )
+
+
+Builder.load_file(
+    pathlib.Path(__file__)
+    .parent.joinpath('raw_content_viewer.kv')
+    .resolve()
+    .as_posix(),
+)

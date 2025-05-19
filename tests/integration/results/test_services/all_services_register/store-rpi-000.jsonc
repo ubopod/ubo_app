@@ -332,6 +332,23 @@
                       "label": "Portainer",
                       "opacity": null,
                       "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<function:<lambda>>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰉋",
+                      "is_short": false,
+                      "key": "file_system:file-system",
+                      "label": "File System",
+                      "opacity": null,
+                      "progress": null
                     }
                   ],
                   "placeholder": "No apps",
@@ -2042,6 +2059,238 @@
                                     "placeholder": null,
                                     "sub_heading": "No errors raised in this service",
                                     "title": "Ethernet"
+                                  }
+                                },
+                                {
+                                  "_type": "SubMenuItem",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "[color=#008000]󰪥[/color]",
+                                  "is_short": false,
+                                  "key": "file_system",
+                                  "label": "File System",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "_type": "HeadedMenu",
+                                    "heading": "[color=#008000]󰪥[/color] File System",
+                                    "items": [
+                                      {
+                                        "_type": "UboDispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#FF3F51",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "stop",
+                                        "label": "Stop",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsStopServiceAction",
+                                          "service_id": "file_system"
+                                        }
+                                      },
+                                      {
+                                        "_type": "UboDispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "enabled",
+                                        "label": "Auto Load",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetIsEnabledAction",
+                                          "is_enabled": false,
+                                          "service_id": "file_system"
+                                        }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#b6b6b6",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "log_level",
+                                        "label": "Level: DEBUG",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadlessMenu",
+                                          "items": [
+                                            {
+                                              "_type": "UboDispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#545454",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "NOTSET",
+                                              "label": "NOTSET",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 0,
+                                                "service_id": "file_system"
+                                              }
+                                            },
+                                            {
+                                              "_type": "UboDispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#848484",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "VERBOSE",
+                                              "label": "VERBOSE",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 5,
+                                                "service_id": "file_system"
+                                              }
+                                            },
+                                            {
+                                              "_type": "UboDispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#b6b6b6",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
+                                              "is_short": false,
+                                              "key": "DEBUG",
+                                              "label": "DEBUG",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 10,
+                                                "service_id": "file_system"
+                                              }
+                                            },
+                                            {
+                                              "_type": "UboDispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#64C864",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "INFO",
+                                              "label": "INFO",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 20,
+                                                "service_id": "file_system"
+                                              }
+                                            },
+                                            {
+                                              "_type": "UboDispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FFA500",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "WARNING",
+                                              "label": "WARNING",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 30,
+                                                "service_id": "file_system"
+                                              }
+                                            },
+                                            {
+                                              "_type": "UboDispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF9696",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "ERROR",
+                                              "label": "ERROR",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 40,
+                                                "service_id": "file_system"
+                                              }
+                                            },
+                                            {
+                                              "_type": "UboDispatchItem",
+                                              "action": "<function:action>",
+                                              "background_color": "#000000",
+                                              "color": "#FF00FF",
+                                              "icon": "󰄱",
+                                              "is_short": false,
+                                              "key": "CRITICAL",
+                                              "label": "CRITICAL",
+                                              "opacity": null,
+                                              "progress": null,
+                                              "store_action": {
+                                                "_type": "SettingsServiceSetLogLevelAction",
+                                                "log_level": 50,
+                                                "service_id": "file_system"
+                                              }
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "title": "Log Level: DEBUG"
+                                        }
+                                      },
+                                      {
+                                        "_type": "UboDispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#000000",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰶕",
+                                        "is_short": false,
+                                        "key": "auto_restart",
+                                        "label": "Auto Restart",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsServiceSetShouldRestartAction",
+                                          "service_id": "file_system",
+                                          "should_auto_restart": true
+                                        }
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "sub_heading": "No errors raised in this service",
+                                    "title": "File System"
                                   }
                                 },
                                 {
@@ -6331,6 +6580,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Ethernet",
+        "log_level": 10,
+        "should_auto_restart": false
+      },
+      "file_system": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "file_system",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "File System",
         "log_level": 10,
         "should_auto_restart": false
       },

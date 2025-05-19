@@ -4,19 +4,14 @@ from __future__ import annotations
 
 import datetime
 import logging
-import pathlib
 from typing import TYPE_CHECKING
 
-from kivy.lang.builder import Builder
-from kivy.metrics import dp
-from kivy.properties import StringProperty
 from ubo_gui.menu.types import (
     HeadedMenu,
     HeadlessMenu,
     Item,
     SubMenuItem,
 )
-from ubo_gui.page import PageWidget
 
 from ubo_app import logger
 from ubo_app.colors import (
@@ -38,7 +33,6 @@ from ubo_app.store.settings.types import (
 from ubo_app.store.ubo_actions import (
     UboApplicationItem,
     UboDispatchItem,
-    register_application,
 )
 from ubo_app.utils.gui import (
     SELECTED_ITEM_PARAMETERS,
@@ -65,28 +59,6 @@ def _get_unselected_item_parameters(log_level_: int) -> ItemParameters:
 
 if TYPE_CHECKING:
     from ubo_app.store.settings.types import ServiceState
-
-
-class _ErrorReportPage(PageWidget):
-    text: str = StringProperty()
-
-    def go_up(self) -> None:
-        """Scroll up the error report."""
-        self.ids.scrollable_widget.y = max(
-            self.ids.scrollable_widget.y - dp(100),
-            self.ids.container.y
-            - (self.ids.scrollable_widget.height - self.ids.container.height),
-        )
-
-    def go_down(self) -> None:
-        """Scroll down the error report."""
-        self.ids.scrollable_widget.y = min(
-            self.ids.scrollable_widget.y + dp(100),
-            self.ids.container.y,
-        )
-
-
-register_application(application=_ErrorReportPage, application_id='ubo:error-report')
 
 
 SERVICE_ITEMS: dict[str, SubMenuItem] = {}
@@ -149,7 +121,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
                 .astimezone()
                 .strftime('%Y-%m-%d %H:%M:%S'),
                 icon=f'[color={DANGER_COLOR}][/color]',
-                application_id='ubo:error-report',
+                application_id='ubo:raw-content-viewer',
                 initialization_kwargs={
                     'text': error.message,
                 },
@@ -355,8 +327,3 @@ def service_items(services: dict[str, ServiceState] | None) -> list[SubMenuItem]
         _create_service_item(service)
         for service in sorted(services.values(), key=lambda x: x.label)
     ]
-
-
-Builder.load_file(
-    pathlib.Path(__file__).parent.joinpath('error_report.kv').resolve().as_posix(),
-)

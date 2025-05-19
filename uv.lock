@@ -1982,7 +1982,7 @@ requires-dist = [
     { name = "fasteners", specifier = ">=0.19" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = ">=2.0.1" },
     { name = "graphviz", marker = "extra == 'test-investigation'", specifier = ">=0.20.3" },
-    { name = "headless-kivy", specifier = ">=0.12.2" },
+    { name = "headless-kivy", specifier = "==0.12.3" },
     { name = "netifaces", specifier = ">=0.11.0" },
     { name = "objgraph", marker = "extra == 'test-investigation'", specifier = ">=3.6.2" },
     { name = "onnxruntime", marker = "platform_machine == 'aarch64'", specifier = "==1.20.1" },
@@ -2008,7 +2008,7 @@ requires-dist = [
     { name = "sentry-sdk", specifier = ">=1.43.0" },
     { name = "simpleaudio", specifier = ">=1.0.4" },
     { name = "tenacity", specifier = ">=8.2.3" },
-    { name = "ubo-gui", specifier = "==0.13.17.dev1250518103975398101" },
+    { name = "ubo-gui", specifier = "==0.13.17" },
     { name = "vosk", specifier = "==0.3.44" },
 ]
 provides-extras = ["test-investigation"]
@@ -2036,16 +2036,16 @@ dev = [
 
 [[package]]
 name = "ubo-gui"
-version = "0.13.17.dev1250518103975398101"
+version = "0.13.17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "headless-kivy" },
     { name = "python-immutable" },
     { name = "qrcode" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/38/57ae3b5be90318245becfd52bfabe2bd7ceaf6008dd499dfce212ed86709/ubo_gui-0.13.17.dev1250518103975398101.tar.gz", hash = "sha256:e901f7c5ff1a02c51168118b6dc3b44c34afbf6ef7dc364aa7e67476808dd5e9", size = 8580590, upload-time = "2025-05-18T13:58:32.066Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/41/650e4157738fbc2f1823027032a967bb997fbc23f755be67bd870a81e583/ubo_gui-0.13.17.tar.gz", hash = "sha256:8879c927dc223c414e0c663d3a79aab851d7071f3d0a612aa6e62c0ddb04ab63", size = 8580309, upload-time = "2025-05-19T04:56:56.965Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/60/fb4a5e0656605b91a1a8b7b5b6d5765acf728c23af957fe42721b014f45d/ubo_gui-0.13.17.dev1250518103975398101-py3-none-any.whl", hash = "sha256:0fa49501de7ebbbc72d511c7591edf7d0f17fca9b54c2e7012a9f47d4f7d3e00", size = 8603690, upload-time = "2025-05-18T13:58:29.223Z" },
+    { url = "https://files.pythonhosted.org/packages/72/67/ea70ad16bbaccd82ebeded8301c3a0d034a3bcc2f8419359c6e2c7f6a96f/ubo_gui-0.13.17-py3-none-any.whl", hash = "sha256:d24d2b840374e2887dd0c4adf084e40d32b2980a34630468b0e2825aeacf4bef", size = 8603440, upload-time = "2025-05-19T04:56:54.814Z" },
 ]
 
 [[package]]
