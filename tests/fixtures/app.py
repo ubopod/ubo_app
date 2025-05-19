@@ -247,13 +247,13 @@ def _setup_kivy() -> None:
         os.environ['KIVY_DPI'] = '96'
         original_config_set = Config.set
 
-        def patched_config_set(category: str, key: str, value: str) -> None:
-            if category == 'graphics':
-                if key == 'width':
+        def patched_config_set(section: str, option: str, value: str) -> None:
+            if section == 'graphics':
+                if option == 'width':
                     value = str(int(value) // 2)
-                if key == 'height':
+                if option == 'height':
                     value = str(int(value) // 2)
-            original_config_set(category, key, value)
+            original_config_set(section, option, value)
 
         Config.set = patched_config_set
 

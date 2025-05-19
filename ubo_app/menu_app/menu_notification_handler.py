@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 
 class NotificationReference:
-    def __init__(self: NotificationReference, notification: Notification) -> None:
+    def __init__(self, notification: Notification) -> None:
         self.value = notification
         self.dismiss_on_close = notification.dismiss_on_close
         self.is_initialized = False
@@ -57,7 +57,7 @@ class MenuNotificationHandler(UboApp):
 
     @mainthread
     def display_notification(  # noqa: C901
-        self: MenuNotificationHandler,
+        self,
         event: NotificationsDisplayEvent,
     ) -> None:
         if (
@@ -176,7 +176,7 @@ class MenuNotificationHandler(UboApp):
         store.dispatch(OpenApplicationAction(application=notification_application))
 
     def _notification_items(  # noqa: C901
-        self: MenuNotificationHandler,
+        self,
         notification: NotificationReference,
         close: Callable[[], None],
     ) -> list[NotificationActionItem | NotificationApplicationItem | None]:
@@ -270,7 +270,7 @@ class MenuNotificationHandler(UboApp):
 
     @mainthread
     def _update_notification_widget(
-        self: MenuNotificationHandler,
+        self,
         notification_application: UboNotificationWidget,
         event: NotificationsDisplayEvent,
         notification: NotificationReference,

@@ -119,7 +119,7 @@ class MenuAppFooter(UboApp):
         def set_value(_: int | None = None) -> None:
             clock.text = now().strftime('%H:%M')
 
-        def update(_: int | None = None) -> None:
+        def update(_: float | None = None) -> None:
             set_value()
             now_ = now()
             Clock.schedule_once(

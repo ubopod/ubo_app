@@ -178,7 +178,11 @@ async def ubo_input(  # noqa: PLR0913
                 (event.value, event.result),
             )
             kivy_color = get_color_from_hex('#21E693')
-            color = tuple(round(c * 255) for c in kivy_color[:3])
+            color = (
+                round(kivy_color[0] * 255),
+                round(kivy_color[1] * 255),
+                round(kivy_color[2] * 255),
+            )
             store.dispatch(
                 RgbRingBlinkAction(
                     color=color,

@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
 from ubo_gui.app import UboApp
-from ubo_gui.menu.menu_widget import MenuWidget
+from ubo_gui.menu.menu_widget import MenuPageWidget, MenuWidget
 from ubo_gui.menu.stack_item import StackItem, StackMenuItem
+from ubo_gui.page import PageWidget
+from ubo_gui.utils import mainthread_if_needed
 
 from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
+from ubo_app.menu_app.home_page import HomePage
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core.types import (
     CloseApplicationEvent,
@@ -29,12 +32,11 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
 
-from .home_page import HomePage
-
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Item, Menu
-    from ubo_gui.page import PageWidget
 
 
 class MenuWidgetWithHomePage(MenuWidget):
@@ -46,7 +48,7 @@ class MenuWidgetWithHomePage(MenuWidget):
             padding_top=self.padding_top,
         )
 
-    def _render_menu(self: MenuWidgetWithHomePage, menu: Menu) -> PageWidget | None:
+    def _render_menu(self: MenuWidgetWithHomePage, menu: Menu) -> MenuPageWidget:
         if self.depth <= 1:
             self.home_page.items = self.current_menu_items
             self.current_screen = self.home_page
@@ -78,10 +80,11 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 return
             self.menu_widget.set_root_menu(menu)
 
-    def build(self: UboApp) -> Widget | None:
+    def build(self) -> Widget | None:
         root = super().build()
-        self.menu_widget.padding_top = root.ids.header_layout.height
-        self.menu_widget.padding_bottom = root.ids.footer_layout.height
+        if root:
+            self.menu_widget.padding_top = root.ids.header_layout.height
+            self.menu_widget.padding_bottom = root.ids.footer_layout.height
 
         return root
 
@@ -119,7 +122,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
-        self.root.is_fullscreen = True
         self.root.title = self.menu_widget.title
 
         store.subscribe_event(
@@ -171,6 +173,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         return self.menu_widget
 
+    @mainthread_if_needed
     def open_application(self: MenuAppCentral, event: OpenApplicationEvent) -> None:
         self.menu_widget.open_application(event.application)
 
@@ -188,7 +191,13 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         if current_page is None:
             msg = 'No current page'
             raise ValueError(msg)
-        items: list[Item | None] = current_page.items
+        if not isinstance(current_page, PageWidget):
+            msg = 'Current page is not a StackMenuItem'
+            raise TypeError(msg)
+        if current_page.items is None:
+            msg = 'No items in current page'
+            raise TypeError(msg)
+        items: Sequence[Item | None] = current_page.items
         filtered_items = [item for item in items if item and item.icon == event.icon]
         if not filtered_items:
             msg = f'No item with icon "{event.icon}"'
@@ -205,11 +214,19 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self: MenuAppCentral,
         event: MenuChooseByLabelEvent,
     ) -> None:
+        from ubo_gui.page import PageWidget
+
         current_page = self.menu_widget.current_screen
         if current_page is None:
             msg = 'No current page'
             raise ValueError(msg)
-        items: list[Item | None] = current_page.items
+        if not isinstance(current_page, PageWidget):
+            msg = 'Current page is not a StackMenuItem'
+            raise TypeError(msg)
+        if current_page.items is None:
+            msg = 'No items in current page'
+            raise TypeError(msg)
+        items: Sequence[Item | None] = current_page.items
         filtered_items = [item for item in items if item and item.label == event.label]
         if not filtered_items:
             msg = f'No item with label "{event.label}"'

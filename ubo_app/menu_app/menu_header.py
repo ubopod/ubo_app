@@ -42,10 +42,10 @@ class MenuAppHeader(UboApp):
                     del self.notification_widgets[notification.id]
             elif math.isnan(notification.progress):
                 if notification.id not in self.notification_widgets or not isinstance(
-                    self.notification_widgets[notification.id][1],
+                    widget := self.notification_widgets[notification.id][1],
                     SpinnerWidget,
                 ):
-                    self.notification_widgets[notification.id] = (
+                    [_, widget] = self.notification_widgets[notification.id] = (
                         notification,
                         SpinnerWidget(
                             font_size=dp(16),
@@ -55,13 +55,13 @@ class MenuAppHeader(UboApp):
                             width=dp(16),
                         ),
                     )
-                self.notification_widgets[notification.id][1].color = notification.color
+                widget.color = notification.color
             else:
                 if notification.id not in self.notification_widgets or not isinstance(
-                    self.notification_widgets[notification.id][1],
+                    widget := self.notification_widgets[notification.id][1],
                     ProgressRingWidget,
                 ):
-                    self.notification_widgets[notification.id] = (
+                    [_, widget] = self.notification_widgets[notification.id] = (
                         notification,
                         ProgressRingWidget(
                             background_color=(0.3, 0.3, 0.3, 1),
@@ -71,10 +71,8 @@ class MenuAppHeader(UboApp):
                             pos_hint={'center_y': 0.5},
                         ),
                     )
-                self.notification_widgets[notification.id][
-                    1
-                ].progress = notification.progress
-                self.notification_widgets[notification.id][1].color = notification.color
+                widget.progress = notification.progress
+                widget.color = notification.color
 
         for id in set(self.notification_widgets) - {
             notification.id for notification in notifications

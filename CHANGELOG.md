@@ -46,6 +46,7 @@
 - refactor(core): introduce `utils.dataclass.default_provider` and use it wherever we had that duplicated code for setting the default value of a dataclass field based on other fields
 - refactor: replace all `ApplicationItem`s with the new `UboApplicationItem`, not storing the mutable `PageWidget`  classes in the store, an step towards implementing #261
 - feat(file-system): add `file-system` service with readonly features like navigation through file-system, checking size/permission/owner/group of files and directories, and reading files - closes #299
+- refactor: improve type stubs for kivy app by only providing stubs for pyx files and making `Widget` use correct `EventListener` base and fix type errors coming to surface
 
 ## Version 1.3.0
 

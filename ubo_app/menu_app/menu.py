@@ -49,10 +49,9 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         store.subscribe_event(DisplayRerenderEvent, self.rerender, keep_ref=False)
 
     @override
-    def stop(self, *largs: object) -> object:
+    def stop(self, *largs: object) -> None:
         """Stop the application."""
-        return_value = super().stop(*largs)
+        super().stop(*largs)
         self.is_stopped = True
         for cleanup in self.subscriptions:
             cleanup()
-        return return_value
