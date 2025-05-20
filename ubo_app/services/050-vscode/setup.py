@@ -12,7 +12,6 @@ from kivy.lang.builder import Builder
 from kivy.properties import StringProperty
 from login_page import LoginPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
-from ubo_gui.page import PageWidget
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
@@ -32,10 +31,11 @@ from ubo_app.store.services.vscode import (
 )
 from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.gui import UboPageWidget
 from ubo_app.utils.log_process import log_async_process
 
 
-class _VSCodeQRCodePage(PageWidget):
+class _VSCodeQRCodePage(UboPageWidget):
     url = StringProperty()
 
 

@@ -9,6 +9,7 @@ from kivy.lang.builder import Builder
 from kivy.metrics import dp
 from kivy.properties import StringProperty
 from ubo_gui.page import PageWidget
+from ubo_gui.prompt import PromptWidget
 
 from ubo_app.colors import SUCCESS_COLOR
 
@@ -23,7 +24,17 @@ UNSELECTED_ITEM_PARAMETERS: ItemParameters = {
 }
 
 
-class RawContentViewer(PageWidget):
+class UboPageWidget(PageWidget):
+    """Base class for all UBO pages."""
+
+    id: str = StringProperty()
+
+
+class UboPromptWidget(PromptWidget, UboPageWidget):
+    """Base class for all UBO prompts."""
+
+
+class RawContentViewer(UboPageWidget):
     """Kivy widget for displaying raw content in a scrollable view."""
 
     text: str = StringProperty()

@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_gui.menu.types import Item, Menu
-    from ubo_gui.page import PageWidget
 
 
 class MainAction(BaseAction): ...
@@ -124,11 +123,13 @@ class MenuScrollAction(MenuAction):
 
 
 class OpenApplicationAction(MainAction):
-    application: PageWidget
+    application_id: str
+    initialization_args: tuple = ()
+    initialization_kwargs: dict = field(default_factory=dict)
 
 
 class CloseApplicationAction(MainAction):
-    application: PageWidget
+    application_instance_id: str
 
 
 class MainEvent(BaseEvent): ...
@@ -163,11 +164,13 @@ class MenuScrollEvent(MenuEvent):
 
 
 class OpenApplicationEvent(MainEvent):
-    application: PageWidget
+    application_id: str
+    initialization_args: tuple = ()
+    initialization_kwargs: dict = field(default_factory=dict)
 
 
 class CloseApplicationEvent(MainEvent):
-    application: PageWidget
+    application_instance_id: str
 
 
 class PowerEvent(MainEvent): ...

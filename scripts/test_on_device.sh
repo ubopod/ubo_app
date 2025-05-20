@@ -75,7 +75,7 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
   fi
 
   if [ "$run" == "True" ]; then
-    cmd_list+=("uv run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* || true &&")
+    cmd_list+=("uv run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* 2>&1 || true &&")
   fi
 
   # Add a final true to ensure the command exits successfully

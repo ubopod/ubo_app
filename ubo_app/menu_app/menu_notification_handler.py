@@ -17,7 +17,7 @@ from ubo_gui.page import PAGE_MAX_ITEMS
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.menu_app.notification_info import NotificationInfo
-from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
+from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
@@ -29,6 +29,7 @@ from ubo_app.store.services.notifications import (
     NotificationsDisplayEvent,
 )
 from ubo_app.store.services.speech_synthesis import SpeechSynthesisReadTextAction
+from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -46,7 +47,7 @@ class NotificationReference:
         self.flash_event: ClockEvent | None = None
 
 
-class UboNotificationWidget(NotificationWidget):
+class UboNotificationWidget(NotificationWidget, UboPageWidget):
     """renders a notification."""
 
     notification_id: str = StringProperty()
@@ -95,7 +96,11 @@ class MenuNotificationHandler(UboApp):
             for unsubscribe in subscriptions:
                 unsubscribe()
             notification_application.unbind(on_close=close)
-            store.dispatch(CloseApplicationAction(application=notification_application))
+            store.dispatch(
+                CloseApplicationAction(
+                    application_instance_id=notification_application.id,
+                ),
+            )
             if notification.dismiss_on_close:
                 store.dispatch(
                     NotificationsClearAction(notification=notification.value),
@@ -173,7 +178,7 @@ class MenuNotificationHandler(UboApp):
 
         renew_notification(event)
 
-        store.dispatch(OpenApplicationAction(application=notification_application))
+        self.menu_widget.open_application(notification_application)
 
     def _notification_items(  # noqa: C901
         self,

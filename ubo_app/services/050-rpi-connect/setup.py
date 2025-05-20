@@ -16,12 +16,12 @@ from commands import (
 from kivy.lang.builder import Builder
 from sign_in_page import SignInPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
-from ubo_gui.page import PageWidget
 
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
     from ubo_app.store.services.rpi_connect import (
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     )
 
 
-class _RPiConnectQRCodePage(PageWidget): ...
+class _RPiConnectQRCodePage(UboPageWidget): ...
 
 
 register_application(

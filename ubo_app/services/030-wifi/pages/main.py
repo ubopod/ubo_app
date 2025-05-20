@@ -31,6 +31,7 @@ from ubo_app.store.services.wifi import (
 )
 from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.gui import UboPromptWidget
 
 from .create_wireless_connection import CreateWirelessConnectionPage
 
@@ -38,7 +39,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 
-class _WiFiConnectionPage(PromptWidget):
+class _WiFiConnectionPage(UboPromptWidget):
     ssid: str = StringProperty()
     state: ConnectionState = StringProperty(defaultvalue=ConnectionState.UNKNOWN)
 
@@ -52,7 +53,7 @@ class _WiFiConnectionPage(PromptWidget):
     def second_option_callback(self) -> None:
         create_task(forget_wireless_connection(self.ssid))
         store.dispatch(
-            CloseApplicationAction(application=self),
+            CloseApplicationAction(application_instance_id=self.id),
             WiFiUpdateRequestAction(reset=True),
         )
 

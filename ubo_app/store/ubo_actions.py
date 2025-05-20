@@ -84,3 +84,14 @@ def register_application(
         raise ValueError(msg)
 
     application_registry[application_id] = application
+
+
+def get_registered_application(
+    application_id: str,
+) -> type[PageWidget]:
+    """Get a registered application by its ID."""
+    if application_id not in application_registry:
+        msg = f'Application ID {application_id} is not registered.'
+        raise ValueError(msg)
+
+    return application_registry[application_id]

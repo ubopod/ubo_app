@@ -78,7 +78,7 @@ SYSTEM_MENU: list[SubMenuItem] = [
         ),
     ),
     SubMenuItem(
-        key='third_parry',
+        key='third_party',
         label='Third Party',
         icon='',
         sub_menu=HeadlessMenu(

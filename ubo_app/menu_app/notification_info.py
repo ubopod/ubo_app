@@ -6,10 +6,11 @@ import pathlib
 from kivy.lang.builder import Builder
 from kivy.metrics import dp
 from kivy.properties import StringProperty
-from ubo_gui.page import PageWidget
+
+from ubo_app.utils.gui import UboPageWidget
 
 
-class NotificationInfo(PageWidget):
+class NotificationInfo(UboPageWidget):
     text: str = StringProperty()
 
     def go_down(self: NotificationInfo) -> None:

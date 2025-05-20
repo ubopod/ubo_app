@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, cast
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty
 from str_to_bool import str_to_bool
-from ubo_gui.page import PageWidget
 from wifi_manager import add_wireless_connection
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
@@ -30,6 +29,7 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.gui import UboPageWidget
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
@@ -199,7 +199,7 @@ async def input_wifi_connection(
     )
 
 
-class CreateWirelessConnectionPage(PageWidget):
+class CreateWirelessConnectionPage(UboPageWidget):
     creating = BooleanProperty(defaultvalue=False)
 
     def __init__(
@@ -216,7 +216,7 @@ class CreateWirelessConnectionPage(PageWidget):
             on_creating=lambda: setattr(self, 'creating', True),
             input_methods=InputMethod.ALL,
         )
-        store.dispatch(CloseApplicationAction(application=self))
+        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
 
 
 Builder.load_file(

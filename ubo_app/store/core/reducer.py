@@ -119,13 +119,23 @@ def reducer(
     if isinstance(action, OpenApplicationAction):
         return CompleteReducerResult(
             state=state,
-            events=[OpenApplicationEvent(application=action.application)],
+            events=[
+                OpenApplicationEvent(
+                    application_id=action.application_id,
+                    initialization_args=action.initialization_args,
+                    initialization_kwargs=action.initialization_kwargs,
+                ),
+            ],
         )
 
     if isinstance(action, CloseApplicationAction):
         return CompleteReducerResult(
             state=state,
-            events=[CloseApplicationEvent(application=action.application)],
+            events=[
+                CloseApplicationEvent(
+                    application_instance_id=action.application_instance_id,
+                ),
+            ],
         )
 
     if isinstance(action, ToggleRecordingAction) and not state.is_replaying:

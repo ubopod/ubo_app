@@ -11,7 +11,6 @@ from constants_ import CODE_BINARY_PATH
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import NumericProperty, StringProperty
-from ubo_gui.page import PageWidget
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
@@ -25,9 +24,10 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.vscode import VSCodeLoginEvent
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.gui import UboPageWidget
 
 
-class LoginPage(PageWidget):
+class LoginPage(UboPageWidget):
     stage: int = NumericProperty(0)
     url: str | None = StringProperty()
     code: str | None = StringProperty()
@@ -40,7 +40,9 @@ class LoginPage(PageWidget):
         super().__init__(*args, **kwargs, items=[])
         store.subscribe_event(
             VSCodeLoginEvent,
-            lambda: store.dispatch(CloseApplicationAction(application=self)),
+            lambda: store.dispatch(
+                CloseApplicationAction(application_instance_id=self.id),
+            ),
         )
         create_task(self.login())
 

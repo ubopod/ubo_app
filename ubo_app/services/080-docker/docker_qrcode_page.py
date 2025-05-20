@@ -6,10 +6,11 @@ import pathlib
 
 from kivy.lang.builder import Builder
 from kivy.properties import ListProperty, NumericProperty, StringProperty
-from ubo_gui.page import PageWidget
+
+from ubo_app.utils.gui import UboPageWidget
 
 
-class DockerQRCodePage(PageWidget):
+class DockerQRCodePage(UboPageWidget):
     """QR code for the container's url (ip and port)."""
 
     ips: list[str] = ListProperty()

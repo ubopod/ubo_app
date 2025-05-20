@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from debouncer import DebounceOptions, debounce
 from ubo_gui.app import UboApp
 from ubo_gui.menu.menu_widget import MenuPageWidget, MenuWidget
-from ubo_gui.menu.stack_item import StackItem, StackMenuItem
+from ubo_gui.menu.stack_item import StackApplicationItem, StackItem, StackMenuItem
 from ubo_gui.page import PageWidget
 from ubo_gui.utils import mainthread_if_needed
 
@@ -31,6 +31,8 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
+from ubo_app.store.ubo_actions import get_registered_application
+from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -175,10 +177,20 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
     @mainthread_if_needed
     def open_application(self: MenuAppCentral, event: OpenApplicationEvent) -> None:
-        self.menu_widget.open_application(event.application)
+        application = get_registered_application(event.application_id)
+        self.menu_widget.open_application(
+            application(*event.initialization_args, **event.initialization_kwargs),
+        )
 
     def close_application(self: MenuAppCentral, event: CloseApplicationEvent) -> None:
-        self.menu_widget.close_application(event.application)
+        for item in self.menu_widget.stack:
+            if (
+                isinstance(item, StackApplicationItem)
+                and hasattr(item.application, 'id')
+                and isinstance(item.application, UboPageWidget)
+                and item.application.id == event.application_instance_id
+            ):
+                self.menu_widget.close_application(item.application)
 
     def go_home(self: MenuAppCentral, _: MenuGoHomeEvent) -> None:
         self.menu_widget.go_home()

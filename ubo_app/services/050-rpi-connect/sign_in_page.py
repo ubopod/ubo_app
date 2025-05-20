@@ -10,7 +10,6 @@ from commands import check_status
 from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from kivy.properties import NumericProperty, StringProperty
-from ubo_gui.page import PageWidget
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
@@ -24,9 +23,10 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.rpi_connect import RPiConnectLoginEvent
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.gui import UboPageWidget
 
 
-class SignInPage(PageWidget):
+class SignInPage(UboPageWidget):
     stage: int = NumericProperty(0)
     url: str | None = StringProperty()
 
@@ -38,7 +38,9 @@ class SignInPage(PageWidget):
         super().__init__(*args, **kwargs, items=[])
         store.subscribe_event(
             RPiConnectLoginEvent,
-            lambda: store.dispatch(CloseApplicationAction(application=self)),
+            lambda: store.dispatch(
+                CloseApplicationAction(application_instance_id=self.id),
+            ),
         )
         create_task(self.login())
 

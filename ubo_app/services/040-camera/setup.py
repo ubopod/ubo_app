@@ -11,7 +11,6 @@ import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock, mainthread
-from ubo_gui.page import PageWidget
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
@@ -22,9 +21,11 @@ from ubo_app.store.services.camera import (
     CameraStopViewfinderEvent,
 )
 from ubo_app.store.services.display import DisplayPauseAction, DisplayResumeAction
+from ubo_app.store.ubo_actions import register_application
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
+from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
     from numpy._typing._array_like import NDArray
@@ -59,7 +60,53 @@ def check_codes(codes: list[str]) -> None:
     store.dispatch(CameraReportBarcodeAction(codes=codes))
 
 
-class CameraApplication(PageWidget): ...
+class CameraApplication(UboPageWidget):
+    def __init__(
+        self,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(items=[], **kwargs)
+        picamera2 = initialize_camera()
+        is_running = True
+
+        fs_lock = Lock()
+
+        def feed_viewfinder_locked(_: object) -> None:
+            with fs_lock:
+                if not is_running:
+                    return
+                feed_viewfinder(picamera2)
+
+        feed_viewfinder_scheduler = Clock.schedule_interval(
+            feed_viewfinder_locked,
+            0.04,
+        )
+
+        store.dispatch(DisplayPauseAction())
+
+        def handle_stop_viewfinder(_: object = None) -> None:
+            unsubscribe()
+            with fs_lock:
+                nonlocal is_running
+                is_running = False
+                feed_viewfinder_scheduler.cancel()
+                store.dispatch(
+                    CloseApplicationAction(application_instance_id=self.id),
+                    DisplayResumeAction(),
+                )
+                if picamera2:
+                    picamera2.stop()
+                    picamera2.close()
+
+        self.bind(on_close=handle_stop_viewfinder)
+
+        unsubscribe = store.subscribe_event(
+            CameraStopViewfinderEvent,
+            handle_stop_viewfinder,
+        )
+
+
+register_application(application_id='camera:viewfinder', application=CameraApplication)
 
 
 def initialize_camera() -> Picamera2 | None:
@@ -175,43 +222,7 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
 
 @mainthread
 def start_camera_viewfinder() -> None:
-    picamera2 = initialize_camera()
-    is_running = True
-
-    fs_lock = Lock()
-    application = CameraApplication()
-    store.dispatch(OpenApplicationAction(application=application))
-
-    def feed_viewfinder_locked(_: object) -> None:
-        with fs_lock:
-            if not is_running:
-                return
-            feed_viewfinder(picamera2)
-
-    feed_viewfinder_scheduler = Clock.schedule_interval(feed_viewfinder_locked, 0.04)
-
-    store.dispatch(DisplayPauseAction())
-
-    def handle_stop_viewfinder(_: object = None) -> None:
-        unsubscribe()
-        with fs_lock:
-            nonlocal is_running
-            is_running = False
-            feed_viewfinder_scheduler.cancel()
-            store.dispatch(
-                CloseApplicationAction(application=application),
-                DisplayResumeAction(),
-            )
-            if picamera2:
-                picamera2.stop()
-                picamera2.close()
-
-    application.bind(on_close=handle_stop_viewfinder)
-
-    unsubscribe = store.subscribe_event(
-        CameraStopViewfinderEvent,
-        handle_stop_viewfinder,
-    )
+    store.dispatch(OpenApplicationAction(application_id='camera:viewfinder'))
 
 
 def init_service() -> Subscriptions:
