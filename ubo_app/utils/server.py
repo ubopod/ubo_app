@@ -19,11 +19,17 @@ async def send_command(*command: str) -> None: ...
 async def send_command(
     *command: str,
     has_output: Literal[True],
+) -> str: ...
+@overload
+async def send_command(
+    *command: str,
+    has_output_stream: Literal[True],
 ) -> AsyncIterator[str]: ...
 async def send_command(
     *command_: str,
     has_output: bool = False,
-) -> AsyncIterator[str] | None:
+    has_output_stream: bool = False,
+) -> AsyncIterator[str] | str | None:
     """Send a command to the system manager socket."""
     if not IS_RPI:
         return None
@@ -37,6 +43,16 @@ async def send_command(
 
         writer.write(command.encode() + b'\0')
         if has_output:
+            response = ''
+            datagram = (await reader.readuntil(b'\0'))[:-1]
+            if datagram:
+                response = datagram.decode('utf-8')
+                logger.debug('Server response:', extra={'response': response})
+
+            writer.close()
+            return response
+
+        if has_output_stream:
 
             async def generator() -> AsyncIterator[str]:
                 while datagram := (await reader.readuntil(b'\0'))[:-1]:

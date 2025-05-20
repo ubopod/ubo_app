@@ -251,7 +251,7 @@ async def _update(target_version: str | None) -> None:
     async for line in await send_command(
         'update',
         target_version or '',
-        has_output=True,
+        has_output_stream=True,
     ):
         for key, report_ in progress_map.items():
             if line.startswith(key):

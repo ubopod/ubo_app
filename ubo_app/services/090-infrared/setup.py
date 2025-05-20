@@ -66,7 +66,7 @@ async def _wait_for_ir_code() -> None:
             async for response in await send_command(
                 'infrared',
                 'receive',
-                has_output=True,
+                has_output_stream=True,
             ):
                 if response == 'nocode':
                     break

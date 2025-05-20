@@ -68,16 +68,37 @@ def handle_command(command: str, connection: socket.socket) -> None:
                 if isinstance(response, Iterator):
                     try:
                         for line in response:
+                            logger.debug(
+                                'Sending line to client',
+                                extra={
+                                    'line': line,
+                                    'command': command,
+                                },
+                            )
                             if isinstance(line, bytes):
                                 connection.sendall(line + b'\0')
                             else:
                                 connection.sendall(line.encode() + b'\0')
                     finally:
+                        logger.debug(
+                            'Sending end of stream to client',
+                            extra={
+                                'command': command,
+                            },
+                        )
                         connection.sendall(b'\0\0')
-                elif isinstance(response, bytes):
-                    connection.sendall(response + b'\0\0')
-                elif isinstance(response, str):
-                    connection.sendall(response.encode() + b'\0\0')
+                else:
+                    logger.debug(
+                        'Sending response to client',
+                        extra={
+                            'response': response,
+                            'command': command,
+                        },
+                    )
+                    if isinstance(response, bytes):
+                        connection.sendall(response + b'\0\0')
+                    elif isinstance(response, str):
+                        connection.sendall(response.encode() + b'\0\0')
     except Exception as exception:
         logger.exception(
             'Failed to handle command',
@@ -122,7 +143,7 @@ def setup_hostname() -> None:
 
 def _initialize() -> socket.socket:
     setup_error_handling()
-    logger.info('Initialising System-Manager...')
+    logger.info('------------------Starting System Manager-------------------')
 
     setup_hostname()
     setup_reset_button(led_manager)
