@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import time
 from pathlib import Path
 
@@ -16,6 +17,19 @@ logger = get_logger('system-manager')
 
 def audio_handler(command: str) -> str | None:
     """Install and start Docker on the host machine."""
+    if command == 'install':
+        try:
+            process = subprocess.run(  # noqa: S603
+                Path(__file__).parent.parent / 'scripts/install_wm8960.sh',
+                check=True,
+            )
+            process.check_returncode()
+        except Exception:
+            logger.exception('Error installing Docker')
+            return 'error'
+        else:
+            return 'installed'
+
     if command == 'failure_report':
         logger.info('Audio failure report received, rebinding device...')
         try:

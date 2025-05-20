@@ -5,6 +5,7 @@ from __future__ import annotations
 from ubo_gui.menu.types import HeadlessMenu, SubMenuItem
 
 from ubo_app.store.main import store
+from ubo_app.store.services.audio import AudioInstallDriverAction
 from ubo_app.store.settings.services import service_items
 from ubo_app.store.settings.types import (
     SettingsToggleBetaVersionsAction,
@@ -12,6 +13,7 @@ from ubo_app.store.settings.types import (
     SettingsToggleVisualDebugAction,
 )
 from ubo_app.store.ubo_actions import UboDispatchItem
+from ubo_app.utils.eeprom import get_eeprom_data
 
 
 @store.autorun(lambda state: state.settings.pdb_signal)
@@ -28,6 +30,17 @@ def _visual_debug_icon(visual_debug: bool) -> str:  # noqa: FBT001
 def _beta_versions_icon(beta_versions: bool) -> str:  # noqa: FBT001
     return '󰱒' if beta_versions else '󰄱'
 
+
+THIRD_PARTY_ITEMS = []
+
+eeprom_data = get_eeprom_data()
+if eeprom_data['speakers'] is not None and eeprom_data['speakers']['model'] == 'wm8960':
+    THIRD_PARTY_ITEMS.append(
+        UboDispatchItem(
+            label='Re/Install Audio',
+            store_action=AudioInstallDriverAction(),
+        ),
+    )
 
 SYSTEM_MENU: list[SubMenuItem] = [
     SubMenuItem(
@@ -62,6 +75,15 @@ SYSTEM_MENU: list[SubMenuItem] = [
         sub_menu=HeadlessMenu(
             title='Services',
             items=service_items,
+        ),
+    ),
+    SubMenuItem(
+        key='third_parry',
+        label='Third Party',
+        icon='',
+        sub_menu=HeadlessMenu(
+            title='Third Party Tools',
+            items=THIRD_PARTY_ITEMS,
         ),
     ),
 ]

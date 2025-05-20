@@ -6009,6 +6009,49 @@
                               "placeholder": null,
                               "title": "Services"
                             }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": "third_parry",
+                            "label": "Third Party",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadlessMenu",
+                              "items": [
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": null,
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Re/Install Audio",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "AudioInstallDriverAction"
+                                  }
+                                }
+                              ],
+                              "placeholder": null,
+                              "title": "Third Party Tools"
+                            }
                           }
                         ],
                         "placeholder": "No settings in this category",

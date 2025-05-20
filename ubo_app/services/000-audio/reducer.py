@@ -16,6 +16,8 @@ from ubo_app.store.services.audio import (
     AudioChangeVolumeAction,
     AudioDevice,
     AudioEvent,
+    AudioInstallDriverAction,
+    AudioInstallDriverEvent,
     AudioPlayAudioAction,
     AudioPlayAudioEvent,
     AudioPlaybackDoneAction,
@@ -42,6 +44,8 @@ def reducer(
             return AudioState()
         raise InitializationActionError(action)
 
+    if isinstance(action, AudioInstallDriverAction):
+        return CompleteReducerResult(state=state, events=[AudioInstallDriverEvent()])
     if isinstance(action, AudioSetVolumeAction):
         if action.device == AudioDevice.OUTPUT:
             return replace(state, playback_volume=action.volume)

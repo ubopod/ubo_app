@@ -1,4 +1,5 @@
-# ruff: noqa: D100, D101, D102, D103, D104, D107, N999
+"""Definition of audio state, actions, and events."""
+
 from __future__ import annotations
 
 from dataclasses import field
@@ -11,37 +12,56 @@ from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
 class AudioDevice(StrEnum):
+    """Audio device enum."""
+
     INPUT = 'Input'
     OUTPUT = 'Output'
 
 
-class AudioAction(BaseAction): ...
+class AudioAction(BaseAction):
+    """Audio action."""
+
+
+class AudioInstallDriverAction(AudioAction):
+    """Install audio driver action."""
 
 
 class AudioSetVolumeAction(AudioAction):
+    """Set volume action."""
+
     volume: float
     device: AudioDevice
 
 
 class AudioChangeVolumeAction(AudioAction):
+    """Change volume action."""
+
     amount: float
     device: AudioDevice
 
 
 class AudioSetMuteStatusAction(AudioAction):
+    """Set mute status action."""
+
     is_mute: bool
     device: AudioDevice
 
 
 class AudioToggleMuteStatusAction(AudioAction):
+    """Toggle mute status action."""
+
     device: AudioDevice
 
 
 class AudioPlayChimeAction(AudioAction):
+    """Play chime action."""
+
     name: str
 
 
 class AudioPlayAudioAction(AudioAction):
+    """Play audio action."""
+
     id: str | None = None
     sample: bytes
     channels: int
@@ -50,17 +70,28 @@ class AudioPlayAudioAction(AudioAction):
 
 
 class AudioPlaybackDoneAction(AudioAction):
+    """Playback done action."""
+
     id: str
 
 
-class AudioEvent(BaseEvent): ...
+class AudioEvent(BaseEvent):
+    """Audio event."""
+
+
+class AudioInstallDriverEvent(AudioEvent):
+    """Install audio driver event."""
 
 
 class AudioPlayChimeEvent(AudioEvent):
+    """Play chime event."""
+
     name: str
 
 
 class AudioPlayAudioEvent(AudioEvent):
+    """Play audio event."""
+
     id: str | None = None
     volume: float
     sample: bytes
@@ -70,10 +101,14 @@ class AudioPlayAudioEvent(AudioEvent):
 
 
 class AudioPlaybackDoneEvent(AudioEvent):
+    """Playback done event."""
+
     id: str
 
 
 class AudioState(Immutable):
+    """Audio state."""
+
     playback_volume: float = field(
         default_factory=lambda: read_from_persistent_store(
             'audio_state:playback_volume',

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import wave
 from pathlib import Path
 from typing import TYPE_CHECKING, ParamSpec
@@ -9,16 +10,25 @@ from typing import TYPE_CHECKING, ParamSpec
 from audio_manager import AudioManager
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 
+from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
+    AudioInstallDriverEvent,
     AudioPlayAudioAction,
     AudioPlayAudioEvent,
     AudioPlayChimeEvent,
+)
+from ubo_app.store.services.notifications import (
+    Chime,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.async_ import to_thread
 from ubo_app.utils.error_handlers import loop_exception_handler
 from ubo_app.utils.persistent_store import register_persistent_store
+from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -38,6 +48,56 @@ def _run_async_in_thread(
     result = loop.run_until_complete(async_func(*args, **kwargs))
     loop.close()
     return result
+
+
+async def _install_driver() -> None:
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='audio_install_driver',
+                title='Audio',
+                content='Installing driver ...',
+                display_type=NotificationDisplayType.STICKY,
+                color=WARNING_COLOR,
+                icon='󱀞',
+                show_dismiss_action=False,
+                progress=math.nan,
+            ),
+        ),
+    )
+    result = await send_command(
+        'audio',
+        'install',
+        has_output=True,
+    )
+    if result == 'installed':
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='audio_install_driver',
+                    title='Audio Driver',
+                    content='Installed successfully.\nPlease restart the device.',
+                    display_type=NotificationDisplayType.FLASH,
+                    color=SUCCESS_COLOR,
+                    icon='󰄬',
+                    chime=Chime.DONE,
+                ),
+            ),
+        )
+    else:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='audio_install_driver',
+                    title='Audio Driver',
+                    content='Failed to install',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
 
 
 def init_service() -> Subscriptions:
@@ -111,6 +171,7 @@ def init_service() -> Subscriptions:
     )
 
     return [
+        store.subscribe_event(AudioInstallDriverEvent, _install_driver),
         store.subscribe_event(AudioPlayChimeEvent, play_chime),
         store.subscribe_event(AudioPlayAudioEvent, play_audio),
     ]

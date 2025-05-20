@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import functools
 import json
+import math
 import uuid
 from typing import TYPE_CHECKING
 
@@ -29,7 +30,7 @@ from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
-from ubo_app.colors import DANGER_COLOR, WARNING_COLOR
+from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -87,15 +88,44 @@ if TYPE_CHECKING:
 
 async def install_docker() -> None:
     """Install docker."""
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='docker_install',
+                title='Docker',
+                content='Installing ...',
+                display_type=NotificationDisplayType.STICKY,
+                color=WARNING_COLOR,
+                icon='󱀞',
+                show_dismiss_action=False,
+                progress=math.nan,
+            ),
+        ),
+    )
     result = await send_command(
         'docker',
         'install',
         has_output=True,
     )
-    if result != 'installed':
+    if result == 'installed':
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
+                    id='docker_install',
+                    title='Docker',
+                    content='Installed successfully',
+                    display_type=NotificationDisplayType.FLASH,
+                    color=SUCCESS_COLOR,
+                    icon='󰄬',
+                    chime=Chime.DONE,
+                ),
+            ),
+        )
+    else:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='docker_install',
                     title='Docker',
                     content='Failed to install',
                     display_type=NotificationDisplayType.STICKY,
