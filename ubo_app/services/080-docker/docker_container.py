@@ -172,28 +172,22 @@ def stop_container(event: DockerImageStopContainerEvent) -> None:
     """Stop a container."""
     id = event.image
 
-    def act() -> None:
-        docker_client = docker.from_env()
-        container = find_container(docker_client, image=IMAGES[id].path)
-        if container and container.status != 'exited':
-            container.stop()
-        docker_client.close()
-
-    to_thread(act)
+    docker_client = docker.from_env()
+    container = find_container(docker_client, image=IMAGES[id].path)
+    if container and container.status != 'exited':
+        container.stop()
+    docker_client.close()
 
 
 def remove_container(event: DockerImageRemoveContainerEvent) -> None:
     """Remove a container."""
     id = event.image
 
-    def act() -> None:
-        docker_client = docker.from_env()
-        container = find_container(docker_client, image=IMAGES[id].path)
-        if container:
-            container.remove(v=True, force=True)
-        docker_client.close()
-
-    to_thread(act)
+    docker_client = docker.from_env()
+    container = find_container(docker_client, image=IMAGES[id].path)
+    if container:
+        container.remove(v=True, force=True)
+    docker_client.close()
 
 
 def update_container(*, image_id: str, container: Container) -> None:

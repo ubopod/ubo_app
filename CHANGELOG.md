@@ -48,6 +48,7 @@
 - feat(file-system): add `file-system` service with readonly features like navigation through file-system, checking size/permission/owner/group of files and directories, and reading files - closes #299
 - refactor: improve type stubs for kivy app by only providing stubs for pyx files and making `Widget` use correct `EventListener` base and fix type errors coming to surface
 - refactor(core): make `get_eeprom_data` return a default value instead of `None` if there is an issue in procuring the data
+- refactor(docker): remove sync wrapper functions around async actions and make the action directly async as it is run by `subscribe_event` and it supports async functions, general housekeeping for docker service
 
 ## Version 1.3.0
 

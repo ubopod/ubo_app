@@ -16,7 +16,6 @@ from ubo_app.store.services.docker import (
     DockerItemStatus,
 )
 from ubo_app.utils import secrets
-from ubo_app.utils.async_ import to_thread
 
 
 @store.with_state(lambda state: state.docker.service.usernames)
@@ -27,46 +26,39 @@ def fetch_image(
     """Fetch an image."""
     id = event.image
 
-    def act() -> None:
+    store.dispatch(
+        DockerImageSetStatusAction(
+            image=id,
+            status=DockerItemStatus.FETCHING,
+        ),
+    )
+    try:
+        logger.info('Fetching image', extra={'image': IMAGES[id].path})
+        docker_client = docker.from_env()
+        for registry, username in usernames.items():
+            if IMAGES[id].registry == registry:
+                docker_client.login(
+                    username=username,
+                    password=secrets.read_secret(
+                        DOCKER_CREDENTIALS_TEMPLATE.format(registry),
+                    ),
+                    registry=registry,
+                )
+        docker_client.images.pull(IMAGES[id].path)
+        docker_client.close()
+    except docker.errors.DockerException:
         store.dispatch(
             DockerImageSetStatusAction(
                 image=id,
-                status=DockerItemStatus.FETCHING,
+                status=DockerItemStatus.ERROR,
             ),
         )
-        try:
-            logger.info('Fetching image', extra={'image': IMAGES[id].path})
-            docker_client = docker.from_env()
-            for registry, username in usernames.items():
-                if IMAGES[id].registry == registry:
-                    docker_client.login(
-                        username=username,
-                        password=secrets.read_secret(
-                            DOCKER_CREDENTIALS_TEMPLATE.format(registry),
-                        ),
-                        registry=registry,
-                    )
-            docker_client.images.pull(IMAGES[id].path)
-            docker_client.close()
-        except docker.errors.DockerException:
-            store.dispatch(
-                DockerImageSetStatusAction(
-                    image=id,
-                    status=DockerItemStatus.ERROR,
-                ),
-            )
-            raise
-
-    to_thread(act)
+        raise
 
 
 def remove_image(event: DockerImageRemoveEvent) -> None:
     """Remove an image."""
     id = event.image
-
-    def act() -> None:
-        docker_client = docker.from_env()
-        docker_client.images.remove(IMAGES[id].path, force=True)
-        docker_client.close()
-
-    to_thread(act)
+    docker_client = docker.from_env()
+    docker_client.images.remove(IMAGES[id].path, force=True)
+    docker_client.close()

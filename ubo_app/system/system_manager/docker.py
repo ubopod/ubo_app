@@ -6,17 +6,26 @@ import subprocess
 from pathlib import Path
 
 from ubo_app.constants import USERNAME
+from ubo_app.logger import get_logger
+
+logger = get_logger('system-manager')
 
 
 def docker_handler(command: str) -> str | None:
     """Install and start Docker on the host machine."""
     if command == 'install':
-        subprocess.run(  # noqa: S603
-            Path(__file__).parent.parent.joinpath('install_docker.sh'),
-            env={'USERNAME': USERNAME},
-            check=False,
-        )
-        return 'installed'
+        try:
+            process = subprocess.run(  # noqa: S603
+                Path(__file__).parent.parent / 'scripts/install_docker.sh',
+                env={'USERNAME': USERNAME},
+                check=True,
+            )
+            process.check_returncode()
+        except Exception:
+            logger.exception('Error installing Docker')
+            return 'error'
+        else:
+            return 'installed'
 
     if command == 'start':
         subprocess.run(  # noqa: S603

@@ -85,52 +85,37 @@ if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
 
 
-def install_docker() -> None:
+async def install_docker() -> None:
     """Install docker."""
-
-    async def act() -> None:
-        store.dispatch(DockerSetStatusAction(status=DockerStatus.INSTALLING))
-        result = await send_command(
-            'docker',
-            'install',
-            has_output=True,
-        )
-        if result != 'installed':
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='Docker',
-                        content='Failed to install',
-                        display_type=NotificationDisplayType.STICKY,
-                        color=DANGER_COLOR,
-                        icon='󰜺',
-                        chime=Chime.FAILURE,
-                    ),
+    result = await send_command(
+        'docker',
+        'install',
+        has_output=True,
+    )
+    if result != 'installed':
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Docker',
+                    content='Failed to install',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
                 ),
-            )
-        await check_docker()
+            ),
+        )
+    await check_docker()
 
-    create_task(act())
 
-
-def start_docker() -> None:
+async def start_docker() -> None:
     """Start docker service."""
-
-    async def act() -> None:
-        await send_command('docker', 'start')
-        store.dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
-
-    create_task(act())
+    await send_command('docker', 'start')
 
 
-def stop_docker() -> None:
+async def stop_docker() -> None:
     """Stop docker service."""
-
-    async def act() -> None:
-        await send_command('docker', 'stop')
-        store.dispatch(DockerSetStatusAction(status=DockerStatus.UNKNOWN))
-
-    create_task(act())
+    await send_command('docker', 'stop')
 
 
 async def check_docker() -> None:

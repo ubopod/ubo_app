@@ -33,6 +33,7 @@ from ubo_app.store.services.docker import (
     DockerImageRemoveCompositionEvent,
     DockerImageRemoveContainerAction,
     DockerImageRemoveContainerEvent,
+    DockerImageRemoveEvent,
     DockerImageRunCompositionAction,
     DockerImageRunCompositionEvent,
     DockerImageRunContainerAction,
@@ -45,12 +46,14 @@ from ubo_app.store.services.docker import (
     DockerImageStopContainerEvent,
     DockerInstallAction,
     DockerInstallEvent,
+    DockerItemStatus,
     DockerRemoveUsernameAction,
     DockerServiceState,
     DockerSetStatusAction,
     DockerStartAction,
     DockerStartEvent,
     DockerState,
+    DockerStatus,
     DockerStopAction,
     DockerStopEvent,
     DockerStoreUsernameAction,
@@ -93,13 +96,22 @@ def service_reducer(
         )
 
     if isinstance(action, DockerInstallAction):
-        return CompleteReducerResult(state=state, events=[DockerInstallEvent()])
+        return CompleteReducerResult(
+            state=replace(state, status=DockerStatus.INSTALLING),
+            events=[DockerInstallEvent()],
+        )
 
     if isinstance(action, DockerStartAction):
-        return CompleteReducerResult(state=state, events=[DockerStartEvent()])
+        return CompleteReducerResult(
+            state=replace(state, status=DockerStatus.UNKNOWN),
+            events=[DockerStartEvent()],
+        )
 
     if isinstance(action, DockerStopAction):
-        return CompleteReducerResult(state=state, events=[DockerStopEvent()])
+        return CompleteReducerResult(
+            state=replace(state, status=DockerStatus.UNKNOWN),
+            events=[DockerStopEvent()],
+        )
 
     return state
 
@@ -146,7 +158,7 @@ def image_reducer(
         )
     if isinstance(action, DockerImageFetchAction):
         return CompleteReducerResult(
-            state=state,
+            state=replace(state, status=DockerItemStatus.FETCHING),
             events=[DockerImageFetchEvent(image=state.id)],
         )
     if isinstance(action, DockerImageRemoveCompositionAction):
@@ -157,7 +169,7 @@ def image_reducer(
     if isinstance(action, DockerImageRemoveAction):
         return CompleteReducerResult(
             state=state,
-            events=[DockerImageRemoveContainerEvent(image=state.id)],
+            events=[DockerImageRemoveEvent(image=state.id)],
         )
     if isinstance(action, DockerImageRunCompositionAction):
         return CompleteReducerResult(
