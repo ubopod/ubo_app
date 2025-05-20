@@ -8,12 +8,7 @@ from ubo_app.utils.server import send_command
 def init_service() -> None:
     eeprom_data = get_eeprom_data()
 
-    if (
-        eeprom_data is None
-        or 'led' not in eeprom_data
-        or eeprom_data['led'] is None
-        or eeprom_data['led']['model'] != 'neopixel'
-    ):
+    if eeprom_data['led'] is None or eeprom_data['led']['model'] != 'neopixel':
         return
 
     async def handle_rgb_ring_command(event: RgbRingCommandEvent) -> None:

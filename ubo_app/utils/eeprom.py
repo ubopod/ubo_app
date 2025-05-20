@@ -148,30 +148,45 @@ class EepromData(TypedDict):
     test_result: bool | None
 
 
+EMPTY_EEPROM_DATA: EepromData = {
+    'serial_number': '<not-available>',
+    'eeprom': None,
+    'speakers': None,
+    'microphones': None,
+    'temperature': None,
+    'ambient': None,
+    'keypad': None,
+    'i2c_bus': None,
+    'lcd': None,
+    'led': None,
+    'infrared': None,
+    'version': '0.0.0',
+    'timedate': None,
+    'test_result': None,
+}
+
+
 @cache
-def get_eeprom_data() -> EepromData | None:
+def get_eeprom_data() -> EepromData:
     """Read the EEPROM data."""
     if not IS_RPI:
-        return None
+        return EMPTY_EEPROM_DATA
     try:
         eeprom_json_data = Path(
             '/proc/device-tree/hat/custom_0',
         ).read_text(encoding='utf-8')
-        eeprom_data = json.loads(eeprom_json_data)
+        data = json.loads(eeprom_json_data)
     except Exception:
         logger.exception('Failed to read EEPROM data')
-        return None
+        return EMPTY_EEPROM_DATA
     else:
-        if 'serial_number' not in eeprom_data or 'version' not in eeprom_data:
-            return None
-        return eeprom_data
+        if 'serial_number' not in data or 'version' not in data:
+            return EMPTY_EEPROM_DATA
+        eeprom_data: EepromData = data
+        return {**EMPTY_EEPROM_DATA, **eeprom_data}
 
 
 def read_serial_number() -> str | None:
     """Read the serial number from the EEPROM."""
-    if IS_RPI:
-        data = get_eeprom_data()
-        if data is not None:
-            return data['serial_number']
-        return None
-    return '<not-available>'
+    data = get_eeprom_data()
+    return data['serial_number']

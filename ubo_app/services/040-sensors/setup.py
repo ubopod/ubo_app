@@ -76,9 +76,7 @@ def init_service() -> Subscriptions:
     i2c = board.I2C()
     try:
         if (
-            eeprom_data is not None
-            and 'temperature' in eeprom_data
-            and eeprom_data['temperature'] is not None
+            eeprom_data['temperature'] is not None
             and eeprom_data['temperature']['model'].upper() == 'PCT2075'
         ):
             temperature_sensor = _initialize_device(
@@ -92,9 +90,7 @@ def init_service() -> Subscriptions:
 
     try:
         if (
-            eeprom_data is not None
-            and 'ambient' in eeprom_data
-            and eeprom_data['ambient'] is not None
+            eeprom_data['ambient'] is not None
             and eeprom_data['ambient']['model'].upper() == 'VEML7700'
         ):
             light_sensor = _initialize_device(

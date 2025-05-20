@@ -13,6 +13,7 @@ from fake import Fake
 from redux import FinishAction
 
 from ubo_app.utils import IS_TEST_ENV
+from ubo_app.utils.eeprom import EMPTY_EEPROM_DATA
 
 if TYPE_CHECKING:
     from ubo_gui.menu.types import Callable
@@ -126,7 +127,10 @@ def setup() -> None:
 
         from ubo_app.utils import eeprom
 
-        eeprom.get_eeprom_data = lambda: {'speakers': {'model': 'wm8960'}}
+        eeprom.get_eeprom_data = lambda: {
+            **EMPTY_EEPROM_DATA,
+            'speakers': {'model': 'wm8960'},
+        }
 
         from ubo_app.utils import monitor_unit
 

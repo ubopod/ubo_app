@@ -39,9 +39,7 @@ class Display:
             eeprom_data = get_eeprom_data()
 
             if (
-                eeprom_data is not None
-                and 'lcd' in eeprom_data
-                and eeprom_data['lcd'] is not None
+                eeprom_data['lcd'] is not None
                 and eeprom_data['lcd']['model'] == 'st7789'
             ):
                 import board

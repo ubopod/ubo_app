@@ -281,10 +281,5 @@ def init_service() -> None:
     if not IS_RPI:
         return
     eeprom_data = get_eeprom_data()
-    if (
-        eeprom_data is not None
-        and 'keypad' in eeprom_data
-        and eeprom_data['keypad']
-        and eeprom_data['keypad']['model'] == 'aw9523'
-    ):
+    if eeprom_data['keypad'] and eeprom_data['keypad']['model'] == 'aw9523':
         Keypad()

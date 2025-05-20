@@ -53,16 +53,11 @@ class AudioManager:
 
         eeprom_data = get_eeprom_data()
 
-        if eeprom_data is not None and (
-            'speakers' in eeprom_data
-            and eeprom_data['speakers']
-            and eeprom_data['speakers']['model'] == 'wm8960'
-        ):
+        if eeprom_data['speakers'] and eeprom_data['speakers']['model'] == 'wm8960':
             self.has_speakers = True
 
-        if eeprom_data is not None and (
-            'microphones' in eeprom_data
-            and eeprom_data['microphones']
+        if (
+            eeprom_data['microphones']
             and eeprom_data['microphones']['model'] == 'wm8960'
         ):
             self.has_microphones = True
