@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+from redux import AutorunOptions
+from ubo_gui.constants import WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, Menu
 
 from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, STOPPED_COLOR
@@ -83,7 +85,10 @@ def enable_lightdm_service() -> None:
     create_task(act())
 
 
-@store.autorun(lambda state: state.lightdm)
+@store.autorun(
+    lambda state: state.lightdm,
+    options=AutorunOptions(default_value=f'[color={WARNING_COLOR}][/color]'),
+)
 def lightdm_icon(state: LightDMState) -> str:
     """Get the LightDM icon."""
     return (

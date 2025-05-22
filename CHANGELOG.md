@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- refactor(core): use the latest version of `python-redux` and override the `_create_task` method of our custom `Autorun` class to make sure async autorun tasks run in service threads of their respective services
+
 ## Version 1.4.0
 
 - test: improve test logs in the ci

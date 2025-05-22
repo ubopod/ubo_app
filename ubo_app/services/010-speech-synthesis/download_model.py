@@ -40,7 +40,7 @@ the screen.""",
         NotificationsAddAction(
             notification=Notification(
                 id=PIPER_DOWNLOAD_NOTIFICATION_ID,
-                title=f'Downloading - {progress:.1%}',
+                title='Downloading',
                 content='Piper speech synthesis model',
                 extra_information=extra_information,
                 display_type=NotificationDisplayType.FLASH

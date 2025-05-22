@@ -1,7 +1,7 @@
 // store-desktop-000
 {
-  "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "_type": "RootState",
+  "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
   "input": null,
   "main": {
     "_type": "MainState",

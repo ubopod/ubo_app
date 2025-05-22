@@ -36,7 +36,7 @@ the screen.""",
         NotificationsAddAction(
             notification=Notification(
                 id=VOSK_DOWNLOAD_NOTIFICATION_ID,
-                title=f'Downloading - {progress:.1%}',
+                title='Downloading',
                 content='Vosk speech recognition model',
                 extra_information=extra_information,
                 display_type=NotificationDisplayType.FLASH

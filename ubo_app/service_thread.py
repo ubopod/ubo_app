@@ -192,7 +192,7 @@ class UboServiceThread(threading.Thread):
 
         store.dispatch(
             CombineReducerRegisterAction(
-                _id=root_reducer_id,
+                combine_reducers_id=root_reducer_id,
                 key=self.service_id,
                 reducer=reducer,
             ),
@@ -496,7 +496,7 @@ class UboServiceThread(threading.Thread):
 
             store.dispatch(
                 CombineReducerUnregisterAction(
-                    _id=root_reducer_id,
+                    combine_reducers_id=root_reducer_id,
                     key=self.service_id,
                 ),
             )

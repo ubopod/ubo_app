@@ -26,7 +26,7 @@ from typing import (
 
 import dill
 from fake import Fake
-from immutable import Immutable
+from immutable import Immutable, is_immutable
 from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
@@ -295,6 +295,8 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             return {'_type': 'datetime', 'value': obj.isoformat()}
         if isinstance(obj, functools.partial):
             return f'<functools.partial:{cls.serialize_value(obj.func)}>'
+        if is_immutable(obj):
+            return cls._serialize_dataclass_to_dict(obj)
         if callable(obj):
             return f'<function:{obj.__name__}>'
         if isinstance(obj, dict):
@@ -488,6 +490,9 @@ class _UboAutorun(
         super().__call__(*args, **kwargs)
         return self._latest_value
 
+    def _create_task(self, coro: Coroutine[None, None, Any]) -> None:
+        self.coroutine_runner(coro)
+
 
 def ubo_create_task(
     coro: Coroutine,
@@ -539,7 +544,7 @@ from ubo_app.store.core.reducer import reducer as main_reducer  # noqa: E402
 store.dispatch(InitAction())
 store.dispatch(
     CombineReducerRegisterAction(
-        _id=root_reducer_id,
+        combine_reducers_id=root_reducer_id,
         key='main',
         reducer=main_reducer,
     ),
