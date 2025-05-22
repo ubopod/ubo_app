@@ -6811,8 +6811,8 @@
           "scancode": "0x40"
         },
         "phrase": [
-          "Turn on the light strip",
-          "Turn off the light strip"
+          "Turn on light strip",
+          "Turn off light strip"
         ]
       },
       {
@@ -7047,8 +7047,9 @@
         ]
       }
     ],
-    "is_active": false,
-    "is_waiting": false
+    "is_assistant_active": false,
+    "is_intents_active": false,
+    "status": "idle"
   },
   "speech_synthesis": {
     "_type": "SpeechSynthesisState",

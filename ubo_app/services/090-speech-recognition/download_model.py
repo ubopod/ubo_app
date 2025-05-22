@@ -20,7 +20,9 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.speech_recognition import SpeechRecognitionSetIsActiveAction
+from ubo_app.store.services.speech_recognition import (
+    SpeechRecognitionSetIsIntentsActiveAction,
+)
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.download import download_file
@@ -104,7 +106,7 @@ def download_vosk_model() -> None:
                 stderr=asyncio.subprocess.DEVNULL,
             )
             await process.wait()
-            store.dispatch(SpeechRecognitionSetIsActiveAction(is_active=True))
+            store.dispatch(SpeechRecognitionSetIsIntentsActiveAction(is_active=True))
         except Exception:
             _handle_error()
             raise

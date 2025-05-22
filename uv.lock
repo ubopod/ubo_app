@@ -1082,10 +1082,8 @@ dependencies = [
     { name = "sympy" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/08/c008711d1b92ff1272f4fea0fbee57723171f161d42e5c680625535280af/onnxruntime-1.22.0-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:8d6725c5b9a681d8fe72f2960c191a96c256367887d076b08466f52b4e0991df", size = 34282151, upload-time = "2025-05-09T20:25:59.246Z" },
     { url = "https://files.pythonhosted.org/packages/3e/8b/22989f6b59bc4ad1324f07a945c80b9ab825f0a581ad7a6064b93716d9b7/onnxruntime-1.22.0-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fef17d665a917866d1f68f09edc98223b9a27e6cb167dec69da4c66484ad12fd", size = 14446302, upload-time = "2025-05-09T20:25:44.299Z" },
     { url = "https://files.pythonhosted.org/packages/7a/d5/aa83d084d05bc8f6cf8b74b499c77431ffd6b7075c761ec48ec0c161a47f/onnxruntime-1.22.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b978aa63a9a22095479c38371a9b359d4c15173cbb164eaad5f2cd27d666aa65", size = 16393496, upload-time = "2025-05-09T20:26:11.588Z" },
-    { url = "https://files.pythonhosted.org/packages/89/a5/1c6c10322201566015183b52ef011dfa932f5dd1b278de8d75c3b948411d/onnxruntime-1.22.0-cp311-cp311-win_amd64.whl", hash = "sha256:03d3ef7fb11adf154149d6e767e21057e0e577b947dd3f66190b212528e1db31", size = 12691517, upload-time = "2025-05-12T21:26:13.354Z" },
 ]
 
 [[package]]
@@ -1323,6 +1321,10 @@ name = "pyaudio"
 version = "0.2.14"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/26/1d/8878c7752febb0f6716a7e1a52cb92ac98871c5aa522cba181878091607c/PyAudio-0.2.14.tar.gz", hash = "sha256:78dfff3879b4994d1f4fc6485646a57755c6ee3c19647a491f790a0895bd2f87", size = 47066, upload-time = "2023-11-07T07:11:48.806Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/f0/b0eab89eafa70a86b7b566a4df2f94c7880a2d483aa8de1c77d335335b5b/PyAudio-0.2.14-cp311-cp311-win32.whl", hash = "sha256:506b32a595f8693811682ab4b127602d404df7dfc453b499c91a80d0f7bad289", size = 144624, upload-time = "2023-11-07T07:11:36.94Z" },
+    { url = "https://files.pythonhosted.org/packages/82/d8/f043c854aad450a76e476b0cf9cda1956419e1dacf1062eb9df3c0055abe/PyAudio-0.2.14-cp311-cp311-win_amd64.whl", hash = "sha256:bbeb01d36a2f472ae5ee5e1451cacc42112986abe622f735bb870a5db77cf903", size = 164070, upload-time = "2023-11-07T07:11:38.579Z" },
+]
 
 [[package]]
 name = "pycparser"
@@ -1792,6 +1794,27 @@ wheels = [
 ]
 
 [[package]]
+name = "soxr"
+version = "0.5.0.post1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/02/c0/4429bf9b3be10e749149e286aa5c53775399ec62891c6b970456c6dca325/soxr-0.5.0.post1.tar.gz", hash = "sha256:7092b9f3e8a416044e1fa138c8172520757179763b85dc53aa9504f4813cff73", size = 170853, upload-time = "2024-08-31T03:43:33.058Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/28/dc62dae260a77603e8257e9b79078baa2ca4c0b4edc6f9f82c9113d6ef18/soxr-0.5.0.post1-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:6fb77b626773a966e3d8f6cb24f6f74b5327fa5dc90f1ff492450e9cdc03a378", size = 203648, upload-time = "2024-08-31T03:43:08.339Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/48/3e88329a695f6e0e38a3b171fff819d75d7cc055dae1ec5d5074f34d61e3/soxr-0.5.0.post1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:39e0f791ba178d69cd676485dbee37e75a34f20daa478d90341ecb7f6d9d690f", size = 159933, upload-time = "2024-08-31T03:43:10.053Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/a5/6b439164be6871520f3d199554568a7656e96a867adbbe5bac179caf5776/soxr-0.5.0.post1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4f0b558f445ba4b64dbcb37b5f803052eee7d93b1dbbbb97b3ec1787cb5a28eb", size = 221010, upload-time = "2024-08-31T03:43:11.839Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/e5/400e3bf7f29971abad85cb877e290060e5ec61fccd2fa319e3d85709c1be/soxr-0.5.0.post1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ca6903671808e0a6078b0d146bb7a2952b118dfba44008b2aa60f221938ba829", size = 252471, upload-time = "2024-08-31T03:43:13.347Z" },
+    { url = "https://files.pythonhosted.org/packages/86/94/6a7e91bea7e6ca193ee429869b8f18548cd79759e064021ecb5756024c7c/soxr-0.5.0.post1-cp311-cp311-win_amd64.whl", hash = "sha256:c4d8d5283ed6f5efead0df2c05ae82c169cfdfcf5a82999c2d629c78b33775e8", size = 166723, upload-time = "2024-08-31T03:43:15.212Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/e3/d422d279e51e6932e7b64f1170a4f61a7ee768e0f84c9233a5b62cd2c832/soxr-0.5.0.post1-cp312-abi3-macosx_10_14_x86_64.whl", hash = "sha256:fef509466c9c25f65eae0ce1e4b9ac9705d22c6038c914160ddaf459589c6e31", size = 199993, upload-time = "2024-08-31T03:43:17.24Z" },
+    { url = "https://files.pythonhosted.org/packages/20/f1/88adaca3c52e03bcb66b63d295df2e2d35bf355d19598c6ce84b20be7fca/soxr-0.5.0.post1-cp312-abi3-macosx_11_0_arm64.whl", hash = "sha256:4704ba6b13a3f1e41d12acf192878384c1c31f71ce606829c64abdf64a8d7d32", size = 156373, upload-time = "2024-08-31T03:43:18.633Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/38/bad15a9e615215c8219652ca554b601663ac3b7ac82a284aca53ec2ff48c/soxr-0.5.0.post1-cp312-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:bd052a66471a7335b22a6208601a9d0df7b46b8d087dce4ff6e13eed6a33a2a1", size = 216564, upload-time = "2024-08-31T03:43:20.789Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/1a/569ea0420a0c4801c2c8dd40d8d544989522f6014d51def689125f3f2935/soxr-0.5.0.post1-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a3f16810dd649ab1f433991d2a9661e9e6a116c2b4101039b53b3c3e90a094fc", size = 248455, upload-time = "2024-08-31T03:43:22.165Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/10/440f1ba3d4955e0dc740bbe4ce8968c254a3d644d013eb75eea729becdb8/soxr-0.5.0.post1-cp312-abi3-win_amd64.whl", hash = "sha256:b1be9fee90afb38546bdbd7bde714d1d9a8c5a45137f97478a83b65e7f3146f6", size = 164937, upload-time = "2024-08-31T03:43:23.671Z" },
+]
+
+[[package]]
 name = "srt"
 version = "3.5.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1916,14 +1939,14 @@ dependencies = [
     { name = "gpiozero", marker = "platform_machine != 'aarch64'" },
     { name = "headless-kivy" },
     { name = "netifaces" },
-    { name = "onnxruntime", marker = "platform_machine == 'aarch64'" },
+    { name = "onnxruntime", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "piper-tts", marker = "sys_platform == 'linux'" },
     { name = "platformdirs" },
     { name = "psutil" },
     { name = "pulsectl" },
     { name = "pvorca" },
-    { name = "pyalsaaudio", marker = "platform_machine == 'aarch64'" },
-    { name = "pyaudio", marker = "sys_platform == 'darwin'" },
+    { name = "pyalsaaudio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "pyaudio", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "pypng" },
     { name = "python-debouncer" },
     { name = "python-dotenv" },
@@ -1932,12 +1955,13 @@ dependencies = [
     { name = "python-strtobool" },
     { name = "pyzbar" },
     { name = "quart" },
-    { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'" },
+    { name = "rpi-lgpio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'" },
     { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'" },
     { name = "semver" },
     { name = "sentry-sdk" },
     { name = "simpleaudio" },
+    { name = "soxr" },
     { name = "tenacity" },
     { name = "ubo-gui" },
     { name = "vosk" },
@@ -1990,14 +2014,14 @@ requires-dist = [
     { name = "headless-kivy", specifier = ">=0.12.4" },
     { name = "netifaces", specifier = ">=0.11.0" },
     { name = "objgraph", marker = "extra == 'test-investigation'", specifier = ">=3.6.2" },
-    { name = "onnxruntime", marker = "platform_machine == 'aarch64'", specifier = ">=1.22.0" },
+    { name = "onnxruntime", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = ">=1.22.0" },
     { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = ">=1.2.0" },
     { name = "platformdirs", specifier = ">=4.3.6" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pulsectl", specifier = ">=24.12.0" },
     { name = "pvorca", specifier = ">=1.1.1" },
-    { name = "pyalsaaudio", marker = "platform_machine == 'aarch64'", specifier = ">=0.11.0" },
-    { name = "pyaudio", marker = "sys_platform == 'darwin'", specifier = ">=0.2.14" },
+    { name = "pyalsaaudio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = ">=0.11.0" },
+    { name = "pyaudio", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = ">=0.2.14" },
     { name = "pypng", specifier = ">=0.20220715.0" },
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
@@ -2006,12 +2030,13 @@ requires-dist = [
     { name = "python-strtobool", specifier = ">=1.0.3" },
     { name = "pyzbar", specifier = ">=0.1.9" },
     { name = "quart", specifier = ">=0.20.0" },
-    { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'", specifier = ">=0.6" },
+    { name = "rpi-lgpio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = ">=0.6" },
     { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'", specifier = ">=5.0.0" },
     { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'", specifier = ">=2.0.0" },
     { name = "semver", specifier = ">=3.0.4" },
     { name = "sentry-sdk", specifier = ">=2.22.0" },
     { name = "simpleaudio", specifier = ">=1.0.4" },
+    { name = "soxr", specifier = ">=0.5.0.post1" },
     { name = "tenacity", specifier = ">=9.0.0" },
     { name = "ubo-gui", specifier = ">=0.13.17" },
     { name = "vosk", specifier = "==0.3.44" },

@@ -34,6 +34,7 @@ dependencies = [
   "semver>=3.0.4",
   "sentry-sdk>=2.22.0",
   "simpleaudio>=1.0.4",
+  "soxr>=0.5.0.post1",
   "tenacity>=9.0.0",
   "ubo-gui>=0.13.17",
   "vosk==0.3.44",
@@ -46,11 +47,11 @@ dependencies = [
   "adafruit-circuitpython-veml7700>=2.1.2",
   # RPi dependencies
   "piper-tts>=1.2.0 ; sys_platform=='linux'",
-  "rpi-lgpio>=0.6 ; platform_machine=='aarch64'",
-  "onnxruntime>=1.22.0 ; platform_machine == 'aarch64'",
-  "pyalsaaudio>=0.11.0 ; platform_machine == 'aarch64'",
+  "rpi-lgpio>=0.6 ; sys_platform=='linux' and platform_machine=='aarch64'",
+  "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
+  "pyalsaaudio>=0.11.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
   # Desktop dependencies
-  "pyaudio>=0.2.14 ; sys_platform=='darwin'",
+  "pyaudio>=0.2.14 ; sys_platform!='linux' or platform_machine!='aarch64'",
   "gpiozero>=2.0.1 ; platform_machine != 'aarch64'",
   # gRPC
   "betterproto [compiler]>=2.0.0b7",
