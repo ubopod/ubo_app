@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 import wave
+from asyncio import get_event_loop
+from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING
 
 import alsaaudio
 import simpleaudio
@@ -18,13 +22,22 @@ from tenacity import (
 
 from ubo_app.logger import logger
 from ubo_app.store.main import store
-from ubo_app.store.services.audio import AudioPlaybackDoneAction
+from ubo_app.store.services.audio import (
+    AudioPlaybackDoneAction,
+    AudioReportAudioEvent,
+)
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.eeprom import get_eeprom_data
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.server import send_command
 
-CHUNK_SIZE = 1024
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
+INPUT_SAMPLE_RATE = 48_000
+INPUT_CHANNELS = 2
+INPUT_PERIOD_SIZE = 1 << 14
 
 
 def _linear_to_logarithmic(volume_linear: float) -> int:
@@ -41,7 +54,7 @@ def _linear_to_logarithmic(volume_linear: float) -> int:
 class AudioManager:
     """Class for managing audio playback and recording."""
 
-    def __init__(self: AudioManager) -> None:
+    def __init__(self) -> None:
         """Initialize the audio manager."""
         # create an audio object
         self.has_speakers = False
@@ -63,8 +76,9 @@ class AudioManager:
             self.has_microphones = True
 
         create_task(self.find_card_index())
+        create_task(self.stream_mic())
 
-    async def find_card_index(self: AudioManager) -> None:
+    async def find_card_index(self) -> None:
         """Find the card index of the audio device."""
         self.card_index = None
         if not self.has_speakers and not self.has_microphones:
@@ -90,19 +104,15 @@ class AudioManager:
                 break
         else:
             logger.error(
-                'Failed to find the card index after multiple trials',
+                'Audio - Failed to find the card index after multiple trials',
             )
             return
-        cards = alsaaudio.cards()
-        self.card_index = cards.index(
-            next(card for card in cards if 'wm8960' in card),
-        )
         # In case they were set before the card was initialized
         self.set_playback_mute(mute=self.playback_mute)
         self.set_playback_volume(self.playback_volume)
         self.set_capture_volume(self.capture_volume)
 
-    async def play_file(self: AudioManager, filename: str) -> None:
+    async def play_file(self, filename: str) -> None:
         """Play a waveform audio file.
 
         Parameters
@@ -112,7 +122,10 @@ class AudioManager:
 
         """
         # open the file for reading.
-        logger.info('Opening audio file for playback', extra={'filename_': filename})
+        logger.info(
+            'Audio - Opening audio file for playback',
+            extra={'filename_': filename},
+        )
         with wave.open(filename, 'rb') as wave_file:
             sample_rate = wave_file.getframerate()
             channels = wave_file.getnchannels()
@@ -127,7 +140,7 @@ class AudioManager:
             )
 
     async def play_sequence(
-        self: AudioManager,
+        self,
         data: bytes,
         *,
         channels: int,
@@ -174,7 +187,7 @@ class AudioManager:
                     _simpleaudio.SimpleaudioError,
                 ):
                     logger.info(
-                        'Reporting the playback issue to ubo-system',
+                        'Audio - Reporting the playback issue to ubo-system',
                         extra={'attempt': attempt.retry_state.attempt_number},
                     )
                     report_service_error(
@@ -185,13 +198,122 @@ class AudioManager:
                     break
             else:
                 logger.error(
-                    'Failed to play audio file after multiple trials',
+                    'Audio - Failed to play audio file after multiple trials',
                 )
                 return
         if id is not None:
             store.dispatch(AudioPlaybackDoneAction(id=id))
 
-    def set_playback_mute(self: AudioManager, *, mute: bool = False) -> None:
+    async def _initialize_input_reader(
+        self,
+    ) -> Callable[[], Coroutine[None, None, tuple[int, bytes]]]:
+        read_executor = ThreadPoolExecutor(max_workers=1)
+
+        if IS_RPI:
+            import alsaaudio  # type: ignore [reportMissingModuleSource=false]
+
+            async for attempt in AsyncRetrying(
+                stop=stop_after_attempt(3),
+                wait=wait_fixed(1),
+                reraise=True,
+            ):
+                with attempt:
+                    if self.card_index is None:
+                        msg = 'Card index is not set'
+                        raise RuntimeError(msg)
+                    input_audio = alsaaudio.PCM(
+                        alsaaudio.PCM_CAPTURE,
+                        alsaaudio.PCM_NORMAL,
+                        channels=INPUT_CHANNELS,
+                        rate=INPUT_SAMPLE_RATE,
+                        format=alsaaudio.PCM_FORMAT_S16_LE,
+                        periodsize=INPUT_PERIOD_SIZE,
+                        cardindex=self.card_index,
+                    )
+                if attempt.retry_state.outcome and isinstance(
+                    attempt.retry_state.outcome.exception(),
+                    alsaaudio.ALSAAudioError,
+                ):
+                    logger.info(
+                        'Audio - Reporting the audio capture issue to ubo-system',
+                        extra={'attempt': attempt.retry_state.attempt_number},
+                    )
+                    report_service_error(
+                        exception=attempt.retry_state.outcome.exception(),
+                    )
+                    await send_command('audio', 'failure_report', has_output=True)
+                else:
+                    break
+            else:
+                # Since reraise is set to True, this part should be unreachable
+                logger.error(
+                    'Audio - Failed to open audio capture after multiple trials',
+                )
+                msg = 'Failed to open audio capture after multiple trials'
+                raise RuntimeError(msg)
+
+            async def read_audio_chunk() -> tuple[int, bytes]:
+                return await get_event_loop().run_in_executor(
+                    read_executor,
+                    input_audio.read,
+                )
+
+        else:
+            try:
+                import pyaudio
+
+                pa = pyaudio.PyAudio()
+                input_audio = pa.open(
+                    format=pyaudio.paInt16,
+                    channels=INPUT_CHANNELS,
+                    rate=INPUT_SAMPLE_RATE,
+                    input=True,
+                    frames_per_buffer=INPUT_PERIOD_SIZE,
+                )
+
+                async def read_audio_chunk() -> tuple[int, bytes]:
+                    data = await get_event_loop().run_in_executor(
+                        read_executor,
+                        input_audio.read,
+                        INPUT_PERIOD_SIZE,
+                        False,  # noqa: FBT003
+                    )
+                    return len(data), data
+            except OSError:
+                logger.exception('Audio - Error opening audio capture')
+
+                async def read_audio_chunk() -> tuple[int, bytes]:
+                    await asyncio.sleep(0.1)
+                    return 0, b''
+
+        return read_audio_chunk
+
+    async def stream_mic(self) -> None:
+        """Stream audio from the microphone to the store."""
+        read_audio_chunk = await self._initialize_input_reader()
+        event_loop = get_event_loop()
+        while True:
+            try:
+                length, data = await read_audio_chunk()
+            except alsaaudio.ALSAAudioError:
+                logger.exception('Audio - Error reading audio capture')
+                read_audio_chunk = await self._initialize_input_reader()
+                break
+            else:
+                if length > 0:
+                    store._dispatch(  # noqa: SLF001
+                        [
+                            AudioReportAudioEvent(
+                                timestamp=event_loop.time(),
+                                sample=data,
+                                channels=INPUT_CHANNELS,
+                                rate=INPUT_SAMPLE_RATE,
+                                width=2,
+                            ),
+                        ],
+                    )
+
+    def set_playback_mute(self, *, mute: bool = False) -> None:
         """Set the playback mute of the audio output.
 
         Parameters
@@ -224,7 +346,7 @@ class AudioManager:
             except alsaaudio.ALSAAudioError:
                 create_task(self.find_card_index())
 
-    def set_playback_volume(self: AudioManager, volume: float = 0.8) -> None:
+    def set_playback_volume(self, volume: float = 0.8) -> None:
         """Set the playback volume of the audio output.
 
         Parameters
@@ -262,7 +384,7 @@ class AudioManager:
             except alsaaudio.ALSAAudioError:
                 create_task(self.find_card_index())
 
-    def set_capture_volume(self: AudioManager, volume: float = 0.8) -> None:
+    def set_capture_volume(self, volume: float = 0.8) -> None:
         """Set the capture volume of the audio output.
 
         Parameters

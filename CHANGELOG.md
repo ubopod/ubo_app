@@ -53,6 +53,7 @@
 - feat: add a menu item in settings for installing/reinstalling the wm8960 driver
 - refactor: use `application_registry` in `OpenApplication` and `CloseApplication` actions and events to move towards avoiding mutable objects in the store bus as part of #261
 - refactor(core): use the latest version of `python-redux` and override the `_create_task` method of our custom `Autorun` class to make sure async autorun tasks run in service threads of their respective services
+- feat(speech-recognition): add assistant logic, report voice and text recorded since `ASSISTANT_WAKE_WORD` was detected until the `ASSISTANT_END_WORD` is detected, and add a menu item to enable/disable the assistant - closes #304
 
 ## Version 1.3.0
 

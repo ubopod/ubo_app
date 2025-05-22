@@ -70,8 +70,18 @@ CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)
 SECRETS_PATH = CONFIG_PATH / '.secrets.env'
 PERSISTENT_STORE_PATH = CONFIG_PATH / 'state.json'
 
-CACHE_PATH = platformdirs.user_cache_path(appname='ubo', ensure_exists=True)
-DATA_PATH = platformdirs.user_data_path(appname='ubo', ensure_exists=True)
+CACHE_PATH = Path(
+    os.environ.get(
+        'UBO_CACHE_PATH',
+        platformdirs.user_cache_path(appname='ubo', ensure_exists=True),
+    ),
+)
+DATA_PATH = Path(
+    os.environ.get(
+        'UBO_DATA_PATH',
+        platformdirs.user_data_path(appname='ubo', ensure_exists=True),
+    ),
+)
 
 DISPLAY_BAUDRATE = int(os.environ.get('UBO_DISPLAY_BAUDRATE', '60_000_000'))
 WIDTH = 240
@@ -111,3 +121,6 @@ TEST_INVESTIGATION_MODE = str_to_bool(
 )
 
 WAKE_WORD = os.environ.get('UBO_WAKE_WORD', 'hey pod')
+ASSISTANT_WAKE_WORD = os.environ.get('UBO_ASSISTANT_WAKE_WORD', 'hey there')
+ASSISTANT_END_WORD = os.environ.get('UBO_ASSISTANT_END_WORD', 'roger that')
+ASSISTANT_DEBUG_PATH = os.environ.get('UBO_ASSISTANT_DEBUG_PATH')

@@ -138,7 +138,7 @@ jobs:
         if: matrix.runner == 'ubuntu-latest'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0
+          sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0 libportaudio2
 
       - uses: actions/checkout@v4
         name: Checkout

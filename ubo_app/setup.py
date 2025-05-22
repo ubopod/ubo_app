@@ -180,6 +180,7 @@ def setup() -> None:
         application=RawContentViewer,
         application_id='ubo:raw-content-viewer',
     )
+    import ubo_app.store.main  # noqa: F401
 
 
 def clear_signal_handlers() -> None:
