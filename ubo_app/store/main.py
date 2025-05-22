@@ -488,6 +488,9 @@ class _UboAutorun(
         super().__call__(*args, **kwargs)
         return self._latest_value
 
+    def _create_task(self, coro: Coroutine[None, None, Any]) -> None:
+        self.coroutine_runner(coro)
+
 
 def ubo_create_task(
     coro: Coroutine,
@@ -539,7 +542,7 @@ from ubo_app.store.core.reducer import reducer as main_reducer  # noqa: E402
 store.dispatch(InitAction())
 store.dispatch(
     CombineReducerRegisterAction(
-        _id=root_reducer_id,
+        combine_reducers_id=root_reducer_id,
         key='main',
         reducer=main_reducer,
     ),

@@ -443,7 +443,7 @@ supported""",
 
             store.dispatch(
                 CombineReducerRegisterAction(
-                    _id=reducer_id,
+                    combine_reducers_id=reducer_id,
                     key=id,
                     reducer=image_reducer,
                     payload=result.data,
@@ -530,7 +530,7 @@ def _load_images() -> None:
     store.dispatch(
         [
             CombineReducerRegisterAction(
-                _id=reducer_id,
+                combine_reducers_id=reducer_id,
                 key=image_id,
                 reducer=image_reducer,
                 payload={'label': IMAGES[image_id].label},
@@ -539,7 +539,7 @@ def _load_images() -> None:
         ],
         [
             CombineReducerRegisterAction(
-                _id=reducer_id,
+                combine_reducers_id=reducer_id,
                 key=item.stem,
                 reducer=image_reducer,
                 payload=json.load((item / 'metadata.json').open()),

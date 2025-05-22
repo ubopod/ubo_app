@@ -1,6 +1,5 @@
 // store-rpi-000
 {
-  "_id": "e3e70682c2094cac629f6fbed82c07cd",
   "_type": "RootState",
   "audio": {
     "_type": "AudioState",
@@ -15,13 +14,14 @@
     "is_viewfinder_active": false,
     "queue": []
   },
+  "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
   "display": {
     "_type": "DisplayState",
     "is_paused": false
   },
   "docker": {
-    "_id": "eb1167b367a9c3787c65c1e582e2e662",
     "_type": "DockerState",
+    "combine_reducers_id": "eb1167b367a9c3787c65c1e582e2e662",
     "envoy_grpc": {
       "_type": "ImageState",
       "container_ip": null,

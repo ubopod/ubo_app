@@ -1563,15 +1563,15 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.23.0"
+version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-immutable" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/49/b9/8c988abe28efd2c3ea1e878a23acb3d17783c3737ec40f92a0cb3117a0f6/python_redux-0.23.0.tar.gz", hash = "sha256:f4c74e5816536a9bb60380af146a103c25d28cc3eb21e9be8adeb7a72043e5e4", size = 21897, upload-time = "2025-04-23T10:11:15.406Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/de/e5c7492cea183f31105d00dc419eda7b48aed9ef91b85e602d6661890414/python_redux-0.24.0.tar.gz", hash = "sha256:0c0008a43fa9d8c72fbb2dbd68da743906b05ca4d4e8d2158fee69c61098bf35", size = 23025, upload-time = "2025-05-22T03:09:39.656Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/48/b363307478a02f6489c6fdce30d42edc72cebc9e4965b85127dbc956cd17/python_redux-0.23.0-py3-none-any.whl", hash = "sha256:55db56abc58dc41d62da85d542c2a5995950f5e2530c14e4c02e51c5c0bc1c8c", size = 27542, upload-time = "2025-04-23T10:11:13.697Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/b4/ad1abb49f1143cd043394b9df26bcad91652c4658ffbd728e14433b3e65e/python_redux-0.24.0-py3-none-any.whl", hash = "sha256:765ec99e9602966c9a3ef8df272ef95f500ff7e561b28918b6e9eaa5f6a073b5", size = 28864, upload-time = "2025-05-22T03:09:38.478Z" },
 ]
 
 [[package]]
@@ -1997,7 +1997,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = ">=0.1.5" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-fake", specifier = ">=0.2.0" },
-    { name = "python-redux", specifier = ">=0.23.0" },
+    { name = "python-redux", specifier = ">=0.24.0" },
     { name = "python-strtobool", specifier = ">=1.0.0" },
     { name = "pyzbar", specifier = ">=0.1.9" },
     { name = "quart", specifier = ">=0.19.6" },

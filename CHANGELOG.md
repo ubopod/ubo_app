@@ -52,6 +52,7 @@
 - fix: separate `has_output` and `has_output_stream` to fix the old `send_command` callers being broken with the new `send_command` implementation
 - feat: add a menu item in settings for installing/reinstalling the wm8960 driver
 - refactor: use `application_registry` in `OpenApplication` and `CloseApplication` actions and events to move towards avoiding mutable objects in the store bus as part of #261
+- refactor(core): use the latest version of `python-redux` and override the `_create_task` method of our custom `Autorun` class to make sure async autorun tasks run in service threads of their respective services
 
 ## Version 1.3.0
 

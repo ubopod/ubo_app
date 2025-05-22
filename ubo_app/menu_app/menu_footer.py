@@ -134,9 +134,8 @@ class MenuAppFooter(UboApp):
     @mainthread
     def render_icons(
         self: MenuAppFooter,
-        selector_result: Sequence[IconState],
+        icons: Sequence[IconState],
     ) -> None:
-        icons = selector_result
         self.icons_layout.clear_widgets()
         for icon in list(reversed(icons))[:4]:
             label = Label(
