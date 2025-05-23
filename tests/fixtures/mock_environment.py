@@ -364,6 +364,9 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
             ),
         },
     )
+    sys.modules['ollama'] = Fake(
+        _Fake__attrs={'list': lambda: Fake(_Fake__attrs={'models': []})},
+    )
 
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)

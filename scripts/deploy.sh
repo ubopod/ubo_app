@@ -21,7 +21,7 @@ function run_on_pod() {
     return 1
   fi
   if [ $# -eq 1 ]; then
-    ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
+    ssh ubo@ubo-development-pod-$index "XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
     return 0
   fi
   return 1

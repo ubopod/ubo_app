@@ -75,6 +75,11 @@ if TYPE_CHECKING:
         InputAction,
         InputResolveEvent,
     )
+    from ubo_app.store.services.assistant import (
+        AssistantAction,
+        AssistantEvent,
+        AssistantState,
+    )
     from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
     from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
     from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
@@ -97,6 +102,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.sensors import SensorsAction, SensorsState
     from ubo_app.store.services.speech_recognition import (
         SpeechRecognitionAction,
+        SpeechRecognitionEvent,
         SpeechRecognitionState,
     )
     from ubo_app.store.services.speech_synthesis import (
@@ -126,6 +132,7 @@ UboAction: TypeAlias = Union[
     'UpdateManagerAction',
     'InputAction',
     # Services Actions
+    'AssistantAction',
     'AudioAction',
     'CameraAction',
     'DisplayAction',
@@ -150,12 +157,14 @@ UboEvent: TypeAlias = Union[
     'MainEvent',
     'InputResolveEvent',
     # Services Events
+    'AssistantEvent',
     'AudioEvent',
     'CameraEvent',
     'DisplayEvent',
     'InfraredEvent',
     'IpEvent',
     'NotificationsEvent',
+    'SpeechRecognitionEvent',
     'UsersEvent',
     'WiFiEvent',
 ]
@@ -171,6 +180,7 @@ class RootState(BaseCombineReducerState):
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
 
+    assistant: AssistantState
     audio: AudioState
     camera: CameraState
     display: DisplayState

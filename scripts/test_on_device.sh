@@ -23,7 +23,7 @@ function run_on_pod() {
   fi
 
   # Use SSH to execute commands read from stdin
-  ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -s" <<EOF
+  ssh ubo@ubo-development-pod-$index "XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) bash -s" <<EOF
 cd
 source /etc/profile
 source "\$HOME/.profile"

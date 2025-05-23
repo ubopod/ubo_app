@@ -10,6 +10,7 @@ from docker_composition import (
 from docker_container import check_container
 from docker_images import IMAGES
 from docker_qrcode_page import DockerQRCodePage
+from redux import AutorunOptions
 from ubo_gui.menu.types import (
     ActionItem,
     HeadedMenu,
@@ -242,4 +243,5 @@ def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
             getattr(state.docker, image_id),
             state.ip.interfaces if hasattr(state, 'ip') else None,
         ),
+        options=AutorunOptions(default_value=None),
     )(image_menu)

@@ -27,6 +27,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionIntent,
     SpeechRecognitionReportIntentDetectionAction,
     SpeechRecognitionReportSpeechAction,
+    SpeechRecognitionReportTextEvent,
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionSetIsAssistantActiveAction,
     SpeechRecognitionSetIsIntentsActiveAction,
@@ -218,6 +219,10 @@ def _handle_result(
     result: dict[Literal['text'], str],
 ) -> None:
     intents, status = data
+
+    if 'text' not in result or not result['text']:
+        return
+
     logger.info(
         'Vosk - Text recognized',
         extra={
@@ -237,9 +242,6 @@ def _handle_result(
             'assistant_end_word': ASSISTANT_END_WORD,
         },
     )
-
-    if 'text' not in result or not result['text']:
-        return
 
     text = result['text']
 
@@ -320,14 +322,29 @@ async def _run_listener_thread(
     while _is_active() and _context.recognizer:
         data = await _context.chunks_queue.get()
 
-        if await get_event_loop().run_in_executor(
+        if result := await get_event_loop().run_in_executor(
             process_executor,
             _context.recognizer.AcceptWaveform,
             data,
         ):
-            result = json.loads(_context.recognizer.FinalResult())
+            result = json.loads(_context.recognizer.Result())
 
             _handle_result(result=result)
+        else:
+            result = json.loads(_context.recognizer.PartialResult())
+            if result.get('partial'):
+                logger.verbose(
+                    'Vosk - Partial result',
+                    extra={'result': result},
+                )
+                store._dispatch(  # noqa: SLF001
+                    [
+                        SpeechRecognitionReportTextEvent(
+                            timestamp=get_event_loop().time(),
+                            text=result['partial'],
+                        ),
+                    ],
+                )
 
         _context.append_to_ongoing_voice(chunk=data)
 

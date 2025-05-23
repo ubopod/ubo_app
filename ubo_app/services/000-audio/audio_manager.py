@@ -265,7 +265,7 @@ class AudioManager:
                 pa = pyaudio.PyAudio()
                 input_audio = pa.open(
                     format=pyaudio.paInt16,
-                    channels=INPUT_CHANNELS,
+                    channels=1,
                     rate=INPUT_SAMPLE_RATE,
                     input=True,
                     frames_per_buffer=INPUT_PERIOD_SIZE,

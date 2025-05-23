@@ -92,6 +92,7 @@ NOTIFICATIONS_FLASH_TIME = 4
 
 
 CORE_SERVICE_IDS = [
+    'assistant',
     'audio',
     'camera',
     'display',
@@ -124,3 +125,7 @@ WAKE_WORD = os.environ.get('UBO_WAKE_WORD', 'hey pod')
 ASSISTANT_WAKE_WORD = os.environ.get('UBO_ASSISTANT_WAKE_WORD', 'hey there')
 ASSISTANT_END_WORD = os.environ.get('UBO_ASSISTANT_END_WORD', 'roger that')
 ASSISTANT_DEBUG_PATH = os.environ.get('UBO_ASSISTANT_DEBUG_PATH')
+DEFAULT_ASSISTANT_OLLAMA_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_OLLAMA_MODEL',
+    'gemma3:1b',
+)

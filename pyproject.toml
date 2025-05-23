@@ -17,6 +17,7 @@ dependencies = [
   "fasteners>=0.19",
   "headless-kivy>=0.12.4",
   "netifaces>=0.11.0",
+  "ollama>=0.4.8",
   "platformdirs>=4.3.6",
   "psutil>=7.0.0",
   "pulsectl>=24.12.0",
@@ -25,7 +26,7 @@ dependencies = [
   "python-debouncer>=0.1.5",
   "python-dotenv>=1.0.1",
   "python-fake>=0.2.0",
-  "python-redux>=0.24.0",
+  "python-redux==0.24.1.dev1250523103975755100",
   "python-strtobool>=1.0.3",
   "pyzbar>=0.1.9",
   "quart>=0.20.0",
@@ -87,7 +88,7 @@ dev-dependencies = [
   "pdbpp>=0.10.3",
   "poethepoet>=0.24.4",
   "pyfakefs>=5.7.4",
-  "pyright>=1.1.400",
+  "pyright>=1.1.401",
   "pytest>=8.0.0",
   "pytest-asyncio>=0.23.5.post1",
   "pytest-cov>=4.1.0",
@@ -283,6 +284,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/080-docker"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-assistant"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
