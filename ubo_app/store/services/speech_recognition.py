@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
-from redux import BaseAction
+from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -57,6 +57,17 @@ class SpeechRecognitionReportSpeechAction(SpeechRecognitionAction):
 
     text: str
     raw_audio: bytes
+
+
+class SpeechRecognitionEvent(BaseEvent):
+    """Base class for speech recognition events."""
+
+
+class SpeechRecognitionReportTextEvent(SpeechRecognitionEvent):
+    """Event to report stream of recognized text."""
+
+    timestamp: float
+    text: str
 
 
 class SpeechRecognitionStatus(StrEnum):

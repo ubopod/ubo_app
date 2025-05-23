@@ -21,12 +21,14 @@ class DisplayRerenderEvent(DisplayEvent): ...
 
 
 class DisplayRenderEvent(DisplayEvent):
+    timestamp: float
     data: bytes
     rectangle: tuple[int, int, int, int]
     density: float
 
 
 class DisplayCompressedRenderEvent(DisplayEvent):
+    timestamp: float
     compressed_data: bytes
     rectangle: tuple[int, int, int, int]
     density: float
