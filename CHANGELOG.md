@@ -7,6 +7,7 @@
 - feat(assistant): add assistnat service
 - feat(speech-recognition): add intents for creating wifi connections and activating/deactivating the assistant
 - fix(tests):`stability` not passing `attempts` to `wait_for`, making it basically wait forever
+- refactor(core): do not default the log level of services to the `get_log_level`, use `INFO` as the default log level for services
 
 ## Version 1.4.0
 
