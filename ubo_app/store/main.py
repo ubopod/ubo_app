@@ -9,6 +9,7 @@ import threading
 import weakref
 from asyncio import Handle, iscoroutine
 from datetime import datetime
+from enum import Flag
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -297,6 +298,8 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
 
         if isinstance(obj, Autorun):
             obj = obj()
+        if isinstance(obj, Flag):
+            return obj.value
         if isinstance(obj, set):
             return {'_type': 'set', 'value': [cls.serialize_value(i) for i in obj]}
         if isinstance(obj, bytes):

@@ -7099,6 +7099,58 @@
       {
         "_type": "SpeechRecognitionIntent",
         "action": {
+          "_type": "SpeechRecognitionSetIsAssistantActiveAction",
+          "is_active": true
+        },
+        "phrase": "Turn on Assistant"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "SpeechRecognitionSetIsAssistantActiveAction",
+          "is_active": false
+        },
+        "phrase": "Turn off Assistant"
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "OpenApplicationAction",
+          "application_id": "wifi:create-connection-page",
+          "initialization_args": [],
+          "initialization_kwargs": {
+            "input_methods": 1
+          }
+        },
+        "phrase": [
+          "Create WiFi Connection with Camera",
+          "Create WiFi Connection with QR Code",
+          "Create WiFi Connection using Camera",
+          "Create WiFi Connection using QR Code"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
+          "_type": "OpenApplicationAction",
+          "application_id": "wifi:create-connection-page",
+          "initialization_args": [],
+          "initialization_kwargs": {
+            "input_methods": 2
+          }
+        },
+        "phrase": [
+          "Create WiFi Connection with Web Dashboard",
+          "Create WiFi Connection with Web",
+          "Create WiFi Connection with Web UI",
+          "Create WiFi Connection using Web Dashboard",
+          "Create WiFi Connection using Web UI",
+          "Create WiFi Connection using Web"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action": {
           "_type": "InfraredSendCodeAction",
           "protocol": "nec",
           "scancode": "0x40"

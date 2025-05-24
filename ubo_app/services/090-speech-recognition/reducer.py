@@ -15,7 +15,9 @@ from ubo_app.store.core.types import (
     MenuGoHomeAction,
     MenuScrollAction,
     MenuScrollDirection,
+    OpenApplicationAction,
 )
+from ubo_app.store.input.types import InputMethod
 from ubo_app.store.services.audio import (
     AudioChangeVolumeAction,
     AudioDevice,
@@ -58,6 +60,46 @@ def reducer(
         if isinstance(action, InitAction):
             return SpeechRecognitionState(
                 intents=[
+                    SpeechRecognitionIntent(
+                        phrase='Turn on Assistant',
+                        action=SpeechRecognitionSetIsAssistantActiveAction(
+                            is_active=True,
+                        ),
+                    ),
+                    SpeechRecognitionIntent(
+                        phrase='Turn off Assistant',
+                        action=SpeechRecognitionSetIsAssistantActiveAction(
+                            is_active=False,
+                        ),
+                    ),
+                    SpeechRecognitionIntent(
+                        phrase=[
+                            'Create WiFi Connection with Camera',
+                            'Create WiFi Connection with QR Code',
+                            'Create WiFi Connection using Camera',
+                            'Create WiFi Connection using QR Code',
+                        ],
+                        action=OpenApplicationAction(
+                            application_id='wifi:create-connection-page',
+                            initialization_kwargs={'input_methods': InputMethod.CAMERA},
+                        ),
+                    ),
+                    SpeechRecognitionIntent(
+                        phrase=[
+                            'Create WiFi Connection with Web Dashboard',
+                            'Create WiFi Connection with Web',
+                            'Create WiFi Connection with Web UI',
+                            'Create WiFi Connection using Web Dashboard',
+                            'Create WiFi Connection using Web UI',
+                            'Create WiFi Connection using Web',
+                        ],
+                        action=OpenApplicationAction(
+                            application_id='wifi:create-connection-page',
+                            initialization_kwargs={
+                                'input_methods': InputMethod.WEB_DASHBOARD,
+                            },
+                        ),
+                    ),
                     SpeechRecognitionIntent(
                         phrase=['Turn on light strip', 'Turn off light strip'],
                         action=InfraredSendCodeAction(
