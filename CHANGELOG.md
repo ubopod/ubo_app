@@ -6,6 +6,7 @@
 - feat(speech-recognition): add assistant logic, report voice and text recorded since `ASSISTANT_WAKE_WORD` was detected until the `ASSISTANT_END_WORD` is detected, and add a menu item to enable/disable the assistant - closes #304
 - feat(assistant): add assistnat service
 - feat(speech-recognition): add intents for creating wifi connections and activating/deactivating the assistant
+- fix(tests):`stability` not passing `attempts` to `wait_for`, making it basically wait forever
 
 ## Version 1.4.0
 
