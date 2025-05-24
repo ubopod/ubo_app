@@ -206,15 +206,17 @@ class CreateWirelessConnectionPage(UboPageWidget):
         self: CreateWirelessConnectionPage,
         items: Sequence[Item] | None = None,
         *args: object,
+        input_methods: InputMethod = InputMethod.ALL,
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=items)
+        self.input_methods = input_methods
         create_task(self.create_wireless_connection())
 
     async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
         await input_wifi_connection(
             on_creating=lambda: setattr(self, 'creating', True),
-            input_methods=InputMethod.ALL,
+            input_methods=self.input_methods,
         )
         store.dispatch(CloseApplicationAction(application_instance_id=self.id))
 

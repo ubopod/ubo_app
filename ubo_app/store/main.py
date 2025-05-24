@@ -9,6 +9,7 @@ import threading
 import weakref
 from asyncio import Handle, iscoroutine
 from datetime import datetime
+from enum import Flag
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -291,12 +292,14 @@ class _UboEventHandler(Generic[StrictEvent]):
 
 class UboStore(Store[RootState, UboAction, UboEvent]):
     @classmethod
-    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
+    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:  # noqa: C901
         from redux.autorun import Autorun
         from ubo_gui.page import PageWidget
 
         if isinstance(obj, Autorun):
             obj = obj()
+        if isinstance(obj, Flag):
+            return obj.value
         if isinstance(obj, set):
             return {'_type': 'set', 'value': [cls.serialize_value(i) for i in obj]}
         if isinstance(obj, bytes):
