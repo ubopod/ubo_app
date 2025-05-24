@@ -904,7 +904,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -914,7 +914,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -957,9 +957,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -974,9 +974,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -1041,7 +1041,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -1136,7 +1136,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -1146,7 +1146,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -1189,9 +1189,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -1206,9 +1206,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -1273,7 +1273,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -1368,7 +1368,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -1378,7 +1378,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -1421,9 +1421,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -1438,9 +1438,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -1505,7 +1505,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -1600,7 +1600,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -1610,7 +1610,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -1653,9 +1653,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -1670,9 +1670,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -1737,7 +1737,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -1832,7 +1832,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -1842,7 +1842,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -1885,9 +1885,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -1902,9 +1902,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -1969,7 +1969,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -2064,7 +2064,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -2074,7 +2074,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -2117,9 +2117,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -2134,9 +2134,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -2201,7 +2201,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -2296,7 +2296,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -2306,7 +2306,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -2349,9 +2349,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -2366,9 +2366,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -2433,7 +2433,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -2528,7 +2528,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -2538,7 +2538,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -2581,9 +2581,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -2598,9 +2598,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -2665,7 +2665,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -2760,7 +2760,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -2770,7 +2770,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -2813,9 +2813,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -2830,9 +2830,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -2897,7 +2897,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -2992,7 +2992,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -3002,7 +3002,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -3045,9 +3045,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -3062,9 +3062,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -3129,7 +3129,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -3224,7 +3224,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -3234,7 +3234,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -3277,9 +3277,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -3294,9 +3294,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -3361,7 +3361,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -3456,7 +3456,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -3466,7 +3466,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -3509,9 +3509,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -3526,9 +3526,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -3593,7 +3593,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -3688,7 +3688,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -3698,7 +3698,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -3741,9 +3741,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -3758,9 +3758,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -3825,7 +3825,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -3920,7 +3920,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -3930,7 +3930,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -3973,9 +3973,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -3990,9 +3990,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -4057,7 +4057,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -4152,7 +4152,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -4162,7 +4162,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -4205,9 +4205,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -4222,9 +4222,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -4289,7 +4289,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -4384,7 +4384,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -4394,7 +4394,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -4437,9 +4437,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -4454,9 +4454,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -4521,7 +4521,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -4616,7 +4616,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -4626,7 +4626,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -4669,9 +4669,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -4686,9 +4686,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -4753,7 +4753,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -4848,7 +4848,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -4858,7 +4858,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -4901,9 +4901,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -4918,9 +4918,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -4985,7 +4985,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -5080,7 +5080,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -5090,7 +5090,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -5133,9 +5133,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -5150,9 +5150,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -5217,7 +5217,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -5312,7 +5312,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -5322,7 +5322,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -5365,9 +5365,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -5382,9 +5382,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -5449,7 +5449,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -5544,7 +5544,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -5554,7 +5554,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -5597,9 +5597,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -5614,9 +5614,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -5681,7 +5681,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -5776,7 +5776,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -5786,7 +5786,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -5829,9 +5829,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -5846,9 +5846,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -5913,7 +5913,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -6008,7 +6008,7 @@
                                       },
                                       {
                                         "_type": "SubMenuItem",
-                                        "background_color": "#b6b6b6",
+                                        "background_color": "#64C864",
                                         "color": [
                                           1,
                                           1,
@@ -6018,7 +6018,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "log_level",
-                                        "label": "Level: DEBUG",
+                                        "label": "Level: INFO",
                                         "opacity": null,
                                         "progress": null,
                                         "sub_menu": {
@@ -6061,9 +6061,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#b6b6b6",
-                                              "color": "#ffffff",
-                                              "icon": "󰱒",
+                                              "background_color": "#000000",
+                                              "color": "#b6b6b6",
+                                              "icon": "󰄱",
                                               "is_short": false,
                                               "key": "DEBUG",
                                               "label": "DEBUG",
@@ -6078,9 +6078,9 @@
                                             {
                                               "_type": "UboDispatchItem",
                                               "action": "<function:action>",
-                                              "background_color": "#000000",
-                                              "color": "#64C864",
-                                              "icon": "󰄱",
+                                              "background_color": "#64C864",
+                                              "color": "#ffffff",
+                                              "icon": "󰱒",
                                               "is_short": false,
                                               "key": "INFO",
                                               "label": "INFO",
@@ -6145,7 +6145,7 @@
                                             }
                                           ],
                                           "placeholder": null,
-                                          "title": "Log Level: DEBUG"
+                                          "title": "Log Level: INFO"
                                         }
                                       },
                                       {
@@ -6801,7 +6801,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Assistant",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "audio": {
@@ -6811,7 +6811,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Audio",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "camera": {
@@ -6821,7 +6821,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Camera",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "display": {
@@ -6831,7 +6831,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Display",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "docker": {
@@ -6841,7 +6841,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Docker",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "ethernet": {
@@ -6851,7 +6851,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Ethernet",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "file_system": {
@@ -6861,7 +6861,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "File System",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "infrared": {
@@ -6871,7 +6871,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Infrared",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "ip": {
@@ -6881,7 +6881,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "IP",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "keyboard": {
@@ -6891,7 +6891,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Keyboard",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "keypad": {
@@ -6901,7 +6901,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Keypad",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "lightdm": {
@@ -6911,7 +6911,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "LightDM",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "notifications": {
@@ -6921,7 +6921,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Notifications",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "rgb_ring": {
@@ -6931,7 +6931,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "RGB Ring",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "rpi_connect": {
@@ -6941,7 +6941,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "RPi Connect",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "sensors": {
@@ -6951,7 +6951,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Sensors",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "speech_recognition": {
@@ -6961,7 +6961,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Speech Recognition",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "speech_synthesis": {
@@ -6971,7 +6971,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Speech Synthesis",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "ssh": {
@@ -6981,7 +6981,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "SSH",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "users": {
@@ -6991,7 +6991,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Users",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "vscode": {
@@ -7001,7 +7001,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "VSCode",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "web_ui": {
@@ -7011,7 +7011,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Web UI",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       },
       "wifi": {
@@ -7021,7 +7021,7 @@
         "is_active": true,
         "is_enabled": true,
         "label": "WiFi",
-        "log_level": 10,
+        "log_level": 20,
         "should_auto_restart": false
       }
     },
