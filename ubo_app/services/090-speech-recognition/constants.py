@@ -2,7 +2,7 @@
 
 from ubo_app.constants import CACHE_PATH
 
-VOSK_MODEL = 'vosk-model-en-us-0.22-lgraph'
+VOSK_MODEL = 'vosk-model-small-en-us-0.15'
 
 VOSK_MODEL_URL = f'https://alphacephei.com/vosk/models/{VOSK_MODEL}.zip'
 

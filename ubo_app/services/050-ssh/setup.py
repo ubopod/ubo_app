@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+from redux import AutorunOptions
+from ubo_gui.constants import WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
 from ubo_app.colors import RUNNING_COLOR, STOPPED_COLOR
@@ -83,7 +85,10 @@ def ssh_items(state: SSHState) -> Sequence[Item]:
     ]
 
 
-@store.autorun(lambda state: state.ssh)
+@store.autorun(
+    lambda state: state.ssh,
+    options=AutorunOptions(default_value=f'[color={WARNING_COLOR}][/color]'),
+)
 def ssh_icon(state: SSHState) -> str:
     """Get the SSH icon."""
     return (

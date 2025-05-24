@@ -85,7 +85,11 @@ def snapshot_prefix() -> str:
 def _persistent_store(request: SubRequest) -> None:
     """Set defaults for app-context for tests."""
     persistent_store_marker = request.node.get_closest_marker('persistent_store')
-    persistent_store_data = {'wifi_has_visited_onboarding': True}
+    persistent_store_data = {
+        'wifi_has_visited_onboarding': True,
+        'speech_recognition:is_intents_active': False,
+        'speech_recognition:is_assistant_active': False,
+    }
     if persistent_store_marker:
         persistent_store_data = {
             **persistent_store_data,

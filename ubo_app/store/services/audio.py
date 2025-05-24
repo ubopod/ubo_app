@@ -79,6 +79,16 @@ class AudioEvent(BaseEvent):
     """Audio event."""
 
 
+class AudioReportAudioEvent(AudioEvent):
+    """Report audio event."""
+
+    timestamp: float
+    sample: bytes
+    channels: int
+    rate: int
+    width: int
+
+
 class AudioInstallDriverEvent(AudioEvent):
     """Install audio driver event."""
 

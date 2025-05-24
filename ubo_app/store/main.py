@@ -9,6 +9,7 @@ import threading
 import weakref
 from asyncio import Handle, iscoroutine
 from datetime import datetime
+from enum import Flag
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -75,6 +76,11 @@ if TYPE_CHECKING:
         InputAction,
         InputResolveEvent,
     )
+    from ubo_app.store.services.assistant import (
+        AssistantAction,
+        AssistantEvent,
+        AssistantState,
+    )
     from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
     from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
     from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
@@ -97,6 +103,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.sensors import SensorsAction, SensorsState
     from ubo_app.store.services.speech_recognition import (
         SpeechRecognitionAction,
+        SpeechRecognitionEvent,
         SpeechRecognitionState,
     )
     from ubo_app.store.services.speech_synthesis import (
@@ -126,6 +133,7 @@ UboAction: TypeAlias = Union[
     'UpdateManagerAction',
     'InputAction',
     # Services Actions
+    'AssistantAction',
     'AudioAction',
     'CameraAction',
     'DisplayAction',
@@ -150,12 +158,14 @@ UboEvent: TypeAlias = Union[
     'MainEvent',
     'InputResolveEvent',
     # Services Events
+    'AssistantEvent',
     'AudioEvent',
     'CameraEvent',
     'DisplayEvent',
     'InfraredEvent',
     'IpEvent',
     'NotificationsEvent',
+    'SpeechRecognitionEvent',
     'UsersEvent',
     'WiFiEvent',
 ]
@@ -171,6 +181,7 @@ class RootState(BaseCombineReducerState):
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
 
+    assistant: AssistantState
     audio: AudioState
     camera: CameraState
     display: DisplayState
@@ -287,6 +298,8 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
 
         if isinstance(obj, Autorun):
             obj = obj()
+        if isinstance(obj, Flag):
+            return obj.value
         if isinstance(obj, set):
             return {'_type': 'set', 'value': [cls.serialize_value(i) for i in obj]}
         if isinstance(obj, bytes):
@@ -488,6 +501,9 @@ class _UboAutorun(
         super().__call__(*args, **kwargs)
         return self._latest_value
 
+    def _create_task(self, coro: Coroutine[None, None, Any]) -> None:
+        self.coroutine_runner(coro)
+
 
 def ubo_create_task(
     coro: Coroutine,
@@ -539,7 +555,7 @@ from ubo_app.store.core.reducer import reducer as main_reducer  # noqa: E402
 store.dispatch(InitAction())
 store.dispatch(
     CombineReducerRegisterAction(
-        _id=root_reducer_id,
+        combine_reducers_id=root_reducer_id,
         key='main',
         reducer=main_reducer,
     ),
