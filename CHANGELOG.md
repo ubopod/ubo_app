@@ -10,6 +10,7 @@
 - refactor(core): do not default the log level of services to the `get_log_level`, use `INFO` as the default log level for services
 - fix(core): logger not logging repeated primitive type instances in extra
 - refactor(core): add optional `name` field to `create_task`, `coroutine_runner` and friends
+- fix(core): fix some issues in rpc serialization of enums and lists in ubo-store objects
 
 ## Version 1.4.0
 

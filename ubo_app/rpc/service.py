@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from asyncio import Queue
+from asyncio import Queue, QueueFull
 from typing import TYPE_CHECKING, Any, cast
 
 import betterproto
@@ -64,12 +64,23 @@ class StoreService(StoreServiceBase):
             extra={'request': subscribe_event_request},
         )
         event_class = get_class(reduce_group(subscribe_event_request.event))
-        queue: Queue[UboEvent] = Queue()
+        queue: Queue[UboEvent] = Queue(30)
         if event_class:
-            store.subscribe_event(
-                event_class,
-                lambda event: queue.put(event),
-            )
+
+            def queue_event(event: UboEvent) -> None:
+                """Put the event in the queue."""
+                try:
+                    queue.put_nowait(event)
+                except QueueFull:
+                    logger.debug(
+                        'Subscription event queue is full, dropping event',
+                        extra={
+                            'event': event,
+                            'queue_size': queue.qsize(),
+                        },
+                    )
+
+            store.subscribe_event(event_class, queue_event)
             while True:
                 event = await queue.get()
                 yield SubscribeEventResponse(
