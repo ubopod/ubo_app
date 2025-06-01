@@ -170,6 +170,7 @@ class SpeechRecognitionMixin(BackgroundRunningMixin, abc.ABC):
                             'end_phrase': self.ongoing_recognition.end_phrase,
                         },
                     )
+                    self.ongoing_recognition.append_text(result[: indices[0]])
                     await self._complete_speech_recognition()
                 else:
                     self.ongoing_recognition.append_text(result)

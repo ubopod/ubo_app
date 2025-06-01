@@ -15,6 +15,7 @@
 - feat(core): add `AsyncEvictingQueue`, a queue that evicts the oldest item when it reaches its maximum size, it is to be used in sound processing for buffering
 - refactor(audio): add `sample_speech_recognition` to `AudioReportSampleEvent` (renamed from `AudioReportAudioEvent`) to report audio samples in a format appropriate to be consumed by speech recognition engines
 - refactor(speech-recognition): abstract the speech recognition engine interface with `vosk` as the first implementation of it - close #310
+- refactor(speech-recognition): understand the assistant end phrase even when it is stated right after and in continuation of the speech
 
 ## Version 1.4.0
 
