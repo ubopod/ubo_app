@@ -15,12 +15,20 @@ import "@fontsource/roboto/700.css";
 
 import { ThemeSwitch } from "./components/ThemeSwitch";
 import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
+import { WebUIState } from "./generated/ubo/v1/ubo_pb";
 import { Inputs } from "./inputs";
 import { MainView } from "./main-view";
-import { InputDescription, StatusType } from "./types";
+import { StatusType } from "./types";
 
-export function Root({ inputs }: { inputs: InputDescription[] }) {
+export function Root({ state }: { state: string }) {
   const [status, setStatus] = useState<StatusType | undefined>();
+  const inputDescriptions = WebUIState.deserializeBinary(
+    new Uint8Array(
+      ((status == null ? state : status.state).match(/.{1,2}/g) || []).map(
+        (byte) => parseInt(byte, 16),
+      ),
+    ),
+  ).toObject().activeInputsList;
   const store = useMemo<StoreServiceClient | null>(
     () =>
       new StoreServiceClient(
@@ -56,7 +64,7 @@ export function Root({ inputs }: { inputs: InputDescription[] }) {
       <Container maxWidth="xs" component={Stack} spacing={2} py={2}>
         <MainView status={status} store={store} />
         <Inputs
-          inputs={status == null ? inputs : status.inputs}
+          inputs={inputDescriptions}
           isGrpcConnected={
             status?.status === "ok" &&
             status?.docker === "running" &&
@@ -75,14 +83,14 @@ const theme = createTheme({
   },
 });
 
-export function init(inputs: InputDescription[]) {
+export function init(state: string) {
   const rootElement = document.getElementById("web-app-root");
   if (rootElement) {
     const root = createRoot(rootElement);
     root.render(
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Root inputs={inputs} />
+        <Root state={state} />
       </ThemeProvider>,
     );
   }

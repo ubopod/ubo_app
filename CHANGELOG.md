@@ -11,6 +11,7 @@
 - fix(core): logger not logging repeated primitive type instances in extra
 - refactor(core): add optional `name` field to `create_task`, `coroutine_runner` and friends
 - fix(core): fix some issues in rpc serialization of enums and lists in ubo-store objects
+- refactor(web-ui): use rpc serialization instead of json for transferring data from web-ui server to its client, and add regular-expression to file inputs
 
 ## Version 1.4.0
 

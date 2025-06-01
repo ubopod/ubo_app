@@ -18,14 +18,15 @@ from ubo_app.constants import (
     WEB_UI_LISTEN_PORT,
 )
 from ubo_app.logger import logger
+from ubo_app.rpc.generated.ubo.v1 import WebUiState as GRPCWebUIState
+from ubo_app.rpc.object_to_message import build_message
 from ubo_app.store.input.types import (
     InputCancelAction,
-    InputDescription,
     InputMethod,
     InputProvideAction,
     InputResult,
 )
-from ubo_app.store.main import UboStore, store
+from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
     DockerImageRemoveAction,
@@ -43,7 +44,11 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
-from ubo_app.store.services.web_ui import WebUIInitializeEvent, WebUIStopEvent
+from ubo_app.store.services.web_ui import (
+    WebUIInitializeEvent,
+    WebUIState,
+    WebUIStopEvent,
+)
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.network import has_gateway
@@ -220,16 +225,18 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
     app.debug = WEB_UI_DEBUG_MODE
     shutdown_event: asyncio.Event = asyncio.Event()
 
-    @store.with_state(lambda state: state.web_ui.active_inputs)
-    def inputs(inputs: list[InputDescription]) -> list[InputDescription]:
-        return inputs
+    @store.with_state(lambda state: state.web_ui)
+    def state(state: WebUIState) -> str:
+        return (
+            build_message(state, expected_type=GRPCWebUIState).SerializeToString().hex()
+        )
 
     @app.route('/', methods=['GET', 'POST'])
     async def inputs_form() -> str:
         if request.method == 'POST':
             data = dict(await request.form)
             files = {
-                key: cast('FileStorage', value).stream
+                key: cast('FileStorage', value).stream.read()
                 for key, value in (await request.files).items()
             }
 
@@ -252,7 +259,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
             await asyncio.sleep(0.1)
         return await render_template(
             'index.jinja2',
-            inputs=UboStore.serialize_value(inputs()),
+            state=state(),
             re=re,
             GRPC_ENVOY_LISTEN_PORT=GRPC_ENVOY_LISTEN_PORT,
         )
@@ -269,7 +276,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                     'status': 'ok',
                     'docker': statuses[0],
                     'envoy': statuses[1],
-                    'inputs': UboStore.serialize_value(inputs()),
+                    'state': state(),
                 },
             ),
             content_type='application/json',

@@ -8,6 +8,7 @@ import functools
 import json
 import math
 import uuid
+from io import BytesIO
 from typing import TYPE_CHECKING
 
 import docker
@@ -287,7 +288,7 @@ default.""",
                             label='Service',
                             type=InputFieldType.TEXT,
                             description='The service name',
-                            default='docker.io',
+                            default_value='docker.io',
                             required=False,
                         ),
                         InputFieldDescription(
@@ -426,19 +427,18 @@ supported""",
             directory_content = result.files.pop('content', None)
             # uncompress content
             if directory_content:
-                header = directory_content.read(6)
-                directory_content.seek(0)
+                header = directory_content[:6]
+                directory_content_io = BytesIO(directory_content)
 
                 if header.startswith(b'PK'):
-                    directory_content.seek(0)
                     import zipfile
 
-                    with zipfile.ZipFile(directory_content) as zip_file:
+                    with zipfile.ZipFile(directory_content_io) as zip_file:
                         zip_file.extractall(path=composition_path)
                 if header.startswith((b'\x1f\x8b', b'BZh', b'\xfd7zXZ')):
                     import tarfile
 
-                    with tarfile.open(fileobj=directory_content) as tar_file:
+                    with tarfile.open(fileobj=directory_content_io) as tar_file:
                         tar_file.extractall(path=composition_path)  # noqa: S202
 
             store.dispatch(

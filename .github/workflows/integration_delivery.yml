@@ -161,6 +161,11 @@ jobs:
         run: |
           uv venv --system-site-packages
 
+      - name: Build protobuf files and gRPC bindings
+        run: |
+          uv run --frozen poe proto:generate:raw
+          uv run --frozen poe proto:compile:raw
+
       - name: Run Tests
         run: |
           mkdir -p $HOME/.kivy/mods
