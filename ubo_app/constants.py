@@ -62,8 +62,6 @@ STORE_GRACE_PERIOD = int(os.environ.get('UBO_STORE_GRACE_PERIOD', '1'))
 # Enable it to replace UUIDs with numerical counters in tests and log the traceback
 # each time a UUID is generated.
 
-PICOVOICE_ACCESS_KEY = 'PICOVOICE_ACCESS_KEY'
-
 DOCKER_CREDENTIALS_TEMPLATE = 'DOCKER_CREDENTIALS_{}'
 
 CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)
@@ -121,7 +119,7 @@ TEST_INVESTIGATION_MODE = str_to_bool(
     os.environ.get('UBO_TEST_INVESTIGATION_MODE', 'False'),
 )
 
-WAKE_WORD = os.environ.get('UBO_WAKE_WORD', 'hey pod')
+INTENTS_WAKE_WORD = os.environ.get('UBO_INTENTS_WAKE_WORD', 'hey pod')
 ASSISTANT_WAKE_WORD = os.environ.get('UBO_ASSISTANT_WAKE_WORD', 'hey there')
 ASSISTANT_END_WORD = os.environ.get('UBO_ASSISTANT_END_WORD', 'roger that')
 ASSISTANT_DEBUG_PATH = os.environ.get('UBO_ASSISTANT_DEBUG_PATH')

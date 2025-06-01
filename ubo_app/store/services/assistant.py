@@ -15,10 +15,10 @@ class AssistantAction(BaseAction):
     """Base class for assistant actions."""
 
 
-class AssistantSetActiveEngineAction(AssistantAction):
-    """Action to set the active engine."""
+class AssistantSetSelectedEngineAction(AssistantAction):
+    """Action to set the selected engine."""
 
-    engine: str
+    engine_name: str
 
 
 class AssistantDownloadOllamaModelAction(AssistantAction):
@@ -40,16 +40,16 @@ class AssistantDownloadOllamaModelEvent(AssistantEvent):
 class AssistantProcessSpeechEvent(AssistantEvent):
     """Event to process input speech."""
 
-    raw_audio: bytes
+    audio: bytes
     text: str
 
 
 class AssistantState(Immutable):
     """State for the assistant service."""
 
-    active_engine: str = field(
+    selected_engine: str = field(
         default_factory=lambda: read_from_persistent_store(
-            'assistant:active_engine',
+            'assistant:selected_engine',
             default=f'ollama:{DEFAULT_ASSISTANT_OLLAMA_MODEL}',
         ),
     )

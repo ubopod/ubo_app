@@ -14,6 +14,7 @@
 - refactor(web-ui): use rpc serialization instead of json for transferring data from web-ui server to its client, and add regular-expression to file inputs
 - feat(core): add `AsyncEvictingQueue`, a queue that evicts the oldest item when it reaches its maximum size, it is to be used in sound processing for buffering
 - refactor(audio): add `sample_speech_recognition` to `AudioReportSampleEvent` (renamed from `AudioReportAudioEvent`) to report audio samples in a format appropriate to be consumed by speech recognition engines
+- refactor(speech-recognition): abstract the speech recognition engine interface with `vosk` as the first implementation of it - close #310
 
 ## Version 1.4.0
 

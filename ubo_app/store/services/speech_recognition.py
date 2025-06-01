@@ -21,6 +21,12 @@ class SpeechRecognitionAction(BaseAction):
     """Base class for speech recognition actions."""
 
 
+class SpeechRecognitionSetSelectedEngineAction(SpeechRecognitionAction):
+    """Action to set the selected speech recognition engine."""
+
+    engine_name: SpeechRecognitionEngineName | None
+
+
 class SpeechRecognitionSetIsIntentsActiveAction(SpeechRecognitionAction):
     """Action to set the active state of the voice intents listener."""
 
@@ -55,8 +61,9 @@ class SpeechRecognitionReportIntentDetectionAction(SpeechRecognitionAction):
 class SpeechRecognitionReportSpeechAction(SpeechRecognitionAction):
     """Action to report speech raw audio."""
 
+    engine_name: SpeechRecognitionEngineName
     text: str
-    raw_audio: bytes
+    audio: bytes
 
 
 class SpeechRecognitionEvent(BaseEvent):
@@ -78,9 +85,21 @@ class SpeechRecognitionStatus(StrEnum):
     ASSISTANT_WAITING = 'assistant_waiting'
 
 
+class SpeechRecognitionEngineName(StrEnum):
+    """Available speech recognition engines."""
+
+    VOSK = 'vosk'
+
+
 class SpeechRecognitionState(Immutable):
     """State for speech recognition service."""
 
+    selected_engine: SpeechRecognitionEngineName | None = field(
+        default_factory=lambda: read_from_persistent_store(
+            'speech_recognition:selected_engine',
+            default=SpeechRecognitionEngineName.VOSK,
+        ),
+    )
     intents: list[SpeechRecognitionIntent]
     is_intents_active: bool = field(
         default_factory=lambda: read_from_persistent_store(

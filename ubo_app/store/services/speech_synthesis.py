@@ -22,13 +22,13 @@ class SpeechSynthesisUpdateAccessKeyStatus(SpeechSynthesisAction):
     is_access_key_set: bool
 
 
-class SpeechSynthesisEngine(StrEnum):
+class SpeechSynthesisEngineName(StrEnum):
     PIPER = 'piper'
     PICOVOICE = 'picovoice'
 
 
-class SpeechSynthesisSetEngineAction(SpeechSynthesisAction):
-    engine: SpeechSynthesisEngine
+class SpeechSynthesisSetSelectedEngineAction(SpeechSynthesisAction):
+    engine_name: SpeechSynthesisEngineName
 
 
 class ReadableInformation(Immutable):
@@ -72,7 +72,7 @@ class ReadableInformation(Immutable):
 class SpeechSynthesisReadTextAction(SpeechSynthesisAction):
     information: ReadableInformation
     speech_rate: float | None = None
-    engine: SpeechSynthesisEngine | None = None
+    engine: SpeechSynthesisEngineName | None = None
 
 
 class SpeechSynthesisSynthesizeTextEvent(SpeechSynthesisEvent):
@@ -82,9 +82,9 @@ class SpeechSynthesisSynthesizeTextEvent(SpeechSynthesisEvent):
 
 class SpeechSynthesisState(Immutable):
     is_access_key_set: bool | None = None
-    selected_engine: SpeechSynthesisEngine = field(
+    selected_engine: SpeechSynthesisEngineName = field(
         default_factory=lambda: read_from_persistent_store(
-            key='speech_synthesis_engine',
-            default=SpeechSynthesisEngine.PIPER,
+            key='speech_synthesis:selected_engine',
+            default=SpeechSynthesisEngineName.PIPER,
         ),
     )

@@ -9,7 +9,7 @@ from ubo_app.store.services.speech_synthesis import (
     SpeechSynthesisAction,
     SpeechSynthesisEvent,
     SpeechSynthesisReadTextAction,
-    SpeechSynthesisSetEngineAction,
+    SpeechSynthesisSetSelectedEngineAction,
     SpeechSynthesisState,
     SpeechSynthesisSynthesizeTextEvent,
     SpeechSynthesisUpdateAccessKeyStatus,
@@ -22,7 +22,9 @@ def reducer(
 ) -> (
     SpeechSynthesisState
     | CompleteReducerResult[
-        SpeechSynthesisState, SpeechSynthesisAction, SpeechSynthesisEvent,
+        SpeechSynthesisState,
+        SpeechSynthesisAction,
+        SpeechSynthesisEvent,
     ]
 ):
     if state is None:
@@ -33,8 +35,8 @@ def reducer(
     if isinstance(action, SpeechSynthesisUpdateAccessKeyStatus):
         return replace(state, is_access_key_set=action.is_access_key_set)
 
-    if isinstance(action, SpeechSynthesisSetEngineAction):
-        return replace(state, selected_engine=action.engine)
+    if isinstance(action, SpeechSynthesisSetSelectedEngineAction):
+        return replace(state, selected_engine=action.engine_name)
 
     if isinstance(action, SpeechSynthesisReadTextAction):
         return CompleteReducerResult(

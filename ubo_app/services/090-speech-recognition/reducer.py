@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import replace
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from redux import CompleteReducerResult, InitAction, InitializationActionError
 
-from ubo_app.constants import ASSISTANT_DEBUG_PATH, ASSISTANT_WAKE_WORD, WAKE_WORD
+from ubo_app.constants import ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
 from ubo_app.store.core.types import (
     MenuChooseByIndexAction,
     MenuGoBackAction,
@@ -39,6 +38,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionSetIsAssistantActiveAction,
     SpeechRecognitionSetIsIntentsActiveAction,
+    SpeechRecognitionSetSelectedEngineAction,
     SpeechRecognitionState,
     SpeechRecognitionStatus,
 )
@@ -212,14 +212,36 @@ def reducer(
 
         raise InitializationActionError(action)
 
+    if isinstance(action, SpeechRecognitionSetSelectedEngineAction):
+        return replace(
+            state,
+            selected_engine=action.engine_name,
+            status=SpeechRecognitionStatus.IDLE,
+        )
+
     if isinstance(action, SpeechRecognitionSetIsIntentsActiveAction):
-        return replace(state, is_intents_active=action.is_active)
+        return replace(
+            state,
+            is_intents_active=action.is_active,
+            status=SpeechRecognitionStatus.IDLE
+            if state.status is SpeechRecognitionStatus.INTENTS_WAITING
+            else state.status,
+        )
 
     if isinstance(action, SpeechRecognitionSetIsAssistantActiveAction):
-        return replace(state, is_assistant_active=action.is_active)
+        return replace(
+            state,
+            is_assistant_active=action.is_active,
+            status=SpeechRecognitionStatus.IDLE
+            if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING
+            else state.status,
+        )
 
-    if isinstance(action, SpeechRecognitionReportWakeWordDetectionAction):
-        if action.wake_word == WAKE_WORD:
+    if (
+        isinstance(action, SpeechRecognitionReportWakeWordDetectionAction)
+        and state.status is SpeechRecognitionStatus.IDLE
+    ):
+        if action.wake_word == INTENTS_WAKE_WORD:
             return CompleteReducerResult(
                 state=replace(state, status=SpeechRecognitionStatus.INTENTS_WAITING),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
@@ -253,11 +275,6 @@ def reducer(
         )
 
     if isinstance(action, SpeechRecognitionReportSpeechAction):
-        if ASSISTANT_DEBUG_PATH is not None:
-            with Path(ASSISTANT_DEBUG_PATH).with_suffix('.wav').open('wb') as f:
-                f.write(action.raw_audio)
-            with Path(ASSISTANT_DEBUG_PATH).with_suffix('.txt').open('wb') as f:
-                f.write(action.text.encode('utf-8'))
         return CompleteReducerResult(
             state=replace(state, status=SpeechRecognitionStatus.IDLE),
             actions=[ACKNOWLEDGMENT_ACTION],

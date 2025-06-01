@@ -18,16 +18,15 @@ from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
-from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
 from ubo_app.store.services.speech_synthesis import (
     ReadableInformation,
-    SpeechSynthesisEngine,
+    SpeechSynthesisEngineName,
     SpeechSynthesisReadTextAction,
-    SpeechSynthesisSetEngineAction,
+    SpeechSynthesisSetSelectedEngineAction,
     SpeechSynthesisSynthesizeTextEvent,
     SpeechSynthesisUpdateAccessKeyStatus,
 )
@@ -41,6 +40,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from ubo_app.utils.types import Subscriptions
+
+PICOVOICE_ACCESS_KEY = 'PICOVOICE_ACCESS_KEY'
 
 
 class _Context:
@@ -118,7 +119,7 @@ def clear_access_key() -> None:
 
 
 @store.with_state(lambda state: state.speech_synthesis.selected_engine)
-def _engine(engine: SpeechSynthesisEngine) -> SpeechSynthesisEngine:
+def _engine(engine: SpeechSynthesisEngineName) -> SpeechSynthesisEngineName:
     return engine
 
 
@@ -128,7 +129,7 @@ piper_cache: dict[str, list[bytes]] = {}
 def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
     """Synthesize the text."""
     engine = _engine()
-    if engine == SpeechSynthesisEngine.PIPER:
+    if engine == SpeechSynthesisEngineName.PIPER:
         text = event.information.piper_text
         if not _context.piper_voice:
             return
@@ -162,7 +163,7 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
                 ),
             )
         unsubscribe()
-    elif engine == SpeechSynthesisEngine.PICOVOICE:
+    elif engine == SpeechSynthesisEngineName.PICOVOICE:
         with _context.picovoice_lock.read_lock():
             if not _context.picovoice_instance:
                 return
@@ -209,24 +210,24 @@ Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}"""
 
 
 ENGINE_LABELS = {
-    SpeechSynthesisEngine.PIPER: 'Piper',
-    SpeechSynthesisEngine.PICOVOICE: 'Picovoice',
+    SpeechSynthesisEngineName.PIPER: 'Piper',
+    SpeechSynthesisEngineName.PICOVOICE: 'Picovoice',
 }
 
 
-def create_engine_selector(engine: SpeechSynthesisEngine) -> Callable[[], None]:
+def create_engine_selector(engine: SpeechSynthesisEngineName) -> Callable[[], None]:
     """Select the speech synthesis engine."""
 
     def _engine_selector() -> None:
         store.dispatch(
-            SpeechSynthesisSetEngineAction(engine=engine),
+            SpeechSynthesisSetSelectedEngineAction(engine_name=engine),
             SpeechSynthesisReadTextAction(
                 information=ReadableInformation(
                     text={
-                        SpeechSynthesisEngine.PIPER: 'Piper speech synthesis engine '
-                        'selected',
-                        SpeechSynthesisEngine.PICOVOICE: 'Picovoice speech synthesis '
+                        SpeechSynthesisEngineName.PIPER: 'Piper speech synthesis '
                         'engine selected',
+                        SpeechSynthesisEngineName.PICOVOICE: 'Picovoice speech '
+                        'synthesis engine selected',
                     }[engine],
                 ),
                 engine=engine,
@@ -271,7 +272,7 @@ def _is_piper_downloaded() -> bool:
     lambda state: state.speech_synthesis.selected_engine,
     options=AutorunOptions(memoization=False),
 )
-def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngine) -> HeadlessMenu:
+def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngineName) -> HeadlessMenu:
     return HeadlessMenu(
         title='󰔊Speech Synthesis',
         items=[
@@ -308,9 +309,9 @@ def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngine) -> HeadlessMe
                             key=engine.name,
                             **selection_parameters,
                         )
-                        for engine in SpeechSynthesisEngine
+                        for engine in SpeechSynthesisEngineName
                         if _is_piper_downloaded()
-                        or engine != SpeechSynthesisEngine.PIPER
+                        or engine != SpeechSynthesisEngineName.PIPER
                     ],
                 ),
             ),
@@ -327,7 +328,7 @@ def init_service() -> Subscriptions:
         to_thread(_context.cleanup)
 
     register_persistent_store(
-        'speech_synthesis_engine',
+        'speech_synthesis:selected_engine',
         lambda state: state.speech_synthesis.selected_engine,
     )
 

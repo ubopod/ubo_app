@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import ollama
@@ -12,7 +13,7 @@ from redux import AutorunOptions
 from ubo_gui.menu.types import HeadedMenu, SubMenuItem
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.constants import DEFAULT_ASSISTANT_OLLAMA_MODEL
+from ubo_app.constants import ASSISTANT_DEBUG_PATH, DEFAULT_ASSISTANT_OLLAMA_MODEL
 from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
@@ -20,7 +21,7 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantProcessSpeechEvent,
-    AssistantSetActiveEngineAction,
+    AssistantSetSelectedEngineAction,
 )
 from ubo_app.store.services.audio import AudioReportSampleEvent
 from ubo_app.store.services.docker import (
@@ -109,23 +110,28 @@ def _read_text(text: str) -> None:
     )
 
 
-@store.with_state(lambda state: state.assistant.active_engine)
+@store.with_state(lambda state: state.assistant.selected_engine)
 async def process_complete_speech(
-    active_engine: str,
+    selected_engine: str,
     event: AssistantProcessSpeechEvent,
 ) -> None:
     """Process speech event."""
-    if active_engine.startswith('ollama:'):
-        active_engine = active_engine.partition(':')[2]
+    if ASSISTANT_DEBUG_PATH is not None:
+        with Path(ASSISTANT_DEBUG_PATH).with_suffix('.wav').open('wb') as f:
+            f.write(event.audio)
+        with Path(ASSISTANT_DEBUG_PATH).with_suffix('.txt').open('wb') as f:
+            f.write(event.text.encode('utf-8'))
+    if selected_engine.startswith('ollama:'):
+        selected_engine = selected_engine.partition(':')[2]
         client = ollama.AsyncClient()
         try:
-            await client.show(active_engine)
+            await client.show(selected_engine)
         except Exception:  # noqa: BLE001
             report_service_error()
 
         evolving_text = ''
         response = await client.chat(
-            model=active_engine,
+            model=selected_engine,
             messages=[
                 {
                     'role': 'system',
@@ -174,7 +180,7 @@ and dash. Do not use any other special characters or emojis.""",
         )
         return
 
-    msg = f'Processing speech event is not implemented for {active_engine} engine'
+    msg = f'Processing speech event is not implemented for {selected_engine} engine'
     raise NotImplementedError(msg)
 
 
@@ -200,13 +206,13 @@ def process_text_stream(
 
 @store.autorun(
     lambda state: (
-        state.assistant.active_engine,
+        state.assistant.selected_engine,
         state.docker.ollama.status,
     ),
     options=AutorunOptions(memoization=False),
 )
 def _engines_menu(data: tuple[str, DockerItemStatus | None]) -> HeadedMenu:
-    [active_engine, ollama_status] = data
+    [selected_engine, ollama_status] = data
     try:
         ollama.ps()
     except ConnectionError:
@@ -222,12 +228,12 @@ def _engines_menu(data: tuple[str, DockerItemStatus | None]) -> HeadedMenu:
             UboDispatchItem(
                 key=model,
                 label=model,
-                store_action=AssistantSetActiveEngineAction(
-                    engine=f'ollama:{model}',
+                store_action=AssistantSetSelectedEngineAction(
+                    engine_name=f'ollama:{model}',
                 ),
                 **(
                     SELECTED_ITEM_PARAMETERS
-                    if active_engine == f'ollama:{model}'
+                    if selected_engine == f'ollama:{model}'
                     else UNSELECTED_ITEM_PARAMETERS
                 ),
             )
@@ -267,7 +273,7 @@ def _engines_menu(data: tuple[str, DockerItemStatus | None]) -> HeadedMenu:
     return HeadedMenu(
         title='󰁤 Assistant Engine',
         heading='Assistant Engine',
-        sub_heading=f'Active: {active_engine or "-"}',
+        sub_heading=f'Selected: {selected_engine or "-"}',
         items=items,
     )
 
@@ -284,9 +290,10 @@ def init_service() -> Subscriptions:
             ),
         ),
     )
+
     register_persistent_store(
-        'assistant:active_engine',
-        lambda state: state.assistant.active_engine,
+        'assistant:selected_engine',
+        lambda state: state.assistant.selected_engine,
     )
     return [
         store.subscribe_event(AssistantProcessSpeechEvent, process_complete_speech),

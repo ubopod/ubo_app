@@ -3,7 +3,7 @@
   "_type": "RootState",
   "assistant": {
     "_type": "AssistantState",
-    "active_engine": "ollama:gemma3:1b"
+    "selected_engine": "ollama:gemma3:1b"
   },
   "audio": {
     "_type": "AudioState",
@@ -6409,18 +6409,18 @@
                               1,
                               1
                             ],
-                            "icon": "󰗋",
+                            "icon": "",
                             "is_short": false,
                             "key": "speech_recognition:",
                             "label": "Speech Recognition",
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
-                              "_type": "HeadlessMenu",
+                              "_type": "HeadedMenu",
+                              "heading": "Speech Recognition Settings",
                               "items": [
                                 {
-                                  "_type": "ActionItem",
-                                  "action": "<function:download_vosk_model>",
+                                  "_type": "SubMenuItem",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -6428,16 +6428,108 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "󰇚",
+                                  "icon": "",
                                   "is_short": false,
-                                  "key": "download",
-                                  "label": "Download Vosk Model",
+                                  "key": "services",
+                                  "label": "Services",
                                   "opacity": null,
-                                  "progress": null
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "_type": "HeadlessMenu",
+                                    "items": [
+                                      {
+                                        "_type": "UboDispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰄱",
+                                        "is_short": false,
+                                        "key": "is_intents_active",
+                                        "label": "Command Interface",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SpeechRecognitionSetIsIntentsActiveAction",
+                                          "is_active": true
+                                        }
+                                      },
+                                      {
+                                        "_type": "UboDispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "󰄱",
+                                        "is_short": false,
+                                        "key": "is_assistant_active",
+                                        "label": "Voice Assistant",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SpeechRecognitionSetIsAssistantActiveAction",
+                                          "is_active": true
+                                        }
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "title": "Services"
+                                  }
+                                },
+                                {
+                                  "_type": "SubMenuItem",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "engine",
+                                  "label": "Recognition Engine",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "sub_menu": {
+                                    "_type": "HeadedMenu",
+                                    "heading": "Select Active Engine",
+                                    "items": [
+                                      {
+                                        "_type": "ActionItem",
+                                        "action": "<function:setup>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "vosk",
+                                        "label": "Setup Vosk",
+                                        "opacity": null,
+                                        "progress": null
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "sub_heading": "[color=#03F7AE]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+                                    "title": "Recognition Engine"
+                                  }
                                 }
                               ],
                               "placeholder": null,
-                              "title": "󰗋Speech Recognition"
+                              "sub_heading": "Vosk is used for wake word detection",
+                              "title": "Speech Recognition"
                             }
                           },
                           {
@@ -6562,7 +6654,7 @@
                                 }
                               ],
                               "placeholder": null,
-                              "sub_heading": "Active: ollama:gemma3:1b",
+                              "sub_heading": "Selected: ollama:gemma3:1b",
                               "title": "󰁤 Assistant Engine"
                             }
                           },
@@ -7394,6 +7486,7 @@
     ],
     "is_assistant_active": false,
     "is_intents_active": false,
+    "selected_engine": "vosk",
     "status": "idle"
   },
   "speech_synthesis": {
