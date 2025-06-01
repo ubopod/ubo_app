@@ -25,12 +25,14 @@ class CoroutineRunner(Protocol):
         self,
         coroutine: Coroutine[None, None, TaskType],
         callback: TaskCreatorCallback | None = None,
+        name: str | None = None,
     ) -> Handle:
         """Run a coroutine in the event loop.
 
         Args:
             coroutine: The coroutine to run.
             callback: A callback to call when the coroutine is done.
+            name: An optional name for the task.
 
         Returns:
             The handle of the task.

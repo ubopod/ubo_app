@@ -86,7 +86,9 @@ class Notification(Immutable):
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     is_read: bool = False
     sender: str | None = None
-    actions: list[NotificationActionItem | NotificationApplicationItem] = field(
+    actions: list[
+        NotificationActionItem | NotificationDispatchItem | NotificationApplicationItem
+    ] = field(
         default_factory=list,
     )
     icon: str = field(

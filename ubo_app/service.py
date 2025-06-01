@@ -48,11 +48,12 @@ class WorkerThread(threading.Thread):
         self: WorkerThread,
         coroutine: Coroutine,
         callback: TaskCreatorCallback | None = None,
+        name: str | None = None,
     ) -> Handle:
         from ubo_app.constants import DEBUG_TASKS
 
         def task_wrapper(stack: str) -> None:
-            task = self.loop.create_task(coroutine)
+            task = self.loop.create_task(coroutine, name=name)
             if DEBUG_TASKS:
                 from ubo_app.utils.error_handlers import STACKS
 
@@ -133,5 +134,6 @@ def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
 def run_coroutine(
     coroutine: Coroutine,
     callback: TaskCreatorCallback | None = None,
+    name: str | None = None,
 ) -> Handle:
-    return worker_thread.run_coroutine(coroutine, callback)
+    return worker_thread.run_coroutine(coroutine, callback, name=name)

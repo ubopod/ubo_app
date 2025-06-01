@@ -24,6 +24,7 @@ def create_task(
     task: Coroutine,
     callback: TaskCreatorCallback | None = None,
     coroutine_runner: CoroutineRunner | None = None,
+    name: str | None = None,
 ) -> Handle:
     def callback_(task: asyncio.Task) -> None:
         if callback:
@@ -48,7 +49,9 @@ def create_task(
         coroutine_runner = get_coroutine_runner()
 
     handle = (
-        coroutine_runner(result, callback_) if callback else coroutine_runner(result)
+        coroutine_runner(result, callback_, name=name)
+        if callback
+        else coroutine_runner(result, name=name)
     )
 
     tasks.append(handle)

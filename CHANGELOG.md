@@ -9,6 +9,7 @@
 - fix(tests):`stability` not passing `attempts` to `wait_for`, making it basically wait forever
 - refactor(core): do not default the log level of services to the `get_log_level`, use `INFO` as the default log level for services
 - fix(core): logger not logging repeated primitive type instances in extra
+- refactor(core): add optional `name` field to `create_task`, `coroutine_runner` and friends
 
 ## Version 1.4.0
 

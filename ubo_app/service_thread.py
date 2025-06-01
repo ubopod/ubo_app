@@ -398,9 +398,10 @@ class UboServiceThread(threading.Thread):
         self: UboServiceThread,
         coroutine: Coroutine,
         callback: TaskCreatorCallback | None = None,
+        name: str | None = None,
     ) -> asyncio.Handle:
         def task_wrapper(stack: str) -> None:
-            task = self.loop.create_task(coroutine)
+            task = self.loop.create_task(coroutine, name=name)
             if DEBUG_TASKS:
                 STACKS[task] = stack
             if callback:
