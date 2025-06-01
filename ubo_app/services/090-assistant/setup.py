@@ -22,7 +22,7 @@ from ubo_app.store.services.assistant import (
     AssistantProcessSpeechEvent,
     AssistantSetActiveEngineAction,
 )
-from ubo_app.store.services.audio import AudioReportAudioEvent
+from ubo_app.store.services.audio import AudioReportSampleEvent
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
     DockerImageRunContainerAction,
@@ -181,7 +181,7 @@ and dash. Do not use any other special characters or emojis.""",
 @store.with_state(lambda state: state.speech_recognition.status)
 def process_audio_stream(
     status: SpeechRecognitionStatus,
-    event: AudioReportAudioEvent,
+    event: AudioReportSampleEvent,
 ) -> None:
     """Process audio stream event."""
     if status is SpeechRecognitionStatus.ASSISTANT_WAITING:
@@ -291,6 +291,6 @@ def init_service() -> Subscriptions:
     return [
         store.subscribe_event(AssistantProcessSpeechEvent, process_complete_speech),
         store.subscribe_event(AssistantDownloadOllamaModelEvent, download_ollama_model),
-        store.subscribe_event(AudioReportAudioEvent, process_audio_stream),
+        store.subscribe_event(AudioReportSampleEvent, process_audio_stream),
         store.subscribe_event(SpeechRecognitionReportTextEvent, process_text_stream),
     ]

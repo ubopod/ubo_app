@@ -11,7 +11,9 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import alsaaudio
+import numpy as np
 import simpleaudio
+import soxr
 from simpleaudio import _simpleaudio  # pyright: ignore [reportAttributeAccessIssue]
 from tenacity import (
     AsyncRetrying,
@@ -20,11 +22,12 @@ from tenacity import (
     wait_fixed,
 )
 
+from ubo_app.constants import SPEECH_RECOGNITION_FRAME_RATE
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioPlaybackDoneAction,
-    AudioReportAudioEvent,
+    AudioReportSampleEvent,
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
@@ -35,7 +38,7 @@ from ubo_app.utils.server import send_command
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-INPUT_SAMPLE_RATE = 48_000
+INPUT_FRAME_RATE = 48_000
 INPUT_CHANNELS = 2
 INPUT_PERIOD_SIZE = 1 << 14
 
@@ -225,7 +228,7 @@ class AudioManager:
                         alsaaudio.PCM_CAPTURE,
                         alsaaudio.PCM_NORMAL,
                         channels=INPUT_CHANNELS,
-                        rate=INPUT_SAMPLE_RATE,
+                        rate=INPUT_FRAME_RATE,
                         format=alsaaudio.PCM_FORMAT_S16_LE,
                         periodsize=INPUT_PERIOD_SIZE,
                         cardindex=self.card_index,
@@ -266,7 +269,7 @@ class AudioManager:
                 input_audio = pa.open(
                     format=pyaudio.paInt16,
                     channels=1,
-                    rate=INPUT_SAMPLE_RATE,
+                    rate=INPUT_FRAME_RATE,
                     input=True,
                     frames_per_buffer=INPUT_PERIOD_SIZE,
                 )
@@ -301,13 +304,40 @@ class AudioManager:
                 break
             else:
                 if length > 0:
+                    data_speech_recognition = np.frombuffer(data, dtype=np.int16)
+                    data_speech_recognition = data_speech_recognition.reshape(
+                        -1,
+                        INPUT_CHANNELS,
+                    )
+                    data_speech_recognition = data_speech_recognition.T
+                    data_speech_recognition = (
+                        data_speech_recognition.astype(np.float32) / 32768.0
+                    )
+
+                    data_speech_recognition = (
+                        data_speech_recognition.squeeze()
+                        if INPUT_CHANNELS == 1
+                        else np.mean(data_speech_recognition, axis=0)
+                    )
+
+                    if INPUT_FRAME_RATE != SPEECH_RECOGNITION_FRAME_RATE:
+                        data_speech_recognition = soxr.resample(
+                            data_speech_recognition,
+                            in_rate=INPUT_FRAME_RATE,
+                            out_rate=SPEECH_RECOGNITION_FRAME_RATE,
+                        )
+
+                    data_speech_recognition = (
+                        (data_speech_recognition * 32768.0).astype(np.int16).tobytes()
+                    )
                     store._dispatch(  # noqa: SLF001
                         [
-                            AudioReportAudioEvent(
+                            AudioReportSampleEvent(
                                 timestamp=event_loop.time(),
-                                sample=data,
+                                sample=data_speech_recognition,
+                                sample_speech_recognition=data_speech_recognition,
                                 channels=INPUT_CHANNELS,
-                                rate=INPUT_SAMPLE_RATE,
+                                rate=INPUT_FRAME_RATE,
                                 width=2,
                             ),
                         ],

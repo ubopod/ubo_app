@@ -79,11 +79,12 @@ class AudioEvent(BaseEvent):
     """Audio event."""
 
 
-class AudioReportAudioEvent(AudioEvent):
+class AudioReportSampleEvent(AudioEvent):
     """Report audio event."""
 
     timestamp: float
     sample: bytes
+    sample_speech_recognition: bytes
     channels: int
     rate: int
     width: int

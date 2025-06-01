@@ -22,7 +22,7 @@ from ubo_app.constants import ASSISTANT_END_WORD, ASSISTANT_WAKE_WORD, WAKE_WORD
 from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
-from ubo_app.store.services.audio import AudioReportAudioEvent
+from ubo_app.store.services.audio import AudioReportSampleEvent
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionIntent,
     SpeechRecognitionReportIntentDetectionAction,
@@ -111,7 +111,7 @@ class _Context:
             ),
         )
 
-    async def queue_audio_chunk(self, event: AudioReportAudioEvent) -> None:
+    async def queue_audio_chunk(self, event: AudioReportSampleEvent) -> None:
         if event.timestamp <= self.last_chunk_timestamp or not _is_active():
             return
         self.last_chunk_timestamp = event.timestamp
@@ -440,5 +440,5 @@ def init_service() -> Subscriptions:
 
     return [
         _context.unset_recognizer,
-        store.subscribe_event(AudioReportAudioEvent, _context.queue_audio_chunk),
+        store.subscribe_event(AudioReportSampleEvent, _context.queue_audio_chunk),
     ]
