@@ -12,6 +12,7 @@
 - refactor(core): add optional `name` field to `create_task`, `coroutine_runner` and friends
 - fix(core): fix some issues in rpc serialization of enums and lists in ubo-store objects
 - refactor(web-ui): use rpc serialization instead of json for transferring data from web-ui server to its client, and add regular-expression to file inputs
+- feat(core): add `AsyncEvictingQueue`, a queue that evicts the oldest item when it reaches its maximum size, it is to be used in sound processing for buffering
 
 ## Version 1.4.0
 
