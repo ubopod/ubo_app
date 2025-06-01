@@ -50,12 +50,15 @@ def handle_circular_references(
     obj: object,
     seen: dict[int, str | dict | list | tuple] | None = None,
 ) -> object:
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+
     if seen is None:
         seen = {}
 
     obj_id = id(obj)
     if obj_id in seen:
-        return None
+        return seen[obj_id]
 
     seen[obj_id] = '<circular reference>'
 
@@ -71,6 +74,7 @@ def handle_circular_references(
         result = str(obj)
 
     seen[obj_id] = result
+
     return result
 
 
