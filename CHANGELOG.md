@@ -16,6 +16,7 @@
 - refactor(audio): add `sample_speech_recognition` to `AudioReportSampleEvent` (renamed from `AudioReportAudioEvent`) to report audio samples in a format appropriate to be consumed by speech recognition engines
 - refactor(speech-recognition): abstract the speech recognition engine interface with `vosk` as the first implementation of it - close #310
 - refactor(speech-recognition): understand the assistant end phrase even when it is stated right after and in continuation of the speech
+- refactor(core): add `ToThreadOptions` for the purpose of passing `callback`, `name` and `corountine_runner` to `ubo_app.async_.to_thread`, remove `ubo_app.async_.to_thread_with_coroutine_runner` as it is no longer needed
 
 ## Version 1.4.0
 

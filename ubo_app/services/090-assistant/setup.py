@@ -80,7 +80,11 @@ async def download_ollama_model(event: AssistantDownloadOllamaModelEvent) -> Non
                     ),
                 ),
             )
-    except Exception:  # noqa: BLE001
+    except Exception:
+        logger.exception(
+            'Assistant - Error downloading Ollama model',
+            extra={'model': event.model},
+        )
         report_service_error()
         return
     else:
@@ -126,7 +130,11 @@ async def process_complete_speech(
         client = ollama.AsyncClient()
         try:
             await client.show(selected_engine)
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logger.exception(
+                'Assistant - Error getting Ollama model information',
+                extra={'model': selected_engine},
+            )
             report_service_error()
 
         evolving_text = ''

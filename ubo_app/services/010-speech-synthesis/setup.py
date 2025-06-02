@@ -105,7 +105,7 @@ def input_access_key() -> None:
             if not access_key:
                 return
             secrets.write_secret(key=PICOVOICE_ACCESS_KEY, value=access_key)
-            to_thread(_context.set_access_key, access_key)
+            to_thread(_context.set_access_key, None, access_key)
         except CancelledError:
             pass
 
@@ -323,7 +323,7 @@ def init_service() -> Subscriptions:
     """Initialize speech synthesis service."""
     access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY)
     if access_key:
-        to_thread(_context.set_access_key, access_key)
+        to_thread(_context.set_access_key, None, access_key)
     else:
         to_thread(_context.cleanup)
 
@@ -368,7 +368,7 @@ def init_service() -> Subscriptions:
     return [
         store.subscribe_event(
             SpeechSynthesisSynthesizeTextEvent,
-            lambda event: to_thread(synthesize_and_play, event),
+            lambda event: to_thread(synthesize_and_play, None, event),
         ),
         _context.cleanup,
     ]

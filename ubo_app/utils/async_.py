@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, ParamSpec
 
+from immutable import Immutable
 from typing_extensions import TypeVar
 
 from ubo_app.utils.service import get_coroutine_runner
@@ -63,20 +64,29 @@ T = TypeVar('T', infer_variance=True)
 T_params = ParamSpec('T_params')
 
 
+class ToThreadOptions(Immutable):
+    """Options for the to_thread function."""
+
+    coroutine_runner: CoroutineRunner | None = None
+    callback: TaskCreatorCallback | None = None
+    name: str | None = None
+
+
 def to_thread(
     task: Callable[T_params, T],
+    options: ToThreadOptions | None = None,
     *args: T_params.args,
     **kwargs: T_params.kwargs,
 ) -> Handle:
     coroutine_runner = get_coroutine_runner()
+    if options is None:
+        options = ToThreadOptions()
 
-    return coroutine_runner(asyncio.to_thread(task, *args, **kwargs))
+    if options.coroutine_runner is not None:
+        coroutine_runner = options.coroutine_runner
 
-
-def to_thread_with_coroutine_runner(
-    task: Callable[T_params, T],
-    coroutine_runner: CoroutineRunner,
-    *args: T_params.args,
-    **kwargs: T_params.kwargs,
-) -> Handle:
-    return coroutine_runner(asyncio.to_thread(task, *args, **kwargs))
+    return coroutine_runner(
+        asyncio.to_thread(task, *args, **kwargs),
+        callback=options.callback,
+        name=options.name,
+    )

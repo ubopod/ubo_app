@@ -57,6 +57,7 @@ from ubo_app.store.scheduler import Scheduler
 from ubo_app.store.settings.reducer import reducer as settings_reducer
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
+from ubo_app.utils.async_ import ToThreadOptions
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.serializer import add_type_field
 from ubo_app.utils.service import get_coroutine_runner
@@ -481,16 +482,24 @@ class _UboAutorun(
         def wrapper(super_: Autorun) -> None:
             try:
                 super_.call(*args, **kwargs)
-            except Exception:  # noqa: BLE001
+            except Exception:
+                logger.exception(
+                    'Error in autorun call',
+                    extra={
+                        'autorun': self,
+                        'args_': args,
+                        'kwargs': kwargs,
+                    },
+                )
                 report_service_error()
             finally:
                 self.call_event.set()
 
-        from ubo_app.utils.async_ import to_thread_with_coroutine_runner
+        from ubo_app.utils.async_ import to_thread
 
-        to_thread_with_coroutine_runner(
+        to_thread(
             wrapper,
-            coroutine_runner=self.coroutine_runner,
+            ToThreadOptions(coroutine_runner=self.coroutine_runner),
             super_=super(),
         )
 

@@ -25,7 +25,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
-from ubo_app.utils.async_ import to_thread
+from ubo_app.utils.async_ import ToThreadOptions, to_thread
 from ubo_app.utils.error_handlers import loop_exception_handler
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
@@ -145,6 +145,7 @@ def init_service() -> Subscriptions:
     def play_audio(event: AudioPlayAudioEvent) -> None:
         to_thread(
             _run_async_in_thread,
+            ToThreadOptions(name='AudioManager.play_sequence'),
             audio_manager.play_sequence,
             event.sample,
             id=event.id,

@@ -72,7 +72,7 @@ class StoreService(StoreServiceBase):
                 try:
                     queue.put_nowait(event)
                 except QueueFull:
-                    logger.debug(
+                    logger.verbose(
                         'Subscription event queue is full, dropping event',
                         extra={
                             'event': event,
