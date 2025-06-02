@@ -17,6 +17,7 @@
 - refactor(speech-recognition): abstract the speech recognition engine interface with `vosk` as the first implementation of it - close #310
 - refactor(speech-recognition): understand the assistant end phrase even when it is stated right after and in continuation of the speech
 - refactor(core): add `ToThreadOptions` for the purpose of passing `callback`, `name` and `corountine_runner` to `ubo_app.async_.to_thread`, remove `ubo_app.async_.to_thread_with_coroutine_runner` as it is no longer needed
+- refactor: reorganize secret keys and the name of constants holding them to be more consistent
 
 ## Version 1.4.0
 

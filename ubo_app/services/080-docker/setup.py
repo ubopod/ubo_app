@@ -32,7 +32,7 @@ from redux import CombineReducerRegisterAction
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
+from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterRegularAppAction,
@@ -333,7 +333,7 @@ default.""",
                 registry=registry,
             )
             secrets.write_secret(
-                key=DOCKER_CREDENTIALS_TEMPLATE.format(registry),
+                key=DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID.format(registry),
                 value=password,
             )
             store.dispatch(
@@ -455,7 +455,7 @@ supported""",
 
 def clear_credentials(registry: str) -> None:
     """Clear an entry in docker credentials."""
-    secrets.clear_secret(DOCKER_CREDENTIALS_TEMPLATE.format(registry))
+    secrets.clear_secret(DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID.format(registry))
     store.dispatch(DockerRemoveUsernameAction(registry=registry))
 
 

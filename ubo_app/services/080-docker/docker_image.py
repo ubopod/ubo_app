@@ -6,7 +6,7 @@ import docker
 import docker.errors
 from docker_images import IMAGES
 
-from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
+from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
@@ -40,7 +40,7 @@ def fetch_image(
                 docker_client.login(
                     username=username,
                     password=secrets.read_secret(
-                        DOCKER_CREDENTIALS_TEMPLATE.format(registry),
+                        DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID.format(registry),
                     ),
                     registry=registry,
                 )

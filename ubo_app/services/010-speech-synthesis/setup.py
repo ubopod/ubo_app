@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING
 
 import fasteners
 import pvorca
-from constants import PIPER_MODEL_HASH, PIPER_MODEL_JSON_PATH, PIPER_MODEL_PATH
+from constants import (
+    PICOVOICE_ACCESS_KEY_SECRET_ID,
+    PIPER_MODEL_HASH,
+    PIPER_MODEL_JSON_PATH,
+    PIPER_MODEL_PATH,
+)
 from download_model import download_piper_model
 from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource]
 from redux import AutorunOptions
@@ -40,8 +45,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from ubo_app.utils.types import Subscriptions
-
-PICOVOICE_ACCESS_KEY = 'PICOVOICE_ACCESS_KEY'
 
 
 class _Context:
@@ -104,7 +107,7 @@ def input_access_key() -> None:
             access_key = input_result.data.get('access_key')
             if not access_key:
                 return
-            secrets.write_secret(key=PICOVOICE_ACCESS_KEY, value=access_key)
+            secrets.write_secret(key=PICOVOICE_ACCESS_KEY_SECRET_ID, value=access_key)
             to_thread(_context.set_access_key, None, access_key)
         except CancelledError:
             pass
@@ -114,7 +117,7 @@ def input_access_key() -> None:
 
 def clear_access_key() -> None:
     """Clear the Picovoice access key."""
-    secrets.clear_secret(PICOVOICE_ACCESS_KEY)
+    secrets.clear_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
     to_thread(_context.cleanup)
 
 
@@ -206,7 +209,7 @@ def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
 @store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
 def _menu_sub_heading(_: bool | None) -> str:
     return f"""Set the access key
-Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}"""
+Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)}"""
 
 
 ENGINE_LABELS = {
@@ -321,7 +324,7 @@ def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngineName) -> Headle
 
 def init_service() -> Subscriptions:
     """Initialize speech synthesis service."""
-    access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY)
+    access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
     if access_key:
         to_thread(_context.set_access_key, None, access_key)
     else:

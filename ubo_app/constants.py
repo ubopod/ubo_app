@@ -62,7 +62,7 @@ STORE_GRACE_PERIOD = int(os.environ.get('UBO_STORE_GRACE_PERIOD', '1'))
 # Enable it to replace UUIDs with numerical counters in tests and log the traceback
 # each time a UUID is generated.
 
-DOCKER_CREDENTIALS_TEMPLATE = 'DOCKER_CREDENTIALS_{}'
+DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID = 'docker_credentials:{}'  # noqa: S105
 
 CONFIG_PATH = platformdirs.user_config_path(appname='ubo', ensure_exists=True)
 SECRETS_PATH = CONFIG_PATH / '.secrets.env'
