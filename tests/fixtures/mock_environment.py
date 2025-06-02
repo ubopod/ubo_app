@@ -302,6 +302,22 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, 'create_subprocess_exec', _fake_create_subprocess_exec)
 
 
+def _monkeypatch_pyaudio(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Monkeypatch PyAudio to avoid actual audio input/output."""
+    import pyaudio
+    from fake import Fake
+
+    monkeypatch.setattr(
+        pyaudio,
+        'PyAudio',
+        Fake(
+            _Fake__attrs={
+                'read': lambda *_: b'',
+            },
+        ),
+    )
+
+
 @pytest.fixture
 def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
@@ -321,6 +337,7 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     from ubo_app.store.update_manager import (
         installed_versions as update_manager_installed_versions,
     )
+    from ubo_app.utils import IS_RPI
 
     tracemalloc.start()
 
@@ -377,3 +394,5 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_rpi_modules()
     _monkeypatch_subprocess(monkeypatch)
     _monkeypatch_asyncio_subprocess(monkeypatch)
+    if not IS_RPI:
+        _monkeypatch_pyaudio(monkeypatch)

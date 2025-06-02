@@ -374,6 +374,15 @@ wheels = [
 ]
 
 [[package]]
+name = "cachetools"
+version = "5.5.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/81/3747dad6b14fa2cf53fcf10548cf5aea6913e96fab41a3c198676f8948a5/cachetools-5.5.2.tar.gz", hash = "sha256:1a661caa9175d26759571b2e19580f9d6393969e5dfca11fdb1f947a23e640d4", size = 28380, upload-time = "2025-02-20T21:01:19.524Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/76/20fa66124dbe6be5cafeb312ece67de6b61dd91a0247d1ea13db4ebb33c2/cachetools-5.5.2-py3-none-any.whl", hash = "sha256:d26a22bcc62eb95c3beabd9f1ee5e820d3d2704fe2967cbe350e20c8ffcd3f0a", size = 10080, upload-time = "2025-02-20T21:01:16.647Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2025.4.26"
 source = { registry = "https://pypi.org/simple" }
@@ -641,6 +650,69 @@ wheels = [
 ]
 
 [[package]]
+name = "google-api-core"
+version = "2.25.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-auth" },
+    { name = "googleapis-common-protos" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/98/a2/8176b416ca08106b2ae30cd4a006c8176945f682c3a5b42f141c9173f505/google_api_core-2.25.0.tar.gz", hash = "sha256:9b548e688702f82a34ed8409fb8a6961166f0b7795032f0be8f48308dff4333a", size = 164914, upload-time = "2025-06-02T14:45:34.789Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ac/ca/149e41a277bb0855e8ded85fd7579d7747c1223e253d82c5c0f1be236875/google_api_core-2.25.0-py3-none-any.whl", hash = "sha256:1db79d1281dcf9f3d10023283299ba38f3dc9f639ec41085968fd23e5bcf512e", size = 160668, upload-time = "2025-06-02T14:45:33.272Z" },
+]
+
+[package.optional-dependencies]
+grpc = [
+    { name = "grpcio" },
+    { name = "grpcio-status" },
+]
+
+[[package]]
+name = "google-auth"
+version = "2.40.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cachetools" },
+    { name = "pyasn1-modules" },
+    { name = "rsa" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/84/f67f53c505a6b2c5da05c988e2a5483f5ba9eee4b1841d2e3ff22f547cd5/google_auth-2.40.2.tar.gz", hash = "sha256:a33cde547a2134273226fa4b853883559947ebe9207521f7afc707efbf690f58", size = 280990, upload-time = "2025-05-21T18:04:59.816Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/c7/e2d82e6702e2a9e2311c138f8e1100f21d08aed0231290872b229ae57a86/google_auth-2.40.2-py2.py3-none-any.whl", hash = "sha256:f7e568d42eedfded58734f6a60c58321896a621f7c116c411550a4b4a13da90b", size = 216102, upload-time = "2025-05-21T18:04:57.547Z" },
+]
+
+[[package]]
+name = "google-cloud-speech"
+version = "2.32.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dc/fc/7e47328069850f084ee17e26b5572de067e30fdab862e381702222d237b7/google_cloud_speech-2.32.0.tar.gz", hash = "sha256:89c2618b131d310c6c00e7c04d290ffa9a5d68c20191030766a7737850f04e77", size = 387621, upload-time = "2025-04-14T10:16:35.386Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/85/a4/f41f2737cd0597f2aa5855b0a12f353fad4506868887590671230df81c77/google_cloud_speech-2.32.0-py3-none-any.whl", hash = "sha256:537b279d8697fe5b5bc5f485f2d48a6b343fc76f73385b5776806c37bc5f8ea1", size = 334148, upload-time = "2025-04-14T10:16:33.89Z" },
+]
+
+[[package]]
+name = "googleapis-common-protos"
+version = "1.70.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/39/24/33db22342cf4a2ea27c9955e6713140fedd51e8b141b5ce5260897020f1a/googleapis_common_protos-1.70.0.tar.gz", hash = "sha256:0e1b44e0ea153e6594f9f394fef15193a68aaaea2d843f83e2742717ca753257", size = 145903, upload-time = "2025-04-14T10:17:02.924Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/f1/62a193f0227cf15a920390abe675f386dec35f7ae3ffe6da582d3ade42c7/googleapis_common_protos-1.70.0-py3-none-any.whl", hash = "sha256:b8bfcca8c25a2bb253e0e0b0adaf8c00773e5e6af6fd92397576680b807e0fd8", size = 294530, upload-time = "2025-04-14T10:17:01.271Z" },
+]
+
+[[package]]
 name = "gpiozero"
 version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -677,6 +749,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d8/91/21f11977998405634a13f05366957fb3b8bbd5cc469821bcee761f7b5aa2/grpcio-1.72.1-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:524bad78d610fa1f9f316d47b3aab1ff89d438ba952ee34e3e335ca80a27ba96", size = 6142005, upload-time = "2025-06-02T10:09:18.233Z" },
     { url = "https://files.pythonhosted.org/packages/1c/60/060ef7dde47f19050688a050457057d53c6ed9d08d5eb6fc34f5540932aa/grpcio-1.72.1-cp311-cp311-win32.whl", hash = "sha256:409ee0abf7e74bbf88941046142452cf3d1f3863d34e11e8fd2b07375170c730", size = 3560422, upload-time = "2025-06-02T10:09:20.209Z" },
     { url = "https://files.pythonhosted.org/packages/a2/37/7e97573e346d730a9c380710e2d7d7c0bc70e9b9f611246a3c0a4a291506/grpcio-1.72.1-cp311-cp311-win_amd64.whl", hash = "sha256:ea483e408fac55569c11158c3e6d6d6a8c3b0f798b68f1c10db9b22c5996e19b", size = 4230049, upload-time = "2025-06-02T10:09:22.473Z" },
+]
+
+[[package]]
+name = "grpcio-status"
+version = "1.71.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "googleapis-common-protos" },
+    { name = "grpcio" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d7/53/a911467bece076020456401f55a27415d2d70d3bc2c37af06b44ea41fc5c/grpcio_status-1.71.0.tar.gz", hash = "sha256:11405fed67b68f406b3f3c7c5ae5104a79d2d309666d10d61b152e91d28fb968", size = 13669, upload-time = "2025-03-10T19:29:00.901Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ad/d6/31fbc43ff097d8c4c9fc3df741431b8018f67bf8dfbe6553a555f6e5f675/grpcio_status-1.71.0-py3-none-any.whl", hash = "sha256:843934ef8c09e3e858952887467f8256aac3910c55f077a359a65b2b3cde3e68", size = 14424, upload-time = "2025-03-10T19:27:04.967Z" },
 ]
 
 [[package]]
@@ -1310,6 +1396,18 @@ wheels = [
 ]
 
 [[package]]
+name = "proto-plus"
+version = "1.26.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/ac/87285f15f7cce6d4a008f33f1757fb5a13611ea8914eb58c3d0d26243468/proto_plus-1.26.1.tar.gz", hash = "sha256:21a515a4c4c0088a773899e23c7bbade3d18f9c66c73edd4c7ee3816bc96a012", size = 56142, upload-time = "2025-03-10T15:54:38.843Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/6d/280c4c2ce28b1593a19ad5239c8b826871fc6ec275c21afc8e1820108039/proto_plus-1.26.1-py3-none-any.whl", hash = "sha256:13285478c2dcf2abb829db158e1047e2f1e8d63a077d94263c2b88b043c75a66", size = 50163, upload-time = "2025-03-10T15:54:37.335Z" },
+]
+
+[[package]]
 name = "protobuf"
 version = "6.31.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1379,6 +1477,27 @@ name = "pyalsaaudio"
 version = "0.11.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/21/a6/3d833079b030d449345e35ce0e2874e330d3612135734f07b9ceace25bcf/pyalsaaudio-0.11.0.tar.gz", hash = "sha256:a78a9dca33524b2c9064b34e21f5ab874272313cf324a9a77592f396a5e0fddc", size = 311152, upload-time = "2024-05-30T21:35:57.928Z" }
+
+[[package]]
+name = "pyasn1"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/e9/01f1a64245b89f039897cb0130016d79f77d52669aae6ee7b159a6c4c018/pyasn1-0.6.1.tar.gz", hash = "sha256:6f580d2bdd84365380830acf45550f2511469f673cb4a5ae3857a3170128b034", size = 145322, upload-time = "2024-09-10T22:41:42.55Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/f1/d6a797abb14f6283c0ddff96bbdd46937f64122b8c925cab503dd37f8214/pyasn1-0.6.1-py3-none-any.whl", hash = "sha256:0d632f46f2ba09143da3a8afe9e33fb6f92fa2320ab7e886e2d0f7672af84629", size = 83135, upload-time = "2024-09-11T16:00:36.122Z" },
+]
+
+[[package]]
+name = "pyasn1-modules"
+version = "0.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyasn1" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e9/e6/78ebbb10a8c8e4b61a59249394a4a594c1a7af95593dc933a349c8d00964/pyasn1_modules-0.4.2.tar.gz", hash = "sha256:677091de870a80aae844b1ca6134f54652fa2c8c5a52aa396440ac3106e941e6", size = 307892, upload-time = "2025-03-28T02:41:22.17Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/47/8d/d529b5d697919ba8c11ad626e835d4039be708a35b0d22de83a269a6682c/pyasn1_modules-0.4.2-py3-none-any.whl", hash = "sha256:29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a", size = 181259, upload-time = "2025-03-28T02:41:19.028Z" },
+]
 
 [[package]]
 name = "pyaudio"
@@ -1814,6 +1933,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c0/1e/642208a685c5e96d38323f42c75d9b24f95e2d1b8390dd104e04a712f29e/rpi_ws281x-5.0.0.tar.gz", hash = "sha256:00ce6db771436b778d0930245cf8ea2aae11008cc5fd67d57789c5422af3ee55", size = 64519, upload-time = "2023-05-16T12:04:22.463Z" }
 
 [[package]]
+name = "rsa"
+version = "4.9.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyasn1" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/da/8a/22b7beea3ee0d44b1916c0c1cb0ee3af23b700b6da9f04991899d0c555d4/rsa-4.9.1.tar.gz", hash = "sha256:e7bdbfdb5497da4c07dfd35530e1a902659db6ff241e39d9953cad06ebd0ae75", size = 29034, upload-time = "2025-04-16T09:51:18.218Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/8d/0133e4eb4beed9e425d9a98ed6e081a55d195481b7632472be1af08d2f6b/rsa-4.9.1-py3-none-any.whl", hash = "sha256:68635866661c6836b8d39430f97a996acbd61bfa49406748ea243539fe239762", size = 34696, upload-time = "2025-04-16T09:51:17.142Z" },
+]
+
+[[package]]
 name = "ruff"
 version = "0.11.13"
 source = { registry = "https://pypi.org/simple" }
@@ -2070,6 +2201,7 @@ dependencies = [
     { name = "dill" },
     { name = "docker" },
     { name = "fasteners" },
+    { name = "google-cloud-speech" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'" },
     { name = "headless-kivy" },
     { name = "netifaces" },
@@ -2144,6 +2276,7 @@ requires-dist = [
     { name = "dill", specifier = ">=0.3.9" },
     { name = "docker", specifier = ">=7.1.0" },
     { name = "fasteners", specifier = ">=0.19" },
+    { name = "google-cloud-speech", specifier = ">=2.32.0" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = ">=2.0.1" },
     { name = "graphviz", marker = "extra == 'test-investigation'", specifier = ">=0.20.3" },
     { name = "headless-kivy", specifier = ">=0.12.4" },

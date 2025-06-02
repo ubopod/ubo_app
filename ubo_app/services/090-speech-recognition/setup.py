@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from abstraction import NeedsSetupMixin
+from abstraction import NeedsSetupMixin, SpeechRecognitionMixin
 from constants import OFFLINE_ENGINES
 from engines_manager import EnginesManager
 from redux import AutorunOptions
@@ -81,6 +81,9 @@ def init_service() -> Subscriptions:
         items: list[Item] = []
         for engine_name in SpeechRecognitionEngineName:
             engine = engines_manager.engines_by_name[engine_name]
+
+            if not isinstance(engine, SpeechRecognitionMixin):
+                continue
 
             if isinstance(engine, NeedsSetupMixin) and not engine.is_setup():
                 items.append(

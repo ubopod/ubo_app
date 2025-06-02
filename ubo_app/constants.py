@@ -130,3 +130,18 @@ DEFAULT_ASSISTANT_OLLAMA_MODEL = os.environ.get(
 
 SPEECH_RECOGNITION_FRAME_RATE = 16_000
 SPEECH_RECOGNITION_SAMPLE_WIDTH = 2
+
+GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID = 'google_cloud_service_account_key'  # noqa: S105
+GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN = r"""{
+  "type": "service_account",
+  "project_id": "[a-z][a-z0-9-]+",
+  "private_key_id": "[a-z0-9]{40}",
+  "private_key": "-----BEGIN PRIVATE KEY-----\\n([a-zA-Z0-9+/=\\n]+)\\n-----END PRIVATE KEY-----\\n",
+  "client_email": "[a-z0-9._%+-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com",
+  "client_id": "[0-9]{12,}",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/[a-z0-9-]+%40[a-z0-9-]+\.iam\.gserviceaccount\.com",
+  "universe_domain": "googleapis.com"
+}"""  # noqa: E501

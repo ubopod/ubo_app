@@ -50,6 +50,7 @@ class BackgroundRunningMixin(abc.ABC):
     @final
     def _task_done_callback(self, task: asyncio.Task[None]) -> None:
         self._is_running = False
+        self._task = None
         if not task.cancelled() and task.exception():
             logger.exception(
                 'Speech recognition engine task failed',

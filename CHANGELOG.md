@@ -18,6 +18,7 @@
 - refactor(speech-recognition): understand the assistant end phrase even when it is stated right after and in continuation of the speech
 - refactor(core): add `ToThreadOptions` for the purpose of passing `callback`, `name` and `corountine_runner` to `ubo_app.async_.to_thread`, remove `ubo_app.async_.to_thread_with_coroutine_runner` as it is no longer needed
 - refactor: reorganize secret keys and the name of constants holding them to be more consistent
+- feat(speech-recognition): add google cloud as a speech recognition engine, add a menu item to select the speech recognition engine, and add a menu item to set the google cloud credentials - closes #311
 
 ## Version 1.4.0
 

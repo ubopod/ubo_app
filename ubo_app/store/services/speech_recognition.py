@@ -89,6 +89,7 @@ class SpeechRecognitionEngineName(StrEnum):
     """Available speech recognition engines."""
 
     VOSK = 'vosk'
+    GOOGLE = 'google'
 
 
 class SpeechRecognitionState(Immutable):

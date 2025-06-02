@@ -6454,6 +6454,23 @@
                                         "label": "Setup Vosk",
                                         "opacity": null,
                                         "progress": null
+                                      },
+                                      {
+                                        "_type": "ActionItem",
+                                        "action": "<function:setup>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "google",
+                                        "label": "Setup Google Code",
+                                        "opacity": null,
+                                        "progress": null
                                       }
                                     ],
                                     "placeholder": null,

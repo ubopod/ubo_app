@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, TypedDict, cast
 
+from google_engine import GoogleEngine
 from handle_speech_recognition import handle_speech_recognition
 from vosk_engine import VoskEngine
 
@@ -50,11 +51,13 @@ class EnginesManager:
     def __init__(self) -> None:
         """Initialize `EnginesManager`."""
         vosk_engine = VoskEngine()
+        google_engine = GoogleEngine()
         self.engines_by_name: dict[
             SpeechRecognitionEngineName,
             SpeechRecognitionMixin,
         ] = {
             SpeechRecognitionEngineName.VOSK: vosk_engine,
+            SpeechRecognitionEngineName.GOOGLE: google_engine,
         }
         self.engines: _Engines = {'wake_word': vosk_engine, 'speech': vosk_engine}
         store.autorun(lambda state: state.speech_recognition.selected_engine)(
