@@ -673,16 +673,16 @@ grpc = [
 
 [[package]]
 name = "google-auth"
-version = "2.40.2"
+version = "2.40.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
     { name = "pyasn1-modules" },
     { name = "rsa" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/84/f67f53c505a6b2c5da05c988e2a5483f5ba9eee4b1841d2e3ff22f547cd5/google_auth-2.40.2.tar.gz", hash = "sha256:a33cde547a2134273226fa4b853883559947ebe9207521f7afc707efbf690f58", size = 280990, upload-time = "2025-05-21T18:04:59.816Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/9b/e92ef23b84fa10a64ce4831390b7a4c2e53c0132568d99d4ae61d04c8855/google_auth-2.40.3.tar.gz", hash = "sha256:500c3a29adedeb36ea9cf24b8d10858e152f2412e3ca37829b3fa18e33d63b77", size = 281029, upload-time = "2025-06-04T18:04:57.577Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/c7/e2d82e6702e2a9e2311c138f8e1100f21d08aed0231290872b229ae57a86/google_auth-2.40.2-py2.py3-none-any.whl", hash = "sha256:f7e568d42eedfded58734f6a60c58321896a621f7c116c411550a4b4a13da90b", size = 216102, upload-time = "2025-05-21T18:04:57.547Z" },
+    { url = "https://files.pythonhosted.org/packages/17/63/b19553b658a1692443c62bd07e5868adaa0ad746a0751ba62c59568cd45b/google_auth-2.40.3-py2.py3-none-any.whl", hash = "sha256:1370d4593e86213563547f97a92752fc658456fe4514c809544f330fed45a7ca", size = 216137, upload-time = "2025-06-04T18:04:55.573Z" },
 ]
 
 [[package]]
@@ -753,16 +753,16 @@ wheels = [
 
 [[package]]
 name = "grpcio-status"
-version = "1.71.0"
+version = "1.72.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "googleapis-common-protos" },
     { name = "grpcio" },
     { name = "protobuf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/53/a911467bece076020456401f55a27415d2d70d3bc2c37af06b44ea41fc5c/grpcio_status-1.71.0.tar.gz", hash = "sha256:11405fed67b68f406b3f3c7c5ae5104a79d2d309666d10d61b152e91d28fb968", size = 13669, upload-time = "2025-03-10T19:29:00.901Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/b8/e563262a30065d3b52b61ca92c427fe2a1b04ba5dfca0415ae0df8ecdac8/grpcio_status-1.72.1.tar.gz", hash = "sha256:627111a87afa920eafb42cc6c50db209d263e07fa51fbb084981ef636566be7b", size = 13646, upload-time = "2025-06-02T10:14:23.666Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/d6/31fbc43ff097d8c4c9fc3df741431b8018f67bf8dfbe6553a555f6e5f675/grpcio_status-1.71.0-py3-none-any.whl", hash = "sha256:843934ef8c09e3e858952887467f8256aac3910c55f077a359a65b2b3cde3e68", size = 14424, upload-time = "2025-03-10T19:27:04.967Z" },
+    { url = "https://files.pythonhosted.org/packages/11/62/529a3d6b00792ef464d929ffa8980a300ad3030842880d04213ef9e6e0fd/grpcio_status-1.72.1-py3-none-any.whl", hash = "sha256:75fb29e1b879e875ff0c37032cbbb4e102c6dce845cdac37904c44ff52cbd8e7", size = 14420, upload-time = "2025-06-02T10:12:02.723Z" },
 ]
 
 [[package]]
@@ -2270,7 +2270,7 @@ requires-dist = [
     { name = "adafruit-circuitpython-rgb-display", specifier = ">=3.14.0" },
     { name = "adafruit-circuitpython-veml7700", specifier = ">=2.1.2" },
     { name = "aiofiles", specifier = ">=24.1.0" },
-    { name = "aiohttp", specifier = ">=3.11.13" },
+    { name = "aiohttp", specifier = ">=3.12.7" },
     { name = "aiostream", specifier = ">=0.6.4" },
     { name = "betterproto", extras = ["compiler"], specifier = ">=2.0.0b7" },
     { name = "dill", specifier = ">=0.3.9" },

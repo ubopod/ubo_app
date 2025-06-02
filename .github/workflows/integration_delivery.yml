@@ -12,69 +12,8 @@ env:
   PYTHON_VERSION: '3.11.9'
 
 jobs:
-  dependencies:
-    name: Install Dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        name: Checkout
-
-      - name: System Dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y portaudio19-dev
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-suffix: ubuntu-latest
-
-      - name: Create virtualenv
-        run: |
-          uv venv --system-site-packages
-
-      - name: Install dependencies
-        run: uv sync --frozen
-
-  ubo-pod-dependencies:
-    name: Install Ubo Pod Dependencies
-    runs-on: ubo-pod-pi5
-    outputs:
-      python-version: ${{ steps.get-python-version.outputs.PYTHON_VERSION }}
-    steps:
-      - uses: actions/checkout@v4
-        name: Checkout
-
-      - name: Extract Python Version
-        id: get-python-version
-        run: |
-          echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)" >>$GITHUB_OUTPUT
-          echo "PYTHON_VERSION=$(python --version | cut -d' ' -f2)"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-suffix: ubo-pod
-
-      - name: Create virtualenv
-        run: |
-          uv venv --system-site-packages
-
-      - name: Install dependencies
-        run: |
-          uv sync --frozen
-
   type-check:
     name: Type Check
-    needs:
-      - ubo-pod-dependencies
     runs-on: ubo-pod-pi5
     steps:
       - uses: actions/checkout@v4
@@ -89,6 +28,10 @@ jobs:
       - name: Create virtualenv
         run: |
           uv venv --system-site-packages
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --verbose
 
       - name: Create stub files
         run: |
@@ -105,8 +48,6 @@ jobs:
 
   lint:
     name: Lint
-    needs:
-      - dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -123,9 +64,6 @@ jobs:
 
   test:
     name: Test
-    needs:
-      - dependencies
-      - ubo-pod-dependencies
     strategy:
       matrix:
         runner: ['ubo-pod-pi4', 'ubo-pod-pi5', 'ubuntu-latest']
@@ -138,7 +76,7 @@ jobs:
         if: matrix.runner == 'ubuntu-latest'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0 libportaudio2
+          sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0 libportaudio2 portaudio19-dev
 
       - uses: actions/checkout@v4
         name: Checkout
@@ -160,6 +98,10 @@ jobs:
       - name: Create virtualenv
         run: |
           uv venv --system-site-packages
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen
 
       - name: Build protobuf files and gRPC bindings
         run: |
@@ -201,8 +143,6 @@ jobs:
 
   build:
     name: Build
-    needs:
-      - dependencies
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.extract-version.outputs.VERSION }}
@@ -212,6 +152,11 @@ jobs:
         name: Checkout
         with:
           lfs: true
+
+      - name: System Dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y portaudio19-dev
 
       - uses: actions/setup-python@v5
         name: Setup Python
