@@ -47,6 +47,14 @@ add_file_handler(logger, log_level)
 logger.setLevel(log_level)
 
 
+def serialize_response(response: str | bytes | None) -> bytes:
+    if isinstance(response, bytes):
+        return response + b'\0'
+    if isinstance(response, str):
+        return response.encode() + b'\0'
+    return b'\0'
+
+
 def handle_command(command: str, connection: socket.socket) -> None:
     try:
         header, *arguments = command.split()
@@ -75,10 +83,7 @@ def handle_command(command: str, connection: socket.socket) -> None:
                                     'command': command,
                                 },
                             )
-                            if isinstance(line, bytes):
-                                connection.sendall(line + b'\0')
-                            else:
-                                connection.sendall(line.encode() + b'\0')
+                            connection.sendall(serialize_response(line))
                     finally:
                         logger.debug(
                             'Sending end of stream to client',
@@ -95,10 +100,7 @@ def handle_command(command: str, connection: socket.socket) -> None:
                             'command': command,
                         },
                     )
-                    if isinstance(response, bytes):
-                        connection.sendall(response + b'\0\0')
-                    elif isinstance(response, str):
-                        connection.sendall(response.encode() + b'\0\0')
+                    connection.sendall(serialize_response(response))
     except Exception as exception:
         logger.exception(
             'Failed to handle command',
