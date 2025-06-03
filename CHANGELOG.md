@@ -21,6 +21,7 @@
 - feat(speech-recognition): add google cloud as a speech recognition engine, add a menu item to select the speech recognition engine, and add a menu item to set the google cloud credentials - closes #311
 - refactor(ci): drop dependencies jobs and put `uv sync` wherever needed, since `uv` is so fast compared to our old dependency manager `poetry`, it is not worth the effort to have a separate job for it
 - fix(system-manager): better handle `None` output of handlers in response to `send_command`
+- refactor: replace `default_factory` with `default` whenever possible so that `default_provider` can be used
 
 ## Version 1.4.0
 

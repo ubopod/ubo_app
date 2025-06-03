@@ -18,7 +18,6 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.settings.types import (
     ServicesStatus,
     SettingsAction,
@@ -57,6 +56,8 @@ def reducer(
         raise InitializationActionError(action)
 
     if isinstance(action, SettingsTogglePdbSignalAction):
+        from ubo_app.store.services.speech_synthesis import ReadableInformation
+
         return CompleteReducerResult(
             state=replace(
                 state,

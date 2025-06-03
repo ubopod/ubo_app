@@ -121,25 +121,25 @@ class AudioState(Immutable):
     """Audio state."""
 
     playback_volume: float = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'audio_state:playback_volume',
             default=0.15,
         ),
     )
     is_playback_mute: bool = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'audio_state:is_playback_mute',
             default=False,
         ),
     )
     capture_volume: float = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'audio_state:capture_volume',
             default=0.5,
         ),
     )
     is_capture_mute: bool = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'audio_state:is_capture_mute',
             default=False,
         ),

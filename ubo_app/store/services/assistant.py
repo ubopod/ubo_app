@@ -48,7 +48,7 @@ class AssistantState(Immutable):
     """State for the assistant service."""
 
     selected_engine: str = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'assistant:selected_engine',
             default=f'ollama:{DEFAULT_ASSISTANT_OLLAMA_MODEL}',
         ),

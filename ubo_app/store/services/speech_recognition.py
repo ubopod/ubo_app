@@ -96,20 +96,20 @@ class SpeechRecognitionState(Immutable):
     """State for speech recognition service."""
 
     selected_engine: SpeechRecognitionEngineName | None = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'speech_recognition:selected_engine',
             default=SpeechRecognitionEngineName.VOSK,
         ),
     )
     intents: list[SpeechRecognitionIntent]
     is_intents_active: bool = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'speech_recognition:is_intents_active',
             default=True,
         ),
     )
     is_assistant_active: bool = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'speech_recognition:is_assistant_active',
             default=False,
         ),

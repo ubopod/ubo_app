@@ -83,7 +83,7 @@ class SpeechSynthesisSynthesizeTextEvent(SpeechSynthesisEvent):
 class SpeechSynthesisState(Immutable):
     is_access_key_set: bool | None = None
     selected_engine: SpeechSynthesisEngineName = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             key='speech_synthesis:selected_engine',
             default=SpeechSynthesisEngineName.PIPER,
         ),

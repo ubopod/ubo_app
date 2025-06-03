@@ -63,6 +63,9 @@ def parse(input_module: ModuleType, actions: list, events: list) -> _ProtoGenera
 if __name__ == '__main__':
     print('🚀 Generating proto files...')
     output_directory = Path('ubo_app/rpc/proto/')
+    import ubo_app.utils.persistent_store
+
+    ubo_app.utils.persistent_store.read_from_persistent_store = lambda *_, **__: ''
 
     import ubo_gui.menu.types
 
