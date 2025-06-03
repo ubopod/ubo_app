@@ -24,7 +24,6 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionSetIsIntentsActiveAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
-from ubo_app.utils.async_ import create_task
 from ubo_app.utils.download import download_file
 
 
@@ -73,44 +72,41 @@ def _handle_error() -> None:
     shutil.rmtree(VOSK_MODEL_PATH, ignore_errors=True)
 
 
-def download_vosk_model() -> None:
+async def download_vosk_model() -> None:
     """Download Vosk model."""
     shutil.rmtree(VOSK_MODEL_PATH, ignore_errors=True)
 
     _update_download_notification(progress=0)
 
-    async def act() -> None:
-        try:
-            VOSK_DOWNLOAD_PATH.parent.mkdir(parents=True, exist_ok=True)
-            VOSK_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        VOSK_DOWNLOAD_PATH.parent.mkdir(parents=True, exist_ok=True)
+        VOSK_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-            async for downloaded_bytes, size in download_file(
-                url=VOSK_MODEL_URL,
-                path=VOSK_DOWNLOAD_PATH,
-            ):
-                if size:
-                    _update_download_notification(
-                        progress=min(1.0, downloaded_bytes / size),
-                    )
+        async for downloaded_bytes, size in download_file(
+            url=VOSK_MODEL_URL,
+            path=VOSK_DOWNLOAD_PATH,
+        ):
+            if size:
+                _update_download_notification(
+                    progress=min(1.0, downloaded_bytes / size),
+                )
 
-            _update_download_notification(progress=1.0)
+        _update_download_notification(progress=1.0)
 
-            process = await asyncio.create_subprocess_exec(
-                '/usr/bin/env',
-                'unzip',
-                '-o',
-                VOSK_DOWNLOAD_PATH,
-                '-d',
-                VOSK_MODEL_PATH.parent,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await process.wait()
-            store.dispatch(SpeechRecognitionSetIsIntentsActiveAction(is_active=True))
-        except Exception:
-            _handle_error()
-            raise
-        finally:
-            VOSK_DOWNLOAD_PATH.unlink(missing_ok=True)
-
-    create_task(act())
+        process = await asyncio.create_subprocess_exec(
+            '/usr/bin/env',
+            'unzip',
+            '-o',
+            VOSK_DOWNLOAD_PATH,
+            '-d',
+            VOSK_MODEL_PATH.parent,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await process.wait()
+        store.dispatch(SpeechRecognitionSetIsIntentsActiveAction(is_active=True))
+    except Exception:
+        _handle_error()
+        raise
+    finally:
+        VOSK_DOWNLOAD_PATH.unlink(missing_ok=True)

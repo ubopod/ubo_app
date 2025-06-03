@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from abstraction import NeedsSetupMixin, SpeechRecognitionMixin
+from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
 from constants import OFFLINE_ENGINES
 from engines_manager import EnginesManager
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
+from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
@@ -156,7 +157,7 @@ def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.SPEECH,
-            priority=1,
+            priority=30,
             menu_item=SubMenuItem(
                 label='Speech Recognition',
                 icon='',

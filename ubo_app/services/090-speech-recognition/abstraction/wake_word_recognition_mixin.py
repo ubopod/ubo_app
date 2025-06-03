@@ -9,7 +9,7 @@ from typing_extensions import override
 
 from ubo_app.utils.async_evicting_queue import AsyncEvictingQueue
 
-from .background_running_mixing import BackgroundRunningMixin
+from .base_class import BaseSpeechRecognitionEngine
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     )
 
 
-class WakeWordRecognitionMixin(BackgroundRunningMixin, abc.ABC):
+class WakeWordRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
     """Mixin for wake word detection functionality."""
 
     wake_words: Sequence[str] | None = None

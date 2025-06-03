@@ -12,8 +12,6 @@ VOSK_DOWNLOAD_PATH = VOSK_MODEL_PATH.with_suffix('.zip')
 
 VOSK_DOWNLOAD_NOTIFICATION_ID = 'speech_recognition:download-vosk'
 
-ENGINE_ERROR_NOTIFICATION_ID = 'speech_recognition:engine-error:{engine}'
-
 OFFLINE_ENGINES: list[SpeechRecognitionEngineName] = [
     SpeechRecognitionEngineName.VOSK,
 ]

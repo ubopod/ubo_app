@@ -7,24 +7,31 @@ import json
 from asyncio import get_event_loop
 from concurrent.futures import ThreadPoolExecutor
 
-from abstraction import (
-    NeedsSetupMixin,
+from abstraction.speech_recognition_mixin import (
     PhraseRecognition,
     SpeechRecognition,
     SpeechRecognitionMixin,
-    WakeWordRecognitionMixin,
 )
+from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
 from constants import VOSK_MODEL_PATH
 from typing_extensions import override
 from vosk import KaldiRecognizer, Model
 
+from ubo_app.colors import WARNING_COLOR
 from ubo_app.constants import SPEECH_RECOGNITION_FRAME_RATE
+from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.logger import logger
 from ubo_app.store.main import store
+from ubo_app.store.services.notifications import (
+    Notification,
+    NotificationActionItem,
+    NotificationsAddAction,
+)
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionEngineName,
     SpeechRecognitionReportTextEvent,
 )
+from ubo_app.utils.async_ import create_task
 
 from .download_model import download_vosk_model
 
@@ -67,11 +74,8 @@ class VoskEngine(NeedsSetupMixin, SpeechRecognitionMixin, WakeWordRecognitionMix
             *([json.dumps(phrases)] if phrases else []),
         )
 
-        while True:
-            data = await self.input_chunks_queue.get()
-            if self.wake_words is None and self.ongoing_recognition is None:
-                await asyncio.sleep(0.2)
-                continue
+        while self.should_be_running():
+            data = await self.input_queue.get()
 
             if await get_event_loop().run_in_executor(
                 self.process_executor,
@@ -134,7 +138,22 @@ class VoskEngine(NeedsSetupMixin, SpeechRecognitionMixin, WakeWordRecognitionMix
 
     @override
     def setup(self) -> None:
-        download_vosk_model()
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Vosk Engine Setup',
+                    content='Download the Vosk model to use this engine.',
+                    color=WARNING_COLOR,
+                    actions=[
+                        NotificationActionItem(
+                            label='Download Model',
+                            icon='󰇚',
+                            action=lambda: create_task(download_vosk_model()) and None,
+                        ),
+                    ],
+                ),
+            ),
+        )
 
     @override
     def is_setup(self) -> bool:

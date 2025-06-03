@@ -6533,7 +6533,7 @@
                                         "icon": "",
                                         "is_short": false,
                                         "key": "google",
-                                        "label": "Setup Google Code",
+                                        "label": "Setup Google Cloud",
                                         "opacity": null,
                                         "progress": null
                                       }
@@ -6547,6 +6547,52 @@
                               "placeholder": null,
                               "sub_heading": "Vosk is used for wake word detection",
                               "title": "Speech Recognition"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰁤",
+                            "is_short": false,
+                            "key": "assistant:",
+                            "label": "Assistant Engine",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Assistant Engine",
+                              "items": [
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#FFC107",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰇚",
+                                  "is_short": false,
+                                  "key": "ollama:_download",
+                                  "label": "Download gemma3:1b",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "AssistantDownloadOllamaModelAction",
+                                    "model": "gemma3:1b"
+                                  }
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Selected: ollama:gemma3:1b",
+                              "title": "󰁤 Assistant Engine"
                             }
                           },
                           {
@@ -6627,52 +6673,6 @@
                               ],
                               "placeholder": null,
                               "title": "󰔊Speech Synthesis"
-                            }
-                          },
-                          {
-                            "_type": "SubMenuItem",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󰁤",
-                            "is_short": false,
-                            "key": "assistant:",
-                            "label": "Assistant Engine",
-                            "opacity": null,
-                            "progress": null,
-                            "sub_menu": {
-                              "_type": "HeadedMenu",
-                              "heading": "Assistant Engine",
-                              "items": [
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#FFC107",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰇚",
-                                  "is_short": false,
-                                  "key": "ollama:_download",
-                                  "label": "Download gemma3:1b",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "AssistantDownloadOllamaModelAction",
-                                    "model": "gemma3:1b"
-                                  }
-                                }
-                              ],
-                              "placeholder": null,
-                              "sub_heading": "Selected: ollama:gemma3:1b",
-                              "title": "󰁤 Assistant Engine"
                             }
                           },
                           {
@@ -6918,15 +6918,15 @@
     "path": [],
     "recorded_sequence": [],
     "settings_items_priorities": {
-      "assistant:": null,
+      "assistant:": 20,
       "docker:registries": 2,
       "docker:service": 1,
       "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
       "rpi_connect:": null,
-      "speech_recognition:": 1,
-      "speech_synthesis:engines": 1,
+      "speech_recognition:": 30,
+      "speech_synthesis:engines": 10,
       "speech_synthesis:settings": 0,
       "ssh:": 1,
       "users:": 1,

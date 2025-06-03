@@ -59,7 +59,7 @@ class SpeechRecognitionReportIntentDetectionAction(SpeechRecognitionAction):
 
 
 class SpeechRecognitionReportSpeechAction(SpeechRecognitionAction):
-    """Action to report speech raw audio."""
+    """Action to report speech raw audio and recognized text."""
 
     engine_name: SpeechRecognitionEngineName
     text: str

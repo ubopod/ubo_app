@@ -3,23 +3,15 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING
 
-from constants import ENGINE_ERROR_NOTIFICATION_ID
 from typing_extensions import override
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.engines.abstraction.background_running_mixin import BackgroundRunningMixin
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import Notification, NotificationsAddAction
-from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionSetIsAssistantActiveAction,
-    SpeechRecognitionSetIsIntentsActiveAction,
-)
 
-from .background_running_mixing import BackgroundRunningMixin
-
-if TYPE_CHECKING:
-    from ubo_app.store.services.speech_recognition import SpeechRecognitionEngineName
+ENGINE_ERROR_NOTIFICATION_ID = 'speech_recognition:engine-error:{engine}'
 
 
 class NeedsSetupMixin(BackgroundRunningMixin, abc.ABC):
@@ -29,7 +21,7 @@ class NeedsSetupMixin(BackgroundRunningMixin, abc.ABC):
     def __init__(
         self,
         *,
-        name: SpeechRecognitionEngineName,
+        name: str,
         label: str,
         not_setup_message: str,
     ) -> None:
@@ -48,7 +40,7 @@ class NeedsSetupMixin(BackgroundRunningMixin, abc.ABC):
         raise NotImplementedError
 
     @override
-    def run(self) -> None:
+    def run(self) -> bool:
         """Check if the engine is set up before running."""
         if not self.is_setup():
             store.dispatch(
@@ -60,8 +52,6 @@ class NeedsSetupMixin(BackgroundRunningMixin, abc.ABC):
                         color=DANGER_COLOR,
                     ),
                 ),
-                SpeechRecognitionSetIsIntentsActiveAction(is_active=False),
-                SpeechRecognitionSetIsAssistantActiveAction(is_active=False),
             )
-            return
-        super().run()
+            return False
+        return super().run()

@@ -340,7 +340,7 @@ def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.SPEECH,
-            priority=1,
+            priority=10,
             menu_item=SubMenuItem(
                 label='Speech Synthesis',
                 icon='󰔊',

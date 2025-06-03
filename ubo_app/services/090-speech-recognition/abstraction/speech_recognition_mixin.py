@@ -7,10 +7,9 @@ from typing import TYPE_CHECKING, final, overload
 
 from typing_extensions import override
 
+from abstraction.base_class import BaseSpeechRecognitionEngine
 from ubo_app.logger import logger
 from ubo_app.utils.async_evicting_queue import AsyncEvictingQueue
-
-from .background_running_mixing import BackgroundRunningMixin
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
@@ -70,19 +69,16 @@ class PhraseRecognition(Recognition):
         super().__init__(engine_name)
 
 
-class SpeechRecognitionMixin(BackgroundRunningMixin, abc.ABC):
+class SpeechRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
     """Base class for speech recognition engines."""
 
+    speech_engine_name: SpeechRecognitionEngineName
+
     @override
-    def __init__(
-        self,
-        *,
-        name: SpeechRecognitionEngineName,
-        label: str,
-    ) -> None:
+    def __init__(self, *, name: SpeechRecognitionEngineName, label: str) -> None:
         """Initialize speech recognition engine."""
         self.ongoing_recognition: Recognition | None = None
-        self.speech_detections_queue: AsyncEvictingQueue[Recognition | None] = (
+        self.speech_recognitions_queue: AsyncEvictingQueue[Recognition | None] = (
             AsyncEvictingQueue(maxsize=5)
         )
         super().__init__(name=name, label=label)
@@ -116,12 +112,12 @@ class SpeechRecognitionMixin(BackgroundRunningMixin, abc.ABC):
             raise RuntimeError(msg)
         if end_phrase is not None:
             self.ongoing_recognition = SpeechRecognition(
-                self.name,
+                self.speech_engine_name,
                 end_phrase=end_phrase,
             )
         elif phrases is not None:
             self.ongoing_recognition = PhraseRecognition(
-                self.name,
+                self.speech_engine_name,
                 phrases=phrases,
             )
 
@@ -131,7 +127,7 @@ class SpeechRecognitionMixin(BackgroundRunningMixin, abc.ABC):
     async def deactivate_speech_recognition(self) -> None:
         """Deactivate the ongoing speech recognition."""
         self.ongoing_recognition = None
-        await self.speech_detections_queue.put(None)
+        await self.speech_recognitions_queue.put(None)
 
         self.decide_running_state()
 
@@ -141,7 +137,7 @@ class SpeechRecognitionMixin(BackgroundRunningMixin, abc.ABC):
         if self.ongoing_recognition is None:
             msg = 'Speech recognition is not active.'
             raise RuntimeError(msg)
-        await self.speech_detections_queue.put(self.ongoing_recognition)
+        await self.speech_recognitions_queue.put(self.ongoing_recognition)
 
     @override
     async def report(self, result: str) -> None:
@@ -192,6 +188,6 @@ class SpeechRecognitionMixin(BackgroundRunningMixin, abc.ABC):
 
     @final
     async def speech_recognitions(self) -> AsyncGenerator[Recognition, None]:
-        """Yield recognized speech phrases."""
-        while detection := await self.speech_detections_queue.get():
-            yield detection
+        """Yield recognized speeches."""
+        while recognition := await self.speech_recognitions_queue.get():
+            yield recognition

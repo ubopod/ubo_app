@@ -1,4 +1,4 @@
-"""Google Stack Assistant with Gemini API and Speech Recognition."""
+"""Google Cloud Speech Recognition Engine Implementation."""
 
 import asyncio
 import json
@@ -6,16 +6,17 @@ import re
 import time
 from collections.abc import Generator
 
-from abstraction import NeedsSetupMixin, SpeechRecognitionMixin
+from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
 from google.cloud import speech_v2 as speech
 from google.oauth2 import service_account
+from typing_extensions import override
 
 from ubo_app.constants import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN,
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
     SPEECH_RECOGNITION_FRAME_RATE,
 )
-from ubo_app.store.input.types import InputFieldDescription, InputFieldType
+from ubo_app.engines.google_cloud import GoogleEngine
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionEngineName,
@@ -23,31 +24,26 @@ from ubo_app.store.services.speech_recognition import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import ToThreadOptions, create_task, to_thread
-from ubo_app.utils.input import ubo_input
 
 
-class GoogleEngine(NeedsSetupMixin, SpeechRecognitionMixin):
+class GoogleSpeechRecognitionEngine(GoogleEngine, SpeechRecognitionMixin):
     """Google speech recognition engine using Google Cloud Speech-to-Text."""
 
     _task: asyncio.Task[None] | None = None
 
     def __init__(self) -> None:
         """Initialize the Google speech recognition engine."""
-        super().__init__(
-            name=SpeechRecognitionEngineName.GOOGLE,
-            label='Google Cloud',
-            not_setup_message='Google Cloud service account key is not set. You can '
-            'set it in the settings.',
-        )
+        self.engine_name = SpeechRecognitionEngineName.GOOGLE
+        super().__init__(name=self.engine_name)
 
     def _requests_stream(
         self,
     ) -> Generator[speech.StreamingRecognizeRequest, None, None]:
         """Generate audio stream for transcription."""
         yield self._config_request
-        while self.ongoing_recognition:
+        while self.should_be_running():
             try:
-                sample = self.input_chunks_queue.get_nowait()
+                sample = self.input_queue.get_nowait()
             except IndexError:
                 time.sleep(0.05)
                 continue
@@ -109,34 +105,11 @@ class GoogleEngine(NeedsSetupMixin, SpeechRecognitionMixin):
             is not None
         )
 
-    def setup(self) -> None:
-        """Set up the Google speech recognition engine."""
-
-        async def act() -> None:
-            _, result = await ubo_input(
-                title='Google Cloud Service Account Key',
-                prompt='Enter your service account key, it should have at least '
-                '"Google Speech Client" role.',
-                fields=[
-                    InputFieldDescription(
-                        name='service_account_key',
-                        type=InputFieldType.FILE,
-                        label='Service Account Key',
-                        description='JSON key file for Google Cloud Speech-to-Text',
-                        file_mimetype='application/json',
-                        required=True,
-                        pattern=GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN,
-                    ),
-                ],
-            )
-            secrets.write_secret(
-                key=GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
-                value=result.files['service_account_key'].decode('utf-8'),
-            )
-            store.dispatch(
-                SpeechRecognitionSetSelectedEngineAction(
-                    engine_name=SpeechRecognitionEngineName.GOOGLE,
-                ),
-            )
-
-        create_task(act())
+    @override
+    async def _setup_google_cloud_service_account_key(self) -> None:
+        await super()._setup_google_cloud_service_account_key()
+        store.dispatch(
+            SpeechRecognitionSetSelectedEngineAction(
+                engine_name=self.engine_name,
+            ),
+        )

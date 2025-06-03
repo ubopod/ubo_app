@@ -291,6 +291,7 @@ def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.SPEECH,
+            priority=20,
             menu_item=SubMenuItem(
                 label='Assistant Engine',
                 icon='󰁤',

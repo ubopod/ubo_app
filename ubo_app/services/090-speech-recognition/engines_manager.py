@@ -5,8 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, TypedDict, cast
 
-from google_engine import GoogleEngine
-from handle_speech_recognition import handle_speech_recognition
+from google_engine import GoogleSpeechRecognitionEngine
 from vosk_engine import VoskEngine
 
 from ubo_app.constants import ASSISTANT_END_WORD, ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
@@ -16,6 +15,8 @@ from ubo_app.store.services.audio import AudioReportSampleEvent
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionEngineName,
     SpeechRecognitionIntent,
+    SpeechRecognitionReportIntentDetectionAction,
+    SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionStatus,
 )
@@ -24,11 +25,9 @@ from ubo_app.utils.async_ import create_task
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from abstraction import (
-        BackgroundRunningMixin,
-        SpeechRecognitionMixin,
-        WakeWordRecognitionMixin,
-    )
+    from abstraction.base_class import BaseSpeechRecognitionEngine
+    from abstraction.speech_recognition_mixin import Recognition, SpeechRecognitionMixin
+    from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
 
     from ubo_app.utils.types import Subscriptions
 
@@ -38,9 +37,9 @@ class _Engines(TypedDict):
     speech: SpeechRecognitionMixin | None
 
 
-def _running_engines(engines: _Engines) -> set[BackgroundRunningMixin]:
+def _running_engines(engines: _Engines) -> set[BaseSpeechRecognitionEngine]:
     return cast(
-        'set[BackgroundRunningMixin]',
+        'set[BaseSpeechRecognitionEngine]',
         {engine for engine in engines.values() if engine is not None},
     )
 
@@ -51,7 +50,7 @@ class EnginesManager:
     def __init__(self) -> None:
         """Initialize `EnginesManager`."""
         vosk_engine = VoskEngine()
-        google_engine = GoogleEngine()
+        google_engine = GoogleSpeechRecognitionEngine()
         self.engines_by_name: dict[
             SpeechRecognitionEngineName,
             SpeechRecognitionMixin,
@@ -61,7 +60,7 @@ class EnginesManager:
         }
         self.engines: _Engines = {'wake_word': vosk_engine, 'speech': vosk_engine}
         store.autorun(lambda state: state.speech_recognition.selected_engine)(
-            self._sync_speech_engine,
+            self._sync_selected_engine,
         )
 
         store.autorun(
@@ -94,7 +93,7 @@ class EnginesManager:
         for engine in _running_engines(self.engines):
             await engine.queue_audio_chunk(event.sample_speech_recognition)
 
-    async def _sync_speech_engine(
+    async def _sync_selected_engine(
         self,
         selected_engine: SpeechRecognitionEngineName | None,
     ) -> None:
@@ -164,6 +163,60 @@ class EnginesManager:
                 end_phrase=ASSISTANT_END_WORD,
             )
 
+    @store.with_state(
+        lambda state: (
+            state.speech_recognition.status,
+            state.speech_recognition.intents,
+        ),
+    )
+    def handle_speech_recognition(
+        self,
+        data: tuple[SpeechRecognitionStatus, Sequence[SpeechRecognitionIntent]],
+        recognition: Recognition,
+    ) -> None:
+        """Handle speech recognitions."""
+        status, intents = data
+        if status is SpeechRecognitionStatus.INTENTS_WAITING:
+            if intent := next(
+                (
+                    intent
+                    for intent in intents
+                    if (
+                        intent.phrase.lower() == recognition.text.lower()
+                        if isinstance(intent.phrase, str)
+                        else recognition.text.lower()
+                        in [phrase.lower() for phrase in intent.phrase]
+                    )
+                ),
+                None,
+            ):
+                logger.info(
+                    'Intent recognized',
+                    extra={
+                        'engine_name': recognition.engine_name,
+                        'text': recognition.text,
+                        'intent': intent,
+                    },
+                )
+                store.dispatch(
+                    SpeechRecognitionReportIntentDetectionAction(intent=intent),
+                )
+        elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
+            logger.info(
+                'Assistant command recognized',
+                extra={
+                    'engine_name': recognition.engine_name,
+                    'text': recognition.text,
+                },
+            )
+            store.dispatch(
+                SpeechRecognitionReportSpeechAction(
+                    audio=recognition.audio,
+                    text=recognition.text,
+                    engine_name=recognition.engine_name,
+                ),
+            )
+
     async def _monitor_wake_word_recognitions(self) -> None:
         """Monitor wake word recognitions and dispatch events."""
         while True:
@@ -178,7 +231,7 @@ class EnginesManager:
         while True:
             if self.engines['speech'] is not None:
                 async for recognition in self.engines['speech'].speech_recognitions():
-                    handle_speech_recognition(recognition)
+                    self.handle_speech_recognition(recognition)
             await asyncio.sleep(0.1)
 
     def _cleanup(self) -> None:
