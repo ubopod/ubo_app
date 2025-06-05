@@ -58,7 +58,6 @@ if TYPE_CHECKING:
 
     from ubo_app.utils.types import Subscriptions
 
-
 SERVICES_BY_PATH: dict[Path, UboServiceThread] = {}
 SERVICE_PATHS_BY_ID: dict[str, Path] = OrderedDict()
 ROOT_PATH = Path(__file__).parent
@@ -71,46 +70,42 @@ class DisabledServiceError(Exception):
 # Customized module finder and module loader for ubo services to avoid mistakenly
 # loading conflicting names in different services.
 class UboModuleLoader(SourceFileLoader):
-    cache: ClassVar[dict[str, weakref.ReferenceType[ModuleType]]] = {}
+    cache: ClassVar[weakref.WeakValueDictionary[str, ModuleType]] = (
+        weakref.WeakValueDictionary()
+    )
 
     @property
-    def cache_id(self: UboModuleLoader) -> str:
+    def _cache_id(self: UboModuleLoader) -> str:
         return f'{self.path}:{self.name}'
 
-    def create_module(
-        self: UboModuleLoader,
-        spec: ModuleSpec,
-    ) -> ModuleType | None:
-        _ = spec
-        if (
-            self.cache_id in UboModuleLoader.cache
-            and UboModuleLoader.cache[self.cache_id]() is not None
-        ):
-            return UboModuleLoader.cache[self.cache_id]()
-        return None
-
-    def exec_module(self: UboModuleLoader, module: ModuleType) -> None:
-        if (
-            self.cache_id in UboModuleLoader.cache
-            and UboModuleLoader.cache[self.cache_id]() is not None
-        ):
-            return
-        super().exec_module(module)
-        UboModuleLoader.cache[self.cache_id] = weakref.ref(module)
-
-    def get_filename(self: UboModuleLoader, name: str | None = None) -> str:
+    def get_filename(self, name: str | None = None) -> str:
         return super().get_filename(name.split(':')[-1] if name else name)
+
+    def create_module(self, spec: ModuleSpec) -> ModuleType | None:
+        if self._cache_id in self.cache:
+            return self.cache[self._cache_id]
+        return super().create_module(spec)
+
+    def exec_module(self, module: ModuleType) -> None:
+        if self._cache_id in self.cache:
+            return
+        self.cache[self._cache_id] = module
+        sys.modules[module.__name__] = module
+        super().exec_module(module)
 
 
 class UboServiceFinder(importlib.abc.MetaPathFinder):
     def find_spec(
-        self: UboServiceFinder,
+        self,
         fullname: str,
         _: Sequence[str] | None,
         target: ModuleType | None = None,
     ) -> ModuleSpec | None:
         if fullname.startswith(PACKAGE_NAME):
             return None
+
+        if fullname.startswith('/') and fullname in sys.modules:
+            return sys.modules[fullname].__spec__
 
         try:
             service = get_service()
@@ -128,9 +123,15 @@ class UboServiceFinder(importlib.abc.MetaPathFinder):
 
             module_name = f'{service.service_uid}:{fullname}'
 
+            if module_name in sys.modules:
+                module = sys.modules[module_name]
+                return module.__spec__
+
+            fullname_parts = fullname.split('.')
+            search_path = service.path.joinpath(*fullname_parts[:-1])
             spec = PathFinder.find_spec(
-                fullname,
-                [service.path.as_posix()],
+                fullname_parts[-1],
+                [search_path.as_posix()],
                 target,
             )
             if spec and spec.origin:
@@ -146,7 +147,7 @@ sys.meta_path.insert(0, UboServiceFinder())
 
 class UboServiceThread(threading.Thread):
     def __init__(
-        self: UboServiceThread,
+        self,
         path: Path,
         *,
         allowed_service_ids: Sequence[str] | None = [],
@@ -168,12 +169,12 @@ class UboServiceThread(threading.Thread):
         self.subscriptions: Subscriptions = []
 
     def set_reducer_barrier(
-        self: UboServiceThread,
+        self,
         reducer_barrier: threading.Barrier,
     ) -> None:
         self._reducer_barrier = reducer_barrier
 
-    def register_reducer(self: UboServiceThread, reducer: ReducerType) -> None:
+    def register_reducer(self, reducer: ReducerType) -> None:
         if self.has_reducer:
             msg = '`register_reducer` can only be called once per service'
             raise RuntimeError(msg)
@@ -200,13 +201,13 @@ class UboServiceThread(threading.Thread):
 
         self._wait_for_reducers()
 
-    def _wait_for_reducers(self: UboServiceThread) -> None:
+    def _wait_for_reducers(self) -> None:
         if self._reducer_barrier:
             with contextlib.suppress(threading.BrokenBarrierError):
                 self._reducer_barrier.wait()
 
     def register(
-        self: UboServiceThread,
+        self,
         *,
         service_id: str,
         label: str,
@@ -246,7 +247,7 @@ class UboServiceThread(threading.Thread):
             },
         )
 
-    def initiate(self: UboServiceThread) -> None:
+    def initiate(self) -> None:
         try:
             if self.path.exists():
                 self.spec = PathFinder.find_spec(
@@ -280,16 +281,16 @@ class UboServiceThread(threading.Thread):
             else:
                 SERVICE_PATHS_BY_ID[self.service_id] = self.path
 
-    def start(self: UboServiceThread) -> None:
+    def start(self) -> None:
         if not hasattr(self, 'setup'):
             return
 
         super().start()
 
-    def stop(self: UboServiceThread) -> None:
+    def stop(self) -> None:
         self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
-    def run(self: UboServiceThread) -> None:
+    def run(self) -> None:
         from ubo_app.store.main import store
 
         self.loop = asyncio.new_event_loop()
@@ -388,14 +389,14 @@ class UboServiceThread(threading.Thread):
                 ),
             )
 
-    def __repr__(self: UboServiceThread) -> str:
+    def __repr__(self) -> str:
         return (
-            f'<UboServiceThread id='
-            f'{self.service_id} label={self.label} name={self.name}>'
+            f'<UboServiceThread id={self.service_id} '
+            f'label={self.label} name={self.name} is_alive={self.is_alive()}>'
         )
 
     def run_coroutine(
-        self: UboServiceThread,
+        self,
         coroutine: Coroutine,
         callback: TaskCreatorCallback | None = None,
         name: str | None = None,
@@ -412,7 +413,7 @@ class UboServiceThread(threading.Thread):
             ''.join(traceback.format_stack()[:-3]) if DEBUG_TASKS else '',
         )
 
-    async def shutdown(self: UboServiceThread) -> None:
+    async def shutdown(self) -> None:
         from ubo_app.logger import logger
 
         logger.debug(
@@ -429,7 +430,7 @@ class UboServiceThread(threading.Thread):
         self._unregister_reducer()
         self._cleanup()
 
-    async def _clean_subscriptions(self: UboServiceThread) -> None:
+    async def _clean_subscriptions(self) -> None:
         if not hasattr(self, 'subscriptions'):
             return
         subscriptions = self.subscriptions
@@ -445,7 +446,7 @@ class UboServiceThread(threading.Thread):
                     'Error during cleanup',
                     extra={
                         'service_id': self.service_id,
-                        'label': self.label,
+                        'service_label': self.label,
                         'cleanup_callback': unsubscribe,
                     },
                 )
@@ -458,18 +459,17 @@ class UboServiceThread(threading.Thread):
             tasks = [task for task in tasks if not task.done()]
             await asyncio.sleep(0.1)
 
-    async def _clean_remaining_tasks(self: UboServiceThread) -> None:
+    async def _clean_remaining_tasks(self) -> None:
         if not self.loop.is_running():
             return
-        while True:
-            tasks = [
-                task
-                for task in asyncio.all_tasks(self.loop)
-                if task is not asyncio.current_task(self.loop)
-                and task.cancelling() == 0
-                and not task.done()
-            ]
-            logger.debug(
+        while tasks := [
+            task
+            for task in asyncio.all_tasks(self.loop)
+            if task is not asyncio.current_task(self.loop)
+            and task.cancelling() == 0
+            and not task.done()
+        ]:
+            logger.info(
                 'Waiting for tasks to finish',
                 extra={
                     'tasks': tasks,
@@ -478,8 +478,6 @@ class UboServiceThread(threading.Thread):
                     'service_label': self.label,
                 },
             )
-            if not tasks:
-                break
             with contextlib.suppress(BaseException):
                 await asyncio.wait_for(
                     asyncio.gather(
@@ -491,7 +489,7 @@ class UboServiceThread(threading.Thread):
             await asyncio.sleep(0.1)
         self.loop.stop()
 
-    def _unregister_reducer(self: UboServiceThread) -> None:
+    def _unregister_reducer(self) -> None:
         if self.has_reducer:
             from ubo_app.store.main import root_reducer_id, store
 
@@ -503,7 +501,7 @@ class UboServiceThread(threading.Thread):
             )
             self.has_reducer = False
 
-    def _cleanup(self: UboServiceThread) -> None:
+    def _cleanup(self) -> None:
         from ubo_app.utils import bus_provider
 
         if self in bus_provider.system_buses:
@@ -515,16 +513,12 @@ class UboServiceThread(threading.Thread):
             if name.startswith(f'{self.service_uid}:'):
                 del sys.modules[name]
 
-        for name in list(UboModuleLoader.cache):
-            if name.startswith(f'{self.service_uid}:'):
-                del UboModuleLoader.cache[name]
-
         if self.path in SERVICES_BY_PATH:
             del SERVICES_BY_PATH[self.path]
 
         del self.module
 
-    def kill(self: UboServiceThread) -> None:
+    def kill(self) -> None:
         if self.ident is None:
             return
         if self.loop.is_running():
@@ -672,3 +666,6 @@ def load_services(
     store.dispatch(
         SettingsSetServicesAction(services=services, gap_duration=gap_duration),
     )
+
+
+__import__('ubo_app._ignore_this_in_back_track')

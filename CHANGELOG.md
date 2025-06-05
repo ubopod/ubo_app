@@ -22,6 +22,7 @@
 - refactor(ci): drop dependencies jobs and put `uv sync` wherever needed, since `uv` is so fast compared to our old dependency manager `poetry`, it is not worth the effort to have a separate job for it
 - fix(system-manager): better handle `None` output of handlers in response to `send_command`
 - refactor: replace `default_factory` with `default` whenever possible so that `default_provider` can be used
+- refactor(core): improve importing modules in service threads, making it almost identical to python environment, at the cost of patching `importlib._bootstrap._find_and_load_unlocked`
 
 ## Version 1.4.0
 
