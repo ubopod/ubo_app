@@ -5,6 +5,16 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+if ! [ -f /etc/debian_version ]; then
+  echo "This script only supports Debian-based systems."
+  exit 1
+fi
+
+if ! python3 -c "import sys; exit(0) if sys.version_info >= (3, 11) else exit(1)"; then
+  echo "Python 3.11 or higher is required"
+  exit 1
+fi
+
 trap 'echo "Error on line $LINENO: $BASH_COMMAND" >&2' ERR
 
 export DEBIAN_FRONTEND=noninteractive
@@ -47,6 +57,11 @@ for arg in "$@"; do
   esac
 done
 
+IS_RPI=""
+if [ -f /etc/rpi-issue ]; then
+  IS_RPI=true
+fi
+
 USERNAME=${USERNAME:-"ubo"}
 TARGET_VERSION=${TARGET_VERSION:-}
 INSTALLATION_PATH=${INSTALLATION_PATH:-"/opt/ubo"}
@@ -54,6 +69,11 @@ WITHOUT_WM8960=$([ "${WITHOUT_WM8960:-''}" = true ] && echo true || true)
 WITHOUT_DOCKER=$([ "${WITHOUT_DOCKER:-''}" = true ] && echo true || true)
 SOURCE="${SOURCE:-"ubo-app${TARGET_VERSION:+==$TARGET_VERSION}"}"
 IN_PACKER=$([ "${IN_PACKER:-''}" = true ] && echo true || true)
+
+if [ "$IS_RPI" != true ]; then
+  echo "Running on non-Raspberry Pi system, disabling WM8960 driver installation."
+  WITHOUT_WM8960=true
+fi
 
 # Check for root privileges
 if [ "$(id -u)" != "0" ]; then
@@ -110,10 +130,18 @@ apt-get -y install \
   python3-dev \
   python3-gpiozero \
   python3-libcamera \
-  python3-picamera2 \
   python3-pip \
   python3-virtualenv \
   --no-install-recommends --no-install-suggests
+if [ "$IS_RPI" = true ]; then
+  apt-get -y install \
+    python3-picamera2 \
+    --no-install-recommends --no-install-suggests
+else
+  apt-get -y install \
+    gcc \
+    --no-install-recommends --no-install-suggests
+fi
 apt-get -y clean
 apt-get -y autoremove
 
@@ -126,7 +154,10 @@ else
 fi
 
 echo "Adding user $USERNAME to required groups..."
-usermod -aG adm,audio,video,gpio,i2c,spi,kmem,render "$USERNAME"
+usermod -aG adm,audio,video,i2c,kmem,render "$USERNAME"
+if [ "$IS_RPI" = true ]; then
+  usermod -aG gpio,spi "$USERNAME"
+fi
 
 if grep -q "XDG_RUNTIME_DIR" "/home/$USERNAME/.bashrc"; then
   echo "XDG_RUNTIME_DIR already set in .bashrc"

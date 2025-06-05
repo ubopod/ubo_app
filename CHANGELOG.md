@@ -52,6 +52,7 @@
 - fix: separate `has_output` and `has_output_stream` to fix the old `send_command` callers being broken with the new `send_command` implementation
 - feat: add a menu item in settings for installing/reinstalling the wm8960 driver
 - refactor: use `application_registry` in `OpenApplication` and `CloseApplication` actions and events to move towards avoiding mutable objects in the store bus as part of #261
+- chore(installation): add some checks to the `install.sh` script to make sure it is run on a supported platform and with the right python version, also run parts of it conditionally based on the platform
 
 ## Version 1.3.0
 
