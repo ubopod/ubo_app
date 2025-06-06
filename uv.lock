@@ -21,16 +21,16 @@ wheels = [
 
 [[package]]
 name = "adafruit-circuitpython-aw9523"
-version = "1.1.11"
+version = "1.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "adafruit-blinka" },
     { name = "adafruit-circuitpython-busdevice" },
     { name = "adafruit-circuitpython-register" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9f/b0/222dd89f36af0156e2f9c03bc8397975573d00b4a1b49e336fb32e1a3894/adafruit_circuitpython_aw9523-1.1.11.tar.gz", hash = "sha256:522cab1594e1f6347a4074e144219398fb8541711b901ed194769228df12fd1a", size = 28301, upload-time = "2025-01-16T18:45:55.864Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/4f/06d5685331da7933a49fdb31dee647d230e91697fcf5cc29ee288e643145/adafruit-circuitpython-aw9523-1.1.7.tar.gz", hash = "sha256:7682efed4b13baf3c3d470e831a1b539c97f282f467cf7b0eac774487fc3fb16", size = 28434, upload-time = "2023-05-26T16:07:55.964Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/18/b6/75552e217fc9e48daeadba558a0438db85bfc7a024c4ca99daed646bc141/adafruit_circuitpython_aw9523-1.1.11-py3-none-any.whl", hash = "sha256:6ba96e7af39c13bae917eb8b89a9ba24f1d487947c1d7a74df2e5d85c7e750a2", size = 6690, upload-time = "2025-01-16T18:45:50.953Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/7d/e9e3aa0b4636f4adedfe8d3a5c38c7628675c734a34825f157edd296f2da/adafruit_circuitpython_aw9523-1.1.7-py3-none-any.whl", hash = "sha256:8596e4ef2c3e7d720b84b170810a58a11e8a897c0d1ab4c5b9901bc6ad8583de", size = 6677, upload-time = "2023-05-26T16:07:35.88Z" },
 ]
 
 [[package]]
@@ -69,29 +69,29 @@ wheels = [
 
 [[package]]
 name = "adafruit-circuitpython-neopixel"
-version = "6.3.15"
+version = "6.3.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "adafruit-blinka" },
     { name = "adafruit-circuitpython-pixelbuf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/44/60/efd17cdb9ff1d315c0117699c1be026a8b714079dccf36845786abfe2cc5/adafruit_circuitpython_neopixel-6.3.15.tar.gz", hash = "sha256:290495e8059cc641be9ad00c2808fb40e5494d50d0016def64b8cc6642b07283", size = 28485, upload-time = "2025-01-30T14:12:34.039Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/eb/358962f875ecb4edaa8f5e5995583ff51760a46ade56165ace6ca18bae6b/adafruit-circuitpython-neopixel-6.3.11.tar.gz", hash = "sha256:c7b7693e87bcb3549bc64394822c0a0f2846c4a076748c66059520300ec68ceb", size = 28477, upload-time = "2023-12-09T17:29:06.587Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/1a/9ca962f590129933f348f92150ed4702962727411cdb68a665ac783daeb5/adafruit_circuitpython_neopixel-6.3.15-py3-none-any.whl", hash = "sha256:c34c40bf602aead9987d22be50e056dec350e04b158750e3130801510d113b81", size = 6471, upload-time = "2025-01-30T14:12:30.844Z" },
+    { url = "https://files.pythonhosted.org/packages/96/ae/d956aabb2af2bf0593a90655b0bb2f658b22319a9a7ceab145893c6ca308/adafruit_circuitpython_neopixel-6.3.11-py3-none-any.whl", hash = "sha256:0abb2f22917d550df99501d43cee3c96e8cdc9191042dbdfa368d4658ae132f6", size = 6433, upload-time = "2023-12-09T17:29:05.417Z" },
 ]
 
 [[package]]
 name = "adafruit-circuitpython-pct2075"
-version = "1.1.23"
+version = "1.1.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "adafruit-blinka" },
     { name = "adafruit-circuitpython-busdevice" },
     { name = "adafruit-circuitpython-register" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/08/56/04ef5eeae738a35244f0e336c9d818ee6ff1afe620680600e9f206439839/adafruit_circuitpython_pct2075-1.1.23.tar.gz", hash = "sha256:daa9b4daf0e80a6901404c9a8176eae88a4bcd25979728c7fd548388774b3ef6", size = 27123, upload-time = "2025-01-16T19:05:24.438Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/a8/4ae21edf6a9d3bb24a6bb92cb59a387329522c1506502b7203ec60ce0bd6/adafruit-circuitpython-pct2075-1.1.21.tar.gz", hash = "sha256:55eb646c2c08d8be3a54262fe48f4586d1bb7b51347d6866ac45954c2f473cc5", size = 27121, upload-time = "2023-12-09T17:32:02.082Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/83/db0c5b2625f6913740e5985c9b4dd53af735ae5a71a501a7169efa1b0c2d/adafruit_circuitpython_pct2075-1.1.23-py3-none-any.whl", hash = "sha256:6e1822c2064718942ab3071f3464c326b72b3635b4ce28152a25ae7e5ed53227", size = 5999, upload-time = "2025-01-16T19:05:19.603Z" },
+    { url = "https://files.pythonhosted.org/packages/00/0a/8a9607d7e031211c3eb5959a4cfacea6c377c1b376ec51f3b2abb51393f5/adafruit_circuitpython_pct2075-1.1.21-py3-none-any.whl", hash = "sha256:78425ec0037a46587a0d08a565e4b13b1f4522812f94e3b58267f3ac4e4fffcd", size = 5999, upload-time = "2023-12-09T17:31:59.348Z" },
 ]
 
 [[package]]
@@ -136,15 +136,15 @@ wheels = [
 
 [[package]]
 name = "adafruit-circuitpython-rgb-display"
-version = "3.13"
+version = "3.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "adafruit-blinka" },
     { name = "adafruit-circuitpython-busdevice" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/d3/8b9833ab73422d4190b419c4ca5fdc256769097cc03d0ea52c23fc5d716a/adafruit_circuitpython_rgb_display-3.13.tar.gz", hash = "sha256:c3c84061ab0ad167ec8b11e21f82b2e20191ccc273c9deac17052f308eaa8322", size = 44035, upload-time = "2025-02-10T22:26:59.973Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/0d/daa0482d0fc41a0bca4f61e78e6724e8b98f0168e0303895e41ac44f02cf/adafruit_circuitpython_rgb_display-3.14.0.tar.gz", hash = "sha256:e854efc33b0bfeda8c5c121aa2b1e85ea0a01b53177612d193ebbcd0e54ceeaf", size = 40277, upload-time = "2025-04-30T12:45:38.383Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/f5/8f8377f818df99c8c8cd9324a9218a572c11ef4b0822c6ec7455f2243feb/adafruit_circuitpython_rgb_display-3.13-py3-none-any.whl", hash = "sha256:f6dbeece9ecf08ea50a58f847137ab11aa6daa6ddd589e9155f64d20e75da7ae", size = 22361, upload-time = "2025-02-10T22:26:56.479Z" },
+    { url = "https://files.pythonhosted.org/packages/74/51/631d13606745a1be2f3979b9e5dc48dc002fe207163e06d2e43c10401a8a/adafruit_circuitpython_rgb_display-3.14.0-py3-none-any.whl", hash = "sha256:6c6c27aa1ff3d7276ec5d4d0e527ef8f60214bbe7f3829f6c8ee59bc4adba6b6", size = 21826, upload-time = "2025-04-30T12:45:37.354Z" },
 ]
 
 [[package]]
@@ -707,16 +707,16 @@ wheels = [
 
 [[package]]
 name = "headless-kivy"
-version = "0.12.3"
+version = "0.12.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kivy" },
     { name = "numpy" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d3/45/8b1cb7f6fd33e9c13b986aba66b60572621a093a0e5e4d04d0c975c0b634/headless_kivy-0.12.3.tar.gz", hash = "sha256:824994965432c84dce56f56b28c5ccf7e2be7166a5cf895b8e32d583a2f0b2f4", size = 16430, upload-time = "2025-04-18T15:26:23.544Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/17/2f88b12f7a7fab855fdc8b628e064664c0b6f4514859894499a730ac54f5/headless_kivy-0.12.4.tar.gz", hash = "sha256:e1c7c91aab73d9959f53b69633a6825a7f06da607a43d6b1c6729cfd8ad42b94", size = 16540, upload-time = "2025-06-06T00:02:51.499Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/96/6ff0a3c55a59a92e616a2e0195fad9e1aa1e040bcffe7f1475a3125304b5/headless_kivy-0.12.3-py3-none-any.whl", hash = "sha256:95ee0efafa1a87bcda45342a379618bef3215be13bb1736db861a10798cd2714", size = 20126, upload-time = "2025-04-18T15:26:21.704Z" },
+    { url = "https://files.pythonhosted.org/packages/73/48/df34c9e981bdcef4b86a096c989a3ee2d507e73ecda6c24a751977d481b4/headless_kivy-0.12.4-py3-none-any.whl", hash = "sha256:330859da48e1bc42f792935be36295b1a4a53be8f207037e4d212e9b0c37bbe3", size = 20206, upload-time = "2025-06-06T00:02:49.851Z" },
 ]
 
 [package.optional-dependencies]
@@ -1967,47 +1967,47 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adafruit-circuitpython-aw9523", specifier = ">=1.1.7" },
-    { name = "adafruit-circuitpython-irremote", specifier = ">=5.0.3" },
-    { name = "adafruit-circuitpython-neopixel", specifier = ">=6.3.11" },
-    { name = "adafruit-circuitpython-pct2075", specifier = ">=1.1.21" },
-    { name = "adafruit-circuitpython-rgb-display", specifier = ">=3.11.0" },
-    { name = "adafruit-circuitpython-veml7700", specifier = ">=2.1.2" },
-    { name = "aiofiles", specifier = ">=24.1.0" },
-    { name = "aiohttp", specifier = ">=3.9.1" },
-    { name = "aiostream", specifier = ">=0.6.4" },
-    { name = "betterproto", extras = ["compiler"], specifier = ">=2.0.0b7" },
-    { name = "dill", specifier = ">=0.3.8" },
-    { name = "docker", specifier = ">=7.1.0" },
-    { name = "fasteners", specifier = ">=0.19" },
-    { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = ">=2.0.1" },
+    { name = "adafruit-circuitpython-aw9523", specifier = "==1.1.7" },
+    { name = "adafruit-circuitpython-irremote", specifier = "==5.0.3" },
+    { name = "adafruit-circuitpython-neopixel", specifier = "==6.3.11" },
+    { name = "adafruit-circuitpython-pct2075", specifier = "==1.1.21" },
+    { name = "adafruit-circuitpython-rgb-display", specifier = "==3.14.0" },
+    { name = "adafruit-circuitpython-veml7700", specifier = "==2.1.2" },
+    { name = "aiofiles", specifier = "==24.1.0" },
+    { name = "aiohttp", specifier = "==3.11.13" },
+    { name = "aiostream", specifier = "==0.6.4" },
+    { name = "betterproto", extras = ["compiler"], specifier = "==2.0.0b7" },
+    { name = "dill", specifier = "==0.3.9" },
+    { name = "docker", specifier = "==7.1.0" },
+    { name = "fasteners", specifier = "==0.19" },
+    { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = "==2.0.1" },
     { name = "graphviz", marker = "extra == 'test-investigation'", specifier = ">=0.20.3" },
-    { name = "headless-kivy", specifier = "==0.12.3" },
-    { name = "netifaces", specifier = ">=0.11.0" },
+    { name = "headless-kivy", specifier = "==0.12.4" },
+    { name = "netifaces", specifier = "==0.11.0" },
     { name = "objgraph", marker = "extra == 'test-investigation'", specifier = ">=3.6.2" },
     { name = "onnxruntime", marker = "platform_machine == 'aarch64'", specifier = "==1.20.1" },
-    { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = ">=1.2.0" },
-    { name = "platformdirs", specifier = ">=4.2.0" },
-    { name = "psutil", specifier = ">=6.0.0" },
-    { name = "pulsectl", specifier = ">=23.5.2" },
-    { name = "pvorca", specifier = ">=0.2.1" },
-    { name = "pyalsaaudio", marker = "platform_machine == 'aarch64'", specifier = ">=0.11.0" },
-    { name = "pyaudio", marker = "sys_platform == 'darwin'", specifier = ">=0.2.14" },
-    { name = "pypng", specifier = ">=0.20220715.0" },
-    { name = "python-debouncer", specifier = ">=0.1.5" },
-    { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "python-fake", specifier = ">=0.2.0" },
-    { name = "python-redux", specifier = ">=0.23.0" },
-    { name = "python-strtobool", specifier = ">=1.0.0" },
-    { name = "pyzbar", specifier = ">=0.1.9" },
-    { name = "quart", specifier = ">=0.19.6" },
-    { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'", specifier = ">=0.6" },
-    { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'", specifier = ">=5.0.0" },
-    { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'", specifier = ">=2.0.0" },
-    { name = "semver", specifier = ">=3.0.2" },
-    { name = "sentry-sdk", specifier = ">=1.43.0" },
-    { name = "simpleaudio", specifier = ">=1.0.4" },
-    { name = "tenacity", specifier = ">=8.2.3" },
+    { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = "==1.2.0" },
+    { name = "platformdirs", specifier = "==4.3.6" },
+    { name = "psutil", specifier = "==7.0.0" },
+    { name = "pulsectl", specifier = "==24.12.0" },
+    { name = "pvorca", specifier = "==1.1.1" },
+    { name = "pyalsaaudio", marker = "platform_machine == 'aarch64'", specifier = "==0.11.0" },
+    { name = "pyaudio", marker = "sys_platform == 'darwin'", specifier = "==0.2.14" },
+    { name = "pypng", specifier = "==0.20220715.0" },
+    { name = "python-debouncer", specifier = "==0.1.5" },
+    { name = "python-dotenv", specifier = "==1.0.1" },
+    { name = "python-fake", specifier = "==0.2.0" },
+    { name = "python-redux", specifier = "==0.23.0" },
+    { name = "python-strtobool", specifier = "==1.0.3" },
+    { name = "pyzbar", specifier = "==0.1.9" },
+    { name = "quart", specifier = "==0.20.0" },
+    { name = "rpi-lgpio", marker = "platform_machine == 'aarch64'", specifier = "==0.6" },
+    { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'", specifier = "==5.0.0" },
+    { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'", specifier = "==2.0.0" },
+    { name = "semver", specifier = "==3.0.4" },
+    { name = "sentry-sdk", specifier = "==2.22.0" },
+    { name = "simpleaudio", specifier = "==1.0.4" },
+    { name = "tenacity", specifier = "==9.0.0" },
     { name = "ubo-gui", specifier = "==0.13.17" },
     { name = "vosk", specifier = "==0.3.44" },
 ]
@@ -2016,7 +2016,7 @@ provides-extras = ["test-investigation"]
 [package.metadata.requires-dev]
 dev = [
     { name = "grpcio-tools", specifier = ">=1.66.1" },
-    { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.3" },
+    { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.4" },
     { name = "ipdb", specifier = ">=0.13.13" },
     { name = "ipython", specifier = ">=8.23.0" },
     { name = "pdbpp", specifier = ">=0.10.3" },
