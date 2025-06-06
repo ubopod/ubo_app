@@ -33,7 +33,6 @@ dependencies = [
   "quart>=0.20.0",
   "rpi_ws281x>=5.0.0 ; platform_machine=='aarch64'",
   "sdbus-networkmanager>=2.0.0 ; platform_machine=='aarch64'",
-  "semver>=3.0.4",
   "sentry-sdk>=2.22.0",
   "simpleaudio>=1.0.4",
   "soxr>=0.5.0.post1",

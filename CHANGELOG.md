@@ -25,6 +25,7 @@
 - refactor(core): improve importing modules in service threads, making it almost identical to python environment, at the cost of patching `importlib._bootstrap._find_and_load_unlocked`
 - refactor(speech-recognition): move the `BackgroundRunningMixin` and `NeedsSetupMixin` abstractions to the core as other modules can use them too
 - refactor(core): add `mapper` to `read_from_persistent_store` to map the read string into the object, add support for enums in `UboStore.load_object`
+- fix(core): switch to `packaging.version` for parsing Python package versions to ensure PEP 440 compliance instead of using `semver`
 
 ## Version 1.4.0
 
