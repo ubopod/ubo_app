@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+import threading
 import traceback
 from typing import TYPE_CHECKING
 
@@ -18,9 +20,6 @@ class ServiceUnavailableError(Exception):
 
 def get_service() -> UboServiceThread:
     """Get the current service instance."""
-    import sys
-    import threading
-
     if 'ubo_app.service_thread' in sys.modules:
         from ubo_app.service_thread import SERVICES_BY_PATH, UboServiceThread
 

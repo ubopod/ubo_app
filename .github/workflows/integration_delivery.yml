@@ -31,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --frozen --verbose
+          uv sync --frozen
 
       - name: Create stub files
         run: |

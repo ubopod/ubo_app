@@ -154,7 +154,7 @@ class DockerServiceState(Immutable):
         default_factory=functools.partial(
             read_from_persistent_store,
             'docker_usernames',
-            object_type=dict[str, str],
+            output_type=dict[str, str],
         ),
     )
 

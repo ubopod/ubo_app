@@ -9,7 +9,7 @@ import threading
 import weakref
 from asyncio import Handle, iscoroutine
 from datetime import datetime
-from enum import Flag
+from enum import Flag, IntEnum, StrEnum
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -340,7 +340,7 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         object_type: type[T],
     ) -> T: ...
 
-    def load_object(  # noqa: C901
+    def load_object(  # noqa: C901, PLR0912
         self: Self,
         data: Any,
         *,
@@ -375,6 +375,16 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             origin = get_origin(object_type)
             if isinstance(data, origin):
                 return cast('T', data)
+        elif object_type and issubclass(object_type, StrEnum):
+            if isinstance(data, str):
+                return object_type(data)
+            msg = f'Invalid data type {type(data)} for StrEnum {object_type}'
+            raise TypeError(msg)
+        elif object_type and issubclass(object_type, IntEnum):
+            if isinstance(data, int):
+                return object_type(data)
+            msg = f'Invalid data type {type(data)} for IntEnum {object_type}'
+            raise TypeError(msg)
         elif not object_type or isinstance(data, object_type):
             return cast('T', data)
 
