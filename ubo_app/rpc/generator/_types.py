@@ -329,7 +329,10 @@ class _DictType(_Type):
 
     def get_proto(self: Self, name: str, *, current_package: str | None) -> str:
         return f"""map<{
-            self.key_type.get_proto(
+            'string'
+            if isinstance(self.key_type, _BasicType)
+            and self.key_type.type in global_enums
+            else self.key_type.get_proto(
                 f'{name}_key',
                 current_package=current_package,
             )

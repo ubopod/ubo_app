@@ -3,7 +3,11 @@
   "_type": "RootState",
   "assistant": {
     "_type": "AssistantState",
-    "selected_engine": "ollama:gemma3:1b"
+    "is_active": false,
+    "selected_engine": "ollama",
+    "selected_models": {
+      "ollama": "gemma3:1b"
+    }
   },
   "audio": {
     "_type": "AudioState",
@@ -6496,38 +6500,59 @@
                             "icon": "󰁤",
                             "is_short": false,
                             "key": "assistant:",
-                            "label": "Assistant Engine",
+                            "label": "Assistant",
                             "opacity": null,
                             "progress": null,
                             "sub_menu": {
                               "_type": "HeadedMenu",
-                              "heading": "Assistant Engine",
+                              "heading": "Assistant Settings",
                               "items": [
                                 {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#FFC107",
+                                  "_type": "SubMenuItem",
+                                  "background_color": "#68B7FF",
                                   "color": [
                                     1,
                                     1,
                                     1,
                                     1
                                   ],
-                                  "icon": "󰇚",
+                                  "icon": "",
                                   "is_short": false,
-                                  "key": "ollama:_download",
-                                  "label": "Download gemma3:1b",
+                                  "key": "engine",
+                                  "label": "Recognition Engine",
                                   "opacity": null,
                                   "progress": null,
-                                  "store_action": {
-                                    "_type": "AssistantDownloadOllamaModelAction",
-                                    "model": "gemma3:1b"
+                                  "sub_menu": {
+                                    "_type": "HeadedMenu",
+                                    "heading": "Select Active Engine",
+                                    "items": [
+                                      {
+                                        "_type": "ActionItem",
+                                        "action": "<function:setup>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "ollama",
+                                        "label": "Setup Ollama",
+                                        "opacity": null,
+                                        "progress": null
+                                      }
+                                    ],
+                                    "placeholder": null,
+                                    "sub_heading": "[color=#03F7AE]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+                                    "title": "Assistant Engine"
                                   }
                                 }
                               ],
                               "placeholder": null,
-                              "sub_heading": "Selected: ollama:gemma3:1b",
-                              "title": "󰁤 Assistant Engine"
+                              "sub_heading": "",
+                              "title": "󰁤 Assistant"
                             }
                           },
                           {

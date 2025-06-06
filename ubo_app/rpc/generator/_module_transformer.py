@@ -153,6 +153,11 @@ class _ProtoGenerator(ast.NodeVisitor):
 
     def process_enum(self: _ProtoGenerator, node: ast.ClassDef) -> None:
         enum_name = node.name
+        if enum_name in global_types:
+            msg = (
+                f'Enum "{enum_name}" is already defined in "{global_types[enum_name]}"'
+            )
+            raise SyntaxError(msg)
         values: list[tuple[str, Any]] = []
         for n in node.body:
             if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name):
@@ -160,11 +165,6 @@ class _ProtoGenerator(ast.NodeVisitor):
                 value = n.value.value if isinstance(n.value, ast.Constant) else None
                 values.append((value_name, value))
         self.enums[enum_name] = values
-        if enum_name in global_types:
-            msg = (
-                f'Enum "{enum_name}" is already defined in "{global_types[enum_name]}"'
-            )
-            raise SyntaxError(msg)
         global_enums[enum_name] = self.package_name
 
     def get_field_type(  # noqa: C901, PLR0912
