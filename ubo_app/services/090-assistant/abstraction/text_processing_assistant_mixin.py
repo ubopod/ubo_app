@@ -37,9 +37,6 @@ class TextProcessingAssistantMixin(AssistantMixin):
             },
         )
         if self.ongoing_assistance:
-            if not result:
-                await self._complete_assistance()
-            else:
-                self.ongoing_assistance.append_text(result)
+            self.ongoing_assistance.append_text(result)
         else:
             await super().report(result)

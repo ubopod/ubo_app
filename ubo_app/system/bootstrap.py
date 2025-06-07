@@ -49,11 +49,11 @@ def create_service_files() -> None:
     create_user_service_directory()
     for service in SERVICES:
         if service['scope'] == 'user':
-            service_file_path = (
-                f'/home/{USERNAME}/.config/systemd/user/{service["name"]}.service'
+            service_file_path = Path(
+                f'/home/{USERNAME}/.config/systemd/user/{service["name"]}.service',
             )
         elif service['scope'] == 'system':
-            service_file_path = f'/etc/systemd/system/{service["name"]}.service'
+            service_file_path = Path(f'/etc/systemd/system/{service["name"]}.service')
         else:
             msg = (
                 f"Service '{service['name']}' has an invalid scope: {service['scope']}"
@@ -77,8 +77,17 @@ def create_service_files() -> None:
             USERNAME,
         )
 
+        if service['scope'] == 'user':
+            for parent in reversed(service_file_path.parents):
+                if parent.exists():
+                    continue
+                parent.mkdir()
+                os.chown(parent, USER_UID, USER_GID)
+        else:
+            service_file_path.parent.mkdir(parents=True, exist_ok=True)
+
         # Write the service content to the file
-        with Path(service_file_path).open('w') as file:
+        with service_file_path.open('w') as file:
             file.write(content)
             if service['scope'] == 'user':
                 os.chown(service_file_path, USER_UID, USER_GID)

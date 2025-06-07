@@ -7,8 +7,6 @@ import time
 from collections.abc import Generator
 
 from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
-from google.cloud import speech_v2 as speech
-from google.oauth2 import service_account
 from typing_extensions import override
 
 from ubo_app.constants import (
@@ -36,21 +34,26 @@ class GoogleSpeechRecognitionEngine(GoogleEngine, SpeechRecognitionMixin):
         self.engine_name = SpeechRecognitionEngineName.GOOGLE
         super().__init__(name=self.engine_name)
 
-    def _requests_stream(
-        self,
-    ) -> Generator[speech.StreamingRecognizeRequest, None, None]:
-        """Generate audio stream for transcription."""
-        yield self._config_request
-        while self.should_be_running():
-            try:
-                sample = self.input_queue.get_nowait()
-            except IndexError:
-                time.sleep(0.05)
-                continue
-            else:
-                yield speech.StreamingRecognizeRequest(audio=sample)
-
     def _run_loop(self) -> None:
+        from google.cloud import speech_v2 as speech
+        from google.oauth2 import service_account
+
+        def requests_stream() -> Generator[
+            speech.StreamingRecognizeRequest,
+            None,
+            None,
+        ]:
+            """Generate audio stream for transcription."""
+            yield self._config_request
+            while self.should_be_running():
+                try:
+                    sample = self.input_queue.get_nowait()
+                except IndexError:
+                    time.sleep(0.05)
+                    continue
+                else:
+                    yield speech.StreamingRecognizeRequest(audio=sample)
+
         service_account_info_string = secrets.read_secret(
             GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
         )
@@ -76,7 +79,7 @@ class GoogleSpeechRecognitionEngine(GoogleEngine, SpeechRecognitionMixin):
             service_account_info,
         )
         client = speech.SpeechClient(credentials=credentials)
-        responses = client.streaming_recognize(requests=self._requests_stream())
+        responses = client.streaming_recognize(requests=requests_stream())
 
         for response in responses:
             for result in response.results:

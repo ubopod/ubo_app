@@ -6,6 +6,7 @@
     "is_active": false,
     "selected_engine": "ollama",
     "selected_models": {
+      "google": "gemini-2.5-flash-preview-05-20",
       "ollama": "gemma3:1b"
     }
   },
@@ -6516,10 +6517,10 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "",
+                                  "icon": "󰁤",
                                   "is_short": false,
                                   "key": "engine",
-                                  "label": "Recognition Engine",
+                                  "label": "Assistant Engine",
                                   "opacity": null,
                                   "progress": null,
                                   "sub_menu": {
@@ -6542,11 +6543,28 @@
                                         "label": "Setup Ollama",
                                         "opacity": null,
                                         "progress": null
+                                      },
+                                      {
+                                        "_type": "ActionItem",
+                                        "action": "<function:setup>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "google",
+                                        "label": "Setup Google Cloud",
+                                        "opacity": null,
+                                        "progress": null
                                       }
                                     ],
                                     "placeholder": null,
                                     "sub_heading": "[color=#03F7AE]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
-                                    "title": "Assistant Engine"
+                                    "title": "󰁤Assistant Engine"
                                   }
                                 }
                               ],

@@ -8,7 +8,6 @@ from redux import CompleteReducerResult, InitializationActionError
 from redux.basic_types import InitAction
 
 from ubo_app.store.services.assistant import (
-    DEFAULT_MODELS,
     AssistantAction,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
@@ -41,14 +40,16 @@ def reducer(
         return replace(state, is_active=action.is_active)
 
     if isinstance(action, AssistantSetSelectedEngineAction):
-        return replace(
-            state,
-            selected_engine=action.engine_name,
-            selected_model=DEFAULT_MODELS[action.engine_name],
-        )
+        return replace(state, selected_engine=action.engine_name)
 
     if isinstance(action, AssistantSetSelectedModelAction):
-        return replace(state, selected_model=action.model)
+        return replace(
+            state,
+            selected_models={
+                **state.selected_models,
+                state.selected_engine: action.model,
+            },
+        )
 
     if isinstance(action, AssistantDownloadOllamaModelAction):
         return CompleteReducerResult(

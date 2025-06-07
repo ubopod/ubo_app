@@ -76,10 +76,12 @@ question mark, and dash. Do not use any other special characters or emojis.""",
 
         while True:
             text = await self.input_queue.get()
-            async for chunk in await process_text(text):
-                chunk_text: str = chunk['message']['content']
-                await self.report(chunk_text)
-            await self.report('')
+            try:
+                async for chunk in await process_text(text):
+                    chunk_text: str = chunk['message']['content']
+                    await self.report(chunk_text)
+            finally:
+                await self._complete_assistance()
 
     @override
     @store.with_state(

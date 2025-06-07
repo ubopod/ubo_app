@@ -27,6 +27,7 @@
 - refactor(core): add `mapper` to `read_from_persistent_store` to map the read string into the object, add support for enums in `UboStore.load_object`
 - fix(core): switch to `packaging.version` for parsing Python package versions to ensure PEP 440 compliance instead of using `semver`
 - refactor(assistant): add abstractions for assistant module extending engine abstractions in the core and reimplement the service based on these abstract base classes
+- feat(assistant): implement google engine for assistant service using google cloud vertexai - closes #312
 
 ## Version 1.4.0
 

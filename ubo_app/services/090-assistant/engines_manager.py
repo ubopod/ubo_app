@@ -6,6 +6,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from abstraction.text_processing_assistant_mixin import TextProcessingAssistantMixin
+from google_engine import GoogleAssistantEngine
 from ollama_engine import OllamaEngine
 
 from ubo_app.store.main import store
@@ -31,8 +32,10 @@ class EnginesManager:
     def __init__(self) -> None:
         """Initialize `EnginesManager`."""
         ollama_engine = OllamaEngine()
+        google_engine = GoogleAssistantEngine()
         self.engines_by_name: dict[AssistantEngineName, AssistantMixin] = {
             AssistantEngineName.OLLAMA: ollama_engine,
+            AssistantEngineName.GOOGLE: google_engine,
         }
         self.selected_engine: AssistantMixin | None = None
 

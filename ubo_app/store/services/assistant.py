@@ -8,7 +8,10 @@ from enum import StrEnum
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
-from ubo_app.constants import DEFAULT_ASSISTANT_OLLAMA_MODEL
+from ubo_app.constants import (
+    DEFAULT_ASSISTANT_GOOGLE_MODEL,
+    DEFAULT_ASSISTANT_OLLAMA_MODEL,
+)
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
@@ -16,6 +19,13 @@ class AssistantEngineName(StrEnum):
     """Available speech recognition engines."""
 
     OLLAMA = 'ollama'
+    GOOGLE = 'google'
+
+
+DEFAULT_MODELS = {
+    AssistantEngineName.OLLAMA: DEFAULT_ASSISTANT_OLLAMA_MODEL,
+    AssistantEngineName.GOOGLE: DEFAULT_ASSISTANT_GOOGLE_MODEL,
+}
 
 
 class AssistantAction(BaseAction):
@@ -61,11 +71,6 @@ class AssistantProcessSpeechEvent(AssistantEvent):
 
     audio: bytes
     text: str
-
-
-DEFAULT_MODELS = {
-    AssistantEngineName.OLLAMA: DEFAULT_ASSISTANT_OLLAMA_MODEL,
-}
 
 
 class AssistantState(Immutable):

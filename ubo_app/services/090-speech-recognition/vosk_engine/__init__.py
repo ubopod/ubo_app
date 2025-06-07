@@ -15,7 +15,6 @@ from abstraction.speech_recognition_mixin import (
 from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
 from constants import VOSK_MODEL_PATH
 from typing_extensions import override
-from vosk import KaldiRecognizer, Model
 
 from ubo_app.colors import WARNING_COLOR
 from ubo_app.constants import SPEECH_RECOGNITION_FRAME_RATE
@@ -56,6 +55,8 @@ class VoskEngine(NeedsSetupMixin, SpeechRecognitionMixin, WakeWordRecognitionMix
 
     @override
     async def _run(self) -> None:
+        from vosk import KaldiRecognizer, Model
+
         phrases = self._phrases
         model = Model(
             model_path=VOSK_MODEL_PATH.resolve().as_posix(),
