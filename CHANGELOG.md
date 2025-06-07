@@ -1,5 +1,34 @@
 # Changelog
 
+## Upcoming
+
+- refactor(core): use the latest version of `python-redux` and override the `_create_task` method of our custom `Autorun` class to make sure async autorun tasks run in service threads of their respective services
+- feat(speech-recognition): add assistant logic, report voice and text recorded since `ASSISTANT_WAKE_WORD` was detected until the `ASSISTANT_END_WORD` is detected, and add a menu item to enable/disable the assistant - closes #304
+- feat(assistant): add assistnat service
+- feat(speech-recognition): add intents for creating wifi connections and activating/deactivating the assistant
+- fix(tests):`stability` not passing `attempts` to `wait_for`, making it basically wait forever
+- refactor(core): do not default the log level of services to the `get_log_level`, use `INFO` as the default log level for services
+- fix(core): logger not logging repeated primitive type instances in extra
+- refactor(core): add optional `name` field to `create_task`, `coroutine_runner` and friends
+- fix(core): fix some issues in rpc serialization of enums and lists in ubo-store objects
+- refactor(web-ui): use rpc serialization instead of json for transferring data from web-ui server to its client, and add regular-expression to file inputs
+- feat(core): add `AsyncEvictingQueue`, a queue that evicts the oldest item when it reaches its maximum size, it is to be used in sound processing for buffering
+- refactor(audio): add `sample_speech_recognition` to `AudioReportSampleEvent` (renamed from `AudioReportAudioEvent`) to report audio samples in a format appropriate to be consumed by speech recognition engines
+- refactor(speech-recognition): abstract the speech recognition engine interface with `vosk` as the first implementation of it - close #310
+- refactor(speech-recognition): understand the assistant end phrase even when it is stated right after and in continuation of the speech
+- refactor(core): add `ToThreadOptions` for the purpose of passing `callback`, `name` and `corountine_runner` to `ubo_app.async_.to_thread`, remove `ubo_app.async_.to_thread_with_coroutine_runner` as it is no longer needed
+- refactor: reorganize secret keys and the name of constants holding them to be more consistent
+- feat(speech-recognition): add google cloud as a speech recognition engine, add a menu item to select the speech recognition engine, and add a menu item to set the google cloud credentials - closes #311
+- refactor(ci): drop dependencies jobs and put `uv sync` wherever needed, since `uv` is so fast compared to our old dependency manager `poetry`, it is not worth the effort to have a separate job for it
+- fix(system-manager): better handle `None` output of handlers in response to `send_command`
+- refactor: replace `default_factory` with `default` whenever possible so that `default_provider` can be used
+- refactor(core): improve importing modules in service threads, making it almost identical to python environment, at the cost of patching `importlib._bootstrap._find_and_load_unlocked`
+- refactor(speech-recognition): move the `BackgroundRunningMixin` and `NeedsSetupMixin` abstractions to the core as other modules can use them too
+- refactor(core): add `mapper` to `read_from_persistent_store` to map the read string into the object, add support for enums in `UboStore.load_object`
+- fix(core): switch to `packaging.version` for parsing Python package versions to ensure PEP 440 compliance instead of using `semver`
+- refactor(assistant): add abstractions for assistant module extending engine abstractions in the core and reimplement the service based on these abstract base classes
+- feat(assistant): implement google engine for assistant service using google cloud vertexai - closes #312
+
 ## Version 1.4.0
 
 - test: improve test logs in the ci

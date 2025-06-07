@@ -9,6 +9,7 @@ import threading
 import weakref
 from asyncio import Handle, iscoroutine
 from datetime import datetime
+from enum import Flag, IntEnum, StrEnum
 from types import GenericAlias
 from typing import (
     TYPE_CHECKING,
@@ -26,7 +27,7 @@ from typing import (
 
 import dill
 from fake import Fake
-from immutable import Immutable
+from immutable import Immutable, is_immutable
 from redux import (
     BaseCombineReducerState,
     CombineReducerAction,
@@ -56,6 +57,7 @@ from ubo_app.store.scheduler import Scheduler
 from ubo_app.store.settings.reducer import reducer as settings_reducer
 from ubo_app.store.status_icons.reducer import reducer as status_icons_reducer
 from ubo_app.store.update_manager.reducer import reducer as update_manager_reducer
+from ubo_app.utils.async_ import ToThreadOptions
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.serializer import add_type_field
 from ubo_app.utils.service import get_coroutine_runner
@@ -74,6 +76,11 @@ if TYPE_CHECKING:
     from ubo_app.store.input.types import (
         InputAction,
         InputResolveEvent,
+    )
+    from ubo_app.store.services.assistant import (
+        AssistantAction,
+        AssistantEvent,
+        AssistantState,
     )
     from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
     from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
@@ -97,6 +104,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.sensors import SensorsAction, SensorsState
     from ubo_app.store.services.speech_recognition import (
         SpeechRecognitionAction,
+        SpeechRecognitionEvent,
         SpeechRecognitionState,
     )
     from ubo_app.store.services.speech_synthesis import (
@@ -126,6 +134,7 @@ UboAction: TypeAlias = Union[
     'UpdateManagerAction',
     'InputAction',
     # Services Actions
+    'AssistantAction',
     'AudioAction',
     'CameraAction',
     'DisplayAction',
@@ -150,12 +159,14 @@ UboEvent: TypeAlias = Union[
     'MainEvent',
     'InputResolveEvent',
     # Services Events
+    'AssistantEvent',
     'AudioEvent',
     'CameraEvent',
     'DisplayEvent',
     'InfraredEvent',
     'IpEvent',
     'NotificationsEvent',
+    'SpeechRecognitionEvent',
     'UsersEvent',
     'WiFiEvent',
 ]
@@ -171,6 +182,7 @@ class RootState(BaseCombineReducerState):
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
 
+    assistant: AssistantState
     audio: AudioState
     camera: CameraState
     display: DisplayState
@@ -281,12 +293,14 @@ class _UboEventHandler(Generic[StrictEvent]):
 
 class UboStore(Store[RootState, UboAction, UboEvent]):
     @classmethod
-    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
+    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:  # noqa: C901
         from redux.autorun import Autorun
         from ubo_gui.page import PageWidget
 
         if isinstance(obj, Autorun):
             obj = obj()
+        if isinstance(obj, Flag):
+            return obj.value
         if isinstance(obj, set):
             return {'_type': 'set', 'value': [cls.serialize_value(i) for i in obj]}
         if isinstance(obj, bytes):
@@ -295,6 +309,8 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             return {'_type': 'datetime', 'value': obj.isoformat()}
         if isinstance(obj, functools.partial):
             return f'<functools.partial:{cls.serialize_value(obj.func)}>'
+        if is_immutable(obj):
+            return cls._serialize_dataclass_to_dict(obj)
         if callable(obj):
             return f'<function:{obj.__name__}>'
         if isinstance(obj, dict):
@@ -324,7 +340,7 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         object_type: type[T],
     ) -> T: ...
 
-    def load_object(  # noqa: C901
+    def load_object(  # noqa: C901, PLR0912
         self: Self,
         data: Any,
         *,
@@ -359,6 +375,16 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             origin = get_origin(object_type)
             if isinstance(data, origin):
                 return cast('T', data)
+        elif object_type and issubclass(object_type, StrEnum):
+            if isinstance(data, str):
+                return object_type(data)
+            msg = f'Invalid data type {type(data)} for StrEnum {object_type}'
+            raise TypeError(msg)
+        elif object_type and issubclass(object_type, IntEnum):
+            if isinstance(data, int):
+                return object_type(data)
+            msg = f'Invalid data type {type(data)} for IntEnum {object_type}'
+            raise TypeError(msg)
         elif not object_type or isinstance(data, object_type):
             return cast('T', data)
 
@@ -466,16 +492,24 @@ class _UboAutorun(
         def wrapper(super_: Autorun) -> None:
             try:
                 super_.call(*args, **kwargs)
-            except Exception:  # noqa: BLE001
+            except Exception:
+                logger.exception(
+                    'Error in autorun call',
+                    extra={
+                        'autorun': self,
+                        'args_': args,
+                        'kwargs': kwargs,
+                    },
+                )
                 report_service_error()
             finally:
                 self.call_event.set()
 
-        from ubo_app.utils.async_ import to_thread_with_coroutine_runner
+        from ubo_app.utils.async_ import to_thread
 
-        to_thread_with_coroutine_runner(
+        to_thread(
             wrapper,
-            coroutine_runner=self.coroutine_runner,
+            ToThreadOptions(coroutine_runner=self.coroutine_runner),
             super_=super(),
         )
 
@@ -487,6 +521,9 @@ class _UboAutorun(
         self.call_event.clear()
         super().__call__(*args, **kwargs)
         return self._latest_value
+
+    def _create_task(self, coro: Coroutine[None, None, Any]) -> None:
+        self.coroutine_runner(coro)
 
 
 def ubo_create_task(
@@ -539,7 +576,7 @@ from ubo_app.store.core.reducer import reducer as main_reducer  # noqa: E402
 store.dispatch(InitAction())
 store.dispatch(
     CombineReducerRegisterAction(
-        _id=root_reducer_id,
+        combine_reducers_id=root_reducer_id,
         key='main',
         reducer=main_reducer,
     ),

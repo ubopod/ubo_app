@@ -168,13 +168,16 @@ def render_on_display(*, regions: list[Region]) -> None:
         data = region['data'].tobytes()
         compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
         compressed_data = compressor.compress(data) + compressor.flush()
+        timestamp = time.time()
         return (
             DisplayRenderEvent(
+                timestamp=timestamp,
                 data=data,
                 rectangle=region['rectangle'],
                 density=density,
             ),
             DisplayCompressedRenderEvent(
+                timestamp=timestamp,
                 compressed_data=compressed_data,
                 rectangle=region['rectangle'],
                 density=density,

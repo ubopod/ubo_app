@@ -12,22 +12,26 @@ from typing import TYPE_CHECKING
 
 import fasteners
 import pvorca
-from constants import PIPER_MODEL_HASH, PIPER_MODEL_JSON_PATH, PIPER_MODEL_PATH
+from constants import (
+    PICOVOICE_ACCESS_KEY_SECRET_ID,
+    PIPER_MODEL_HASH,
+    PIPER_MODEL_JSON_PATH,
+    PIPER_MODEL_PATH,
+)
 from download_model import download_piper_model
 from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource]
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
-from ubo_app.constants import PICOVOICE_ACCESS_KEY
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.input.types import InputFieldDescription, InputFieldType
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
 from ubo_app.store.services.speech_synthesis import (
     ReadableInformation,
-    SpeechSynthesisEngine,
+    SpeechSynthesisEngineName,
     SpeechSynthesisReadTextAction,
-    SpeechSynthesisSetEngineAction,
+    SpeechSynthesisSetSelectedEngineAction,
     SpeechSynthesisSynthesizeTextEvent,
     SpeechSynthesisUpdateAccessKeyStatus,
 )
@@ -103,8 +107,8 @@ def input_access_key() -> None:
             access_key = input_result.data.get('access_key')
             if not access_key:
                 return
-            secrets.write_secret(key=PICOVOICE_ACCESS_KEY, value=access_key)
-            to_thread(_context.set_access_key, access_key)
+            secrets.write_secret(key=PICOVOICE_ACCESS_KEY_SECRET_ID, value=access_key)
+            to_thread(_context.set_access_key, None, access_key)
         except CancelledError:
             pass
 
@@ -113,12 +117,12 @@ def input_access_key() -> None:
 
 def clear_access_key() -> None:
     """Clear the Picovoice access key."""
-    secrets.clear_secret(PICOVOICE_ACCESS_KEY)
+    secrets.clear_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
     to_thread(_context.cleanup)
 
 
 @store.with_state(lambda state: state.speech_synthesis.selected_engine)
-def _engine(engine: SpeechSynthesisEngine) -> SpeechSynthesisEngine:
+def _engine(engine: SpeechSynthesisEngineName) -> SpeechSynthesisEngineName:
     return engine
 
 
@@ -128,7 +132,7 @@ piper_cache: dict[str, list[bytes]] = {}
 def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
     """Synthesize the text."""
     engine = _engine()
-    if engine == SpeechSynthesisEngine.PIPER:
+    if engine == SpeechSynthesisEngineName.PIPER:
         text = event.information.piper_text
         if not _context.piper_voice:
             return
@@ -162,7 +166,7 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
                 ),
             )
         unsubscribe()
-    elif engine == SpeechSynthesisEngine.PICOVOICE:
+    elif engine == SpeechSynthesisEngineName.PICOVOICE:
         with _context.picovoice_lock.read_lock():
             if not _context.picovoice_instance:
                 return
@@ -205,28 +209,28 @@ def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
 @store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
 def _menu_sub_heading(_: bool | None) -> str:
     return f"""Set the access key
-Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY)}"""
+Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)}"""
 
 
 ENGINE_LABELS = {
-    SpeechSynthesisEngine.PIPER: 'Piper',
-    SpeechSynthesisEngine.PICOVOICE: 'Picovoice',
+    SpeechSynthesisEngineName.PIPER: 'Piper',
+    SpeechSynthesisEngineName.PICOVOICE: 'Picovoice',
 }
 
 
-def create_engine_selector(engine: SpeechSynthesisEngine) -> Callable[[], None]:
+def create_engine_selector(engine: SpeechSynthesisEngineName) -> Callable[[], None]:
     """Select the speech synthesis engine."""
 
     def _engine_selector() -> None:
         store.dispatch(
-            SpeechSynthesisSetEngineAction(engine=engine),
+            SpeechSynthesisSetSelectedEngineAction(engine_name=engine),
             SpeechSynthesisReadTextAction(
                 information=ReadableInformation(
                     text={
-                        SpeechSynthesisEngine.PIPER: 'Piper speech synthesis engine '
-                        'selected',
-                        SpeechSynthesisEngine.PICOVOICE: 'Picovoice speech synthesis '
+                        SpeechSynthesisEngineName.PIPER: 'Piper speech synthesis '
                         'engine selected',
+                        SpeechSynthesisEngineName.PICOVOICE: 'Picovoice speech '
+                        'synthesis engine selected',
                     }[engine],
                 ),
                 engine=engine,
@@ -271,7 +275,7 @@ def _is_piper_downloaded() -> bool:
     lambda state: state.speech_synthesis.selected_engine,
     options=AutorunOptions(memoization=False),
 )
-def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngine) -> HeadlessMenu:
+def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngineName) -> HeadlessMenu:
     return HeadlessMenu(
         title='󰔊Speech Synthesis',
         items=[
@@ -308,9 +312,9 @@ def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngine) -> HeadlessMe
                             key=engine.name,
                             **selection_parameters,
                         )
-                        for engine in SpeechSynthesisEngine
+                        for engine in SpeechSynthesisEngineName
                         if _is_piper_downloaded()
-                        or engine != SpeechSynthesisEngine.PIPER
+                        or engine != SpeechSynthesisEngineName.PIPER
                     ],
                 ),
             ),
@@ -320,14 +324,14 @@ def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngine) -> HeadlessMe
 
 def init_service() -> Subscriptions:
     """Initialize speech synthesis service."""
-    access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY)
+    access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
     if access_key:
-        to_thread(_context.set_access_key, access_key)
+        to_thread(_context.set_access_key, None, access_key)
     else:
         to_thread(_context.cleanup)
 
     register_persistent_store(
-        'speech_synthesis_engine',
+        'speech_synthesis:selected_engine',
         lambda state: state.speech_synthesis.selected_engine,
     )
 
@@ -336,7 +340,7 @@ def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.SPEECH,
-            priority=1,
+            priority=10,
             menu_item=SubMenuItem(
                 label='Speech Synthesis',
                 icon='󰔊',
@@ -367,7 +371,7 @@ def init_service() -> Subscriptions:
     return [
         store.subscribe_event(
             SpeechSynthesisSynthesizeTextEvent,
-            lambda event: to_thread(synthesize_and_play, event),
+            lambda event: to_thread(synthesize_and_play, None, event),
         ),
         _context.cleanup,
     ]

@@ -166,7 +166,7 @@ class LEDManager:
             g = int(0b11111111 - pos * 3)
             b = 0
         elif pos < 0b10101010:
-            pos -= 85
+            pos -= 0b1010101
             r = int(0b11111111 - pos * 3)
             g = 0
             b = int(pos * 3)

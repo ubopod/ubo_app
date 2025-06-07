@@ -13,7 +13,7 @@
     window.GRPC_ENVOY_LISTEN_PORT = "{{ GRPC_ENVOY_LISTEN_PORT }}";
 
     import { init } from "{{ url_for('static', filename='main.js') }}";
-    init({{ inputs | tojson }});
+    init({{ state | tojson }});
   </script>
 
   <body>

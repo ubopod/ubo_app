@@ -1,10 +1,9 @@
 # ruff: noqa: D100, D101, D102, D103, D104, D107
 from __future__ import annotations
 
-import contextlib
 from dataclasses import replace
 
-import semver
+import packaging.version
 from redux import (
     CompleteReducerResult,
     InitAction,
@@ -56,18 +55,9 @@ def reducer(
             latest_version=action.latest_version,
             recent_versions=action.recent_versions,
         )
-        version_comparison = 1
-        with contextlib.suppress(ValueError):
-            latest_version = semver.Version.parse(
-                action.latest_version,
-                optional_minor_and_patch=True,
-            )
-            current_version = semver.Version.parse(
-                action.current_version,
-                optional_minor_and_patch=True,
-            )
-            version_comparison = latest_version.compare(current_version)
-        if version_comparison > 0:
+        latest_version = packaging.version.parse(action.latest_version)
+        current_version = packaging.version.parse(action.current_version)
+        if latest_version > current_version:
             return CompleteReducerResult(
                 state=replace(
                     state,

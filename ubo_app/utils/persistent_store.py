@@ -43,12 +43,18 @@ def register_persistent_store(
 
 
 @overload
-def read_from_persistent_store(key: str) -> None: ...
+def read_from_persistent_store(key: str) -> str: ...
 @overload
 def read_from_persistent_store(
     key: str,
     *,
-    object_type: type[T],
+    mapper: Callable[[str], T],
+) -> T: ...
+@overload
+def read_from_persistent_store(
+    key: str,
+    *,
+    output_type: type[T],
 ) -> T: ...
 @overload
 def read_from_persistent_store(
@@ -61,7 +67,14 @@ def read_from_persistent_store(
     key: str,
     *,
     default: T,
-    object_type: type[T],
+    mapper: Callable[[str], T],
+) -> T: ...
+@overload
+def read_from_persistent_store(
+    key: str,
+    *,
+    default: T,
+    output_type: type[T],
 ) -> T: ...
 
 
@@ -69,10 +82,15 @@ def read_from_persistent_store(
     key: str,
     *,
     default: T | None = None,
-    object_type: type[T] | None = None,
+    output_type: type[T] | None = None,
+    mapper: Callable[[str], T] | None = None,
 ) -> T | None:
     """Read a part of the store from the file system."""
     from ubo_app.store.main import store
+
+    if output_type is not None and mapper:
+        msg = 'You cannot specify both `output_type` and `mapper` arguments.'
+        raise ValueError(msg)
 
     try:
         with persistent_store_lock.read_lock():
@@ -83,11 +101,14 @@ def read_from_persistent_store(
     value = current_state.get(key)
     if value is None:
         return (
-            (None if object_type is None else object_type())
+            (None if output_type is None else output_type())
             if default is None
             else default
         )
+
+    if mapper:
+        return mapper(value)
     return store.load_object(
         value,
-        object_type=cast('type[T]', object_type),
+        object_type=cast('type[T]', output_type),
     )

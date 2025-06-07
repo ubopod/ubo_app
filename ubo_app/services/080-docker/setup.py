@@ -8,6 +8,7 @@ import functools
 import json
 import math
 import uuid
+from io import BytesIO
 from typing import TYPE_CHECKING
 
 import docker
@@ -31,7 +32,7 @@ from redux import CombineReducerRegisterAction
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE
+from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterRegularAppAction,
@@ -287,7 +288,7 @@ default.""",
                             label='Service',
                             type=InputFieldType.TEXT,
                             description='The service name',
-                            default='docker.io',
+                            default_value='docker.io',
                             required=False,
                         ),
                         InputFieldDescription(
@@ -332,7 +333,7 @@ default.""",
                 registry=registry,
             )
             secrets.write_secret(
-                key=DOCKER_CREDENTIALS_TEMPLATE.format(registry),
+                key=DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID.format(registry),
                 value=password,
             )
             store.dispatch(
@@ -426,24 +427,23 @@ supported""",
             directory_content = result.files.pop('content', None)
             # uncompress content
             if directory_content:
-                header = directory_content.read(6)
-                directory_content.seek(0)
+                header = directory_content[:6]
+                directory_content_io = BytesIO(directory_content)
 
                 if header.startswith(b'PK'):
-                    directory_content.seek(0)
                     import zipfile
 
-                    with zipfile.ZipFile(directory_content) as zip_file:
+                    with zipfile.ZipFile(directory_content_io) as zip_file:
                         zip_file.extractall(path=composition_path)
                 if header.startswith((b'\x1f\x8b', b'BZh', b'\xfd7zXZ')):
                     import tarfile
 
-                    with tarfile.open(fileobj=directory_content) as tar_file:
+                    with tarfile.open(fileobj=directory_content_io) as tar_file:
                         tar_file.extractall(path=composition_path)  # noqa: S202
 
             store.dispatch(
                 CombineReducerRegisterAction(
-                    _id=reducer_id,
+                    combine_reducers_id=reducer_id,
                     key=id,
                     reducer=image_reducer,
                     payload=result.data,
@@ -455,7 +455,7 @@ supported""",
 
 def clear_credentials(registry: str) -> None:
     """Clear an entry in docker credentials."""
-    secrets.clear_secret(DOCKER_CREDENTIALS_TEMPLATE.format(registry))
+    secrets.clear_secret(DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID.format(registry))
     store.dispatch(DockerRemoveUsernameAction(registry=registry))
 
 
@@ -530,7 +530,7 @@ def _load_images() -> None:
     store.dispatch(
         [
             CombineReducerRegisterAction(
-                _id=reducer_id,
+                combine_reducers_id=reducer_id,
                 key=image_id,
                 reducer=image_reducer,
                 payload={'label': IMAGES[image_id].label},
@@ -539,7 +539,7 @@ def _load_images() -> None:
         ],
         [
             CombineReducerRegisterAction(
-                _id=reducer_id,
+                combine_reducers_id=reducer_id,
                 key=item.stem,
                 reducer=image_reducer,
                 payload=json.load((item / 'metadata.json').open()),

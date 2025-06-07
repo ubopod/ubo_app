@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.timeout(200)
 @pytest.mark.skipif(not IS_RPI, reason='Only runs on Raspberry Pi')
-async def test_wireless_flow(
+async def test_setup_flow(
     app_context: AppContext,
     window_snapshot: WindowSnapshot,
     store_snapshot: StoreSnapshot[RootState],

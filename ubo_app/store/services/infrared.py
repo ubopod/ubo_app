@@ -54,13 +54,13 @@ class InfraredState(Immutable):
     """State of the infrared service."""
 
     should_propagate_keypad_actions: bool = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'infrared_state:should_propagate_keypad_actions',
             default=False,
         ),
     )
     should_receive_keypad_actions: bool = field(
-        default_factory=lambda: read_from_persistent_store(
+        default=read_from_persistent_store(
             'infrared_state:should_receive_keypad_actions',
             default=False,
         ),

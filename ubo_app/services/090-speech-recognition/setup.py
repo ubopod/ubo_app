@@ -2,31 +2,30 @@
 
 from __future__ import annotations
 
-import json
-import threading
-from asyncio import get_event_loop
-from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
-from constants import VOSK_MODEL_PATH
-from download_model import download_vosk_model
+from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
+from constants import OFFLINE_ENGINES
+from engines_manager import EnginesManager
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
-from vosk import KaldiRecognizer, Model
+from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.constants import WAKE_WORD
-from ubo_app.logger import logger
+from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
+from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionIntent,
-    SpeechRecognitionReportIntentDetectionAction,
-    SpeechRecognitionReportWakeWordDetectionAction,
-    SpeechRecognitionSetIsActiveAction,
+    SpeechRecognitionEngineName,
+    SpeechRecognitionSetIsAssistantActiveAction,
+    SpeechRecognitionSetIsIntentsActiveAction,
+    SpeechRecognitionSetSelectedEngineAction,
 )
 from ubo_app.store.ubo_actions import UboDispatchItem
-from ubo_app.utils import IS_RPI
-from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.gui import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+    ItemParameters,
+)
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
@@ -34,253 +33,165 @@ if TYPE_CHECKING:
 
     from ubo_app.utils.types import Subscriptions
 
-SAMPLE_RATE = 16_000
-BUFFER_SIZE = 4_000
+
+def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
+    return {
+        **SELECTED_ITEM_PARAMETERS,
+        'background_color': SUCCESS_COLOR if is_offline else WARNING_COLOR,
+        'color': '#ffffff',
+    }
 
 
-class _Context:
-    recognizer: KaldiRecognizer | None = None
-    set_word_event = threading.Event()
-    set_word_lock = threading.Lock()
-
-    def set_recognizer(self: _Context, recognizer: KaldiRecognizer) -> None:
-        self.recognizer = recognizer
-
-    def unset_recognizer(self: _Context) -> None:
-        self.recognizer = None
-
-
-_context = _Context()
-
-
-@store.with_state(lambda state: state.speech_recognition.is_active)
-def _is_active(is_active: bool) -> bool:  # noqa: FBT001
-    return is_active
-
-
-@store.view(lambda state: state.speech_recognition.intents)
-def _phrases(intents: Sequence[SpeechRecognitionIntent]) -> list[str]:
-    return [
-        phrase.lower()
-        for intent in intents
-        for phrase in (
-            [intent.phrase] if isinstance(intent.phrase, str) else intent.phrase
-        )
-    ]
-
-
-@store.autorun(
-    lambda state: (state.speech_recognition.is_waiting),
-    options=AutorunOptions(initial_call=False, memoization=False),
-)
-def _update_intents(is_waiting: bool) -> None:  # noqa: FBT001
-    if not _context.recognizer:
-        return
-
-    logger.debug(
-        'Vosk - Setting phrases',
-        extra={
-            'is_waiting': is_waiting,
-            'phrases': _phrases(),
-            'wake_word': WAKE_WORD,
-        },
-    )
-    with _context.set_word_lock:
-        _context.set_word_event.clear()
-        _context.set_word_event.wait()
-        _context.recognizer.SetGrammar(
-            json.dumps([*_phrases(), '[unk]'] if is_waiting else [WAKE_WORD, '[unk]']),
-        )
-
-
-@store.with_state(
-    lambda state: (
-        state.speech_recognition.intents,
-        state.speech_recognition.is_waiting,
-    ),
-)
-def _handle_result(
-    data: tuple[Sequence[SpeechRecognitionIntent], bool],
-    result: dict[Literal['text'], str],
-) -> None:
-    intents, is_waiting = data
-    if 'text' not in result or not result['text']:
-        return
-    logger.debug(
-        'Vosk - Text recognized',
-        extra={
-            'is_waiting': is_waiting,
-            'result': result,
-            'intents': intents,
-            'wake_word': WAKE_WORD,
-        },
-    )
-
-    text = result['text']
-
-    if is_waiting:
-        if intent := next(
-            (
-                intent
-                for intent in intents
-                if (
-                    intent.phrase.lower() == text.lower()
-                    if isinstance(intent.phrase, str)
-                    else text.lower() in [phrase.lower() for phrase in intent.phrase]
-                )
-            ),
-            None,
-        ):
-            logger.info('Vosk - Phrase recognized')
-            store.dispatch(
-                SpeechRecognitionReportIntentDetectionAction(intent=intent),
-            )
-    elif text == WAKE_WORD:
-        store.dispatch(SpeechRecognitionReportWakeWordDetectionAction())
-        logger.info('Vosk - Wake word recognized')
-
-
-@store.with_state(
-    lambda state: (
-        state.speech_recognition.intents,
-        state.speech_recognition.is_waiting,
-    ),
-)
-async def _run_listener_thread(
-    _data: tuple[Sequence[SpeechRecognitionIntent], bool],
-) -> None:
-    intents, is_waiting = _data
-
-    if not VOSK_MODEL_PATH.exists():
-        store.dispatch(SpeechRecognitionSetIsActiveAction(is_active=False))
-        return
-
-    logger.debug(
-        'Vosk - Initializing model',
-        extra={'intents': intents if is_waiting else [WAKE_WORD]},
-    )
-    model = Model(
-        model_path=VOSK_MODEL_PATH.resolve().as_posix(),
-        lang='en-us',
-    )
-    _context.set_recognizer(
-        KaldiRecognizer(
-            model,
-            SAMPLE_RATE,
-            json.dumps([*_phrases(), '[unk]'] if is_waiting else [WAKE_WORD, '[unk]']),
-        ),
-    )
-
-    executor = ThreadPoolExecutor()
-
-    if IS_RPI:
-        import alsaaudio  # type: ignore [reportMissingModuleSource=false]
-
-        input_audio = alsaaudio.PCM(
-            alsaaudio.PCM_CAPTURE,
-            alsaaudio.PCM_NORMAL,
-            channels=1,
-            rate=SAMPLE_RATE,
-            format=alsaaudio.PCM_FORMAT_S16_LE,
-            periodsize=BUFFER_SIZE,
-        )
-
-        async def read_audio_chunk() -> tuple[int, bytes]:
-            return await get_event_loop().run_in_executor(
-                executor,
-                input_audio.read,
-            )
-    else:
-        import pyaudio
-
-        pa = pyaudio.PyAudio()
-        stream = pa.open(
-            format=pyaudio.paInt16,
-            channels=1,
-            rate=SAMPLE_RATE,
-            input=True,
-            frames_per_buffer=BUFFER_SIZE,
-        )
-
-        async def read_audio_chunk() -> tuple[int, bytes]:
-            data = await get_event_loop().run_in_executor(
-                executor,
-                stream.read,
-                BUFFER_SIZE,
-                False,  # noqa: FBT003
-            )
-            return len(data), data
-
-    logger.debug('Vosk - Listening for commands...')
-    _context.set_word_event.set()
-    while _is_active() and _context.recognizer:
-        length, data = await read_audio_chunk()
-        if length > 0 and await get_event_loop().run_in_executor(
-            executor,
-            _context.recognizer.AcceptWaveform,
-            data,
-        ):
-            result = json.loads(_context.recognizer.FinalResult())
-
-            _handle_result(result)
-
-        if not _context.set_word_event.is_set():
-            _context.recognizer.Reset()
-            _context.set_word_event.set()
-            with _context.set_word_lock:
-                ...
-
-
-@store.autorun(lambda state: state.speech_recognition.is_active)
-def _vosk_items(is_active: bool) -> list[ActionItem]:  # noqa: FBT001
-    if not VOSK_MODEL_PATH.exists():
-        return [
-            ActionItem(
-                key='download',
-                label='Download Vosk Model',
-                icon='󰇚',
-                action=download_vosk_model,
-            ),
-        ]
-
-    return [
-        UboDispatchItem(
-            key='is_active',
-            label='Is Active',
-            store_action=SpeechRecognitionSetIsActiveAction(
-                is_active=not is_active,
-            ),
-            **(SELECTED_ITEM_PARAMETERS if is_active else UNSELECTED_ITEM_PARAMETERS),
-        ),
-    ]
+def _get_unselected_item_parameters(*, is_offline: bool) -> ItemParameters:
+    return {
+        **UNSELECTED_ITEM_PARAMETERS,
+        'background_color': '#000000',
+        'color': SUCCESS_COLOR if is_offline else WARNING_COLOR,
+    }
 
 
 def init_service() -> Subscriptions:
     """Initialize speech recognition service."""
-
-    @store.autorun(lambda state: state.speech_recognition.is_active)
-    async def run_listener(is_active: bool) -> None:  # noqa: FBT001
-        if is_active:
-            await _run_listener_thread()
-
     register_persistent_store(
-        'speech_recognition:is_active',
-        lambda state: state.speech_recognition.is_active,
+        'speech_recognition:selected_engine',
+        lambda state: state.speech_recognition.selected_engine or 'vosk',
     )
+    register_persistent_store(
+        'speech_recognition:is_intents_active',
+        lambda state: state.speech_recognition.is_intents_active,
+    )
+    register_persistent_store(
+        'speech_recognition:is_assistant_active',
+        lambda state: state.speech_recognition.is_assistant_active,
+    )
+
+    engines_manager = EnginesManager()
+
+    @store.autorun(
+        lambda state: (
+            state.speech_recognition.is_intents_active,
+            state.speech_recognition.selected_engine,
+        ),
+        options=AutorunOptions(memoization=False),
+    )
+    def recognition_engine_items(
+        data: tuple[bool, SpeechRecognitionEngineName | None],
+    ) -> Sequence[Item]:
+        """Return items for recognition engine selection."""
+        _, selected_engine = data
+        items: list[Item] = []
+        for engine_name in SpeechRecognitionEngineName:
+            engine = engines_manager.engines_by_name[engine_name]
+
+            if not isinstance(engine, SpeechRecognitionMixin):
+                continue
+
+            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup():
+                items.append(
+                    ActionItem(
+                        key=engine_name,
+                        label=f'Setup {engine.label}',
+                        icon='',
+                        action=engine.setup,
+                    ),
+                )
+                continue
+
+            items.append(
+                UboDispatchItem(
+                    key=engine_name,
+                    label=engine.label,
+                    store_action=SpeechRecognitionSetSelectedEngineAction(
+                        engine_name=engine_name,
+                    ),
+                    **(
+                        _get_selected_item_parameters(
+                            is_offline=engine_name in OFFLINE_ENGINES,
+                        )
+                        if selected_engine == engine_name
+                        else _get_unselected_item_parameters(
+                            is_offline=engine_name in OFFLINE_ENGINES,
+                        )
+                    ),
+                ),
+            )
+
+        return items
+
+    @store.autorun(
+        lambda state: (
+            state.speech_recognition.is_intents_active,
+            state.speech_recognition.is_assistant_active,
+        ),
+    )
+    def speech_recognition_items(data: tuple[bool, bool]) -> list[Item]:
+        is_intents_active, is_assistant_active = data
+
+        return [
+            UboDispatchItem(
+                key='is_intents_active',
+                label='Command Interface',
+                store_action=SpeechRecognitionSetIsIntentsActiveAction(
+                    is_active=not is_intents_active,
+                ),
+                **(
+                    SELECTED_ITEM_PARAMETERS
+                    if is_intents_active
+                    else UNSELECTED_ITEM_PARAMETERS
+                ),
+            ),
+            UboDispatchItem(
+                key='is_assistant_active',
+                label='Voice Assistant',
+                store_action=SpeechRecognitionSetIsAssistantActiveAction(
+                    is_active=not is_assistant_active,
+                ),
+                **(
+                    SELECTED_ITEM_PARAMETERS
+                    if is_assistant_active
+                    else UNSELECTED_ITEM_PARAMETERS
+                ),
+            ),
+        ]
 
     store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.SPEECH,
-            priority=1,
+            priority=30,
             menu_item=SubMenuItem(
                 label='Speech Recognition',
-                icon='󰗋',
-                sub_menu=HeadlessMenu(
-                    title='󰗋Speech Recognition',
-                    items=_vosk_items,
+                icon='',
+                sub_menu=HeadedMenu(
+                    title='Speech Recognition',
+                    heading='Speech Recognition Settings',
+                    sub_heading='Vosk is used for wake word detection',
+                    items=[
+                        SubMenuItem(
+                            key='services',
+                            label='Services',
+                            icon='',
+                            sub_menu=HeadlessMenu(
+                                title='Services',
+                                items=speech_recognition_items,
+                            ),
+                        ),
+                        SubMenuItem(
+                            key='engine',
+                            label='Recognition Engine',
+                            icon='',
+                            sub_menu=HeadedMenu(
+                                title='Recognition Engine',
+                                heading='Select Active Engine',
+                                sub_heading=f'[color={SUCCESS_COLOR}]󱓻[/color] Offline '
+                                f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
+                                'models',
+                                items=recognition_engine_items,
+                            ),
+                        ),
+                    ],
                 ),
             ),
         ),
     )
 
-    return [_context.unset_recognizer]
+    return engines_manager.subscriptions

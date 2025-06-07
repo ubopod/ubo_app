@@ -25,31 +25,52 @@ import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
 import {
   Action,
   InputCancelAction,
+  InputDescription,
+  InputFieldType,
   InputMethod,
   InputProvideAction,
   InputResult,
 } from "./generated/ubo/v1/ubo_pb";
-import { InputDescription, InputFieldType } from "./types";
+import { inputFieldTypes } from "./types";
 
 export function Inputs({
   inputs,
   isGrpcConnected,
   store,
 }: {
-  inputs: InputDescription[];
+  inputs: InputDescription.AsObject[];
   isGrpcConnected: boolean;
   store: StoreServiceClient | null;
 }) {
-  const [files, setFiles] = useState<Record<string, File>>({});
+  const [files, setFiles] = useState<Record<string, Record<string, File>>>({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const id = formData.get("id") as string;
+    const input = inputs.find((input) => input.id === id);
+
+    if (input?.fields) {
+      for (const field of input.fields.itemsList) {
+        if (field.pattern) {
+          if (field.type !== InputFieldType.INPUT_FIELD_TYPE_FILE) {
+            const value = formData.get(field.name) as string;
+            if (value && !new RegExp(`^${field.pattern}$`).test(value)) {
+              alert(
+                `The value for "${field.label}" does not match the required pattern!`,
+              );
+              event.preventDefault();
+              return;
+            }
+          }
+        }
+      }
+    }
+
     if (!store || !isGrpcConnected) {
       return;
     }
     event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const id = formData.get("id") as string;
     const value = (formData.get("value") || "") as string;
     const action = (
       (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement
@@ -64,26 +85,7 @@ export function Inputs({
       for (const [name, value] of formData.entries()) {
         if (!["id", "value", "action"].includes(name)) {
           if (value instanceof File) {
-            const filesValue = new InputResult.FilesValue();
-            const bytes = await new Promise<Uint8Array>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                if (reader.result instanceof ArrayBuffer) {
-                  resolve(new Uint8Array(reader.result));
-                } else if (typeof reader.result === "string") {
-                  resolve(new TextEncoder().encode(reader.result));
-                } else {
-                  reject(new Error("Invalid file type"));
-                }
-              };
-              reader.onerror = (error) => {
-                console.error("FileReader error", error);
-                reject(new Error("Failed to read file"));
-              };
-              reader.readAsArrayBuffer(value);
-            });
-            filesValue.setBytes(bytes);
-            fileMap.set(name, filesValue);
+            fileMap.set(name, await value.bytes());
           } else {
             dataMap.set(name, value as string);
           }
@@ -119,7 +121,7 @@ export function Inputs({
   return inputs.map((input, index) => (
     <Dialog key={input.id} open>
       <DialogTitle>{input.prompt}</DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ "&&.MuiDialogContent-root": { pt: 1 } }}>
         <Stack
           component="form"
           autoComplete="off"
@@ -130,9 +132,9 @@ export function Inputs({
         >
           <input name="id" type="hidden" value={input.id} />
 
-          {input.fields?.length ? (
-            input.fields.map((field) =>
-              field.type === InputFieldType.SELECT ? (
+          {input.fields?.itemsList.length ? (
+            input.fields.itemsList.map((field) =>
+              field.type === InputFieldType.INPUT_FIELD_TYPE_SELECT ? (
                 <FormControl
                   key={field.name}
                   fullWidth
@@ -143,10 +145,10 @@ export function Inputs({
                     id={field.name}
                     name={field.name}
                     label={field.label}
-                    defaultValue={field.default || ""}
+                    defaultValue={field.defaultValue || ""}
                     displayEmpty
                   >
-                    {field.options?.map((option) => (
+                    {field.options?.itemsList?.map((option) => (
                       <MenuItem key={option} value={option}>
                         {option}
                       </MenuItem>
@@ -156,16 +158,16 @@ export function Inputs({
                     <FormHelperText>{field.description}</FormHelperText>
                   )}
                 </FormControl>
-              ) : field.type === InputFieldType.LONG ? (
+              ) : field.type === InputFieldType.INPUT_FIELD_TYPE_LONG ? (
                 <TextField
                   key={field.name}
                   name={field.name}
                   label={field.label}
                   helperText={field.description}
-                  defaultValue={field.default || undefined}
+                  defaultValue={field.defaultValue || undefined}
                   title={field.title || undefined}
                   multiline
-                  rows={4}
+                  minRows={4}
                   slotProps={{
                     htmlInput: {
                       pattern: field.pattern || undefined,
@@ -174,7 +176,7 @@ export function Inputs({
                   required={field.required}
                   fullWidth
                 />
-              ) : field.type === InputFieldType.CHECKBOX ? (
+              ) : field.type === InputFieldType.INPUT_FIELD_TYPE_CHECKBOX ? (
                 <FormControl
                   key={field.name}
                   fullWidth
@@ -187,13 +189,13 @@ export function Inputs({
                       <Switch
                         name={field.name}
                         required={field.required}
-                        defaultValue={field.default || undefined}
+                        defaultValue={field.defaultValue || undefined}
                       />
                     }
                   />
                   <FormHelperText>{field.description}</FormHelperText>
                 </FormControl>
-              ) : field.type === InputFieldType.FILE ? (
+              ) : field.type === InputFieldType.INPUT_FIELD_TYPE_FILE ? (
                 <FormControl
                   key={field.name}
                   fullWidth
@@ -212,27 +214,44 @@ export function Inputs({
                         id={field.name}
                         name={field.name}
                         required={field.required}
-                        accept={field.pattern || "*"}
-                        onChange={(event) => {
+                        accept={field.fileMimetype || "*"}
+                        onChange={async (event) => {
                           if (event.target.files?.length) {
                             const file = event.target.files[0];
-                            setFiles((files) => ({
-                              ...files,
-                              [field.name]: file,
-                            }));
-                          } else {
+                            const content = await file.text();
                             setFiles((files) => {
-                              const newFiles = { ...files };
-                              delete newFiles[field.name];
-                              return newFiles;
+                              if (
+                                !field.pattern ||
+                                new RegExp(field.pattern).test(content)
+                              ) {
+                                return {
+                                  ...files,
+                                  [input.id]: {
+                                    ...files[input.id],
+                                    [field.name]: file,
+                                  },
+                                };
+                              } else {
+                                alert(
+                                  `The file "${file.name}" does not match the required pattern!`,
+                                );
+                                event.target.value = "";
+                                const newFiles = files[input.id] || {};
+                                delete newFiles[field.name];
+                                return { ...files, [input.id]: newFiles };
+                              }
                             });
+                          } else {
+                            const newFiles = files[input.id] || {};
+                            delete newFiles[field.name];
+                            return { ...files, [input.id]: newFiles };
                           }
                         }}
                         hidden
                       />
                       <Typography variant="body2">
-                        {files[field.name]
-                          ? files[field.name].name
+                        {files[input.id]?.[field.name]
+                          ? files[input.id][field.name].name
                           : "Select a file"}
                       </Typography>
                     </Button>
@@ -261,17 +280,12 @@ export function Inputs({
               ) : (
                 <TextField
                   key={field.name}
-                  type={field.type}
+                  type={inputFieldTypes[field.type]}
                   name={field.name}
                   label={field.label}
                   helperText={field.description}
-                  defaultValue={field.default || undefined}
+                  defaultValue={field.defaultValue || undefined}
                   title={field.title || undefined}
-                  slotProps={{
-                    htmlInput: {
-                      pattern: field.pattern || undefined,
-                    },
-                  }}
                   required={field.required}
                   fullWidth
                 />

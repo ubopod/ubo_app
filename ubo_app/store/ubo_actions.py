@@ -31,7 +31,7 @@ def _default_action(store_action: UboAction) -> Callable[[], None]:
 class UboDispatchItem(ActionItem):
     """Menu item that dispatches an action."""
 
-    store_action: UboAction
+    store_action: UboAction | list[UboAction]
     action: Callable[[], None] = field(
         default_factory=default_provider(['store_action'], _default_action),
     )

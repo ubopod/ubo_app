@@ -11,6 +11,7 @@ from kivy.utils import escape_markup
 from ubo_gui.menu.menu_widget import MenuPageWidget
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item
 
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
@@ -81,7 +82,8 @@ class PathSelectorApplication(MenuPageWidget):
                         f' [i][{len(content_bytes) - FILE_SIZE_LIMIT} more bytes][/i]'
                     ).encode()
                 )
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logger.exception('Error reading file content', extra={'path': path})
             report_service_error()
             return '[i][Error reading file content.][/i]'
         else:

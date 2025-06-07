@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from enum import Flag, FlagBoundary, StrEnum, auto
-from typing import IO, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
-    from io import BytesIO
-
     from ubo_app.store.services.speech_synthesis import ReadableInformation
 
 
@@ -18,7 +16,7 @@ class InputResult(Immutable):
     """Input result."""
 
     data: dict[str, str | None]
-    files: dict[str, IO[bytes] | BytesIO]
+    files: dict[str, bytes]
     method: InputMethod
 
 
@@ -53,8 +51,9 @@ class InputFieldDescription(Immutable):
     type: InputFieldType
     description: str | None = None
     title: str | None = None
+    file_mimetype: str | None = None
     pattern: str | None = None
-    default: str | None = None
+    default_value: str | None = None
     options: list[str] | None = None
     required: bool = False
 
