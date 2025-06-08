@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import functools
 import stat
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from kivy.utils import escape_markup
-from ubo_gui.menu.menu_widget import MenuPageWidget
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item
+from redux import AutorunOptions
+from ubo_gui.menu.types import ActionItem, HeadlessMenu
 
-from ubo_app.logger import logger
 from ubo_app.store.main import store
+from ubo_app.store.services.file_system import (
+    FileSystemEvent,
+    FileSystemReportSelectionAction,
+    PathSelectorConfig,
+)
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationApplicationItem,
@@ -23,12 +28,9 @@ from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.file_system import human_readable_size
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable
 
-    from ubo_app.store.services.file_system import PathSelectorConfig
-
-SELECT_NOTIFICATION_ID = 'file_system:select'
-FILE_SIZE_LIMIT = 2**13  # 8 KiB
+FILE_VIEWER_SIZE_LIMIT = 2**11  # 2 KiB
 
 
 def _file_info(path: Path) -> str:
@@ -47,189 +49,208 @@ def _file_info(path: Path) -> str:
         if path.is_socket()
         else 'File'
     }
-[b]Path:[/b] {path.as_posix()}
+[b]Path:[/b] {escape_markup(path.as_posix())}
 [b]Size:[/b] {'-' if path.is_dir() else human_readable_size(path.stat().st_size)}
 [b]Owner:[/b] {path.owner()}
 [b]Group:[/b] {path.group()}
 [b]Permissions:[/b] {stat.filemode(path.stat().st_mode)}"""
 
 
-class PathSelectorApplication(MenuPageWidget):
-    """A class to represent a file system navigation application."""
-
-    def __init__(
-        self,
-        config: PathSelectorConfig,
-        items: Sequence[Item] | None = None,
-        *args: object,
-        **kwargs: object,
-    ) -> None:
-        """Initialize the PathSelectorApplication."""
-        super().__init__(*args, **kwargs, items=items)
-        self.config = config
-
-    def _get_file_content(
-        self,
-        path: Path,
-    ) -> str:
-        """Show the path in a notification."""
-        try:
-            content_bytes = path.read_bytes().replace(b'\0', b'\\x00')
-            if len(content_bytes) > FILE_SIZE_LIMIT:
-                content_bytes = (
-                    content_bytes[:FILE_SIZE_LIMIT]
-                    + (
-                        f' [i][{len(content_bytes) - FILE_SIZE_LIMIT} more bytes][/i]'
-                    ).encode()
-                )
-        except Exception:
-            logger.exception('Error reading file content', extra={'path': path})
-            report_service_error()
-            return '[i][Error reading file content.][/i]'
-        else:
-            return content_bytes.decode(errors='backslashreplace')
-
-    def show_directory(
-        self,
-        path: Path,
-    ) -> HeadlessMenu | None:
-        """Show the path in a notification."""
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=SELECT_NOTIFICATION_ID,
-                    title=path.name,
-                    content=_file_info(path),
-                    icon='󰉋',
-                    display_type=NotificationDisplayType.STICKY,
-                    show_dismiss_action=False,
-                ),
-            ),
+def _get_file_content(path: Path) -> str:
+    """Show the path in a notification."""
+    try:
+        content_bytes = path.read_bytes().replace(b'\0', b'\\x00')
+        if len(content_bytes) > FILE_VIEWER_SIZE_LIMIT:
+            content_bytes = (
+                content_bytes[:FILE_VIEWER_SIZE_LIMIT]
+                + (
+                    f' [i][{len(content_bytes) - FILE_VIEWER_SIZE_LIMIT} more bytes]'
+                    '[/i]'
+                ).encode()
+            )
+    except Exception:  # noqa: BLE001
+        report_service_error()
+        return '[i][Error reading file content.][/i]'
+    else:
+        return (
+            content_bytes.decode(errors='backslashreplace')
+            .replace(
+                ' ',
+                '[color=#666]󱁐[/color]',
+            )
+            .replace(
+                '\n',
+                '[color=#666]󰌑[/color]\n',
+            )
+            .replace(
+                '\t',
+                '[color=#666][/color]',
+            )
         )
 
-    def show_file(self, path: Path) -> HeadlessMenu | None:
-        """Show the path in a notification."""
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=SELECT_NOTIFICATION_ID,
-                    title=path.name,
-                    content=_file_info(path),
-                    icon='󰦪',
-                    display_type=NotificationDisplayType.STICKY,
-                    show_dismiss_action=False,
-                    actions=[
-                        NotificationApplicationItem(
-                            key='view',
-                            label='View File Content',
-                            icon='󰦪',
-                            application_id='ubo:raw-content-viewer',
-                            initialization_kwargs={
-                                'text': self._get_file_content(path),
-                            },
-                            close_notification=False,
-                        ),
-                    ]
-                    if path.is_file()
-                    else [],
-                ),
-            ),
-        )
 
-    def open(self, *, path: Path | None = None) -> HeadlessMenu | None:
-        """Open a directory and return a HeadlessMenu for its contents."""
-        path = path or self.config.initial_path or Path('/')
-        select_directory = select_file = None
-        is_selecting = self.config.accepts_directories or self.config.accepts_files
-        if not is_selecting:
-            select_directory = self.show_directory
-            select_file = self.show_file
-        elif self.config.accepts_directories:
-            select_directory = self.show_directory
-        elif self.config.accepts_files:
-            select_file = self.show_file
-        try:
-            if path.is_dir():
-                return HeadlessMenu(
-                    title=path.as_posix(),
-                    items=[
-                        ActionItem(
-                            key='select',
-                            label='Select',
-                            icon='',
-                            background_color='#2d5b86',
-                            action=functools.partial(select_directory, path)
-                            if select_directory
-                            else lambda: None,
-                        ),
-                    ]
-                    + [
-                        ActionItem(
-                            key=item.as_posix(),
-                            label=escape_markup(item.name),
-                            background_color='#303030'
-                            if (item.is_dir() and select_directory is None)
-                            or (
-                                item.is_file()
-                                and (
-                                    select_file is None
-                                    or (
-                                        self.config.acceptable_suffixes
-                                        and not any(
-                                            suffix in self.config.acceptable_suffixes
-                                            for suffix in item.suffixes
-                                        )
-                                    )
-                                )
+def _show_directory(path: Path) -> HeadlessMenu | None:
+    """Show the path in a notification."""
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title=escape_markup(path.name),
+                content=_file_info(path),
+                icon='󰉋',
+                display_type=NotificationDisplayType.STICKY,
+                show_dismiss_action=False,
+                actions=[],
+            ),
+        ),
+    )
+
+
+def _show_file(path: Path) -> HeadlessMenu | None:
+    """Show the path in a notification."""
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title=escape_markup(path.name),
+                content=_file_info(path),
+                icon='󰈔',
+                display_type=NotificationDisplayType.STICKY,
+                show_dismiss_action=False,
+                actions=[
+                    NotificationApplicationItem(
+                        key='view',
+                        label='View File Content',
+                        icon='󰦪',
+                        application_id='ubo:raw-content-viewer',
+                        initialization_kwargs={
+                            'text': _get_file_content(path),
+                        },
+                        close_notification=False,
+                    ),
+                ]
+                if path.is_file()
+                else [],
+            ),
+        ),
+    )
+
+
+def _select(path: Path) -> None:
+    store.dispatch(FileSystemReportSelectionAction(path=path))
+
+
+def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem]]:
+    path = config.initial_path or Path('/')
+    if config.accepts_directories and config.accepts_files:
+        select_directory = select_file = _select
+    elif config.accepts_directories:
+        select_directory = _select
+        select_file = None
+    elif config.accepts_files:
+        select_directory = None
+        select_file = _select
+    else:
+        select_directory = _show_directory
+        select_file = _show_file
+
+    @store.autorun(lambda _: None, options=AutorunOptions(memoization=False))
+    def items(_: None) -> list[ActionItem]:
+        return (
+            [
+                ActionItem(
+                    key='select',
+                    label='[b]Select[/b]'
+                    if config.accepts_directories
+                    else '[b]Info[/b]',
+                    icon='',
+                    background_color='#2d5b86',
+                    action=functools.partial(select_directory, path),
+                ),
+            ]
+            if select_directory
+            else []
+        ) + [
+            ActionItem(
+                key=item.as_posix(),
+                label=escape_markup(item.name),
+                background_color='#303030'
+                if (item.is_dir() and select_directory is None)
+                or (
+                    item.is_file()
+                    and (
+                        select_file is None
+                        or (
+                            config.acceptable_suffixes
+                            and not any(
+                                suffix in config.acceptable_suffixes
+                                for suffix in item.suffixes
                             )
-                            else None,
-                            icon='󰈔' if item.is_file() else '󰉋',
-                            action=functools.partial(self.open, path=item),
                         )
-                        for item in sorted(
-                            path.iterdir(),
-                            key=lambda x: x.name.lower(),
-                        )
-                        if self.config.show_hidden or not item.name.startswith('.')
-                    ],
+                    )
                 )
-            if path.is_file():
-                if select_file:
-                    return select_file(path)
-                return None
-        except PermissionError:
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='Permission Denied',
-                        content=f'Cannot access {path.as_posix()}.',
-                        icon='󰍛',
-                        display_type=NotificationDisplayType.FLASH,
-                    ),
+                else None,
+                icon='󰈔' if item.is_file() else '󰉋',
+                action=functools.partial(
+                    open_path,
+                    config=replace(config, initial_path=item),
                 ),
             )
-            return None
-        except Exception:
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='Error',
-                        content=f'An error occurred while accessing {path.as_posix()}',
-                        icon='󰍛',
-                        display_type=NotificationDisplayType.FLASH,
-                    ),
-                ),
+            for item in sorted(
+                path.iterdir(),
+                key=lambda x: x.name.lower(),
             )
-            raise
-        else:
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='Invalid Selection',
-                        content=f'{path.as_posix()} is neither a file nor a directory.',
-                        icon='󰍛',
-                        display_type=NotificationDisplayType.FLASH,
-                    ),
-                ),
+            if config.show_hidden or not item.name.startswith('.')
+        ]
+
+    store.subscribe_event(FileSystemEvent, items)
+
+    return items
+
+
+def open_path(*, config: PathSelectorConfig | None = None) -> HeadlessMenu | None:
+    """Open a directory and return a HeadlessMenu for its contents."""
+    config = config or PathSelectorConfig()
+    path = config.initial_path or Path('/')
+
+    try:
+        if path.is_dir():
+            return HeadlessMenu(
+                title=escape_markup(path.as_posix()),
+                items=_items_generator(config),
             )
-            return None
+    except PermissionError:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Permission Denied',
+                    content=f'Cannot access {escape_markup(path.as_posix())}.',
+                    icon='󰍛',
+                    display_type=NotificationDisplayType.FLASH,
+                ),
+            ),
+        )
+        return None
+    except Exception:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Error',
+                    content='An error occurred while accessing '
+                    f'{escape_markup(path.as_posix())}',
+                    icon='󰍛',
+                    display_type=NotificationDisplayType.FLASH,
+                ),
+            ),
+        )
+        raise
+    else:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Invalid Selection',
+                    content=f'{escape_markup(path.as_posix())} is not a directory.',
+                    icon='󰍛',
+                    display_type=NotificationDisplayType.FLASH,
+                ),
+            ),
+        )
+        return None

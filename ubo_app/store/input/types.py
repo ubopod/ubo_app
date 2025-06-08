@@ -13,6 +13,7 @@ from redux import BaseAction, BaseEvent
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from ubo_app.store.services.file_system import PathSelectorConfig
     from ubo_app.store.services.speech_synthesis import ReadableInformation
 
 
@@ -87,6 +88,14 @@ class QRCodeInputDescription(InputDescription):
 
     instructions: ReadableInformation | None = None
     pattern: str | None = None
+
+
+class PathInputDescription(InputDescription):
+    """Description of a QR code input field."""
+
+    input_method: InputMethod = InputMethod.PATH_SELECTOR
+
+    selector_config: PathSelectorConfig
 
 
 class InputAction(BaseAction):

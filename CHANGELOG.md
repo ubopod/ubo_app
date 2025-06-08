@@ -30,6 +30,7 @@
 - feat(assistant): implement google engine for assistant service using google cloud vertexai - closes #312
 - feat(notifications): support unlimited notification actions with a "more" button for overflow
 - refactor(core:input): generalize `ubo_input`'s api to allow more input methods
+- feat(file-system): add `InputMethod.PathSelector` as a new input method, showing a file navigation menu to select a file or directory - closes #301
 
 ## Version 1.4.0
 

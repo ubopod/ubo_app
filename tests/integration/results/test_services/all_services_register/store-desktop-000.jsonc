@@ -115,6 +115,11 @@
       "usernames": {}
     }
   },
+  "file_system": {
+    "_type": "FileSystemState",
+    "current_input": null,
+    "queue": []
+  },
   "infrared": {
     "_type": "InfraredState",
     "should_propagate_keypad_actions": false,
@@ -342,7 +347,7 @@
                     },
                     {
                       "_type": "ActionItem",
-                      "action": "<function:<lambda>>",
+                      "action": "<function:open_path>",
                       "background_color": "#68B7FF",
                       "color": [
                         1,

@@ -70,6 +70,7 @@ if TYPE_CHECKING:
         SnapshotAtom,
         TaskCreatorCallback,
     )
+    from store.services.file_system import FileSystemAction
     from store.settings.types import SettingsAction
 
     from ubo_app.store.core.types import MainAction, MainEvent, MainState
@@ -139,6 +140,7 @@ UboAction: TypeAlias = Union[
     'CameraAction',
     'DisplayAction',
     'DockerAction',
+    'FileSystemAction',
     'InfraredAction',
     'IpAction',
     'KeypadAction',
