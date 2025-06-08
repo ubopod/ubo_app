@@ -11,6 +11,7 @@ from kivy.clock import Clock, mainthread
 from kivy.properties import StringProperty
 from ubo_gui.app import UboApp
 from ubo_gui.menu.stack_item import StackApplicationItem
+from ubo_gui.menu.types import HeadlessMenu
 from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PAGE_MAX_ITEMS
 
@@ -157,8 +158,10 @@ class MenuNotificationHandler(UboApp):
                     ),
                 )
 
-        notification_application = UboNotificationWidget(items=[None] * PAGE_MAX_ITEMS)
-        notification_application.notification_id = notification.value.id
+        notification_application = UboNotificationWidget(
+            notification_id=notification.value.id,
+            items=[None] * PAGE_MAX_ITEMS,
+        )
 
         notification_application.bind(on_close=close)
 
@@ -203,18 +206,21 @@ class MenuNotificationHandler(UboApp):
                     close()
             return result
 
-        items: list[NotificationActionItem | NotificationApplicationItem | None] = []
+        top_items: list[
+            NotificationActionItem | NotificationApplicationItem | None
+        ] = []
+        bottom_items: list[
+            NotificationActionItem | NotificationApplicationItem | None
+        ] = []
 
         if notification.value.extra_information:
             text = notification.value.extra_information.text
 
-            def open_info() -> PageWidget:
-                return NotificationInfo(text=text)
-
-            items.append(
+            top_items.append(
                 NotificationActionItem(
+                    key='info',
                     icon='󰋼',
-                    action=open_info,
+                    action=lambda: NotificationInfo(text=text),
                     label='',
                     is_short=True,
                     background_color=INFO_COLOR,
@@ -234,35 +240,10 @@ class MenuNotificationHandler(UboApp):
 
             return run_application
 
-        items += [
-            replace(
-                action,
-                is_short=True,
-                action=(
-                    action_ := functools.partial(run_notification_action, action),
-                    setattr(action_, '_is_default_action_of_ubo_dispatch_item', True),
-                )[0],
-            )
-            if isinstance(action, NotificationActionItem)
-            else NotificationActionItem(
-                action=get_application_runner(action),
-                background_color=action.background_color,
-                close_notification=action.close_notification,
-                color=action.color,
-                dismiss_notification=action.dismiss_notification,
-                icon=action.icon,
-                is_short=True,
-                key=action.key,
-                label=action.label,
-                opacity=action.opacity,
-                progress=action.progress,
-            )
-            for action in notification.value.actions
-        ]
-
         if notification.value.show_dismiss_action:
-            items.append(
+            bottom_items.append(
                 NotificationActionItem(
+                    key='dismiss',
                     icon='󰆴',
                     action=dismiss,
                     label='',
@@ -271,6 +252,79 @@ class MenuNotificationHandler(UboApp):
                 ),
             )
 
+        actions_quantity = (
+            len(top_items) + len(notification.value.actions) + len(bottom_items)
+        )
+
+        def convert_action(
+            action: NotificationActionItem | NotificationApplicationItem,
+        ) -> NotificationActionItem:
+            return (
+                replace(
+                    action,
+                    is_short=True,
+                    action=(
+                        action_ := functools.partial(
+                            run_notification_action,
+                            action,
+                        ),
+                        setattr(
+                            action_,
+                            '_is_default_action_of_ubo_dispatch_item',
+                            True,
+                        ),
+                    )[0],
+                )
+                if isinstance(action, NotificationActionItem)
+                else NotificationActionItem(
+                    action=get_application_runner(action),
+                    background_color=action.background_color,
+                    close_notification=action.close_notification,
+                    color=action.color,
+                    dismiss_notification=action.dismiss_notification,
+                    icon=action.icon,
+                    is_short=True,
+                    key=action.key,
+                    label=action.label,
+                    opacity=action.opacity,
+                    progress=action.progress,
+                )
+            )
+
+        if actions_quantity > PAGE_MAX_ITEMS:
+
+            def open_options() -> HeadlessMenu:
+                return HeadlessMenu(
+                    title=notification.value.icon + ' Select',
+                    items=[
+                        convert_action(action) for action in notification.value.actions
+                    ],
+                )
+
+            return (
+                top_items
+                + [
+                    convert_action(action)
+                    for action in notification.value.actions[
+                        : PAGE_MAX_ITEMS - len(top_items) - len(bottom_items) - 1
+                    ]
+                ]
+                + [
+                    NotificationActionItem(
+                        key='all',
+                        icon='󰍜',
+                        action=open_options,
+                        is_short=True,
+                    ),
+                ]
+                + bottom_items
+            )
+
+        items = (
+            top_items
+            + [convert_action(action) for action in notification.value.actions]
+            + bottom_items
+        )
         return [None] * (PAGE_MAX_ITEMS - len(items)) + items
 
     @mainthread
