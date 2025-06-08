@@ -31,6 +31,7 @@
 - feat(notifications): support unlimited notification actions with a "more" button for overflow
 - refactor(core:input): generalize `ubo_input`'s api to allow more input methods
 - feat(file-system): add `InputMethod.PathSelector` as a new input method, showing a file navigation menu to select a file or directory - closes #301
+- feat(file-system): add file system operations copy, move, and remove - closes #300
 
 ## Version 1.4.0
 

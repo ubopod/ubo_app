@@ -11,7 +11,12 @@ from ubo_gui.menu.types import ActionItem
 from ubo_app.store.core.types import RegisterRegularAppAction
 from ubo_app.store.input.types import InputCancelAction
 from ubo_app.store.main import store
-from ubo_app.store.services.file_system import FileSystemSelectEvent
+from ubo_app.store.services.file_system import (
+    FileSystemCopyEvent,
+    FileSystemMoveEvent,
+    FileSystemRemoveEvent,
+    FileSystemSelectEvent,
+)
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
@@ -64,4 +69,31 @@ def init_service() -> None:
             ),
         )
 
+    def handle_copy_event(event: FileSystemCopyEvent) -> None:
+        from shutil import copyfile, copytree
+
+        for source in event.sources:
+            if source.is_dir():
+                copytree(source, event.destination / source.name)
+            else:
+                copyfile(source, event.destination / source.name)
+
+    def handle_move_event(event: FileSystemMoveEvent) -> None:
+        from shutil import move
+
+        for source in event.sources:
+            move(source, event.destination / source.name)
+
+    def handle_remove_event(event: FileSystemRemoveEvent) -> None:
+        from shutil import rmtree
+
+        for source in event.paths:
+            if source.is_dir():
+                rmtree(source)
+            else:
+                source.unlink(missing_ok=True)
+
     store.subscribe_event(FileSystemSelectEvent, handle_open_path_event)
+    store.subscribe_event(FileSystemCopyEvent, handle_copy_event)
+    store.subscribe_event(FileSystemMoveEvent, handle_move_event)
+    store.subscribe_event(FileSystemRemoveEvent, handle_remove_event)

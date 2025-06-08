@@ -34,6 +34,26 @@ class FileSystemReportSelectionAction(FileSystemAction):
     path: Path
 
 
+class FileSystemCopyAction(FileSystemAction):
+    """Copy files or directories to a new location."""
+
+    sources: Sequence[Path]
+    destination: Path
+
+
+class FileSystemMoveAction(FileSystemAction):
+    """Move files or directories to a new location."""
+
+    sources: Sequence[Path]
+    destination: Path
+
+
+class FileSystemRemoveAction(FileSystemAction):
+    """Remove files or directories."""
+
+    paths: Sequence[Path]
+
+
 class FileSystemEvent(BaseEvent):
     """Base event for file system operations."""
 
@@ -42,6 +62,26 @@ class FileSystemSelectEvent(FileSystemEvent):
     """Event for opening the path selector."""
 
     description: PathInputDescription
+
+
+class FileSystemCopyEvent(FileSystemEvent):
+    """Event for copying filesystem items."""
+
+    sources: Sequence[Path]
+    destination: Path
+
+
+class FileSystemMoveEvent(FileSystemEvent):
+    """Event for moving filesystem items."""
+
+    sources: Sequence[Path]
+    destination: Path
+
+
+class FileSystemRemoveEvent(FileSystemEvent):
+    """Event for removing filesystem items."""
+
+    paths: Sequence[Path]
 
 
 class FileSystemState(Immutable):

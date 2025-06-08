@@ -23,7 +23,13 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.services.file_system import (
     FileSystemAction,
+    FileSystemCopyAction,
+    FileSystemCopyEvent,
     FileSystemEvent,
+    FileSystemMoveAction,
+    FileSystemMoveEvent,
+    FileSystemRemoveAction,
+    FileSystemRemoveEvent,
     FileSystemReportSelectionAction,
     FileSystemSelectEvent,
     FileSystemState,
@@ -75,6 +81,34 @@ def reducer(
             return FileSystemState(queue=[])
 
         raise InitializationActionError(action)
+
+    if isinstance(action, FileSystemCopyAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[
+                FileSystemCopyEvent(
+                    sources=action.sources,
+                    destination=action.destination,
+                ),
+            ],
+        )
+
+    if isinstance(action, FileSystemMoveAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[
+                FileSystemMoveEvent(
+                    sources=action.sources,
+                    destination=action.destination,
+                ),
+            ],
+        )
+
+    if isinstance(action, FileSystemRemoveAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[FileSystemRemoveEvent(paths=action.paths)],
+        )
 
     if isinstance(action, InputDemandAction) and isinstance(
         action.description,

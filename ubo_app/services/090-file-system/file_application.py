@@ -12,20 +12,28 @@ from kivy.utils import escape_markup
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
 
+from ubo_app.store.input.types import PathInputDescription
 from ubo_app.store.main import store
 from ubo_app.store.services.file_system import (
+    FileSystemCopyAction,
     FileSystemEvent,
+    FileSystemMoveAction,
+    FileSystemRemoveAction,
     FileSystemReportSelectionAction,
     PathSelectorConfig,
 )
 from ubo_app.store.services.notifications import (
     Notification,
+    NotificationActionItem,
     NotificationApplicationItem,
+    NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.file_system import human_readable_size
+from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -89,6 +97,87 @@ def _get_file_content(path: Path) -> str:
         )
 
 
+def _copy(path: Path) -> None:
+    """Copy the path to the clipboard."""
+
+    async def act() -> None:
+        destination, _ = await ubo_input(
+            title='Copy Destination',
+            prompt='Select the destination directory.]\n'
+            f'[b]Source:[/b] {escape_markup(path.as_posix())}',
+            descriptions=[
+                PathInputDescription(
+                    selector_config=PathSelectorConfig(
+                        accepts_directories=True,
+                        accepts_files=False,
+                    ),
+                ),
+            ],
+        )
+
+        store.dispatch(
+            FileSystemCopyAction(
+                sources=[path],
+                destination=Path(destination),
+            ),
+        )
+
+    create_task(act())
+
+
+def _move(path: Path) -> None:
+    """Move the path to the clipboard."""
+
+    async def act() -> None:
+        destination, _ = await ubo_input(
+            title='Move Destination',
+            prompt='Select the destination directory.]\n'
+            f'[b]Source:[/b] {escape_markup(path.as_posix())}',
+            descriptions=[
+                PathInputDescription(
+                    selector_config=PathSelectorConfig(
+                        accepts_directories=True,
+                        accepts_files=False,
+                    ),
+                ),
+            ],
+        )
+
+        store.dispatch(
+            FileSystemMoveAction(
+                sources=[path],
+                destination=Path(destination),
+            ),
+        )
+
+    create_task(act())
+
+
+def _remove(path: Path) -> None:
+    """Remove the path."""
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title='Confirm Removal',
+                content='Are you sure you want to remove '
+                f'"{escape_markup(path.as_posix())}"?',
+                icon='󰆴',
+                display_type=NotificationDisplayType.STICKY,
+                dismiss_on_close=True,
+                actions=[
+                    NotificationDispatchItem(
+                        key='confirm',
+                        label='Remove',
+                        icon='󰆴',
+                        store_action=FileSystemRemoveAction(paths=[path]),
+                        close_notification=True,
+                    ),
+                ],
+            ),
+        ),
+    )
+
+
 def _show_directory(path: Path) -> HeadlessMenu | None:
     """Show the path in a notification."""
     store.dispatch(
@@ -99,7 +188,29 @@ def _show_directory(path: Path) -> HeadlessMenu | None:
                 icon='󰉋',
                 display_type=NotificationDisplayType.STICKY,
                 show_dismiss_action=False,
-                actions=[],
+                actions=[
+                    NotificationActionItem(
+                        key='copy',
+                        label='Copy Directory',
+                        icon='󰆏',
+                        action=functools.partial(_copy, path),
+                        close_notification=False,
+                    ),
+                    NotificationActionItem(
+                        key='move',
+                        label='Move Directory',
+                        icon='󰉒',
+                        action=functools.partial(_move, path),
+                        close_notification=False,
+                    ),
+                    NotificationActionItem(
+                        key='remove',
+                        label='Remove Directory',
+                        icon='󰉘',
+                        action=functools.partial(_remove, path),
+                        close_notification=False,
+                    ),
+                ],
             ),
         ),
     )
@@ -124,6 +235,27 @@ def _show_file(path: Path) -> HeadlessMenu | None:
                         initialization_kwargs={
                             'text': _get_file_content(path),
                         },
+                        close_notification=False,
+                    ),
+                    NotificationActionItem(
+                        key='copy',
+                        label='Copy File',
+                        icon='󰆏',
+                        action=functools.partial(_copy, path),
+                        close_notification=False,
+                    ),
+                    NotificationActionItem(
+                        key='move',
+                        label='Move File',
+                        icon='󰪹',
+                        action=functools.partial(_move, path),
+                        close_notification=False,
+                    ),
+                    NotificationActionItem(
+                        key='remove',
+                        label='Remove File',
+                        icon='󰮘',
+                        action=functools.partial(_remove, path),
                         close_notification=False,
                     ),
                 ]
