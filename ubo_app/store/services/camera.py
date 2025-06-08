@@ -7,7 +7,7 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
-    from ubo_app.store.input.types import InputDescription
+    from ubo_app.store.input.types import QRCodeInputDescription
 
 
 class CameraAction(BaseAction): ...
@@ -28,11 +28,8 @@ class CameraStartViewfinderEvent(CameraEvent):
     pattern: str | None
 
 
-class CameraStopViewfinderEvent(CameraEvent):
-    id: str | None
+class CameraStopViewfinderEvent(CameraEvent): ...
 
 
 class CameraState(Immutable):
-    current: InputDescription | None = None
-    is_viewfinder_active: bool
-    queue: list[InputDescription]
+    queue: list[QRCodeInputDescription]

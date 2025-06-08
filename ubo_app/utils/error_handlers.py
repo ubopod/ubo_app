@@ -9,6 +9,7 @@ import traceback
 import weakref
 from typing import TYPE_CHECKING, cast
 
+from ubo_app.utils import IS_TEST_ENV
 from ubo_app.utils.eeprom import read_serial_number
 
 if TYPE_CHECKING:
@@ -244,6 +245,10 @@ def report_service_error(
 
     for key in context:
         message += f'\n\n[b]{key}:[/b] {context.get(key)}'
+
+    if IS_TEST_ENV and message == '':
+        msg = 'The error could not be represented as a string, reasonably'
+        raise ValueError(msg)
 
     try:
         from ubo_app.store.main import store

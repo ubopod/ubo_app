@@ -29,6 +29,7 @@
 - refactor(assistant): add abstractions for assistant module extending engine abstractions in the core and reimplement the service based on these abstract base classes
 - feat(assistant): implement google engine for assistant service using google cloud vertexai - closes #312
 - feat(notifications): support unlimited notification actions with a "more" button for overflow
+- refactor(core:input): generalize `ubo_input`'s api to allow more input methods
 
 ## Version 1.4.0
 

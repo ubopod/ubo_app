@@ -7,18 +7,18 @@ from immutable import Immutable
 from redux import BaseEvent
 
 if TYPE_CHECKING:
-    from ubo_app.store.input.types import InputDescription
+    from ubo_app.store.input.types import WebUIInputDescription
 
 
 class WebUIEvent(BaseEvent): ...
 
 
 class WebUIInitializeEvent(WebUIEvent):
-    description: InputDescription
+    description: WebUIInputDescription
 
 
 class WebUIStopEvent(WebUIEvent): ...
 
 
 class WebUIState(Immutable):
-    active_inputs: list[InputDescription]
+    active_inputs: list[WebUIInputDescription]

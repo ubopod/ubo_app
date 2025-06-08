@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
-from enum import Flag, FlagBoundary, StrEnum, auto
+import uuid
+from dataclasses import field
+from enum import StrEnum, auto
 from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.store.services.speech_synthesis import ReadableInformation
+
+
+class InputMethod(StrEnum):
+    """Input method."""
+
+    CAMERA = auto()
+    WEB_DASHBOARD = auto()
+    PATH_SELECTOR = auto()
 
 
 class InputResult(Immutable):
@@ -35,14 +47,6 @@ class InputFieldType(StrEnum):
     TIME = 'time'
 
 
-class InputMethod(Flag, boundary=FlagBoundary.STRICT):
-    """Input method."""
-
-    CAMERA = auto()
-    WEB_DASHBOARD = auto()
-    ALL = CAMERA | WEB_DASHBOARD
-
-
 class InputFieldDescription(Immutable):
     """Description of an input field in an input demand."""
 
@@ -61,12 +65,28 @@ class InputFieldDescription(Immutable):
 class InputDescription(Immutable):
     """Description of an input demand."""
 
-    title: str
-    prompt: str | None
-    extra_information: ReadableInformation | None = None
-    id: str
-    pattern: str | None
-    fields: list[InputFieldDescription] | None = None
+    input_method: InputMethod
+
+    id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    title: str | None = None
+    prompt: str | None = None
+
+
+class WebUIInputDescription(InputDescription):
+    """Description of a web UI input field."""
+
+    input_method: InputMethod = InputMethod.WEB_DASHBOARD
+
+    fields: Sequence[InputFieldDescription] | None = None
+
+
+class QRCodeInputDescription(InputDescription):
+    """Description of a QR code input field."""
+
+    input_method: InputMethod = InputMethod.CAMERA
+
+    instructions: ReadableInformation | None = None
+    pattern: str | None = None
 
 
 class InputAction(BaseAction):
@@ -77,7 +97,6 @@ class InputDemandAction(InputAction):
     """Action for demanding input from the user."""
 
     description: InputDescription
-    method: InputMethod
 
 
 class InputResolveAction(InputAction):

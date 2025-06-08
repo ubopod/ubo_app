@@ -16,6 +16,7 @@ from wifi_manager import (
 from ubo_app.colors import INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
+    OpenApplicationAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
@@ -23,7 +24,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
-    NotificationActionItem,
+    NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
@@ -97,9 +98,9 @@ async def _check_connection() -> None:
         icon='󱚵',
         display_type=NotificationDisplayType.STICKY,
         actions=[
-            NotificationActionItem(
-                action=lambda: (
-                    create_wireless_connection.CreateWirelessConnectionPage
+            NotificationDispatchItem(
+                store_action=OpenApplicationAction(
+                    application_id='wifi:create-connection-page',
                 ),
                 icon='󱚾',
                 background_color=INFO_COLOR,

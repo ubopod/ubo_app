@@ -10,8 +10,8 @@ from ubo_app.store.input.types import (
     InputAction,
     InputCancelAction,
     InputDemandAction,
-    InputMethod,
     InputResolveAction,
+    WebUIInputDescription,
 )
 from ubo_app.store.services.notifications import (
     NotificationsAction,
@@ -32,18 +32,19 @@ DispatchAction = InputCancelAction | NotificationsAction
 def reducer(
     state: WebUIState | None,
     action: InputAction,
-) -> (
-    WebUIState
-    | ReducerResult[WebUIState, DispatchAction, WebUIInitializeEvent | WebUIStopEvent]
-):
+) -> ReducerResult[
+    WebUIState,
+    DispatchAction,
+    WebUIInitializeEvent | WebUIStopEvent,
+]:
     if state is None:
         if isinstance(action, InitAction):
             return WebUIState(active_inputs=[])
         raise InitializationActionError(action)
 
-    if (
-        isinstance(action, InputDemandAction)
-        and action.method is InputMethod.WEB_DASHBOARD
+    if isinstance(action, InputDemandAction) and isinstance(
+        action.description,
+        WebUIInputDescription,
     ):
         return CompleteReducerResult(
             state=replace(

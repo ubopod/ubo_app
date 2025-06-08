@@ -20,6 +20,7 @@ from ubo_app.store.input.types import (
     InputProvideAction,
     InputResolveAction,
     InputResult,
+    QRCodeInputDescription,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
@@ -46,14 +47,64 @@ DispatchAction = (
 )
 
 
-def pop_queue(state: CameraState) -> CameraState:
-    if len(state.queue) > 0:
-        input_description, *queue = state.queue
-        return replace(state, current=input_description, queue=queue)
-    return replace(
-        state,
-        is_viewfinder_active=False,
-        current=None,
+def prompt_notification(description: QRCodeInputDescription) -> NotificationsAddAction:
+    return NotificationsAddAction(
+        notification=Notification(
+            id=f'camera:qrcode:{description.id}',
+            icon='󰄀󰐲',
+            title='QR Code',
+            content=f'[size=18dp]{description.prompt}[/size]',
+            display_type=NotificationDisplayType.STICKY,
+            is_read=True,
+            extra_information=description.instructions,
+            expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
+            color='#ffffff',
+            actions=[
+                NotificationDispatchItem(
+                    store_action=CameraStartViewfinderAction(
+                        pattern=description.pattern,
+                    ),
+                    icon='󰄀',
+                    close_notification=False,
+                ),
+            ],
+            show_dismiss_action=False,
+            dismiss_on_close=True,
+            on_close=functools.partial(
+                store.dispatch,
+                InputCancelAction(id=description.id),
+            ),
+        ),
+    )
+
+
+def pop_queue(
+    state: CameraState,
+    *,
+    actions: list[DispatchAction] | None = None,
+    events: list[CameraEvent] | None = None,
+) -> ReducerResult[
+    CameraState,
+    DispatchAction,
+    CameraEvent,
+]:
+    if len(state.queue) == 0:
+        msg = 'Cannot pop from an empty queue in CameraState.'
+        raise ValueError(msg)
+    actions = actions or []
+    events = events or []
+    events.append(CameraStopViewfinderEvent())
+
+    actions.append(
+        NotificationsClearByIdAction(id=f'camera:qrcode:{state.queue[0].id}'),
+    )
+    _, *queue = state.queue
+    if queue:
+        actions.append(prompt_notification(queue[0]))
+    return CompleteReducerResult(
+        state=replace(state, queue=queue),
+        actions=actions,
+        events=events,
     )
 
 
@@ -67,62 +118,21 @@ def reducer(
 ]:
     if state is None:
         if isinstance(action, InitAction):
-            return CameraState(is_viewfinder_active=False, queue=[])
+            return CameraState(queue=[])
         raise InitializationActionError(action)
 
-    if isinstance(action, InputDemandAction) and action.method is InputMethod.CAMERA:
-        if state.is_viewfinder_active:
-            return replace(
-                state,
-                queue=[
-                    *state.queue,
-                    action.description,
-                ],
-            )
+    if isinstance(action, InputDemandAction) and isinstance(
+        action.description,
+        QRCodeInputDescription,
+    ):
         return CompleteReducerResult(
-            state=replace(
-                state,
-                current=action.description,
-            ),
-            actions=[
-                NotificationsAddAction(
-                    notification=Notification(
-                        id='camera:qrcode',
-                        icon='󰄀󰐲',
-                        title='QR Code',
-                        content=f'[size=18dp]{action.description.prompt}[/size]',
-                        display_type=NotificationDisplayType.STICKY,
-                        is_read=True,
-                        extra_information=action.description.extra_information,
-                        expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
-                        color='#ffffff',
-                        actions=[
-                            NotificationDispatchItem(
-                                store_action=CameraStartViewfinderAction(
-                                    pattern=action.description.pattern,
-                                ),
-                                icon='󰄀',
-                                close_notification=False,
-                            ),
-                        ],
-                        show_dismiss_action=False,
-                        dismiss_on_close=True,
-                        on_close=functools.partial(
-                            store.dispatch,
-                            InputCancelAction(id=action.description.id),
-                        ),
-                    ),
-                ),
-            ],
+            state=replace(state, queue=[*state.queue, action.description]),
+            actions=[] if state.queue else [prompt_notification(action.description)],
         )
 
-    if isinstance(action, InputResolveAction | InputCancelAction):
-        if state.current and state.current.id == action.id:
-            return CompleteReducerResult(
-                state=pop_queue(state),
-                actions=[NotificationsClearByIdAction(id='camera:qrcode')],
-                events=[CameraStopViewfinderEvent(id=state.current.id)],
-            )
+    if isinstance(action, InputResolveAction):
+        if state.queue and state.queue[0].id == action.id:
+            return pop_queue(state)
         return replace(
             state,
             queue=[
@@ -134,23 +144,20 @@ def reducer(
 
     if isinstance(action, CameraStartViewfinderAction):
         return CompleteReducerResult(
-            state=replace(
-                state,
-                is_viewfinder_active=True,
-            ),
+            state=replace(state),
             events=[CameraStartViewfinderEvent(pattern=action.pattern)],
         )
 
-    if isinstance(action, CameraReportBarcodeAction) and state.current:
+    if isinstance(action, CameraReportBarcodeAction) and state.queue:
         for code in action.codes:
-            if state.current.pattern:
-                match = re.match(state.current.pattern, code)
+            if state.queue[0].pattern:
+                match = re.match(state.queue[0].pattern, code)
                 if match:
                     return CompleteReducerResult(
-                        state=pop_queue(state),
+                        state=state,
                         actions=[
                             InputProvideAction(
-                                id=state.current.id,
+                                id=state.queue[0].id,
                                 value=code,
                                 result=InputResult(
                                     data={
@@ -162,24 +169,17 @@ def reducer(
                                     method=InputMethod.CAMERA,
                                 ),
                             ),
-                            NotificationsClearByIdAction(id='camera:qrcode'),
-                        ],
-                        events=[
-                            CameraStopViewfinderEvent(id=None),
                         ],
                     )
             else:
                 return CompleteReducerResult(
-                    state=pop_queue(state),
+                    state=state,
                     actions=[
                         InputProvideAction(
-                            id=state.current.id,
+                            id=state.queue[0].id,
                             value=code,
                             result=None,
                         ),
-                    ],
-                    events=[
-                        CameraStopViewfinderEvent(id=None),
                     ],
                 )
 

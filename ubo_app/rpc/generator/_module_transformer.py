@@ -126,7 +126,9 @@ class _ProtoGenerator(ast.NodeVisitor):
                     if n.value is not None:
                         field_type = _OptionalType(type=field_type)
                 except TypeError as e:
-                    if 'Callable types are not supported' in str(e):
+                    if 'Callable types are not supported' in str(
+                        e,
+                    ) or 'ClassVar is not supported' in str(e):
                         continue
                     raise
 
@@ -167,7 +169,7 @@ class _ProtoGenerator(ast.NodeVisitor):
         self.enums[enum_name] = values
         global_enums[enum_name] = self.package_name
 
-    def get_field_type(  # noqa: C901, PLR0912
+    def get_field_type(  # noqa: C901, PLR0912, PLR0915
         self: _ProtoGenerator,
         *,
         value: ast.AST,
@@ -185,6 +187,8 @@ class _ProtoGenerator(ast.NodeVisitor):
                 return _BasicType(type='bytes')
             if value.id == 'datetime':
                 return _BasicType(type='int64')
+            if value.id == 'Path':
+                return _BasicType(type='string')
             return _BasicType(type=value.id)
         if isinstance(value, ast.Subscript):
             if isinstance(value.value, ast.Name):
@@ -232,6 +236,10 @@ class _ProtoGenerator(ast.NodeVisitor):
 
                 if value.value.id == 'IO':
                     return _BasicType(type='bytes')
+
+                if value.value.id == 'ClassVar':
+                    msg = 'ClassVar is not supported'
+                    raise TypeError(msg)
 
                 msg = (
                     f'Unsupported subscript type: {value.value.id} '

@@ -24,7 +24,12 @@ from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
-from ubo_app.store.input.types import InputFieldDescription, InputFieldType
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    QRCodeInputDescription,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
 from ubo_app.store.services.speech_synthesis import (
@@ -82,24 +87,30 @@ def input_access_key() -> None:
         try:
             input_result = (
                 await ubo_input(
-                    title='Picovoice Access Key',
-                    qr_code_generation_instructions=ReadableInformation(
-                        text='Convert the Picovoice access key to a QR code and hold '
-                        'it in front of the camera to scan it.',
-                        picovoice_text='Convert the Picovoice access key to a '
-                        '{QR|K Y UW AA R} and hold it in front of the camera to scan '
-                        'it.',
-                    ),
                     prompt='Enter Picovoice Access Key',
-                    pattern=r'^(?P<access_key>.*)$',
-                    fields=[
-                        InputFieldDescription(
-                            name='access_key',
-                            label='Access Key',
-                            description='Enter Picovoice Access Key',
-                            type=InputFieldType.TEXT,
-                            required=True,
-                            title='Picovoice Access Key',
+                    title='Picovoice Access Key',
+                    descriptions=[
+                        QRCodeInputDescription(
+                            pattern=r'^(?P<access_key>.*)$',
+                            instructions=ReadableInformation(
+                                text='Convert the Picovoice access key to a QR code '
+                                'and hold it in front of the camera to scan it.',
+                                picovoice_text='Convert the Picovoice access key to a '
+                                '{QR|K Y UW AA R} and hold it in front of the camera '
+                                'to scan it.',
+                            ),
+                        ),
+                        WebUIInputDescription(
+                            fields=[
+                                InputFieldDescription(
+                                    name='access_key',
+                                    label='Access Key',
+                                    description='Enter Picovoice Access Key',
+                                    type=InputFieldType.TEXT,
+                                    required=True,
+                                    title='Picovoice Access Key',
+                                ),
+                            ],
                         ),
                     ],
                 )

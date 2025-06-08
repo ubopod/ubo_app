@@ -10,7 +10,11 @@ from ubo_app.constants import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
-from ubo_app.store.input.types import InputFieldDescription, InputFieldType
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    WebUIInputDescription,
+)
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
@@ -50,15 +54,19 @@ class GoogleEngine(NeedsSetupMixin):
             title='Google Cloud Service Account Key',
             prompt='Enter your service account key, it should have at least '
             '"Google Speech Client" role.',
-            fields=[
-                InputFieldDescription(
-                    name='service_account_key',
-                    type=InputFieldType.FILE,
-                    label='Service Account Key',
-                    description='JSON key file for Google Cloud Speech-to-Text',
-                    file_mimetype='application/json',
-                    required=True,
-                    pattern=GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN,
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name='service_account_key',
+                            type=InputFieldType.FILE,
+                            label='Service Account Key',
+                            description='JSON key file for Google Cloud Speech-to-Text',
+                            file_mimetype='application/json',
+                            required=True,
+                            pattern=GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN,
+                        ),
+                    ],
                 ),
             ],
         )

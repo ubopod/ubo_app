@@ -185,7 +185,8 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     def close_application(self: MenuAppCentral, event: CloseApplicationEvent) -> None:
         for item in self.menu_widget.stack:
             if (
-                isinstance(item, StackApplicationItem)
+                event.application_instance_id
+                and isinstance(item, StackApplicationItem)
                 and hasattr(item.application, 'id')
                 and isinstance(item.application, UboPageWidget)
                 and item.application.id == event.application_instance_id

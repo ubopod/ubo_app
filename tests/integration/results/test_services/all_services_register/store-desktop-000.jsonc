@@ -19,8 +19,6 @@
   },
   "camera": {
     "_type": "CameraState",
-    "current": null,
-    "is_viewfinder_active": false,
     "queue": []
   },
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
@@ -7206,7 +7204,7 @@
           "application_id": "wifi:create-connection-page",
           "initialization_args": [],
           "initialization_kwargs": {
-            "input_methods": 1
+            "input_methods": "camera"
           }
         },
         "phrase": [
@@ -7223,7 +7221,7 @@
           "application_id": "wifi:create-connection-page",
           "initialization_args": [],
           "initialization_kwargs": {
-            "input_methods": 2
+            "input_methods": "web_dashboard"
           }
         },
         "phrase": [

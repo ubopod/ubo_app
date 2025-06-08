@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pathlib
-from typing import Literal, TypeAlias
+import uuid
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from kivy.lang.builder import Builder
 from kivy.metrics import dp
@@ -12,6 +13,11 @@ from ubo_gui.page import PageWidget
 from ubo_gui.prompt import PromptWidget
 
 from ubo_app.colors import SUCCESS_COLOR
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from ubo_gui.menu.types import Item
 
 ItemParameters: TypeAlias = dict[Literal['background_color', 'color', 'icon'], str]
 
@@ -27,7 +33,17 @@ UNSELECTED_ITEM_PARAMETERS: ItemParameters = {
 class UboPageWidget(PageWidget):
     """Base class for all UBO pages."""
 
-    id: str = StringProperty()
+    id: str
+
+    def __init__(
+        self,
+        items: Sequence[Item | None] | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        """Initialize the UBO page widget."""
+        self.id = uuid.uuid4().hex
+        super().__init__(*args, items=items, **kwargs)
 
 
 class UboPromptWidget(PromptWidget, UboPageWidget):

@@ -14,9 +14,12 @@ from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.input.types import (
+    InputDescription,
     InputFieldDescription,
     InputFieldType,
     InputMethod,
+    QRCodeInputDescription,
+    WebUIInputDescription,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -46,58 +49,68 @@ BARCODE_PATTERN = (
     r'(?:P:(?P<Password_>[^;]*);)?(?:H:(?P<Hidden_>(?i:true|false|));)?;$'
 )
 HOTSPOT_GRACE_TIME = 5
+INPUT_DESCRIPTIONS: Sequence[InputDescription] = [
+    QRCodeInputDescription(
+        pattern=BARCODE_PATTERN,
+        instructions=ReadableInformation(
+            text='Go to your phone settings, choose QR code and hold it in '
+            'front of the camera to scan it.',
+            picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '
+            'code and hold it in front of the camera to scan it.',
+        ),
+    ),
+    WebUIInputDescription(
+        fields=[
+            InputFieldDescription(
+                name='SSID',
+                label='SSID',
+                type=InputFieldType.TEXT,
+                description='The name of the WiFi network',
+                required=True,
+            ),
+            InputFieldDescription(
+                name='Password',
+                label='Password',
+                type=InputFieldType.PASSWORD,
+                description='The password of the WiFi network',
+                required=False,
+            ),
+            InputFieldDescription(
+                name='Type',
+                label='Type',
+                type=InputFieldType.SELECT,
+                description='The type of the WiFi network',
+                default_value='WPA2',
+                options=['WEP', 'WPA', 'WPA2', 'nopass'],
+                required=False,
+            ),
+            InputFieldDescription(
+                name='Hidden',
+                label='Hidden',
+                type=InputFieldType.CHECKBOX,
+                description='Is the WiFi network hidden?',
+                default_value='false',
+                required=False,
+            ),
+        ],
+    ),
+]
 
 
 async def input_wifi_connection(
     *,
-    input_methods: InputMethod = InputMethod.WEB_DASHBOARD,
+    input_methods: tuple[type[InputDescription], ...] = (),
     on_creating: Callable[[], None] | None = None,
 ) -> None:
     """Input WiFi connection."""
     logger.debug('wifi connection input - start')
     try:
         _, result = await ubo_input(
-            input_methods=input_methods,
             prompt='Enter WiFi connection',
-            qr_code_generation_instructions=ReadableInformation(
-                text='Go to your phone settings, choose QR code and hold it in '
-                'front of the camera to scan it.',
-                picovoice_text='Go to your phone settings, choose {QR|K Y UW AA R} '
-                'code and hold it in front of the camera to scan it.',
-            ),
-            pattern=BARCODE_PATTERN,
-            fields=[
-                InputFieldDescription(
-                    name='SSID',
-                    label='SSID',
-                    type=InputFieldType.TEXT,
-                    description='The name of the WiFi network',
-                    required=True,
-                ),
-                InputFieldDescription(
-                    name='Password',
-                    label='Password',
-                    type=InputFieldType.PASSWORD,
-                    description='The password of the WiFi network',
-                    required=False,
-                ),
-                InputFieldDescription(
-                    name='Type',
-                    label='Type',
-                    type=InputFieldType.SELECT,
-                    description='The type of the WiFi network',
-                    default_value='WPA2',
-                    options=['WEP', 'WPA', 'WPA2', 'nopass'],
-                    required=False,
-                ),
-                InputFieldDescription(
-                    name='Hidden',
-                    label='Hidden',
-                    type=InputFieldType.CHECKBOX,
-                    description='Is the WiFi network hidden?',
-                    default_value='false',
-                    required=False,
-                ),
+            descriptions=[
+                description
+                for description in INPUT_DESCRIPTIONS
+                if not input_methods or isinstance(description, input_methods)
             ],
         )
     except asyncio.CancelledError:
@@ -148,11 +161,7 @@ async def input_wifi_connection(
             color=WARNING_COLOR,
             icon='󱋆',
         )
-        store.dispatch(
-            NotificationsAddAction(
-                notification=notification,
-            ),
-        )
+        store.dispatch(NotificationsAddAction(notification=notification))
         await asyncio.sleep(HOTSPOT_GRACE_TIME)
         store.dispatch(NotificationsClearByIdAction(id='wifi-wait-hotspot'))
         logger.debug(
@@ -203,10 +212,10 @@ class CreateWirelessConnectionPage(UboPageWidget):
     creating = BooleanProperty(defaultvalue=False)
 
     def __init__(
-        self: CreateWirelessConnectionPage,
+        self,
         items: Sequence[Item] | None = None,
         *args: object,
-        input_methods: InputMethod = InputMethod.ALL,
+        input_methods: tuple[type[InputDescription], ...] = (),
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=items)

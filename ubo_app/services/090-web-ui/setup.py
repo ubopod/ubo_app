@@ -81,10 +81,10 @@ async def _get_docker_status() -> str:
         return 'not installed'
     except Exception:
         logger.exception('Failed to check if docker is running')
+        report_service_error()
         return 'failed'
     else:
         logger.warning('Docker process returned non-zero exit code')
-        report_service_error()
         return 'not running'
 
 
@@ -133,7 +133,7 @@ async def _get_envoy_status() -> str:
         return 'failed'
 
 
-async def initialize_hotspot(event: WebUIInitializeEvent) -> None:
+async def initialize(event: WebUIInitializeEvent) -> None:
     """Start the hotspot if there is no network connection."""
     is_connected = await has_gateway()
     logger.info(
@@ -314,8 +314,6 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
             content_type='application/json',
         )
 
-    _.extend([inputs_form, status, action])
-
     if WEB_UI_DEBUG_MODE:
 
         @app.errorhandler(Exception)
@@ -326,7 +324,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
 
         _.append(handle_error)
 
-    store.subscribe_event(WebUIInitializeEvent, initialize_hotspot)
+    store.subscribe_event(WebUIInitializeEvent, initialize)
     store.subscribe_event(WebUIStopEvent, stop_hotspot)
 
     start_event = asyncio.Event()

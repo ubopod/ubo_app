@@ -39,7 +39,12 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
-from ubo_app.store.input.types import InputFieldDescription, InputFieldType, InputMethod
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    QRCodeInputDescription,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchCompositionEvent,
@@ -262,46 +267,52 @@ def input_credentials() -> None:
             credentials = (
                 await ubo_input(
                     prompt='Enter Docker Credentials',
-                    qr_code_generation_instructions=ReadableInformation(
-                        text="""To generate your QR code for login, format your \
-details by separating your service, username, and password with the pipe symbol. For \
-example, format it as "docker.io|johndoe|password" and then convert this text into a \
-QR code. If you omit the service name, "docker.io" will automatically be used as the \
+                    descriptions=[
+                        QRCodeInputDescription(
+                            instructions=ReadableInformation(
+                                text="""To generate your QR code for login, format \
+your details by separating your service, username, and password with the pipe symbol. \
+For example, format it as "docker.io|johndoe|password" and then convert this text into \
+a QR code. If you omit the service name, "docker.io" will automatically be used as the \
 default.""",
-                        piper_text="""To generate your QR code for login, format your \
-details by separating your service, username, and password with the pipe symbol. For \
-example, format it as docker.ay o pipe johndoe pipe password and then convert this \
-text into a QR code. If you omit the service name, docker.ay o will automatically be \
-used as the default.""",
-                        picovoice_text="""To generate your {QR|K Y UW AA R} code for \
-login, format your details by separating your service, username, and password with the \
-pipe symbol. For example, format it as "docker {.|D AA T} io {.|P AY P} johndoe \
-{.|P AY P} password" and then convert this text into a {QR|K Y UW AA R} code. If you \
-omit the service name, "docker {.|D AA T} io" will automatically be used as the \
+                                piper_text="""To generate your QR code for login, \
+format your details by separating your service, username, and password with the pipe \
+symbol. For example, format it as docker.ay o pipe johndoe pipe password and then \
+convert this text into a QR code. If you omit the service name, docker.ay o will \
+automatically be used as the default.""",
+                                picovoice_text="""To generate your {QR|K Y UW AA R} \
+code for login, format your details by separating your service, username, and password \
+with the pipe symbol. For example, format it as "docker {.|D AA T} io {.|P AY P} \
+johndoe {.|P AY P} password" and then convert this text into a {QR|K Y UW AA R} code. \
+If you omit the service name, "docker {.|D AA T} io" will automatically be used as the \
 default.""",
-                    ),
-                    pattern=r'^(?P<Service>[^|]*)\|(?P<Username>[^|]*)\|(?P<Password>[^|]*)$|'
-                    r'(?P<Username_>^[^|]*)|(?P<Password_>[^|]*)$',
-                    fields=[
-                        InputFieldDescription(
-                            name='Service',
-                            label='Service',
-                            type=InputFieldType.TEXT,
-                            description='The service name',
-                            default_value='docker.io',
-                            required=False,
+                            ),
+                            pattern=r'^(?P<Service>[^|]*)\|(?P<Username>[^|]*)\|(?P<Password>[^|]*)$|'
+                            r'(?P<Username_>^[^|]*)|(?P<Password_>[^|]*)$',
                         ),
-                        InputFieldDescription(
-                            name='Username',
-                            label='Username',
-                            type=InputFieldType.TEXT,
-                            required=True,
-                        ),
-                        InputFieldDescription(
-                            name='Password',
-                            label='Password',
-                            type=InputFieldType.PASSWORD,
-                            required=True,
+                        WebUIInputDescription(
+                            fields=[
+                                InputFieldDescription(
+                                    name='Service',
+                                    label='Service',
+                                    type=InputFieldType.TEXT,
+                                    description='The service name',
+                                    default_value='docker.io',
+                                    required=False,
+                                ),
+                                InputFieldDescription(
+                                    name='Username',
+                                    label='Username',
+                                    type=InputFieldType.TEXT,
+                                    required=True,
+                                ),
+                                InputFieldDescription(
+                                    name='Password',
+                                    label='Password',
+                                    type=InputFieldType.PASSWORD,
+                                    required=True,
+                                ),
+                            ],
                         ),
                     ],
                 )
@@ -368,46 +379,51 @@ def input_docker_composition() -> None:
     async def act() -> None:
         with contextlib.suppress(asyncio.CancelledError):
             _, result = await ubo_input(
-                input_methods=InputMethod.WEB_DASHBOARD,
                 prompt='Import Docker Composition',
-                fields=[
-                    InputFieldDescription(
-                        name='label',
-                        label='Label',
-                        type=InputFieldType.TEXT,
-                        description='The label of this composition',
-                        required=True,
-                    ),
-                    InputFieldDescription(
-                        name='yaml-config',
-                        label='Compose YAML',
-                        type=InputFieldType.LONG,
-                        description='This will be saved as the docker-compose.yml file',
-                        required=True,
-                    ),
-                    InputFieldDescription(
-                        name='icon',
-                        label='Icon',
-                        type=InputFieldType.TEXT,
-                        description="""<a \
+                descriptions=[
+                    WebUIInputDescription(
+                        fields=[
+                            InputFieldDescription(
+                                name='label',
+                                label='Label',
+                                type=InputFieldType.TEXT,
+                                description='The label of this composition',
+                                required=True,
+                            ),
+                            InputFieldDescription(
+                                name='yaml-config',
+                                label='Compose YAML',
+                                type=InputFieldType.LONG,
+                                description='This will be saved as the '
+                                'docker-compose.yml file',
+                                required=True,
+                            ),
+                            InputFieldDescription(
+                                name='icon',
+                                label='Icon',
+                                type=InputFieldType.TEXT,
+                                description="""<a \
 href="https://www.nerdfonts.com/cheat-sheet" target="_blank">Nerd Fonts</a> are \
 supported""",
-                        required=False,
-                    ),
-                    InputFieldDescription(
-                        name='instructions',
-                        label='Instructions',
-                        type=InputFieldType.LONG,
-                        description='Instructions on how to use this composition',
-                        required=False,
-                    ),
-                    InputFieldDescription(
-                        name='content',
-                        label='Directory Content',
-                        type=InputFieldType.FILE,
-                        description='The content of the directory in any of these '
-                        'formats .tar.gz, .tar.bz2, .tar.xz, or .zip',
-                        required=False,
+                                required=False,
+                            ),
+                            InputFieldDescription(
+                                name='instructions',
+                                label='Instructions',
+                                type=InputFieldType.LONG,
+                                description='Instructions on how to use this '
+                                'composition',
+                                required=False,
+                            ),
+                            InputFieldDescription(
+                                name='content',
+                                label='Directory Content',
+                                type=InputFieldType.FILE,
+                                description='The content of the directory in any of '
+                                'these formats .tar.gz, .tar.bz2, .tar.xz, or .zip',
+                                required=False,
+                            ),
+                        ],
                     ),
                 ],
             )
