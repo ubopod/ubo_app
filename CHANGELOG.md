@@ -34,6 +34,7 @@
 - feat(file-system): add file system operations copy, move, and remove - closes #300
 - fix(wifi): hotspot initialization issue on bare Raspberry Pi, not able to interact with the pod to select the input method
 - fix(web-ui): show a notification when web ui is connected, this is a workaround to emulate a redraw in the display render stream events in the bus
+- refactor(core:rpc): rename `generated` to `ubo_bindings`, we want to reuse that directory to create a separate python package for the rpc bindings, so that other services can use it without depending on the whole `ubo_app` package
 
 ## Version 1.4.0
 

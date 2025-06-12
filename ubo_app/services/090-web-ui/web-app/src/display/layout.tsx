@@ -1,7 +1,7 @@
 import { SxProps } from "@mui/material";
 import { styled, StyleFunction, unstable_styleFunctionSx } from "@mui/system";
 
-import { Key } from "../generated/ubo/v1/ubo_pb";
+import { Key } from "../bindings/ubo/v1/ubo_pb";
 
 interface SvgProps {
   sx?: SxProps;

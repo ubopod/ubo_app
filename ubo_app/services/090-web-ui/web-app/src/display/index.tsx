@@ -4,15 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { subscribeToBrowserEvents } from "./browser-event-handler";
 import { Layout } from "./layout";
 import { subscribeToStoreEvents } from "./store-event-handler";
-import { DispatchActionRequest } from "../generated/store/v1/store_pb";
-import { StoreServiceClient } from "../generated/store/v1/StoreServiceClientPb";
+import { DispatchActionRequest } from "../bindings/store/v1/store_pb";
+import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
   Key,
   KeypadAction,
   KeypadKeyPressAction,
   KeypadKeyReleaseAction,
-} from "../generated/ubo/v1/ubo_pb";
+} from "../bindings/ubo/v1/ubo_pb";
 
 export function Display({ store }: { store: StoreServiceClient }) {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);

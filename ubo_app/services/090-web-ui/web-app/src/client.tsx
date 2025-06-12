@@ -13,9 +13,9 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 
+import { StoreServiceClient } from "./bindings/store/v1/StoreServiceClientPb";
+import { WebUIState } from "./bindings/ubo/v1/ubo_pb";
 import { ThemeSwitch } from "./components/ThemeSwitch";
-import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
-import { WebUIState } from "./generated/ubo/v1/ubo_pb";
 import { Inputs } from "./inputs";
 import { MainView } from "./main-view";
 import { StatusType } from "./types";

@@ -120,7 +120,7 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 
 "proto:generate:raw" = "python ubo_app/rpc/generator/generate_proto.py"
 "proto:generate" = ["proto:generate:raw", "proto:lint"]
-"proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/generated && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/generated/ ubo_app/rpc/proto/store/v1/store.proto'"
+"proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto'"
 "proto:compile" = ["proto:compile:raw", "lint:fix"]
 "proto:lint" = "buf format -w ubo_app/rpc/proto/"
 "proto" = ["proto:generate", "proto:compile"]
@@ -186,7 +186,7 @@ multiline-quotes = "double"
 "test_*.py" = ["S101", "PLR0913", "PLR0915", "PLR2004"]
 "**/reducer.py" = ["C901", "PLR0912", "PLR0915"]
 "ubo_app/services/*/ubo_handle.py" = ["TC004"]
-"ubo_app/rpc/generated/*" = [
+"ubo_app/rpc/ubo_bindings/*" = [
   "ARG002",
   "ASYNC109",
   "D",
@@ -209,7 +209,7 @@ profile = "black"
 [tool.pyright]
 exclude = [
   "typings",
-  "ubo_app/rpc/generated",
+  "ubo_app/rpc/ubo_bindings",
   ".venv",
   "setup_scm_schemes.py",
   "dist/",

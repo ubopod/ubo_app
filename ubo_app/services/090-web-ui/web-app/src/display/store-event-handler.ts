@@ -4,8 +4,8 @@ import {
   DispatchActionRequest,
   SubscribeEventRequest,
   SubscribeEventResponse,
-} from "../generated/store/v1/store_pb";
-import { StoreServiceClient } from "../generated/store/v1/StoreServiceClientPb";
+} from "../bindings/store/v1/store_pb";
+import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
   AudioPlayAudioEvent,
@@ -14,7 +14,7 @@ import {
   Notification,
   NotificationDisplayType,
   NotificationsAddAction,
-} from "../generated/ubo/v1/ubo_pb";
+} from "../bindings/ubo/v1/ubo_pb";
 
 function showConnectionNotification(store: StoreServiceClient) {
   const dispatchActionRequest = new DispatchActionRequest();
