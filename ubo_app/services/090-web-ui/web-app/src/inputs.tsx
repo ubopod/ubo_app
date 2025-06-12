@@ -19,8 +19,8 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
-import { DispatchActionRequest } from "./generated/store/v1/store_pb";
-import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
+import { DispatchActionRequest } from "./bindings/store/v1/store_pb";
+import { StoreServiceClient } from "./bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
   InputCancelAction,
@@ -29,7 +29,7 @@ import {
   InputProvideAction,
   InputResult,
   WebUIInputDescription,
-} from "./generated/ubo/v1/ubo_pb";
+} from "./bindings/ubo/v1/ubo_pb";
 import { inputFieldTypes } from "./types";
 
 export function Inputs({
