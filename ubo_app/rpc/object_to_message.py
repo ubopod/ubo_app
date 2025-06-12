@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, TypeAlias, TypeVar, cast, overload
 
 import betterproto
 import betterproto.casing
-
-import ubo_app.rpc.generated.ubo.v1
+import ubo_app.rpc.ubo_bindings.ubo.v1
 
 if TYPE_CHECKING:
     from immutable import Immutable
@@ -28,7 +27,7 @@ ReturnType: TypeAlias = (
 
 def get_class(object_: Immutable) -> type[betterproto.Message]:
     return getattr(
-        ubo_app.rpc.generated.ubo.v1,
+        ubo_app.rpc.ubo_bindings.ubo.v1,
         betterproto.casing.pascal_case(type(object_).__name__),
     )
 

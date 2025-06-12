@@ -1,0 +1,38 @@
+[project]
+name = "ubo-app-raw-bindings"
+dynamic = ["version"]
+description = "Raw bindings for UBO App."
+license = "Apache-2.0"
+authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+readme = "README.md"
+requires-python = ">=3.11, <3.12"
+keywords = [
+  'ubo',
+  'ubo-pod',
+  'raspberry pi',
+  'rpi',
+  'home assistance',
+  'python',
+  'bindings',
+  'grpc',
+]
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "code"
+path = "ubo_bindings/parent_version.py"
+expression = "get_version()"
+
+[tool.hatch.build]
+packages = ["ubo_bindings"]
+
+[tool.uv]
+dev-dependencies = ["pyright>=1.1.401", "ruff>=0.11.8"]
+
+[tool.ruff]
+target-version = 'py311'

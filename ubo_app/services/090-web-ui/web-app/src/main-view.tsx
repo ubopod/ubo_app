@@ -1,6 +1,6 @@
+import { StoreServiceClient } from "./bindings/store/v1/StoreServiceClientPb";
 import { Status } from "./components/Status";
 import { Display } from "./display";
-import { StoreServiceClient } from "./generated/store/v1/StoreServiceClientPb";
 import { Action, StatusType } from "./types";
 
 function request(action: Action) {

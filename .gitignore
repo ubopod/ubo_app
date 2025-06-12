@@ -91,7 +91,9 @@ ubo_app/_version.py
 
 # grpc
 /ubo_app/rpc/proto/ubo
-/ubo_app/rpc/generated
+/ubo_app/rpc/ubo_bindings
+-/ubo_app/rpc/ubo_bindings/client.py
+-/ubo_app/rpc/ubo_bindings/parent_version.py
 
 /screenshots
 /snapshots

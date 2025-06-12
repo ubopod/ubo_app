@@ -13,7 +13,7 @@
   ],
   "repository": "https://github.com/ubopod/ubo-grpc-clients",
   "scripts": {
-    "proto:compile": "mkdir -p src/generated && grpc_tools_node_protoc --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js --js_out=import_style=commonjs:./src/generated --grpc-web_out=import_style=typescript,mode=grpcwebtext:./src/generated -I ../../../rpc/proto/ ../../../rpc/proto/package_info/v1/package_info.proto ../../../rpc/proto/store/v1/store.proto ../../../rpc/proto/ubo/v1/ubo.proto",
+    "proto:compile": "mkdir -p src/bindings && grpc_tools_node_protoc --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js --js_out=import_style=commonjs:./src/bindings --grpc-web_out=import_style=typescript,mode=grpcwebtext:./src/bindings -I ../../../rpc/proto/ ../../../rpc/proto/package_info/v1/package_info.proto ../../../rpc/proto/store/v1/store.proto ../../../rpc/proto/ubo/v1/ubo.proto",
     "start": "webpack serve --open",
     "build": "webpack",
     "build:watch": "webpack --watch"
