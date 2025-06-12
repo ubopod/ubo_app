@@ -1,6 +1,8 @@
-const path = require("path");
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-module.exports = {
+export default {
   entry: "./src/client.tsx",
   output: {
     filename: "main.js",

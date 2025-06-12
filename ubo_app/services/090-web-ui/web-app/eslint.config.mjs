@@ -6,11 +6,23 @@ import tseslint from "typescript-eslint";
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  { files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"] },
+  {
+    files: ["src/**/*.{js,mjs,cjs,ts,jsx,tsx}"],
+  },
+  {
+    ignores: ["src/bindings/**", "node_modules/**", "dist/**"],
+  },
   { languageOptions: { globals: globals.browser } },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
-  pluginReact.configs.flat.recommended,
+  {
+    ...pluginReact.configs.flat.recommended,
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
+  },
   {
     plugins: { import: pluginImport },
     rules: {
