@@ -33,6 +33,7 @@
 - feat(file-system): add `InputMethod.PathSelector` as a new input method, showing a file navigation menu to select a file or directory - closes #301
 - feat(file-system): add file system operations copy, move, and remove - closes #300
 - refactor(core:rpc): rename `generated` to `ubo_bindings`, we want to reuse that directory to create a separate python package for the rpc bindings, so that other services can use it without depending on the whole `ubo_app` package
+- chore(web-ui): add lint command in `package.json` scripts
 
 ## Version 1.4.0
 
