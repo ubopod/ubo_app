@@ -2,7 +2,7 @@
 name = "ubo-app"
 dynamic = ["version"]
 description = "Ubo main app, running on device initialization. A platform for running other apps."
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 readme = "README.md"

@@ -27,6 +27,10 @@ class AsyncRemoteStore:
         self.channel = Channel(host=host, port=port)
         self.service = StoreServiceStub(self.channel)
 
+    def close(self) -> None:
+        """Close the channel."""
+        self.channel.close()
+
     @overload
     async def dispatch_async(self, *, action: Action) -> None: ...
     @overload

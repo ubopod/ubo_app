@@ -13,12 +13,40 @@ env:
   PYTHON_VERSION: '3.11.9'
 
 jobs:
+  version:
+    name: Extract Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract-version.outputs.VERSION }}
+      name: ${{ steps.extract-version.outputs.NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-suffix: ubuntu-latest
+
+      - name: Extract Version
+        id: extract-version
+        run: |
+          git fetch --prune --unshallow
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          echo "VERSION=$(uvx hatch version)" >>"$GITHUB_OUTPUT"
+          echo "VERSION=$(uvx hatch version)"
+          echo "NAME=$(uvx hatch project metadata | jq -r .name)" >>"$GITHUB_OUTPUT"
+          echo "NAME=$(uvx hatch project metadata | jq -r .name)"
+
   type-check:
     name: Type Check
     runs-on: ubo-pod-pi5
     steps:
-      - uses: actions/checkout@v4
-        name: Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -51,8 +79,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        name: Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -85,8 +113,8 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0 libportaudio2 portaudio19-dev
 
-      - uses: actions/checkout@v4
-        name: Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Python
         if: matrix.runner == 'ubuntu-latest'
@@ -148,12 +176,100 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  proto:
+    name: Protobuf Files
+    runs-on: ubuntu-latest
+    needs:
+      - version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: System Dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y portaudio19-dev
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-suffix: ubuntu-latest
+
+      - name: Install buf cli
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Build protobuf files
+        run: |
+          uv run --frozen poe proto:generate
+
+      - name: Upload protobuf files
+        uses: actions/upload-artifact@v4
+        with:
+          name: proto-files
+          path: ubo_app/rpc/proto
+          if-no-files-found: error
+
+  bindings:
+    name: Python Bindings
+    runs-on: ubuntu-latest
+    needs:
+      - version
+      - proto
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: System Dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y portaudio19-dev
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-suffix: ubuntu-latest
+
+      - name: Download protobuf files
+        uses: actions/download-artifact@v4
+        with:
+          name: proto-files
+          path: ubo_app/rpc/proto
+
+      - name: Build python bindings
+        run: |
+          uv run --frozen poe proto:compile
+
+      - name: Build
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          cd ubo_app/rpc
+          uv build
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-bindings
+          path: ubo_app/rpc/dist/*.whl
+          if-no-files-found: error
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-bindings
+          path: ubo_app/rpc/dist/*.tar.gz
+          if-no-files-found: error
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.extract-version.outputs.VERSION }}
-      name: ${{ steps.extract-version.outputs.NAME }}
+    needs:
+      - version
+      - proto
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -165,44 +281,22 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y portaudio19-dev
 
-      - uses: actions/setup-python@v5
-        name: Setup Python
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-suffix: ubuntu-latest
 
-      - name: Extract Version
-        id: extract-version
-        run: |
-          git fetch --prune --unshallow
-          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-          echo "VERSION=$(uvx hatch version)" >>"$GITHUB_OUTPUT"
-          echo "VERSION=$(uvx hatch version)"
-          echo "NAME=$(uvx hatch project metadata | jq -r .name)" >>"$GITHUB_OUTPUT"
-          echo "NAME=$(uvx hatch project metadata | jq -r .name)"
-
-      - name: Create virtualenv
-        run: |
-          uv venv --system-site-packages
-
-      - name: Install buf cli
-        uses: bufbuild/buf-action@v1
-        with:
-          setup_only: true
-
-      - name: Build protobuf files and gRPC bindings
-        run: |
-          uv run --frozen poe proto
-
-      - uses: actions/setup-node@v4
-        name: Setup Node
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Download protobuf files
+        uses: actions/download-artifact@v4
+        with:
+          name: proto-files
+          path: ubo_app/rpc/proto
 
       - name: Build Web Application
         run: |
@@ -213,7 +307,7 @@ jobs:
 
       - name: Configure Sentry
         env:
-          VERSION: ${{ steps.extract-version.outputs.VERSION }}
+          VERSION: ${{ needs.version.outputs.version }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REF: ${{ github.ref }}
@@ -231,8 +325,7 @@ jobs:
 
       - name: Build
         env:
-          SETUPTOOLS_SCM_PRETEND_VERSION:
-            ${{ steps.extract-version.outputs.VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ needs.version.outputs.version }}
         run: uv build
 
       - name: Upload wheel
@@ -252,6 +345,7 @@ jobs:
   images:
     name: Create Images
     needs:
+      - version
       - type-check
       - lint
       - test
@@ -270,12 +364,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
+      - name: Download Wheel
+        uses: actions/download-artifact@v4
         with:
           name: wheel
           path: /build/dist
 
-      - uses: actions/download-artifact@v4
+      - name: Download Binary
+        uses: actions/download-artifact@v4
         with:
           name: binary
           path: /build/dist
@@ -311,7 +407,7 @@ jobs:
 
       - name: Build Artifact
         env:
-          PKR_VAR_ubo_app_version: ${{ needs.build.outputs.version }}
+          PKR_VAR_ubo_app_version: ${{ needs.version.outputs.version }}
           PKR_VAR_image_url: ${{ steps.generate-image-url.outputs.image_url }}
           PKR_VAR_image_name: ${{ steps.generate-image-url.outputs.image_name }}
           PKR_VAR_image_checksum_url:
@@ -336,7 +432,7 @@ jobs:
 
       - name: Compress File with Gzip
         env:
-          VERSION: ${{ needs.build.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
           DASHED_SUFFIX: ${{ steps.generate-image-url.outputs.dashed_suffix }}
         run: |
           scripts/consume.sh /build/image.img | gzip -9 >/ubo_app-$VERSION-bookworm$DASHED_SUFFIX.img.gz
@@ -345,36 +441,42 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name:
-            ubo_app-${{ needs.build.outputs.version }}-bookworm${{
+            ubo_app-${{ needs.version.outputs.version }}-bookworm${{
             steps.generate-image-url.outputs.dashed_suffix}}-arm64.img.gz
           path:
-            /ubo_app-${{ needs.build.outputs.version }}-bookworm${{
+            /ubo_app-${{ needs.version.outputs.version }}-bookworm${{
             steps.generate-image-url.outputs.dashed_suffix }}.img.gz
           if-no-files-found: error
 
   publish:
     name: Publish
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if:
+      github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') ||
+      github.ref == 'refs/heads/development')
     needs:
+      - version
       - type-check
       - lint
       - test
+      - bindings
       - build
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url:
-        https://pypi.org/project/${{ needs.build.outputs.name }}/${{
-        needs.build.outputs.version }}
+        https://pypi.org/project/${{ needs.version.outputs.name }}/${{
+        needs.version.outputs.version }}
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download Wheel
+        uses: actions/download-artifact@v4
         with:
           name: wheel
           path: dist
 
-      - uses: actions/download-artifact@v4
+      - name: Download Binary
+        uses: actions/download-artifact@v4
         with:
           name: binary
           path: dist
@@ -384,10 +486,49 @@ jobs:
         with:
           packages-dir: dist
 
+  publish-bindings:
+    name: Publish Bindings
+    if:
+      github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') ||
+      github.ref == 'refs/heads/development')
+    needs:
+      - version
+      - bindings
+      - lint
+      - test
+      - bindings
+      - build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-bindings
+      url:
+        https://pypi.org/project/${{ needs.version.outputs.name
+        }}-raw-bindings/${{ needs.version.outputs.version }}
+    permissions:
+      id-token: write
+    steps:
+      - name: Download Wheel Bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel-bindings
+          path: dist
+
+      - name: Download Binary Bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-bindings
+          path: dist
+
+      - name: Publish Bindings to PyPI
+        uses: ppa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     name: Release
     needs:
+      - version
       - type-check
       - lint
       - test
@@ -399,25 +540,26 @@ jobs:
       name: release
       url:
         https://github.com/${{ github.repository }}/releases/tag/v${{
-        needs.build.outputs.version }}
+        needs.version.outputs.version }}
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-        name: Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Procure Lite Image
         uses: actions/download-artifact@v4
         with:
           name:
-            ubo_app-${{ needs.build.outputs.version
+            ubo_app-${{ needs.version.outputs.version
             }}-bookworm-lite-arm64.img.gz
           path: artifacts
 
       - name: Procure Default Image
         uses: actions/download-artifact@v4
         with:
-          name: ubo_app-${{ needs.build.outputs.version }}-bookworm-arm64.img.gz
+          name:
+            ubo_app-${{ needs.version.outputs.version }}-bookworm-arm64.img.gz
           path: artifacts
 
       - name: Procure Wheel
@@ -446,7 +588,7 @@ jobs:
       - name: Extract Changelog
         id: changelog
         run: |
-          perl -0777 -ne 'while (/## Version ${{ needs.build.outputs.version }}\n(\s*\n)*(.*?)(\s*\n)*## Version \d+\.\d+\.\d+\n/sg) {print "$2\n"}' CHANGELOG.md >CURRENT_CHANGELOG.md
+          perl -0777 -ne 'while (/## Version ${{ needs.version.outputs.version }}\n(\s*\n)*(.*?)(\s*\n)*## Version \d+\.\d+\.\d+\n/sg) {print "$2\n"}' CHANGELOG.md >CURRENT_CHANGELOG.md
           {
             echo "CONTENT<<EOF"
             cat CURRENT_CHANGELOG.md
@@ -457,9 +599,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
-          tag_name: v${{ needs.build.outputs.version }}
+          tag_name: v${{ needs.version.outputs.version }}
           body: |
-            PyPI package: https://pypi.org/project/${{ needs.build.outputs.name }}/${{ needs.build.outputs.version }}
+            PyPI package: https://pypi.org/project/${{ needs.version.outputs.name }}/${{ needs.version.outputs.version }}
 
             # Changes:
             ${{ steps.changelog.outputs.CONTENT }}
