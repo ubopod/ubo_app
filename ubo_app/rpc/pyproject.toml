@@ -17,7 +17,7 @@ keywords = [
   'bindings',
   'grpc',
 ]
-dependencies = []
+dependencies = ["betterproto [compiler]>=2.0.0b7"]
 
 [build-system]
 requires = ["hatchling"]
