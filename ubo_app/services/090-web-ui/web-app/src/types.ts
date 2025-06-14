@@ -1,4 +1,4 @@
-import { InputFieldType } from "./generated/ubo/v1/ubo_pb";
+import { InputFieldType } from "./bindings/ubo/v1/ubo_pb";
 
 export type Action =
   | "install docker"
