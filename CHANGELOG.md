@@ -37,6 +37,7 @@
 - refactor(core:rpc): rename `generated` to `ubo_bindings`, we want to reuse that directory to create a separate python package for the rpc bindings, so that other services can use it without depending on the whole `ubo_app` package
 - chore(web-ui): add lint command in `package.json` scripts
 - build(bindings): add raw-bindings package
+- fix(docker): use `127.0.0.1` instead of `GRPC_SERVER_HOST` as the docker container sometimes could not connect to the host ip
 
 ## Version 1.4.0
 
