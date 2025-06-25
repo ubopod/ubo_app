@@ -199,7 +199,7 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
 
 
 @store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
-def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
+def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:  # noqa: FBT001
     if is_access_key_set:
         return [
             ActionItem(
@@ -218,7 +218,7 @@ def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:
 
 
 @store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
-def _menu_sub_heading(_: bool | None) -> str:
+def _menu_sub_heading(_: bool | None) -> str:  # noqa: FBT001
     return f"""Set the access key
 Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)}"""
 

@@ -48,7 +48,7 @@ def _power_off() -> None:
         def power_off_system(*_: list[object]) -> None:
             atexit.unregister(power_off_system)
             atexit._run_exitfuncs()  # noqa: SLF001
-            subprocess.run(  # noqa: S603
+            subprocess.run(
                 ['/usr/bin/env', 'systemctl', 'poweroff', '-i'],
                 check=True,
             )
@@ -64,7 +64,7 @@ def _reboot() -> None:
         def reboot_system(*_: list[object]) -> None:
             atexit.unregister(reboot_system)
             atexit._run_exitfuncs()  # noqa: SLF001
-            subprocess.run(  # noqa: S603
+            subprocess.run(
                 ['/usr/bin/env', 'systemctl', 'reboot', '-i'],
                 check=True,
             )

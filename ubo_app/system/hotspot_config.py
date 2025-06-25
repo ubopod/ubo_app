@@ -13,11 +13,11 @@ def main() -> None:
     """Set up the hotspot configuration files."""
     templates_path = pathlib.Path(__file__).parent / 'hotspot_templates'
     if sys.argv[1] == 'configure':
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             ['/usr/bin/env', 'iw', 'wlan0', 'set', 'power_save', 'off'],
             check=True,
         )
-        subprocess.run(['/usr/bin/env', 'rfkill', 'unblock', 'wifi'], check=True)  # noqa: S603
+        subprocess.run(['/usr/bin/env', 'rfkill', 'unblock', 'wifi'], check=True)
 
         copy_templates(
             templates_path,
@@ -27,11 +27,11 @@ def main() -> None:
             },
         )
 
-        subprocess.run(['/bin/systemctl', 'restart', 'dhcpcd.service'], check=True)  # noqa: S603
-        subprocess.run(['/bin/systemctl', 'restart', 'dnsmasq.service'], check=True)  # noqa: S603
-        subprocess.run(['/bin/systemctl', 'unmask', 'hostapd.service'], check=True)  # noqa: S603
-        subprocess.run(['/bin/systemctl', 'enable', 'hostapd.service'], check=True)  # noqa: S603
-        subprocess.run(['/bin/systemctl', 'start', 'hostapd.service'], check=True)  # noqa: S603
+        subprocess.run(['/bin/systemctl', 'restart', 'dhcpcd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'restart', 'dnsmasq.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'unmask', 'hostapd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'enable', 'hostapd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'start', 'hostapd.service'], check=True)
     elif sys.argv[1] == 'restore':
         restore_backups(templates_path)
 
@@ -41,11 +41,11 @@ def main() -> None:
                 '# Leave this blank for automatic configuration\n',
             )
 
-        subprocess.run(['/bin/systemctl', 'stop', 'hostapd.service'], check=True)  # noqa: S603
-        subprocess.run(['/bin/systemctl', 'disable', 'hostapd.service'], check=True)  # noqa: S603
-        subprocess.run(['/bin/systemctl', 'mask', 'hostapd.service'], check=True)  # noqa: S603
-        subprocess.run(['/bin/systemctl', 'stop', 'dnsmasq.service'], check=True)  # noqa: S603
-        subprocess.run(['/usr/bin/env', 'nmcli', 'radio', 'wifi', 'on'], check=True)  # noqa: S603
+        subprocess.run(['/bin/systemctl', 'stop', 'hostapd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'disable', 'hostapd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'mask', 'hostapd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'stop', 'dnsmasq.service'], check=True)
+        subprocess.run(['/usr/bin/env', 'nmcli', 'radio', 'wifi', 'on'], check=True)
     else:
         msg = 'Invalid argument'
         raise ValueError(msg)

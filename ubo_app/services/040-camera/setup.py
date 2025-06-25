@@ -1,5 +1,5 @@
 # pyright: reportMissingModuleSource=false
-# ruff: noqa: D100, D101, D102, D103, D104, D107
+# ruff: noqa: D100, D101, D103, D107
 from __future__ import annotations
 
 from pathlib import Path

@@ -24,7 +24,7 @@ def package_handler(action: str, package: str) -> str:
         if action == 'install':
             if package == 'lightdm':
                 install_package('raspberrypi-ui-mods', force=True)
-                subprocess.run(  # noqa: S603
+                subprocess.run(
                     [
                         '/usr/bin/env',
                         'sed',
@@ -35,7 +35,7 @@ def package_handler(action: str, package: str) -> str:
                     ],
                     check=False,
                 )
-                subprocess.run(  # noqa: S603
+                subprocess.run(
                     [
                         '/usr/bin/env',
                         'raspi-config',

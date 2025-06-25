@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D101, D102, D103, D104, D107, PLR2004
+# ruff: noqa: D100, D103
 from __future__ import annotations
 
 import atexit
@@ -130,7 +130,7 @@ def setup_hostname() -> None:
         ],
         check=True,
     )
-    subprocess.run(  # noqa: S603
+    subprocess.run(
         ['/usr/bin/env', 'systemctl', 'restart', 'avahi-daemon'],
         check=True,
     )

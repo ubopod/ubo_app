@@ -54,7 +54,7 @@ def setup_reset_button(led_manager: LEDManager) -> None:
                 led_manager.run_command_thread_safe(
                     ['blink', '255', '0', '0', '200', '2'],
                 )
-                subprocess.run(  # noqa: S603
+                subprocess.run(
                     ['/usr/bin/env', 'systemctl', 'reboot', '-i'],
                     check=False,
                 )
@@ -85,7 +85,7 @@ def setup_reset_button(led_manager: LEDManager) -> None:
                 led_manager.run_command_thread_safe(
                     ['blink', '255', '0', '0', '200', '1'],
                 )
-                subprocess.run(  # noqa: S603
+                subprocess.run(
                     ['/usr/bin/env', 'killall', '-9', 'ubo'],
                     check=False,
                 )
