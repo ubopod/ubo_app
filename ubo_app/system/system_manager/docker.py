@@ -28,7 +28,7 @@ def docker_handler(command: str) -> str | None:
             return 'installed'
 
     if command == 'start':
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             [
                 '/usr/bin/env',
                 'systemctl',
@@ -37,7 +37,7 @@ def docker_handler(command: str) -> str | None:
             ],
             check=False,
         )
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             [
                 '/usr/bin/env',
                 'systemctl',
@@ -47,7 +47,7 @@ def docker_handler(command: str) -> str | None:
             check=False,
         )
     elif command == 'stop':
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             [
                 '/usr/bin/env',
                 'systemctl',
@@ -56,7 +56,7 @@ def docker_handler(command: str) -> str | None:
             ],
             check=False,
         )
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             [
                 '/usr/bin/env',
                 'systemctl',

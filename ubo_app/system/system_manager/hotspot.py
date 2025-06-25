@@ -10,7 +10,7 @@ logger = get_logger('system-manager')
 def _start() -> str:
     logger.info('Starting the hotspot')
     try:
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             ['/usr/bin/env', 'systemctl', 'start', 'ubo-hotspot'],
             check=True,
         )
@@ -26,7 +26,7 @@ def _start() -> str:
 def _stop() -> str:
     logger.info('Stopping the hotspot')
     try:
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             ['/usr/bin/env', 'systemctl', 'stop', 'ubo-hotspot'],
             check=False,
         )

@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D101, D102, D103, D104, D107, N999
+# ruff: noqa: D100, D103
 from __future__ import annotations
 
 from collections.abc import Sequence

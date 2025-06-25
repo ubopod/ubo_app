@@ -1,5 +1,5 @@
 # pyright: reportMissingModuleSource=false
-# ruff: noqa: D100, D101, D102, D103, D104, D107
+# ruff: noqa: D100, D103
 
 from ubo_app.utils import IS_RPI
 

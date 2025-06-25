@@ -156,7 +156,7 @@ def daemon_reload() -> None:
         stderr.write(msg)
         stderr.flush()
     stdout.flush()
-    subprocess.run(  # noqa: S603
+    subprocess.run(
         ['/usr/bin/env', 'systemctl', 'daemon-reload'],
         check=True,
     )
@@ -196,11 +196,11 @@ def configure_device() -> None:
         pass
 
     # Enable I2C and SPI interfaces
-    subprocess.run(  # noqa: S603
+    subprocess.run(
         ['/usr/bin/env', 'raspi-config', 'nonint', 'do_i2c', '0'],
         check=True,
     )
-    subprocess.run(  # noqa: S603
+    subprocess.run(
         ['/usr/bin/env', 'raspi-config', 'nonint', 'do_spi', '0'],
         check=True,
     )
@@ -243,7 +243,7 @@ def bootstrap(*, in_packer: bool = False) -> None:
     # solution until we have a better way to handle this.
     # Also `check` is `False` because this service is not available in the light image
     # and this same code runs for all images.
-    subprocess.run(  # noqa: S603
+    subprocess.run(
         ['/usr/bin/env', 'systemctl', 'disable', 'lightdm'],
         check=False,
     )
