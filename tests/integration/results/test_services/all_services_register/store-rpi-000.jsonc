@@ -7274,7 +7274,9 @@
           "application_id": "wifi:create-connection-page",
           "initialization_args": [],
           "initialization_kwargs": {
-            "input_methods": "camera"
+            "input_methods": [
+              "camera"
+            ]
           }
         },
         "phrase": [
@@ -7291,7 +7293,9 @@
           "application_id": "wifi:create-connection-page",
           "initialization_args": [],
           "initialization_kwargs": {
-            "input_methods": "web_dashboard"
+            "input_methods": [
+              "web_dashboard"
+            ]
           }
         },
         "phrase": [

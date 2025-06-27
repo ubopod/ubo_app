@@ -148,8 +148,10 @@ class EepromData(TypedDict):
     test_result: bool | None
 
 
+UNAVAILABLE_SERIAL_NUMBER = '<not-available>'
+
 EMPTY_EEPROM_DATA: EepromData = {
-    'serial_number': '<not-available>',
+    'serial_number': UNAVAILABLE_SERIAL_NUMBER,
     'eeprom': None,
     'speakers': None,
     'microphones': None,

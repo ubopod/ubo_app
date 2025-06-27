@@ -59,8 +59,14 @@ jobs:
           enable-cache: true
           cache-suffix: ubuntu-latest
 
-      - name: Lint
-        run: uvx ruff check
+      - name: Extract Ruff version from pyproject.toml
+        run: |
+          SPEC=$(grep -Po '"ruff\K[^"]+' pyproject.toml | head -1)
+          RUFF_VER=${SPEC#>=}
+          echo "RUFF_VER=$RUFF_VER" >>$GITHUB_ENV
+
+      - name: Run Ruff
+        run: uvx ruff@${{ env.RUFF_VER }} check .
 
   test:
     name: Test

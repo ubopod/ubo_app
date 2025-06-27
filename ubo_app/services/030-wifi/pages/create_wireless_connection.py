@@ -99,7 +99,7 @@ INPUT_DESCRIPTIONS: Sequence[InputDescription] = [
 
 async def input_wifi_connection(
     *,
-    input_methods: tuple[type[InputDescription], ...] = (),
+    input_methods: tuple[InputMethod, ...] = (),
     on_creating: Callable[[], None] | None = None,
 ) -> None:
     """Input WiFi connection."""
@@ -110,7 +110,7 @@ async def input_wifi_connection(
             descriptions=[
                 description
                 for description in INPUT_DESCRIPTIONS
-                if not input_methods or isinstance(description, input_methods)
+                if not input_methods or description.input_method in input_methods
             ],
         )
     except asyncio.CancelledError:
@@ -215,7 +215,7 @@ class CreateWirelessConnectionPage(UboPageWidget):
         self,
         items: Sequence[Item] | None = None,
         *args: object,
-        input_methods: tuple[type[InputDescription], ...] = (),
+        input_methods: tuple[InputMethod, ...] = (),
         **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs, items=items)

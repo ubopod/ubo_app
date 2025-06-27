@@ -235,18 +235,22 @@ class AudioManager:
                     )
                 if attempt.retry_state.outcome and isinstance(
                     attempt.retry_state.outcome.exception(),
-                    alsaaudio.ALSAAudioError,
+                    Exception,
                 ):
-                    logger.info(
-                        'Audio - Reporting the audio capture issue to ubo-system',
-                        extra={'attempt': attempt.retry_state.attempt_number},
-                    )
-                    report_service_error(
-                        exception=attempt.retry_state.outcome.exception(),
-                    )
-                    await send_command('audio', 'failure_report', has_output=True)
-                else:
-                    break
+                    if isinstance(
+                        attempt.retry_state.outcome.exception(),
+                        alsaaudio.ALSAAudioError,
+                    ):
+                        logger.info(
+                            'Audio - Reporting the audio capture issue to ubo-system',
+                            extra={'attempt': attempt.retry_state.attempt_number},
+                        )
+                        report_service_error(
+                            exception=attempt.retry_state.outcome.exception(),
+                        )
+                        await send_command('audio', 'failure_report', has_output=True)
+                    continue
+                break
             else:
                 # Since reraise is set to True, this part should be unreachable
                 logger.error(

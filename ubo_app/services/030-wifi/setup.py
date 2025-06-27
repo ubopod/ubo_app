@@ -20,6 +20,7 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
+from ubo_app.store.input.types import InputMethod
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
@@ -37,8 +38,8 @@ from ubo_app.store.services.wifi import (
     WiFiUpdateAction,
     WiFiUpdateRequestEvent,
 )
+from ubo_app.utils import IS_UBO_POD
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.eeprom import get_eeprom_data
 from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
 from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
@@ -121,7 +122,7 @@ async def _check_connection() -> None:
         color=INFO_COLOR,
     )
     if not await has_gateway() and not await get_saved_wifi_ssids():
-        if get_eeprom_data() is not None:
+        if IS_UBO_POD:
             if not read_from_persistent_store(
                 key='wifi_has_visited_onboarding',
                 default=False,
@@ -161,6 +162,8 @@ def init_service() -> Subscriptions:
         store.subscribe_event(WiFiUpdateRequestEvent, request_scan),
         store.subscribe_event(
             WiFiInputConnectionEvent,
-            create_wireless_connection.input_wifi_connection,
+            lambda: create_wireless_connection.input_wifi_connection(
+                input_methods=(InputMethod.WEB_DASHBOARD,),
+            ),
         ),
     ]

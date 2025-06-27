@@ -81,7 +81,9 @@ def reducer(
                         ],
                         action=OpenApplicationAction(
                             application_id='wifi:create-connection-page',
-                            initialization_kwargs={'input_methods': InputMethod.CAMERA},
+                            initialization_kwargs={
+                                'input_methods': (InputMethod.CAMERA,),
+                            },
                         ),
                     ),
                     SpeechRecognitionIntent(
@@ -96,7 +98,7 @@ def reducer(
                         action=OpenApplicationAction(
                             application_id='wifi:create-connection-page',
                             initialization_kwargs={
-                                'input_methods': InputMethod.WEB_DASHBOARD,
+                                'input_methods': (InputMethod.WEB_DASHBOARD,),
                             },
                         ),
                     ),
