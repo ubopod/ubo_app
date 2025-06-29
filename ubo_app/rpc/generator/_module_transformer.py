@@ -8,7 +8,6 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import betterproto.casing
-
 from ubo_app.rpc.generator._types import (
     _BasicType,
     _DictType,
@@ -47,7 +46,7 @@ class _ProtoGenerator(ast.NodeVisitor):
 
     def visit_ClassDef(self: _ProtoGenerator, node: ast.ClassDef) -> None:
         if any(
-            base.id in ('Enum', 'StrEnum', 'IntEnum', 'Flag', 'IntFlag')
+            base.id in ("Enum", "StrEnum", "IntEnum", "Flag", "IntFlag")
             for base in node.bases
             if isinstance(base, ast.Name)
         ):
@@ -60,14 +59,14 @@ class _ProtoGenerator(ast.NodeVisitor):
         if (
             isinstance(node.target, ast.Name)
             and isinstance(node.annotation, ast.Name)
-            and node.annotation.id == 'TypeAlias'
+            and node.annotation.id == "TypeAlias"
             and node.value
         ):
             field_name = node.target.id
             try:
                 field_type = self.get_field_type(value=node.value)
             except TypeError as e:
-                if 'Callable types are not supported' in str(e):
+                if "Callable types are not supported" in str(e):
                     return
                 raise
             self.types[field_name] = field_type
@@ -84,7 +83,7 @@ class _ProtoGenerator(ast.NodeVisitor):
         if (
             isinstance(node.value, ast.Call)
             and isinstance(node.value.func, ast.Name)
-            and node.value.func.id == 'TypeVar'
+            and node.value.func.id == "TypeVar"
             and isinstance(node.targets[0], ast.Name)
         ):
             field_name = node.targets[0].id
@@ -92,7 +91,7 @@ class _ProtoGenerator(ast.NodeVisitor):
                 (
                     constraint
                     for constraint in node.value.keywords
-                    if constraint.arg == 'bound'
+                    if constraint.arg == "bound"
                 ),
                 None,
             )
@@ -124,11 +123,12 @@ class _ProtoGenerator(ast.NodeVisitor):
                 try:
                     field_type = self.get_field_type(value=n.annotation)
                     if n.value is not None:
-                        field_type = _OptionalType(type=field_type)
+                        if not isinstance(field_type, _OptionalType):
+                            field_type = _OptionalType(type=field_type)
                 except TypeError as e:
-                    if 'Callable types are not supported' in str(
+                    if "Callable types are not supported" in str(
                         e,
-                    ) or 'ClassVar is not supported' in str(e):
+                    ) or "ClassVar is not supported" in str(e):
                         continue
                     raise
 
@@ -148,9 +148,9 @@ class _ProtoGenerator(ast.NodeVisitor):
                     )
         self.messages[message_name] = fields
         global_messages[message_name] = (self.package_name, fields)
-        if message_name.endswith('Action'):
+        if message_name.endswith("Action"):
             self.actions.append((message_name, self.package_name))
-        if message_name.endswith('Event'):
+        if message_name.endswith("Event"):
             self.events.append((message_name, self.package_name))
 
     def process_enum(self: _ProtoGenerator, node: ast.ClassDef) -> None:
@@ -175,133 +175,153 @@ class _ProtoGenerator(ast.NodeVisitor):
         value: ast.AST,
     ) -> _Type:
         if isinstance(value, ast.Name):
-            if value.id == 'str':
-                return _BasicType(type='string')
-            if value.id == 'int':
-                return _BasicType(type='int64')
-            if value.id == 'float':
-                return _BasicType(type='float')
-            if value.id == 'bool':
-                return _BasicType(type='bool')
-            if value.id == 'bytes':
-                return _BasicType(type='bytes')
-            if value.id == 'datetime':
-                return _BasicType(type='int64')
-            if value.id == 'Path':
-                return _BasicType(type='string')
+            if value.id == "str":
+                return _BasicType(type="string")
+            if value.id == "int":
+                return _BasicType(type="int64")
+            if value.id == "float":
+                return _BasicType(type="float")
+            if value.id == "bool":
+                return _BasicType(type="bool")
+            if value.id == "bytes":
+                return _BasicType(type="bytes")
+            if value.id == "datetime":
+                return _BasicType(type="int64")
+            if value.id == "Path":
+                return _BasicType(type="string")
             return _BasicType(type=value.id)
+        if isinstance(value, ast.Constant) and value.value is None:
+            return _BasicType(type="None")
         if isinstance(value, ast.Subscript):
             if isinstance(value.value, ast.Name):
-                if value.value.id == 'dict' and isinstance(value.slice, ast.Tuple):
+                if value.value.id in ("Mapping", "dict") and isinstance(
+                    value.slice, ast.Tuple
+                ):
                     key_type = self.get_field_type(value=value.slice.elts[0])
                     value_type = self.get_field_type(value=value.slice.elts[1])
                     return _DictType(key_type=key_type, value_type=value_type)
 
-                if value.value.id in ('Sequence', 'list'):
+                if value.value.id in ("Sequence", "list"):
                     return _ListType(type=self.get_field_type(value=value.slice))
 
-                if value.value.id == 'set':
+                if value.value.id == "set":
                     return _SetType(type=self.get_field_type(value=value.slice))
 
-                if value.value.id == 'tuple' and isinstance(value.slice, ast.Tuple):
+                if value.value.id == "tuple" and isinstance(value.slice, ast.Tuple):
                     if (
                         len(value.slice.elts) == 2  # noqa: PLR2004
                         and isinstance(value.slice.elts[1], ast.Constant)
                         and value.slice.elts[1].value is ...
                     ):
-                        types = [self.get_field_type(value=value.slice.elts[0])]
+                        types = {self.get_field_type(value=value.slice.elts[0])}
                     else:
-                        types = list(
-                            {
-                                self.get_field_type(value=elt)
-                                for elt in value.slice.elts
-                            },
-                        )
+                        types = {
+                            self.get_field_type(value=elt) for elt in value.slice.elts
+                        }
+
                     return _ListType(
                         type=_UnionType.from_(
-                            types=types,
+                            types=list(types),
                         ),
                     )
 
                 if value.value.id in self.types or value.value.id in self.messages:
-                    msg = 'Generic types are not supported {value.value.id}'
+                    msg = "Generic types are not supported {value.value.id}"
                     raise TypeError(msg)
 
-                if value.value.id == 'type':
-                    return _BasicType(type='string')
+                if value.value.id == "type":
+                    return _BasicType(type="string")
 
-                if value.value.id == 'Callable':
-                    msg = 'Callable types are not supported'
+                if value.value.id == "Callable":
+                    msg = "Callable types are not supported"
                     raise TypeError(msg)
 
-                if value.value.id == 'IO':
-                    return _BasicType(type='bytes')
+                if value.value.id == "IO":
+                    return _BasicType(type="bytes")
 
-                if value.value.id == 'ClassVar':
-                    msg = 'ClassVar is not supported'
+                if value.value.id == "ClassVar":
+                    msg = "ClassVar is not supported"
                     raise TypeError(msg)
 
                 msg = (
-                    f'Unsupported subscript type: {value.value.id} '
-                    f'- file: {self.module} - line: {value.lineno}'
+                    f"Unsupported subscript type: {value.value.id} "
+                    f"- file: {self.module} - line: {value.lineno}"
                 )
                 raise TypeError(msg)
 
             msg = (
-                f'Unsupported subscript type: {value.value} {value.slice} '
-                f'- file: {self.module} - line: {value.lineno}'
+                f"Unsupported subscript type: {value.value} {value.slice} "
+                f"- file: {self.module} - line: {value.lineno}"
             )
             raise TypeError(msg)
 
         if isinstance(value, ast.BinOp) and isinstance(value.op, ast.BitOr):
-            types: list[_Type] = []
+            types: set[_Type] = set()
             try:
                 type = self.get_field_type(value=value.left)
-                if type not in types:
-                    types.append(type)
+                if isinstance(type, _UnionType):
+                    types = types.union(type.types)
+                else:
+                    types.add(type)
             except TypeError as e:
-                if 'Callable types are not supported' not in str(e):
+                if "Callable types are not supported" not in str(e):
                     raise
             try:
                 type = self.get_field_type(value=value.right)
-                if type not in types:
-                    types.append(type)
+                if isinstance(type, _UnionType):
+                    types = types.union(type.types)
+                else:
+                    types.add(type)
             except TypeError as e:
-                if 'Callable types are not supported' not in str(e):
+                if "Callable types are not supported" not in str(e):
                     raise
-            return _UnionType.from_(types=list(types))
+            is_optional = any(
+                isinstance(type, _BasicType) and type.type == "None" for type in types
+            )
+            types_ = [
+                type
+                for type in types
+                if not isinstance(type, _BasicType) or type.type != "None"
+            ]
+            if len(types_) == 1:
+                type = types_[0]
+            else:
+                type = _UnionType.from_(types=types_)
+            if is_optional:
+                if isinstance(type, _OptionalType):
+                    return type
+                return _OptionalType(type=type)
+            return type
 
-        if isinstance(value, ast.Constant) and value.value is None:
-            return _UnionType(types=())
-        msg = f'Unsupported field type: {value}'
+        msg = f"Unsupported field type: {value}"
         raise TypeError(msg)
 
     def generate_proto(self: _ProtoGenerator) -> str:  # noqa: C901
         try:
-            proto = ''
+            proto = ""
             for enum_name, values in self.enums.items():
-                proto += f'enum {enum_name} {{\n'
+                proto += f"enum {enum_name} {{\n"
                 proto += f"""  {betterproto.casing.snake_case(enum_name).upper()}_{
-                    self.package_name.replace('.', '_dot_').upper()
+                    self.package_name.replace(".", "_dot_").upper()
                 }_UNSPECIFIED = 0;\n"""
                 for i, (value_name, _) in enumerate(values, 0):
                     proto += f"""  {betterproto.casing.snake_case(enum_name).upper()}_{
                         value_name
                     } = {i + 1};\n"""
-                proto += '}\n\n'
+                proto += "}\n\n"
             for message_name, fields in self.messages.items():
-                proto += f'message {message_name} {{\n'
+                proto += f"message {message_name} {{\n"
                 proto += f"""  option (package_info.v1.package_name) = "{
                     self.package_name
                 }";\n"""
-                proto += f'  optional string {META_FIELD_PREFIX_PACKAGE_NAME}'
-                proto += f"""{self.package_name.replace('.', '_dot_')} = {
+                proto += f"  optional string {META_FIELD_PREFIX_PACKAGE_NAME}"
+                proto += f"""{self.package_name.replace(".", "_dot_")} = {
                     META_FIELD_PREFIX_PACKAGE_NAME_INDEX
                 };\n"""
                 for field_name, field_type in fields:
                     proto += re.sub(
-                        r'\n(?=.)',
-                        '\n',
+                        r"\n(?=.)",
+                        "\n",
                         field_type.get_definitions(
                             field_name,
                             current_package=self.package_name,
@@ -316,19 +336,19 @@ class _ProtoGenerator(ast.NodeVisitor):
                             )
                         } {field_name} = {i};\n"""
                     except TypeError as exception:
-                        if 'Empty Union' in str(exception):
+                        if "Empty Union" in str(exception):
                             continue
-                        if 'Unknown type' in str(exception):
+                        if "Unknown type" in str(exception):
                             continue
                         raise
-                proto += '}\n\n'
+                proto += "}\n\n"
             for name, field_type in self.types.items():
                 proto += field_type.get_embedded_definitions(
                     name,
                     current_package=self.package_name,
                 )
         except TypeError as e:
-            msg = f'Error in {self.package_name}'
+            msg = f"Error in {self.package_name}"
             raise TypeError(msg) from e
         else:
             return proto

@@ -88,7 +88,7 @@ class _WiFiConnectionPage(UboPromptWidget):
             self.icon = ''
 
     def __init__(self, **kwargs: object) -> None:
-        super().__init__(**kwargs, items=None)
+        super().__init__(**kwargs)
         self.title = None
         self.prompt = f'SSID: {self.ssid}'
         self.first_option_is_short = False

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from ubo_gui.menu.types import ActionItem, ApplicationItem
 
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from ubo_gui.page import PageWidget
 
     from ubo_app.store.main import UboAction
+    from ubo_app.utils.gui import UboPageWidget
 
 
 def _default_action(store_action: UboAction) -> Callable[[], None]:
@@ -43,7 +44,9 @@ class UboDispatchItem(ActionItem):
             raise ValueError(msg)
 
 
-application_registry: dict[str, type[PageWidget]] = {}
+application_registry: dict[str, type[UboPageWidget]] = {}
+
+BasicType: TypeAlias = str | bytes | int | float | bool | None
 
 
 class UboApplicationItem(ApplicationItem):
@@ -69,14 +72,14 @@ class UboApplicationItem(ApplicationItem):
     )
 
     application_id: str
-    initialization_args: tuple = ()
-    initialization_kwargs: dict | None = None
+    initialization_args: tuple[BasicType, ...] = ()
+    initialization_kwargs: dict[str, BasicType] | None = None
 
 
 def register_application(
     *,
     application_id: str,
-    application: type[PageWidget],
+    application: type[UboPageWidget],
 ) -> None:
     """Register an application in the application registry."""
     if application_id in application_registry:
@@ -88,7 +91,7 @@ def register_application(
 
 def get_registered_application(
     application_id: str,
-) -> type[PageWidget]:
+) -> type[UboPageWidget]:
     """Get a registered application by its ID."""
     if application_id not in application_registry:
         msg = f'Application ID {application_id} is not registered.'

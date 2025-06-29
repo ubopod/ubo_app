@@ -428,17 +428,19 @@ supported""",
                 ],
             )
 
-            if not result or not result.data['yaml-config'] or not result.data['label']:
+            data = dict(result.data)
+
+            if not result or not data['yaml-config'] or not data['label']:
                 return
 
             id = f'composition_{uuid.uuid4().hex}'
             composition_path = COMPOSITIONS_PATH / id
             composition_path.mkdir(exist_ok=True, parents=True)
             with (composition_path / 'docker-compose.yml').open('w') as file:
-                file.write(result.data['yaml-config'])
+                file.write(data['yaml-config'])
             with (composition_path / 'metadata.json').open('w') as file:
-                result.data.pop('yaml-config')
-                file.write(json.dumps(result.data))
+                data.pop('yaml-config')
+                file.write(json.dumps(data))
 
             directory_content = result.files.pop('content', None)
             # uncompress content
@@ -462,7 +464,7 @@ supported""",
                     combine_reducers_id=reducer_id,
                     key=id,
                     reducer=image_reducer,
-                    payload=result.data,
+                    payload=data,
                 ),
             )
 

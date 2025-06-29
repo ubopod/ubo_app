@@ -31,8 +31,5 @@ expression = "get_version()"
 [tool.hatch.build]
 packages = ["ubo_bindings"]
 
-[tool.uv]
-dev-dependencies = ["pyright>=1.1.401", "ruff>=0.11.8"]
-
 [tool.ruff]
 target-version = 'py311'

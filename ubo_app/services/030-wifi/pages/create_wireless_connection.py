@@ -38,8 +38,6 @@ from ubo_app.utils.input import ubo_input
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from ubo_gui.menu.types import Item
-
 # Regular expression pattern
 # WIFI:S:<SSID>;T:<WEP|WPA|blank>;P:<PASSWORD>;H:<true|false|blank>;;
 BARCODE_PATTERN = (
@@ -213,16 +211,14 @@ class CreateWirelessConnectionPage(UboPageWidget):
 
     def __init__(
         self,
-        items: Sequence[Item] | None = None,
-        *args: object,
         input_methods: tuple[InputMethod, ...] = (),
         **kwargs: object,
     ) -> None:
-        super().__init__(*args, **kwargs, items=items)
+        super().__init__(**kwargs)
         self.input_methods = input_methods
         create_task(self.create_wireless_connection())
 
-    async def create_wireless_connection(self: CreateWirelessConnectionPage) -> None:
+    async def create_wireless_connection(self) -> None:
         await input_wifi_connection(
             on_creating=lambda: setattr(self, 'creating', True),
             input_methods=self.input_methods,

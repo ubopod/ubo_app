@@ -11,7 +11,7 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from ubo_app.store.services.file_system import PathSelectorConfig
     from ubo_app.store.services.speech_synthesis import ReadableInformation
@@ -28,7 +28,7 @@ class InputMethod(StrEnum):
 class InputResult(Immutable):
     """Input result."""
 
-    data: dict[str, str | None]
+    data: Mapping[str, str]
     files: dict[str, bytes]
     method: InputMethod
 

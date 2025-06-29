@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, TypeAlias, TypeVar, cast, overload
 
 import betterproto
 import betterproto.casing
-import ubo_app.rpc.ubo_bindings.ubo.v1
+
+import ubo_bindings.ubo.v1
 
 if TYPE_CHECKING:
     from immutable import Immutable
@@ -21,18 +22,18 @@ ReturnType: TypeAlias = (
     | bytes
     | bool
     | None
-    | list['ReturnType']
+    | list["ReturnType"]
 )
 
 
 def get_class(object_: Immutable) -> type[betterproto.Message]:
     return getattr(
-        ubo_app.rpc.ubo_bindings.ubo.v1,
+        ubo_bindings.ubo.v1,
         betterproto.casing.pascal_case(type(object_).__name__),
     )
 
 
-T = TypeVar('T', bound=betterproto.Message)
+T = TypeVar("T", bound=betterproto.Message)
 
 
 @overload
@@ -56,31 +57,31 @@ def build_message(  # noqa: C901
         Enum,
     ):
         if expected_type is None or not issubclass(expected_type, betterproto.Enum):
-            msg = f'Expected a betterproto.Enum, got {expected_type}'
+            msg = f"Expected a betterproto.Enum, got {expected_type}"
             raise ValueError(msg)
         if not isinstance(object_, Enum):
-            msg = f'Expected an Enum, got {type(object_)}'
+            msg = f"Expected an Enum, got {type(object_)}"
             raise ValueError(msg)
         return getattr(
             expected_type,
-            cast('str', 'UNSPECIFIED' if object_ is None else object_.name),
+            cast("str", "UNSPECIFIED" if object_ is None else object_.name),
         )
 
     if isinstance(object_, int | float | str | bytes | bool | None):
-        return cast('ReturnType', object_)
+        return cast("ReturnType", object_)
 
     if isinstance(object_, list | tuple):
         if expected_type:
             if hasattr(
                 expected_type,
-                '_betterproto',
-            ) and expected_type._betterproto.sorted_field_names == ('items',):
+                "_betterproto",
+            ) and expected_type._betterproto.sorted_field_names == ("items",):
                 fields = {
-                    'items': [
+                    "items": [
                         build_message(
                             item,
                             expected_type=expected_type._betterproto.cls_by_field[
-                                'items'
+                                "items"
                             ],
                         )
                         for item in object_
@@ -98,7 +99,7 @@ def build_message(  # noqa: C901
     if expected_type and (
         message_class is None or not issubclass(message_class, expected_type)
     ):
-        msg = f'Expected {expected_type}, got {message_class}'
+        msg = f"Expected {expected_type}, got {message_class}"
         raise ValueError(msg)
 
     fields = {
@@ -110,11 +111,11 @@ def build_message(  # noqa: C901
     }
 
     if message_class is None:
-        msg = f'Class not found for {object_}'
+        msg = f"Class not found for {object_}"
         raise ValueError(msg)
 
     if issubclass(message_class, betterproto.Message):
         return message_class(**fields)
 
-    msg = f'Building message from {object_} is not implemented yet'
+    msg = f"Building message from {object_} is not implemented yet"
     raise NotImplementedError(msg)

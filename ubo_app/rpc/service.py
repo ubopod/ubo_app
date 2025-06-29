@@ -9,15 +9,16 @@ import betterproto
 from ubo_app.logger import logger
 from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_group
 from ubo_app.rpc.object_to_message import build_message
-from ubo_app.rpc.ubo_bindings.store.v1 import (
+from ubo_app.store.main import UboAction, UboEvent, store
+
+from ubo_bindings.store.v1 import (
     DispatchActionRequest,
     DispatchActionResponse,
     StoreServiceBase,
     SubscribeEventRequest,
     SubscribeEventResponse,
 )
-from ubo_app.rpc.ubo_bindings.ubo.v1 import Event
-from ubo_app.store.main import UboAction, UboEvent, store
+from ubo_bindings.ubo.v1 import Event
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -43,7 +44,7 @@ class StoreService(StoreServiceBase):
                 },
             )
         else:
-            logger.info(
+            logger.debug(
                 "Dispatching action coming from gRPC",
                 extra={
                     "request": dispatch_action_request,
