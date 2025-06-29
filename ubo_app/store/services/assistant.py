@@ -4,27 +4,37 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
+from typing import TYPE_CHECKING, TypeAlias
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 from ubo_app.constants import (
+    DEFAULT_ASSISTANT_ANTHROPIC_MODEL,
     DEFAULT_ASSISTANT_GOOGLE_MODEL,
     DEFAULT_ASSISTANT_OLLAMA_MODEL,
+    DEFAULT_ASSISTANT_OPENAI_MODEL,
 )
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
+if TYPE_CHECKING:
+    from ubo_app.store.services.audio import AudioSample
 
-class AssistantEngineName(StrEnum):
-    """Available speech recognition engines."""
+
+class AssistantLLMName(StrEnum):
+    """Available assistant llms."""
 
     OLLAMA = 'ollama'
     GOOGLE = 'google'
+    OPENAI = 'openai'
+    ANTHROPIC = 'anthropic'
 
 
 DEFAULT_MODELS = {
-    AssistantEngineName.OLLAMA: DEFAULT_ASSISTANT_OLLAMA_MODEL,
-    AssistantEngineName.GOOGLE: DEFAULT_ASSISTANT_GOOGLE_MODEL,
+    AssistantLLMName.OLLAMA: DEFAULT_ASSISTANT_OLLAMA_MODEL,
+    AssistantLLMName.GOOGLE: DEFAULT_ASSISTANT_GOOGLE_MODEL,
+    AssistantLLMName.OPENAI: DEFAULT_ASSISTANT_OPENAI_MODEL,
+    AssistantLLMName.ANTHROPIC: DEFAULT_ASSISTANT_ANTHROPIC_MODEL,
 }
 
 
@@ -38,10 +48,10 @@ class AssistantSetIsActiveAction(AssistantAction):
     is_active: bool
 
 
-class AssistantSetSelectedEngineAction(AssistantAction):
-    """Action to set the selected engine."""
+class AssistantSetSelectedLLMAction(AssistantAction):
+    """Action to set the selected llm."""
 
-    engine_name: AssistantEngineName
+    llm_name: AssistantLLMName
 
 
 class AssistantSetSelectedModelAction(AssistantAction):
@@ -56,6 +66,54 @@ class AssistantDownloadOllamaModelAction(AssistantAction):
     model: str
 
 
+class AssistanceFrame(Immutable):
+    """An assistance frame."""
+
+    is_last_frame: bool
+    timestamp: float
+    id: str
+    index: int
+
+
+class AssistanceTextFrame(AssistanceFrame):
+    """A text assistance frame."""
+
+    text: str | None
+
+
+class AssistanceAudioFrame(AssistanceFrame):
+    """An audio assistance frame."""
+
+    audio: AudioSample | None
+
+
+class AssistanceImageFrame(AssistanceFrame):
+    """An image assistance frame."""
+
+    image: bytes | None = None
+
+
+class AssistanceVideoFrame(AssistanceFrame):
+    """An video assistance frame."""
+
+    video: bytes | None = None
+
+
+AcceptableAssistanceFrame: TypeAlias = (
+    AssistanceTextFrame
+    | AssistanceAudioFrame
+    | AssistanceImageFrame
+    | AssistanceVideoFrame
+)
+
+
+class AssistantReportAction(AssistantAction):
+    """Action to report assistance from the assistant."""
+
+    source_id: str
+    data: AcceptableAssistanceFrame
+
+
 class AssistantEvent(BaseEvent):
     """Base class for assistant events."""
 
@@ -66,11 +124,11 @@ class AssistantDownloadOllamaModelEvent(AssistantEvent):
     model: str
 
 
-class AssistantProcessSpeechEvent(AssistantEvent):
-    """Event to process input speech."""
+class AssistantReportEvent(AssistantEvent):
+    """Action to report assistance from the assistant."""
 
-    audio: bytes
-    text: str
+    source_id: str
+    data: AcceptableAssistanceFrame
 
 
 class AssistantState(Immutable):
@@ -82,16 +140,15 @@ class AssistantState(Immutable):
             default=False,
         ),
     )
-
-    selected_engine: AssistantEngineName = field(
+    selected_llm: AssistantLLMName = field(
         default=read_from_persistent_store(
-            'assistant:selected_engine',
-            default=AssistantEngineName.OLLAMA,
-            mapper=lambda value: AssistantEngineName(value)
-            if value in AssistantEngineName.__members__
-            else AssistantEngineName.OLLAMA,
+            'assistant:selected_llm',
+            default=AssistantLLMName.OLLAMA,
+            mapper=lambda value: AssistantLLMName(value)
+            if value in AssistantLLMName.__members__
+            else AssistantLLMName.OLLAMA,
         ),
     )
-    selected_models: dict[AssistantEngineName, str] = field(
+    selected_models: dict[AssistantLLMName, str] = field(
         default_factory=lambda: DEFAULT_MODELS,
     )
