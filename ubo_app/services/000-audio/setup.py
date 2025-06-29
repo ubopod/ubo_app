@@ -14,9 +14,11 @@ from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioInstallDriverEvent,
-    AudioPlayAudioAction,
-    AudioPlayAudioEvent,
+    AudioPlayAudioSampleAction,
+    AudioPlayAudioSampleEvent,
+    AudioPlayAudioSequenceEvent,
     AudioPlayChimeEvent,
+    AudioSample,
 )
 from ubo_app.store.services.notifications import (
     Chime,
@@ -134,25 +136,35 @@ def init_service() -> Subscriptions:
             audio_data = wave_file.readframes(wave_file.getnframes())
 
             store.dispatch(
-                AudioPlayAudioAction(
-                    rate=sample_rate,
-                    channels=channels,
-                    width=sample_width,
-                    sample=audio_data,
+                AudioPlayAudioSampleAction(
+                    sample=AudioSample(
+                        data=audio_data,
+                        rate=sample_rate,
+                        channels=channels,
+                        width=sample_width,
+                    ),
                 ),
             )
 
-    def play_audio(event: AudioPlayAudioEvent) -> None:
-        to_thread(
-            _run_async_in_thread,
-            ToThreadOptions(name='AudioManager.play_sequence'),
-            audio_manager.play_sequence,
-            event.sample,
-            id=event.id,
-            channels=event.channels,
-            rate=event.rate,
-            width=event.width,
-        )
+    def play_audio(
+        event: AudioPlayAudioSampleEvent | AudioPlayAudioSequenceEvent,
+    ) -> None:
+        if isinstance(event, AudioPlayAudioSequenceEvent):
+            to_thread(
+                _run_async_in_thread,
+                ToThreadOptions(name='AudioManager.play_sequence'),
+                audio_manager.play_sequence,
+                event.sample,
+                id=event.id,
+                index=event.index,
+            )
+        else:
+            to_thread(
+                _run_async_in_thread,
+                ToThreadOptions(name='AudioManager.play_sequence'),
+                audio_manager.play_sample,
+                event.sample,
+            )
 
     register_persistent_store(
         'audio_state:playback_volume',
@@ -174,5 +186,6 @@ def init_service() -> Subscriptions:
     return [
         store.subscribe_event(AudioInstallDriverEvent, _install_driver),
         store.subscribe_event(AudioPlayChimeEvent, play_chime),
-        store.subscribe_event(AudioPlayAudioEvent, play_audio),
+        store.subscribe_event(AudioPlayAudioSampleEvent, play_audio),
+        store.subscribe_event(AudioPlayAudioSequenceEvent, play_audio),
     ]

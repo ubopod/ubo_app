@@ -59,11 +59,24 @@ class AudioPlayChimeAction(AudioAction):
     name: str
 
 
-class AudioPlayAudioAction(AudioAction):
+class AudioPlayAudioSampleAction(AudioAction):
     """Play audio action."""
 
-    id: str | None = None
-    sample: bytes
+    sample: AudioSample
+
+
+class AudioPlayAudioSequenceAction(AudioAction):
+    """Play indexed audio action."""
+
+    sample: AudioSample | None
+    id: str
+    index: int
+
+
+class AudioSample(Immutable):
+    """An audio sample."""
+
+    data: bytes
     channels: int
     rate: int
     width: int
@@ -83,11 +96,8 @@ class AudioReportSampleEvent(AudioEvent):
     """Report audio event."""
 
     timestamp: float
-    sample: bytes
     sample_speech_recognition: bytes
-    channels: int
-    rate: int
-    width: int
+    sample: AudioSample
 
 
 class AudioInstallDriverEvent(AudioEvent):
@@ -100,15 +110,20 @@ class AudioPlayChimeEvent(AudioEvent):
     name: str
 
 
-class AudioPlayAudioEvent(AudioEvent):
+class AudioPlayAudioSampleEvent(AudioEvent):
     """Play audio event."""
 
-    id: str | None = None
     volume: float
-    sample: bytes
-    channels: int
-    rate: int
-    width: int
+    sample: AudioSample
+
+
+class AudioPlayAudioSequenceEvent(AudioEvent):
+    """Play indexed audio event."""
+
+    volume: float
+    sample: AudioSample | None
+    id: str
+    index: int
 
 
 class AudioPlaybackDoneEvent(AudioEvent):
