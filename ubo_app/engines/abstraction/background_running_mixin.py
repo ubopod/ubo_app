@@ -68,10 +68,8 @@ class BackgroundRunningMixin(abc.ABC):
         self._task = task
         self._task.add_done_callback(self._task_done_callback)
 
-    @abc.abstractmethod
     async def _run(self) -> None:
-        msg = 'This method should be implemented by subclasses.'
-        raise NotImplementedError(msg)
+        raise NotImplementedError
 
     def run(self) -> bool:
         """Run the engine if it is not already running."""

@@ -6,21 +6,20 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ubo_handle import ReducerRegistrar, register
 
-    from ubo_app.utils.types import Subscriptions
 
-
-def setup(register_reducer: ReducerRegistrar) -> Subscriptions:
+async def setup(register_reducer: ReducerRegistrar) -> None:
     from reducer import reducer
 
     register_reducer(reducer)
 
     from setup import init_service
 
-    return init_service()
+    await init_service()
 
 
 register(
     service_id='assistant',
     label='Assistant',
     setup=setup,
+    binary_path='bin/ubo-assistant',
 )

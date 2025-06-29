@@ -12,14 +12,12 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantEvent,
-    AssistantProcessSpeechEvent,
+    AssistantReportAction,
+    AssistantReportEvent,
     AssistantSetIsActiveAction,
-    AssistantSetSelectedEngineAction,
+    AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
     AssistantState,
-)
-from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionReportSpeechAction,
 )
 
 if TYPE_CHECKING:
@@ -39,15 +37,15 @@ def reducer(
     if isinstance(action, AssistantSetIsActiveAction):
         return replace(state, is_active=action.is_active)
 
-    if isinstance(action, AssistantSetSelectedEngineAction):
-        return replace(state, selected_engine=action.engine_name)
+    if isinstance(action, AssistantSetSelectedLLMAction):
+        return replace(state, selected_llm=action.llm_name)
 
     if isinstance(action, AssistantSetSelectedModelAction):
         return replace(
             state,
             selected_models={
                 **state.selected_models,
-                state.selected_engine: action.model,
+                state.selected_llm: action.model,
             },
         )
 
@@ -57,13 +55,13 @@ def reducer(
             events=[AssistantDownloadOllamaModelEvent(model=action.model)],
         )
 
-    if isinstance(action, SpeechRecognitionReportSpeechAction):
+    if isinstance(action, AssistantReportAction):
         return CompleteReducerResult(
             state=state,
             events=[
-                AssistantProcessSpeechEvent(
-                    audio=action.audio,
-                    text=action.text,
+                AssistantReportEvent(
+                    source_id=action.source_id,
+                    data=action.data,
                 ),
             ],
         )

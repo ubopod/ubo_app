@@ -1,0 +1,48 @@
+[project]
+name = "ubo-app-assistant"
+dynamic = ["version"]
+description = "This is part of ubo-app and communicates with it over its gRPC API"
+license = "Apache-2.0"
+authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ['ubo', 'ubo-pod', 'ubo-service', 'pipecat', 'assistant']
+dependencies = [
+  "pipecat-ai[google,openai,silero]>=0.0.74",
+  "platformdirs>=4.3.8",
+  "ubo-app-raw-bindings",
+  "vosk==0.3.44",
+  # RPi dependencies
+  "piper-tts>=1.2.0 ; sys_platform=='linux'",
+]
+
+[tool.uv]
+dev-dependencies = ["poethepoet>=0.24.4", "pyright>=1.1.402", "ruff>=0.12.1"]
+
+[tool.uv.sources]
+ubo-app-raw-bindings = { path = "../../../rpc", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "code"
+path = "ubo_assistant/parent_version.py"
+expression = "get_version()"
+
+[tool.hatch.build]
+packages = ["ubo_assistant"]
+
+[project.scripts]
+ubo-assistant = "ubo_assistant.main:main"
+
+[tool.poe.tasks]
+lint = "ruff check ."
+"lint:fix" = "ruff check . --fix --unsafe-fixes"
+typecheck = "pyright -p pyproject.toml ."
+sanity = ["typecheck", "lint"]
+
+[tool.ruff]
+target-version = 'py311'

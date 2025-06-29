@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import ollama
-from abstraction.text_processing_assistant_mixin import TextProcessingAssistantMixin
 from typing_extensions import override
 
 from ollama_engine.constants import SETUP_NOTIFICATION_ID
@@ -13,7 +10,7 @@ from ollama_engine.download_model import download_ollama_model
 from ubo_app.colors import WARNING_COLOR
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.store.main import store
-from ubo_app.store.services.assistant import AssistantEngineName
+from ubo_app.store.services.assistant import AssistantLLMName
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
     DockerImageRunContainerAction,
@@ -27,65 +24,21 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils.async_ import create_task
 
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
 
-
-class OllamaEngine(NeedsSetupMixin, TextProcessingAssistantMixin):
+class OllamaEngine(NeedsSetupMixin):
     """Ollama assistant engine."""
 
     def __init__(self) -> None:
         """Initialize the Ollama assistant engine."""
         super().__init__(
-            name=AssistantEngineName.OLLAMA,
+            name=AssistantLLMName.OLLAMA,
             label='Ollama',
             not_setup_message='Ollama is not set up. Please set it up in the settings.',
         )
 
     @override
-    async def _run(self) -> None:
-        """Run the Ollama assistant engine."""
-        client = ollama.AsyncClient()
-
-        @store.with_state(
-            lambda state: state.assistant.selected_models[AssistantEngineName.OLLAMA],
-        )
-        async def process_text(
-            model: str,
-            text: str,
-        ) -> AsyncIterator[ollama.ChatResponse]:
-            """Process text using the Ollama model."""
-            return await client.chat(
-                model=model,
-                stream=True,
-                messages=[
-                    {
-                        'role': 'system',
-                        'content': 'Please write short and concise answers.',
-                    },
-                    {
-                        'role': 'system',
-                        'content': """it is going to be read by a simple text to \
-speech engine. So please answer only with English letters, numbers and standard \
-production like period, comma, colon, single and double quotes, exclamation mark, \
-question mark, and dash. Do not use any other special characters or emojis.""",
-                    },
-                    {'role': 'user', 'content': text},
-                ],
-            )
-
-        while True:
-            text = await self.input_queue.get()
-            try:
-                async for chunk in await process_text(text):
-                    chunk_text: str = chunk['message']['content']
-                    await self.report(chunk_text)
-            finally:
-                await self._complete_assistance()
-
-    @override
     @store.with_state(
-        lambda state: state.assistant.selected_models[state.assistant.selected_engine],
+        lambda state: state.assistant.selected_models[AssistantLLMName.OLLAMA],
     )
     def is_setup(self, model: str) -> bool:
         try:
@@ -96,7 +49,7 @@ question mark, and dash. Do not use any other special characters or emojis.""",
             return any(m.model == model for m in models)
 
     @store.with_state(
-        lambda state: state.assistant.selected_models[AssistantEngineName.OLLAMA],
+        lambda state: state.assistant.selected_models[AssistantLLMName.OLLAMA],
     )
     async def download_model(self, model: str) -> None:
         """Download the specified Ollama model."""

@@ -49,10 +49,10 @@ dependencies = [
   "adafruit-circuitpython-rgb-display==3.14.0",
   "adafruit-circuitpython-veml7700==2.1.3",
   # RPi dependencies
-  "piper-tts==1.2.0 ; sys_platform == 'linux'",
-  "rpi-lgpio==0.6 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
   "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
-  "pyalsaaudio==0.11.0 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
+  "piper-tts==1.2.0 ; sys_platform=='linux' or platform_machine=='x86_64'",
+  "pyalsaaudio==0.11.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
+  "rpi-lgpio==0.6 ; sys_platform == 'linux' and platform_machine == 'aarch64'",
   # Desktop dependencies
   "pyaudio==0.2.14 ; platform_machine != 'aarch64' or sys_platform != 'linux'",
   "gpiozero==2.0.1 ; platform_machine != 'aarch64'",

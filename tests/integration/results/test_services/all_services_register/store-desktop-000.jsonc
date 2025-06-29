@@ -4,10 +4,12 @@
   "assistant": {
     "_type": "AssistantState",
     "is_active": false,
-    "selected_engine": "ollama",
+    "selected_llm": "ollama",
     "selected_models": {
+      "anthropic": "claude-3-opus-20240229",
       "google": "gemini-2.5-flash-preview-05-20",
-      "ollama": "gemma3:1b"
+      "ollama": "gemma3:1b",
+      "openai": "gpt-4o"
     }
   },
   "audio": {

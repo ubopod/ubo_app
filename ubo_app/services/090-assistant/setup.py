@@ -4,20 +4,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from abstraction.assistant_mixin import AssistantMixin
 from constants import OFFLINE_ENGINES
-from engines_manager import EnginesManager
+from ollama_engine import OllamaEngine
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
+from ubo_app.engines.google_cloud import GoogleEngine
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
-    AssistantEngineName,
-    AssistantSetSelectedEngineAction,
+    AssistanceAudioFrame,
+    AssistantLLMName,
+    AssistantReportEvent,
+    AssistantSetSelectedLLMAction,
 )
+from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.gui import (
     SELECTED_ITEM_PARAMETERS,
@@ -28,8 +31,6 @@ from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from ubo_app.utils.types import Subscriptions
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -48,38 +49,51 @@ def _get_unselected_item_parameters(*, is_offline: bool) -> ItemParameters:
     }
 
 
-def init_service() -> Subscriptions:
+def _communicate(event: AssistantReportEvent) -> None:
+    """Communicate the assistance."""
+    if isinstance(event.data, AssistanceAudioFrame):
+        store.dispatch(
+            AudioPlayAudioSequenceAction(
+                sample=event.data.audio,
+                id=f'assistant:{event.source_id}:{event.data.id}',
+                index=event.data.index,
+            ),
+        )
+
+
+async def init_service() -> None:
     """Initialize the assistant service."""
     register_persistent_store(
-        'assistant:selected_engine',
-        lambda state: state.assistant.selected_engine,
+        'assistant:selected_llm',
+        lambda state: state.assistant.selected_llm,
     )
 
-    engines_manager = EnginesManager()
+    engines = {
+        AssistantLLMName.OLLAMA: OllamaEngine(),
+        AssistantLLMName.GOOGLE: GoogleEngine(name=AssistantLLMName.GOOGLE),
+    }
 
     @store.autorun(
         lambda state: (
             state.assistant.is_active,
-            state.assistant.selected_engine,
+            state.assistant.selected_llm,
         ),
         options=AutorunOptions(memoization=False),
     )
     def assistant_items(
-        data: tuple[bool, AssistantEngineName | None],
+        data: tuple[bool, AssistantLLMName | None],
     ) -> Sequence[Item]:
         """Return items for recognition engine selection."""
         _, selected_engine = data
         items: list[Item] = []
-        for engine_name in AssistantEngineName:
-            engine = engines_manager.engines_by_name[engine_name]
-
-            if not isinstance(engine, AssistantMixin):
+        for llm_name in AssistantLLMName:
+            if llm_name not in engines:
                 continue
-
+            engine = engines[llm_name]
             if isinstance(engine, NeedsSetupMixin) and not engine.is_setup():
                 items.append(
                     ActionItem(
-                        key=engine_name,
+                        key=llm_name,
                         label=f'Setup {engine.label}',
                         icon='',
                         action=engine.setup,
@@ -89,18 +103,16 @@ def init_service() -> Subscriptions:
 
             items.append(
                 UboDispatchItem(
-                    key=engine_name,
+                    key=llm_name,
                     label=engine.label,
-                    store_action=AssistantSetSelectedEngineAction(
-                        engine_name=engine_name,
-                    ),
+                    store_action=AssistantSetSelectedLLMAction(llm_name=llm_name),
                     **(
                         _get_selected_item_parameters(
-                            is_offline=engine_name in OFFLINE_ENGINES,
+                            is_offline=llm_name in OFFLINE_ENGINES,
                         )
-                        if selected_engine == engine_name
+                        if selected_engine == llm_name
                         else _get_unselected_item_parameters(
-                            is_offline=engine_name in OFFLINE_ENGINES,
+                            is_offline=llm_name in OFFLINE_ENGINES,
                         )
                     ),
                 ),
@@ -139,4 +151,4 @@ def init_service() -> Subscriptions:
         ),
     )
 
-    return engines_manager.subscriptions
+    store.subscribe_event(AssistantReportEvent, _communicate)
