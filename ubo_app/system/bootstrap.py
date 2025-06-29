@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import functools
 import grp
+import hashlib
 import os
 import pwd
+import shutil
 import subprocess
 import sys
 import time
+import venv
 from pathlib import Path
 from sys import stderr, stdout
 from typing import Literal, TypedDict
@@ -63,8 +67,7 @@ def create_service_files() -> None:
             raise ValueError(msg)
 
         template = (
-            Path(__file__)
-            .parent.joinpath(f'services/{service["name"]}.service.tmpl')
+            (Path(__file__).parent / 'services' / f'{service["name"]}.service.tmpl')
             .open()
             .read()
         )
@@ -208,13 +211,79 @@ def configure_device() -> None:
     # Create the polkit rules file.
     with Path('/etc/polkit-1/rules.d/50-ubo.rules').open('w') as file:
         file.write(
-            Path(__file__)
-            .parent.joinpath('polkit.rules')
+            (Path(__file__).parent / 'polkit.rules')
             .open()
             .read()
             .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
             .replace('{{USERNAME}}', USERNAME),
         )
+
+
+def setup_ubo_services() -> None:
+    """Install dependencies of ubo services that run in their own virtual envs."""
+    ubo_services_search_path = Path(__file__).parent.parent / 'services'
+
+    services_installation_path = Path(INSTALLATION_PATH) / 'ubo-services'
+    services_installation_path.mkdir(exist_ok=True, parents=True)
+    os.chown(services_installation_path, USER_UID, USER_GID)
+
+    for ubo_service_path in ubo_services_search_path.iterdir():
+        setup_script_path = ubo_service_path / 'ubo-setup.sh'
+        if setup_script_path.exists():
+            stdout.write(f'Setting up ubo service {ubo_service_path}')
+            stdout.flush()
+
+            md5sum = hashlib.sha256()
+            md5sum.update(ubo_service_path.as_posix().encode())
+            service_directory_hash = md5sum.hexdigest()
+            service_installation_path = (
+                services_installation_path / service_directory_hash
+            )
+
+            shutil.rmtree(service_installation_path, ignore_errors=True)
+            service_installation_path.mkdir()
+            os.chown(service_installation_path, USER_UID, USER_GID)
+
+            def prepare(
+                ubo_service_path: Path,
+                service_installation_path: Path,
+            ) -> None:
+                try:
+                    os.setgid(USER_GID)
+                    os.setuid(USER_UID)
+
+                    venv.create(
+                        service_installation_path.as_posix(),
+                        system_site_packages=True,
+                        with_pip=True,
+                    )
+
+                    symlink_path = ubo_service_path / 'ubo-service'
+                    if symlink_path.exists():
+                        symlink_path.unlink()
+                    symlink_path.symlink_to(service_installation_path)
+                    os.chown(symlink_path, USER_UID, USER_GID)
+
+                except Exception as e:
+                    print(f'preexec_fn error: {e}', flush=True)  # noqa: T201
+                    import traceback
+
+                    print(traceback.format_exc(), flush=True)  # noqa: T201
+                    raise
+
+            subprocess.run(  # noqa: S602
+                f'source {service_installation_path / "bin" / "activate"} && '
+                f'{setup_script_path.absolute()}',
+                preexec_fn=functools.partial(
+                    prepare,
+                    ubo_service_path,
+                    service_installation_path,
+                ),
+                cwd=service_installation_path,
+                executable='/bin/bash',
+                shell=True,
+                check=True,
+            )
 
 
 def bootstrap(*, in_packer: bool = False) -> None:
@@ -237,6 +306,8 @@ def bootstrap(*, in_packer: bool = False) -> None:
     configure_device()
     daemon_reload()
     create_service_files()
+
+    setup_ubo_services()
 
     # TODO(sassanh): Disable lightdm to disable piwiz to avoid its visual # noqa: FIX002
     # instructions as ubo by nature doesn't need mouse/keyboard, this is a temporary

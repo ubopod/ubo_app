@@ -37,6 +37,7 @@ source "arm" "raspios" {
   image_path            = "image.img"
   image_size            = var.target_image_size
   image_type            = "dos"
+
   image_partitions {
     name         = "boot"
     type         = "c"
@@ -53,6 +54,7 @@ source "arm" "raspios" {
     size         = "0"
     mountpoint   = "/"
   }
+
   image_chroot_env             = ["PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"]
   qemu_binary_source_path      = "/usr/bin/qemu-aarch64-static"
   qemu_binary_destination_path = "/usr/bin/qemu-aarch64-static"
@@ -67,18 +69,18 @@ build {
   }
 
   provisioner "file" {
-    source      = "/build/dist/ubo_app-${var.ubo_app_version}-py3-none-any.whl"
-    destination = "/ubo_app-${var.ubo_app_version}-py3-none-any.whl"
+    source      = "/build/dist"
+    destination = "/wheels"
   }
 
   provisioner "shell" {
     inline = [
-      "echo \"${var.image_name}\" > /etc/ubo_base_image",
-      "sed -i /etc/lightdm/lightdm.conf -e 's|#\\?autologin-user=.*|autologin-user=ubo|' || true",
-      "rm -f /etc/xdg/autostart/piwiz.desktop",
       "chmod +x /install.sh",
-      "/install.sh --in-packer --source=/ubo_app-${var.ubo_app_version}-py3-none-any.whl --target-version=${var.ubo_app_version}",
-      "rm /install.sh /ubo_app-${var.ubo_app_version}-py3-none-any.whl",
+      "echo \"${var.image_name}\" > /etc/ubo_base_image",
+      "sed -i '/^#\\?autologin-user=/c\\autologin-user=ubo' /etc/lightdm/lightdm.conf || true",
+      "rm -f /etc/xdg/autostart/piwiz.desktop",
+      "/install.sh --in-packer --wheels-directory=/wheels --target-version=${var.ubo_app_version}",
+      "rm -rf /install.sh /wheels/",
       "/usr/bin/env systemctl disable userconfig || true",
       "apt-get clean -y",
       "echo DF; df -h"

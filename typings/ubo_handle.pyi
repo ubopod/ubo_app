@@ -22,4 +22,5 @@ def register(
     service_id: str,
     label: str,
     setup: SetupFunction,
+    binary_path: str | None = None,
 ) -> None: ...

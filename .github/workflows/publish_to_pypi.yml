@@ -26,14 +26,21 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: wheel
+          name: package
           path: dist
           run-id: ${{ github.event.inputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/download-artifact@v4
         with:
-          name: binary
+          name: bindings-package
+          path: dist
+          run-id: ${{ github.event.inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: services-packages
           path: dist
           run-id: ${{ github.event.inputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

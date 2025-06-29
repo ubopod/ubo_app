@@ -10,16 +10,20 @@ def get_version():
     root = Path().absolute().parent
     while not any(i.name == "pyproject.toml" for i in root.iterdir()):
         root = root.parent
+
     result = subprocess.run(
         [
             "/usr/bin/env",
             "uvx",
+            "--with",
+            "pip",
             "hatch",
             "version",
         ],
-        # check=True,
+        check=True,
         text=True,
         cwd=root,
         capture_output=True,
     )
+    print(result)
     return result.stdout.strip()
