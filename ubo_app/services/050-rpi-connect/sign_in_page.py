@@ -35,7 +35,7 @@ class SignInPage(UboPageWidget):
         *args: object,
         **kwargs: object,
     ) -> None:
-        super().__init__(*args, **kwargs, items=[])
+        super().__init__(*args, **kwargs)
         store.subscribe_event(
             RPiConnectLoginEvent,
             lambda: store.dispatch(

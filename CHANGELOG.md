@@ -39,6 +39,7 @@
 - build(bindings): add raw-bindings package
 - fix(docker): use `127.0.0.1` instead of `GRPC_SERVER_HOST` as the docker container sometimes could not connect to the host ip
 - feat(services): add a mechanism to run external processes as part of ubo services, these processes are supposed to communicate to the ubo-app via gRPC, they have their own installation script (`ubo-setup.sh` file in the service directory) and run in a separate virtualenv
+- refactor(rpc): several improvements in rpc and store types, most importantly, avoid marking all fields as optional in proto files and remove `items` from `UboPageWidget`'s constructor
 
 ## Version 1.4.0
 

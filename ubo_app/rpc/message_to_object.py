@@ -19,9 +19,9 @@ ReturnType: TypeAlias = (
     | bool
     | None
     | datetime
-    | list['ReturnType']
-    | set['ReturnType']
-    | dict[str, 'ReturnType']
+    | list["ReturnType"]
+    | set["ReturnType"]
+    | dict[str, "ReturnType"]
 )
 
 
@@ -29,7 +29,7 @@ class _MissingType: ...
 
 
 MISSING = _MissingType()
-META_FIELD_PREFIX_PACKAGE_NAME = 'meta_field_package_name_'
+META_FIELD_PREFIX_PACKAGE_NAME = "meta_field_package_name_"
 META_FIELD_PREFIX_PACKAGE_NAME_INDEX = 1000
 
 
@@ -38,7 +38,7 @@ def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
     if isinstance(message, betterproto.Enum):
         unspecified_member = next(iter(type(message).__members__.keys()))
         destination_module_path = (
-            unspecified_member[: -len('_UNSPECIFIED')].lower().replace('_dot_', '.')
+            unspecified_member[: -len("_UNSPECIFIED")].lower().replace("_dot_", ".")
         )
     elif (
         META_FIELD_PREFIX_PACKAGE_NAME_INDEX
@@ -50,7 +50,7 @@ def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
         if field_name.startswith(META_FIELD_PREFIX_PACKAGE_NAME):
             destination_module_path = field_name[
                 len(META_FIELD_PREFIX_PACKAGE_NAME) :
-            ].replace('_dot_', '.')
+            ].replace("_dot_", ".")
         else:
             return None
     else:
@@ -68,7 +68,7 @@ def reduce_group(message: betterproto.Message) -> betterproto.Message:
     return getattr(message, attribute)
 
 
-T = TypeVar('T', bound=betterproto.Message | betterproto.Enum)
+T = TypeVar("T", bound=betterproto.Message | betterproto.Enum)
 
 
 def rebuild_object(  # noqa: C901
@@ -78,7 +78,7 @@ def rebuild_object(  # noqa: C901
         message,
         betterproto.Enum,
     ):
-        return cast('ReturnType', message)
+        return cast("ReturnType", message)
 
     if isinstance(message, list):
         return [rebuild_object(item) for item in message]
@@ -90,32 +90,32 @@ def rebuild_object(  # noqa: C901
             if value is not None
         }
 
-    if hasattr(message, '_group_current') and len(message._group_current) > 0:
+    if hasattr(message, "_group_current") and len(message._group_current) > 0:
         return rebuild_object(reduce_group(message))
 
     destination_class = get_class(message)
 
     if isinstance(message, betterproto.Enum) and message.name:
-        if message.name.endswith('UNSPECIFIED'):
+        if message.name.endswith("UNSPECIFIED"):
             return None
         return getattr(destination_class, message.name)
 
     keys = message._betterproto.sorted_field_names
-    if len(keys) == 1 and keys[0] == 'items':
-        items = [rebuild_object(item) for item in getattr(message, 'items', [])]
-        if type(message).__name__.endswith('SetType'):
+    if len(keys) == 1 and keys[0] == "items":
+        items = [rebuild_object(item) for item in getattr(message, "items", [])]
+        if type(message).__name__.endswith("SetType"):
             return set(items)
         return items
 
     if destination_class is None:
-        msg = f'Class not found for {message}'
+        msg = f"Class not found for {message}"
         raise ValueError(msg)
 
     if not isinstance(destination_class, type) or not issubclass(
         destination_class,
         Immutable,
     ):
-        msg = f'Parsing {message} is not implemented yet'
+        msg = f"Parsing {message} is not implemented yet"
         raise NotImplementedError(msg)
 
     fields = {
@@ -125,7 +125,7 @@ def rebuild_object(  # noqa: C901
             key,
         )
         for key in keys
-        if not key.startswith('meta_field_') and getattr(message, key) is not None
+        if not key.startswith("meta_field_")
     }
 
     fields = {key: value for key, value in fields.items() if value is not MISSING}
@@ -154,7 +154,7 @@ def get_field_value(
 
         return None
 
-    if key.endswith('_timestamp'):
+    if key.endswith("_timestamp"):
         return datetime.fromtimestamp(
             getattr(message, key),
             tz=UTC,

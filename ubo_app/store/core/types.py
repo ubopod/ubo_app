@@ -10,6 +10,13 @@ from redux import BaseAction, BaseEvent
 
 from ubo_app.utils.service import ServiceUnavailableError
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from ubo_gui.menu.types import Item, Menu
+
+    from ubo_app.store.ubo_actions import BasicType
+
 
 class SettingsCategory(StrEnum):
     NETWORK = 'Network'
@@ -33,12 +40,6 @@ SETTINGS_ICONS = {
     SettingsCategory.SPEECH: '󰔊',
     SettingsCategory.DOCKER: '󰡨',
 }
-
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from ubo_gui.menu.types import Item, Menu
 
 
 class MainAction(BaseAction): ...
@@ -124,8 +125,11 @@ class MenuScrollAction(MenuAction):
 
 class OpenApplicationAction(MainAction):
     application_id: str
-    initialization_args: tuple = ()
-    initialization_kwargs: dict = field(default_factory=dict)
+    initialization_args: tuple[BasicType, ...] = ()
+    initialization_kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
 
 
 class CloseApplicationAction(MainAction):
@@ -165,8 +169,11 @@ class MenuScrollEvent(MenuEvent):
 
 class OpenApplicationEvent(MainEvent):
     application_id: str
-    initialization_args: tuple = ()
-    initialization_kwargs: dict = field(default_factory=dict)
+    initialization_args: tuple[BasicType, ...] = ()
+    initialization_kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
 
 
 class CloseApplicationEvent(MainEvent):

@@ -37,7 +37,7 @@ class LoginPage(UboPageWidget):
         *args: object,
         **kwargs: object,
     ) -> None:
-        super().__init__(*args, **kwargs, items=[])
+        super().__init__(*args, **kwargs)
         store.subscribe_event(
             VSCodeLoginEvent,
             lambda: store.dispatch(

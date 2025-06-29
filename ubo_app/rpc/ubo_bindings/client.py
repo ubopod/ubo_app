@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, overload
 
 from grpclib.client import Channel
@@ -24,7 +25,8 @@ class AsyncRemoteStore:
 
     def __init__(self, host: str, port: int) -> None:
         """Initialize the async remote store."""
-        self.channel = Channel(host=host, port=port)
+        self.event_loop = asyncio.get_event_loop()
+        self.channel = Channel(host=host, port=port, loop=self.event_loop)
         self.service = StoreServiceStub(self.channel)
 
     def close(self) -> None:
@@ -32,10 +34,10 @@ class AsyncRemoteStore:
         self.channel.close()
 
     @overload
-    async def dispatch_async(self, *, action: Action) -> None: ...
+    def dispatch(self, *, action: Action) -> None: ...
     @overload
-    async def dispatch_async(self, *, event: Event) -> None: ...
-    async def dispatch_async(
+    def dispatch(self, *, event: Event) -> None: ...
+    def dispatch(
         self,
         *,
         action: Action | None = None,
@@ -43,17 +45,25 @@ class AsyncRemoteStore:
     ) -> None:
         """Dispatch an operation to the remote store."""
         if action is not None:
-            await self.service.dispatch_action(DispatchActionRequest(action=action))
+            self.event_loop.create_task(
+                self.service.dispatch_action(DispatchActionRequest(action=action)),
+            )
         if event is not None:
-            await self.service.dispatch_event(DispatchEventRequest(event=event))
+            self.event_loop.create_task(
+                self.service.dispatch_event(DispatchEventRequest(event=event)),
+            )
 
-    async def subscribe_event(
+    def subscribe_event(
         self,
         event_type: Event,
         callback: Callable[[Event], None],
     ) -> None:
         """Subscribe to the remote store."""
-        async for response in self.service.subscribe_event(
-            SubscribeEventRequest(event=event_type),
-        ):
-            callback(response.event)
+
+        async def iterator():
+            async for response in self.service.subscribe_event(
+                SubscribeEventRequest(event=event_type),
+            ):
+                callback(response.event)
+
+        self.event_loop.create_task(iterator())

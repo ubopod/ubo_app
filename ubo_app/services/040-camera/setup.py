@@ -65,7 +65,7 @@ class CameraApplication(UboPageWidget):
         self,
         **kwargs: object,
     ) -> None:
-        super().__init__(items=[], **kwargs)
+        super().__init__(**kwargs)
         picamera2 = initialize_camera()
         is_running = True
 

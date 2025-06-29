@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
 from quart import Quart, Response, render_template, request
+from ubo_bindings.ubo.v1 import WebUiState as GRPCWebUIState
 
 from ubo_app.constants import (
     GRPC_ENVOY_LISTEN_PORT,
@@ -19,7 +20,6 @@ from ubo_app.constants import (
 )
 from ubo_app.logger import logger
 from ubo_app.rpc.object_to_message import build_message
-from ubo_app.rpc.ubo_bindings.ubo.v1 import WebUiState as GRPCWebUIState
 from ubo_app.store.input.types import (
     InputCancelAction,
     InputMethod,
@@ -234,7 +234,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
     @app.route('/', methods=['GET', 'POST'])
     async def inputs_form() -> str:
         if request.method == 'POST':
-            data = dict(await request.form)
+            data: dict[str, str] = dict(await request.form)
             files = {
                 key: cast('FileStorage', value).stream.read()
                 for key, value in (await request.files).items()

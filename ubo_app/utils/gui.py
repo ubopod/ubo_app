@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pathlib
 import uuid
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import Literal, TypeAlias
 
 from kivy.lang.builder import Builder
 from kivy.metrics import dp
@@ -13,11 +13,6 @@ from ubo_gui.page import PageWidget
 from ubo_gui.prompt import PromptWidget
 
 from ubo_app.colors import SUCCESS_COLOR
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from ubo_gui.menu.types import Item
 
 ItemParameters: TypeAlias = dict[Literal['background_color', 'color', 'icon'], str]
 
@@ -35,15 +30,15 @@ class UboPageWidget(PageWidget):
 
     id: str
 
-    def __init__(
-        self,
-        items: Sequence[Item | None] | None = None,
-        *args: object,
-        **kwargs: object,
-    ) -> None:
+    def __init__(self, **kwargs: object) -> None:
         """Initialize the UBO page widget."""
         self.id = uuid.uuid4().hex
-        super().__init__(*args, items=items, **kwargs)
+        kwargs = {**kwargs}
+        items = kwargs.pop('items', None)
+        if items is not None and not isinstance(items, list):
+            msg = 'items must be a list'
+            raise TypeError(msg)
+        super().__init__(items=items, **kwargs)
 
 
 class UboPromptWidget(PromptWidget, UboPageWidget):
