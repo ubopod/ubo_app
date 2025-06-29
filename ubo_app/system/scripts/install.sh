@@ -42,8 +42,8 @@ for arg in "$@"; do
     WITHOUT_DOCKER=true
     shift
     ;;
-  --source=*)
-    SOURCE="${arg#*=}"
+  --wheels-directory=*)
+    WHEELS_DIRECTORY="${arg#*=}"
     shift
     ;;
   --in-packer)
@@ -67,7 +67,7 @@ TARGET_VERSION=${TARGET_VERSION:-}
 INSTALLATION_PATH=${INSTALLATION_PATH:-"/opt/ubo"}
 WITHOUT_WM8960=$([ "${WITHOUT_WM8960:-''}" = true ] && echo true || true)
 WITHOUT_DOCKER=$([ "${WITHOUT_DOCKER:-''}" = true ] && echo true || true)
-SOURCE="${SOURCE:-"ubo-app${TARGET_VERSION:+==$TARGET_VERSION}"}"
+export WHEELS_DIRECTORY=${WHEELS_DIRECTORY:-""}
 IN_PACKER=$([ "${IN_PACKER:-''}" = true ] && echo true || true)
 
 if [ "$IS_RPI" != true ]; then
@@ -96,7 +96,11 @@ echo "TARGET_VERSION: \"$TARGET_VERSION\""
 echo "INSTALLATION_PATH: \"$INSTALLATION_PATH\""
 echo "WITHOUT_DOCKER: \"$WITHOUT_DOCKER\""
 echo "WITHOUT_WM8960: \"$WITHOUT_WM8960\""
-echo "SOURCE: $SOURCE"
+echo "WHEELS_DIRECTORY: \"$WHEELS_DIRECTORY\""
+if [ -n "$WHEELS_DIRECTORY" ]; then
+  echo "PROVIDED_WHEELS:"
+  ls -l "$WHEELS_DIRECTORY"
+fi
 echo "----------------------------------------------"
 
 VERSION_ENVIRONMENT="$INSTALLATION_PATH/${TARGET_VERSION}"
@@ -168,10 +172,11 @@ fi
 
 setup_virtualenv
 
-echo "Installing $SOURCE in $VERSION_ENVIRONMENT..."
-$VERSION_ENVIRONMENT/bin/python -m pip install "$SOURCE" --force-reinstall | tee >(grep -c '^Collecting ' >"$INSTALLATION_PATH/.packages-count")
+SOURCE="ubo-app${TARGET_VERSION:+==$TARGET_VERSION}"
+echo "Installing ${SOURCE} in $VERSION_ENVIRONMENT..."
+$VERSION_ENVIRONMENT/bin/python -m pip install${WHEELS_DIRECTORY:+ --pre --find-links="$WHEELS_DIRECTORY"} "$SOURCE" --force-reinstall | tee >(grep -c '^Collecting ' >"$INSTALLATION_PATH/.packages-count")
 
-echo "$SOURCE installed successfully in $VERSION_ENVIRONMENT."
+echo "${SOURCE} installed successfully in $VERSION_ENVIRONMENT."
 
 UBO_APP_DIR=$($VERSION_ENVIRONMENT/bin/python -c 'import ubo_app; print(ubo_app.__path__[0])')
 

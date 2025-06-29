@@ -38,6 +38,7 @@ dependencies = [
   "simpleaudio>=1.0.4",
   "soxr>=0.5.0.post1",
   "tenacity>=9.0.0",
+  "ubo-app-raw-bindings",
   "ubo-gui>=0.13.17",
   "vosk==0.3.44",
   # Adafruit dependencies
@@ -48,37 +49,16 @@ dependencies = [
   "adafruit-circuitpython-rgb-display>=3.14.0",
   "adafruit-circuitpython-veml7700>=2.1.2",
   # RPi dependencies
-  "piper-tts>=1.2.0 ; sys_platform=='linux'",
-  "rpi-lgpio>=0.6 ; sys_platform=='linux' and platform_machine=='aarch64'",
   "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
+  "piper-tts>=1.2.0 ; sys_platform=='linux'",
   "pyalsaaudio>=0.11.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
+  "rpi-lgpio>=0.6 ; sys_platform=='linux' and platform_machine=='aarch64'",
   # Desktop dependencies
   "pyaudio>=0.2.14 ; sys_platform!='linux' or platform_machine!='aarch64'",
   "gpiozero>=2.0.1 ; platform_machine != 'aarch64'",
   # gRPC
   "betterproto [compiler]>=2.0.0b7",
 ]
-
-[build-system]
-requires = ["hatchling", "hatch-vcs"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.hooks.vcs]
-version-file = "ubo_app/_version.py"
-
-[tool.hatch.version.raw-options]
-local_scheme = "setup_scm_schemes:local_scheme"
-
-[tool.hatch.build]
-packages = ["ubo_app"]
-exclude = ["ubo_app/services/090-web-ui/web-app/node_modules"]
-artifacts = ["ubo_app/services/090-web-ui/web-app/dist", "/ubo_app/rpc"]
-
-[project.optional-dependencies]
-test-investigation = ["graphviz>=0.20.3", "objgraph>=3.6.2"]
 
 [tool.uv]
 dev-dependencies = [
@@ -100,6 +80,33 @@ dev-dependencies = [
   "ruff>=0.12.0",
   "toml>=0.10.2",
 ]
+
+[tool.uv.sources]
+ubo-app-raw-bindings = { path = "ubo_app/rpc", editable = true }
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "ubo_app/_version.py"
+
+[tool.hatch.version.raw-options]
+local_scheme = "setup_scm_schemes:local_scheme"
+
+[tool.hatch.build]
+packages = ["ubo_app"]
+exclude = [
+  "ubo_app/services/090-web-ui/web-app/node_modules",
+  "ubo_app/services/*/ubo-service",
+]
+artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
+
+[project.optional-dependencies]
+test-investigation = ["graphviz>=0.20.3", "objgraph>=3.6.2"]
 
 [project.scripts]
 ubo = "ubo_app.main:main"
@@ -157,6 +164,7 @@ args = [
   { name = "restart", type = "boolean" },
   { name = "bootstrap", type = "boolean" },
   { name = "env", type = "boolean" },
+  { name = "offline", type = "boolean" },
   { name = "index", type = "integer", default = '1' },
 ]
 cmd = "scripts/deploy.sh"
@@ -210,7 +218,8 @@ profile = "black"
 exclude = [
   "typings",
   "ubo_app/rpc/ubo_bindings",
-  ".venv",
+  "ubo_app/services/*/ubo-service",
+  "**/.venv",
   "setup_scm_schemes.py",
   "dist/",
 ]

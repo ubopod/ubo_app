@@ -205,7 +205,7 @@ jobs:
         run: |
           uv run --frozen poe proto:generate
 
-      - name: Upload protobuf files
+      - name: Upload Protobuf Files
         uses: actions/upload-artifact@v4
         with:
           name: proto-files
@@ -233,7 +233,7 @@ jobs:
           enable-cache: true
           cache-suffix: ubuntu-latest
 
-      - name: Download protobuf files
+      - name: Download Protobuf Files
         uses: actions/download-artifact@v4
         with:
           name: proto-files
@@ -250,19 +250,59 @@ jobs:
           cd ubo_app/rpc
           uv build
 
-      - name: Upload wheel
+      - name: Upload Bindings Package
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-bindings
-          path: ubo_app/rpc/dist/*.whl
+          name: bindings-package
+          path: ubo_app/rpc/dist/*
           if-no-files-found: error
 
-      - name: Upload binary
+  services:
+    name: Services
+    runs-on: ubuntu-latest
+    needs:
+      - version
+      - bindings
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: System Dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y portaudio19-dev
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-suffix: ubuntu-latest
+
+      - name: Build Services
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          mkdir -p services-packages
+          for service in $(ls ubo_app/services); do
+            if [ -d "ubo_app/services/$service/ubo-service" ]; then
+              echo "Building service: $service"
+              cd ubo_app/services/$service/ubo-service
+              uv build
+              cp dist/* $GITHUB_WORKSPACE/services-packages/
+              cd -
+            fi
+          done
+          if [ ! "$(ls -A services-packages)" ]; then
+            touch services-packages/non-empty
+          fi
+
+      - name: Upload Services Packages
         uses: actions/upload-artifact@v4
         with:
-          name: binary-bindings
-          path: ubo_app/rpc/dist/*.tar.gz
-          if-no-files-found: error
+          name: services-packages
+          path: services-packages/**
 
   build:
     name: Build
@@ -271,8 +311,8 @@ jobs:
       - version
       - proto
     steps:
-      - uses: actions/checkout@v4
-        name: Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           lfs: true
 
@@ -292,7 +332,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download protobuf files
+      - name: Download Protobuf Files
         uses: actions/download-artifact@v4
         with:
           name: proto-files
@@ -328,18 +368,11 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ needs.version.outputs.version }}
         run: uv build
 
-      - name: Upload wheel
+      - name: Upload Ubo App Package
         uses: actions/upload-artifact@v4
         with:
-          name: wheel
-          path: dist/*.whl
-          if-no-files-found: error
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: binary
-          path: dist/*.tar.gz
+          name: package
+          path: dist/*
           if-no-files-found: error
 
   images:
@@ -364,16 +397,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Wheel
+      - name: Download Ubo App Package
         uses: actions/download-artifact@v4
         with:
-          name: wheel
+          name: package
           path: /build/dist
 
-      - name: Download Binary
+      - name: Download Bindings Package
         uses: actions/download-artifact@v4
         with:
-          name: binary
+          name: bindings-package
+          path: /build/dist
+
+      - name: Download Services Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: services-packages
           path: /build/dist
 
       - name: Generate Image URL and Checksum
@@ -396,9 +435,9 @@ jobs:
           echo "image_name=$IMAGE_NAME" >>"$GITHUB_OUTPUT"
           echo "image_checksum_url=$CHECKSUM_URL" >>"$GITHUB_OUTPUT"
           if [ "$MATRIX_SUFFIX" = "lite" ]; then
-            IMAGE_SIZE_GB=4.5
+            IMAGE_SIZE_GB=5.5
           elif [ "$MATRIX_SUFFIX" = "" ]; then
-            IMAGE_SIZE_GB=7
+            IMAGE_SIZE_GB=8
           else
             IMAGE_SIZE_GB=13
           fi
@@ -415,6 +454,7 @@ jobs:
           PKR_VAR_target_image_size:
             ${{ steps.generate-image-url.outputs.image_size}}
         run: |
+          ls /build/dist
           /entrypoint.sh init scripts/packer/image.pkr.hcl
           SETUP_QEMU=false /entrypoint.sh build scripts/packer/image.pkr.hcl
           ls -lh
@@ -469,58 +509,26 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Download Wheel
+      - name: Download Ubo App Package
         uses: actions/download-artifact@v4
         with:
-          name: wheel
+          name: package
+          path: /build/dist
+
+      - name: Download Bindings Package
+        uses: actions/download-artifact@v4
+        with:
+          name: bindings-package
           path: dist
 
-      - name: Download Binary
+      - name: Download Services Packages
         uses: actions/download-artifact@v4
         with:
-          name: binary
+          name: services-packages
           path: dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist
-
-  publish-bindings:
-    name: Publish Bindings
-    if:
-      github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') ||
-      github.ref == 'refs/heads/development')
-    needs:
-      - version
-      - bindings
-      - lint
-      - test
-      - bindings
-      - build
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi-bindings
-      url:
-        https://pypi.org/project/${{ needs.version.outputs.name
-        }}-raw-bindings/${{ needs.version.outputs.version }}
-    permissions:
-      id-token: write
-    steps:
-      - name: Download Wheel Bindings
-        uses: actions/download-artifact@v4
-        with:
-          name: wheel-bindings
-          path: dist
-
-      - name: Download Binary Bindings
-        uses: actions/download-artifact@v4
-        with:
-          name: binary-bindings
-          path: dist
-
-      - name: Publish Bindings to PyPI
-        uses: ppa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
 
@@ -568,10 +576,10 @@ jobs:
           name: wheel
           path: artifacts
 
-      - name: Procure Binary
+      - name: Procure Source
         uses: actions/download-artifact@v4
         with:
-          name: binary
+          name: source
           path: artifacts
 
       - name:

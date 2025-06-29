@@ -11,8 +11,13 @@ bootstrap=${bootstrap:-"False"}
 kill=${kill:-"False"}
 restart=${restart:-"False"}
 env=${env:-"True"}
+offline=${env:-"False"}
 
-uv build
+if [ "$offline" == "True" ]; then
+  uv --offline build
+else
+  uv build
+fi
 LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
 
 function run_on_pod() {
@@ -21,7 +26,7 @@ function run_on_pod() {
     return 1
   fi
   if [ $# -eq 1 ]; then
-    ssh ubo@ubo-development-pod-$index "XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
+    ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
     return 0
   fi
   return 1

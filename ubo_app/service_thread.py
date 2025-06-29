@@ -9,6 +9,8 @@ import importlib.abc
 import importlib.util
 import inspect
 import logging
+import os
+import signal
 import sys
 import threading
 import traceback
@@ -26,9 +28,12 @@ from redux import (
 )
 
 from ubo_app.constants import (
+    DATA_PATH,
     DEBUG_TASKS,
     DISABLED_SERVICES,
     ENABLED_SERVICES,
+    GRPC_LISTEN_ADDRESS,
+    GRPC_LISTEN_PORT,
     PACKAGE_NAME,
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
@@ -206,12 +211,13 @@ class UboServiceThread(threading.Thread):
             with contextlib.suppress(threading.BrokenBarrierError):
                 self._reducer_barrier.wait()
 
-    def register(
+    def register(  # noqa: PLR0913
         self,
         *,
         service_id: str,
         label: str,
         setup: SetupFunction,
+        binary_path: str | None = None,
         is_enabled: bool = True,
         should_auto_restart: bool = False,
     ) -> None:
@@ -236,6 +242,7 @@ class UboServiceThread(threading.Thread):
         self.label = label
         self.service_id = service_id
         self.setup = setup
+        self.binary_path = binary_path
         self.is_enabled = is_enabled
         self.should_auto_restart = should_auto_restart
 
@@ -290,7 +297,7 @@ class UboServiceThread(threading.Thread):
     def stop(self) -> None:
         self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
-    def run(self) -> None:
+    def run(self) -> None:  # noqa: C901, PLR0915
         from ubo_app.store.main import store
 
         self.loop = asyncio.new_event_loop()
@@ -314,9 +321,9 @@ class UboServiceThread(threading.Thread):
         )
         asyncio.set_event_loop(self.loop)
 
-        async def setup_wrapper() -> None:
-            result = None
+        async def setup_wrapper() -> None:  # noqa: C901
             try:
+                result = None
                 if len(inspect.signature(self.setup).parameters) == 0:
                     self._wait_for_reducers()
                     result = cast(
@@ -330,7 +337,39 @@ class UboServiceThread(threading.Thread):
                     )(self.register_reducer)
 
                 if asyncio.iscoroutine(result):
-                    result = await result
+                    subscriptions = await result
+                else:
+                    subscriptions = result
+                subscriptions = [*subscriptions] if subscriptions else []
+
+                if self.binary_path is not None:
+                    process_path = self.path / 'ubo-service' / self.binary_path
+                    if process_path.exists():
+                        process = await asyncio.subprocess.create_subprocess_exec(
+                            process_path,
+                            cwd=process_path.parent.parent,
+                            env={
+                                'GRPC_ADDRESS': GRPC_LISTEN_ADDRESS,
+                                'GRPC_PORT': str(GRPC_LISTEN_PORT),
+                                'PATH': os.environ.get('PATH', ''),
+                                'UBO_DATA_PATH': DATA_PATH,
+                            },
+                            start_new_session=True,
+                        )
+
+                        async def process_terminate() -> None:
+                            if not process.returncode:
+                                os.killpg(process.pid, signal.SIGTERM)
+                                try:
+                                    await asyncio.wait_for(
+                                        process.wait(),
+                                        timeout=SERVICES_LOOP_GRACE_PERIOD,
+                                    )
+                                except TimeoutError:
+                                    os.killpg(process.pid, signal.SIGKILL)
+
+                        subscriptions.append(process_terminate)
+
             except Exception:
                 logger.exception(
                     'Error during setup',
@@ -343,8 +382,8 @@ class UboServiceThread(threading.Thread):
 
             self.is_started = True
 
-            if result:
-                self.subscriptions = result
+            if subscriptions:
+                self.subscriptions = subscriptions
 
             store.dispatch(
                 SettingsServiceSetStatusAction(

@@ -2401,6 +2401,7 @@ dependencies = [
     { name = "simpleaudio" },
     { name = "soxr" },
     { name = "tenacity" },
+    { name = "ubo-app-raw-bindings" },
     { name = "ubo-gui" },
     { name = "vosk" },
 ]
@@ -2478,6 +2479,7 @@ requires-dist = [
     { name = "simpleaudio", specifier = ">=1.0.4" },
     { name = "soxr", specifier = ">=0.5.0.post1" },
     { name = "tenacity", specifier = ">=9.0.0" },
+    { name = "ubo-app-raw-bindings", editable = "ubo_app/rpc" },
     { name = "ubo-gui", specifier = ">=0.13.17" },
     { name = "vosk", specifier = "==0.3.44" },
 ]
@@ -2503,6 +2505,16 @@ dev = [
     { name = "ruff", specifier = ">=0.12.0" },
     { name = "toml", specifier = ">=0.10.2" },
 ]
+
+[[package]]
+name = "ubo-app-raw-bindings"
+source = { editable = "ubo_app/rpc" }
+dependencies = [
+    { name = "betterproto", extra = ["compiler"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "betterproto", extras = ["compiler"], specifier = ">=2.0.0b7" }]
 
 [[package]]
 name = "ubo-gui"
