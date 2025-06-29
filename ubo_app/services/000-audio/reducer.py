@@ -18,8 +18,10 @@ from ubo_app.store.services.audio import (
     AudioEvent,
     AudioInstallDriverAction,
     AudioInstallDriverEvent,
-    AudioPlayAudioAction,
-    AudioPlayAudioEvent,
+    AudioPlayAudioSampleAction,
+    AudioPlayAudioSampleEvent,
+    AudioPlayAudioSequenceAction,
+    AudioPlayAudioSequenceEvent,
     AudioPlaybackDoneAction,
     AudioPlaybackDoneEvent,
     AudioPlayChimeAction,
@@ -107,17 +109,25 @@ def reducer(
                 AudioPlayChimeEvent(name=action.name),
             ],
         )
-    elif isinstance(action, AudioPlayAudioAction):
+    elif isinstance(action, AudioPlayAudioSequenceAction):
         return CompleteReducerResult(
             state=state,
             events=[
-                AudioPlayAudioEvent(
+                AudioPlayAudioSequenceEvent(
                     volume=state.playback_volume,
                     sample=action.sample,
-                    channels=action.channels,
-                    rate=action.rate,
-                    width=action.width,
                     id=action.id,
+                    index=action.index,
+                ),
+            ],
+        )
+    elif isinstance(action, AudioPlayAudioSampleAction):
+        return CompleteReducerResult(
+            state=state,
+            events=[
+                AudioPlayAudioSampleEvent(
+                    volume=state.playback_volume,
+                    sample=action.sample,
                 ),
             ],
         )

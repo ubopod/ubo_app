@@ -7,7 +7,6 @@ import hashlib
 import json
 import struct
 from asyncio import CancelledError
-from queue import Queue
 from typing import TYPE_CHECKING
 
 import fasteners
@@ -31,7 +30,11 @@ from ubo_app.store.input.types import (
     WebUIInputDescription,
 )
 from ubo_app.store.main import store
-from ubo_app.store.services.audio import AudioPlayAudioAction, AudioPlaybackDoneEvent
+from ubo_app.store.services.audio import (
+    AudioPlayAudioSampleAction,
+    AudioPlayAudioSequenceAction,
+    AudioSample,
+)
 from ubo_app.store.services.speech_synthesis import (
     ReadableInformation,
     SpeechSynthesisEngineName,
@@ -148,7 +151,6 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
         if not _context.piper_voice:
             return
         id = hex(hash(text))
-        queue = Queue(maxsize=1)
 
         if text in piper_cache:
             source = piper_cache[text]
@@ -158,25 +160,31 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
             piper_cache[text] = []
             is_first_time = True
 
-        unsubscribe = store.subscribe_event(
-            AudioPlaybackDoneEvent,
-            lambda event: event.id == id and queue.get(),
-        )
-
+        index = 0
         for sample in source:
             if is_first_time:
                 piper_cache[text].append(sample)
-            queue.put(None)
             store.dispatch(
-                AudioPlayAudioAction(
+                AudioPlayAudioSequenceAction(
+                    sample=AudioSample(
+                        data=sample,
+                        channels=1,
+                        rate=_context.piper_voice.config.sample_rate,
+                        width=2,
+                    ),
                     id=id,
-                    sample=sample,
-                    channels=1,
-                    rate=22050,
-                    width=2,
+                    index=index,
                 ),
             )
-        unsubscribe()
+            index += 1
+        store.dispatch(
+            AudioPlayAudioSequenceAction(
+                sample=None,
+                id=id,
+                index=index,
+            ),
+        )
+
     elif engine == SpeechSynthesisEngineName.PICOVOICE:
         with _context.picovoice_lock.read_lock():
             if not _context.picovoice_instance:
@@ -189,11 +197,13 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
             )
         sample = b''.join(struct.pack('h', sample) for sample in audio_sequence[0])
         store.dispatch(
-            AudioPlayAudioAction(
-                sample=sample,
-                channels=1,
-                rate=rate,
-                width=2,
+            AudioPlayAudioSampleAction(
+                sample=AudioSample(
+                    data=sample,
+                    channels=1,
+                    rate=rate,
+                    width=2,
+                ),
             ),
         )
 

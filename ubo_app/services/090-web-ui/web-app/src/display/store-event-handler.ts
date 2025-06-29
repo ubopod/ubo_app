@@ -8,7 +8,7 @@ import {
 import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
-  AudioPlayAudioEvent,
+  AudioPlayAudioSampleEvent,
   DisplayCompressedRenderEvent,
   Event,
   Notification,
@@ -150,7 +150,7 @@ function createWavFile(
 
 function subscribeToAudioEvents(store: StoreServiceClient) {
   const event = new Event();
-  event.setAudioPlayAudioEvent(new AudioPlayAudioEvent());
+  event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent());
 
   const subscribeEventRequest = new SubscribeEventRequest();
   subscribeEventRequest.setEvent(event);
@@ -161,19 +161,25 @@ function subscribeToAudioEvents(store: StoreServiceClient) {
     setTimeout(() => subscribeToAudioEvents(store), 1000),
   );
   stream.on("data", async (response: SubscribeEventResponse) => {
-    const audioEvent = response.getEvent()?.getAudioPlayAudioEvent();
+    const audioEvent = response.getEvent()?.getAudioPlayAudioSampleEvent();
 
     if (!audioEvent) {
       return;
     }
 
-    const sample = audioEvent.getSample_asU8();
-    const rate = audioEvent.getRate();
-    const width = audioEvent.getWidth();
-    const channels = audioEvent.getChannels();
+    const audioSample = audioEvent.setSample().getSample();
+
+    if (!audioSample) {
+      return;
+    }
+
+    const data = audioSample.getData_asU8();
+    const rate = audioSample.getRate();
+    const width = audioSample.getWidth();
+    const channels = audioSample.getChannels();
     const volume = audioEvent.getVolume();
 
-    const audioBlob = createWavFile(sample, rate, channels, width * 8);
+    const audioBlob = createWavFile(data, rate, channels, width * 8);
     const arrayBuffer = await audioBlob.arrayBuffer();
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 

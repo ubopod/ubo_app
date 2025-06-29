@@ -8,6 +8,7 @@ import math
 import wave
 from asyncio import get_event_loop
 from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 from typing import TYPE_CHECKING
 
 import alsaaudio
@@ -28,6 +29,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioPlaybackDoneAction,
     AudioReportSampleEvent,
+    AudioSample,
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
@@ -40,7 +42,7 @@ if TYPE_CHECKING:
 
 INPUT_FRAME_RATE = 48_000
 INPUT_CHANNELS = 2
-INPUT_PERIOD_SIZE = 1 << 14
+INPUT_PERIOD_SIZE = int(INPUT_FRAME_RATE / 1000) * 50  # 50ms
 
 
 def _linear_to_logarithmic(volume_linear: float) -> int:
@@ -66,6 +68,10 @@ class AudioManager:
         self.playback_mute = True
         self.playback_volume = 0.1
         self.capture_volume = 0.1
+
+        self.audio_buffers: dict[str, dict[int, AudioSample | None]] = {}
+        self.audio_heads: dict[str, int] = {}
+        self.audio_buffers_lock = Lock()
 
         eeprom_data = get_eeprom_data()
 
@@ -135,76 +141,112 @@ class AudioManager:
             sample_width = wave_file.getsampwidth()
             audio_data = wave_file.readframes(wave_file.getnframes())
 
-            await self.play_sequence(
-                audio_data,
-                channels=channels,
-                rate=sample_rate,
-                width=sample_width,
+            await self.play_sample(
+                AudioSample(
+                    data=audio_data,
+                    channels=channels,
+                    rate=sample_rate,
+                    width=sample_width,
+                ),
             )
 
-    async def play_sequence(
+    async def play_sample(
         self,
-        data: bytes,
-        *,
-        channels: int,
-        rate: int,
-        width: int,
-        id: str | None = None,
+        sample: AudioSample,
     ) -> None:
         """Play a sequence of audio.
 
         Parameters
         ----------
-        data: bytes
-            Audio as a sequence of bytes
-
-        channels: int
-            Number of channels
-
-        rate: int
-            Frame rate of the audio
-
-        width: int
-            Sample width of the audio
-
-        id: str | None
-            ID of the audio sequence chain
+        sample: AudioSample
+            Audio sample as a sequence of bytes and its parameters: sample rate, width
+            and channels
 
         """
-        if data != b'':
-            async for attempt in AsyncRetrying(
-                stop=stop_after_attempt(3),
-                wait=wait_fixed(1),
-            ):
-                with attempt:
-                    wave_object = simpleaudio.WaveObject(
-                        audio_data=data,
-                        num_channels=channels,
-                        sample_rate=rate,
-                        bytes_per_sample=width,
-                    )
-                    play_object = wave_object.play()
-                    play_object.wait_done()
-                if attempt.retry_state.outcome and isinstance(
-                    attempt.retry_state.outcome.exception(),
-                    _simpleaudio.SimpleaudioError,
-                ):
-                    logger.info(
-                        'Audio - Reporting the playback issue to ubo-system',
-                        extra={'attempt': attempt.retry_state.attempt_number},
-                    )
-                    report_service_error(
-                        exception=attempt.retry_state.outcome.exception(),
-                    )
-                    await send_command('audio', 'failure_report', has_output=True)
-                else:
-                    break
-            else:
-                logger.error(
-                    'Audio - Failed to play audio file after multiple trials',
+        if sample.data == b'':
+            return
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(1),
+        ):
+            with attempt:
+                wave_object = simpleaudio.WaveObject(
+                    audio_data=sample.data,
+                    num_channels=sample.channels,
+                    sample_rate=sample.rate,
+                    bytes_per_sample=sample.width,
                 )
-                return
-        if id is not None:
+                play_object = wave_object.play()
+                play_object.wait_done()
+            if attempt.retry_state.outcome and isinstance(
+                attempt.retry_state.outcome.exception(),
+                _simpleaudio.SimpleaudioError,
+            ):
+                logger.info(
+                    'Audio - Reporting the playback issue to ubo-system',
+                    extra={'attempt': attempt.retry_state.attempt_number},
+                )
+                report_service_error(
+                    exception=attempt.retry_state.outcome.exception(),
+                )
+                await send_command('audio', 'failure_report', has_output=True)
+            else:
+                break
+        else:
+            logger.error(
+                'Audio - Failed to play audio file after multiple trials',
+            )
+            return
+
+    async def play_sequence(
+        self,
+        sample: AudioSample | None,
+        *,
+        id: str,
+        index: int,
+    ) -> None:
+        """Play a sequence of audio.
+
+        Parameters
+        ----------
+        sample: AudioSample
+            Audio sample as a sequence of bytes and its parameters: sample rate, width
+            and channels
+
+        id: str
+            ID of the audio sequence chain
+
+        index: int
+            Index of the sample in the sequence
+
+        """
+        with self.audio_buffers_lock:
+            if not (already_playing := id in self.audio_buffers):
+                self.audio_buffers[id] = {}
+                self.audio_heads[id] = 0
+
+        buffer = self.audio_buffers[id]
+        buffer[index] = sample
+
+        if already_playing:
+            return
+
+        class NotProvided: ...
+
+        not_provided = NotProvided()
+
+        while (
+            head_sample := buffer.get(self.audio_heads[id], not_provided)
+        ) is not None:
+            if isinstance(head_sample, NotProvided):
+                await asyncio.sleep(0.05)
+                continue
+            await self.play_sample(head_sample)
+            self.audio_heads[id] += 1
+
+        with self.audio_buffers_lock:
+            del self.audio_buffers[id]
+            del self.audio_heads[id]
             store.dispatch(AudioPlaybackDoneAction(id=id))
 
     async def _initialize_input_reader(
@@ -338,11 +380,13 @@ class AudioManager:
                         [
                             AudioReportSampleEvent(
                                 timestamp=event_loop.time(),
-                                sample=data_speech_recognition,
                                 sample_speech_recognition=data_speech_recognition,
-                                channels=INPUT_CHANNELS,
-                                rate=INPUT_FRAME_RATE,
-                                width=2,
+                                sample=AudioSample(
+                                    data=data_speech_recognition,
+                                    channels=INPUT_CHANNELS,
+                                    rate=INPUT_FRAME_RATE,
+                                    width=2,
+                                ),
                             ),
                         ],
                     )
