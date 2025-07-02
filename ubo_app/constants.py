@@ -157,3 +157,5 @@ GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN = r"""{
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/[a-z0-9-]+%40[a-z0-9-]+\.iam\.gserviceaccount\.com",
   "universe_domain": "googleapis.com"
 }"""  # noqa: E501
+
+OPENAI_API_KEY_SECRET_ID = 'openai_api_key'  # noqa: S105

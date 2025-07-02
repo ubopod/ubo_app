@@ -44,6 +44,7 @@
 - feat(assistant): add pipecat in a separate process
 - feat(rpc): add secrets rpc service for querying secrets
 - feat(core): add a mechanism for services to provide environment variables for their binaries
+- refactor(assistant): use the new secret querying service to query google and openai credentials/api-key
 
 ## Version 1.4.0
 

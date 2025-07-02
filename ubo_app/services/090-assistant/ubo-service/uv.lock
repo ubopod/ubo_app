@@ -1504,6 +1504,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-fake"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/b8/9f35885b8fae3a47ffc2726ffcb485f10346b83134a19a385d350a8bee0d/python_fake-0.2.0.tar.gz", hash = "sha256:e5effed784f9002fe44cf469c2e96c259b583ad097ec3c5771eadba53f3cf75c", size = 4914, upload-time = "2025-03-31T20:54:32.957Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e3/48/a9de476360154b5208fb51b5f0571879e6025167e33465cd108bc7c9b1b6/python_fake-0.2.0-py3-none-any.whl", hash = "sha256:962a6605310a8a594b6e2f4cfd81f0a29cd32f790f62f198542a46398c2480cd", size = 4402, upload-time = "2025-03-31T20:54:31.603Z" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1744,6 +1753,7 @@ dependencies = [
     { name = "pipecat-ai", extra = ["google", "openai", "silero"] },
     { name = "piper-tts", marker = "sys_platform == 'linux'" },
     { name = "platformdirs" },
+    { name = "python-fake", marker = "sys_platform != 'linux'" },
     { name = "ubo-app-raw-bindings" },
     { name = "vosk" },
 ]
@@ -1760,6 +1770,7 @@ requires-dist = [
     { name = "pipecat-ai", extras = ["google", "openai", "silero"], specifier = ">=0.0.74" },
     { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = ">=1.2.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
+    { name = "python-fake", marker = "sys_platform != 'linux'", specifier = ">=0.2.0" },
     { name = "ubo-app-raw-bindings", editable = "../../../rpc" },
     { name = "vosk", specifier = "==0.3.44" },
 ]

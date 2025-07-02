@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import os
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
@@ -55,9 +56,6 @@ from ubo_assistant.vosk import VoskSTTService
 if TYPE_CHECKING:
     from openai.types.chat import ChatCompletionMessageParam
 
-google_credentials = None
-openai_api_key = None
-
 
 class UboProvider(BaseOutputTransport):
     def __init__(
@@ -101,6 +99,9 @@ class UboSTTService(UboSwitchService[STTService], STTService):
     def __init__(
         self,
         client: UboRPCClient,
+        *,
+        google_credentials: str | None,
+        openai_api_key: str | None,
         **kwargs: object,
     ) -> None:
         self._assistance_index = 0
@@ -182,6 +183,9 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
     def __init__(
         self,
         client: UboRPCClient,
+        *,
+        google_credentials: str | None,
+        openai_api_key: str | None,
         **kwargs: object,
     ) -> None:
         try:
@@ -264,6 +268,9 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
     def __init__(
         self,
         client: UboRPCClient,
+        *,
+        google_credentials: str | None,
+        openai_api_key: str | None,
         **kwargs: object,
     ) -> None:
         try:
@@ -378,9 +385,25 @@ class Assistant:
             client=self.client,
         )
 
-        ubo_stt_service = UboSTTService(client=self.client)
+        google_credentials = await self.client.query_secret(
+            os.environ["GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID"],
+        )
 
-        ubo_llm_service = UboLLMService(client=self.client)
+        openai_api_key = await self.client.query_secret(
+            os.environ["OPENAI_API_KEY_SECRET_ID"],
+        )
+
+        ubo_stt_service = UboSTTService(
+            client=self.client,
+            google_credentials=google_credentials,
+            openai_api_key=openai_api_key,
+        )
+
+        ubo_llm_service = UboLLMService(
+            client=self.client,
+            google_credentials=google_credentials,
+            openai_api_key=openai_api_key,
+        )
 
         messages: list[ChatCompletionMessageParam] = [
             {
@@ -406,7 +429,11 @@ question mark, and dash. Do not use any other special characters or emojis.""",
 
         self.client.event_loop.create_task(g())
 
-        ubo_tts_service = UboTTSService(client=self.client)
+        ubo_tts_service = UboTTSService(
+            client=self.client,
+            google_credentials=google_credentials,
+            openai_api_key=openai_api_key,
+        )
 
         pipeline = Pipeline(
             [
@@ -425,8 +452,10 @@ question mark, and dash. Do not use any other special characters or emojis.""",
 
 
 def main() -> None:
+    print(1111, os.environ)
     try:
         assistant = Assistant()
         asyncio.get_event_loop().run_until_complete(assistant.run())
     except Exception as exception:
         logger.info("An error occurred", extra={"exception": exception})
+        raise
