@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, overload
 
 from grpclib.client import Channel
 
+from ubo_bindings.secrets.v1 import QuerySecretRequest, SecretsServiceStub
 from ubo_bindings.store.v1 import (
     DispatchActionRequest,
     DispatchEventRequest,
@@ -20,14 +21,15 @@ if TYPE_CHECKING:
     from ubo_bindings.ubo.v1 import Action, Event
 
 
-class AsyncRemoteStore:
+class UboRPCClient:
     """Async remote store for dispatching operations to a gRPC server."""
 
     def __init__(self, host: str, port: int) -> None:
         """Initialize the async remote store."""
         self.event_loop = asyncio.get_event_loop()
         self.channel = Channel(host=host, port=port, loop=self.event_loop)
-        self.service = StoreServiceStub(self.channel)
+        self.store_service = StoreServiceStub(self.channel)
+        self.secrets_service = SecretsServiceStub(self.channel)
 
     def close(self) -> None:
         """Close the channel."""
@@ -46,11 +48,13 @@ class AsyncRemoteStore:
         """Dispatch an operation to the remote store."""
         if action is not None:
             self.event_loop.create_task(
-                self.service.dispatch_action(DispatchActionRequest(action=action)),
+                self.store_service.dispatch_action(
+                    DispatchActionRequest(action=action)
+                ),
             )
         if event is not None:
             self.event_loop.create_task(
-                self.service.dispatch_event(DispatchEventRequest(event=event)),
+                self.store_service.dispatch_event(DispatchEventRequest(event=event)),
             )
 
     def subscribe_event(
@@ -61,9 +65,28 @@ class AsyncRemoteStore:
         """Subscribe to the remote store."""
 
         async def iterator():
-            async for response in self.service.subscribe_event(
+            async for response in self.store_service.subscribe_event(
                 SubscribeEventRequest(event=event_type),
             ):
                 callback(response.event)
 
         self.event_loop.create_task(iterator())
+
+    async def query_secret(
+        self,
+        key: str,
+        *,
+        covered: bool = False,
+    ) -> str:
+        """Query a secret from the secrets manager."""
+        result = await self.secrets_service.query_secret(
+            QuerySecretRequest(key=key, covered=covered),
+        )
+
+        match result.error:
+            case "Secret not found":
+                raise KeyError(f"Secret not found: {key}")
+            case None:
+                return result.value
+            case _:
+                raise RuntimeError(f"Error querying secret: {result.error}")

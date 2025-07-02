@@ -37,7 +37,7 @@ from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
 from pipecat.transports.base_output import BaseOutputTransport
 from pipecat.transports.base_transport import TransportParams
-from ubo_bindings.client import AsyncRemoteStore
+from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
     AssistanceAudioFrame,
@@ -63,7 +63,7 @@ class UboProvider(BaseOutputTransport):
     def __init__(
         self,
         params: TransportParams,
-        client: AsyncRemoteStore,
+        client: UboRPCClient,
         **kwargs: object,
     ) -> None:
         self.client = client
@@ -100,7 +100,7 @@ class UboProvider(BaseOutputTransport):
 class UboSTTService(UboSwitchService[STTService], STTService):
     def __init__(
         self,
-        client: AsyncRemoteStore,
+        client: UboRPCClient,
         **kwargs: object,
     ) -> None:
         self._assistance_index = 0
@@ -181,7 +181,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
 class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
     def __init__(
         self,
-        client: AsyncRemoteStore,
+        client: UboRPCClient,
         **kwargs: object,
     ) -> None:
         try:
@@ -263,7 +263,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
 class UboTTSService(UboSwitchService[TTSService], TTSService):
     def __init__(
         self,
-        client: AsyncRemoteStore,
+        client: UboRPCClient,
         **kwargs: object,
     ) -> None:
         try:
@@ -356,7 +356,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
 
 class Assistant:
     def __init__(self) -> None:
-        self.client = AsyncRemoteStore("localhost", 50051)
+        self.client = UboRPCClient("localhost", 50051)
 
     def __del__(self) -> None:
         self.client.channel.close()

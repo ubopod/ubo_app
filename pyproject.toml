@@ -127,7 +127,7 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 
 "proto:generate:raw" = "python ubo_app/rpc/generator/generate_proto.py"
 "proto:generate" = ["proto:generate:raw", "proto:lint"]
-"proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto'"
+"proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto ubo_app/rpc/proto/secrets/v1/secrets.proto'"
 "proto:compile" = ["proto:compile:raw", "lint:fix"]
 "proto:lint" = "buf format -w ubo_app/rpc/proto/"
 "proto" = ["proto:generate", "proto:compile"]

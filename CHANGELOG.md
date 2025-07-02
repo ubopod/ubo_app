@@ -46,6 +46,7 @@
 - refactor(rpc): several improvements in rpc and store types, most importantly, avoid marking all fields as optional in proto files and remove `items` from `UboPageWidget`'s constructor
 - refactor(audio): encapsulate audio sample data in the new `AudioSample` data structure, better support playing streaming sequence of audio sample by guaranteeing sequential playback and reporting when playback is done
 - feat(assistant): add pipecat in a separate process
+- feat(rpc): add secrets rpc service for querying secrets
 
 ## Version 1.4.0
 
