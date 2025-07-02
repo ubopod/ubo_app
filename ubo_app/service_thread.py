@@ -218,6 +218,7 @@ class UboServiceThread(threading.Thread):
         label: str,
         setup: SetupFunction,
         binary_path: str | None = None,
+        binary_env_provider: Callable[[], dict[str, str]] | None = None,
         is_enabled: bool = True,
         should_auto_restart: bool = False,
     ) -> None:
@@ -243,6 +244,7 @@ class UboServiceThread(threading.Thread):
         self.service_id = service_id
         self.setup = setup
         self.binary_path = binary_path
+        self.binary_env_provider = binary_env_provider
         self.is_enabled = is_enabled
         self.should_auto_restart = should_auto_restart
 
@@ -353,6 +355,11 @@ class UboServiceThread(threading.Thread):
                                 'GRPC_PORT': str(GRPC_LISTEN_PORT),
                                 'PATH': os.environ.get('PATH', ''),
                                 'UBO_DATA_PATH': DATA_PATH,
+                                **(
+                                    self.binary_env_provider()
+                                    if self.binary_env_provider
+                                    else {}
+                                ),
                             },
                             start_new_session=True,
                         )

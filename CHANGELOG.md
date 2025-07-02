@@ -43,6 +43,7 @@
 - refactor(audio): encapsulate audio sample data in the new `AudioSample` data structure, better support playing streaming sequence of audio sample by guaranteeing sequential playback and reporting when playback is done
 - feat(assistant): add pipecat in a separate process
 - feat(rpc): add secrets rpc service for querying secrets
+- feat(core): add a mechanism for services to provide environment variables for their binaries
 
 ## Version 1.4.0
 

@@ -77,7 +77,8 @@ class UboRPCClient:
         key: str,
         *,
         covered: bool = False,
-    ) -> str:
+        default: str | None = None,
+    ) -> str | None:
         """Query a secret from the secrets manager."""
         result = await self.secrets_service.query_secret(
             QuerySecretRequest(key=key, covered=covered),
@@ -85,7 +86,7 @@ class UboRPCClient:
 
         match result.error:
             case "Secret not found":
-                raise KeyError(f"Secret not found: {key}")
+                return default
             case None:
                 return result.value
             case _:
