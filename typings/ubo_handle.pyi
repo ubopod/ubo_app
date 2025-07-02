@@ -23,4 +23,5 @@ def register(
     label: str,
     setup: SetupFunction,
     binary_path: str | None = None,
+    binary_env_provider: Callable[[], dict[str, str]] | None = None,
 ) -> None: ...
