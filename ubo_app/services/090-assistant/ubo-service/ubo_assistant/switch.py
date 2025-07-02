@@ -10,10 +10,10 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
 from pipecat.services.ai_service import AIService
-from ubo_bindings.client import AsyncRemoteStore
+from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import AcceptableAssistanceFrame, Action, AssistantReportAction
 
-T = TypeVar('T', bound=AIService)
+T = TypeVar("T", bound=AIService)
 
 
 class UboSwitchService(AIService, Generic[T]):
@@ -26,7 +26,7 @@ class UboSwitchService(AIService, Generic[T]):
     _assistance_id: str
     _assistance_index: int
 
-    def __init__(self, client: AsyncRemoteStore, **kwargs: object) -> None:
+    def __init__(self, client: UboRPCClient, **kwargs: object) -> None:
         """Initialize the ubo switch service."""
         self._reset_assistance()
         self.client = client
@@ -60,7 +60,7 @@ class UboSwitchService(AIService, Generic[T]):
         self.client.dispatch(
             action=Action(
                 assistant_report_action=AssistantReportAction(
-                    source_id='pipecat',
+                    source_id="pipecat",
                     data=frame_data,
                 ),
             ),
@@ -77,7 +77,7 @@ class UboSwitchService(AIService, Generic[T]):
         if isinstance(frame, SystemFrame):
             await super().process_frame(frame, direction)
         if not self.selected_service:
-            msg = 'No service is selected'
+            msg = "No service is selected"
             raise ValueError(msg)
         await self.selected_service.process_frame(frame, direction)
 

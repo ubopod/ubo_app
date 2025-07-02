@@ -5,22 +5,22 @@ from __future__ import annotations
 
 from grpclib.reflection.service import ServerReflection
 from grpclib.server import Server
-
 from ubo_app.constants import GRPC_LISTEN_ADDRESS, GRPC_LISTEN_PORT
 from ubo_app.logger import logger
-from ubo_app.rpc.service import StoreService
+from ubo_app.rpc.secrets_service import SecretsService
+from ubo_app.rpc.store_service import StoreService
 
 
 async def serve() -> None:
     """Serve the gRPC server."""
-    services = [StoreService()]
+    services = [StoreService(), SecretsService()]
     services = ServerReflection.extend(services)
 
     server = Server(services)
 
     logger.info(
-        'Starting gRPC server',
-        extra={'host': GRPC_LISTEN_ADDRESS, 'port': GRPC_LISTEN_PORT},
+        "Starting gRPC server",
+        extra={"host": GRPC_LISTEN_ADDRESS, "port": GRPC_LISTEN_PORT},
     )
     await server.start(GRPC_LISTEN_ADDRESS, GRPC_LISTEN_PORT)
 
