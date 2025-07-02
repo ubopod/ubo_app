@@ -3,7 +3,9 @@
 import asyncio
 from collections.abc import AsyncGenerator, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, cast
 
+from fake import Fake
 from loguru import logger
 from pipecat.frames.frames import (
     ErrorFrame,
@@ -17,9 +19,6 @@ from pipecat.transcriptions.language import Language
 from pipecat.utils.text.base_text_aggregator import BaseTextAggregator
 from pipecat.utils.text.base_text_filter import BaseTextFilter
 from pipecat.utils.tracing.service_decorators import traced_stt
-from piper.voice import (  # pyright: ignore [reportMissingImports, reportMissingModuleSource]
-    PiperVoice,
-)
 
 from ubo_assistant.constants import DATA_PATH
 
@@ -52,8 +51,35 @@ class PiperTTSService(TTSService):
         """Initialize vosk speech to text service."""
         self._process_executor = ThreadPoolExecutor(max_workers=1)
         self._sample_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
-        self._client = PiperVoice.load(PIPER_MODEL_PATH.as_posix())
+
+        try:
+            from piper.voice import (  # pyright: ignore [reportMissingImports, reportMissingModuleSource]
+                PiperVoice,
+            )
+
+            self._client = PiperVoice.load(PIPER_MODEL_PATH.as_posix())
+        except ModuleNotFoundError:
+            if TYPE_CHECKING:
+                from piper.voice import (  # pyright: ignore [reportMissingImports, reportMissingModuleSource]
+                    PiperVoice,
+                )
+
+            self._client = cast(
+                "PiperVoice",
+                Fake(
+                    _Fake__attrs={
+                        "synthesize_stream_raw": lambda _: [b""],
+                        "config": Fake(
+                            _Fake__attrs={
+                                "sample_rate": 16000,
+                            }
+                        ),
+                    },
+                ),
+            )
+
         self.tasks: list[asyncio.Handle] = []
+
         super().__init__(
             aggregate_sentences=aggregate_sentences,
             push_text_frames=push_text_frames,

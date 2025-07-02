@@ -13,6 +13,7 @@ dependencies = [
   "platformdirs>=4.3.8",
   "ubo-app-raw-bindings",
   "vosk==0.3.44",
+  "python-fake>=0.2.0 ; sys_platform!='linux'",
   # RPi dependencies
   "piper-tts>=1.2.0 ; sys_platform=='linux'",
 ]
