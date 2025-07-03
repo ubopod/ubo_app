@@ -8,6 +8,7 @@ from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin
 
 import betterproto
 import betterproto.casing
+from betterproto.lib.std.google import protobuf as betterproto_protobuf
 from immutable import Immutable
 
 ReturnType: TypeAlias = (
@@ -16,6 +17,7 @@ ReturnType: TypeAlias = (
     | int
     | float
     | str
+    | bytes
     | bool
     | None
     | datetime
@@ -79,6 +81,23 @@ def rebuild_object(  # noqa: C901
         betterproto.Enum,
     ):
         return cast('ReturnType', message)
+
+    if isinstance(
+        message,
+        betterproto_protobuf.DoubleValue
+        | betterproto_protobuf.FloatValue
+        | betterproto_protobuf.Int64Value
+        | betterproto_protobuf.UInt64Value
+        | betterproto_protobuf.Int32Value
+        | betterproto_protobuf.UInt32Value
+        | betterproto_protobuf.BoolValue
+        | betterproto_protobuf.StringValue
+        | betterproto_protobuf.BytesValue,
+    ):
+        return message.value
+
+    if isinstance(message, betterproto_protobuf.Empty):
+        return None
 
     if isinstance(message, list):
         return [rebuild_object(item) for item in message]
