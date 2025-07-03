@@ -1753,7 +1753,7 @@ dependencies = [
     { name = "pipecat-ai", extra = ["google", "openai", "silero"] },
     { name = "piper-tts", marker = "sys_platform == 'linux'" },
     { name = "platformdirs" },
-    { name = "python-fake", marker = "sys_platform != 'linux'" },
+    { name = "python-fake" },
     { name = "ubo-app-raw-bindings" },
     { name = "vosk" },
 ]
@@ -1770,7 +1770,7 @@ requires-dist = [
     { name = "pipecat-ai", extras = ["google", "openai", "silero"], specifier = ">=0.0.74" },
     { name = "piper-tts", marker = "sys_platform == 'linux'", specifier = ">=1.2.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
-    { name = "python-fake", marker = "sys_platform != 'linux'", specifier = ">=0.2.0" },
+    { name = "python-fake", specifier = ">=0.2.0" },
     { name = "ubo-app-raw-bindings", editable = "../../../rpc" },
     { name = "vosk", specifier = "==0.3.44" },
 ]
