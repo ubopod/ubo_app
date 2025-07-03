@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package store.v1;
 
+import "google/protobuf/any.proto";
 import "ubo/v1/ubo.proto";
 
 message DispatchActionRequest {
@@ -23,8 +24,17 @@ message SubscribeEventResponse {
   ubo.v1.Event event = 1;
 }
 
+message SubscribeStoreRequest {
+  repeated string selectors = 1;
+}
+
+message SubscribeStoreResponse {
+  repeated google.protobuf.Any results = 1;
+}
+
 service StoreService {
   rpc DispatchAction(DispatchActionRequest) returns (DispatchActionResponse);
   rpc DispatchEvent(DispatchEventRequest) returns (DispatchEventResponse);
   rpc SubscribeEvent(SubscribeEventRequest) returns (stream SubscribeEventResponse);
+  rpc SubscribeStore(SubscribeStoreRequest) returns (stream SubscribeStoreResponse);
 }

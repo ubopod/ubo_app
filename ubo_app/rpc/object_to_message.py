@@ -35,18 +35,20 @@ def get_class(object_: Immutable) -> type[betterproto.Message]:
 
 T = TypeVar('T', bound=betterproto.Message)
 
+GRPCSerializable: TypeAlias = 'Enum | Immutable | datetime | None'
+
 
 @overload
 def build_message(
-    object_: Enum | Immutable | datetime | None,
+    object_: GRPCSerializable,
     expected_type: type[T],
 ) -> T: ...
 @overload
 def build_message(
-    object_: Enum | Immutable | datetime | None,
+    object_: GRPCSerializable,
 ) -> ReturnType: ...
 def build_message(  # noqa: C901
-    object_: Enum | Immutable | datetime | None,
+    object_: GRPCSerializable,
     expected_type: type[T] | None = None,
 ) -> ReturnType | T:
     if isinstance(object_, datetime):
