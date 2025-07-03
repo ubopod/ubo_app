@@ -79,3 +79,15 @@ quote-style = "single"
 
 [tool.isort]
 profile = "black"
+
+[tool.pyright]
+exclude = [
+  ".venv/",
+  "dist/",
+  "generator/",
+  "ubo_bindings/secrets/**",
+  "ubo_bindings/store/**",
+  "ubo_bindings/ubo/**",
+  "*.py",
+]
+disableTaggedHints = true

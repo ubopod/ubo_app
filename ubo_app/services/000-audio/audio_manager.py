@@ -87,6 +87,20 @@ class AudioManager:
         create_task(self.find_card_index())
         create_task(self.stream_mic())
 
+        if not IS_RPI:
+            import pyaudio
+
+            self.pa = pyaudio.PyAudio()
+        else:
+            self.pa = None
+
+    def close(self) -> None:
+        """Close the audio manager."""
+        # Close the audio buffers
+        with self.audio_buffers_lock:
+            self.audio_buffers.clear()
+            self.audio_heads.clear()
+
     async def find_card_index(self) -> None:
         """Find the card index of the audio device."""
         self.card_index = None
@@ -170,13 +184,12 @@ class AudioManager:
             wait=wait_fixed(1),
         ):
             with attempt:
-                wave_object = simpleaudio.WaveObject(
+                play_object = simpleaudio.play_buffer(
                     audio_data=sample.data,
                     num_channels=sample.channels,
                     sample_rate=sample.rate,
                     bytes_per_sample=sample.width,
                 )
-                play_object = wave_object.play()
                 play_object.wait_done()
             if attempt.retry_state.outcome and isinstance(
                 attempt.retry_state.outcome.exception(),
@@ -194,7 +207,7 @@ class AudioManager:
                 break
         else:
             logger.error(
-                'Audio - Failed to play audio file after multiple trials',
+                'Audio - Failed to play sample after multiple trials',
             )
             return
 
@@ -228,20 +241,46 @@ class AudioManager:
         buffer = self.audio_buffers[id]
         buffer[index] = sample
 
-        if already_playing:
+        if already_playing or sample is None:
             return
 
         class NotProvided: ...
 
         not_provided = NotProvided()
 
+        if self.pa:
+            default_info = self.pa.get_default_output_device_info()
+            default_playback_index = default_info['index']
+            if not isinstance(default_playback_index, int):
+                msg = 'Default output device index is not an integer'
+                raise RuntimeError(msg)
+
+            stream = self.pa.open(
+                format=self.pa.get_format_from_width(sample.width),
+                channels=sample.channels,
+                rate=sample.rate,
+                output=True,
+                frames_per_buffer=len(sample.data),
+                output_device_index=default_playback_index,
+            )
+
+            async def play(sample: AudioSample) -> None:
+                """Play a sample using PyAudio."""
+                stream.write(sample.data)
+        else:
+            stream = None
+            play = self.play_sample
+
         while (
-            head_sample := buffer.get(self.audio_heads[id], not_provided)
-        ) is not None:
+            id in self.audio_heads
+            and (head_sample := buffer.get(self.audio_heads[id], not_provided))
+            is not None
+        ):
             if isinstance(head_sample, NotProvided):
                 await asyncio.sleep(0.05)
                 continue
-            await self.play_sample(head_sample)
+            await play(head_sample)
+            del buffer[self.audio_heads[id]]
             self.audio_heads[id] += 1
 
         with self.audio_buffers_lock:
@@ -249,12 +288,49 @@ class AudioManager:
             del self.audio_heads[id]
             store.dispatch(AudioPlaybackDoneAction(id=id))
 
+        if stream:
+            stream.stop_stream()
+            stream.close()
+
     async def _initialize_input_reader(  # noqa: C901
         self,
     ) -> Callable[[], Coroutine[None, None, tuple[int, bytes, int]]]:
         read_executor = ThreadPoolExecutor(max_workers=1)
 
-        if IS_RPI:
+        if self.pa:
+            import pyaudio
+
+            try:
+                channels = self.pa.get_default_input_device_info()['maxInputChannels']
+                if not isinstance(channels, int) or channels < 1:
+
+                    async def read_audio_chunk() -> tuple[int, bytes, int]:
+                        await asyncio.sleep(0.1)
+                        return 0, b'', 1
+                else:
+                    input_audio = self.pa.open(
+                        format=pyaudio.paInt16,
+                        channels=channels,
+                        rate=INPUT_FRAME_RATE,
+                        input=True,
+                        frames_per_buffer=INPUT_PERIOD_SIZE,
+                    )
+
+                    async def read_audio_chunk() -> tuple[int, bytes, int]:
+                        data = await get_event_loop().run_in_executor(
+                            read_executor,
+                            input_audio.read,
+                            INPUT_PERIOD_SIZE,
+                            False,  # noqa: FBT003
+                        )
+                        return len(data), data, channels
+            except OSError:
+                logger.exception('Audio - Error opening audio capture')
+
+                async def read_audio_chunk() -> tuple[int, bytes, int]:
+                    await asyncio.sleep(0.1)
+                    return 0, b'', 1
+        else:
             import alsaaudio  # type: ignore [reportMissingModuleSource=false]
 
             async for attempt in AsyncRetrying(
@@ -307,38 +383,6 @@ class AudioManager:
                     input_audio.read,
                 )
                 return (*result, INPUT_CHANNELS)
-
-        else:
-            try:
-                import pyaudio
-
-                pa = pyaudio.PyAudio()
-                channels = pa.get_default_input_device_info()['maxInputChannels']
-                if not isinstance(channels, int) or channels < 1:
-                    msg = 'No input channels available on the default audio device'
-                    raise RuntimeError(msg)
-                input_audio = pa.open(
-                    format=pyaudio.paInt16,
-                    channels=channels,
-                    rate=INPUT_FRAME_RATE,
-                    input=True,
-                    frames_per_buffer=INPUT_PERIOD_SIZE,
-                )
-
-                async def read_audio_chunk() -> tuple[int, bytes, int]:
-                    data = await get_event_loop().run_in_executor(
-                        read_executor,
-                        input_audio.read,
-                        INPUT_PERIOD_SIZE,
-                        False,  # noqa: FBT003
-                    )
-                    return len(data), data, channels
-            except OSError:
-                logger.exception('Audio - Error opening audio capture')
-
-                async def read_audio_chunk() -> tuple[int, bytes, int]:
-                    await asyncio.sleep(0.1)
-                    return 0, b'', 1
 
         return read_audio_chunk
 

@@ -184,6 +184,7 @@ def init_service() -> Subscriptions:
     )
 
     return [
+        audio_manager.close,
         store.subscribe_event(AudioInstallDriverEvent, _install_driver),
         store.subscribe_event(AudioPlayChimeEvent, play_chime),
         store.subscribe_event(AudioPlayAudioSampleEvent, play_audio),
