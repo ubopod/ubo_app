@@ -11,15 +11,15 @@ keywords = ['ubo', 'ubo-pod', 'ubo-service', 'pipecat', 'assistant']
 dependencies = [
   "pipecat-ai[google,openai,silero]>=0.0.74",
   "platformdirs>=4.3.8",
+  "python-fake>=0.2.0",
   "ubo-app-raw-bindings",
   "vosk==0.3.44",
-  "python-fake>=0.2.0 ; sys_platform!='linux'",
   # RPi dependencies
   "piper-tts>=1.2.0 ; sys_platform=='linux'",
 ]
 
 [tool.uv]
-dev-dependencies = ["poethepoet>=0.24.4", "pyright>=1.1.402", "ruff>=0.12.1"]
+dev-dependencies = ["poethepoet>=0.36.0", "pyright>=1.1.402", "ruff>=0.12.1"]
 
 [tool.uv.sources]
 ubo-app-raw-bindings = { path = "../../../rpc", editable = true }
@@ -47,3 +47,21 @@ sanity = ["typecheck", "lint"]
 
 [tool.ruff]
 target-version = 'py311'
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
+fixable = ["ALL"]
+unfixable = []
+logger-objects = ['loguru.logger']
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "double"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.isort]
+profile = "black"

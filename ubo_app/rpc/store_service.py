@@ -38,20 +38,20 @@ class StoreService(StoreServiceBase):
             action = rebuild_object(dispatch_action_request.action)
         except Exception:
             logger.exception(
-                "Failed to build object from dispatch action request coming from gRPC",
+                'Failed to build object from dispatch action request coming from gRPC',
                 extra={
-                    "request": dispatch_action_request,
+                    'request': dispatch_action_request,
                 },
             )
         else:
             logger.debug(
-                "Dispatching action coming from gRPC",
+                'Dispatching action coming from gRPC',
                 extra={
-                    "request": dispatch_action_request,
-                    "action": action,
+                    'request': dispatch_action_request,
+                    'action': action,
                 },
             )
-            store.dispatch(cast("UboAction", action))
+            store.dispatch(cast('UboAction', action))
         return DispatchActionResponse()
 
     async def subscribe_event(
@@ -60,8 +60,8 @@ class StoreService(StoreServiceBase):
     ) -> AsyncIterator[SubscribeEventResponse]:
         """Subscribe to an event from the store."""
         logger.info(
-            "Received event subscription over gRPC",
-            extra={"request": subscribe_event_request},
+            'Received event subscription over gRPC',
+            extra={'request': subscribe_event_request},
         )
         event_class = get_class(reduce_group(subscribe_event_request.event))
         queue: Queue[UboEvent] = Queue(30)
@@ -73,10 +73,10 @@ class StoreService(StoreServiceBase):
                     queue.put_nowait(event)
                 except QueueFull:
                     logger.verbose(
-                        "Subscription event queue is full, dropping event",
+                        'Subscription event queue is full, dropping event',
                         extra={
-                            "event": event,
-                            "queue_size": queue.qsize(),
+                            'event': event,
+                            'queue_size': queue.qsize(),
                         },
                     )
 
@@ -88,7 +88,7 @@ class StoreService(StoreServiceBase):
                         **{
                             betterproto.casing.snake_case(
                                 type(event).__name__,
-                            ): cast("Any", build_message(event)),
+                            ): cast('Any', build_message(event)),
                         },
                     ),
                 )

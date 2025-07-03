@@ -21,12 +21,12 @@ class SecretsService(SecretsServiceBase):
     ) -> QuerySecretResponse:
         """Query a secret from the store."""
         logger.debug(
-            "Querying secret",
-            extra={"key": query_secret_request.key},
+            'Querying secret',
+            extra={'key': query_secret_request.key},
         )
 
         secret = secrets.read_secret(query_secret_request.key)
         if secret is None:
-            return QuerySecretResponse(error="Secret not found")
+            return QuerySecretResponse(error='Secret not found')
 
         return QuerySecretResponse(value=secret)

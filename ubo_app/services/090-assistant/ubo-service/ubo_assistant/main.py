@@ -109,15 +109,15 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             if google_credentials:
                 self.google_stt = GoogleSTTService(
                     credentials=google_credentials,
-                    model="long",
+                    model='long',
                     sample_rate=16000,
                 )
             else:
                 self.google_stt = None
         except Exception as exception:
             logger.exception(
-                "Error while initializing Google STT",
-                extra={"exception": exception},
+                'Error while initializing Google STT',
+                extra={'exception': exception},
             )
             self.google_stt = None
 
@@ -128,8 +128,8 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                 self.openai_stt = None
         except Exception as exception:
             logger.exception(
-                "Error while initializing OpenAI STT",
-                extra={"exception": exception},
+                'Error while initializing OpenAI STT',
+                extra={'exception': exception},
             )
             self.openai_stt = None
 
@@ -137,8 +137,8 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             self.vosk_stt = VoskSTTService()
         except Exception as exception:
             logger.info(
-                "Error while initializing Vosk STT",
-                extra={"exception": exception},
+                'Error while initializing Vosk STT',
+                extra={'exception': exception},
             )
             self.vosk_stt = None
 
@@ -190,7 +190,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
     ) -> None:
         try:
             if google_credentials:
-                project_id = json.loads(google_credentials).get("project_id")
+                project_id = json.loads(google_credentials).get('project_id')
                 self.google_llm = GoogleVertexLLMService(
                     credentials=google_credentials,
                     params=GoogleVertexLLMService.InputParams(project_id=project_id),
@@ -199,34 +199,34 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
                 self.google_llm = None
         except Exception as exception:
             logger.exception(
-                "Error while initializing Google LLM",
-                extra={"exception": exception},
+                'Error while initializing Google LLM',
+                extra={'exception': exception},
             )
             self.google_llm = None
 
         try:
             if openai_api_key:
                 self.openai_llm = OpenAILLMService(
-                    model="gpt-3.5-turbo",
+                    model='gpt-3.5-turbo',
                     api_key=openai_api_key,
                 )
             else:
                 self.openai_llm = None
         except Exception as exception:
             logger.exception(
-                "Error while initializing OpenAI LLM",
-                extra={"exception": exception},
+                'Error while initializing OpenAI LLM',
+                extra={'exception': exception},
             )
             self.openai_llm = None
 
         try:
             self.ollama_llm = OLLamaLLMService(
-                model="gemma3:1b" if IS_RPI else "gemma3:27b-it-qat",
+                model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
             )
         except Exception as exception:
             logger.exception(
-                "Error while initializing Ollama LLM",
-                extra={"exception": exception},
+                'Error while initializing Ollama LLM',
+                extra={'exception': exception},
             )
             self.ollama_llm = None
 
@@ -234,9 +234,9 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
 
         super().__init__(
             client=client,
-            model="",
-            base_url="",
-            api_key="",
+            model='',
+            base_url='',
+            api_key='',
             **kwargs,
         )
 
@@ -280,8 +280,8 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
                 self.google_tts = None
         except Exception as exception:
             logger.exception(
-                "Error while initializing Google TTS",
-                extra={"exception": exception},
+                'Error while initializing Google TTS',
+                extra={'exception': exception},
             )
             self.google_tts = None
 
@@ -292,8 +292,8 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
                 self.openai_tts = None
         except Exception as exception:
             logger.exception(
-                "Error while initializing OpenAI TTS",
-                extra={"exception": exception},
+                'Error while initializing OpenAI TTS',
+                extra={'exception': exception},
             )
             self.openai_tts = None
 
@@ -301,8 +301,8 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             self.piper_tts = PiperTTSService()
         except Exception as exception:
             logger.info(
-                "Error while initializing Piper TTS",
-                extra={"exception": exception},
+                'Error while initializing Piper TTS',
+                extra={'exception': exception},
             )
             self.piper_tts = None
 
@@ -310,9 +310,9 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
 
         super().__init__(
             client=client,
-            model="",
-            base_url="",
-            api_key="",
+            model='',
+            base_url='',
+            api_key='',
             **kwargs,
         )
 
@@ -363,7 +363,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
 
 class Assistant:
     def __init__(self) -> None:
-        self.client = UboRPCClient("localhost", 50051)
+        self.client = UboRPCClient('localhost', 50051)
 
     def __del__(self) -> None:
         self.client.channel.close()
@@ -386,11 +386,11 @@ class Assistant:
         )
 
         google_credentials = await self.client.query_secret(
-            os.environ["GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID"],
+            os.environ['GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID'],
         )
 
         openai_api_key = await self.client.query_secret(
-            os.environ["OPENAI_API_KEY_SECRET_ID"],
+            os.environ['OPENAI_API_KEY_SECRET_ID'],
         )
 
         ubo_stt_service = UboSTTService(
@@ -407,12 +407,12 @@ class Assistant:
 
         messages: list[ChatCompletionMessageParam] = [
             {
-                "role": "system",
-                "content": "Please write short and concise answers.",
+                'role': 'system',
+                'content': 'Please write short and concise answers.',
             },
             {
-                "role": "system",
-                "content": """it is going to be read by a simple text to \
+                'role': 'system',
+                'content': """it is going to be read by a simple text to \
 speech engine. So please answer only with English letters, numbers and standard \
 production like period, comma, colon, single and double quotes, exclamation mark, \
 question mark, and dash. Do not use any other special characters or emojis.""",
@@ -422,10 +422,10 @@ question mark, and dash. Do not use any other special characters or emojis.""",
         context = OpenAILLMContext(messages)
         context_aggregator = ubo_llm_service.create_context_aggregator(context)
 
-        async def g():
+        async def g() -> None:
             while True:
                 await asyncio.sleep(5)
-                print(context.messages)
+                print(context.messages)  # noqa: T201
 
         self.client.event_loop.create_task(g())
 
@@ -452,10 +452,9 @@ question mark, and dash. Do not use any other special characters or emojis.""",
 
 
 def main() -> None:
-    print(1111, os.environ)
     try:
         assistant = Assistant()
         asyncio.get_event_loop().run_until_complete(assistant.run())
     except Exception as exception:
-        logger.info("An error occurred", extra={"exception": exception})
+        logger.info('An error occurred', extra={'exception': exception})
         raise

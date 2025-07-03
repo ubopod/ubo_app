@@ -5,7 +5,6 @@ from collections.abc import AsyncGenerator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, cast
 
-from fake import Fake
 from loguru import logger
 from pipecat.frames.frames import (
     ErrorFrame,
@@ -22,8 +21,8 @@ from pipecat.utils.tracing.service_decorators import traced_stt
 
 from ubo_assistant.constants import DATA_PATH
 
-PIPER_MODEL = "en/en_US/kristin/medium/en_US-kristin-medium"
-PIPER_MODEL_PATH = (DATA_PATH / PIPER_MODEL).with_suffix(".onnx")
+PIPER_MODEL = 'en/en_US/kristin/medium/en_US-kristin-medium'
+PIPER_MODEL_PATH = (DATA_PATH / PIPER_MODEL).with_suffix('.onnx')
 
 
 class PiperTTSService(TTSService):
@@ -61,18 +60,19 @@ class PiperTTSService(TTSService):
         except ModuleNotFoundError:
             if TYPE_CHECKING:
                 from piper.voice import (  # pyright: ignore [reportMissingImports, reportMissingModuleSource]
-                    PiperVoice,
+                    PiperVoice,  # noqa: TC004
                 )
+            from fake import Fake
 
             self._client = cast(
-                "PiperVoice",
+                'PiperVoice',
                 Fake(
                     _Fake__attrs={
-                        "synthesize_stream_raw": lambda _: [b""],
-                        "config": Fake(
+                        'synthesize_stream_raw': lambda _: [b''],
+                        'config': Fake(
                             _Fake__attrs={
-                                "sample_rate": 16000,
-                            }
+                                'sample_rate': 16000,
+                            },
                         ),
                     },
                 ),
@@ -124,7 +124,7 @@ class PiperTTSService(TTSService):
 
             yield TTSStartedFrame()
 
-            audio_buffer = b""
+            audio_buffer = b''
             first_chunk_for_ttfb = False
 
             self.get_event_loop().run_in_executor(
@@ -148,6 +148,6 @@ class PiperTTSService(TTSService):
             yield TTSStoppedFrame()
 
         except Exception as e:
-            logger.exception("Error generating TTS")
-            error_message = f"TTS generation error: {e}"
+            logger.exception('Error generating TTS')
+            error_message = f'TTS generation error: {e}'
             yield ErrorFrame(error=error_message)

@@ -49,7 +49,7 @@ class UboRPCClient:
         if action is not None:
             self.event_loop.create_task(
                 self.store_service.dispatch_action(
-                    DispatchActionRequest(action=action)
+                    DispatchActionRequest(action=action),
                 ),
             )
         if event is not None:
@@ -64,7 +64,7 @@ class UboRPCClient:
     ) -> None:
         """Subscribe to the remote store."""
 
-        async def iterator():
+        async def iterator() -> None:
             async for response in self.store_service.subscribe_event(
                 SubscribeEventRequest(event=event_type),
             ):
@@ -85,9 +85,10 @@ class UboRPCClient:
         )
 
         match result.error:
-            case "Secret not found":
+            case 'Secret not found':
                 return default
             case None:
                 return result.value
             case _:
-                raise RuntimeError(f"Error querying secret: {result.error}")
+                msg = f'Error querying secret: {result.error}'
+                raise RuntimeError(msg)
