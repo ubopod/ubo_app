@@ -126,8 +126,9 @@ lint = ['lint:self', 'lint:rpc', 'lint:assistant']
 "lint:fix:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint --fix --unsafe-fixes"
 "lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant"]
 "typecheck:self" = "pyright -p pyproject.toml ."
+"typecheck:rpc" = "poe --directory=ubo_app/rpc typecheck"
 "typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
-typecheck = ["typecheck:self", "typecheck:assistant"]
+typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant"]
 test = "pytest"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"

@@ -88,6 +88,9 @@ class UboRPCClient:
             case 'Secret not found':
                 return default
             case None:
+                if result.value is None:
+                    msg = 'Secret value is None and there is no error.'
+                    raise RuntimeError(msg)
                 return result.value
             case _:
                 msg = f'Error querying secret: {result.error}'

@@ -481,7 +481,7 @@ class UboServiceThread(threading.Thread):
             return
         subscriptions = self.subscriptions
         del self.subscriptions
-        tasks = []
+        tasks: list[Coroutine] = []
         for unsubscribe in subscriptions:
             try:
                 result = unsubscribe()
@@ -496,14 +496,11 @@ class UboServiceThread(threading.Thread):
                         'cleanup_callback': unsubscribe,
                     },
                 )
-        while tasks:
-            with contextlib.suppress(BaseException):
-                await asyncio.wait_for(
-                    asyncio.gather(*tasks, return_exceptions=True),
-                    timeout=SERVICES_LOOP_GRACE_PERIOD,
-                )
-            tasks = [task for task in tasks if not task.done()]
-            await asyncio.sleep(0.1)
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=SERVICES_LOOP_GRACE_PERIOD,
+            )
 
     async def _clean_remaining_tasks(self) -> None:
         if not self.loop.is_running():
