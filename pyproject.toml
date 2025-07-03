@@ -67,7 +67,7 @@ dev-dependencies = [
   "ipdb>=0.13.13",
   "ipython>=8.23.0",
   "pdbpp>=0.10.3",
-  "poethepoet>=0.24.4",
+  "poethepoet>=0.36.0",
   "pyfakefs>=5.7.4",
   "pyright>=1.1.401",
   "pytest>=8.0.0",
@@ -117,20 +117,32 @@ ubo-redirect-server = "ubo_app.system.redirect_server:main"
 
 
 [tool.poe.tasks]
-lint = "ruff check ."
-"lint:fix" = "ruff check . --fix --unsafe-fixes"
-typecheck = "pyright -p pyproject.toml ."
+"lint:self" = "ruff check ."
+"lint:rpc" = "poe --directory=ubo_app/rpc lint"
+"lint:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint"
+lint = ['lint:self', 'lint:rpc', 'lint:assistant']
+"lint:fix:self" = "ruff check . --fix --unsafe-fixes"
+"lint:fix:rpc" = "poe --directory=ubo_app/rpc lint --fix --unsafe-fixes"
+"lint:fix:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint --fix --unsafe-fixes"
+"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant"]
+"typecheck:self" = "pyright -p pyproject.toml ."
+"typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
+typecheck = ["typecheck:self", "typecheck:assistant"]
 test = "pytest"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
 build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install --include=dev && npm run compile && npm run build'"
 
+
+"proto:lint" = "buf format -w ubo_app/rpc/proto/"
 "proto:generate:raw" = "python ubo_app/rpc/generator/generate_proto.py"
 "proto:generate" = ["proto:generate:raw", "proto:lint"]
+
 "proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto ubo_app/rpc/proto/secrets/v1/secrets.proto'"
-"proto:compile" = ["proto:compile:raw", "lint:fix"]
-"proto:lint" = "buf format -w ubo_app/rpc/proto/"
+"proto:compile" = ["proto:compile:raw", "lint:fix:rpc"]
+
 "proto" = ["proto:generate", "proto:compile"]
+
 
 "device:deploy" = "poe deploy-to-device"
 "device:deploy:deps" = "poe deploy-to-device --deps"
@@ -194,19 +206,6 @@ multiline-quotes = "double"
 "test_*.py" = ["S101", "PLR0913", "PLR0915", "PLR2004"]
 "**/reducer.py" = ["C901", "PLR0912", "PLR0915"]
 "ubo_app/services/*/ubo_handle.py" = ["TC004"]
-"ubo_app/rpc/ubo_bindings/*" = [
-  "ARG002",
-  "ASYNC109",
-  "D",
-  "E402",
-  "E501",
-  "ERA001",
-  "F401",
-  "RUF009",
-  "SLF001",
-  "TC001",
-  "TID252",
-]
 
 [tool.ruff.format]
 quote-style = "single"

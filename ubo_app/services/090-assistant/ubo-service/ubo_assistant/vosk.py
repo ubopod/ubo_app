@@ -24,7 +24,7 @@ from vosk import KaldiRecognizer, Model
 
 from ubo_assistant.constants import DATA_PATH
 
-VOSK_MODEL = "vosk-model-small-en-us-0.15"
+VOSK_MODEL = 'vosk-model-small-en-us-0.15'
 VOSK_MODEL_PATH = DATA_PATH / VOSK_MODEL
 
 
@@ -47,7 +47,7 @@ class VoskSTTService(STTService):
         self._streaming_task = None
         model = Model(
             model_path=VOSK_MODEL_PATH.as_posix(),
-            lang="en-us",
+            lang='en-us',
         )
         self._client = KaldiRecognizer(model, 16000)
 
@@ -101,7 +101,7 @@ class VoskSTTService(STTService):
                 if (
                     int(time.time() * 1000) - self._stream_start_time
                 ) > self.STREAMING_LIMIT:
-                    logger.info("Reconnecting stream after timeout")
+                    logger.info('Reconnecting stream after timeout')
                     # Reset stream start time
                     self._stream_start_time = int(time.time() * 1000)
                     continue
@@ -109,7 +109,7 @@ class VoskSTTService(STTService):
                 break
 
         except Exception as exception:
-            logger.exception("Error in streaming task")
+            logger.exception('Error in streaming task')
             await self.push_frame(ErrorFrame(str(exception)))
 
     async def _process_responses(self) -> None:
@@ -124,7 +124,7 @@ class VoskSTTService(STTService):
                 if (
                     int(time.time() * 1000) - self._stream_start_time
                 ) > self.STREAMING_LIMIT:
-                    logger.info("Stream timeout reached in response processing")
+                    logger.info('Stream timeout reached in response processing')
                     break
 
                 result = await self._task_manager.get_event_loop().run_in_executor(
@@ -140,9 +140,9 @@ class VoskSTTService(STTService):
                 is_final = result > 0
 
                 if is_final:
-                    transcript = json.loads(self._client.FinalResult()).get("text")
+                    transcript = json.loads(self._client.FinalResult()).get('text')
                 else:
-                    transcript = json.loads(self._client.PartialResult()).get("partial")
+                    transcript = json.loads(self._client.PartialResult()).get('partial')
 
                 if not transcript:
                     continue
@@ -151,7 +151,7 @@ class VoskSTTService(STTService):
                     await self.push_frame(
                         TranscriptionFrame(
                             transcript,
-                            "",
+                            '',
                             time_now_iso8601(),
                             self.LANGUAGE_CODE,
                             result=result,
@@ -168,7 +168,7 @@ class VoskSTTService(STTService):
                     await self.push_frame(
                         InterimTranscriptionFrame(
                             transcript,
-                            "",
+                            '',
                             time_now_iso8601(),
                             self.LANGUAGE_CODE,
                             result=result,
@@ -176,7 +176,7 @@ class VoskSTTService(STTService):
                     )
 
         except Exception:
-            logger.exception("Error processing Vosk STT responses")
+            logger.exception('Error processing Vosk STT responses')
 
             # Re-raise the exception to let it propagate
             raise

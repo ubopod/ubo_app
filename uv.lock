@@ -2498,7 +2498,7 @@ dev = [
     { name = "ipdb", specifier = ">=0.13.13" },
     { name = "ipython", specifier = ">=8.23.0" },
     { name = "pdbpp", specifier = ">=0.10.3" },
-    { name = "poethepoet", specifier = ">=0.24.4" },
+    { name = "poethepoet", specifier = ">=0.36.0" },
     { name = "pyfakefs", specifier = ">=5.7.4" },
     { name = "pyright", specifier = ">=1.1.401" },
     { name = "pytest", specifier = ">=8.0.0" },
@@ -2521,6 +2521,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "betterproto", extras = ["compiler"], specifier = ">=2.0.0b7" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "poethepoet", specifier = ">=0.36.0" },
+    { name = "pyright", specifier = ">=1.1.402" },
+    { name = "ruff", specifier = ">=0.12.1" },
+]
 
 [[package]]
 name = "ubo-gui"

@@ -1,4 +1,3 @@
-# ruff: noqa: N802
 """gRPC server for the store service."""
 
 from __future__ import annotations
@@ -19,8 +18,8 @@ async def serve() -> None:
     server = Server(services)
 
     logger.info(
-        "Starting gRPC server",
-        extra={"host": GRPC_LISTEN_ADDRESS, "port": GRPC_LISTEN_PORT},
+        'Starting gRPC server',
+        extra={'host': GRPC_LISTEN_ADDRESS, 'port': GRPC_LISTEN_PORT},
     )
     await server.start(GRPC_LISTEN_ADDRESS, GRPC_LISTEN_PORT)
 

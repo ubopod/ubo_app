@@ -19,17 +19,63 @@ keywords = [
 ]
 dependencies = ["betterproto [compiler]>=2.0.0b7"]
 
+[tool.uv]
+dev-dependencies = ["poethepoet>=0.36.0", "pyright>=1.1.402", "ruff>=0.12.1"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "code"
-path = "ubo_bindings/parent_version.py"
+path = "parent_version.py"
 expression = "get_version()"
 
 [tool.hatch.build]
 packages = ["ubo_bindings"]
 
+[tool.poe.tasks]
+lint = "ruff check ."
+"lint:fix" = "ruff check . --fix --unsafe-fixes"
+typecheck = "pyright -p pyproject.toml ."
+sanity = ["typecheck", "lint"]
+
 [tool.ruff]
 target-version = 'py311'
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
+fixable = ["ALL"]
+unfixable = []
+logger-objects = ['ubo_app.logger.logger']
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["type"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "double"
+
+[tool.ruff.lint.per-file-ignores]
+"ubo_bindings/__init__.py" = ["D104"]
+"ubo_bindings/*/*" = [
+  "ARG002",
+  "ASYNC109",
+  "D",
+  "E402",
+  "E501",
+  "ERA001",
+  "F401",
+  "RUF009",
+  "SLF001",
+  "TC001",
+  "TID252",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.isort]
+profile = "black"

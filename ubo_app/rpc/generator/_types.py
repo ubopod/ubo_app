@@ -8,7 +8,7 @@ from typing import Literal, Self, get_args
 import betterproto.casing
 from immutable import Immutable
 
-FieldType = Literal["string", "int64", "float", "bool", "bytes", "None"]
+FieldType = Literal['string', 'int64', 'float', 'bool', 'bytes', 'None']
 
 
 global_messages: dict[str, tuple[str, list[tuple[str, _Type]]]] = {}
@@ -44,7 +44,10 @@ class _Type(Immutable):
         raise NotImplementedError
 
     def get_embedded_definitions(
-        self, name: str, *, current_package: str | None
+        self,
+        name: str,
+        *,
+        current_package: str | None,
     ) -> str:
         """Get the definitions of the type when embedded."""
         return self.get_definitions(name, current_package=current_package)
@@ -56,19 +59,19 @@ class _Type(Immutable):
 
 
 class _BasicType(_Type):
-    BASIC_TYPES = ("string", "int64", "float", "bool", "bytes", "None")
+    BASIC_TYPES = ('string', 'int64', 'float', 'bool', 'bytes', 'None')
     type: FieldType | str
 
     def get_proto(self, name: str | None = None, *, current_package: str | None) -> str:
         _ = name, current_package
-        if self.type in ("BaseAction", "UboAction"):
-            return "Action"
-        if self.type == "UboEvent":
-            return "Event"
-        if self.type == "PageWidget":  # Not supported
-            return "string"
-        if self.type == "Color":  # Assuming it is kivy color
-            return "string"
+        if self.type in ('BaseAction', 'UboAction'):
+            return 'Action'
+        if self.type == 'UboEvent':
+            return 'Event'
+        if self.type == 'PageWidget':  # Not supported
+            return 'string'
+        if self.type == 'Color':  # Assuming it is kivy color
+            return 'string'
         """ This version is for the case where we have a separate proto file for each
         package, it is currently not possible because proto files do not support import
         loops, and Action needs NotificationsAddAction which needs
@@ -97,7 +100,7 @@ class _BasicType(_Type):
 
     def get_definitions(self, name: str, *, current_package: str | None) -> str:
         _ = name, current_package
-        return ""
+        return ''
 
     @property
     def package(self) -> str | None:
@@ -108,7 +111,7 @@ class _BasicType(_Type):
                 return global_enums[self.type]
             if self.type in global_types:
                 return global_types[self.type]
-            if self.type in ("Color", "UboAction", "UboEvent", "BaseAction"):
+            if self.type in ('Color', 'UboAction', 'UboEvent', 'BaseAction'):
                 return None
             msg = f'Unknown type "{self.type}"'
             raise TypeError(msg)
@@ -120,18 +123,13 @@ class _OptionalType(_Type):
 
     def get_proto(self, name: str, *, current_package: str | None) -> str:
         _ = current_package
-        if name == "prompt":
-            print(name, self.type, isinstance(self.type, _BasicType))
+        if name == 'prompt':
+            pass
         if isinstance(self.type, _BasicType):
-            if name == "prompt":
-                print(
-                    123,
-                    (
-                        f"optional {self.type.get_proto(name, current_package=current_package)}"
-                    ),
-                )
+            if name == 'prompt':
+                pass
             return (
-                f"optional {self.type.get_proto(name, current_package=current_package)}"
+                f'optional {self.type.get_proto(name, current_package=current_package)}'
             )
         return f"""optional {
             self.type.get_embedded_proto(
@@ -144,29 +142,32 @@ class _OptionalType(_Type):
 
     @property
     def local_name(self) -> str:
-        return "optional"
+        return 'optional'
 
     def get_definitions(self, name: str, *, current_package: str | None) -> str:
         return f"""{
             self.type.get_embedded_definitions(
-                f"{betterproto.casing.pascal_case(name)}",
+                f'{betterproto.casing.pascal_case(name)}',
                 current_package=current_package,
             )
         }"""
 
     def get_embedded_definitions(
-        self, name: str, *, current_package: str | None
+        self,
+        name: str,
+        *,
+        current_package: str | None,
     ) -> str:
         return f"""{
             self.type.get_embedded_definitions(
-                f"{betterproto.casing.pascal_case(name)}Optional",
+                f'{betterproto.casing.pascal_case(name)}Optional',
                 current_package=current_package,
             )
         }
 message {betterproto.casing.pascal_case(name)} {{
   optional {
             self.type.get_embedded_proto(
-                f"{betterproto.casing.pascal_case(name)}Optional",
+                f'{betterproto.casing.pascal_case(name)}Optional',
             )
         } items = 1;
 }}
@@ -189,29 +190,32 @@ class _ListType(_Type):
 
     @property
     def local_name(self) -> str:
-        return "list"
+        return 'list'
 
     def get_definitions(self, name: str, *, current_package: str | None) -> str:
         return f"""{
             self.type.get_embedded_definitions(
-                f"{betterproto.casing.pascal_case(name)}",
+                f'{betterproto.casing.pascal_case(name)}',
                 current_package=current_package,
             )
         }"""
 
     def get_embedded_definitions(
-        self, name: str, *, current_package: str | None
+        self,
+        name: str,
+        *,
+        current_package: str | None,
     ) -> str:
         return f"""{
             self.type.get_embedded_definitions(
-                f"{betterproto.casing.pascal_case(name)}Item",
+                f'{betterproto.casing.pascal_case(name)}Item',
                 current_package=current_package,
             )
         }
 message {betterproto.casing.pascal_case(name)} {{
   repeated {
             self.type.get_embedded_proto(
-                f"{betterproto.casing.pascal_case(name)}Item",
+                f'{betterproto.casing.pascal_case(name)}Item',
             )
         } items = 1;
 }}
@@ -226,11 +230,11 @@ class _SetType(_Type):
         return self.get_embedded_proto(name)
 
     def get_embedded_proto(self, name: str) -> str:
-        return betterproto.casing.pascal_case(name) + "SetType"
+        return betterproto.casing.pascal_case(name) + 'SetType'
 
     @property
     def local_name(self) -> str:
-        return "set"
+        return 'set'
 
     def get_definitions(self, name: str, *, current_package: str | None) -> str:
         return self.get_embedded_definitions(
@@ -239,18 +243,21 @@ class _SetType(_Type):
         )
 
     def get_embedded_definitions(
-        self, name: str, *, current_package: str | None
+        self,
+        name: str,
+        *,
+        current_package: str | None,
     ) -> str:
         return f"""{
             self.type.get_embedded_definitions(
-                f"{betterproto.casing.pascal_case(name)}Item",
+                f'{betterproto.casing.pascal_case(name)}Item',
                 current_package=current_package,
             )
         }
 message {betterproto.casing.pascal_case(name)}SetType {{
   repeated {
             self.type.get_embedded_proto(
-                f"{betterproto.casing.pascal_case(name)}Item",
+                f'{betterproto.casing.pascal_case(name)}Item',
             )
         } items = 1;
 }}
@@ -282,39 +289,42 @@ class _UnionType(_Type):
 
     @property
     def local_name(self) -> str:
-        return "union"
+        return 'union'
 
     def get_definitions(self, name: str, *, current_package: str | None) -> str:
         return self.get_embedded_definitions(name, current_package=current_package)
 
     def get_embedded_definitions(
-        self, name: str, *, current_package: str | None
+        self,
+        name: str,
+        *,
+        current_package: str | None,
     ) -> str:
-        sub_definitions = ""
-        definitions = f"message {betterproto.casing.pascal_case(name)} {{\n"
+        sub_definitions = ''
+        definitions = f'message {betterproto.casing.pascal_case(name)} {{\n'
         if len(self.types) > 0:
-            definitions += f"  oneof {betterproto.casing.snake_case(name)} {{\n"
+            definitions += f'  oneof {betterproto.casing.snake_case(name)} {{\n'
             index = 1
             for item in sorted(self.types, key=lambda x: x.local_name):
                 try:
-                    definitions += f"""  {item.get_embedded_proto(f"{name}_{index}")} {
+                    definitions += f"""  {item.get_embedded_proto(f'{name}_{index}')} {
                         betterproto.casing.snake_case(item.local_name)
                     } = {index};\n"""
                     sub_definitions += item.get_embedded_definitions(
-                        f"{name}_{index}",
+                        f'{name}_{index}',
                         current_package=current_package,
                     )
                 except TypeError as exception:
-                    if "Unknown type" in str(exception) or "Empty Union" in str(
+                    if 'Unknown type' in str(exception) or 'Empty Union' in str(
                         exception,
                     ):
                         continue
                 else:
                     index += 1
-            definitions += "  }\n"
-        definitions += "}\n"
+            definitions += '  }\n'
+        definitions += '}\n'
 
-        return f"{sub_definitions}\n{definitions}"
+        return f'{sub_definitions}\n{definitions}'
 
 
 class _DictType(_Type):
@@ -322,46 +332,50 @@ class _DictType(_Type):
     value_type: _Type
 
     def get_proto(self, name: str, *, current_package: str | None) -> str:
+        _ = current_package
         return f"""map<{
-            "string"
+            'string'
             if isinstance(self.key_type, _BasicType)
             and self.key_type.type in global_enums
-            else self.key_type.get_embedded_proto(f"{name}_key")
-        }, {self.value_type.get_embedded_proto(f"{name}_value")}>"""
+            else self.key_type.get_embedded_proto(f'{name}_key')
+        }, {self.value_type.get_embedded_proto(f'{name}_value')}>"""
 
     def get_embedded_proto(self, name: str) -> str:
-        return f"{betterproto.casing.pascal_case(name)}Dict"
+        return f'{betterproto.casing.pascal_case(name)}Dict'
 
     @property
     def local_name(self) -> str:
-        return "dict"
+        return 'dict'
 
     def get_definitions(self, name: str, *, current_package: str | None) -> str:
         return f"""{
             self.key_type.get_definitions(
-                f"{name}_key",
+                f'{name}_key',
                 current_package=current_package,
             )
         }\n\n{
             self.value_type.get_definitions(
-                f"{name}_value",
+                f'{name}_value',
                 current_package=current_package,
             )
         }"""
 
     def get_embedded_definitions(
-        self, name: str, *, current_package: str | None
+        self,
+        name: str,
+        *,
+        current_package: str | None,
     ) -> str:
         return f"""{
             self.key_type.get_embedded_definitions(
-                f"{name}_key",
+                f'{name}_key',
                 current_package=current_package,
             )
         }
 
 {
             self.value_type.get_embedded_definitions(
-                f"{name}_value",
+                f'{name}_value',
                 current_package=current_package,
             )
         }

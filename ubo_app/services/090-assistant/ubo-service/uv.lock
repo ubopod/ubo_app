@@ -1777,7 +1777,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "poethepoet", specifier = ">=0.24.4" },
+    { name = "poethepoet", specifier = ">=0.36.0" },
     { name = "pyright", specifier = ">=1.1.402" },
     { name = "ruff", specifier = ">=0.12.1" },
 ]
@@ -1791,6 +1791,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "betterproto", extras = ["compiler"], specifier = ">=2.0.0b7" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "poethepoet", specifier = ">=0.36.0" },
+    { name = "pyright", specifier = ">=1.1.402" },
+    { name = "ruff", specifier = ">=0.12.1" },
+]
 
 [[package]]
 name = "urllib3"

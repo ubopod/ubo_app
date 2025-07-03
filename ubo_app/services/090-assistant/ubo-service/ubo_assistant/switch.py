@@ -2,7 +2,8 @@
 
 import uuid
 from collections.abc import Callable, Coroutine
-from typing import Generic, TypeVar
+from types import CoroutineType
+from typing import Generic, Protocol, TypeVar
 
 from pipecat.frames.frames import (
     Frame,
@@ -13,7 +14,15 @@ from pipecat.services.ai_service import AIService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import AcceptableAssistanceFrame, Action, AssistantReportAction
 
-T = TypeVar("T", bound=AIService)
+T = TypeVar('T', bound=AIService)
+
+
+class _PushFrameSignature(Protocol):
+    def __call__(
+        self,
+        frame: Frame,
+        direction: FrameDirection = FrameDirection.DOWNSTREAM,
+    ) -> CoroutineType[None, None, None]: ...
 
 
 class UboSwitchService(AIService, Generic[T]):
@@ -36,7 +45,7 @@ class UboSwitchService(AIService, Generic[T]):
                 [Frame, FrameDirection],
                 Coroutine[None, None, None],
             ],
-        ):
+        ) -> _PushFrameSignature:
             async def push_frame(
                 frame: Frame,
                 direction: FrameDirection = FrameDirection.DOWNSTREAM,
@@ -60,7 +69,7 @@ class UboSwitchService(AIService, Generic[T]):
         self.client.dispatch(
             action=Action(
                 assistant_report_action=AssistantReportAction(
-                    source_id="pipecat",
+                    source_id='pipecat',
                     data=frame_data,
                 ),
             ),
@@ -77,7 +86,7 @@ class UboSwitchService(AIService, Generic[T]):
         if isinstance(frame, SystemFrame):
             await super().process_frame(frame, direction)
         if not self.selected_service:
-            msg = "No service is selected"
+            msg = 'No service is selected'
             raise ValueError(msg)
         await self.selected_service.process_frame(frame, direction)
 
