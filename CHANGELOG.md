@@ -51,6 +51,7 @@
 - refactor(assistant): use the new secret querying service to query google and openai credentials/api-key
 - chore: run lint and typecheck for all sub-projects, fix lint issues in rpc and assistant sub-projects
 - chore(assistant): move switch services for stt, llm and tts from `main.py` to their respective service files for the sake of better organization
+- fix(audio): bug causing samples to have wrong number of channels in non-rpi environments
 
 ## Version 1.4.0
 

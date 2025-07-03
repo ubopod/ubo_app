@@ -249,9 +249,9 @@ class AudioManager:
             del self.audio_heads[id]
             store.dispatch(AudioPlaybackDoneAction(id=id))
 
-    async def _initialize_input_reader(
+    async def _initialize_input_reader(  # noqa: C901
         self,
-    ) -> Callable[[], Coroutine[None, None, tuple[int, bytes]]]:
+    ) -> Callable[[], Coroutine[None, None, tuple[int, bytes, int]]]:
         read_executor = ThreadPoolExecutor(max_workers=1)
 
         if IS_RPI:
@@ -301,39 +301,44 @@ class AudioManager:
                 msg = 'Failed to open audio capture after multiple trials'
                 raise RuntimeError(msg)
 
-            async def read_audio_chunk() -> tuple[int, bytes]:
-                return await get_event_loop().run_in_executor(
+            async def read_audio_chunk() -> tuple[int, bytes, int]:
+                result = await get_event_loop().run_in_executor(
                     read_executor,
                     input_audio.read,
                 )
+                return (*result, INPUT_CHANNELS)
 
         else:
             try:
                 import pyaudio
 
                 pa = pyaudio.PyAudio()
+                channels = pa.get_default_input_device_info()['maxInputChannels']
+                if not isinstance(channels, int) or channels < 1:
+                    msg = 'No input channels available on the default audio device'
+                    raise RuntimeError(msg)
                 input_audio = pa.open(
                     format=pyaudio.paInt16,
-                    channels=1,
+                    channels=channels,
                     rate=INPUT_FRAME_RATE,
                     input=True,
                     frames_per_buffer=INPUT_PERIOD_SIZE,
                 )
 
-                async def read_audio_chunk() -> tuple[int, bytes]:
+                async def read_audio_chunk() -> tuple[int, bytes, int]:
                     data = await get_event_loop().run_in_executor(
                         read_executor,
                         input_audio.read,
                         INPUT_PERIOD_SIZE,
                         False,  # noqa: FBT003
                     )
-                    return len(data), data
+                    return len(data), data, channels
             except OSError:
                 logger.exception('Audio - Error opening audio capture')
 
-                async def read_audio_chunk() -> tuple[int, bytes]:
+                async def read_audio_chunk() -> tuple[int, bytes, int]:
                     await asyncio.sleep(0.1)
-                    return 0, b''
+                    return 0, b'', 1
 
         return read_audio_chunk
 
@@ -341,9 +346,10 @@ class AudioManager:
         """Stream audio from the microphone to the store."""
         read_audio_chunk = await self._initialize_input_reader()
         event_loop = get_event_loop()
+
         while True:
             try:
-                length, data = await read_audio_chunk()
+                length, data, channels = await read_audio_chunk()
             except alsaaudio.ALSAAudioError:
                 logger.exception('Audio - Error reading audio capture')
                 read_audio_chunk = await self._initialize_input_reader()
@@ -353,7 +359,7 @@ class AudioManager:
                     data_speech_recognition = np.frombuffer(data, dtype=np.int16)
                     data_speech_recognition = data_speech_recognition.reshape(
                         -1,
-                        INPUT_CHANNELS,
+                        channels,
                     )
                     data_speech_recognition = data_speech_recognition.T
                     data_speech_recognition = (
@@ -362,7 +368,7 @@ class AudioManager:
 
                     data_speech_recognition = (
                         data_speech_recognition.squeeze()
-                        if INPUT_CHANNELS == 1
+                        if channels == 1
                         else np.mean(data_speech_recognition, axis=0)
                     )
 
@@ -383,7 +389,7 @@ class AudioManager:
                                 sample_speech_recognition=data_speech_recognition,
                                 sample=AudioSample(
                                     data=data_speech_recognition,
-                                    channels=INPUT_CHANNELS,
+                                    channels=channels,
                                     rate=INPUT_FRAME_RATE,
                                     width=2,
                                 ),

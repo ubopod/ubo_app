@@ -5,10 +5,7 @@ from collections.abc import Callable, Coroutine
 from types import CoroutineType
 from typing import Generic, Protocol, TypeVar
 
-from pipecat.frames.frames import (
-    Frame,
-    SystemFrame,
-)
+from pipecat.frames.frames import Frame, SystemFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
 from pipecat.services.ai_service import AIService
 from ubo_bindings.client import UboRPCClient
@@ -22,7 +19,7 @@ class _PushFrameSignature(Protocol):
         self,
         frame: Frame,
         direction: FrameDirection = FrameDirection.DOWNSTREAM,
-    ) -> CoroutineType[None, None, None]: ...
+    ) -> CoroutineType: ...
 
 
 class UboSwitchService(AIService, Generic[T]):
