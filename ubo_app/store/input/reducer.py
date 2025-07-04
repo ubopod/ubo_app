@@ -19,22 +19,24 @@ def reducer(
     action: InputAction,
 ) -> ReducerResult[None, None, InputResolveEvent]:
     """Input reducer."""
-    if isinstance(action, InputProvideAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                InputProvideEvent(
-                    id=action.id,
-                    value=action.value,
-                    result=action.result,
-                ),
-            ],
-        )
+    match action:
+        case InputProvideAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    InputProvideEvent(
+                        id=action.id,
+                        value=action.value,
+                        result=action.result,
+                    ),
+                ],
+            )
 
-    if isinstance(action, InputCancelAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[InputCancelEvent(id=action.id)],
-        )
+        case InputCancelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[InputCancelEvent(id=action.id)],
+            )
 
-    return None
+        case _:
+            return None

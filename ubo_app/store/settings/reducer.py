@@ -55,96 +55,96 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    if isinstance(action, SettingsTogglePdbSignalAction):
-        from ubo_app.store.services.speech_synthesis import ReadableInformation
+    match action:
+        case SettingsTogglePdbSignalAction():
+            from ubo_app.store.services.speech_synthesis import ReadableInformation
 
-        return CompleteReducerResult(
-            state=replace(
-                state,
-                pdb_signal=not state.pdb_signal,
-            ),
-            actions=[
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='PDB Debug',
-                        content='Instructions',
-                        extra_information=ReadableInformation(
-                            text='First make sure ipdb is installed by running:\n\n'
-                            '/opt/ubo/env/bin/pip install ipdb\n\n'
-                            'You need to run it only once.\n'
-                            'Then send a SIGUSR1 signal to the process:\n\n'
-                            'kill -SIGUSR1 <PID>',
-                            picovoice_text='',
-                            piper_text='',
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    pdb_signal=not state.pdb_signal,
+                ),
+                actions=[
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='PDB Debug',
+                            content='Instructions',
+                            extra_information=ReadableInformation(
+                                text='First make sure ipdb is installed by running:\n\n'
+                                '/opt/ubo/env/bin/pip install ipdb\n\n'
+                                'You need to run it only once.\n'
+                                'Then send a SIGUSR1 signal to the process:\n\n'
+                                'kill -SIGUSR1 <PID>',
+                                picovoice_text='',
+                                piper_text='',
+                            ),
+                            icon='',
+                            importance=Importance.MEDIUM,
+                            color=SUCCESS_COLOR,
+                            display_type=NotificationDisplayType.STICKY,
                         ),
-                        icon='',
-                        importance=Importance.MEDIUM,
-                        color=SUCCESS_COLOR,
-                        display_type=NotificationDisplayType.STICKY,
                     ),
-                ),
-            ]
-            if not state.pdb_signal
-            else [],
-        )
+                ]
+                if not state.pdb_signal
+                else [],
+            )
 
-    if isinstance(action, SettingsToggleVisualDebugAction):
-        return replace(
-            state,
-            visual_debug=not state.visual_debug,
-        )
-
-    if isinstance(action, SettingsToggleBetaVersionsAction):
-        return CompleteReducerResult(
-            state=replace(
+        case SettingsToggleVisualDebugAction():
+            return replace(
                 state,
-                beta_versions=not state.beta_versions,
-            ),
-            actions=[
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='Beta Versions',
-                        content='Go to the About menu and select "Recent Versions" to '
-                        'continue.',
-                        icon='󰒓',
-                        color=SUCCESS_COLOR,
-                    ),
+                visual_debug=not state.visual_debug,
+            )
+
+        case SettingsToggleBetaVersionsAction():
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    beta_versions=not state.beta_versions,
                 ),
-                UpdateManagerRequestCheckAction(),
+                actions=[
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='Beta Versions',
+                            content='Go to the About menu and select "Recent Versions" '
+                            'to continue.',
+                            icon='󰒓',
+                            color=SUCCESS_COLOR,
+                        ),
+                    ),
+                    UpdateManagerRequestCheckAction(),
+                ]
+                if not state.beta_versions
+                else [],
+            )
+
+        case SettingsSetServicesAction():
+            enabled_services = [
+                service for service in action.services.values() if service.is_enabled
             ]
-            if not state.beta_versions
-            else [],
-        )
+            return CompleteReducerResult(
+                state=replace(state, services=action.services),
+                events=[
+                    SettingsStartServiceEvent(
+                        service_id=service.id,
+                        delay=index * action.gap_duration,
+                    )
+                    for index, service in enumerate(enabled_services)
+                ],
+            )
 
-    if isinstance(action, SettingsSetServicesAction):
-        enabled_services = [
-            service for service in action.services.values() if service.is_enabled
-        ]
-        return CompleteReducerResult(
-            state=replace(state, services=action.services),
-            events=[
-                SettingsStartServiceEvent(
-                    service_id=service.id,
-                    delay=index * action.gap_duration,
-                )
-                for index, service in enumerate(enabled_services)
-            ],
-        )
+        case SettingsStartServiceAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[SettingsStartServiceEvent(service_id=action.service_id)],
+            )
 
-    if isinstance(action, SettingsStartServiceAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[SettingsStartServiceEvent(service_id=action.service_id)],
-        )
+        case SettingsStopServiceAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[SettingsStopServiceEvent(service_id=action.service_id)],
+            )
 
-    if isinstance(action, SettingsStopServiceAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[SettingsStopServiceEvent(service_id=action.service_id)],
-        )
-
-    if isinstance(action, SettingsServiceSetStatusAction):  # noqa: SIM102
-        if state.services:
+        case SettingsServiceSetStatusAction() if state.services:
             service = state.services.get(action.service_id)
             if service:
                 events: list[SettingsEvent] = []
@@ -180,59 +180,62 @@ def reducer(
                     events=events,
                 )
 
-    if isinstance(action, SettingsReportServiceErrorAction):
-        return replace(
-            state,
-            services={
-                key: replace(value, errors=[*value.errors, action.error])
-                if key == action.service_id
-                else value
-                for key, value in state.services.items()
-            }
-            if state.services
-            else {},
-        )
+            return state
 
-    if isinstance(action, SettingsServiceSetIsEnabledAction):
-        return replace(
-            state,
-            services={
-                **state.services,
-                action.service_id: replace(
-                    state.services[action.service_id],
-                    is_enabled=action.is_enabled,
-                ),
-            }
-            if state.services
-            else {},
-        )
+        case SettingsReportServiceErrorAction():
+            return replace(
+                state,
+                services={
+                    key: replace(value, errors=[*value.errors, action.error])
+                    if key == action.service_id
+                    else value
+                    for key, value in state.services.items()
+                }
+                if state.services
+                else {},
+            )
 
-    if isinstance(action, SettingsServiceSetLogLevelAction):
-        return replace(
-            state,
-            services={
-                **state.services,
-                action.service_id: replace(
-                    state.services[action.service_id],
-                    log_level=action.log_level,
-                ),
-            }
-            if state.services
-            else {},
-        )
+        case SettingsServiceSetIsEnabledAction():
+            return replace(
+                state,
+                services={
+                    **state.services,
+                    action.service_id: replace(
+                        state.services[action.service_id],
+                        is_enabled=action.is_enabled,
+                    ),
+                }
+                if state.services
+                else {},
+            )
 
-    if isinstance(action, SettingsServiceSetShouldRestartAction):
-        return replace(
-            state,
-            services={
-                **state.services,
-                action.service_id: replace(
-                    state.services[action.service_id],
-                    should_auto_restart=action.should_auto_restart,
-                ),
-            }
-            if state.services
-            else {},
-        )
+        case SettingsServiceSetLogLevelAction():
+            return replace(
+                state,
+                services={
+                    **state.services,
+                    action.service_id: replace(
+                        state.services[action.service_id],
+                        log_level=action.log_level,
+                    ),
+                }
+                if state.services
+                else {},
+            )
 
-    return state
+        case SettingsServiceSetShouldRestartAction():
+            return replace(
+                state,
+                services={
+                    **state.services,
+                    action.service_id: replace(
+                        state.services[action.service_id],
+                        should_auto_restart=action.should_auto_restart,
+                    ),
+                }
+                if state.services
+                else {},
+            )
+
+        case _:
+            return state

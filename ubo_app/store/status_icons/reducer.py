@@ -22,30 +22,31 @@ def reducer(
         if isinstance(action, InitAction):
             return StatusIconsState(icons=[])
         raise InitializationActionError(action)
-    if isinstance(action, StatusIconsRegisterAction) and action.service is not None:
-        return replace(
-            state,
-            icons=sorted(
-                [
-                    *[
-                        icon_state
-                        for icon_state in state.icons
-                        if icon_state.id != action.id or icon_state.id is None
-                    ],
-                    IconState(
-                        symbol=action.icon,
-                        color=action.color,
-                        priority=action.priority,
-                        service_id=action.service,
-                        id=action.id,
-                    ),
-                ],
-                key=lambda entry: entry.priority,
-            ),
-        )
 
-    if isinstance(action, SettingsServiceSetStatusAction):  # noqa: SIM102
-        if action.is_active is False:
+    match action:
+        case StatusIconsRegisterAction() if action.service is not None:
+            return replace(
+                state,
+                icons=sorted(
+                    [
+                        *[
+                            icon_state
+                            for icon_state in state.icons
+                            if icon_state.id != action.id or icon_state.id is None
+                        ],
+                        IconState(
+                            symbol=action.icon,
+                            color=action.color,
+                            priority=action.priority,
+                            service_id=action.service,
+                            id=action.id,
+                        ),
+                    ],
+                    key=lambda entry: entry.priority,
+                ),
+            )
+
+        case SettingsServiceSetStatusAction() if action.is_active is False:
             return replace(
                 state,
                 icons=[
@@ -55,4 +56,5 @@ def reducer(
                 ],
             )
 
-    return state
+        case _:
+            return state

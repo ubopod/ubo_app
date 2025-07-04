@@ -56,6 +56,7 @@
 - feat(rpc): add `subscribe_store` rpc to the grpc api for subscribing to store changes and `autorun` to `ubo_bindings` client as a convenience method for subscribing to store changes for clients like the `autorun` in the store of the main app
 - feat(assistant): add openai setup logic
 - feat(assistant): add segmented google stt pipecat service, to avoid paying for silence, normal google stt is still an option user can switch to in `UboSTTService`
+- chore: migrate reducers to `match`/`case` syntax
 
 ## Version 1.4.0
 

@@ -13,13 +13,14 @@ from redux import (
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.services.ip import (
+    IpAction,
     IpSetIsConnectedAction,
     IpState,
     IpUpdateInterfacesAction,
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 
-Action = InitAction | IpUpdateInterfacesAction
+Action = InitAction | IpAction
 
 
 def reducer(
@@ -31,21 +32,23 @@ def reducer(
             return IpState(interfaces=[])
         raise InitializationActionError(action)
 
-    if isinstance(action, IpUpdateInterfacesAction):
-        return replace(state, interfaces=action.interfaces)
+    match action:
+        case IpUpdateInterfacesAction():
+            return replace(state, interfaces=action.interfaces)
 
-    if isinstance(action, IpSetIsConnectedAction):
-        return CompleteReducerResult(
-            state=replace(state, is_connected=action.is_connected),
-            actions=[
-                StatusIconsRegisterAction(
-                    icon='󰖟'
-                    if action.is_connected
-                    else f'[color={DANGER_COLOR}]󰪎[/color]',
-                    priority=INTERNET_STATE_ICON_PRIORITY,
-                    id=INTERNET_STATE_ICON_ID,
-                ),
-            ],
-        )
+        case IpSetIsConnectedAction():
+            return CompleteReducerResult(
+                state=replace(state, is_connected=action.is_connected),
+                actions=[
+                    StatusIconsRegisterAction(
+                        icon='󰖟'
+                        if action.is_connected
+                        else f'[color={DANGER_COLOR}]󰪎[/color]',
+                        priority=INTERNET_STATE_ICON_PRIORITY,
+                        id=INTERNET_STATE_ICON_ID,
+                    ),
+                ],
+            )
 
-    return state
+        case _:
+            return state

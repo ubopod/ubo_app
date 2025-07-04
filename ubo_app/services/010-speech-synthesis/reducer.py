@@ -32,21 +32,23 @@ def reducer(
             return SpeechSynthesisState()
         raise InitializationActionError(action)
 
-    if isinstance(action, SpeechSynthesisUpdateAccessKeyStatus):
-        return replace(state, is_access_key_set=action.is_access_key_set)
+    match action:
+        case SpeechSynthesisUpdateAccessKeyStatus():
+            return replace(state, is_access_key_set=action.is_access_key_set)
 
-    if isinstance(action, SpeechSynthesisSetSelectedEngineAction):
-        return replace(state, selected_engine=action.engine_name)
+        case SpeechSynthesisSetSelectedEngineAction():
+            return replace(state, selected_engine=action.engine_name)
 
-    if isinstance(action, SpeechSynthesisReadTextAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                SpeechSynthesisSynthesizeTextEvent(
-                    information=action.information,
-                    speech_rate=action.speech_rate,
-                ),
-            ],
-        )
+        case SpeechSynthesisReadTextAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    SpeechSynthesisSynthesizeTextEvent(
+                        information=action.information,
+                        speech_rate=action.speech_rate,
+                    ),
+                ],
+            )
 
-    return state
+        case _:
+            return state

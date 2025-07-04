@@ -82,71 +82,73 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    if isinstance(action, FileSystemCopyAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                FileSystemCopyEvent(
-                    sources=action.sources,
-                    destination=action.destination,
-                ),
-            ],
-        )
-
-    if isinstance(action, FileSystemMoveAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                FileSystemMoveEvent(
-                    sources=action.sources,
-                    destination=action.destination,
-                ),
-            ],
-        )
-
-    if isinstance(action, FileSystemRemoveAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[FileSystemRemoveEvent(paths=action.paths)],
-        )
-
-    if isinstance(action, InputDemandAction) and isinstance(
-        action.description,
-        PathInputDescription,
-    ):
-        return CompleteReducerResult(
-            state=replace(state, queue=[*state.queue, action.description]),
-            events=[]
-            if state.queue
-            else [FileSystemSelectEvent(description=action.description)],
-        )
-
-    if isinstance(action, InputResolveAction):
-        if state.queue and state.queue[0].id == action.id:
-            return pop_queue(state)
-        return replace(
-            state,
-            queue=[
-                description
-                for description in state.queue
-                if description.id != action.id
-            ],
-        )
-
-    if isinstance(action, FileSystemReportSelectionAction):
-        return CompleteReducerResult(
-            state=state,
-            actions=[
-                InputProvideAction(
-                    id=state.queue[0].id,
-                    value=action.path.as_posix(),
-                    result=InputResult(
-                        data={'path': action.path.as_posix()},
-                        files={},
-                        method=InputMethod.PATH_SELECTOR,
+    match action:
+        case FileSystemCopyAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    FileSystemCopyEvent(
+                        sources=action.sources,
+                        destination=action.destination,
                     ),
-                ),
-            ],
-        )
+                ],
+            )
 
-    return state
+        case FileSystemMoveAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    FileSystemMoveEvent(
+                        sources=action.sources,
+                        destination=action.destination,
+                    ),
+                ],
+            )
+
+        case FileSystemRemoveAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[FileSystemRemoveEvent(paths=action.paths)],
+            )
+
+        case InputDemandAction() if isinstance(
+            action.description,
+            PathInputDescription,
+        ):
+            return CompleteReducerResult(
+                state=replace(state, queue=[*state.queue, action.description]),
+                events=[]
+                if state.queue
+                else [FileSystemSelectEvent(description=action.description)],
+            )
+
+        case InputResolveAction():
+            if state.queue and state.queue[0].id == action.id:
+                return pop_queue(state)
+            return replace(
+                state,
+                queue=[
+                    description
+                    for description in state.queue
+                    if description.id != action.id
+                ],
+            )
+
+        case FileSystemReportSelectionAction():
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    InputProvideAction(
+                        id=state.queue[0].id,
+                        value=action.path.as_posix(),
+                        result=InputResult(
+                            data={'path': action.path.as_posix()},
+                            files={},
+                            method=InputMethod.PATH_SELECTOR,
+                        ),
+                    ),
+                ],
+            )
+
+        case _:
+            return state

@@ -30,13 +30,15 @@ def reducer(
             return DisplayState()
         raise InitializationActionError(action)
 
-    if isinstance(action, DisplayPauseAction):
-        return replace(state, is_paused=True)
+    match action:
+        case DisplayPauseAction():
+            return replace(state, is_paused=True)
 
-    if isinstance(action, DisplayResumeAction):
-        return CompleteReducerResult(
-            state=replace(state, is_paused=False),
-            events=[DisplayRerenderEvent()],
-        )
+        case DisplayResumeAction():
+            return CompleteReducerResult(
+                state=replace(state, is_paused=False),
+                events=[DisplayRerenderEvent()],
+            )
 
-    return state
+        case _:
+            return state

@@ -40,47 +40,49 @@ def reducer(
             return VSCodeState()
         raise InitializationActionError(action)
 
-    if isinstance(action, VSCodeStartDownloadingAction):
-        return replace(state, is_downloading=True)
+    match action:
+        case VSCodeStartDownloadingAction():
+            return replace(state, is_downloading=True)
 
-    if isinstance(action, VSCodeDoneDownloadingAction):
-        return replace(state, is_downloading=False)
+        case VSCodeDoneDownloadingAction():
+            return replace(state, is_downloading=False)
 
-    if isinstance(action, VSCodeSetPendingAction):
-        return replace(state, is_pending=True)
+        case VSCodeSetPendingAction():
+            return replace(state, is_pending=True)
 
-    if isinstance(action, VSCodeSetStatusAction):
-        actions = []
-        events = []
-        if state.is_logged_in is False and action.is_logged_in:
-            actions.append(
-                NotificationsAddAction(
-                    notification=Notification(
-                        id='vscode:login',
-                        title='VSCode',
-                        content='Successful Login',
-                        icon='󰨞',
-                        importance=Importance.MEDIUM,
-                        color=SUCCESS_COLOR,
-                        display_type=NotificationDisplayType.FLASH,
+        case VSCodeSetStatusAction():
+            actions = []
+            events = []
+            if state.is_logged_in is False and action.is_logged_in:
+                actions.append(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            id='vscode:login',
+                            title='VSCode',
+                            content='Successful Login',
+                            icon='󰨞',
+                            importance=Importance.MEDIUM,
+                            color=SUCCESS_COLOR,
+                            display_type=NotificationDisplayType.FLASH,
+                        ),
                     ),
-                ),
+                )
+                events.extend(
+                    [
+                        VSCodeLoginEvent(),
+                        VSCodeRestartEvent(),
+                    ],
+                )
+
+            state = replace(
+                state,
+                is_pending=False,
+                is_binary_installed=action.is_binary_installed,
+                is_logged_in=action.is_logged_in,
+                status=action.status,
             )
-            events.extend(
-                [
-                    VSCodeLoginEvent(),
-                    VSCodeRestartEvent(),
-                ],
-            )
 
-        state = replace(
-            state,
-            is_pending=False,
-            is_binary_installed=action.is_binary_installed,
-            is_logged_in=action.is_logged_in,
-            status=action.status,
-        )
+            return CompleteReducerResult(state=state, actions=actions, events=events)
 
-        return CompleteReducerResult(state=state, actions=actions, events=events)
-
-    return state
+        case _:
+            return state

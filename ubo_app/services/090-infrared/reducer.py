@@ -70,56 +70,69 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    if isinstance(action, InfraredSendCodeAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[InfraredSendCodeEvent(protocol=action.protocol,
-                                          scancode=action.scancode)],
-        )
+    match action:
+        case InfraredSendCodeAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    InfraredSendCodeEvent(
+                        protocol=action.protocol,
+                        scancode=action.scancode,
+                    ),
+                ],
+            )
 
-    if isinstance(action, InfraredSetShouldPropagateAction):
-        return replace(state, should_propagate_keypad_actions=action.should_propagate)
+        case InfraredSetShouldPropagateAction():
+            return replace(
+                state,
+                should_propagate_keypad_actions=action.should_propagate,
+            )
 
-    if isinstance(action, InfraredSetShouldReceiveAction):
-        return replace(state, should_receive_keypad_actions=action.should_receive)
+        case InfraredSetShouldReceiveAction():
+            return replace(state, should_receive_keypad_actions=action.should_receive)
 
-    if (
-        isinstance(action, (KeypadKeyPressAction, KeypadKeyReleaseAction))
-        and state.should_propagate_keypad_actions
-    ):
-        return CompleteReducerResult(
-            state=state,
-            actions=[
-                InfraredSendCodeAction(
-                    protocol=KEY_TO_INFRARED_CODES[type(action)][action.key][0],
-                    scancode=KEY_TO_INFRARED_CODES[type(action)][action.key][1],
-                ),
-            ],
-        )
+        case KeypadKeyPressAction() | KeypadKeyReleaseAction() if (
+            state.should_propagate_keypad_actions
+        ):
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    InfraredSendCodeAction(
+                        protocol=KEY_TO_INFRARED_CODES[type(action)][action.key][0],
+                        scancode=KEY_TO_INFRARED_CODES[type(action)][action.key][1],
+                    ),
+                ],
+            )
 
-    if (
-        isinstance(action, InfraredHandleReceivedCodeAction)
-        and state.should_receive_keypad_actions
-    ):
-        logger.info('Received infrared code: %s, %s', action.protocol, action.scancode)
-        if (action.protocol, action.scancode) not in INFRARED_CODES_TO_KEY:
+        case InfraredHandleReceivedCodeAction() if state.should_receive_keypad_actions:
+            logger.info(
+                'Received infrared code: %s, %s',
+                action.protocol,
+                action.scancode,
+            )
+            if (action.protocol, action.scancode) not in INFRARED_CODES_TO_KEY:
+                return state
+
+            key_action_type, key = INFRARED_CODES_TO_KEY[
+                (action.protocol, action.scancode)
+            ]
+
+            if key_action_type is KeypadKeyPressAction:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        KeypadKeyPressAction(key=key, pressed_keys={key}),
+                    ],
+                )
+            if key_action_type is KeypadKeyReleaseAction:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        KeypadKeyReleaseAction(key=key, pressed_keys=set()),
+                    ],
+                )
+
             return state
 
-        key_action_type, key = INFRARED_CODES_TO_KEY[(action.protocol, action.scancode)]
-
-        if key_action_type is KeypadKeyPressAction:
-            return CompleteReducerResult(
-                state=state,
-                actions=[
-                    KeypadKeyPressAction(key=key, pressed_keys={key}),
-                ],
-            )
-        if key_action_type is KeypadKeyReleaseAction:
-            return CompleteReducerResult(
-                state=state,
-                actions=[
-                    KeypadKeyReleaseAction(key=key, pressed_keys=set()),
-                ],
-            )
-
-    return state
+        case _:
+            return state

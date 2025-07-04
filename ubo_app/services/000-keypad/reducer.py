@@ -41,10 +41,12 @@ from ubo_app.store.services.notifications import Notification, NotificationsAddA
 if TYPE_CHECKING:
     from ubo_app.store.services.audio import AudioAction
 
+Action = KeypadAction | SetMenuPathAction | InitAction
+
 
 def reducer(
     state: KeypadState | None,
-    action: KeypadAction,
+    action: Action,
 ) -> (
     ReducerResult[
         KeypadState,
@@ -63,128 +65,149 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    if isinstance(action, KeypadKeyPressAction):
-        if action.pressed_keys == {action.key}:
-            if action.key == Key.UP and state.depth == 1:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        AudioChangeVolumeAction(
-                            amount=0.05,
-                            device=AudioDevice.OUTPUT,
+    match action:
+        case KeypadKeyPressAction(key=Key.UP) if (
+            state.depth == 1 and action.pressed_keys == {action.key}
+        ):
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    AudioChangeVolumeAction(
+                        amount=0.05,
+                        device=AudioDevice.OUTPUT,
+                    ),
+                ],
+            )
+        case KeypadKeyPressAction(key=Key.DOWN) if (
+            state.depth == 1 and action.pressed_keys == {action.key}
+        ):
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    AudioChangeVolumeAction(
+                        amount=-0.05,
+                        device=AudioDevice.OUTPUT,
+                    ),
+                ],
+            )
+        case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {action.key}:
+            return CompleteReducerResult(
+                state=state,
+                events=[MenuChooseByIndexEvent(index=0)],
+            )
+        case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {action.key}:
+            return CompleteReducerResult(
+                state=state,
+                events=[MenuChooseByIndexEvent(index=1)],
+            )
+        case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {action.key}:
+            return CompleteReducerResult(
+                state=state,
+                events=[MenuChooseByIndexEvent(index=2)],
+            )
+        case KeypadKeyPressAction(key=Key.UP) if action.pressed_keys == {action.key}:
+            return CompleteReducerResult(
+                state=state,
+                events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
+            )
+        case KeypadKeyPressAction(key=Key.DOWN) if action.pressed_keys == {action.key}:
+            return CompleteReducerResult(
+                state=state,
+                events=[MenuScrollEvent(direction=MenuScrollDirection.DOWN)],
+            )
+        case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {
+            Key.HOME,
+            Key.L1,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                events=[ScreenshotEvent()],
+            )
+        case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {
+            Key.HOME,
+            Key.L2,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                events=[SnapshotEvent()],
+            )
+        case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {
+            Key.HOME,
+            Key.L3,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                actions=[ToggleRecordingAction()],
+            )
+        case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {
+            Key.BACK,
+            Key.L3,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                actions=[ReplayRecordedSequenceAction()],
+            )
+        case KeypadKeyPressAction(key=Key.BACK) if action.pressed_keys == {
+            Key.HOME,
+            Key.BACK,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                events=[FinishEvent()],
+            )
+        # DEMO {
+        case KeypadKeyPressAction(key=Key.UP) if action.pressed_keys == {
+            Key.HOME,
+            Key.UP,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='Test notification with progress',
+                            content='This is a test notification with progress',
+                            progress=0.5,
                         ),
-                    ],
-                )
-            if action.key == Key.DOWN and state.depth == 1:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        AudioChangeVolumeAction(
-                            amount=-0.05,
-                            device=AudioDevice.OUTPUT,
+                    ),
+                ],
+            )
+        case KeypadKeyPressAction(key=Key.DOWN) if action.pressed_keys == {
+            Key.HOME,
+            Key.DOWN,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    NotificationsAddAction(
+                        notification=Notification(
+                            icon='',
+                            title='Test notification with spinner',
+                            content='This is a test notification with spinner',
+                            progress=math.nan,
                         ),
-                    ],
-                )
+                    ),
+                ],
+            )
+        # DEMO }
+        case KeypadKeyPressAction():
+            return state
 
-            if action.key == Key.L1:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuChooseByIndexEvent(index=0)],
-                )
-            if action.key == Key.L2:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuChooseByIndexEvent(index=1)],
-                )
-            if action.key == Key.L3:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuChooseByIndexEvent(index=2)],
-                )
-            if action.key == Key.UP:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
-                )
-            if action.key == Key.DOWN:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuScrollEvent(direction=MenuScrollDirection.DOWN)],
-                )
-        else:
-            if action.pressed_keys == {Key.HOME, Key.L1} and action.key == Key.L1:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[ScreenshotEvent()],
-                )
-            if action.pressed_keys == {Key.HOME, Key.L2} and action.key == Key.L2:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[SnapshotEvent()],
-                )
-            if action.pressed_keys == {Key.HOME, Key.L3} and action.key == Key.L3:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[ToggleRecordingAction()],
-                )
-            if action.pressed_keys == {Key.BACK, Key.L3} and action.key == Key.L3:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[ReplayRecordedSequenceAction()],
-                )
-            if action.pressed_keys == {Key.HOME, Key.BACK} and action.key == Key.BACK:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[FinishEvent()],
-                )
+        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK):
+            return CompleteReducerResult(
+                state=state,
+                events=[MenuGoBackEvent()],
+            )
+        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.HOME):
+            return CompleteReducerResult(
+                state=state,
+                events=[MenuGoHomeEvent()],
+            )
+        case KeypadKeyReleaseAction():
+            return state
 
-            # DEMO {
-            if action.pressed_keys == {Key.HOME, Key.UP} and action.key == Key.UP:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        NotificationsAddAction(
-                            notification=Notification(
-                                title='Test notification with progress',
-                                content='This is a test notification with progress',
-                                progress=0.5,
-                            ),
-                        ),
-                    ],
-                )
-            if action.pressed_keys == {Key.HOME, Key.DOWN} and action.key == Key.DOWN:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        NotificationsAddAction(
-                            notification=Notification(
-                                icon='',
-                                title='Test notification with spinner',
-                                content='This is a test notification with spinner',
-                                progress=math.nan,
-                            ),
-                        ),
-                    ],
-                )
-            # DEMO }
-        return state
+        case SetMenuPathAction():
+            return replace(state, depth=action.depth)
 
-    if isinstance(action, KeypadKeyReleaseAction):
-        if len(action.pressed_keys) == 0:
-            if action.key == Key.BACK:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuGoBackEvent()],
-                )
-            if action.key == Key.HOME:
-                return CompleteReducerResult(
-                    state=state,
-                    events=[MenuGoHomeEvent()],
-                )
-
-        return state
-
-    if isinstance(action, SetMenuPathAction):
-        return replace(state, depth=action.depth)
-
-    return state
+        case _:
+            return state

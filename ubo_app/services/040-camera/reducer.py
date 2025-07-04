@@ -14,6 +14,7 @@ from redux import (
 )
 
 from ubo_app.store.input.types import (
+    InputAction,
     InputCancelAction,
     InputDemandAction,
     InputMethod,
@@ -41,7 +42,7 @@ from ubo_app.store.services.notifications import (
     NotificationsClearByIdAction,
 )
 
-Action = InitAction | CameraAction | InputDemandAction | KeypadKeyPressAction
+Action = InitAction | CameraAction | InputAction | KeypadKeyPressAction
 DispatchAction = (
     NotificationsAddAction | NotificationsClearByIdAction | InputResolveAction
 )
@@ -121,68 +122,64 @@ def reducer(
             return CameraState(queue=[])
         raise InitializationActionError(action)
 
-    if isinstance(action, InputDemandAction) and isinstance(
-        action.description,
-        QRCodeInputDescription,
-    ):
-        return CompleteReducerResult(
-            state=replace(state, queue=[*state.queue, action.description]),
-            actions=[] if state.queue else [prompt_notification(action.description)],
-        )
+    match action:
+        case InputDemandAction(description=QRCodeInputDescription() as description):
+            return CompleteReducerResult(
+                state=replace(state, queue=[*state.queue, description]),
+                actions=[] if state.queue else [prompt_notification(description)],
+            )
 
-    if isinstance(action, InputResolveAction):
-        if state.queue and state.queue[0].id == action.id:
-            return pop_queue(state)
-        return replace(
-            state,
-            queue=[
-                description
-                for description in state.queue
-                if description.id != action.id
-            ],
-        )
+        case InputResolveAction(id=id):
+            if state.queue and state.queue[0].id == id:
+                return pop_queue(state)
+            return replace(
+                state,
+                queue=[
+                    description for description in state.queue if description.id != id
+                ],
+            )
 
-    if isinstance(action, CameraStartViewfinderAction):
-        return CompleteReducerResult(
-            state=replace(state),
-            events=[CameraStartViewfinderEvent(pattern=action.pattern)],
-        )
+        case CameraStartViewfinderAction(pattern=pattern):
+            return CompleteReducerResult(
+                state=replace(state),
+                events=[CameraStartViewfinderEvent(pattern=pattern)],
+            )
 
-    if isinstance(action, CameraReportBarcodeAction) and state.queue:
-        for code in action.codes:
-            if state.queue[0].pattern:
-                match = re.match(state.queue[0].pattern, code)
-                if match:
+        case CameraReportBarcodeAction(codes=codes) if state.queue:
+            for code in codes:
+                if state.queue[0].pattern:
+                    match_ = re.match(state.queue[0].pattern, code)
+                    if match_:
+                        return CompleteReducerResult(
+                            state=state,
+                            actions=[
+                                InputProvideAction(
+                                    id=state.queue[0].id,
+                                    value=code,
+                                    result=InputResult(
+                                        data={
+                                            key.rstrip('_'): value
+                                            for key, value in match_.groupdict().items()
+                                            if value
+                                        },
+                                        files={},
+                                        method=InputMethod.CAMERA,
+                                    ),
+                                ),
+                            ],
+                        )
+                else:
                     return CompleteReducerResult(
                         state=state,
                         actions=[
                             InputProvideAction(
                                 id=state.queue[0].id,
                                 value=code,
-                                result=InputResult(
-                                    data={
-                                        key.rstrip('_'): value
-                                        for key, value in match.groupdict().items()
-                                        if value
-                                    },
-                                    files={},
-                                    method=InputMethod.CAMERA,
-                                ),
+                                result=None,
                             ),
                         ],
                     )
-            else:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        InputProvideAction(
-                            id=state.queue[0].id,
-                            value=code,
-                            result=None,
-                        ),
-                    ],
-                )
-
             return state
 
-    return state
+        case _:
+            return state
