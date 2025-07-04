@@ -54,6 +54,7 @@
 - fix(audio): bug causing samples to have wrong number of channels in non-rpi environments
 - refactor(assistant): add `UboOutputTransport`, a pipecat transport responsible for passing audio output chunks to ubo app to be played, compared to the old method of passing audio chunks in `UboTTSService` it has the benefit of aggregating messages and making sure they are played in the right order
 - feat(rpc): add `subscribe_store` rpc to the grpc api for subscribing to store changes and `autorun` to `ubo_bindings` client as a convenience method for subscribing to store changes for clients like the `autorun` in the store of the main app
+- feat(assistant): add openai setup logic
 
 ## Version 1.4.0
 
