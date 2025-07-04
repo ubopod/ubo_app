@@ -4,6 +4,7 @@
   "assistant": {
     "_type": "AssistantState",
     "is_active": false,
+    "is_listening": false,
     "selected_llm": "ollama",
     "selected_models": {
       "anthropic": "claude-3-opus-20240229",
