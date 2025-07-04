@@ -46,15 +46,20 @@ def reducer(
             return AudioState()
         raise InitializationActionError(action)
 
-    if isinstance(action, AudioInstallDriverAction):
-        return CompleteReducerResult(state=state, events=[AudioInstallDriverEvent()])
-    if isinstance(action, AudioSetVolumeAction):
-        if action.device == AudioDevice.OUTPUT:
+    match action:
+        case AudioInstallDriverAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AudioInstallDriverEvent()],
+            )
+
+        case AudioSetVolumeAction(device=AudioDevice.OUTPUT):
             return replace(state, playback_volume=action.volume)
-        if action.device == AudioDevice.INPUT:
+
+        case AudioSetVolumeAction(device=AudioDevice.INPUT):
             return replace(state, capture_volume=action.volume)
-    elif isinstance(action, AudioChangeVolumeAction):
-        if action.device == AudioDevice.OUTPUT:
+
+        case AudioChangeVolumeAction(device=AudioDevice.OUTPUT):
             return CompleteReducerResult(
                 state=state,
                 actions=[
@@ -68,7 +73,8 @@ def reducer(
                 ],
                 events=[AudioPlayChimeEvent(name=Chime.VOLUME_CHANGE)],
             )
-        if action.device == AudioDevice.INPUT:
+
+        case AudioChangeVolumeAction(device=AudioDevice.INPUT):
             return replace(
                 state,
                 capture_volume=min(
@@ -76,10 +82,11 @@ def reducer(
                     1,
                 ),
             )
-    elif isinstance(action, AudioSetMuteStatusAction):
-        if action.device == AudioDevice.OUTPUT:
+
+        case AudioSetMuteStatusAction(device=AudioDevice.OUTPUT):
             return replace(state, is_playback_mute=action.is_mute)
-        if action.device == AudioDevice.INPUT:
+
+        case AudioSetMuteStatusAction(device=AudioDevice.INPUT):
             return CompleteReducerResult(
                 state=replace(state, is_capture_mute=action.is_mute),
                 actions=[
@@ -90,52 +97,59 @@ def reducer(
                     ),
                 ],
             )
-    elif isinstance(action, AudioToggleMuteStatusAction):
-        return CompleteReducerResult(
-            state=state,
-            actions=[
-                AudioSetMuteStatusAction(
-                    is_mute=not state.is_playback_mute
-                    if action.device == AudioDevice.OUTPUT
-                    else not state.is_capture_mute,
-                    device=action.device,
-                ),
-            ],
-        )
-    elif isinstance(action, AudioPlayChimeAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                AudioPlayChimeEvent(name=action.name),
-            ],
-        )
-    elif isinstance(action, AudioPlayAudioSequenceAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                AudioPlayAudioSequenceEvent(
-                    volume=state.playback_volume,
-                    sample=action.sample,
-                    id=action.id,
-                    index=action.index,
-                ),
-            ],
-        )
-    elif isinstance(action, AudioPlayAudioSampleAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                AudioPlayAudioSampleEvent(
-                    volume=state.playback_volume,
-                    sample=action.sample,
-                ),
-            ],
-        )
-    elif isinstance(action, AudioPlaybackDoneAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                AudioPlaybackDoneEvent(id=action.id),
-            ],
-        )
-    return state
+
+        case AudioToggleMuteStatusAction():
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    AudioSetMuteStatusAction(
+                        is_mute=not state.is_playback_mute
+                        if action.device == AudioDevice.OUTPUT
+                        else not state.is_capture_mute,
+                        device=action.device,
+                    ),
+                ],
+            )
+
+        case AudioPlayChimeAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AudioPlayChimeEvent(name=action.name),
+                ],
+            )
+
+        case AudioPlayAudioSequenceAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AudioPlayAudioSequenceEvent(
+                        volume=state.playback_volume,
+                        sample=action.sample,
+                        id=action.id,
+                        index=action.index,
+                    ),
+                ],
+            )
+
+        case AudioPlayAudioSampleAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AudioPlayAudioSampleEvent(
+                        volume=state.playback_volume,
+                        sample=action.sample,
+                    ),
+                ],
+            )
+
+        case AudioPlaybackDoneAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AudioPlaybackDoneEvent(id=action.id),
+                ],
+            )
+
+        case _:
+            return state

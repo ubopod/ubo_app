@@ -43,49 +43,56 @@ def reducer(
             )
         raise InitializationActionError(action)
 
-    if isinstance(action, WiFiInputConnectionAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[WiFiInputConnectionEvent()],
-        )
+    match action:
+        case WiFiInputConnectionAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[WiFiInputConnectionEvent()],
+            )
 
-    if isinstance(action, WiFiSetHasVisitedOnboardingAction):
-        return CompleteReducerResult(
-            state=replace(state, has_visited_onboarding=action.has_visited_onboarding),
-            events=[WiFiUpdateRequestEvent()],
-        )
-
-    if isinstance(action, WiFiUpdateRequestAction):
-        return CompleteReducerResult(
-            state=replace(state, connections=None) if action.reset else state,
-            events=[WiFiUpdateRequestEvent()],
-        )
-
-    if isinstance(action, WiFiUpdateAction):
-        return CompleteReducerResult(
-            state=replace(
-                state,
-                connections=action.connections,
-                state=action.state,
-                current_connection=action.current_connection,
-            ),
-            actions=[
-                StatusIconsRegisterAction(
-                    icon={
-                        NetState.CONNECTED: get_signal_icon(
-                            action.current_connection.signal_strength
-                            if action.current_connection
-                            else 0,
-                        ),
-                        NetState.DISCONNECTED: '󰖪',
-                        NetState.PENDING: '󱛇',
-                        NetState.NEEDS_ATTENTION: '󱚵',
-                        NetState.UNKNOWN: '󰈅',
-                    }[action.state],
-                    priority=WIFI_STATE_ICON_PRIORITY,
-                    id=WIFI_STATE_ICON_ID,
+        case WiFiSetHasVisitedOnboardingAction():
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    has_visited_onboarding=action.has_visited_onboarding,
                 ),
-            ],
-        )
+                events=[WiFiUpdateRequestEvent()],
+            )
+
+        case WiFiUpdateRequestAction():
+            return CompleteReducerResult(
+                state=replace(state, connections=None) if action.reset else state,
+                events=[WiFiUpdateRequestEvent()],
+            )
+
+        case WiFiUpdateAction():
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    connections=action.connections,
+                    state=action.state,
+                    current_connection=action.current_connection,
+                ),
+                actions=[
+                    StatusIconsRegisterAction(
+                        icon={
+                            NetState.CONNECTED: get_signal_icon(
+                                action.current_connection.signal_strength
+                                if action.current_connection
+                                else 0,
+                            ),
+                            NetState.DISCONNECTED: '󰖪',
+                            NetState.PENDING: '󱛇',
+                            NetState.NEEDS_ATTENTION: '󱚵',
+                            NetState.UNKNOWN: '󰈅',
+                        }[action.state],
+                        priority=WIFI_STATE_ICON_PRIORITY,
+                        id=WIFI_STATE_ICON_ID,
+                    ),
+                ],
+            )
+
+        case _:
+            return state
 
     return state

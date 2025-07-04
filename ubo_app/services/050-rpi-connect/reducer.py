@@ -41,45 +41,47 @@ def reducer(
             return RPiConnectState()
         raise InitializationActionError(action)
 
-    if isinstance(action, RPiConnectStartDownloadingAction):
-        return replace(state, is_downloading=True)
+    match action:
+        case RPiConnectStartDownloadingAction():
+            return replace(state, is_downloading=True)
 
-    if isinstance(action, RPiConnectDoneDownloadingAction):
-        return replace(state, is_downloading=False)
+        case RPiConnectDoneDownloadingAction():
+            return replace(state, is_downloading=False)
 
-    if isinstance(action, RPiConnectSetPendingAction):
-        return replace(state, is_installed=None, is_signed_in=None, status=None)
+        case RPiConnectSetPendingAction():
+            return replace(state, is_installed=None, is_signed_in=None, status=None)
 
-    if isinstance(action, RPiConnectUpdateServiceStateAction):
-        if action.is_active is not None:
-            state = replace(state, is_active=action.is_active)
-        return state
+        case RPiConnectUpdateServiceStateAction():
+            if action.is_active is not None:
+                state = replace(state, is_active=action.is_active)
+            return state
 
-    if isinstance(action, RPiConnectSetStatusAction):
-        actions = []
-        events = []
-        if state.is_signed_in is False and action.is_signed_in:
-            actions.append(
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='RPi-Connect',
-                        content='Successful Login',
-                        icon='',
-                        importance=Importance.MEDIUM,
-                        color=SUCCESS_COLOR,
-                        display_type=NotificationDisplayType.FLASH,
+        case RPiConnectSetStatusAction():
+            actions = []
+            events = []
+            if state.is_signed_in is False and action.is_signed_in:
+                actions.append(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='RPi-Connect',
+                            content='Successful Login',
+                            icon='',
+                            importance=Importance.MEDIUM,
+                            color=SUCCESS_COLOR,
+                            display_type=NotificationDisplayType.FLASH,
+                        ),
                     ),
-                ),
+                )
+                events.append(RPiConnectLoginEvent())
+
+            state = replace(
+                state,
+                is_installed=action.is_installed,
+                is_signed_in=action.is_signed_in,
+                status=action.status,
             )
-            events.append(RPiConnectLoginEvent())
 
-        state = replace(
-            state,
-            is_installed=action.is_installed,
-            is_signed_in=action.is_signed_in,
-            status=action.status,
-        )
+            return CompleteReducerResult(state=state, actions=actions, events=events)
 
-        return CompleteReducerResult(state=state, actions=actions, events=events)
-
-    return state
+        case _:
+            return state

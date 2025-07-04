@@ -42,33 +42,33 @@ def reducer(
             return WebUIState(active_inputs=[])
         raise InitializationActionError(action)
 
-    if isinstance(action, InputDemandAction) and isinstance(
-        action.description,
-        WebUIInputDescription,
-    ):
-        return CompleteReducerResult(
-            state=replace(
-                state,
-                active_inputs=[*state.active_inputs, action.description],
-            ),
-            events=[WebUIInitializeEvent(description=action.description)],
-        )
-    if isinstance(action, InputResolveAction):
-        new_active_inputs = [
-            description
-            for description in state.active_inputs
-            if description.id != action.id
-        ]
-        should_dispatch_stop_event = (
-            len(state.active_inputs) > 0 and len(new_active_inputs) == 0
-        )
-        return CompleteReducerResult(
-            state=replace(
-                state,
-                active_inputs=new_active_inputs,
-            ),
-            actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{action.id}')],
-            events=[WebUIStopEvent()] if should_dispatch_stop_event else [],
-        )
+    match action:
+        case InputDemandAction(description=WebUIInputDescription() as description):
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    active_inputs=[*state.active_inputs, description],
+                ),
+                events=[WebUIInitializeEvent(description=description)],
+            )
 
-    return state
+        case InputResolveAction(id=id):
+            new_active_inputs = [
+                description
+                for description in state.active_inputs
+                if description.id != id
+            ]
+            should_dispatch_stop_event = (
+                len(state.active_inputs) > 0 and len(new_active_inputs) == 0
+            )
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    active_inputs=new_active_inputs,
+                ),
+                actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{id}')],
+                events=[WebUIStopEvent()] if should_dispatch_stop_event else [],
+            )
+
+        case _:
+            return state

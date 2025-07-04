@@ -214,71 +214,77 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    if isinstance(action, SpeechRecognitionSetSelectedEngineAction):
-        return replace(
-            state,
-            selected_engine=action.engine_name,
-            status=SpeechRecognitionStatus.IDLE,
-        )
-
-    if isinstance(action, SpeechRecognitionSetIsIntentsActiveAction):
-        return replace(
-            state,
-            is_intents_active=action.is_active,
-            status=SpeechRecognitionStatus.IDLE
-            if state.status is SpeechRecognitionStatus.INTENTS_WAITING
-            else state.status,
-        )
-
-    if isinstance(action, SpeechRecognitionSetIsAssistantActiveAction):
-        return replace(
-            state,
-            is_assistant_active=action.is_active,
-            status=SpeechRecognitionStatus.IDLE
-            if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING
-            else state.status,
-        )
-
-    if (
-        isinstance(action, SpeechRecognitionReportWakeWordDetectionAction)
-        and state.status is SpeechRecognitionStatus.IDLE
-    ):
-        if action.wake_word == INTENTS_WAKE_WORD:
-            return CompleteReducerResult(
-                state=replace(state, status=SpeechRecognitionStatus.INTENTS_WAITING),
-                actions=[RgbRingRainbowAction(rounds=0, wait=800)],
-            )
-        if action.wake_word == ASSISTANT_WAKE_WORD:
-            return CompleteReducerResult(
-                state=replace(state, status=SpeechRecognitionStatus.ASSISTANT_WAITING),
-                actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+    match action:
+        case SpeechRecognitionSetSelectedEngineAction():
+            return replace(
+                state,
+                selected_engine=action.engine_name,
+                status=SpeechRecognitionStatus.IDLE,
             )
 
-    if isinstance(action, SpeechRecognitionReportIntentDetectionAction):
-        actions = (
-            action.intent.action
-            if isinstance(action.intent.action, Sequence)
-            else [action.intent.action]
-        )
-        rgb_ring_actions = [
-            action for action in actions if isinstance(action, RgbRingCommandAction)
-        ]
-        non_rgb_ring_actions = [
-            action for action in actions if not isinstance(action, RgbRingCommandAction)
-        ]
-        return CompleteReducerResult(
-            state=replace(state, status=SpeechRecognitionStatus.IDLE),
-            actions=[
-                RgbRingSequenceAction(
-                    sequence=[ACKNOWLEDGMENT_ACTION, *rgb_ring_actions],
-                ),
-                *non_rgb_ring_actions,
-            ],
-        )
+        case SpeechRecognitionSetIsIntentsActiveAction():
+            return replace(
+                state,
+                is_intents_active=action.is_active,
+                status=SpeechRecognitionStatus.IDLE
+                if state.status is SpeechRecognitionStatus.INTENTS_WAITING
+                else state.status,
+            )
 
-    if isinstance(action, SpeechRecognitionReportSpeechAction):
-        return CompleteReducerResult(
-            state=replace(state, status=SpeechRecognitionStatus.IDLE),
-            actions=[ACKNOWLEDGMENT_ACTION],
-        )
-    return state
+        case SpeechRecognitionSetIsAssistantActiveAction():
+            return replace(
+                state,
+                is_assistant_active=action.is_active,
+                status=SpeechRecognitionStatus.IDLE
+                if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING
+                else state.status,
+            )
+
+        case SpeechRecognitionReportWakeWordDetectionAction(
+            wake_word=wake_word,
+        ) if (
+            wake_word in (INTENTS_WAKE_WORD, ASSISTANT_WAKE_WORD)
+            and state.status is SpeechRecognitionStatus.IDLE
+        ):
+            new_status = (
+                SpeechRecognitionStatus.INTENTS_WAITING
+                if wake_word == INTENTS_WAKE_WORD
+                else SpeechRecognitionStatus.ASSISTANT_WAITING
+            )
+            return CompleteReducerResult(
+                state=replace(state, status=new_status),
+                actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+            )
+
+        case SpeechRecognitionReportIntentDetectionAction():
+            actions = (
+                action.intent.action
+                if isinstance(action.intent.action, Sequence)
+                else [action.intent.action]
+            )
+            rgb_ring_actions = [
+                action for action in actions if isinstance(action, RgbRingCommandAction)
+            ]
+            non_rgb_ring_actions = [
+                action
+                for action in actions
+                if not isinstance(action, RgbRingCommandAction)
+            ]
+            return CompleteReducerResult(
+                state=replace(state, status=SpeechRecognitionStatus.IDLE),
+                actions=[
+                    RgbRingSequenceAction(
+                        sequence=[ACKNOWLEDGMENT_ACTION, *rgb_ring_actions],
+                    ),
+                    *non_rgb_ring_actions,
+                ],
+            )
+
+        case SpeechRecognitionReportSpeechAction():
+            return CompleteReducerResult(
+                state=replace(state, status=SpeechRecognitionStatus.IDLE),
+                actions=[ACKNOWLEDGMENT_ACTION],
+            )
+
+        case _:
+            return state

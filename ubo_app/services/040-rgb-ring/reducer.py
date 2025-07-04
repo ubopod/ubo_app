@@ -30,21 +30,21 @@ def reducer(
             return RgbRingState(is_busy=False)
         raise InitializationActionError(action)
 
-    if isinstance(action, RgbRingSetIsBusyAction):
-        return replace(
-            state,
-            is_busy=action.is_busy,
-        )
+    match action:
+        case RgbRingSetIsBusyAction():
+            return replace(
+                state,
+                is_busy=action.is_busy,
+            )
 
-    if isinstance(action, RgbRingCommandAction):
-        command = action.as_command()
+        case RgbRingCommandAction():
+            command = action.as_command()
+            if not command:
+                return state
+            return CompleteReducerResult(
+                state=state,
+                events=[RgbRingCommandEvent(command=command.split())],
+            )
 
-        if not command:
+        case _:
             return state
-
-        return CompleteReducerResult(
-            state=state,
-            events=[RgbRingCommandEvent(command=command.split())],
-        )
-
-    return state

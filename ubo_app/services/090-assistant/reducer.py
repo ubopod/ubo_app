@@ -34,36 +34,38 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    if isinstance(action, AssistantSetIsActiveAction):
-        return replace(state, is_active=action.is_active)
+    match action:
+        case AssistantSetIsActiveAction():
+            return replace(state, is_active=action.is_active)
 
-    if isinstance(action, AssistantSetSelectedLLMAction):
-        return replace(state, selected_llm=action.llm_name)
+        case AssistantSetSelectedLLMAction():
+            return replace(state, selected_llm=action.llm_name)
 
-    if isinstance(action, AssistantSetSelectedModelAction):
-        return replace(
-            state,
-            selected_models={
-                **state.selected_models,
-                state.selected_llm: action.model,
-            },
-        )
+        case AssistantSetSelectedModelAction():
+            return replace(
+                state,
+                selected_models={
+                    **state.selected_models,
+                    state.selected_llm: action.model,
+                },
+            )
 
-    if isinstance(action, AssistantDownloadOllamaModelAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[AssistantDownloadOllamaModelEvent(model=action.model)],
-        )
+        case AssistantDownloadOllamaModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantDownloadOllamaModelEvent(model=action.model)],
+            )
 
-    if isinstance(action, AssistantReportAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[
-                AssistantReportEvent(
-                    source_id=action.source_id,
-                    data=action.data,
-                ),
-            ],
-        )
+        case AssistantReportAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantReportEvent(
+                        source_id=action.source_id,
+                        data=action.data,
+                    ),
+                ],
+            )
 
-    return state
+        case _:
+            return state

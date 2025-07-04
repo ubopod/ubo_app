@@ -47,56 +47,58 @@ def reducer(
             return UpdateManagerState()
         raise InitializationActionError(action)
 
-    if isinstance(action, UpdateManagerSetVersionsAction):
-        state = replace(
-            state,
-            current_version=action.current_version,
-            base_image_variant=action.base_image_variant,
-            latest_version=action.latest_version,
-            recent_versions=action.recent_versions,
-        )
-        latest_version = packaging.version.parse(action.latest_version)
-        current_version = packaging.version.parse(action.current_version)
-        if latest_version > current_version:
-            return CompleteReducerResult(
-                state=replace(
-                    state,
-                    update_status=UpdateStatus.OUTDATED,
-                ),
-                actions=[
-                    NotificationsAddAction(
-                        notification=Notification(
-                            id=UPDATE_MANAGER_NOTIFICATION_ID,
-                            title='Update available!',
-                            content=f"""Ubo v{action.latest_version} is available. Go to
-the About menu to update.""",
-                            display_type=NotificationDisplayType.FLASH
-                            if action.flash_notification
-                            else NotificationDisplayType.BACKGROUND,
-                            color=SECONDARY_COLOR,
-                            icon='󰬬',
-                            chime=Chime.DONE,
-                        ),
-                    ),
-                ],
+    match action:
+        case UpdateManagerSetVersionsAction():
+            state = replace(
+                state,
+                current_version=action.current_version,
+                base_image_variant=action.base_image_variant,
+                latest_version=action.latest_version,
+                recent_versions=action.recent_versions,
             )
-        return replace(state, update_status=UpdateStatus.UP_TO_DATE)
+            latest_version = packaging.version.parse(action.latest_version)
+            current_version = packaging.version.parse(action.current_version)
+            if latest_version > current_version:
+                return CompleteReducerResult(
+                    state=replace(
+                        state,
+                        update_status=UpdateStatus.OUTDATED,
+                    ),
+                    actions=[
+                        NotificationsAddAction(
+                            notification=Notification(
+                                id=UPDATE_MANAGER_NOTIFICATION_ID,
+                                title='Update available!',
+                                content=f'Ubo v{action.latest_version} is available. '
+                                'Go to the About menu to update.',
+                                display_type=NotificationDisplayType.FLASH
+                                if action.flash_notification
+                                else NotificationDisplayType.BACKGROUND,
+                                color=SECONDARY_COLOR,
+                                icon='󰬬',
+                                chime=Chime.DONE,
+                            ),
+                        ),
+                    ],
+                )
+            return replace(state, update_status=UpdateStatus.UP_TO_DATE)
 
-    if isinstance(action, UpdateManagerRequestCheckAction):
-        return CompleteReducerResult(
-            state=replace(state, update_status=UpdateStatus.CHECKING),
-            events=[UpdateManagerCheckEvent()],
-        )
+        case UpdateManagerRequestCheckAction():
+            return CompleteReducerResult(
+                state=replace(state, update_status=UpdateStatus.CHECKING),
+                events=[UpdateManagerCheckEvent()],
+            )
 
-    if isinstance(action, UpdateManagerReportFailedCheckAction):
-        return CompleteReducerResult(
-            state=replace(state, update_status=UpdateStatus.FAILED_TO_CHECK),
-        )
+        case UpdateManagerReportFailedCheckAction():
+            return CompleteReducerResult(
+                state=replace(state, update_status=UpdateStatus.FAILED_TO_CHECK),
+            )
 
-    if isinstance(action, UpdateManagerRequestUpdateAction):
-        return CompleteReducerResult(
-            state=replace(state, update_status=UpdateStatus.UPDATING),
-            events=[UpdateManagerUpdateEvent(version=action.version)],
-        )
+        case UpdateManagerRequestUpdateAction():
+            return CompleteReducerResult(
+                state=replace(state, update_status=UpdateStatus.UPDATING),
+                events=[UpdateManagerUpdateEvent(version=action.version)],
+            )
 
-    return state
+        case _:
+            return state

@@ -33,25 +33,27 @@ def reducer(
             return UsersState()
         raise InitializationActionError(action)
 
-    if isinstance(action, UsersSetUsersAction):
-        return replace(state, users=action.users)
+    match action:
+        case UsersSetUsersAction():
+            return replace(state, users=action.users)
 
-    if isinstance(action, UsersCreateUserAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[UsersCreateUserEvent()],
-        )
+        case UsersCreateUserAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[UsersCreateUserEvent()],
+            )
 
-    if isinstance(action, UsersDeleteUserAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[UsersDeleteUserEvent(id=action.id)],
-        )
+        case UsersDeleteUserAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[UsersDeleteUserEvent(id=action.id)],
+            )
 
-    if isinstance(action, UsersResetPasswordAction):
-        return CompleteReducerResult(
-            state=state,
-            events=[UsersResetPasswordEvent(id=action.id)],
-        )
+        case UsersResetPasswordAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[UsersResetPasswordEvent(id=action.id)],
+            )
 
-    return state
+        case _:
+            return state

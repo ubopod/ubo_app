@@ -27,10 +27,10 @@ def reducer(
             return SensorsState()
         raise InitializationActionError(action)
 
-    if isinstance(action, SensorsReportReadingAction):
-        if action.sensor == Sensor.TEMPERATURE:
+    match action:
+        case SensorsReportReadingAction(sensor=Sensor.TEMPERATURE):
             return replace(state, temperature=SensorState(value=action.reading))
-        if action.sensor == Sensor.LIGHT:
+        case SensorsReportReadingAction(sensor=Sensor.LIGHT):
             return replace(state, light=SensorState(value=action.reading))
-
-    return state
+        case _:
+            return state
