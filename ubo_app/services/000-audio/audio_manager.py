@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 INPUT_FRAME_RATE = 48_000
 INPUT_CHANNELS = 2
-INPUT_PERIOD_SIZE = int(INPUT_FRAME_RATE / 1000) * 50  # 50ms
+INPUT_PERIOD_SIZE = int(INPUT_FRAME_RATE / 1000) * 20  # 20ms
 
 
 def _linear_to_logarithmic(volume_linear: float) -> int:
@@ -432,7 +432,7 @@ class AudioManager:
                                 timestamp=event_loop.time(),
                                 sample_speech_recognition=data_speech_recognition,
                                 sample=AudioSample(
-                                    data=data_speech_recognition,
+                                    data=data,
                                     channels=channels,
                                     rate=INPUT_FRAME_RATE,
                                     width=2,

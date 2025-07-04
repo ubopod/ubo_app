@@ -1,4 +1,5 @@
 # ruff: noqa: D101, D102, D103, D105, D107
+
 """A dynamic conversational AI pipeline using Pipecat framework."""
 
 import asyncio
@@ -32,9 +33,7 @@ class Assistant:
         self.client.channel.close()
 
     async def run(self) -> None:
-        vad_analyzer = SileroVADAnalyzer(
-            sample_rate=16000,
-        )
+        vad_analyzer = SileroVADAnalyzer(sample_rate=16000)
 
         ubo_input_transport = UboInputTransport(
             params=TransportParams(
@@ -43,10 +42,13 @@ class Assistant:
                 audio_in_sample_rate=16000,
                 vad_enabled=True,
                 vad_analyzer=vad_analyzer,
-                vad_audio_passthrough=True,
             ),
             client=self.client,
         )
+
+        @self.client.autorun(['state.audio'])
+        def playback_volume_handler(results: list[float]) -> None:
+            print(results)  # noqa: T201
 
         ubo_output_transport = UboOutputTransport(
             params=TransportParams(audio_out_enabled=True),
