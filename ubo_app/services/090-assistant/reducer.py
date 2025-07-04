@@ -17,7 +17,9 @@ from ubo_app.store.services.assistant import (
     AssistantSetIsActiveAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantStartListeningAction,
     AssistantState,
+    AssistantStopListeningAction,
 )
 
 if TYPE_CHECKING:
@@ -66,6 +68,12 @@ def reducer(
                     ),
                 ],
             )
+
+        case AssistantStartListeningAction():
+            return state(is_listening=True)
+
+        case AssistantStopListeningAction():
+            return state(is_listening=False)
 
         case _:
             return state

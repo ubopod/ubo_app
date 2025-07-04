@@ -114,6 +114,14 @@ class AssistantReportAction(AssistantAction):
     data: AcceptableAssistanceFrame
 
 
+class AssistantStartListeningAction(AssistantAction):
+    """Action to start listening for the assistant."""
+
+
+class AssistantStopListeningAction(AssistantAction):
+    """Action to stop listening for the assistant."""
+
+
 class AssistantEvent(BaseEvent):
     """Base class for assistant events."""
 
@@ -134,6 +142,7 @@ class AssistantReportEvent(AssistantEvent):
 class AssistantState(Immutable):
     """State for the assistant service."""
 
+    is_listening: bool = False
     is_active: bool = field(
         default=read_from_persistent_store(
             'assistant:is_active',

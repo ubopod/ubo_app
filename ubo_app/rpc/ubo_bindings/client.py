@@ -34,7 +34,7 @@ def _unpack_from_any(message: betterproto_protobuf.Any) -> Message:
     type_name = message.type_url[len('type.googleapis.com/') :]
 
     if type_name.startswith('google.protobuf.'):
-        type_name = type_name[len('type.googleapis.com/google.protobuf.') :]
+        type_name = type_name[len('google.protobuf.') :]
         cls = cast('type[Message]', getattr(betterproto_protobuf, type_name, None))
         if cls is not None:
             return cls.FromString(message.value)
