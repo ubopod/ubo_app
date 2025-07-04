@@ -18,6 +18,7 @@ from ubo_bindings.ubo.v1 import (
     AssistanceTextFrame,
 )
 
+from ubo_assistant.segmented_googlestt import SegmentedGoogleSTTService
 from ubo_assistant.switch import UboSwitchService
 from ubo_assistant.vosk import VoskSTTService
 
@@ -35,6 +36,22 @@ class UboSTTService(UboSwitchService[STTService], STTService):
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
         self._assistance_index = 0
+        try:
+            if google_credentials:
+                self.segmented_google_stt = SegmentedGoogleSTTService(
+                    credentials=google_credentials,
+                    model='long',
+                    sample_rate=16000,
+                )
+            else:
+                self.segmented_google_stt = None
+        except Exception as exception:
+            logger.exception(
+                'Error while initializing Google STT',
+                extra={'exception': exception},
+            )
+            self.segmented_google_stt = None
+
         try:
             if google_credentials:
                 self.google_stt = GoogleSTTService(
@@ -72,7 +89,12 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             )
             self.vosk_stt = None
 
-        self._services = [self.google_stt, self.openai_stt, self.vosk_stt]
+        self._services = [
+            self.segmented_google_stt,
+            self.google_stt,
+            self.openai_stt,
+            self.vosk_stt,
+        ]
 
         super().__init__(
             client=client,
