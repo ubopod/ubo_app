@@ -58,6 +58,7 @@
 - feat(assistant): add segmented google stt pipecat service, to avoid paying for silence, normal google stt is still an option user can switch to in `UboSTTService`
 - chore: migrate reducers to `match`/`case` syntax
 - feat(assistant): introduce `AssistantStartListeningAction` and `AssistantStopListeningAction` for explicit control over pipecat listening state, assign keyboard's "v" key press/release to these actions
+- docs: improve `README.md` with more details about installing web app dependencies
 
 ## Version 1.4.0
 

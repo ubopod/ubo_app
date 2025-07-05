@@ -188,7 +188,16 @@ uv run poe proto:generate # generate the protobuf files based on the actions/eve
 uv run poe proto:compile  # compile the protobuf files to python files
 ```
 
-##### Compiling the web application
+##### Building the web application
+
+If you are running it for the firt time, you first need to install the dependencies for the web application:
+
+```bash
+cd ubo_app/services/090-web-ui/web-app
+npm install # Only needed the first time or when dependencies change
+```
+
+Then, you need to compile the protobuf files and build the web application:
 
 ```bash
 cd ubo_app/services/090-web-ui/web-app
