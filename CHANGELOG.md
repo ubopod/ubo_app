@@ -55,6 +55,7 @@
 - chore: migrate reducers to `match`/`case` syntax
 - feat(assistant): introduce `AssistantStartListeningAction` and `AssistantStopListeningAction` for explicit control over pipecat listening state, assign keyboard's "v" key press/release to these actions
 - docs: improve `README.md` with more details about installing web app dependencies
+- feat: return unsubscribe function from streaming grpcs `autorun` and `subscribe_event` methods and use it in `ubo_input_transport` to unsubscribe from the audio events stream when it should not be listening instead of getting them and ignoring them
 
 ## Version 1.4.0
 

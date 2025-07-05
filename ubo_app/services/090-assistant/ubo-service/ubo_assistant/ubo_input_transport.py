@@ -1,5 +1,7 @@
 """Ubo Input Transport for Pipecat Reading Audio Samples from UBO RPC Client."""
 
+import threading
+
 from loguru import logger
 from pipecat.frames.frames import (
     InputAudioRawFrame,
@@ -26,31 +28,39 @@ class UboInputTransport(BaseInputTransport):
     ) -> None:
         """Initialize the UboInputTransport with the given parameters and client."""
         self.client = client
-        self.is_listening = False
+        self.subscription = None
+        self.subscription_lock = threading.Lock()
         super().__init__(params, **kwargs)
 
     def _set_is_listening(self, *, is_listening: bool) -> None:
-        self.is_listening = is_listening
-        if is_listening:
-            logger.info('UboInputTransport is now listening for audio samples.')
-        else:
-            logger.info('UboInputTransport is no longer listening for audio samples.')
+        with self.subscription_lock:
+            if is_listening:
+                if self.subscription is None:
+                    self.subscription = self.client.subscribe_event(
+                        Event(audio_report_sample_event=AudioReportSampleEvent()),
+                        self.queue_sample,
+                    )
+                    logger.info(
+                        'UboInputTransport is now listening for audio samples.',
+                    )
+            elif self.subscription:
+                self.subscription()
+                self.subscription = None
+                logger.info(
+                    'UboInputTransport is no longer listening for audio samples.',
+                )
 
     async def start(self, frame: StartFrame) -> None:
         """Start the transport and subscribe to audio sample events."""
         await super().start(frame)
         await self.set_transport_ready(frame)
-        self.client.subscribe_event(
-            Event(audio_report_sample_event=AudioReportSampleEvent()),
-            self.queue_sample,
-        )
         self.client.autorun(['state.assistant.is_listening'])(
             lambda results: self._set_is_listening(is_listening=results[0]),
         )
 
     def queue_sample(self, event: Event) -> None:
         """Queue the audio sample from the event."""
-        if event.audio_report_sample_event and self.is_listening:
+        if event.audio_report_sample_event:
             audio = event.audio_report_sample_event.sample_speech_recognition
             self.task_manager.create_task(
                 self.push_audio_frame(

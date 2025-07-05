@@ -89,7 +89,7 @@ class UboRPCClient:
         self,
         event_type: Event,
         callback: Callable[[Event], None],
-    ) -> None:
+    ) -> Callable[[], None]:
         """Subscribe to the remote store."""
 
         async def iterator() -> None:
@@ -98,22 +98,32 @@ class UboRPCClient:
             ):
                 callback(response.event)
 
-        self.event_loop.create_task(iterator())
+        task = self.event_loop.create_task(iterator())
+
+        def unsubscribe() -> None:
+            task.cancel()
+
+        return unsubscribe
 
     def autorun(
         self,
         selectors: list[str],
-    ) -> Callable[[Callable[[list], None]], None]:
+    ) -> Callable[[Callable[[list], None]], Callable[[], None]]:
         """Autorun a function based on store changes."""
 
-        def wrapper(callback: Callable[[list], None]) -> None:
+        def wrapper(callback: Callable[[list], None]) -> Callable[[], None]:
             async def iterator() -> None:
                 async for response in self.store_service.subscribe_store(
                     SubscribeStoreRequest(selectors=selectors),
                 ):
                     callback([_unpack_from_any(item) for item in response.results])
 
-            self.event_loop.create_task(iterator())
+            task = self.event_loop.create_task(iterator())
+
+            def unsubscribe() -> None:
+                task.cancel()
+
+            return unsubscribe
 
         return wrapper
 
