@@ -33,6 +33,7 @@
 - feat(file-system): add `InputMethod.PathSelector` as a new input method, showing a file navigation menu to select a file or directory - closes #301
 - feat(file-system): add file system operations copy, move, and remove - closes #300
 - fix(wifi): hotspot initialization issue on bare Raspberry Pi, not able to interact with the pod to select the input method
+- fix(web-ui): show a notification when web ui is connected, this is a workaround to emulate a redraw in the display render stream events in the bus
 
 ## Version 1.4.0
 

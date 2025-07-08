@@ -1,20 +1,51 @@
 import { inflate } from "fflate";
 
 import {
+  DispatchActionRequest,
   SubscribeEventRequest,
   SubscribeEventResponse,
 } from "../generated/store/v1/store_pb";
 import { StoreServiceClient } from "../generated/store/v1/StoreServiceClientPb";
 import {
+  Action,
   AudioPlayAudioEvent,
   DisplayCompressedRenderEvent,
   Event,
+  Notification,
+  NotificationDisplayType,
+  NotificationsAddAction,
 } from "../generated/ubo/v1/ubo_pb";
+
+function showConnectionNotification(store: StoreServiceClient) {
+  const dispatchActionRequest = new DispatchActionRequest();
+
+  const action = new Action();
+  dispatchActionRequest.setAction(action);
+
+  const notificationsAddAction = new NotificationsAddAction();
+  action.setNotificationsAddAction(notificationsAddAction);
+
+  const notification = new Notification();
+  notification.setTitle("Connected to UBO");
+  notification.setContent(
+    "You are now connected to the UBO pod. You can interact with it remotely from this browser session.",
+  );
+  notification.setIcon("󰢹");
+  notification.setDisplayType(
+    NotificationDisplayType.NOTIFICATION_DISPLAY_TYPE_FLASH,
+  );
+  notification.setDismissOnClose(true);
+  notificationsAddAction.setNotification(notification);
+
+  store.dispatchAction(dispatchActionRequest);
+}
 
 function subscribeToRenderEvents(
   store: StoreServiceClient,
   canvas: HTMLCanvasElement | null,
 ) {
+  showConnectionNotification(store);
+
   const event = new Event();
   event.setDisplayCompressedRenderEvent(new DisplayCompressedRenderEvent());
 

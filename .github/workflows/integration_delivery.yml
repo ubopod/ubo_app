@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - development
     tags:
       - 'v*'
   pull_request:
@@ -301,7 +302,7 @@ jobs:
           if [ "$MATRIX_SUFFIX" = "lite" ]; then
             IMAGE_SIZE_GB=4.5
           elif [ "$MATRIX_SUFFIX" = "" ]; then
-            IMAGE_SIZE_GB=6.75
+            IMAGE_SIZE_GB=7
           else
             IMAGE_SIZE_GB=13
           fi

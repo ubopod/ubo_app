@@ -4,7 +4,7 @@ from __future__ import annotations
 import enum
 import importlib
 from datetime import UTC, datetime
-from typing import TypeAlias, TypeVar, cast
+from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin
 
 import betterproto
 import betterproto.casing
@@ -24,6 +24,11 @@ ReturnType: TypeAlias = (
     | dict[str, 'ReturnType']
 )
 
+
+class _MissingType: ...
+
+
+MISSING = _MissingType()
 META_FIELD_PREFIX_PACKAGE_NAME = 'meta_field_package_name_'
 META_FIELD_PREFIX_PACKAGE_NAME_INDEX = 1000
 
@@ -114,14 +119,45 @@ def rebuild_object(  # noqa: C901
         raise NotImplementedError(msg)
 
     fields = {
-        betterproto.casing.snake_case(key): datetime.fromtimestamp(
-            getattr(message, key),
-            tz=UTC,
+        betterproto.casing.snake_case(key): get_field_value(
+            destination_class,
+            message,
+            key,
         )
-        if key.endswith('_timestamp')
-        else rebuild_object(getattr(message, key))
         for key in keys
         if not key.startswith('meta_field_') and getattr(message, key) is not None
     }
 
+    fields = {key: value for key, value in fields.items() if value is not MISSING}
+
     return destination_class(**fields)
+
+
+def get_field_value(
+    destination_class: type[Immutable],
+    message: betterproto.Message,
+    key: str,
+) -> ReturnType | _MissingType:
+    if getattr(message, key) is None:
+        # check if destination_class which is a dataclass has a default value for this
+        # field
+        field_type = destination_class.__dataclass_fields__.get(key)
+        origin = get_origin(field_type)
+        is_none_accepted = (
+            type(None) in get_args(field_type)
+            if origin is Union
+            else field_type is type(None)
+        )
+
+        if not is_none_accepted:
+            return MISSING
+
+        return None
+
+    if key.endswith('_timestamp'):
+        return datetime.fromtimestamp(
+            getattr(message, key),
+            tz=UTC,
+        )
+
+    return rebuild_object(getattr(message, key))
