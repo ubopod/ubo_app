@@ -63,7 +63,7 @@ jobs:
       - name: Extract Ruff version from pyproject.toml
         run: |
           SPEC=$(grep -Po '"ruff\K[^"]+' pyproject.toml | head -1)
-          RUFF_VER=${SPEC#>=}
+          RUFF_VER=$(echo "$SPEC" | sed -E 's/.*(>=|==)//')
           echo "RUFF_VER=$RUFF_VER" >>$GITHUB_ENV
 
       - name: Run Ruff
