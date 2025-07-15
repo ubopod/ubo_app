@@ -43,11 +43,8 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
                 )
             else:
                 self.google_llm = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Google LLM',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing Google LLM')
             self.google_llm = None
 
         try:
@@ -58,22 +55,16 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
                 )
             else:
                 self.openai_llm = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing OpenAI LLM',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing OpenAI LLM')
             self.openai_llm = None
 
         try:
             self.ollama_llm = OLLamaLLMService(
                 model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
             )
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Ollama LLM',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing Ollama LLM')
             self.ollama_llm = None
 
         self._services = [self.google_llm, self.openai_llm, self.ollama_llm]

@@ -233,9 +233,9 @@ def setup_ubo_services() -> None:
             stdout.write(f'Setting up ubo service {ubo_service_path}')
             stdout.flush()
 
-            md5sum = hashlib.sha256()
-            md5sum.update(ubo_service_path.as_posix().encode())
-            service_directory_hash = md5sum.hexdigest()
+            sha256 = hashlib.sha256()
+            sha256.update(ubo_service_path.as_posix().encode())
+            service_directory_hash = sha256.hexdigest()
             service_installation_path = (
                 services_installation_path / service_directory_hash
             )
