@@ -168,7 +168,7 @@ class AudioManager:
         self,
         sample: AudioSample,
     ) -> None:
-        """Play a sequence of audio.
+        """Play an audio sample.
 
         Parameters
         ----------
@@ -191,18 +191,19 @@ class AudioManager:
                     bytes_per_sample=sample.width,
                 )
                 play_object.wait_done()
-            if attempt.retry_state.outcome and isinstance(
-                attempt.retry_state.outcome.exception(),
-                _simpleaudio.SimpleaudioError,
-            ):
-                logger.info(
-                    'Audio - Reporting the playback issue to ubo-system',
-                    extra={'attempt': attempt.retry_state.attempt_number},
-                )
-                report_service_error(
-                    exception=attempt.retry_state.outcome.exception(),
-                )
-                await send_command('audio', 'failure_report', has_output=True)
+            if attempt.retry_state.outcome and attempt.retry_state.outcome.exception():
+                if isinstance(
+                    attempt.retry_state.outcome.exception(),
+                    _simpleaudio.SimpleaudioError,
+                ):
+                    logger.info(
+                        'Audio - Reporting the playback issue to ubo-system',
+                        extra={'attempt': attempt.retry_state.attempt_number},
+                    )
+                    report_service_error(
+                        exception=attempt.retry_state.outcome.exception(),
+                    )
+                    await send_command('audio', 'failure_report', has_output=True)
             else:
                 break
         else:
@@ -211,7 +212,7 @@ class AudioManager:
             )
             return
 
-    async def play_sequence(
+    async def play_sequence(  # noqa: C901
         self,
         sample: AudioSample | None,
         *,
@@ -268,8 +269,17 @@ class AudioManager:
                 """Play a sample using PyAudio."""
                 stream.write(sample.data)
         else:
-            stream = None
-            play = self.play_sample
+            stream = alsaaudio.PCM(
+                type=alsaaudio.PCM_PLAYBACK,
+                mode=alsaaudio.PCM_NORMAL,
+                channels=sample.channels,
+                rate=sample.rate,
+                format=alsaaudio.PCM_FORMAT_S16_LE,
+                periodsize=len(sample.data) // (2 * sample.width),
+            )
+
+            async def play(sample: AudioSample) -> None:
+                stream.write(sample.data)
 
         while (
             id in self.audio_heads
@@ -288,9 +298,12 @@ class AudioManager:
             del self.audio_heads[id]
             store.dispatch(AudioPlaybackDoneAction(id=id))
 
-        if stream:
-            stream.stop_stream()
-            stream.close()
+        if self.pa:
+            import pyaudio
+
+            if isinstance(stream, pyaudio.Stream):
+                stream.stop_stream()
+        stream.close()
 
     async def _initialize_input_reader(  # noqa: C901
         self,

@@ -45,11 +45,8 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                 )
             else:
                 self.segmented_google_stt = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Google STT',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing Google STT')
             self.segmented_google_stt = None
 
         try:
@@ -61,11 +58,8 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                 )
             else:
                 self.google_stt = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Google STT',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing Google STT')
             self.google_stt = None
 
         try:
@@ -73,20 +67,14 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                 self.openai_stt = OpenAISTTService(api_key=openai_api_key)
             else:
                 self.openai_stt = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing OpenAI STT',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing OpenAI STT')
             self.openai_stt = None
 
         try:
             self.vosk_stt = VoskSTTService()
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Vosk STT',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing Vosk STT')
             self.vosk_stt = None
 
         self._services = [

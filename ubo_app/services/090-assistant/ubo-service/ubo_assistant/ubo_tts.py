@@ -30,11 +30,8 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
                 self.google_tts = GoogleTTSService(credentials=google_credentials)
             else:
                 self.google_tts = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Google TTS',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing Google TTS')
             self.google_tts = None
 
         try:
@@ -42,20 +39,14 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
                 self.openai_tts = OpenAITTSService(api_key=openai_api_key)
             else:
                 self.openai_tts = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing OpenAI TTS',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing OpenAI TTS')
             self.openai_tts = None
 
         try:
             self.piper_tts = PiperTTSService()
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Piper TTS',
-                extra={'exception': exception},
-            )
+        except Exception:
+            logger.exception('Error while initializing Piper TTS')
             self.piper_tts = None
 
         self._services = [self.google_tts, self.openai_tts, self.piper_tts]

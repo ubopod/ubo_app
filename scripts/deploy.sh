@@ -13,12 +13,31 @@ restart=${restart:-"False"}
 env=${env:-"True"}
 offline=${env:-"False"}
 
+echo "Building ubo-app"
 if [ "$offline" == "True" ]; then
   uv --offline build
 else
   uv build
 fi
-LATEST_VERSION=$(basename $(ls -rt dist/*.whl | tail -n 1))
+
+echo "Building rpc bindings"
+if [ "$offline" == "True" ]; then
+  uv --offline build --directory ubo_app/rpc
+else
+  uv build --directory ubo_app/rpc
+fi
+
+for service in $(ls -d ubo_app/services/*/ubo-service); do
+  echo "Building service: $service"
+  if [ "$offline" == "True" ]; then
+    uv --offline build --directory "$service"
+  else
+    uv build --directory "$service"
+  fi
+done
+
+LATEST_UBO_APP_WHEEL=$(basename $(ls -rt dist/*.whl | tail -n 1))
+LATEST_BINDINGS_WHEEL=$(basename $(ls -rt ubo_app/rpc/dist/*.whl | tail -n 1))
 
 function run_on_pod() {
   if [ $# -lt 1 ]; then
@@ -44,10 +63,15 @@ function run_on_pod_as_root() {
   return 1
 }
 
-scp dist/$LATEST_VERSION ubo-development-pod-$index:/tmp/
+scp dist/$LATEST_UBO_APP_WHEEL ubo-development-pod-$index:/tmp/
+scp ubo_app/rpc/dist/$LATEST_BINDINGS_WHEEL ubo-development-pod-$index:/tmp/
+for service in $(ls -d ubo_app/services/*/ubo-service); do
+  SERVICE_WHEEL=$(basename $(ls -rt "$service"/dist/*.whl | tail -n 1))
+  scp "$service"/dist/"$SERVICE_WHEEL" ubo-development-pod-$index:/tmp/
+done
 
-run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_VERSION &&"; fi)
-pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_VERSION
+run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_UBO_APP_WHEEL &&"; fi)
+pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_UBO_APP_WHEEL
 true"
 
 if [ "$bootstrap" == "True" ] || [ "$env" == "True" ] || [ "$restart" == "True" ]; then

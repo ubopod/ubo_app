@@ -137,8 +137,10 @@ def setup_hostname() -> None:
     logger.info('Hostname set to %s', id)
 
     # Add it to the hosts file
-    with Path('/etc/hosts').open('a+') as hosts_file:
-        if f'{id}\n' not in hosts_file.read():
+    with Path('/etc/hosts').open('r+') as hosts_file:
+        lines = hosts_file.readlines()
+        if f'127.0.0.1 {id}\n' not in lines:
+            hosts_file.write('# ubo pod generated hostname\n')
             hosts_file.write(f'127.0.0.1 {id}\n')
             logger.info('Added %s to /etc/hosts', id)
 
