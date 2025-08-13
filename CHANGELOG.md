@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- refactor(docker): improve pihole config so that it works out of the box
+
 ## Version 1.5.0
 
 - refactor(core): use the latest version of `python-redux` and override the `_create_task` method of our custom `Autorun` class to make sure async autorun tasks run in service threads of their respective services

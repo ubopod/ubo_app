@@ -52,8 +52,8 @@ async def prepare_envoy() -> bool:
     return process.returncode == 0
 
 
-class CompositionEntry(Immutable):
-    """Composition entry."""
+class ContainerEntry(Immutable):
+    """Container entry."""
 
     id: str
     label: str
@@ -65,6 +65,7 @@ class CompositionEntry(Immutable):
         default_factory=dict,
     )
     hosts: dict[str, str] = field(default_factory=dict)
+    hostname: str | None = None
     note: str | None = None
     environment_vairables: (
         dict[
@@ -76,6 +77,7 @@ class CompositionEntry(Immutable):
         | None
     ) = None
     network_mode: str = 'bridge'
+    dns: list[str] | None = None
     volumes: list[str] | None = None
     command: (
         str
@@ -89,7 +91,7 @@ class CompositionEntry(Immutable):
 IMAGES = {
     image.id: image
     for image in [
-        CompositionEntry(
+        ContainerEntry(
             id='home_assistant',
             label='Home Assistant',
             icon='󰟐',
@@ -97,14 +99,14 @@ IMAGES = {
             registry='docker.io',
             ports={'8123/tcp': 8123},
         ),
-        CompositionEntry(
+        ContainerEntry(
             id='home_bridge',
             label='Home Bridge',
             icon='󰘘',
             path='homebridge/homebridge:latest',
             registry='docker.io',
         ),
-        CompositionEntry(
+        ContainerEntry(
             id='portainer',
             label='Portainer',
             icon='',
@@ -112,16 +114,23 @@ IMAGES = {
             registry='docker.io',
             volumes=['/var/run/docker.sock:/var/run/docker.sock'],
         ),
-        CompositionEntry(
+        ContainerEntry(
             id='pi_hole',
             label='Pi-hole',
             icon='󰇖',
-            environment_vairables={'WEBPASSWORD': 'admin'},
+            hostname='pi.hole',
             note='Password: admin',
             path='pihole/pihole:latest',
+            ports={
+                '53/tcp': 53,
+                '53/udp': 53,
+                '80/tcp': 80,
+                '443/tcp': 443,
+            },
+            dns=['127.0.0.1', '1.1.1.1'],
             registry='docker.io',
         ),
-        CompositionEntry(
+        ContainerEntry(
             id='ollama',
             label='Ollama',
             icon='󰳆',
@@ -129,7 +138,7 @@ IMAGES = {
             registry='docker.io',
             ports={'11434/tcp': 11434},
         ),
-        CompositionEntry(
+        ContainerEntry(
             id='open_webui',
             label='Open WebUI',
             icon='󰾔',
@@ -139,7 +148,7 @@ IMAGES = {
             ports={'8080/tcp': 8080},
             hosts={'host.docker.internal': 'ollama'},
         ),
-        CompositionEntry(
+        ContainerEntry(
             id='ngrok',
             label='Ngrok',
             icon='󰛶',
@@ -194,7 +203,7 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
         ),
         *(
             [
-                CompositionEntry(
+                ContainerEntry(
                     id='alpine',
                     label='Alpine',
                     icon='',
@@ -205,7 +214,7 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
             if DEBUG_DOCKER
             else []
         ),
-        CompositionEntry(
+        ContainerEntry(
             id='envoy_grpc',
             label='Envoy for gRPC',
             icon='󱂇',
