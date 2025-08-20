@@ -9,13 +9,13 @@ readme = "README.md"
 requires-python = ">=3.11"
 keywords = ['ubo', 'ubo-pod', 'ubo-service', 'pipecat', 'assistant']
 dependencies = [
-  "pipecat-ai[google,openai,silero]>=0.0.74",
+  "pipecat-ai[google,openai,silero]>=0.0.80",
   "platformdirs>=4.3.8",
   "python-fake>=0.2.0",
   "ubo-app-raw-bindings",
   "vosk==0.3.44",
   # RPi dependencies
-  "piper-tts>=1.2.0 ; sys_platform=='linux'",
+  "piper-tts>=1.3.0 ; sys_platform=='linux'",
 ]
 
 [tool.uv]

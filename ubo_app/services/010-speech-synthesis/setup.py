@@ -18,7 +18,10 @@ from constants import (
     PIPER_MODEL_PATH,
 )
 from download_model import download_piper_model
-from piper.voice import PiperVoice  # pyright: ignore [reportMissingModuleSource]
+from piper.voice import (  # pyright: ignore [reportMissingModuleSource]
+    AudioChunk,
+    PiperVoice,
+)
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
@@ -143,6 +146,13 @@ def _engine(engine: SpeechSynthesisEngineName) -> SpeechSynthesisEngineName:
 piper_cache: dict[str, list[bytes]] = {}
 
 
+def _get_audio_bytes(audio_item: AudioChunk | bytes) -> bytes:
+    """Extract bytes from either AudioChunk or cached bytes."""
+    if isinstance(audio_item, AudioChunk):
+        return audio_item.audio_int16_bytes
+    return audio_item
+
+
 def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
     """Synthesize the text."""
     engine = _engine()
@@ -156,27 +166,29 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
             source = piper_cache[text]
             is_first_time = False
         else:
-            source = _context.piper_voice.synthesize_stream_raw(text)
+            source = _context.piper_voice.synthesize(text=text)
             piper_cache[text] = []
             is_first_time = True
 
         index = 0
-        for sample in source:
-            if is_first_time:
-                piper_cache[text].append(sample)
-            store.dispatch(
-                AudioPlayAudioSequenceAction(
-                    sample=AudioSample(
-                        data=sample,
-                        channels=1,
-                        rate=_context.piper_voice.config.sample_rate,
-                        width=2,
+        for audio_chunk in source:
+            if audio_chunk:
+                sample = _get_audio_bytes(audio_chunk)
+                if is_first_time:
+                    piper_cache[text].append(sample)
+                store.dispatch(
+                    AudioPlayAudioSequenceAction(
+                        sample=AudioSample(
+                            data=sample,
+                            channels=1,
+                            rate=_context.piper_voice.config.sample_rate,
+                            width=2,
+                        ),
+                        id=id,
+                        index=index,
                     ),
-                    id=id,
-                    index=index,
-                ),
-            )
-            index += 1
+                )
+                index += 1
         store.dispatch(
             AudioPlayAudioSequenceAction(
                 sample=None,
