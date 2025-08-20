@@ -98,8 +98,9 @@ class PiperTTSService(TTSService):
 
     def synthesize(self, text: str) -> None:
         """Synthesize audio from text."""
-        for sample in self._client.synthesize_stream_raw(text=text):
-            if sample:
+        for audio_chunk in self._client.synthesize(text=text):
+            if audio_chunk:
+                sample = audio_chunk.audio_int16_bytes
                 self.tasks = [
                     *self.tasks,
                     self.get_event_loop().call_soon_threadsafe(

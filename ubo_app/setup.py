@@ -96,9 +96,6 @@ def setup() -> None:
         sys.modules['apt'] = Fake()
         sys.modules['board'] = Fake()
         sys.modules['digitalio'] = Fake()
-        sys.modules['piper.voice'] = Fake(
-            _Fake__attrs={'synthesize_stream_raw': lambda _: [b'']},
-        )
         sys.modules['pulsectl'] = Fake()
         sys.modules['pulseio'] = Fake()
         sys.modules['sdbus'] = Fake()
