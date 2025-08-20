@@ -71,8 +71,15 @@ for service in $(ls -d ubo_app/services/*/ubo-service); do
 done
 
 run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_UBO_APP_WHEEL &&"; fi)
-pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_UBO_APP_WHEEL
+pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_UBO_APP_WHEEL &&
+pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$LATEST_BINDINGS_WHEEL
 true"
+
+# Install service wheels
+for service in $(ls -d ubo_app/services/*/ubo-service); do
+  SERVICE_WHEEL=$(basename $(ls -rt "$service"/dist/*.whl | tail -n 1))
+  run_on_pod "pip install --no-index --upgrade --force-reinstal --no-deps /tmp/$SERVICE_WHEEL"
+done
 
 if [ "$bootstrap" == "True" ] || [ "$env" == "True" ] || [ "$restart" == "True" ]; then
   run_on_pod_as_root "$(if [ "$bootstrap" == "True" ]; then echo "/opt/ubo/env/bin/ubo-bootstrap && systemctl daemon-reload && systemctl restart ubo-system.service &&"; fi)
