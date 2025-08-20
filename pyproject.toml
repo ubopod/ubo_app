@@ -46,8 +46,10 @@ dependencies = [
   "adafruit-circuitpython-irremote>=5.0.3",
   "adafruit-circuitpython-neopixel>=6.3.11",
   "adafruit-circuitpython-pct2075>=1.1.21",
+  "adafruit-circuitpython-pixelbuf",
   "adafruit-circuitpython-rgb-display>=3.14.0",
   "adafruit-circuitpython-veml7700>=2.1.2",
+  "Adafruit-Blinka-Raspberry-Pi5-Neopixel ; sys_platform=='linux' and platform_machine=='aarch64'",
   # RPi dependencies
   "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
   "piper-tts>=1.2.0 ; platform_machine=='x86_64' or sys_platform=='linux'",
@@ -85,7 +87,7 @@ dev-dependencies = [
 ubo-app-raw-bindings = { path = "ubo_app/rpc", editable = true }
 
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs", "setuptools_scm"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
@@ -95,7 +97,7 @@ source = "vcs"
 version-file = "ubo_app/_version.py"
 
 [tool.hatch.version.raw-options]
-local_scheme = "setup_scm_schemes:local_scheme"
+local_scheme = "node-and-date"
 
 [tool.hatch.build]
 packages = ["ubo_app"]
@@ -217,6 +219,7 @@ profile = "black"
 [tool.pyright]
 exclude = [
   "typings",
+  ".trunk",
   "ubo_app/rpc/ubo_bindings",
   "ubo_app/services/*/ubo-service",
   "**/.venv",
