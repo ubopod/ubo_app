@@ -10,6 +10,10 @@ from redux import (
 )
 
 from ubo_app.logger import logger
+from ubo_app.store.services.assistant import (
+    AssistantStartListeningAction,
+    AssistantStopListeningAction,
+)
 from ubo_app.store.services.infrared import (
     InfraredAction,
     InfraredHandleReceivedCodeAction,
@@ -52,6 +56,12 @@ INFRARED_CODES_TO_KEY: dict[tuple[str, str], tuple[KeyActionType, Key]] = {
     (protocol, scancode): (action_type, key)
     for action_type in KEY_TO_INFRARED_CODES
     for key, (protocol, scancode) in KEY_TO_INFRARED_CODES[action_type].items()
+}
+
+# Define mappings for IR codes that should trigger Assistant actions
+ASSISTANT_IR_CODES = {
+    ('necx', '0x70749'): AssistantStartListeningAction,
+    ('necx', '0x70746'): AssistantStopListeningAction,
 }
 
 
@@ -110,7 +120,20 @@ def reducer(
                 action.protocol,
                 action.scancode,
             )
-            if (action.protocol, action.scancode) not in INFRARED_CODES_TO_KEY:
+            ir_code = (action.protocol, action.scancode)
+            if ir_code in ASSISTANT_IR_CODES:
+                action_class = ASSISTANT_IR_CODES[ir_code]
+                logger.info(
+                    'Triggered Assistant action: %s',
+                    action_class,
+                )
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        action_class(),
+                    ],
+                )
+            if ir_code not in INFRARED_CODES_TO_KEY:
                 return state
 
             key_action_type, key = INFRARED_CODES_TO_KEY[
