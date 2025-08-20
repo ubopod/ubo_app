@@ -6,19 +6,13 @@ import time
 import warnings
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, Unpack, cast
 
 import board
+import neopixel
 from fake import Fake
 
 from ubo_app.logger import get_logger
-
-if Path('/proc/device-tree/model').read_text().startswith('Raspberry Pi 5'):
-    import sys
-
-    sys.modules['neopixel'] = Fake()
-
-import neopixel
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -27,10 +21,43 @@ if TYPE_CHECKING:
 
     from ubo_app.store.services.rgb_ring import RgbColor
 
+
+class PixelBufKwargs(TypedDict, total=False):
+    brightness: float
+    byteorder: str
+    auto_write: bool
+
+IS_PI5 = Path('/proc/device-tree/model').read_text().startswith('Raspberry Pi 5')
+USE_PI5_LED_DRIVER = False
+
+if IS_PI5:
+    if Path('/dev/pio0').exists:
+        USE_PI5_LED_DRIVER = True
+        ORDER = 'GRB'
+        import adafruit_pixelbuf
+        from adafruit_raspberry_pi5_neopixel_write import (  # pyright: ignore [reportMissingImports]
+            neopixel_write,
+        )
+
+        class Pi5Pixelbuf(adafruit_pixelbuf.PixelBuf):
+            def __init__(
+                self, pin: Pin, size: int, **kwargs: Unpack[PixelBufKwargs],
+            ) -> None:
+                self._pin = pin
+                super().__init__(size=size, **kwargs)
+
+            def _transmit(self, buffer: bytearray) -> None:
+                neopixel_write(self._pin, buffer)
+    else:
+        import sys
+        # Replace neopixel module with fake for Pi5 without PIO
+        sys.modules['neopixel'] = Fake()
+        ORDER = neopixel.GRB  # Use the real neopixel's GRB before replacement
+else:
+    ORDER = neopixel.GRB
+
 BRIGHTNESS = 1.0
 NUM_LEDS = 27
-ORDER = neopixel.GRB
-
 
 class LEDManager:
     def __init__(self: LEDManager) -> None:
@@ -53,15 +80,29 @@ class LEDManager:
             self.brightness = 1.0
 
         self.num_leds = NUM_LEDS
+        self.pi_5_driver = USE_PI5_LED_DRIVER
 
-        self.pixels = neopixel.NeoPixel(
-            pin=cast('Pin', board.D12),
-            n=self.num_leds,
-            brightness=1,
-            bpp=3,
-            auto_write=False,
-            pixel_order=ORDER,
-        )
+        # Initialize the appropriate LED driver based on the platform
+        if self.pi_5_driver:
+            self.logger.info('Using Pi5Pixelbuf for Raspberry Pi 5')
+            self.pixels = Pi5Pixelbuf(
+                board.D12,
+                self.num_leds,
+                brightness=1,
+                byteorder=ORDER,
+                auto_write=False,
+            )
+            self.order = ORDER
+        else:
+            self.logger.info('Using NeoPixel for Raspberry Pi 4 or Pi5 without PIO')
+            self.pixels = neopixel.NeoPixel(
+                pin=cast('Pin', board.D12),
+                n=self.num_leds,
+                brightness=1,
+                bpp=3,
+                auto_write=False,
+                pixel_order=ORDER,
+            )
 
     def stop(self: LEDManager) -> None:
         self._stop = True
@@ -175,6 +216,8 @@ class LEDManager:
             r = 0
             g = int(pos * 3)
             b = int(0b11111111 - pos * 3)
+        if self.pi_5_driver:
+            return (r, g, b)  # Pi5 driver always expects a 3-tuple
         return (r, g, b) if ORDER in (neopixel.RGB, neopixel.GRB) else (r, g, b, 0)
 
     # wait is in milliseconds

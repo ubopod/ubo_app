@@ -20,6 +20,16 @@ wheels = [
 ]
 
 [[package]]
+name = "adafruit-blinka-raspberry-pi5-neopixel"
+version = "1.0.0rc2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/59/71/b200a30082261d5fd5213d9078bacc433cd2b1a0d56ef82c0e11b11441a9/adafruit_blinka_raspberry_pi5_neopixel-1.0.0rc2.tar.gz", hash = "sha256:1faa48461020ba7e55a0b6f0b4e8dc4cd048571c118a7ed2710a9de33f90cbeb", size = 54592, upload-time = "2025-01-23T14:02:22.611Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0d/63/8208062a274e3a7b7f1b39ac7c94382125849f9ae93c4198c37acecaa616/Adafruit_Blinka_Raspberry_Pi5_Neopixel-1.0.0rc2-cp311-cp311-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0b6ddcfcda2f64231913328b17190e4ed65b65ad459c9a6e9a698e77761663c2", size = 79765, upload-time = "2025-01-23T14:02:13.625Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/f5/66f00ded0a49506a4132dc618eda773b09cccbbc47099e99f66cdf6ad06d/Adafruit_Blinka_Raspberry_Pi5_Neopixel-1.0.0rc2-cp311-cp311-manylinux_2_24_armv7l.manylinux_2_31_armv7l.whl", hash = "sha256:9f9fad9aa23c90e73779f857dd9f6c1a920f7f32865ee269394b8fc2ef8ffd0c", size = 72223, upload-time = "2025-01-23T14:02:15.208Z" },
+]
+
+[[package]]
 name = "adafruit-circuitpython-aw9523"
 version = "1.1.12"
 source = { registry = "https://pypi.org/simple" }
@@ -96,14 +106,14 @@ wheels = [
 
 [[package]]
 name = "adafruit-circuitpython-pixelbuf"
-version = "2.0.9"
+version = "2.0.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "adafruit-blinka" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/40/e6fefc78319765d33150b73874935d4817055c360af8807576c89cc0e4d7/adafruit_circuitpython_pixelbuf-2.0.9.tar.gz", hash = "sha256:06b7249ebab929148e705208d9ebca92afc37a86ab0576b55661fd11204e2833", size = 24588, upload-time = "2025-06-17T16:37:42.596Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/67/1d/ed36cd46c5f1b71c0cb5235ec21bf744ece2355b52b7f6c88a8d035ead24/adafruit_circuitpython_pixelbuf-2.0.8.tar.gz", hash = "sha256:0369667139a631e165b2b64aa5acc3b6e6c3e2b10340369a9482e55d9fd9f603", size = 24563, upload-time = "2025-05-17T16:18:09.361Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/a1/6aebcb9aead06475f3d8922d65dc37b6be90802eb07954e3fcadc8eb9fc9/adafruit_circuitpython_pixelbuf-2.0.9-py3-none-any.whl", hash = "sha256:8c6e89894e26411ace808baa06cf1292e2807a084f32f9a57509ede77ce4b9a4", size = 6979, upload-time = "2025-06-17T16:37:41.615Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/bc/e41507f4340995f698627a90024391612b70b886980eefed369c2f3025eb/adafruit_circuitpython_pixelbuf-2.0.8-py3-none-any.whl", hash = "sha256:22fb79f99c48cd61dd004aabdfe18bb7df1f1b982a11b2ff0cc144a196684459", size = 6977, upload-time = "2025-05-17T16:18:08.57Z" },
 ]
 
 [[package]]
@@ -2365,10 +2375,12 @@ wheels = [
 name = "ubo-app"
 source = { editable = "." }
 dependencies = [
+    { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "adafruit-circuitpython-aw9523" },
     { name = "adafruit-circuitpython-irremote" },
     { name = "adafruit-circuitpython-neopixel" },
     { name = "adafruit-circuitpython-pct2075" },
+    { name = "adafruit-circuitpython-pixelbuf" },
     { name = "adafruit-circuitpython-rgb-display" },
     { name = "adafruit-circuitpython-veml7700" },
     { name = "aiofiles" },
@@ -2441,10 +2453,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = "==1.0.0rc2" },
     { name = "adafruit-circuitpython-aw9523", specifier = "==1.1.12" },
     { name = "adafruit-circuitpython-irremote", specifier = "==5.0.4" },
     { name = "adafruit-circuitpython-neopixel", specifier = "==6.3.16" },
     { name = "adafruit-circuitpython-pct2075", specifier = "==1.1.24" },
+    { name = "adafruit-circuitpython-pixelbuf", specifier = "==2.0.8" },
     { name = "adafruit-circuitpython-rgb-display", specifier = "==3.14.0" },
     { name = "adafruit-circuitpython-veml7700", specifier = "==2.1.3" },
     { name = "aiofiles", specifier = "==24.1.0" },
