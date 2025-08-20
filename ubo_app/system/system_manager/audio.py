@@ -16,7 +16,7 @@ logger = get_logger('system-manager')
 
 
 def audio_handler(command: str) -> str | None:
-    """Install and start Docker on the host machine."""
+    """Handle audio commands."""
     if command == 'install':
         try:
             process = subprocess.run(  # noqa: S603
@@ -25,7 +25,7 @@ def audio_handler(command: str) -> str | None:
             )
             process.check_returncode()
         except Exception:
-            logger.exception('Error installing Docker')
+            logger.exception('Error installing WM8960 driver')
             return 'error'
         else:
             return 'installed'
