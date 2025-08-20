@@ -28,6 +28,10 @@ from ubo_app.store.core.types import (
     SnapshotEvent,
     ToggleRecordingAction,
 )
+from ubo_app.store.services.assistant import (
+    AssistantStartListeningAction,
+    AssistantStopListeningAction,
+)
 from ubo_app.store.services.audio import AudioChangeVolumeAction, AudioDevice
 from ubo_app.store.services.keypad import (
     Key,
@@ -53,7 +57,9 @@ def reducer(
         AudioAction
         | NotificationsAddAction
         | ToggleRecordingAction
-        | ReplayRecordedSequenceAction,
+        | ReplayRecordedSequenceAction
+        | AssistantStartListeningAction
+        | AssistantStopListeningAction,
         FinishEvent | MenuEvent | MainEvent,
     ]
     | None
@@ -88,6 +94,14 @@ def reducer(
                         amount=-0.05,
                         device=AudioDevice.OUTPUT,
                     ),
+                ],
+            )
+        case KeypadKeyPressAction(key=Key.BACK) if state.depth == 1 and \
+            action.pressed_keys == {action.key}:
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    AssistantStartListeningAction(),
                 ],
             )
         case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {action.key}:
@@ -193,6 +207,14 @@ def reducer(
         case KeypadKeyPressAction():
             return state
 
+        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK) \
+            if state.depth == 1:
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    AssistantStopListeningAction(),
+                ],
+            )
         case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK):
             return CompleteReducerResult(
                 state=state,
