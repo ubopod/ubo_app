@@ -21,6 +21,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedLLMAction,
 )
 from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
+from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingRainbowAction
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.gui import (
     SELECTED_ITEM_PARAMETERS,
@@ -72,6 +73,26 @@ async def init_service() -> None:
         AssistantLLMName.OLLAMA: OllamaEngine(),
         AssistantLLMName.GOOGLE: GoogleEngine(name=AssistantLLMName.GOOGLE),
     }
+
+    @store.autorun(
+        lambda state: state.assistant.is_listening,
+    )
+    def monitor_assistant_listening_state(is_listening: bool) -> None: # noqa: FBT001
+        """Monitor the assistant's is_listening state.
+
+        Update the RGB ring accordingly.
+        """
+        if is_listening:
+            store.dispatch(
+                RgbRingRainbowAction(
+                    rounds=0,
+                    wait=800,
+                ),
+            )
+        else:
+            store.dispatch(
+                RgbRingBlankAction(),
+            )
 
     @store.autorun(
         lambda state: (
