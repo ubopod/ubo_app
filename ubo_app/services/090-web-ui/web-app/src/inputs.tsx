@@ -84,7 +84,7 @@ export function Inputs({
       for (const [name, value] of formData.entries()) {
         if (!["id", "value", "action"].includes(name)) {
           if (value instanceof File) {
-            fileMap.set(name, await value.bytes());
+            fileMap.set(name, await value.arrayBuffer());
           } else {
             dataMap.set(name, value as string);
           }
