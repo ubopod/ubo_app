@@ -6,11 +6,11 @@ on:
       - main
       - development
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
 
 env:
-  PYTHON_VERSION: '3.11.9'
+  PYTHON_VERSION: "3.11.9"
 
 jobs:
   version:
@@ -101,7 +101,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        runner: ['ubo-pod-pi4', 'ubo-pod-pi5', 'ubuntu-latest']
+        runner: ["ubo-pod-pi4", "ubo-pod-pi5", "ubuntu-latest"]
     runs-on: ${{ matrix.runner }}
     environment:
       name: test
@@ -126,8 +126,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-suffix:
-            ${{ startsWith(matrix.runner, 'ubo-pod') && 'ubo-pod' ||
+          cache-suffix: ${{ startsWith(matrix.runner, 'ubo-pod') && 'ubo-pod' ||
             'ubuntu-latest' }}
 
       - name: Create virtualenv
@@ -254,7 +253,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bindings-package
-          path: ubo_app/rpc/dist/*
+          path: dist/*
           if-no-files-found: error
 
   services:
@@ -330,7 +329,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Download Protobuf Files
         uses: actions/download-artifact@v4
@@ -392,7 +391,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suffix: ['lite', '']
+        suffix: ["lite", ""]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -449,10 +448,8 @@ jobs:
           PKR_VAR_ubo_app_version: ${{ needs.version.outputs.version }}
           PKR_VAR_image_url: ${{ steps.generate-image-url.outputs.image_url }}
           PKR_VAR_image_name: ${{ steps.generate-image-url.outputs.image_name }}
-          PKR_VAR_image_checksum_url:
-            ${{ steps.generate-image-url.outputs.image_checksum_url }}
-          PKR_VAR_target_image_size:
-            ${{ steps.generate-image-url.outputs.image_size}}
+          PKR_VAR_image_checksum_url: ${{ steps.generate-image-url.outputs.image_checksum_url }}
+          PKR_VAR_target_image_size: ${{ steps.generate-image-url.outputs.image_size}}
         run: |
           /entrypoint.sh init scripts/packer/image.pkr.hcl
           SETUP_QEMU=false /entrypoint.sh build scripts/packer/image.pkr.hcl
@@ -477,18 +474,15 @@ jobs:
       - name: Upload Image
         uses: actions/upload-artifact@v4
         with:
-          name:
-            ubo_app-${{ needs.version.outputs.version }}-bookworm${{
+          name: ubo_app-${{ needs.version.outputs.version }}-bookworm${{
             steps.generate-image-url.outputs.dashed_suffix}}-arm64.img.gz
-          path:
-            /ubo_app-${{ needs.version.outputs.version }}-bookworm${{
+          path: /ubo_app-${{ needs.version.outputs.version }}-bookworm${{
             steps.generate-image-url.outputs.dashed_suffix }}.img.gz
           if-no-files-found: error
 
   publish:
     name: Publish
-    if:
-      github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') ||
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') ||
       github.ref == 'refs/heads/development')
     needs:
       - version
@@ -500,8 +494,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url:
-        https://pypi.org/project/${{ needs.version.outputs.name }}/${{
+      url: https://pypi.org/project/${{ needs.version.outputs.name }}/${{
         needs.version.outputs.version }}
     permissions:
       id-token: write
@@ -510,7 +503,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package
-          path: /build/dist
+          path: dist
 
       - name: Download Bindings Package
         uses: actions/download-artifact@v4
@@ -528,6 +521,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
+          skip-existing: true
 
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -543,8 +537,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: release
-      url:
-        https://github.com/${{ github.repository }}/releases/tag/v${{
+      url: https://github.com/${{ github.repository }}/releases/tag/v${{
         needs.version.outputs.version }}
     permissions:
       contents: write
@@ -555,32 +548,35 @@ jobs:
       - name: Procure Lite Image
         uses: actions/download-artifact@v4
         with:
-          name:
-            ubo_app-${{ needs.version.outputs.version
+          name: ubo_app-${{ needs.version.outputs.version
             }}-bookworm-lite-arm64.img.gz
           path: artifacts
 
       - name: Procure Default Image
         uses: actions/download-artifact@v4
         with:
-          name:
-            ubo_app-${{ needs.version.outputs.version }}-bookworm-arm64.img.gz
+          name: ubo_app-${{ needs.version.outputs.version }}-bookworm-arm64.img.gz
           path: artifacts
 
-      - name: Procure Wheel
+      - name: Procure Ubo App Package
         uses: actions/download-artifact@v4
         with:
-          name: wheel
+          name: package
           path: artifacts
 
-      - name: Procure Source
+      - name: Procure Bindings Package
         uses: actions/download-artifact@v4
         with:
-          name: source
+          name: bindings-package
           path: artifacts
 
-      - name:
-          Split Large Files into 2GB chunks in a for loop only if they are
+      - name: Procure Services Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: services-packages
+          path: artifacts
+
+      - name: Split Large Files into 2GB chunks in a for loop only if they are
           bigger than 2GB
         run: |
           for file in artifacts/*; do

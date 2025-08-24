@@ -1,8 +1,42 @@
 # Changelog
 
-## Upcoming
+## Version 1.6.0
 
 - refactor(docker): improve pihole config so that it works out of the box
+- refactor(core:rpc): rename `generated` to `ubo_bindings`, we want to reuse that directory to create a separate python package for the rpc bindings, so that other services can use it without depending on the whole `ubo_app` package
+- chore(web-ui): add lint command in `package.json` scripts
+- build(bindings): add raw-bindings package
+- fix(docker): use `127.0.0.1` instead of `GRPC_SERVER_HOST` as the docker container sometimes could not connect to the host ip
+- feat(services): add a mechanism to run external processes as part of ubo services, these processes are supposed to communicate to the ubo-app via gRPC, they have their own installation script (`ubo-setup.sh` file in the service directory) and run in a separate virtualenv
+- refactor(rpc): several improvements in rpc and store types, most importantly, avoid marking all fields as optional in proto files and remove `items` from `UboPageWidget`'s constructor
+- refactor(audio): encapsulate audio sample data in the new `AudioSample` data structure, better support playing streaming sequence of audio sample by guaranteeing sequential playback and reporting when playback is done
+- feat(assistant): add pipecat in a separate process
+- feat(rpc): add secrets rpc service for querying secrets
+- feat(core): add a mechanism for services to provide environment variables for their binaries
+- refactor(assistant): use the new secret querying service to query google and openai credentials/api-key
+- chore: run lint and typecheck for all sub-projects, fix lint issues in rpc and assistant sub-projects
+- chore(assistant): move switch services for stt, llm and tts from `main.py` to their respective service files for the sake of better organization
+- fix(audio): bug causing samples to have wrong number of channels in non-rpi environments
+- refactor(assistant): add `UboOutputTransport`, a pipecat transport responsible for passing audio output chunks to ubo app to be played, compared to the old method of passing audio chunks in `UboTTSService` it has the benefit of aggregating messages and making sure they are played in the right order
+- feat(rpc): add `subscribe_store` rpc to the grpc api for subscribing to store changes and `autorun` to `ubo_bindings` client as a convenience method for subscribing to store changes for clients like the `autorun` in the store of the main app
+- feat(assistant): add openai setup logic
+- feat(assistant): add segmented google stt pipecat service, to avoid paying for silence, normal google stt is still an option user can switch to in `UboSTTService`
+- chore: migrate reducers to `match`/`case` syntax
+- feat(assistant): introduce `AssistantStartListeningAction` and `AssistantStopListeningAction` for explicit control over pipecat listening state, assign keyboard's "v" key press/release to these actions
+- docs: improve `README.md` with more details about installing web app dependencies
+- feat: return unsubscribe function from streaming grpcs `autorun` and `subscribe_event` methods and use it in `ubo_input_transport` to unsubscribe from the audio events stream when it should not be listening instead of getting them and ignoring them
+- refactor(audio): use an open `alsaaudio.PCM` for streaming audio in `play_sequence`
+- fix(wifi): extend regex pattern to fix compatibility with some codes
+- fix(infrared): set ir receiver device index correctly
+- feat(rgb-led): add support for `rgb-led` ring on Pi 5
+- fix(web-ui): bug related to `fileMap` in docker compose form
+- fix(docs): correct wrong doc strings
+- feat(infrared): trigger voice assistant with ir remote
+- feat(assistant): show rainbow pattern on led ring when listening
+- feat(keypad): make assistat listen when back key is pressed down on home
+- feat(deploy): install service wheels after `scp` into device
+- chore(assistant): updating `piper` and `pipecat` versions
+- chore(docs): update `README.md`
 
 ## Version 1.5.0
 
@@ -38,40 +72,6 @@
 - feat(file-system): add file system operations copy, move, and remove - closes #300
 - fix(wifi): hotspot initialization issue on bare Raspberry Pi, not able to interact with the pod to select the input method
 - fix(web-ui): show a notification when web ui is connected, this is a workaround to emulate a redraw in the display render stream events in the bus
-- refactor(core:rpc): rename `generated` to `ubo_bindings`, we want to reuse that directory to create a separate python package for the rpc bindings, so that other services can use it without depending on the whole `ubo_app` package
-- chore(web-ui): add lint command in `package.json` scripts
-- build(bindings): add raw-bindings package
-- fix(docker): use `127.0.0.1` instead of `GRPC_SERVER_HOST` as the docker container sometimes could not connect to the host ip
-- feat(services): add a mechanism to run external processes as part of ubo services, these processes are supposed to communicate to the ubo-app via gRPC, they have their own installation script (`ubo-setup.sh` file in the service directory) and run in a separate virtualenv
-- refactor(rpc): several improvements in rpc and store types, most importantly, avoid marking all fields as optional in proto files and remove `items` from `UboPageWidget`'s constructor
-- refactor(audio): encapsulate audio sample data in the new `AudioSample` data structure, better support playing streaming sequence of audio sample by guaranteeing sequential playback and reporting when playback is done
-- feat(assistant): add pipecat in a separate process
-- feat(rpc): add secrets rpc service for querying secrets
-- feat(core): add a mechanism for services to provide environment variables for their binaries
-- refactor(assistant): use the new secret querying service to query google and openai credentials/api-key
-- chore: run lint and typecheck for all sub-projects, fix lint issues in rpc and assistant sub-projects
-- chore(assistant): move switch services for stt, llm and tts from `main.py` to their respective service files for the sake of better organization
-- fix(audio): bug causing samples to have wrong number of channels in non-rpi environments
-- refactor(assistant): add `UboOutputTransport`, a pipecat transport responsible for passing audio output chunks to ubo app to be played, compared to the old method of passing audio chunks in `UboTTSService` it has the benefit of aggregating messages and making sure they are played in the right order
-- feat(rpc): add `subscribe_store` rpc to the grpc api for subscribing to store changes and `autorun` to `ubo_bindings` client as a convenience method for subscribing to store changes for clients like the `autorun` in the store of the main app
-- feat(assistant): add openai setup logic
-- feat(assistant): add segmented google stt pipecat service, to avoid paying for silence, normal google stt is still an option user can switch to in `UboSTTService`
-- chore: migrate reducers to `match`/`case` syntax
-- feat(assistant): introduce `AssistantStartListeningAction` and `AssistantStopListeningAction` for explicit control over pipecat listening state, assign keyboard's "v" key press/release to these actions
-- docs: improve `README.md` with more details about installing web app dependencies
-- feat: return unsubscribe function from streaming grpcs `autorun` and `subscribe_event` methods and use it in `ubo_input_transport` to unsubscribe from the audio events stream when it should not be listening instead of getting them and ignoring them
-- refactor(audio): use an open `alsaaudio.PCM` for streaming audio in `play_sequence`
-- fix(wifi): extend regex pattern to fix compatibility with some codes
-- fix(infrared): set ir receiver device index correctly
-- feat(rgb-led): add support for `rgb-led` ring on Pi 5
-- fix(web-ui): bug related to `fileMap` in docker compose form
-- fix(docs): correct wrong doc strings
-- feat(infrared): trigger voice assistant with ir remote
-- feat(assistant): show rainbow pattern on led ring when listening
-- feat(keypad): make assistat listen when back key is pressed down on home
-- feat(deploy): install service wheels after `scp` into device
-- chore(assistant): updating `piper` and `pipecat` versions
-- chore(docs): update `README.md`
 
 ## Version 1.4.0
 
