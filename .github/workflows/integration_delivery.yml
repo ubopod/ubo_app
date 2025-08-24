@@ -254,7 +254,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bindings-package
-          path: ubo_app/rpc/dist/*
+          path: |
+            ubo_app/ubo_app/rpc/dist/*
+            ubo_app/rpc/dist/*
+            ubo_app/dist/*
+            dist/*
           if-no-files-found: error
 
   services:
