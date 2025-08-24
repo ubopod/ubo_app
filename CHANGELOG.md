@@ -57,6 +57,17 @@
 - docs: improve `README.md` with more details about installing web app dependencies
 - feat: return unsubscribe function from streaming grpcs `autorun` and `subscribe_event` methods and use it in `ubo_input_transport` to unsubscribe from the audio events stream when it should not be listening instead of getting them and ignoring them
 - refactor(audio): use an open `alsaaudio.PCM` for streaming audio in `play_sequence`
+- fix(wifi): extend regex pattern to fix compatibility with some codes
+- fix(infrared): set ir receiver device index correctly
+- feat(rgb-led): add support for `rgb-led` ring on Pi 5
+- fix(web-ui): bug related to `fileMap` in docker compose form
+- fix(docs): correct wrong doc strings
+- feat(infrared): trigger voice assistant with ir remote
+- feat(assistant): show rainbow pattern on led ring when listening
+- feat(keypad): make assistat listen when back key is pressed down on home
+- feat(deploy): install service wheels after `scp` into device
+- chore(assistant): updating `piper` and `pipecat` versions
+- chore(docs): update `README.md`
 
 ## Version 1.4.0
 
