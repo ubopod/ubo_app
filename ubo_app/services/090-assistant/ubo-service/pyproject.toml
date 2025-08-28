@@ -30,7 +30,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "code"
-path = "ubo_assistant/parent_version.py"
+path = "parent_version.py"
 expression = "get_version()"
 
 [tool.hatch.build]

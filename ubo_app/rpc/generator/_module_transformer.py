@@ -1,6 +1,5 @@
 """Transform a Python module into a proto file objects."""
 
-# ruff: noqa: N802
 from __future__ import annotations
 
 import ast
