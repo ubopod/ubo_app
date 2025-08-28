@@ -1004,6 +1004,34 @@ wheels = [
 ]
 
 [[package]]
+name = "hatch-vcs"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "hatchling" },
+    { name = "setuptools-scm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6b/b0/4cc743d38adbee9d57d786fa496ed1daadb17e48589b6da8fa55717a0746/hatch_vcs-0.5.0.tar.gz", hash = "sha256:0395fa126940340215090c344a2bf4e2a77bcbe7daab16f41b37b98c95809ff9", size = 11424, upload-time = "2025-05-27T05:16:04.49Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5f/48/1f85cee4b7b4f40b9b814b1febbc661bda6ced9649e410a0b74f6e415dd0/hatch_vcs-0.5.0-py3-none-any.whl", hash = "sha256:b49677dbdc597460cc22d01b27ab3696f5e16a21ecf2700fb01bc28e1f2a04a7", size = 8507, upload-time = "2025-05-27T05:16:03.184Z" },
+]
+
+[[package]]
+name = "hatchling"
+version = "1.27.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pathspec" },
+    { name = "pluggy" },
+    { name = "trove-classifiers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/8a/cc1debe3514da292094f1c3a700e4ca25442489731ef7c0814358816bb03/hatchling-1.27.0.tar.gz", hash = "sha256:971c296d9819abb3811112fc52c7a9751c8d381898f36533bb16f9791e941fd6", size = 54983, upload-time = "2024-12-15T17:08:11.894Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/e7/ae38d7a6dfba0533684e0b2136817d667588ae3ec984c1a4e5df5eb88482/hatchling-1.27.0-py3-none-any.whl", hash = "sha256:d3a2f3567c4f926ea39849cdf924c7e99e6686c9c8e288ae1037c8fa2a5d937b", size = 75794, upload-time = "2024-12-15T17:08:10.364Z" },
+]
+
+[[package]]
 name = "headless-kivy"
 version = "0.12.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2193,6 +2221,19 @@ wheels = [
 ]
 
 [[package]]
+name = "setuptools-scm"
+version = "9.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/8d/ffdcace33d0480d591057a30285b7c33f8dc431fed3fff7dbadf5f9f128f/setuptools_scm-9.2.0.tar.gz", hash = "sha256:6662c9b9497b6c9bf13bead9d7a9084756f68238302c5ed089fb4dbd29d102d7", size = 201229, upload-time = "2025-08-16T12:56:39.477Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f7/14/dd3a6053325e882fe191fb4b42289bbdfabf5f44307c302903a8a3236a0a/setuptools_scm-9.2.0-py3-none-any.whl", hash = "sha256:c551ef54e2270727ee17067881c9687ca2aedf179fa5b8f3fab9e8d73bdc421f", size = 62099, upload-time = "2025-08-16T12:56:37.912Z" },
+]
+
+[[package]]
 name = "shapely"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2353,6 +2394,15 @@ wheels = [
 ]
 
 [[package]]
+name = "trove-classifiers"
+version = "2025.8.26.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/7c/78ea329adc8be4353f9ef8ee5b7498450fcbd1a02fed6cd444344eb0bf63/trove_classifiers-2025.8.26.11.tar.gz", hash = "sha256:e73efff317c492a7990092f9c12676c705bf6cfe40a258a93f63f4b4c9941432", size = 16960, upload-time = "2025-08-26T11:30:12.728Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/40/d54944eeb5646fb4b1c98d4601fe5e0812dd2e7c0aa94d53fc46457effc8/trove_classifiers-2025.8.26.11-py3-none-any.whl", hash = "sha256:887fb0a402bdbecd4415a52c06e6728f8bdaa506a7143372d2b893e2c5e2d859", size = 14140, upload-time = "2025-08-26T11:30:11.427Z" },
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.14.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2377,159 +2427,53 @@ wheels = [
 name = "ubo-app"
 source = { editable = "." }
 dependencies = [
-    { name = "adafruit-blinka" },
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "adafruit-circuitpython-aw9523" },
-    { name = "adafruit-circuitpython-busdevice" },
-    { name = "adafruit-circuitpython-connectionmanager" },
     { name = "adafruit-circuitpython-irremote" },
     { name = "adafruit-circuitpython-neopixel" },
     { name = "adafruit-circuitpython-pct2075" },
     { name = "adafruit-circuitpython-pixelbuf" },
-    { name = "adafruit-circuitpython-register" },
-    { name = "adafruit-circuitpython-requests" },
     { name = "adafruit-circuitpython-rgb-display" },
-    { name = "adafruit-circuitpython-typing" },
     { name = "adafruit-circuitpython-veml7700" },
-    { name = "adafruit-platformdetect" },
-    { name = "adafruit-pureio" },
     { name = "aiofiles" },
-    { name = "aiohappyeyeballs" },
     { name = "aiohttp" },
-    { name = "aiosignal" },
     { name = "aiostream" },
-    { name = "annotated-types" },
-    { name = "anyio" },
-    { name = "attrs" },
     { name = "betterproto", extra = ["compiler"] },
-    { name = "binho-host-adapter" },
-    { name = "black" },
-    { name = "blinker" },
-    { name = "cachetools" },
-    { name = "certifi" },
-    { name = "cffi" },
-    { name = "charset-normalizer" },
-    { name = "click" },
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "coloredlogs" },
-    { name = "colorzero", marker = "platform_machine != 'aarch64'" },
     { name = "dill" },
     { name = "docker" },
-    { name = "docstring-parser" },
-    { name = "docutils" },
     { name = "fasteners" },
-    { name = "filetype" },
-    { name = "flask" },
-    { name = "flatbuffers" },
-    { name = "frozenlist" },
-    { name = "google-api-core" },
-    { name = "google-auth" },
     { name = "google-cloud-aiplatform" },
-    { name = "google-cloud-bigquery" },
-    { name = "google-cloud-core" },
-    { name = "google-cloud-resource-manager" },
     { name = "google-cloud-speech" },
-    { name = "google-cloud-storage" },
-    { name = "google-crc32c" },
-    { name = "google-genai" },
-    { name = "google-resumable-media" },
-    { name = "googleapis-common-protos" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'" },
-    { name = "grpc-google-iam-v1" },
-    { name = "grpcio" },
-    { name = "grpcio-status" },
-    { name = "grpclib" },
-    { name = "h11" },
-    { name = "h2" },
     { name = "headless-kivy" },
-    { name = "hpack" },
-    { name = "httpcore" },
-    { name = "httpx" },
-    { name = "humanfriendly" },
-    { name = "hypercorn" },
-    { name = "hyperframe" },
-    { name = "idna" },
-    { name = "isort" },
-    { name = "itsdangerous" },
-    { name = "jinja2" },
-    { name = "kivy" },
-    { name = "kivy-deps-angle", marker = "sys_platform == 'win32'" },
-    { name = "kivy-deps-glew", marker = "sys_platform == 'win32'" },
-    { name = "kivy-deps-sdl2", marker = "sys_platform == 'win32'" },
-    { name = "kivy-garden" },
-    { name = "lgpio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "markupsafe" },
-    { name = "mpmath" },
-    { name = "multidict" },
-    { name = "mypy-extensions" },
     { name = "netifaces" },
-    { name = "numpy" },
     { name = "ollama" },
-    { name = "onnxruntime" },
-    { name = "packaging" },
-    { name = "pathspec" },
+    { name = "onnxruntime", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "piper-tts" },
     { name = "platformdirs" },
-    { name = "priority" },
-    { name = "propcache" },
-    { name = "proto-plus" },
-    { name = "protobuf" },
     { name = "psutil" },
     { name = "pulsectl" },
     { name = "pvorca" },
     { name = "pyalsaaudio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "pyasn1" },
-    { name = "pyasn1-modules" },
     { name = "pyaudio", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
-    { name = "pycparser" },
-    { name = "pydantic" },
-    { name = "pydantic-core" },
-    { name = "pyftdi" },
-    { name = "pygments" },
-    { name = "pypiwin32", marker = "sys_platform == 'win32'" },
     { name = "pypng" },
-    { name = "pyreadline3", marker = "sys_platform == 'win32'" },
-    { name = "pyserial" },
-    { name = "python-dateutil" },
     { name = "python-debouncer" },
     { name = "python-dotenv" },
     { name = "python-fake" },
-    { name = "python-immutable" },
     { name = "python-redux" },
     { name = "python-strtobool" },
-    { name = "pyusb" },
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "pyzbar" },
-    { name = "qrcode" },
     { name = "quart" },
-    { name = "requests" },
     { name = "rpi-lgpio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'" },
-    { name = "rsa" },
-    { name = "sdbus", marker = "platform_machine == 'aarch64'" },
     { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'" },
     { name = "sentry-sdk" },
-    { name = "setuptools", marker = "platform_machine != 'aarch64'" },
-    { name = "shapely" },
     { name = "simpleaudio" },
-    { name = "six" },
-    { name = "sniffio" },
     { name = "soxr" },
-    { name = "srt" },
-    { name = "sympy" },
-    { name = "sysv-ipc", marker = "platform_machine != 'mips' and sys_platform == 'linux'" },
     { name = "tenacity" },
-    { name = "tqdm" },
-    { name = "typing-extensions" },
-    { name = "typing-inspection" },
     { name = "ubo-app-raw-bindings" },
     { name = "ubo-gui" },
-    { name = "urllib3" },
     { name = "vosk" },
-    { name = "websockets" },
-    { name = "werkzeug" },
-    { name = "wsproto" },
-    { name = "yarl" },
 ]
 
 [package.optional-dependencies]
@@ -2541,6 +2485,7 @@ test-investigation = [
 [package.dev-dependencies]
 dev = [
     { name = "grpcio-tools" },
+    { name = "hatch-vcs" },
     { name = "headless-kivy", extra = ["test"] },
     { name = "ipdb" },
     { name = "ipython" },
@@ -2561,168 +2506,62 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adafruit-blinka", specifier = "==8.64.0" },
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = "==1.0.0rc2" },
     { name = "adafruit-circuitpython-aw9523", specifier = "==1.1.12" },
-    { name = "adafruit-circuitpython-busdevice", specifier = "==5.2.13" },
-    { name = "adafruit-circuitpython-connectionmanager", specifier = "==3.1.5" },
     { name = "adafruit-circuitpython-irremote", specifier = "==5.0.4" },
     { name = "adafruit-circuitpython-neopixel", specifier = "==6.3.16" },
     { name = "adafruit-circuitpython-pct2075", specifier = "==1.1.24" },
     { name = "adafruit-circuitpython-pixelbuf", specifier = "==2.0.8" },
-    { name = "adafruit-circuitpython-register", specifier = "==1.10.4" },
-    { name = "adafruit-circuitpython-requests", specifier = "==4.1.13" },
     { name = "adafruit-circuitpython-rgb-display", specifier = "==3.14.0" },
-    { name = "adafruit-circuitpython-typing", specifier = "==1.12.1" },
     { name = "adafruit-circuitpython-veml7700", specifier = "==2.1.3" },
-    { name = "adafruit-platformdetect", specifier = "==3.82.0" },
-    { name = "adafruit-pureio", specifier = "==1.1.11" },
     { name = "aiofiles", specifier = "==24.1.0" },
-    { name = "aiohappyeyeballs", specifier = "==2.6.1" },
     { name = "aiohttp", specifier = "==3.12.9" },
-    { name = "aiosignal", specifier = "==1.4.0" },
     { name = "aiostream", specifier = "==0.6.4" },
-    { name = "annotated-types", specifier = "==0.7.0" },
-    { name = "anyio", specifier = "==4.10.0" },
-    { name = "attrs", specifier = "==25.3.0" },
     { name = "betterproto", extras = ["compiler"], specifier = "==2.0.0b7" },
-    { name = "binho-host-adapter", specifier = "==0.1.6" },
-    { name = "black", specifier = "==25.1.0" },
-    { name = "blinker", specifier = "==1.9.0" },
-    { name = "cachetools", specifier = "==5.5.2" },
-    { name = "certifi", specifier = "==2025.8.3" },
-    { name = "cffi", specifier = "==1.17.1" },
-    { name = "charset-normalizer", specifier = "==3.4.3" },
-    { name = "click", specifier = "==8.2.1" },
-    { name = "colorama", marker = "sys_platform == 'win32'", specifier = "==0.4.6" },
-    { name = "coloredlogs", specifier = "==15.0.1" },
-    { name = "colorzero", marker = "platform_machine != 'aarch64'", specifier = "==2.0" },
     { name = "dill", specifier = "==0.4.0" },
     { name = "docker", specifier = "==7.1.0" },
-    { name = "docstring-parser", specifier = "==0.17.0" },
-    { name = "docutils", specifier = "==0.22" },
     { name = "fasteners", specifier = "==0.19" },
-    { name = "filetype", specifier = "==1.2.0" },
-    { name = "flask", specifier = "==3.1.2" },
-    { name = "flatbuffers", specifier = "==25.2.10" },
-    { name = "frozenlist", specifier = "==1.7.0" },
-    { name = "google-api-core", specifier = "==2.25.1" },
-    { name = "google-auth", specifier = "==2.40.3" },
     { name = "google-cloud-aiplatform", specifier = "==1.96.0" },
-    { name = "google-cloud-bigquery", specifier = "==3.36.0" },
-    { name = "google-cloud-core", specifier = "==2.4.3" },
-    { name = "google-cloud-resource-manager", specifier = "==1.14.2" },
     { name = "google-cloud-speech", specifier = "==2.32.0" },
-    { name = "google-cloud-storage", specifier = "==2.19.0" },
-    { name = "google-crc32c", specifier = "==1.7.1" },
-    { name = "google-genai", specifier = "==1.31.0" },
-    { name = "google-resumable-media", specifier = "==2.7.2" },
-    { name = "googleapis-common-protos", specifier = "==1.70.0" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = "==2.0.1" },
     { name = "graphviz", marker = "extra == 'test-investigation'", specifier = ">=0.20.3" },
-    { name = "grpc-google-iam-v1", specifier = "==0.14.2" },
-    { name = "grpcio", specifier = "==1.74.0" },
-    { name = "grpcio-status", specifier = "==1.74.0" },
-    { name = "grpclib", specifier = "==0.4.8" },
-    { name = "h11", specifier = "==0.16.0" },
-    { name = "h2", specifier = "==4.3.0" },
     { name = "headless-kivy", specifier = "==0.12.4" },
-    { name = "hpack", specifier = "==4.1.0" },
-    { name = "httpcore", specifier = "==1.0.9" },
-    { name = "httpx", specifier = "==0.28.1" },
-    { name = "humanfriendly", specifier = "==10.0" },
-    { name = "hypercorn", specifier = "==0.17.3" },
-    { name = "hyperframe", specifier = "==6.1.0" },
-    { name = "idna", specifier = "==3.10" },
-    { name = "isort", specifier = "==5.13.2" },
-    { name = "itsdangerous", specifier = "==2.2.0" },
-    { name = "jinja2", specifier = "==3.1.6" },
-    { name = "kivy", specifier = "==2.3.1" },
-    { name = "kivy-deps-angle", marker = "sys_platform == 'win32'", specifier = "==0.4.0" },
-    { name = "kivy-deps-glew", marker = "sys_platform == 'win32'", specifier = "==0.3.1" },
-    { name = "kivy-deps-sdl2", marker = "sys_platform == 'win32'", specifier = "==0.8.0" },
-    { name = "kivy-garden", specifier = "==0.1.5" },
-    { name = "lgpio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = "==0.2.2.0" },
-    { name = "markupsafe", specifier = "==3.0.2" },
-    { name = "mpmath", specifier = "==1.3.0" },
-    { name = "multidict", specifier = "==6.6.4" },
-    { name = "mypy-extensions", specifier = "==1.1.0" },
     { name = "netifaces", specifier = "==0.11.0" },
-    { name = "numpy", specifier = "==1.26.4" },
     { name = "objgraph", marker = "extra == 'test-investigation'", specifier = ">=3.6.2" },
     { name = "ollama", specifier = "==0.5.1" },
-    { name = "onnxruntime", specifier = "==1.22.1" },
     { name = "onnxruntime", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = ">=1.22.0" },
-    { name = "packaging", specifier = "==25.0" },
-    { name = "pathspec", specifier = "==0.12.1" },
     { name = "piper-tts", specifier = "==1.3.0" },
     { name = "platformdirs", specifier = "==4.3.8" },
-    { name = "priority", specifier = "==2.0.0" },
-    { name = "propcache", specifier = "==0.3.2" },
-    { name = "proto-plus", specifier = "==1.26.1" },
-    { name = "protobuf", specifier = "==6.32.0" },
     { name = "psutil", specifier = "==7.0.0" },
     { name = "pulsectl", specifier = "==24.12.0" },
     { name = "pvorca", specifier = "==1.1.1" },
     { name = "pyalsaaudio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = "==0.11.0" },
-    { name = "pyasn1", specifier = "==0.6.1" },
-    { name = "pyasn1-modules", specifier = "==0.4.2" },
     { name = "pyaudio", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = "==0.2.14" },
-    { name = "pycparser", specifier = "==2.22" },
-    { name = "pydantic", specifier = "==2.11.7" },
-    { name = "pydantic-core", specifier = "==2.33.2" },
-    { name = "pyftdi", specifier = "==0.57.1" },
-    { name = "pygments", specifier = "==2.19.2" },
-    { name = "pypiwin32", marker = "sys_platform == 'win32'", specifier = "==223" },
     { name = "pypng", specifier = "==0.20220715.0" },
-    { name = "pyreadline3", marker = "sys_platform == 'win32'", specifier = "==3.5.4" },
-    { name = "pyserial", specifier = "==3.5" },
-    { name = "python-dateutil", specifier = "==2.9.0.post0" },
     { name = "python-debouncer", specifier = "==0.1.5" },
     { name = "python-dotenv", specifier = "==1.1.0" },
     { name = "python-fake", specifier = "==0.2.0" },
-    { name = "python-immutable", specifier = "==1.2.2" },
     { name = "python-redux", specifier = "==0.24.1.dev1250523103975755100" },
     { name = "python-strtobool", specifier = "==1.0.3" },
-    { name = "pyusb", specifier = "==1.3.1" },
-    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==311" },
     { name = "pyzbar", specifier = "==0.1.9" },
-    { name = "qrcode", specifier = "==8.2" },
     { name = "quart", specifier = "==0.20.0" },
-    { name = "requests", specifier = "==2.32.5" },
     { name = "rpi-lgpio", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = "==0.6" },
     { name = "rpi-ws281x", marker = "platform_machine == 'aarch64'", specifier = "==5.0.0" },
-    { name = "rsa", specifier = "==4.9.1" },
-    { name = "sdbus", marker = "platform_machine == 'aarch64'", specifier = "==0.14.0" },
     { name = "sdbus-networkmanager", marker = "platform_machine == 'aarch64'", specifier = "==2.0.0" },
     { name = "sentry-sdk", specifier = "==2.29.1" },
-    { name = "setuptools", marker = "platform_machine != 'aarch64'", specifier = "==80.9.0" },
-    { name = "shapely", specifier = "==2.1.1" },
     { name = "simpleaudio", specifier = "==1.0.4" },
-    { name = "six", specifier = "==1.17.0" },
-    { name = "sniffio", specifier = "==1.3.1" },
     { name = "soxr", specifier = "==0.5.0.post1" },
-    { name = "srt", specifier = "==3.5.3" },
-    { name = "sympy", specifier = "==1.14.0" },
-    { name = "sysv-ipc", marker = "platform_machine != 'mips' and sys_platform == 'linux'", specifier = "==1.1.0" },
     { name = "tenacity", specifier = "==9.1.2" },
-    { name = "tqdm", specifier = "==4.67.1" },
-    { name = "typing-extensions", specifier = "==4.14.1" },
-    { name = "typing-inspection", specifier = "==0.4.1" },
     { name = "ubo-app-raw-bindings", editable = "ubo_app/rpc" },
     { name = "ubo-gui", specifier = "==0.13.17" },
-    { name = "urllib3", specifier = "==2.5.0" },
     { name = "vosk", specifier = "==0.3.44" },
-    { name = "websockets", specifier = "==15.0.1" },
-    { name = "werkzeug", specifier = "==3.1.3" },
-    { name = "wsproto", specifier = "==1.2.0" },
-    { name = "yarl", specifier = "==1.20.1" },
 ]
 provides-extras = ["test-investigation"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "grpcio-tools", specifier = ">=1.66.1" },
+    { name = "hatch-vcs", specifier = ">=0.5.0" },
     { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.4" },
     { name = "ipdb", specifier = ">=0.13.13" },
     { name = "ipython", specifier = ">=8.23.0" },
@@ -2737,7 +2576,7 @@ dev = [
     { name = "pytest-repeat", specifier = ">=0.9.3" },
     { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "pytest-xdist", specifier = ">=3.5.0" },
-    { name = "ruff", specifier = ">=0.12.0" },
+    { name = "ruff", specifier = ">=0.12.10" },
     { name = "toml", specifier = ">=0.10.2" },
 ]
 
@@ -2756,7 +2595,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "betterproto", extras = ["compiler"], specifier = ">=2.0.0b7" }]
+requires-dist = [{ name = "betterproto", extras = ["compiler"], specifier = "==2.0.0b7" }]
 
 [package.metadata.requires-dev]
 dev = [

@@ -71,7 +71,7 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
   cmd_list+=("uv python pin python3.11 &&")
 
   if [ "$deps" == "True" ]; then
-    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uvx hatch version) uv sync --frozen &&')
+    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv sync --frozen &&')
   fi
 
   if [ "$run" == "True" ]; then
