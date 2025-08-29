@@ -32,7 +32,12 @@ from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantStopListeningAction,
 )
-from ubo_app.store.services.audio import AudioChangeVolumeAction, AudioDevice
+from ubo_app.store.services.audio import (
+    AudioChangeVolumeAction,
+    AudioDevice,
+    AudioPlayRecordingAction,
+    AudioToggleRecordingAction,
+)
 from ubo_app.store.services.keypad import (
     Key,
     KeypadAction,
@@ -96,8 +101,9 @@ def reducer(
                     ),
                 ],
             )
-        case KeypadKeyPressAction(key=Key.BACK) if state.depth == 1 and \
-            action.pressed_keys == {action.key}:
+        case KeypadKeyPressAction(key=Key.BACK) if (
+            state.depth == 1 and action.pressed_keys == {action.key}
+        ):
             return CompleteReducerResult(
                 state=state,
                 actions=[
@@ -153,6 +159,22 @@ def reducer(
                 state=state,
                 actions=[ToggleRecordingAction()],
             )
+        case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {
+            Key.BACK,
+            Key.L1,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                actions=[AudioToggleRecordingAction()],
+            )
+        case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {
+            Key.BACK,
+            Key.L2,
+        }:
+            return CompleteReducerResult(
+                state=state,
+                actions=[AudioPlayRecordingAction()],
+            )
         case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {
             Key.BACK,
             Key.L3,
@@ -207,8 +229,9 @@ def reducer(
         case KeypadKeyPressAction():
             return state
 
-        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK) \
-            if state.depth == 1:
+        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK) if (
+            state.depth == 1
+        ):
             return CompleteReducerResult(
                 state=state,
                 actions=[

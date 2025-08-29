@@ -28,6 +28,7 @@ from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioPlaybackDoneAction,
+    AudioReportSampleAction,
     AudioReportSampleEvent,
     AudioSample,
 )
@@ -439,19 +440,17 @@ class AudioManager:
                     data_speech_recognition = (
                         (data_speech_recognition * 32768.0).astype(np.int16).tobytes()
                     )
-                    store._dispatch(  # noqa: SLF001
-                        [
-                            AudioReportSampleEvent(
-                                timestamp=event_loop.time(),
-                                sample_speech_recognition=data_speech_recognition,
-                                sample=AudioSample(
-                                    data=data,
-                                    channels=channels,
-                                    rate=INPUT_FRAME_RATE,
-                                    width=2,
-                                ),
+                    store.dispatch(
+                        AudioReportSampleAction(
+                            timestamp=event_loop.time(),
+                            sample_speech_recognition=data_speech_recognition,
+                            sample=AudioSample(
+                                data=data,
+                                channels=channels,
+                                rate=INPUT_FRAME_RATE,
+                                width=2,
                             ),
-                        ],
+                        ),
                     )
 
     def set_playback_mute(self, *, mute: bool = False) -> None:

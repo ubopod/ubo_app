@@ -40,7 +40,6 @@ class Assistant:
                 audio_in_enabled=True,
                 audio_in_channels=1,
                 audio_in_sample_rate=16000,
-                vad_enabled=True,
                 vad_analyzer=vad_analyzer,
             ),
             client=self.client,

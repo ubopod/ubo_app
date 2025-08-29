@@ -82,10 +82,34 @@ class AudioSample(Immutable):
     width: int
 
 
+class AudioReportSampleAction(AudioAction):
+    """Report audio sample action."""
+
+    timestamp: float
+    sample_speech_recognition: bytes
+    sample: AudioSample
+
+
 class AudioPlaybackDoneAction(AudioAction):
     """Playback done action."""
 
     id: str
+
+
+class AudioStartRecordingAction(AudioAction):
+    """Start recording action."""
+
+
+class AudioStopRecordingAction(AudioAction):
+    """Stop recording action."""
+
+
+class AudioToggleRecordingAction(AudioAction):
+    """toggle recording action."""
+
+
+class AudioPlayRecordingAction(AudioAction):
+    """Play recording action."""
 
 
 class AudioEvent(BaseEvent):
@@ -93,7 +117,7 @@ class AudioEvent(BaseEvent):
 
 
 class AudioReportSampleEvent(AudioEvent):
-    """Report audio event."""
+    """Report audio sample event."""
 
     timestamp: float
     sample_speech_recognition: bytes
@@ -159,3 +183,6 @@ class AudioState(Immutable):
             default=False,
         ),
     )
+
+    is_recording: bool = False
+    recording: AudioSample | None = None
