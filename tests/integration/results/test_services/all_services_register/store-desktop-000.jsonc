@@ -18,7 +18,9 @@
     "capture_volume": 0.5,
     "is_capture_mute": false,
     "is_playback_mute": false,
-    "playback_volume": 0.15
+    "is_recording": false,
+    "playback_volume": 0.15,
+    "recording": null
   },
   "camera": {
     "_type": "CameraState",

@@ -101,12 +101,13 @@ class MenuAppHeader(UboApp):
             self.header_layout.remove_widget(self.header_content)
 
     @mainthread
-    def handle_is_recording_change(
+    def handle_is_recording_actions_change(
         self: MenuAppHeader,
         is_recording: bool,  # noqa: FBT001
     ) -> None:
         if is_recording:
             if self.recording_sign not in self.header_content.children:
+                self.recording_sign.color = (0, 0, 1, 1)
                 self.header_content.add_widget(self.recording_sign)
                 self.sign_animation.start(self.recording_sign)
         elif self.recording_sign in self.header_content.children:
@@ -125,6 +126,20 @@ class MenuAppHeader(UboApp):
         elif self.replaying_sign in self.header_content.children:
             self.header_content.remove_widget(self.replaying_sign)
             self.sign_animation.cancel(self.replaying_sign)
+
+    @mainthread
+    def handle_is_recording_audio_change(
+        self: MenuAppHeader,
+        is_recording: bool,  # noqa: FBT001
+    ) -> None:
+        if is_recording:
+            if self.recording_sign not in self.header_content.children:
+                self.recording_sign.color = (0, 1, 0, 1)
+                self.header_content.add_widget(self.recording_sign)
+                self.sign_animation.start(self.recording_sign)
+        elif self.recording_sign in self.header_content.children:
+            self.header_content.remove_widget(self.recording_sign)
+            self.sign_animation.cancel(self.recording_sign)
 
     @cached_property
     def header(self: MenuAppHeader) -> Widget | None:
@@ -195,11 +210,16 @@ class MenuAppHeader(UboApp):
         store.autorun(
             lambda state: state.main.is_recording,
             options=AutorunOptions(keep_ref=False),
-        )(self.handle_is_recording_change)
+        )(self.handle_is_recording_actions_change)
 
         store.autorun(
             lambda state: state.main.is_replaying,
             options=AutorunOptions(keep_ref=False),
         )(self.handle_is_replaying_change)
+
+        store.autorun(
+            lambda state: state.audio.is_recording,
+            options=AutorunOptions(keep_ref=False),
+        )(self.handle_is_recording_audio_change)
 
         return self.header_layout
