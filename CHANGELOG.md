@@ -1,5 +1,9 @@
 # Changelog
 
+## Upcoming
+
+- feat(audio): add audio sample recorder and player, it can be used to quickly test audio input/output devices
+
 ## Version 1.6.0
 
 - refactor(docker): improve pihole config so that it works out of the box
