@@ -106,8 +106,6 @@ class StoreService(StoreServiceBase):
         dispatch_action_request: DispatchActionRequest,
     ) -> DispatchActionResponse:
         """Dispatch an action to the store."""
-        if not dispatch_action_request.action:
-            return DispatchActionResponse()
         try:
             action = rebuild_object(dispatch_action_request.action)
         except Exception:

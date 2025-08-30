@@ -4,6 +4,7 @@
 
 - feat(audio): add audio sample recorder and player, it can be used to quickly test audio input/output devices
 - fix(system): make sure dnsmasq is stopped and disabled when not needed
+- refactor(web-ui): request a redraw when connected (previously we were rendering a notification to force a redraw)
 
 ## Version 1.6.0
 
