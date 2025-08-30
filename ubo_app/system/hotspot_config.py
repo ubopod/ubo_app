@@ -28,6 +28,7 @@ def main() -> None:
         )
 
         subprocess.run(['/bin/systemctl', 'restart', 'dhcpcd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'enable', 'dnsmasq.service'], check=True)
         subprocess.run(['/bin/systemctl', 'restart', 'dnsmasq.service'], check=True)
         subprocess.run(['/bin/systemctl', 'unmask', 'hostapd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'enable', 'hostapd.service'], check=True)
@@ -45,6 +46,7 @@ def main() -> None:
         subprocess.run(['/bin/systemctl', 'disable', 'hostapd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'mask', 'hostapd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'stop', 'dnsmasq.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'disable', 'dnsmasq.service'], check=True)
         subprocess.run(['/usr/bin/env', 'nmcli', 'radio', 'wifi', 'on'], check=True)
     else:
         msg = 'Invalid argument'
