@@ -4,6 +4,7 @@
 
 - feat(audio): add audio sample recorder and player, it can be used to quickly test audio input/output devices
 - fix(system): make sure dnsmasq is stopped and disabled when not needed
+- feat(docker): add set-password form for pihole
 
 ## Version 1.6.0
 

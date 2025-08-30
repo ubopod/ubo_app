@@ -7,7 +7,12 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    QRCodeInputDescription,
+    WebUIInputDescription,
+)
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils import IS_RPI
 
@@ -128,6 +133,46 @@ IMAGES = {
                 '443/tcp': 443,
             },
             dns=['127.0.0.1', '1.1.1.1'],
+            environment_vairables={
+                'FTLCONF_webserver_api_password': lambda: ubo_input(
+                    resolver=lambda _, result: result.data.get('password', '')
+                    if result
+                    else '',
+                    prompt='Enter the admin password',
+                    descriptions=[
+                        QRCodeInputDescription(
+                            instructions=ReadableInformation(
+                                text="""\
+Follow these steps:
+
+1. Convert your desired password to a QR code.
+2. Scan QR code to input the token.""",
+                                picovoice_text="""\
+Follow these steps:
+
+1. Convert your desired password to {QR|K Y UW AA R} code
+2. Scan QR code to input the token.
+
+Password should be at least 4 characters and at most 30 characters.""",
+                            ),
+                            pattern=r'^.{4,30}$',
+                        ),
+                        WebUIInputDescription(
+                            fields=[
+                                InputFieldDescription(
+                                    description='At least 4 characters and at most 30 '
+                                    'characters',
+                                    label='Admin Password',
+                                    name='password',
+                                    pattern=r'^(?P<password>.{4,30})$',
+                                    required=True,
+                                    type=InputFieldType.PASSWORD,
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            },
             registry='docker.io',
         ),
         ContainerEntry(
@@ -177,7 +222,7 @@ Follow these steps:
 3. Convert it to {QR|K Y UW AA R} code
 4. Scan QR code to input the token""",
                             ),
-                            pattern=rf'^[a-zA-Z0-9]{20, 30}_[a-zA-Z0-9]{20, 30}$',
+                            pattern=r'^[a-zA-Z0-9]{20,30}_[a-zA-Z0-9]{20,30}$',
                         ),
                         WebUIInputDescription(),
                     ],
