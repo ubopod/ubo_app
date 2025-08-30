@@ -149,6 +149,9 @@ fi
 apt-get -y clean
 apt-get -y autoremove
 
+systemctl stop dnsmasq
+systemctl disable dnsmasq
+
 if id -u "$USERNAME" >/dev/null 2>&1; then
   echo "User $USERNAME already exists."
 else
