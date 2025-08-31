@@ -9,6 +9,7 @@
 - fix(core): autorun objects when called directly, wait for the result of the function to be ready in the runner thread before returning it
 - feat(file-system): open image files using the image viewer
 - refactor(assistant): move constants of assistant service to a separate file
+- chore: open app in macos with as an always-on-top window to have terminal behind it by default when stage manager is on and streamline development
 
 ## Version 1.6.0
 

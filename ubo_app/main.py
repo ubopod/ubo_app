@@ -89,6 +89,11 @@ def main() -> None:
 
     store.subscribe_event(FinishEvent, mainthread(app.stop))
 
+    if not IS_RPI:
+        from kivy.core.window import Window
+
+        Window._win.set_always_on_top(True)  # noqa: SLF001
+
     try:
         app.run()
     except Exception:
