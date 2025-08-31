@@ -6,6 +6,7 @@
 - fix(system): make sure dnsmasq is stopped and disabled when not needed
 - refactor(web-ui): request a redraw when connected (previously we were rendering a notification to force a redraw)
 - feat(core): add raw image viewer
+- fix(core): autorun objects when called directly, wait for the result of the function to be ready in the runner thread before returning it
 
 ## Version 1.6.0
 

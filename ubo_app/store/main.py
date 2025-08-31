@@ -435,6 +435,9 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         )
 
 
+CALL_EVENT_KWARGS_KEY = '__ubo_autorun_call_event'
+
+
 class _UboAutorun(
     Autorun[
         RootState,
@@ -476,7 +479,6 @@ class _UboAutorun(
             self.handler_ref = weakref.ref(func)
 
         self.coroutine_runner = get_coroutine_runner()
-        self.call_event = threading.Event()
 
         super().__init__(
             store=store,
@@ -491,6 +493,11 @@ class _UboAutorun(
         *args: Args.args,
         **kwargs: Args.kwargs,
     ) -> None:
+        call_event: threading.Event | None = cast(
+            'threading.Event',
+            kwargs.pop(CALL_EVENT_KWARGS_KEY, None),
+        )
+
         def wrapper(super_: Autorun) -> None:
             try:
                 super_.call(*args, **kwargs)
@@ -505,7 +512,8 @@ class _UboAutorun(
                 )
                 report_service_error()
             finally:
-                self.call_event.set()
+                if call_event:
+                    call_event.set()
 
         from ubo_app.utils.async_ import to_thread
 
@@ -520,8 +528,12 @@ class _UboAutorun(
         *args: Args.args,
         **kwargs: Args.kwargs,
     ) -> ReturnType:
-        self.call_event.clear()
-        super().__call__(*args, **kwargs)
+        call_event = threading.Event()
+        super().__call__(*args, **{**kwargs, CALL_EVENT_KWARGS_KEY: call_event})
+        if not call_event.wait(timeout=30):
+            report_service_error(
+                exception=RuntimeError('Autorun call timed out after 30 seconds'),
+            )
         return self._latest_value
 
     def _create_task(self, coro: Coroutine[None, None, Any]) -> None:
