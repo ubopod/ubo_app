@@ -9,10 +9,10 @@ from collections.abc import Generator
 from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
 from typing_extensions import override
 
-from ubo_app.constants import (
+from ubo_app.constants import SPEECH_RECOGNITION_FRAME_RATE
+from ubo_app.constants.assistant import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN,
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
-    SPEECH_RECOGNITION_FRAME_RATE,
 )
 from ubo_app.engines.google_cloud import GoogleEngine
 from ubo_app.store.main import store

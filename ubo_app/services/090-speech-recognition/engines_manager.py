@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING, TypedDict, cast
 from google_engine import GoogleSpeechRecognitionEngine
 from vosk_engine import VoskEngine
 
-from ubo_app.constants import ASSISTANT_END_WORD, ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
+from ubo_app.constants.assistant import (
+    ASSISTANT_END_WORD,
+    ASSISTANT_WAKE_WORD,
+    INTENTS_WAKE_WORD,
+)
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioReportSampleEvent

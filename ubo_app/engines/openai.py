@@ -5,7 +5,7 @@ import re
 
 from typing_extensions import override
 
-from ubo_app.constants import (
+from ubo_app.constants.assistant import (
     OPENAI_API_KEY_PATTERN,
     OPENAI_API_KEY_SECRET_ID,
 )
