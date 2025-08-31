@@ -7,14 +7,21 @@ import os
 from typing import TYPE_CHECKING
 
 from loguru import logger
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.frames.frames import Frame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.processors.consumer_processor import ConsumerProcessor
+from pipecat.processors.producer_processor import ProducerProcessor
+from pipecat.services.google.image import GoogleImageGenService
 from pipecat.transports.base_transport import TransportParams
 from ubo_bindings.client import UboRPCClient
 
+from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import UboLLMService
 from ubo_assistant.ubo_output_transport import UboOutputTransport
@@ -50,12 +57,26 @@ class Assistant:
             print(results)  # noqa: T201
 
         ubo_output_transport = UboOutputTransport(
-            params=TransportParams(audio_out_enabled=True),
+            params=TransportParams(
+                audio_out_enabled=True,
+                audio_out_channels=2,
+                audio_out_sample_rate=48000,
+                video_out_enabled=True,
+                video_out_width=1024,
+                video_out_height=1024,
+                video_out_color_format='RGB',
+                video_out_bitrate=60_000_000,
+                video_out_is_live=True,
+            ),
             client=self.client,
         )
 
         google_credentials = await self.client.query_secret(
             os.environ['GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID'],
+        )
+
+        google_api_key = await self.client.query_secret(
+            os.environ['GOOGLE_API_KEY_SECRET_ID'],
         )
 
         openai_api_key = await self.client.query_secret(
@@ -77,24 +98,58 @@ class Assistant:
         messages: list[ChatCompletionMessageParam] = [
             {
                 'role': 'system',
-                'content': 'Please write short and concise answers.',
-            },
-            {
-                'role': 'system',
-                'content': """it is going to be read by a simple text to \
-speech engine. So please answer only with English letters, numbers and standard \
-production like period, comma, colon, single and double quotes, exclamation mark, \
-question mark, and dash. Do not use any other special characters or emojis.""",
+                'content': """You are a helpful assistant who converses with a user \
+and answers questions. Respond concisely to general questions.
+
+Your response will be turned into speech so use only simple words and punctuation.
+
+You have access to two tools: draw_image and get_image.
+
+You can respond to requests about generating images by using the draw_image tool.
+
+You can answer questions about the user's video stream using the get_image tool.
+Some examples of phrases that indicate you should use the get_image tool are:
+- What do you see?
+- What's in the video?
+- Can you describe the video?
+- Tell me about what you see.
+- Tell me something interesting about what you see.
+- What's happening in the video?""",
             },
         ]
+        draw_image_function = FunctionSchema(
+            name='draw_image',
+            description='Generate an image based on a text prompt.',
+            properties={
+                'prompt': {
+                    'type': 'string',
+                    'description': 'The text description to generate an image from.',
+                },
+            },
+            required=['prompt'],
+        )
+        get_image_function = FunctionSchema(
+            name='get_image',
+            description='Take an image from the video stream and answer a question '
+            'about it.',
+            properties={
+                'question': {
+                    'type': 'string',
+                    'description': 'The question that the user is asking about the '
+                    'image.',
+                },
+            },
+            required=['question'],
+        )
+        tools = ToolsSchema(standard_tools=[draw_image_function, get_image_function])
 
-        context = OpenAILLMContext(messages)
+        context = OpenAILLMContext(messages, tools)
         context_aggregator = ubo_llm_service.create_context_aggregator(context)
 
         async def g() -> None:
             while True:
                 await asyncio.sleep(5)
-                print(context.messages)  # noqa: T201
+                print(str(context.messages)[:5000])  # noqa: T201
 
         self.client.event_loop.create_task(g())
 
@@ -104,12 +159,20 @@ question mark, and dash. Do not use any other special characters or emojis.""",
             openai_api_key=openai_api_key,
         )
 
+        async def is_image_gen_frame(frame: Frame) -> bool:
+            return isinstance(frame, ImageGenFrame)
+
+        image_producer = ProducerProcessor(
+            filter=is_image_gen_frame,
+            passthrough=False,
+        )
         pipeline = Pipeline(
             [
                 ubo_input_transport,
                 ubo_stt_service,
                 context_aggregator.user(),
                 ubo_llm_service,
+                image_producer,
                 ubo_tts_service,
                 context_aggregator.assistant(),
                 ubo_output_transport,
@@ -118,7 +181,28 @@ question mark, and dash. Do not use any other special characters or emojis.""",
 
         task = PipelineTask(pipeline, params=PipelineParams(audio_in_sample_rate=16000))
         runner = PipelineRunner(handle_sigint=True)
-        await runner.run(task)
+
+        if google_api_key:
+            google_image_gen_service = GoogleImageGenService(
+                api_key=google_api_key,
+            )
+
+            image_gen_pipeline = Pipeline(
+                [
+                    ConsumerProcessor(producer=image_producer),
+                    google_image_gen_service,
+                    context_aggregator.assistant(),
+                    ubo_output_transport,
+                ],
+            )
+            image_gen_task = PipelineTask(
+                image_gen_pipeline,
+                params=PipelineParams(audio_in_sample_rate=16000),
+            )
+
+            await asyncio.gather(runner.run(task), runner.run(image_gen_task))
+        else:
+            await runner.run(task)
 
 
 def main() -> None:

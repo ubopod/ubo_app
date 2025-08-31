@@ -6,12 +6,16 @@ from types import CoroutineType
 from typing import Generic, Protocol, TypeVar
 
 from pipecat.frames.frames import Frame, SystemFrame
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
+from pipecat.processors.frame_processor import (
+    FrameDirection,
+    FrameProcessor,
+    FrameProcessorSetup,
+)
 from pipecat.services.ai_service import AIService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import AcceptableAssistanceFrame, Action, AssistantReportAction
 
-T = TypeVar('T', bound=AIService)
+T = TypeVar('T', bound=FrameProcessor)
 
 
 class _PushFrameSignature(Protocol):
@@ -32,7 +36,7 @@ class UboSwitchService(AIService, Generic[T]):
     _assistance_id: str
     _assistance_index: int
 
-    def __init__(self, client: UboRPCClient, **kwargs: object) -> None:
+    def __init__(self, client: UboRPCClient) -> None:
         """Initialize the ubo switch service."""
         self._reset_assistance()
         self.client = client
@@ -56,7 +60,6 @@ class UboSwitchService(AIService, Generic[T]):
         for service in self.services:
             service.push_frame = push_frame_wrapper(service.push_frame)
         self.selected_service: T | None = next(iter(self.services), None)
-        super().__init__(**kwargs)
 
     def _reset_assistance(self) -> None:
         self._assistance_id = uuid.uuid4().hex

@@ -16,8 +16,9 @@ from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistanceAudioFrame,
+    AssistanceImageFrame,
+    AssistantHandleReportEvent,
     AssistantLLMName,
-    AssistantReportEvent,
     AssistantSetSelectedLLMAction,
 )
 from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
@@ -50,16 +51,31 @@ def _get_unselected_item_parameters(*, is_offline: bool) -> ItemParameters:
     }
 
 
-def _communicate(event: AssistantReportEvent) -> None:
+def _communicate(event: AssistantHandleReportEvent) -> None:
     """Communicate the assistance."""
-    if isinstance(event.data, AssistanceAudioFrame):
-        store.dispatch(
-            AudioPlayAudioSequenceAction(
-                sample=event.data.audio,
-                id=f'assistant:{event.source_id}:{event.data.id}',
-                index=event.data.index,
-            ),
-        )
+    match event.data:
+        case AssistanceAudioFrame(data=sample, source_id=source_id):
+            store.dispatch(
+                AudioPlayAudioSequenceAction(
+                    sample=sample.audio,
+                    id=f'assistant:{source_id}:{sample.id}',
+                    index=sample.index,
+                ),
+            )
+
+        case AssistanceImageFrame() as image:
+            from ubo_app.store.core.types import OpenApplicationAction
+
+            store.dispatch(
+                OpenApplicationAction(
+                    application_id='ubo:raw-image-viewer',
+                    initialization_kwargs={
+                        'image': image.image,
+                        'width': image.width,
+                        'height': image.height,
+                    },
+                ),
+            )
 
 
 async def init_service() -> None:
@@ -172,4 +188,4 @@ async def init_service() -> None:
         ),
     )
 
-    store.subscribe_event(AssistantReportEvent, _communicate)
+    store.subscribe_event(AssistantHandleReportEvent, _communicate)
