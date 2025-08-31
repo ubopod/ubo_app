@@ -60,6 +60,7 @@ dependencies = [
   "gpiozero==2.0.1 ; platform_machine != 'aarch64'",
   # gRPC
   "betterproto[compiler]==2.0.0b7",
+  "pillow>=11.3.0",
 ]
 
 [tool.uv]

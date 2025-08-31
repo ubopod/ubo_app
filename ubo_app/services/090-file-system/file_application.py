@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import mimetypes
 import stat
 from dataclasses import replace
 from pathlib import Path
@@ -10,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from kivy.utils import escape_markup
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadlessMenu
+from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item
 
 from ubo_app.store.input.types import PathInputDescription
 from ubo_app.store.main import store
@@ -218,6 +219,38 @@ def _show_directory(path: Path) -> HeadlessMenu | None:
 
 def _show_file(path: Path) -> HeadlessMenu | None:
     """Show the path in a notification."""
+    file_type, _ = mimetypes.guess_type(path)
+    match file_type:
+        case str(type_) if type_.startswith('image/'):
+            from PIL import Image
+
+            image = Image.open(path)
+            width, height = image.size
+            image_bytes = image.tobytes()
+            view_action = NotificationApplicationItem(
+                key='view',
+                label='Open Image',
+                icon='󰋩',
+                application_id='ubo:raw-image-viewer',
+                initialization_kwargs={
+                    'image': image_bytes,
+                    'width': width,
+                    'height': height,
+                },
+                close_notification=False,
+            )
+        case _:
+            view_action = NotificationApplicationItem(
+                key='view',
+                label='View File Content',
+                icon='󰦪',
+                application_id='ubo:raw-text-viewer',
+                initialization_kwargs={
+                    'text': _get_file_content(path),
+                },
+                close_notification=False,
+            )
+
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
@@ -227,16 +260,7 @@ def _show_file(path: Path) -> HeadlessMenu | None:
                 display_type=NotificationDisplayType.STICKY,
                 show_dismiss_action=False,
                 actions=[
-                    NotificationApplicationItem(
-                        key='view',
-                        label='View File Content',
-                        icon='󰦪',
-                        application_id='ubo:raw-text-viewer',
-                        initialization_kwargs={
-                            'text': _get_file_content(path),
-                        },
-                        close_notification=False,
-                    ),
+                    view_action,
                     NotificationActionItem(
                         key='copy',
                         label='Copy File',
@@ -285,7 +309,7 @@ def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem
         select_file = _show_file
 
     @store.autorun(lambda _: None, options=AutorunOptions(memoization=False))
-    def items(_: None) -> list[ActionItem]:
+    def items(_: None) -> list[Item]:
         return (
             [
                 ActionItem(
@@ -304,27 +328,39 @@ def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem
             ActionItem(
                 key=item.as_posix(),
                 label=escape_markup(item.name),
-                background_color='#303030'
-                if (item.is_dir() and select_directory is None)
-                or (
-                    item.is_file()
-                    and (
-                        select_file is None
-                        or (
-                            config.acceptable_suffixes
-                            and not any(
-                                suffix in config.acceptable_suffixes
-                                for suffix in item.suffixes
-                            )
-                        )
-                    )
-                )
-                else None,
-                icon='󰈔' if item.is_file() else '󰉋',
+                background_color='#303030' if select_directory is None else None,
+                icon='󰉋',
                 action=functools.partial(
                     open_path,
                     config=replace(config, initial_path=item),
                 ),
+            )
+            if item.is_dir()
+            else ActionItem(
+                key=item.as_posix(),
+                label=escape_markup(item.name),
+                background_color='#303030'
+                if item.is_file()
+                and (
+                    select_file is None
+                    or (
+                        config.acceptable_suffixes
+                        and not any(
+                            suffix in config.acceptable_suffixes
+                            for suffix in item.suffixes
+                        )
+                    )
+                )
+                else None,
+                icon='󰈔',
+                action=functools.partial(select_file, item),
+            )
+            if select_file
+            else Item(
+                key=item.as_posix(),
+                label=escape_markup(item.name),
+                background_color='#303030',
+                icon='󰈔',
             )
             for item in sorted(
                 path.iterdir(),
@@ -332,6 +368,8 @@ def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem
             )
             if config.show_hidden or not item.name.startswith('.')
         ]
+
+    items()
 
     store.subscribe_event(FileSystemEvent, items)
 
