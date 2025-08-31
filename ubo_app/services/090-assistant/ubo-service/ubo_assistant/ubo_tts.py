@@ -22,7 +22,6 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         *,
         google_credentials: str | None,
         openai_api_key: str | None,
-        **kwargs: object,
     ) -> None:
         """Initialize the TTS service with Google, OpenAI, and Piper TTS services."""
         try:
@@ -51,13 +50,8 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
 
         self._services = [self.google_tts, self.openai_tts, self.piper_tts]
 
-        super().__init__(
-            client=client,
-            model='',
-            base_url='',
-            api_key='',
-            **kwargs,
-        )
+        UboSwitchService.__init__(self, client=client)
+        TTSService.__init__(self)
 
     async def run_tts(self, text: str) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Run TTS on the given text and yield frames."""

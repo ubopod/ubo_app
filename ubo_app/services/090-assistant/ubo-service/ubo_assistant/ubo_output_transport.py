@@ -4,6 +4,7 @@ import uuid
 
 from pipecat.frames.frames import (
     OutputAudioRawFrame,
+    OutputImageRawFrame,
     StartFrame,
 )
 from pipecat.transports.base_output import BaseOutputTransport
@@ -13,6 +14,7 @@ from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
     Action,
     AssistanceAudioFrame,
+    AssistanceImageFrame,
     AssistantReportAction,
     AudioSample,
 )
@@ -67,3 +69,21 @@ class UboOutputTransport(BaseOutputTransport):
                 ),
             ),
         )
+
+    async def write_video_frame(self, frame: OutputImageRawFrame) -> None:
+        """Write a video frame to the UBO RPC Client."""
+        if frame.format:
+            self._report_assistance_frame(
+                AcceptableAssistanceFrame(
+                    assistance_image_frame=AssistanceImageFrame(
+                        image=frame.image,
+                        width=frame.size[0],
+                        height=frame.size[1],
+                        format='RGB',
+                        metadata=frame.metadata,
+                        timestamp=self.client.event_loop.time(),
+                        id=self._assistance_id,
+                        index=self._assistance_index,
+                    ),
+                ),
+            )

@@ -11,6 +11,7 @@
 - refactor(assistant): move constants of assistant service to a separate file
 - chore: open app in macos with as an always-on-top window to have terminal behind it by default when stage manager is on and streamline development
 - chore: fix minor issues in deploy script
+- feat(assistant): enable video_out in our pipecat transport and implement image generation
 
 ## Version 1.6.0
 

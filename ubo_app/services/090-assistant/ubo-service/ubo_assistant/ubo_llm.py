@@ -10,6 +10,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.google.llm_vertex import GoogleVertexLLMService
+from pipecat.services.llm_service import FunctionCallParams, LLMService
 from pipecat.services.ollama.llm import OLLamaLLMService
 from pipecat.services.openai.llm import OpenAILLMService
 from ubo_bindings.client import UboRPCClient
@@ -19,6 +20,7 @@ from ubo_bindings.ubo.v1 import (
 )
 
 from ubo_assistant.constants import IS_RPI
+from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.switch import UboSwitchService
 
 
@@ -31,21 +33,23 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         *,
         google_credentials: str | None,
         openai_api_key: str | None,
-        **kwargs: object,
     ) -> None:
         """Initialize the LLM service with Google, OpenAI, and Ollama LLM services."""
         try:
             if google_credentials:
                 project_id = json.loads(google_credentials).get('project_id')
-                self.google_llm = GoogleVertexLLMService(
+                self.google_vertex_llm = GoogleVertexLLMService(
                     credentials=google_credentials,
                     params=GoogleVertexLLMService.InputParams(project_id=project_id),
                 )
             else:
-                self.google_llm = None
-        except Exception:
-            logger.exception('Error while initializing Google LLM')
-            self.google_llm = None
+                self.google_vertex_llm = None
+        except Exception as exception:
+            logger.exception(
+                'Error while initializing Google Vertex LLM',
+                extra={'exception': exception},
+            )
+            self.google_vertex_llm = None
 
         try:
             if openai_api_key:
@@ -67,15 +71,26 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             logger.exception('Error while initializing Ollama LLM')
             self.ollama_llm = None
 
-        self._services = [self.google_llm, self.openai_llm, self.ollama_llm]
+        self._services = [
+            self.google_vertex_llm,
+            self.openai_llm,
+            self.ollama_llm,
+        ]
 
-        super().__init__(
-            client=client,
-            model='',
-            base_url='',
-            api_key='',
-            **kwargs,
-        )
+        UboSwitchService.__init__(self, client=client)
+        LLMService.__init__(self)
+
+        for service in self.services:
+            service.register_function('draw_image', self.draw_image)
+            service.register_function('get_image', self.get_image)
+
+    async def draw_image(self, params: FunctionCallParams) -> None:
+        """Generate an image based on a text prompt."""
+        await self.push_frame(ImageGenFrame(text=params.arguments['prompt']))
+
+    async def get_image(self, params: FunctionCallParams) -> None:
+        """Get an image from the video stream based on a question."""
+        _ = params
 
     async def push_frame(
         self,

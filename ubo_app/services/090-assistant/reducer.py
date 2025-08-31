@@ -12,8 +12,8 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantEvent,
+    AssistantHandleReportEvent,
     AssistantReportAction,
-    AssistantReportEvent,
     AssistantSetIsActiveAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
@@ -62,7 +62,7 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 events=[
-                    AssistantReportEvent(
+                    AssistantHandleReportEvent(
                         source_id=action.source_id,
                         data=action.data,
                     ),

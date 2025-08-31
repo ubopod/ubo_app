@@ -90,20 +90,15 @@ class AssistanceAudioFrame(AssistanceFrame):
 class AssistanceImageFrame(AssistanceFrame):
     """An image assistance frame."""
 
-    image: bytes | None = None
-
-
-class AssistanceVideoFrame(AssistanceFrame):
-    """An video assistance frame."""
-
-    video: bytes | None = None
+    image: bytes
+    width: int
+    height: int
+    format: str
+    metadata: dict[str, str]
 
 
 AcceptableAssistanceFrame: TypeAlias = (
-    AssistanceTextFrame
-    | AssistanceAudioFrame
-    | AssistanceImageFrame
-    | AssistanceVideoFrame
+    AssistanceTextFrame | AssistanceAudioFrame | AssistanceImageFrame
 )
 
 
@@ -132,7 +127,7 @@ class AssistantDownloadOllamaModelEvent(AssistantEvent):
     model: str
 
 
-class AssistantReportEvent(AssistantEvent):
+class AssistantHandleReportEvent(AssistantEvent):
     """Action to report assistance from the assistant."""
 
     source_id: str
