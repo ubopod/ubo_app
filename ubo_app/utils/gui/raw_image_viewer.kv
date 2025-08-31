@@ -1,0 +1,19 @@
+#:kivy 2.3.0
+
+<RawImageViewer>:
+  BoxLayout:
+    orientation: 'horizontal'
+    padding: 0, dp(5), 0, root.padding_bottom
+    size_hint: 1, 1
+
+    StencilView:
+      id: container
+      size_hint: 1, 1
+
+      Image:
+        id: scrollable_widget
+        texture: root.texture
+        width: self.texture.width
+        height: self.texture.height
+        allow_stretch: True
+        keep_ratio: True

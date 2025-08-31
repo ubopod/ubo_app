@@ -121,7 +121,7 @@ def _create_service_item(service: ServiceState) -> SubMenuItem:  # noqa: C901
                 .astimezone()
                 .strftime('%Y-%m-%d %H:%M:%S'),
                 icon=f'[color={DANGER_COLOR}][/color]',
-                application_id='ubo:raw-content-viewer',
+                application_id='ubo:raw-text-viewer',
                 initialization_kwargs={
                     'text': error.message,
                 },

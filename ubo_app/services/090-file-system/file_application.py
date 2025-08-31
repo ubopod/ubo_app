@@ -231,7 +231,7 @@ def _show_file(path: Path) -> HeadlessMenu | None:
                         key='view',
                         label='View File Content',
                         icon='󰦪',
-                        application_id='ubo:raw-content-viewer',
+                        application_id='ubo:raw-text-viewer',
                         initialization_kwargs={
                             'text': _get_file_content(path),
                         },

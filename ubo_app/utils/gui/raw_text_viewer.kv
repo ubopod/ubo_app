@@ -1,6 +1,6 @@
 #:kivy 2.3.0
 
-<RawContentViewer>:
+<RawTextViewer>:
   BoxLayout:
     orientation: 'horizontal'
     padding: 0, dp(5), 0, root.padding_bottom
@@ -10,12 +10,12 @@
       size_hint: 1, 1
 
       BoxLayout:
+        id: scrollable_widget
         pos: container.pos
         orientation: 'vertical'
         height: max(container.height, self.minimum_height)
         width: container.width
         y: container.y - (self.height - container.height)
-        id: scrollable_widget
 
         Label:
           text: root.text
