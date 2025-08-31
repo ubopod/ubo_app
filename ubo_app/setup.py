@@ -171,11 +171,15 @@ def setup() -> None:
     start_event_loop_thread(asyncio.new_event_loop())
 
     from ubo_app.store.ubo_actions import register_application
-    from ubo_app.utils.gui import RawContentViewer
+    from ubo_app.utils.gui import RawImageViewer, RawTextViewer
 
     register_application(
-        application=RawContentViewer,
-        application_id='ubo:raw-content-viewer',
+        application=RawTextViewer,
+        application_id='ubo:raw-text-viewer',
+    )
+    register_application(
+        application=RawImageViewer,
+        application_id='ubo:raw-image-viewer',
     )
     import ubo_app.store.main  # noqa: F401
 

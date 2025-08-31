@@ -77,7 +77,7 @@ async def init_service() -> None:
     @store.autorun(
         lambda state: state.assistant.is_listening,
     )
-    def monitor_assistant_listening_state(is_listening: bool) -> None: # noqa: FBT001
+    def monitor_assistant_listening_state(is_listening: bool) -> None:  # noqa: FBT001
         """Monitor the assistant's is_listening state.
 
         Update the RGB ring accordingly.
