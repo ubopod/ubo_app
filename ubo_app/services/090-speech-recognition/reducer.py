@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from redux import CompleteReducerResult, InitAction, InitializationActionError
 
-from ubo_app.constants import ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
+from ubo_app.constants.assistant import ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
 from ubo_app.store.core.types import (
     MenuChooseByIndexAction,
     MenuGoBackAction,

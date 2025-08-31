@@ -8,6 +8,7 @@
 - feat(core): add raw image viewer
 - fix(core): autorun objects when called directly, wait for the result of the function to be ready in the runner thread before returning it
 - feat(file-system): open image files using the image viewer
+- refactor(assistant): move constants of assistant service to a separate file
 
 ## Version 1.6.0
 

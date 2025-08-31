@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, TypeAlias
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
-from ubo_app.constants import (
+from ubo_app.constants.assistant import (
     DEFAULT_ASSISTANT_ANTHROPIC_MODEL,
     DEFAULT_ASSISTANT_GOOGLE_MODEL,
     DEFAULT_ASSISTANT_OLLAMA_MODEL,
@@ -78,7 +78,7 @@ class AssistanceFrame(Immutable):
 class AssistanceTextFrame(AssistanceFrame):
     """A text assistance frame."""
 
-    text: str | None
+    text: str
 
 
 class AssistanceAudioFrame(AssistanceFrame):
