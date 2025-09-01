@@ -13,6 +13,7 @@
 - chore: fix minor issues in deploy script
 - feat(assistant): enable video_out in our pipecat transport and implement image generation
 - refactor(assistant): move rgb reactions to the is_listening changes to the reducer, previously implemented via autorun
+- fix(audio): fix audio playback cut off when using pyaudio on non-rpi platforms
 
 ## Version 1.6.0
 
