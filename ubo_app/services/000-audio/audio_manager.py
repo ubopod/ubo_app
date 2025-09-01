@@ -219,7 +219,7 @@ class AudioManager:
         id: str,
         index: int,
     ) -> None:
-        """Play a sequence of audio.
+        """Play a sequence of audio samples.
 
         Parameters
         ----------
@@ -261,13 +261,16 @@ class AudioManager:
                 channels=sample.channels,
                 rate=sample.rate,
                 output=True,
-                frames_per_buffer=len(sample.data),
+                frames_per_buffer=1024,
                 output_device_index=default_playback_index,
             )
 
             async def play(sample: AudioSample) -> None:
                 """Play a sample using PyAudio."""
-                stream.write(sample.data)
+                chunk_size = 1024 * sample.channels * sample.width
+                for i in range(0, len(sample.data), chunk_size):
+                    chunk = sample.data[i : i + chunk_size]
+                    stream.write(chunk)
         else:
             stream = alsaaudio.PCM(
                 type=alsaaudio.PCM_PLAYBACK,
