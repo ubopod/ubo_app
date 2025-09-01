@@ -21,15 +21,18 @@ from ubo_app.store.services.assistant import (
     AssistantState,
     AssistantStopListeningAction,
 )
+from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingRainbowAction
 
 if TYPE_CHECKING:
     from redux import ReducerResult
+
+    from ubo_app.store.services.rgb_ring import RgbRingAction
 
 
 def reducer(
     state: AssistantState | None,
     action: AssistantAction,
-) -> ReducerResult[AssistantState, None, AssistantEvent]:
+) -> ReducerResult[AssistantState, RgbRingAction, AssistantEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return AssistantState()
@@ -70,10 +73,16 @@ def reducer(
             )
 
         case AssistantStartListeningAction():
-            return state(is_listening=True)
+            return CompleteReducerResult(
+                state=state(is_listening=True),
+                actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+            )
 
         case AssistantStopListeningAction():
-            return state(is_listening=False)
+            return CompleteReducerResult(
+                state=state(is_listening=False),
+                actions=[RgbRingBlankAction()],
+            )
 
         case _:
             return state
