@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING, cast, overload
 
 from betterproto.lib.std.google import protobuf as betterproto_protobuf
@@ -113,10 +114,20 @@ class UboRPCClient:
 
         def wrapper(callback: Callable[[list], None]) -> Callable[[], None]:
             async def iterator() -> None:
-                async for response in self.store_service.subscribe_store(
-                    SubscribeStoreRequest(selectors=selectors),
-                ):
-                    callback([_unpack_from_any(item) for item in response.results])
+                try:
+                    async for response in self.store_service.subscribe_store(
+                        SubscribeStoreRequest(selectors=selectors),
+                    ):
+                        try:
+                            callback(
+                                [_unpack_from_any(item) for item in response.results],
+                            )
+                        except Exception:
+                            logging.getLogger().exception(
+                                'Error in autorun callback',
+                            )
+                except Exception:
+                    logging.getLogger().exception('Error in autorun subscription')
 
             task = self.event_loop.create_task(iterator())
 

@@ -1,6 +1,5 @@
 """Google Cloud Speech Recognition Engine Implementation."""
 
-import asyncio
 import json
 import re
 import time
@@ -14,7 +13,7 @@ from ubo_app.constants.assistant import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN,
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
 )
-from ubo_app.engines.google_cloud import GoogleEngine
+from ubo_app.engines.google_cloud import GoogleCloudEngine
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionEngineName,
@@ -24,15 +23,17 @@ from ubo_app.utils import secrets
 from ubo_app.utils.async_ import ToThreadOptions, create_task, to_thread
 
 
-class GoogleSpeechRecognitionEngine(GoogleEngine, SpeechRecognitionMixin):
+class GoogleSpeechRecognitionEngine(GoogleCloudEngine, SpeechRecognitionMixin):
     """Google speech recognition engine using Google Cloud Speech-to-Text."""
-
-    _task: asyncio.Task[None] | None = None
 
     def __init__(self) -> None:
         """Initialize the Google speech recognition engine."""
-        self.engine_name = SpeechRecognitionEngineName.GOOGLE
-        super().__init__(name=self.engine_name)
+        super().__init__(label='Google')
+
+    @property
+    def engine_name(self) -> SpeechRecognitionEngineName:
+        """Return the name of the speech recognition engine."""
+        return SpeechRecognitionEngineName.GOOGLE
 
     def _run_loop(self) -> None:
         from google.cloud import speech_v2 as speech
@@ -94,6 +95,7 @@ class GoogleSpeechRecognitionEngine(GoogleEngine, SpeechRecognitionMixin):
             ToThreadOptions(callback=self._set_task, name='VoskEngine.run'),
         )
 
+    @property
     def is_setup(self) -> bool:
         """Check if the Google speech recognition engine is set up."""
         service_account_info_string = secrets.read_secret(
@@ -109,8 +111,8 @@ class GoogleSpeechRecognitionEngine(GoogleEngine, SpeechRecognitionMixin):
         )
 
     @override
-    async def _setup_google_cloud_service_account_key(self) -> None:
-        await super()._setup_google_cloud_service_account_key()
+    async def _setup(self) -> None:
+        await super()._setup()
         store.dispatch(
             SpeechRecognitionSetSelectedEngineAction(
                 engine_name=self.engine_name,

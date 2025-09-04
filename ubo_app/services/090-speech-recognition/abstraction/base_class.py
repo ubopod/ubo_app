@@ -10,7 +10,6 @@ from ubo_app.engines.abstraction.background_running_mixin import BackgroundRunni
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionEngineName,
     SpeechRecognitionSetIsAssistantActiveAction,
     SpeechRecognitionSetIsIntentsActiveAction,
 )
@@ -21,11 +20,10 @@ class BaseSpeechRecognitionEngine(BackgroundRunningMixin):
     """Base class for speech recognition engines."""
 
     @override
-    def __init__(self, *, name: SpeechRecognitionEngineName, label: str) -> None:
+    def __init__(self, *, label: str | None = None) -> None:
         """Initialize speech recognition engine."""
         self.input_queue: AsyncEvictingQueue[bytes] = AsyncEvictingQueue(maxsize=5)
-        self.speech_engine_name = name
-        super().__init__(name=name, label=label)
+        super().__init__(label=label)
 
     async def queue_audio_chunk(self, chunk: bytes) -> None:
         """Queue a chunk of audio data for processing."""

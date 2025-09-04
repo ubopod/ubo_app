@@ -7,14 +7,14 @@ from functools import reduce
 from typing import TYPE_CHECKING
 
 import aiostream
-from constants import (
+
+from ubo_app.colors import DANGER_COLOR, INFO_COLOR
+from ubo_app.constants.assistant import (
     PIPER_DOWNLOAD_NOTIFICATION_ID,
     PIPER_MODEL_JSON_PATH,
     PIPER_MODEL_PATH,
     PIPER_MODEL_URL,
 )
-
-from ubo_app.colors import DANGER_COLOR, INFO_COLOR
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Chime,

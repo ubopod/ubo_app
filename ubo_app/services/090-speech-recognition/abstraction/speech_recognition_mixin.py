@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, final, overload
+from typing import TYPE_CHECKING, cast, final, overload
 
 from typing_extensions import override
 
 from abstraction.base_class import BaseSpeechRecognitionEngine
 from ubo_app.logger import logger
+from ubo_app.store.services.speech_recognition import (
+    SpeechRecognitionEngineName,
+)
 from ubo_app.utils.async_evicting_queue import AsyncEvictingQueue
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
-
-    from ubo_app.store.services.speech_recognition import (
-        SpeechRecognitionEngineName,
-    )
 
 
 class Recognition:
@@ -72,16 +71,22 @@ class PhraseRecognition(Recognition):
 class SpeechRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
     """Base class for speech recognition engines."""
 
-    speech_engine_name: SpeechRecognitionEngineName
+    @property
+    def speech_engine_name(self) -> SpeechRecognitionEngineName:
+        """Get the name of the speech recognition engine."""
+        return cast('SpeechRecognitionEngineName', self.name)
 
     @override
-    def __init__(self, *, name: SpeechRecognitionEngineName, label: str) -> None:
+    def __init__(self, *, label: str | None = None) -> None:
         """Initialize speech recognition engine."""
+        if self.name not in SpeechRecognitionEngineName.__members__.values():
+            msg = f'Engine name {self.name} is not a valid SpeechRecognitionEngineName.'
+            raise ValueError(msg)
         self.ongoing_recognition: Recognition | None = None
         self.speech_recognitions_queue: AsyncEvictingQueue[Recognition | None] = (
             AsyncEvictingQueue(maxsize=5)
         )
-        super().__init__(name=name, label=label)
+        super().__init__(label=label)
 
     def should_be_running(self) -> bool:
         """Check if the speech recognition engine should be running."""

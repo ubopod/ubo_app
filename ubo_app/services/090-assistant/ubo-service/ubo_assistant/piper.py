@@ -3,7 +3,6 @@
 import asyncio
 from collections.abc import AsyncGenerator, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, cast
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -51,32 +50,9 @@ class PiperTTSService(TTSService):
         self._process_executor = ThreadPoolExecutor(max_workers=1)
         self._sample_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
 
-        try:
-            from piper.voice import (  # pyright: ignore [reportMissingImports, reportMissingModuleSource]
-                PiperVoice,
-            )
+        from piper.voice import PiperVoice
 
-            self._client = PiperVoice.load(PIPER_MODEL_PATH.as_posix())
-        except ModuleNotFoundError:
-            if TYPE_CHECKING:
-                from piper.voice import (  # pyright: ignore [reportMissingImports, reportMissingModuleSource]
-                    PiperVoice,  # noqa: TC004
-                )
-            from fake import Fake
-
-            self._client = cast(
-                'PiperVoice',
-                Fake(
-                    _Fake__attrs={
-                        'synthesize_stream_raw': lambda _: [b''],
-                        'config': Fake(
-                            _Fake__attrs={
-                                'sample_rate': 16000,
-                            },
-                        ),
-                    },
-                ),
-            )
+        self._client = PiperVoice.load(PIPER_MODEL_PATH)
 
         self.tasks: list[asyncio.Handle] = []
 

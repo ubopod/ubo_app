@@ -7,9 +7,10 @@ from enum import StrEnum
 from pathlib import Path
 
 from immutable import Immutable
-from redux import BaseAction, BaseEvent
+from redux import BaseEvent
 
 from ubo_app.constants import DEBUG_BETA_VERSIONS, DEBUG_PDB_SIGNAL, DEBUG_VISUAL
+from ubo_app.store.core.types import MainAction
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 ROOT_PATH = Path(__file__).parent.parent.parent
@@ -22,7 +23,7 @@ class ServicesStatus(StrEnum):
     READY = 'ready'
 
 
-class SettingsAction(BaseAction):
+class SettingsAction(MainAction):
     """Settings action."""
 
 

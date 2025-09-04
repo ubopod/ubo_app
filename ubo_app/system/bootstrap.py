@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import functools
 import grp
-import hashlib
 import os
 import pwd
 import shutil
@@ -219,13 +218,30 @@ def configure_device() -> None:
         )
 
 
+def _prepare(
+    service_installation_path: Path,
+) -> None:
+    try:
+        os.setgid(USER_GID)
+        os.setuid(USER_UID)
+
+        venv.create(
+            service_installation_path.as_posix(),
+            system_site_packages=True,
+            with_pip=True,
+        )
+
+    except Exception as e:
+        print(f'preexec_fn error: {e}', flush=True)  # noqa: T201
+        import traceback
+
+        print(traceback.format_exc(), flush=True)  # noqa: T201
+        raise
+
+
 def setup_ubo_services() -> None:
     """Install dependencies of ubo services that run in their own virtual envs."""
     ubo_services_search_path = Path(__file__).parent.parent / 'services'
-
-    services_installation_path = Path(INSTALLATION_PATH) / 'ubo-services'
-    services_installation_path.mkdir(exist_ok=True, parents=True)
-    os.chown(services_installation_path, USER_UID, USER_GID)
 
     for ubo_service_path in ubo_services_search_path.iterdir():
         setup_script_path = ubo_service_path / 'ubo-setup.sh'
@@ -233,50 +249,16 @@ def setup_ubo_services() -> None:
             stdout.write(f'Setting up ubo service {ubo_service_path}')
             stdout.flush()
 
-            sha256 = hashlib.sha256()
-            sha256.update(ubo_service_path.as_posix().encode())
-            service_directory_hash = sha256.hexdigest()
-            service_installation_path = (
-                services_installation_path / service_directory_hash
-            )
-
+            service_installation_path = ubo_service_path / 'ubo-service'
             shutil.rmtree(service_installation_path, ignore_errors=True)
             service_installation_path.mkdir()
             os.chown(service_installation_path, USER_UID, USER_GID)
-
-            def prepare(
-                ubo_service_path: Path,
-                service_installation_path: Path,
-            ) -> None:
-                try:
-                    os.setgid(USER_GID)
-                    os.setuid(USER_UID)
-
-                    venv.create(
-                        service_installation_path.as_posix(),
-                        system_site_packages=True,
-                        with_pip=True,
-                    )
-
-                    symlink_path = ubo_service_path / 'ubo-service'
-                    if symlink_path.exists():
-                        symlink_path.unlink()
-                    symlink_path.symlink_to(service_installation_path)
-                    os.chown(symlink_path, USER_UID, USER_GID)
-
-                except Exception as e:
-                    print(f'preexec_fn error: {e}', flush=True)  # noqa: T201
-                    import traceback
-
-                    print(traceback.format_exc(), flush=True)  # noqa: T201
-                    raise
 
             subprocess.run(  # noqa: S602
                 f'source {service_installation_path / "bin" / "activate"} && '
                 f'{setup_script_path.absolute()}',
                 preexec_fn=functools.partial(
-                    prepare,
-                    ubo_service_path,
+                    _prepare,
                     service_installation_path,
                 ),
                 cwd=service_installation_path,

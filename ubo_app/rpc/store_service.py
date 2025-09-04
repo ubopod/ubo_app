@@ -13,6 +13,7 @@ from ubo_app.logger import logger
 from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_group
 from ubo_app.rpc.object_to_message import GRPCSerializable, build_message
 from ubo_app.store.main import RootState, UboAction, UboEvent, store
+from ubo_app.utils.error_handlers import report_service_error
 
 from ubo_bindings.store.v1 import (
     DispatchActionRequest,
@@ -102,7 +103,7 @@ class StoreService(StoreServiceBase):
     """gRPC service class that implements the Store service."""
 
     async def dispatch_action(
-        self: StoreService,
+        self,
         dispatch_action_request: DispatchActionRequest,
     ) -> DispatchActionResponse:
         """Dispatch an action to the store."""
@@ -127,7 +128,7 @@ class StoreService(StoreServiceBase):
         return DispatchActionResponse()
 
     async def subscribe_event(
-        self: StoreService,
+        self,
         subscribe_event_request: SubscribeEventRequest,
     ) -> AsyncIterator[SubscribeEventResponse]:
         """Subscribe to an event from the store."""
@@ -166,7 +167,7 @@ class StoreService(StoreServiceBase):
                 )
 
     async def subscribe_store(
-        self: StoreService,
+        self,
         subscribe_store_request: SubscribeStoreRequest,
     ) -> AsyncIterator[SubscribeStoreResponse]:
         """Subscribe to the changes of selected parts of the store."""
@@ -177,14 +178,15 @@ class StoreService(StoreServiceBase):
         ]
 
         def parent_selector(state: RootState) -> Sequence[GRPCSerializable]:
-            return [selector(state) for selector in selectors]
+            return tuple(selector(state) for selector in selectors)
 
+        @store.autorun(parent_selector)
         def queue_change(partial_state: Sequence[GRPCSerializable]) -> None:
             """Put the change in the queue."""
             try:
                 queue.put_nowait(partial_state)
             except QueueFull:
-                logger.verbose(
+                logger.debug(
                     'Subscription store queue is full, dropping change',
                     extra={
                         'partial_state': partial_state,
@@ -192,10 +194,19 @@ class StoreService(StoreServiceBase):
                     },
                 )
 
-        store.autorun(parent_selector)(queue_change)
-
-        while True:
-            change = await queue.get()
-            yield SubscribeStoreResponse(
-                results=[_pack_to_any(partial_state) for partial_state in change],
+        try:
+            while True:
+                change = await queue.get()
+                yield SubscribeStoreResponse(
+                    results=[_pack_to_any(partial_state) for partial_state in change],
+                )
+        except Exception:
+            logger.exception(
+                'Exception in store subscription',
+                extra={
+                    'selectors': subscribe_store_request.selectors,
+                },
             )
+            report_service_error()
+        finally:
+            queue_change.unsubscribe()

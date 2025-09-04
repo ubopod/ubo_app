@@ -1,6 +1,5 @@
-"""Google Cloud engine implementation."""
+"""Google Cloud engine interface."""
 
-import asyncio
 import re
 
 from typing_extensions import override
@@ -9,7 +8,9 @@ from ubo_app.constants.assistant import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_PATTERN,
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
 )
+from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
+from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -18,24 +19,31 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.services.file_system import PathSelectorConfig
 from ubo_app.utils import secrets
-from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
 
 
-class GoogleEngine(NeedsSetupMixin):
+class GoogleCloudEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Google Cloud engine."""
 
-    _task: asyncio.Task[None] | None = None
+    @property
+    def name(self) -> str:
+        """The name of the Google Cloud engine."""
+        return 'google_cloud'
 
-    def __init__(self, name: str) -> None:
-        """Initialize the Google Cloud engine."""
-        super().__init__(
-            name=name,
-            label='Google Cloud',
-            not_setup_message='Google Cloud service account key is not set. You can '
-            'set it in the settings.',
+    @property
+    def label(self) -> str:
+        """The label of the Google Cloud engine."""
+        return 'Google Cloud'
+
+    @property
+    def not_setup_message(self) -> str:
+        """The message to display when the Google Cloud engine is not set up."""
+        return (
+            'Google Cloud service account key is not set. You can '
+            'set it in the settings.'
         )
 
+    @property
     @override
     def is_setup(self) -> bool:
         """Check if the Google Cloud engine is set up."""
@@ -51,7 +59,7 @@ class GoogleEngine(NeedsSetupMixin):
             is not None
         )
 
-    async def _setup_google_cloud_service_account_key(self) -> None:
+    async def _setup(self) -> None:
         _, result = await ubo_input(
             title='Google Cloud Service Account Key',
             prompt='Enter your service account key, it should have at least '
@@ -86,8 +94,3 @@ class GoogleEngine(NeedsSetupMixin):
             key=GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
             value=result.files['service_account_key'].decode('utf-8'),
         )
-
-    @override
-    def setup(self) -> None:
-        """Set up the Google Cloud engine."""
-        create_task(self._setup_google_cloud_service_account_key())

@@ -6,6 +6,7 @@ import asyncio
 import os
 from typing import TYPE_CHECKING
 
+from betterproto.lib.google.protobuf import StringValue
 from loguru import logger
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
@@ -52,10 +53,6 @@ class Assistant:
             client=self.client,
         )
 
-        @self.client.autorun(['state.audio'])
-        def playback_volume_handler(results: list[float]) -> None:
-            print(results)  # noqa: T201
-
         ubo_output_transport = UboOutputTransport(
             params=TransportParams(
                 audio_out_enabled=True,
@@ -83,6 +80,10 @@ class Assistant:
             os.environ['OPENAI_API_KEY_SECRET_ID'],
         )
 
+        grok_api_key = await self.client.query_secret(
+            os.environ['GROK_API_KEY_SECRET_ID'],
+        )
+
         ubo_stt_service = UboSTTService(
             client=self.client,
             google_credentials=google_credentials,
@@ -93,17 +94,42 @@ class Assistant:
             client=self.client,
             google_credentials=google_credentials,
             openai_api_key=openai_api_key,
+            grok_api_key=grok_api_key,
         )
+
+        @self.client.autorun(['state.assistant.selected_stt'])
+        def handle_stt_service_change(data: list[StringValue]) -> None:
+            selected_stt = data[0]
+            ubo_stt_service.set_selected_service(selected_stt.value)
+
+        @self.client.autorun(['state.assistant.selected_llm'])
+        def handle_llm_service_change(data: list[StringValue]) -> None:
+            selected_llm = data[0]
+            ubo_llm_service.set_selected_service(selected_llm.value)
+
+        @self.client.autorun(['state.assistant.selected_tts'])
+        def handle_tts_service_change(data: list[StringValue]) -> None:
+            selected_tts = data[0]
+            ubo_tts_service.set_selected_service(selected_tts.value)
+
+        @self.client.autorun(['state.assistant.selected_image_generator'])
+        def handle_image_generator_service_change(data: list[StringValue]) -> None:
+            pass
 
         messages: list[ChatCompletionMessageParam] = [
             {
                 'role': 'system',
                 'content': """You are a helpful assistant who converses with a user \
-and answers questions. Respond concisely to general questions.
+and answers questions.
 
-Your response will be turned into speech so use only simple words and punctuation.
+Your goals are to be helpful and brief in your responses.
+Respond with one or two sentences at most, unless you are asked to respond at more \
+length.
+Your output will be converted to audio so don't include special characters in your \
+answers.
 
-You have access to two tools: draw_image and get_image.
+You have access to two tools: "draw_image" and "get_image".
+these tools
 
 You can respond to requests about generating images by using the draw_image tool.
 
@@ -114,7 +140,10 @@ Some examples of phrases that indicate you should use the get_image tool are:
 - Can you describe the video?
 - Tell me about what you see.
 - Tell me something interesting about what you see.
-- What's happening in the video?""",
+- What's happening in the video?
+
+You are not limited to these tools, you can answer general questions of the user and
+engage in a conversation with them.""",
             },
         ]
         draw_image_function = FunctionSchema(

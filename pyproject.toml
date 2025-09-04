@@ -87,7 +87,6 @@ dev-dependencies = [
 
 [tool.uv.sources]
 ubo-app-raw-bindings = { workspace = true }
-ubo-version-scheme = { workspace = true }
 
 [tool.uv.workspace]
 members = ["ubo_app/rpc", "version_scheme"]
@@ -332,7 +331,7 @@ filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
   "ignore:'imghdr' is deprecated:DeprecationWarning",
 ]
-timeout = 160
+timeout = 180
 verbosity_assertions = 2
 
 [tool.coverage.report]

@@ -76,12 +76,12 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             logger.exception('Error while initializing Vosk STT')
             self.vosk_stt = None
 
-        self._services = [
-            self.segmented_google_stt,
-            self.google_stt,
-            self.openai_stt,
-            self.vosk_stt,
-        ]
+        self._services = {
+            'google_segmented': self.segmented_google_stt,
+            'google': self.google_stt,
+            'openai': self.openai_stt,
+            'vosk': self.vosk_stt,
+        }
 
         UboSwitchService.__init__(self, client=client)
         STTService.__init__(self)

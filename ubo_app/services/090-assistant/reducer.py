@@ -15,8 +15,11 @@ from ubo_app.store.services.assistant import (
     AssistantHandleReportEvent,
     AssistantReportAction,
     AssistantSetIsActiveAction,
+    AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantSetSelectedSTTAction,
+    AssistantSetSelectedTTSAction,
     AssistantStartListeningAction,
     AssistantState,
     AssistantStopListeningAction,
@@ -43,8 +46,17 @@ def reducer(
         case AssistantSetIsActiveAction():
             return replace(state, is_active=action.is_active)
 
+        case AssistantSetSelectedSTTAction():
+            return replace(state, selected_stt=action.stt_name)
+
         case AssistantSetSelectedLLMAction():
             return replace(state, selected_llm=action.llm_name)
+
+        case AssistantSetSelectedTTSAction():
+            return replace(state, selected_tts=action.tts_name)
+
+        case AssistantSetSelectedImageGeneratorAction():
+            return replace(state, selected_image_generator=action.image_generator_name)
 
         case AssistantSetSelectedModelAction():
             return replace(

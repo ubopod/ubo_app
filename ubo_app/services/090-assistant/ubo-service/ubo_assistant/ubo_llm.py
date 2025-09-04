@@ -10,6 +10,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.google.llm_vertex import GoogleVertexLLMService
+from pipecat.services.grok.llm import GrokLLMService
 from pipecat.services.llm_service import FunctionCallParams, LLMService
 from pipecat.services.ollama.llm import OLLamaLLMService
 from pipecat.services.openai.llm import OpenAILLMService
@@ -33,6 +34,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         *,
         google_credentials: str | None,
         openai_api_key: str | None,
+        grok_api_key: str | None,
     ) -> None:
         """Initialize the LLM service with Google, OpenAI, and Ollama LLM services."""
         try:
@@ -64,6 +66,18 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             self.openai_llm = None
 
         try:
+            if grok_api_key:
+                self.grok_llm = GrokLLMService(
+                    model='grok-4-0709',
+                    api_key=grok_api_key,
+                )
+            else:
+                self.grok_llm = None
+        except Exception:
+            logger.exception('Error while initializing Grok LLM')
+            self.grok_llm = None
+
+        try:
             self.ollama_llm = OLLamaLLMService(
                 model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
             )
@@ -71,16 +85,17 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             logger.exception('Error while initializing Ollama LLM')
             self.ollama_llm = None
 
-        self._services = [
-            self.google_vertex_llm,
-            self.openai_llm,
-            self.ollama_llm,
-        ]
+        self._services = {
+            'google_vertex': self.google_vertex_llm,
+            'openai': self.openai_llm,
+            'grok': self.grok_llm,
+            'ollama': self.ollama_llm,
+        }
 
         UboSwitchService.__init__(self, client=client)
         LLMService.__init__(self)
 
-        for service in self.services:
+        for service in self.services.values():
             service.register_function('draw_image', self.draw_image)
             service.register_function('get_image', self.get_image)
 

@@ -48,7 +48,11 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             logger.exception('Error while initializing Piper TTS')
             self.piper_tts = None
 
-        self._services = [self.google_tts, self.openai_tts, self.piper_tts]
+        self._services = {
+            'google': self.google_tts,
+            'openai': self.openai_tts,
+            'piper': self.piper_tts,
+        }
 
         UboSwitchService.__init__(self, client=client)
         TTSService.__init__(self)
