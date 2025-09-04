@@ -15,6 +15,7 @@
 - refactor(assistant): move rgb reactions to the is_listening changes to the reducer, previously implemented via autorun
 - fix(audio): fix audio playback cut off when using pyaudio on non-rpi platforms
 - feat(assistant): store state, actions and events as well use ui for selecting assistant engines
+- refactor(assistant): implement `UboImageGeneratorService` which is a switch service to switch between available image generator services
 
 ## Version 1.6.0
 

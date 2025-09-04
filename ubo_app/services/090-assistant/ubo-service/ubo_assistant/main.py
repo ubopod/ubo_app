@@ -23,6 +23,7 @@ from pipecat.transports.base_transport import TransportParams
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.image_frame import ImageGenFrame
+from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import UboLLMService
 from ubo_assistant.ubo_output_transport import UboOutputTransport
@@ -99,22 +100,23 @@ class Assistant:
 
         @self.client.autorun(['state.assistant.selected_stt'])
         def handle_stt_service_change(data: list[StringValue]) -> None:
-            selected_stt = data[0]
-            ubo_stt_service.set_selected_service(selected_stt.value)
+            selected_stt = data[0].value
+            ubo_stt_service.set_selected_service(selected_stt)
 
         @self.client.autorun(['state.assistant.selected_llm'])
         def handle_llm_service_change(data: list[StringValue]) -> None:
-            selected_llm = data[0]
-            ubo_llm_service.set_selected_service(selected_llm.value)
+            selected_llm = data[0].value
+            ubo_llm_service.set_selected_service(selected_llm)
 
         @self.client.autorun(['state.assistant.selected_tts'])
         def handle_tts_service_change(data: list[StringValue]) -> None:
-            selected_tts = data[0]
-            ubo_tts_service.set_selected_service(selected_tts.value)
+            selected_tts = data[0].value
+            ubo_tts_service.set_selected_service(selected_tts)
 
         @self.client.autorun(['state.assistant.selected_image_generator'])
         def handle_image_generator_service_change(data: list[StringValue]) -> None:
-            pass
+            selected_image_generator = data[0].value
+            ubo_image_generator_service.set_selected_service(selected_image_generator)
 
         messages: list[ChatCompletionMessageParam] = [
             {
@@ -131,10 +133,10 @@ answers.
 You have access to two tools: "draw_image" and "get_image".
 these tools
 
-You can respond to requests about generating images by using the draw_image tool.
+You can respond to requests about generating images by using the "draw_image" tool.
 
 You can answer questions about the user's video stream using the get_image tool.
-Some examples of phrases that indicate you should use the get_image tool are:
+Some examples of phrases that indicate you should use the "get_image" tool are:
 - What do you see?
 - What's in the video?
 - Can you describe the video?
@@ -177,7 +179,7 @@ engage in a conversation with them.""",
 
         async def g() -> None:
             while True:
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
                 print(str(context.messages)[:5000])  # noqa: T201
 
         self.client.event_loop.create_task(g())
@@ -185,6 +187,12 @@ engage in a conversation with them.""",
         ubo_tts_service = UboTTSService(
             client=self.client,
             google_credentials=google_credentials,
+            openai_api_key=openai_api_key,
+        )
+
+        ubo_image_generator_service = UboImageGeneratorService(
+            client=self.client,
+            google_api_key=google_api_key,
             openai_api_key=openai_api_key,
         )
 
@@ -211,27 +219,17 @@ engage in a conversation with them.""",
         task = PipelineTask(pipeline, params=PipelineParams(audio_in_sample_rate=16000))
         runner = PipelineRunner(handle_sigint=True)
 
-        if google_api_key:
-            google_image_gen_service = GoogleImageGenService(
-                api_key=google_api_key,
-            )
+        image_generator_pipeline = Pipeline(
+            [
+                ConsumerProcessor(producer=image_producer),
+                ubo_image_generator_service,
+                context_aggregator.assistant(),
+                ubo_output_transport,
+            ],
+        )
+        image_generator_task = PipelineTask(image_generator_pipeline)
 
-            image_gen_pipeline = Pipeline(
-                [
-                    ConsumerProcessor(producer=image_producer),
-                    google_image_gen_service,
-                    context_aggregator.assistant(),
-                    ubo_output_transport,
-                ],
-            )
-            image_gen_task = PipelineTask(
-                image_gen_pipeline,
-                params=PipelineParams(audio_in_sample_rate=16000),
-            )
-
-            await asyncio.gather(runner.run(task), runner.run(image_gen_task))
-        else:
-            await runner.run(task)
+        await asyncio.gather(runner.run(task), runner.run(image_generator_task))
 
 
 def main() -> None:
