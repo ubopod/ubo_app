@@ -17,6 +17,7 @@
 - feat(assistant): store state, actions and events as well use ui for selecting assistant engines
 - refactor(assistant): implement `UboImageGeneratorService` which is a switch service to switch between available image generator services
 - fix(assistant): improve pipecat service switch mechanism
+- refactor(assistant): move selected service sync autorun functions from main.py to `UboSwitch`
 
 ## Version 1.6.0
 

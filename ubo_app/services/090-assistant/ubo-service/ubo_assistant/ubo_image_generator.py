@@ -22,6 +22,7 @@ class UboImageGeneratorService(UboSwitchService[ImageGenService], ImageGenServic
         *,
         google_api_key: str | None,
         openai_api_key: str | None,
+        selector: str,
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
         self._assistance_index = 0
@@ -55,7 +56,7 @@ class UboImageGeneratorService(UboSwitchService[ImageGenService], ImageGenServic
             'openai': self.openai_image_generator,
         }
 
-        UboSwitchService.__init__(self, client=client)
+        UboSwitchService.__init__(self, client=client, selector=selector)
         ImageGenService.__init__(self)
 
     async def run_image_gen(self, prompt: str) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
