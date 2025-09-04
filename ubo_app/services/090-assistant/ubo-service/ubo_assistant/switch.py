@@ -5,7 +5,7 @@ from collections.abc import Callable, Coroutine
 from types import CoroutineType
 from typing import Generic, Protocol, TypeVar
 
-from pipecat.frames.frames import Frame, SystemFrame
+from pipecat.frames.frames import Frame, StartFrame, StopFrame, SystemFrame
 from pipecat.processors.frame_processor import (
     FrameDirection,
     FrameProcessor,
@@ -59,7 +59,7 @@ class UboSwitchService(AIService, Generic[T]):
 
         for service in self.services.values():
             service.push_frame = push_frame_wrapper(service.push_frame)
-        self.selected_service: T | None = next(iter(self.services.values()), None)
+        self.selected_service: T | None = None
 
     def _reset_assistance(self) -> None:
         self._assistance_id = uuid.uuid4().hex
@@ -85,11 +85,11 @@ class UboSwitchService(AIService, Generic[T]):
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process frame with the selected service."""
+        if isinstance(frame, StartFrame):
+            self._start_frame = frame
         if isinstance(frame, SystemFrame):
             await super().process_frame(frame, direction)
-            for service in self.services.values():
-                await service.process_frame(frame, direction)
-        elif self.selected_service:
+        if self.selected_service:
             await self.selected_service.process_frame(frame, direction)
 
     async def setup(self, setup: FrameProcessorSetup) -> None:
@@ -103,4 +103,8 @@ class UboSwitchService(AIService, Generic[T]):
         if id not in self.services:
             msg = f'Service {id} is not available in the switch service `{type(self)}`.'
             raise ValueError(msg)
-        self.selected_service = self.services[id]
+        if self.selected_service:
+            self.create_task(self.selected_service.queue_frame(StopFrame()))
+        self.selected_service = self.services.get(id, None)
+        if self.selected_service:
+            self.create_task(self.selected_service.queue_frame(self._start_frame))
