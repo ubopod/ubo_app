@@ -59,10 +59,8 @@ class AssistantTTSName(StrEnum):
 class AssistantImageGeneratorName(StrEnum):
     """Available assistant image generator engines."""
 
-    STABLE_DIFFUSION = 'stable_diffusion'
     GOOGLE = 'google'
     OPENAI = 'openai'
-    GROK = 'grok'
 
 
 class AssistantAction(BaseAction):
