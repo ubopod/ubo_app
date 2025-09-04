@@ -1,6 +1,7 @@
 """LLM service that wraps multiple LLM services allowing switching between them."""
 
 import json
+from dataclasses import dataclass
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -8,12 +9,27 @@ from pipecat.frames.frames import (
     LLMFullResponseStartFrame,
     LLMTextFrame,
 )
+from pipecat.processors.aggregators.llm_response import (
+    LLMAssistantAggregatorParams,
+    LLMUserAggregatorParams,
+)
+from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.processors.frame_processor import FrameDirection
+from pipecat.services.google.llm import (
+    GoogleAssistantContextAggregator,
+    GoogleLLMService,
+    GoogleUserContextAggregator,
+)
 from pipecat.services.google.llm_vertex import GoogleVertexLLMService
 from pipecat.services.grok.llm import GrokLLMService
 from pipecat.services.llm_service import FunctionCallParams, LLMService
 from pipecat.services.ollama.llm import OLLamaLLMService
-from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.openai.llm import (
+    OpenAIAssistantContextAggregator,
+    OpenAIContextAggregatorPair,
+    OpenAILLMService,
+    OpenAIUserContextAggregator,
+)
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
@@ -25,7 +41,81 @@ from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.switch import UboSwitchService
 
 
-class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
+class _UboUserContextAggregator(
+    UboSwitchService[OpenAIUserContextAggregator],
+    OpenAIUserContextAggregator,
+):
+    def __init__(
+        self,
+        client: UboRPCClient,
+        *,
+        context: OpenAILLMContext,
+        params: LLMUserAggregatorParams | None = None,
+    ) -> None:
+        """Initialize the user context aggregator."""
+        self.open_ai_context_aggregator = OpenAIUserContextAggregator(
+            context,
+            params=params,
+        )
+        self.google_context_aggregator = GoogleUserContextAggregator(
+            context,
+            params=params,
+        )
+
+        self._services = [
+            self.open_ai_context_aggregator,
+            self.google_context_aggregator,
+        ]
+
+        super().__init__(client)
+        OpenAIUserContextAggregator.__init__(self, context=context, params=params)
+
+
+class _UboAssistantContextAggregator(
+    UboSwitchService[OpenAIAssistantContextAggregator],
+    OpenAIAssistantContextAggregator,
+):
+    def __init__(
+        self,
+        client: UboRPCClient,
+        *,
+        context: OpenAILLMContext,
+        params: LLMAssistantAggregatorParams | None = None,
+    ) -> None:
+        """Initialize the assistant context aggregator."""
+        self.open_ai_context_aggregator = OpenAIAssistantContextAggregator(
+            context,
+            params=params,
+        )
+        self.google_context_aggregator = GoogleAssistantContextAggregator(
+            context,
+            params=params,
+        )
+
+        self._services = [
+            self.open_ai_context_aggregator,
+            self.google_context_aggregator,
+        ]
+
+        super().__init__(client)
+        OpenAIAssistantContextAggregator.__init__(self, context=context, params=params)
+
+
+@dataclass
+class _UboContextAggregatorPair:
+    _user: _UboUserContextAggregator
+    _assistant: _UboAssistantContextAggregator
+
+    def user(self) -> _UboUserContextAggregator:
+        """Get the user context aggregator."""
+        return self._user
+
+    def assistant(self) -> _UboAssistantContextAggregator:
+        """Get the assistant context aggregator."""
+        return self._assistant
+
+
+class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
     """LLM service that wraps multiple LLM services allowing switching between them."""
 
     def __init__(
@@ -33,10 +123,23 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         client: UboRPCClient,
         *,
         google_credentials: str | None,
+        google_api_key: str | None,
         openai_api_key: str | None,
         grok_api_key: str | None,
     ) -> None:
         """Initialize the LLM service with Google, OpenAI, and Ollama LLM services."""
+        try:
+            if google_api_key:
+                self.google_llm = GoogleLLMService(
+                    api_key=google_api_key,
+                    model='gemini-2.5-flash',
+                )
+            else:
+                self.google_llm = None
+        except Exception:
+            logger.exception('Error while initializing Google LLM')
+            self.google_llm = None
+
         try:
             if google_credentials:
                 project_id = json.loads(google_credentials).get('project_id')
@@ -98,6 +201,32 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         for service in self.services.values():
             service.register_function('draw_image', self.draw_image)
             service.register_function('get_image', self.get_image)
+
+    def create_context_aggregator(
+        self,
+        context: OpenAILLMContext,
+        *,
+        user_params: LLMUserAggregatorParams | None = None,
+        assistant_params: LLMAssistantAggregatorParams | None = None,
+    ) -> OpenAIContextAggregatorPair:
+        """Create a context aggregator for user and assistant messages."""
+        if user_params is None:
+            user_params = LLMUserAggregatorParams()
+        if assistant_params is None:
+            assistant_params = LLMAssistantAggregatorParams()
+
+        context.set_llm_adapter(self.get_llm_adapter())
+        user = _UboUserContextAggregator(
+            self.client,
+            context=context,
+            params=user_params,
+        )
+        assistant = _UboAssistantContextAggregator(
+            self.client,
+            context=context,
+            params=assistant_params,
+        )
+        return OpenAIContextAggregatorPair(_user=user, _assistant=assistant)
 
     async def draw_image(self, params: FunctionCallParams) -> None:
         """Generate an image based on a text prompt."""
