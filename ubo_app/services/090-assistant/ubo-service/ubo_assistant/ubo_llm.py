@@ -35,6 +35,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         google_credentials: str | None,
         openai_api_key: str | None,
         grok_api_key: str | None,
+        selector: str,
     ) -> None:
         """Initialize the LLM service with Google, OpenAI, and Ollama LLM services."""
         try:
@@ -92,7 +93,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             'ollama': self.ollama_llm,
         }
 
-        UboSwitchService.__init__(self, client=client)
+        UboSwitchService.__init__(self, client=client, selector=selector)
         LLMService.__init__(self)
 
         for service in self.services.values():

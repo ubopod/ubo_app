@@ -32,6 +32,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         *,
         google_credentials: str | None,
         openai_api_key: str | None,
+        selector: str,
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
         self._assistance_index = 0
@@ -83,7 +84,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             'vosk': self.vosk_stt,
         }
 
-        UboSwitchService.__init__(self, client=client)
+        UboSwitchService.__init__(self, client=client, selector=selector)
         STTService.__init__(self)
 
     async def run_stt(self, audio: bytes) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]

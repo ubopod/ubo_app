@@ -89,6 +89,7 @@ class Assistant:
             client=self.client,
             google_credentials=google_credentials,
             openai_api_key=openai_api_key,
+            selector='state.assistant.selected_stt',
         )
 
         ubo_llm_service = UboLLMService(
@@ -96,27 +97,8 @@ class Assistant:
             google_credentials=google_credentials,
             openai_api_key=openai_api_key,
             grok_api_key=grok_api_key,
+            selector='state.assistant.selected_llm',
         )
-
-        @self.client.autorun(['state.assistant.selected_stt'])
-        def handle_stt_service_change(data: list[StringValue]) -> None:
-            selected_stt = data[0].value
-            ubo_stt_service.set_selected_service(selected_stt)
-
-        @self.client.autorun(['state.assistant.selected_llm'])
-        def handle_llm_service_change(data: list[StringValue]) -> None:
-            selected_llm = data[0].value
-            ubo_llm_service.set_selected_service(selected_llm)
-
-        @self.client.autorun(['state.assistant.selected_tts'])
-        def handle_tts_service_change(data: list[StringValue]) -> None:
-            selected_tts = data[0].value
-            ubo_tts_service.set_selected_service(selected_tts)
-
-        @self.client.autorun(['state.assistant.selected_image_generator'])
-        def handle_image_generator_service_change(data: list[StringValue]) -> None:
-            selected_image_generator = data[0].value
-            ubo_image_generator_service.set_selected_service(selected_image_generator)
 
         messages: list[ChatCompletionMessageParam] = [
             {
@@ -188,12 +170,14 @@ engage in a conversation with them.""",
             client=self.client,
             google_credentials=google_credentials,
             openai_api_key=openai_api_key,
+            selector='state.assistant.selected_tts',
         )
 
         ubo_image_generator_service = UboImageGeneratorService(
             client=self.client,
             google_api_key=google_api_key,
             openai_api_key=openai_api_key,
+            selector='state.assistant.selected_image_generator',
         )
 
         async def is_image_gen_frame(frame: Frame) -> bool:
