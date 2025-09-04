@@ -11,20 +11,17 @@ from typing import TYPE_CHECKING
 
 import fasteners
 import pvorca
-from constants import (
+from download_model import download_piper_model
+from piper.voice import AudioChunk, PiperVoice
+from redux import AutorunOptions
+from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
+
+from ubo_app.constants.assistant import (
     PICOVOICE_ACCESS_KEY_SECRET_ID,
     PIPER_MODEL_HASH,
     PIPER_MODEL_JSON_PATH,
     PIPER_MODEL_PATH,
 )
-from download_model import download_piper_model
-from piper.voice import (  # pyright: ignore [reportMissingModuleSource]
-    AudioChunk,
-    PiperVoice,
-)
-from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
-
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.input.types import (
     InputFieldDescription,
@@ -332,7 +329,7 @@ def _speech_synthesis_menu(selected_engine: SpeechSynthesisEngineName) -> Headle
                 label='Select Engine',
                 icon='󰔊',
                 sub_menu=HeadlessMenu(
-                    title='󰔊Select Engine' + selected_engine,
+                    title=f'󰔊Select Engine: {selected_engine}',
                     items=[
                         (
                             selection_parameters := SELECTED_ITEM_PARAMETERS
@@ -372,7 +369,7 @@ def init_service() -> Subscriptions:
 
     store.dispatch(
         RegisterSettingAppAction(
-            category=SettingsCategory.SPEECH,
+            category=SettingsCategory.ACCESSIBILITY,
             priority=10,
             menu_item=SubMenuItem(
                 label='Speech Synthesis',
@@ -385,7 +382,7 @@ def init_service() -> Subscriptions:
 
     store.dispatch(
         RegisterSettingAppAction(
-            category=SettingsCategory.SPEECH,
+            category=SettingsCategory.ACCESSIBILITY,
             priority=0,
             menu_item=SubMenuItem(
                 label='Picovoice Settings',

@@ -86,7 +86,7 @@ def init_service() -> Subscriptions:
             if not isinstance(engine, SpeechRecognitionMixin):
                 continue
 
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup():
+            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
                 items.append(
                     ActionItem(
                         key=engine_name,
@@ -156,7 +156,7 @@ def init_service() -> Subscriptions:
 
     store.dispatch(
         RegisterSettingAppAction(
-            category=SettingsCategory.SPEECH,
+            category=SettingsCategory.ACCESSIBILITY,
             priority=30,
             menu_item=SubMenuItem(
                 label='Speech Recognition',

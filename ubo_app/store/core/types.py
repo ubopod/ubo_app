@@ -23,8 +23,9 @@ class SettingsCategory(StrEnum):
     REMOTE = 'Remote'
     SYSTEM = 'System'
     HARDWARE = 'Hardware'
-    SPEECH = 'Speech'
+    ASSISTANT = 'Assistant'
     DOCKER = 'Docker'
+    ACCESSIBILITY = 'Accessibility'
 
 
 class MenuScrollDirection(StrEnum):
@@ -37,8 +38,9 @@ SETTINGS_ICONS = {
     SettingsCategory.REMOTE: '󰑔',
     SettingsCategory.SYSTEM: '󰒔',
     SettingsCategory.HARDWARE: '',
-    SettingsCategory.SPEECH: '󰔊',
+    SettingsCategory.ASSISTANT: '󰚩',
     SettingsCategory.DOCKER: '󰡨',
+    SettingsCategory.ACCESSIBILITY: '󰙋',
 }
 
 

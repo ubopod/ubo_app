@@ -7,6 +7,7 @@ import threading
 from typing import TYPE_CHECKING, final
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.engines.abstraction.engine import EngineMixin
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import Notification, NotificationsAddAction
@@ -17,25 +18,15 @@ if TYPE_CHECKING:
     import asyncio
 
 
-class BackgroundRunningMixin(abc.ABC):
+class BackgroundRunningMixin(EngineMixin, abc.ABC):
     """Base class for third-party background running engines."""
 
-    name: str
-    label: str
-
-    def __init__(
-        self,
-        *,
-        name: str,
-        label: str,
-    ) -> None:
+    def __init__(self, *, label: str | None = None) -> None:
         """Initialize `BackgroundRunningMixin`."""
-        self.name = name
-        self.label = label
         self._task = None
         self._run_lock = threading.Lock()
         self._is_running: bool = False
-        super().__init__()
+        super().__init__(label=label)
 
     @final
     def _task_done_callback(self, task: asyncio.Task[None]) -> None:
@@ -68,6 +59,7 @@ class BackgroundRunningMixin(abc.ABC):
         self._task = task
         self._task.add_done_callback(self._task_done_callback)
 
+    @abc.abstractmethod
     async def _run(self) -> None:
         raise NotImplementedError
 

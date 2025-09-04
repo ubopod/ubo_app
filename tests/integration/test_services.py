@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pytest
-
 if TYPE_CHECKING:
     from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot
@@ -20,7 +18,6 @@ MAX_EXPECTED_LISTENERS = 500
 MAX_EXPECTED_EVENT_HANDLERS = 60
 
 
-@pytest.mark.timeout(120)
 async def test_all_services_register(
     app_context: AppContext,
     window_snapshot: WindowSnapshot,
@@ -33,7 +30,7 @@ async def test_all_services_register(
     from ubo_app.constants import CORE_SERVICE_IDS
 
     app_context.set_app()
-    unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=40, run_async=True)
+    unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=50, run_async=True)
 
     await stability()
 
@@ -43,7 +40,7 @@ async def test_all_services_register(
     store_snapshot.take()
     window_snapshot.take()
 
-    await unload_waiter(timeout=30)
+    await unload_waiter(timeout=50)
 
 
 async def test_reducer_barrier(

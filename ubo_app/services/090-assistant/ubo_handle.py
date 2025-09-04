@@ -21,6 +21,7 @@ def binary_env_provider() -> dict[str, str]:
     from ubo_app.constants.assistant import (
         GOOGLE_API_KEY_SECRET_ID,
         GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
+        GROK_API_KEY_SECRET_ID,
         OPENAI_API_KEY_SECRET_ID,
     )
 
@@ -30,6 +31,7 @@ def binary_env_provider() -> dict[str, str]:
             GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID
         ),
         'OPENAI_API_KEY_SECRET_ID': OPENAI_API_KEY_SECRET_ID,
+        'GROK_API_KEY_SECRET_ID': GROK_API_KEY_SECRET_ID,
     }
 
 

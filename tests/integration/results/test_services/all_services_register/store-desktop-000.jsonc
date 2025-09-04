@@ -5,13 +5,16 @@
     "_type": "AssistantState",
     "is_active": false,
     "is_listening": false,
+    "selected_image_generator": "google",
     "selected_llm": "ollama",
     "selected_models": {
-      "anthropic": "claude-3-opus-20240229",
-      "google": "gemini-2.5-flash-preview-05-20",
+      "google_vertex": "gemini-2.5-flash-preview-05-20",
+      "grok": "grok-4-0709",
       "ollama": "gemma3:1b",
       "openai": "gpt-4o"
-    }
+    },
+    "selected_stt": "vosk",
+    "selected_tts": "piper"
   },
   "audio": {
     "_type": "AudioState",
@@ -6339,10 +6342,515 @@
                         1,
                         1
                       ],
-                      "icon": "󰔊",
+                      "icon": "󰚩",
                       "is_short": false,
-                      "key": "Speech",
-                      "label": "Speech",
+                      "key": "Assistant",
+                      "label": "Assistant",
+                      "opacity": null,
+                      "progress": null,
+                      "sub_menu": {
+                        "_type": "HeadlessMenu",
+                        "items": [
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": "assistant:stt",
+                            "label": "Speech Recognition",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Select Active Engine",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#2196F3",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "vosk",
+                                  "label": "Vosk",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "google_cloud",
+                                  "label": "Google (continuous)",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "google_cloud",
+                                  "label": "Google (segmented)",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "openai",
+                                  "label": "OpenAI",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+                              "title": "Speech Recognition"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰁤",
+                            "is_short": false,
+                            "key": "assistant:llm",
+                            "label": "Language Model",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Select Active Engine",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#2196F3",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "ollama",
+                                  "label": "Ollama",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "google_cloud",
+                                  "label": "Google Vertex",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "grok",
+                                  "label": "Grok",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "openai",
+                                  "label": "OpenAI",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+                              "title": "󰁤Language Model"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰔊",
+                            "is_short": false,
+                            "key": "assistant:tts",
+                            "label": "Speech Synthesis",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Select Active Engine",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#2196F3",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "piper",
+                                  "label": "Piper",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "google_cloud",
+                                  "label": "Google",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "openai",
+                                  "label": "OpenAI",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+                              "title": "󰁤Speech Synthesis"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰹉",
+                            "is_short": false,
+                            "key": "assistant:image_generator",
+                            "label": "Image Generator",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Select Active Engine",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "google",
+                                  "label": "Google",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "openai",
+                                  "label": "OpenAI",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+                              "title": "󰁤Image Generator"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰶗",
+                            "is_short": false,
+                            "key": "assistant:providers",
+                            "label": "Manage",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Setup providers to be used by different assistant features",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "ollama",
+                                  "label": "Ollama",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "piper",
+                                  "label": "Piper",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "vosk",
+                                  "label": "Vosk",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "google",
+                                  "label": "Google",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "google_cloud",
+                                  "label": "Google Cloud",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "grok",
+                                  "label": "Grok",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "openai",
+                                  "label": "OpenAI",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "",
+                              "title": "󰶗Manage"
+                            }
+                          }
+                        ],
+                        "placeholder": "No settings in this category",
+                        "title": "󰚩Assistant"
+                      }
+                    },
+                    {
+                      "_type": "SubMenuItem",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰡨",
+                      "is_short": false,
+                      "key": "Docker",
+                      "label": "Docker",
+                      "opacity": null,
+                      "progress": null,
+                      "sub_menu": {
+                        "_type": "HeadlessMenu",
+                        "items": [
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󱥉",
+                            "is_short": false,
+                            "key": "docker:registries",
+                            "label": "Registries",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "󰡨 Docker",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:input_credentials>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰌉",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Add Registry",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Log in to a registry:",
+                              "title": "󱥉Docker Registries"
+                            }
+                          },
+                          {
+                            "_type": "ActionItem",
+                            "action": "<function:setup_menu_action>",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": "docker:service",
+                            "label": "Service",
+                            "opacity": null,
+                            "progress": null
+                          }
+                        ],
+                        "placeholder": "No settings in this category",
+                        "title": "󰡨Docker"
+                      }
+                    },
+                    {
+                      "_type": "SubMenuItem",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰙋",
+                      "is_short": false,
+                      "key": "Accessibility",
+                      "label": "Accessibility",
                       "opacity": null,
                       "progress": null,
                       "sub_menu": {
@@ -6480,7 +6988,7 @@
                                         ],
                                         "icon": "",
                                         "is_short": false,
-                                        "key": "google",
+                                        "key": "google_cloud",
                                         "label": "Setup Google Cloud",
                                         "opacity": null,
                                         "progress": null
@@ -6495,90 +7003,6 @@
                               "placeholder": null,
                               "sub_heading": "Vosk is used for wake word detection",
                               "title": "Speech Recognition"
-                            }
-                          },
-                          {
-                            "_type": "SubMenuItem",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󰁤",
-                            "is_short": false,
-                            "key": "assistant:",
-                            "label": "Assistant",
-                            "opacity": null,
-                            "progress": null,
-                            "sub_menu": {
-                              "_type": "HeadedMenu",
-                              "heading": "Assistant Settings",
-                              "items": [
-                                {
-                                  "_type": "SubMenuItem",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰁤",
-                                  "is_short": false,
-                                  "key": "engine",
-                                  "label": "Assistant Engine",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "sub_menu": {
-                                    "_type": "HeadedMenu",
-                                    "heading": "Select Active Engine",
-                                    "items": [
-                                      {
-                                        "_type": "ActionItem",
-                                        "action": "<function:setup>",
-                                        "background_color": "#68B7FF",
-                                        "color": [
-                                          1,
-                                          1,
-                                          1,
-                                          1
-                                        ],
-                                        "icon": "",
-                                        "is_short": false,
-                                        "key": "ollama",
-                                        "label": "Setup Ollama",
-                                        "opacity": null,
-                                        "progress": null
-                                      },
-                                      {
-                                        "_type": "ActionItem",
-                                        "action": "<function:setup>",
-                                        "background_color": "#68B7FF",
-                                        "color": [
-                                          1,
-                                          1,
-                                          1,
-                                          1
-                                        ],
-                                        "icon": "",
-                                        "is_short": false,
-                                        "key": "google",
-                                        "label": "Setup Google Cloud",
-                                        "opacity": null,
-                                        "progress": null
-                                      }
-                                    ],
-                                    "placeholder": null,
-                                    "sub_heading": "[color=#03F7AE]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
-                                    "title": "󰁤Assistant Engine"
-                                  }
-                                }
-                              ],
-                              "placeholder": null,
-                              "sub_heading": "",
-                              "title": "󰁤 Assistant"
                             }
                           },
                           {
@@ -6653,7 +7077,7 @@
                                       }
                                     ],
                                     "placeholder": null,
-                                    "title": "󰔊Select Enginepiper"
+                                    "title": "󰔊Select Engine: piper"
                                   }
                                 }
                               ],
@@ -6705,89 +7129,7 @@
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "󰔊Speech"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰡨",
-                      "is_short": false,
-                      "key": "Docker",
-                      "label": "Docker",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [
-                          {
-                            "_type": "SubMenuItem",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󱥉",
-                            "is_short": false,
-                            "key": "docker:registries",
-                            "label": "Registries",
-                            "opacity": null,
-                            "progress": null,
-                            "sub_menu": {
-                              "_type": "HeadedMenu",
-                              "heading": "󰡨 Docker",
-                              "items": [
-                                {
-                                  "_type": "ActionItem",
-                                  "action": "<function:input_credentials>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰌉",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Add Registry",
-                                  "opacity": null,
-                                  "progress": null
-                                }
-                              ],
-                              "placeholder": null,
-                              "sub_heading": "Log in to a registry:",
-                              "title": "󱥉Docker Registries"
-                            }
-                          },
-                          {
-                            "_type": "ActionItem",
-                            "action": "<function:setup_menu_action>",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "",
-                            "is_short": false,
-                            "key": "docker:service",
-                            "label": "Service",
-                            "opacity": null,
-                            "progress": null
-                          }
-                        ],
-                        "placeholder": "No settings in this category",
-                        "title": "󰡨Docker"
+                        "title": "󰙋Accessibility"
                       }
                     }
                   ],
@@ -6904,7 +7246,11 @@
     "path": [],
     "recorded_sequence": [],
     "settings_items_priorities": {
-      "assistant:": 20,
+      "assistant:image_generator": 20,
+      "assistant:llm": 40,
+      "assistant:providers": 10,
+      "assistant:stt": 50,
+      "assistant:tts": 30,
       "docker:registries": 2,
       "docker:service": 1,
       "infrared:infrared": null,

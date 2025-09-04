@@ -32,7 +32,7 @@ class UboSwitchService(AIService, Generic[T]):
     Allows switching between different pipecat services in the pipeline.
     """
 
-    _services: list[T | None]
+    _services: dict[str, T | None]
     _assistance_id: str
     _assistance_index: int
 
@@ -57,9 +57,9 @@ class UboSwitchService(AIService, Generic[T]):
 
             return push_frame
 
-        for service in self.services:
+        for service in self.services.values():
             service.push_frame = push_frame_wrapper(service.push_frame)
-        self.selected_service: T | None = next(iter(self.services), None)
+        self.selected_service: T | None = next(iter(self.services.values()), None)
 
     def _reset_assistance(self) -> None:
         self._assistance_id = uuid.uuid4().hex
@@ -77,20 +77,30 @@ class UboSwitchService(AIService, Generic[T]):
         self._assistance_index += 1
 
     @property
-    def services(self) -> list[T]:
+    def services(self) -> dict[str, T]:
         """List of initialized services."""
-        return [service for service in self._services if service is not None]
+        return {
+            id: service for id, service in self._services.items() if service is not None
+        }
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process frame with the selected service."""
         if isinstance(frame, SystemFrame):
             await super().process_frame(frame, direction)
-        if not self.selected_service:
-            return
-        await self.selected_service.process_frame(frame, direction)
+            for service in self.services.values():
+                await service.process_frame(frame, direction)
+        elif self.selected_service:
+            await self.selected_service.process_frame(frame, direction)
 
     async def setup(self, setup: FrameProcessorSetup) -> None:
         """Set up all sub-services."""
         await super().setup(setup)
-        for service in self.services:
+        for service in self.services.values():
             await service.setup(setup)
+
+    def set_selected_service(self, id: str) -> None:
+        """Set the currently selected service."""
+        if id not in self.services:
+            msg = f'Service {id} is not available in the switch service `{type(self)}`.'
+            raise ValueError(msg)
+        self.selected_service = self.services[id]

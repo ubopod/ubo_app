@@ -55,7 +55,7 @@ class UboInputTransport(BaseInputTransport):
         await super().start(frame)
         await self.set_transport_ready(frame)
         self.client.autorun(['state.assistant.is_listening'])(
-            lambda results: self._set_is_listening(is_listening=results[0]),
+            lambda results: self._set_is_listening(is_listening=results[0].value),
         )
 
     def queue_sample(self, event: Event) -> None:

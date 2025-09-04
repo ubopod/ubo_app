@@ -89,7 +89,7 @@ class SpeechRecognitionEngineName(StrEnum):
     """Available speech recognition engines."""
 
     VOSK = 'vosk'
-    GOOGLE = 'google'
+    GOOGLE = 'google_cloud'
 
 
 class SpeechRecognitionState(Immutable):
@@ -98,6 +98,9 @@ class SpeechRecognitionState(Immutable):
     selected_engine: SpeechRecognitionEngineName | None = field(
         default=read_from_persistent_store(
             'speech_recognition:selected_engine',
+            mapper=lambda value: SpeechRecognitionEngineName(value)
+            if value in SpeechRecognitionEngineName.__members__.values()
+            else SpeechRecognitionEngineName.VOSK,
             default=SpeechRecognitionEngineName.VOSK,
         ),
     )

@@ -33,6 +33,13 @@ def get_class(object_: Immutable) -> type[betterproto.Message]:
     )
 
 
+def get_enum(object_: Enum) -> type[betterproto.Enum]:
+    return getattr(
+        ubo_bindings.ubo.v1,
+        betterproto.casing.pascal_case(type(object_).__name__),
+    )
+
+
 T = TypeVar('T', bound=betterproto.Message)
 
 GRPCSerializable: TypeAlias = 'Enum | Immutable | datetime | None'
@@ -58,11 +65,13 @@ def build_message(  # noqa: C901
         object_,
         Enum,
     ):
-        if expected_type is None or not issubclass(expected_type, betterproto.Enum):
-            msg = f'Expected a betterproto.Enum, got {expected_type}'
-            raise ValueError(msg)
         if not isinstance(object_, Enum):
             msg = f'Expected an Enum, got {type(object_)}'
+            raise ValueError(msg)
+        if expected_type is None:
+            return object_.value
+        if not issubclass(expected_type, betterproto.Enum):
+            msg = f'Expected a betterproto.Enum, got {expected_type}'
             raise ValueError(msg)
         return getattr(
             expected_type,

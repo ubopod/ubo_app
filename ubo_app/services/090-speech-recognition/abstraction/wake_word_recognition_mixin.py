@@ -14,10 +14,6 @@ from .base_class import BaseSpeechRecognitionEngine
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
 
-    from ubo_app.store.services.speech_recognition import (
-        SpeechRecognitionEngineName,
-    )
-
 
 class WakeWordRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
     """Mixin for wake word detection functionality."""
@@ -25,17 +21,12 @@ class WakeWordRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
     wake_words: Sequence[str] | None = None
 
     @override
-    def __init__(
-        self,
-        *,
-        name: SpeechRecognitionEngineName,
-        label: str,
-    ) -> None:
+    def __init__(self, *, label: str | None = None) -> None:
         """Initialize wake word recognition mixin."""
         self.woke_word_recognitions_queue: AsyncEvictingQueue[str | None] = (
             AsyncEvictingQueue(maxsize=5)
         )
-        super().__init__(name=name, label=label)
+        super().__init__(label=label)
 
     def set_wake_words(self, wake_words: Sequence[str] | None) -> None:
         """Set the wake words for detection."""

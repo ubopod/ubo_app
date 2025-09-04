@@ -16,42 +16,28 @@ from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
 from constants import VOSK_MODEL_PATH
 from typing_extensions import override
 
-from ubo_app.colors import WARNING_COLOR
 from ubo_app.constants import SPEECH_RECOGNITION_FRAME_RATE
-from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
+from ubo_app.engines.vosk import VoskEngine as BaseVosk
 from ubo_app.logger import logger
 from ubo_app.store.main import store
-from ubo_app.store.services.notifications import (
-    Notification,
-    NotificationActionItem,
-    NotificationsAddAction,
-)
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionEngineName,
     SpeechRecognitionReportTextEvent,
 )
-from ubo_app.utils.async_ import create_task
-
-from .download_model import download_vosk_model
 
 
-class VoskEngine(NeedsSetupMixin, SpeechRecognitionMixin, WakeWordRecognitionMixin):
+class VoskEngine(
+    BaseVosk,
+    SpeechRecognitionMixin,
+    WakeWordRecognitionMixin,
+):
     """Vosk speech recognition engine."""
-
-    _task: asyncio.Task[None] | None = None
 
     def __init__(self) -> None:
         """Initialize Vosk speech recognition engine."""
         self.grammar_lock = asyncio.Lock()
         self.process_executor = ThreadPoolExecutor(max_workers=1)
 
-        super().__init__(
-            name=SpeechRecognitionEngineName.VOSK,
-            label='Vosk',
-            not_setup_message=(
-                'Vosk model path does not exist. Please download it in the settings.'
-            ),
-        )
+        super().__init__(label='Vosk')
 
     @override
     async def _run(self) -> None:
@@ -136,27 +122,3 @@ class VoskEngine(NeedsSetupMixin, SpeechRecognitionMixin, WakeWordRecognitionMix
             return (*self.wake_words, '[unk]')
 
         return None
-
-    @override
-    def setup(self) -> None:
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    title='Vosk Engine Setup',
-                    content='Download the Vosk model to use this engine.',
-                    color=WARNING_COLOR,
-                    actions=[
-                        NotificationActionItem(
-                            label='Download Model',
-                            icon='󰇚',
-                            action=lambda: create_task(download_vosk_model()) and None,
-                        ),
-                    ],
-                ),
-            ),
-        )
-
-    @override
-    def is_setup(self) -> bool:
-        """Check if the Vosk model is set up."""
-        return VOSK_MODEL_PATH.exists()

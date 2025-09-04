@@ -14,6 +14,7 @@
 - feat(assistant): enable video_out in our pipecat transport and implement image generation
 - refactor(assistant): move rgb reactions to the is_listening changes to the reducer, previously implemented via autorun
 - fix(audio): fix audio playback cut off when using pyaudio on non-rpi platforms
+- feat(assistant): store state, actions and events as well use ui for selecting assistant engines
 
 ## Version 1.6.0
 
