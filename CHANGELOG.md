@@ -24,6 +24,7 @@
 - fix(rpc): fix `get_class` not being able to find class names having acronyms in them like, `QRCodeInputDescription`
 - refactor(rpc): introduce `AvailableInputDescription` so that rpc clients can send actions with different types of `InputDescription`, previosuly they could only impossibly send abstract `InputDescription` itself
 - feat(camera): make camera service constantly report its input to the redux bus when viewfinder is open
+- feat(assistant): implement tool call for providing camera-feed/display-content-feed to the llm
 
 ## Version 1.6.0
 

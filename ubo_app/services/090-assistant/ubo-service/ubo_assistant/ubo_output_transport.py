@@ -72,7 +72,7 @@ class UboOutputTransport(BaseOutputTransport):
 
     async def write_video_frame(self, frame: OutputImageRawFrame) -> None:
         """Write a video frame to the UBO RPC Client."""
-        if frame.format:
+        if frame.format in ('RGB', None):
             self._report_assistance_frame(
                 AcceptableAssistanceFrame(
                     assistance_image_frame=AssistanceImageFrame(

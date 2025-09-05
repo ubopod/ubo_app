@@ -71,10 +71,10 @@ class UboSwitchService(AIService, Generic[T]):
         if isinstance(frame, StartFrame):
             self._start_frame = frame
             self._start()
-        if isinstance(frame, SystemFrame):
-            await super().process_frame(frame, direction)
         if self.selected_service:
             await self.selected_service.process_frame(frame, direction)
+        elif isinstance(frame, SystemFrame):
+            await super().process_frame(frame, direction)
 
     async def setup(self, setup: FrameProcessorSetup) -> None:
         """Set up all sub-services."""
