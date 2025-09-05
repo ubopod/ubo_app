@@ -18,6 +18,7 @@
 - refactor(assistant): implement `UboImageGeneratorService` which is a switch service to switch between available image generator services
 - fix(assistant): improve pipecat service switch mechanism
 - refactor(assistant): move selected service sync autorun functions from main.py to `UboSwitch`
+- fix(core): improve force redraw mechanism to guarantee an immediate redraw
 
 ## Version 1.6.0
 

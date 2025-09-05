@@ -11,7 +11,7 @@ import {
   AudioPlayAudioSampleEvent,
   DisplayCompressedRenderEvent,
   Event,
-  DisplayResumeAction,
+  DisplayRedrawAction,
 } from "../bindings/ubo/v1/ubo_pb";
 
 function requestRedraw(store: StoreServiceClient) {
@@ -20,10 +20,10 @@ function requestRedraw(store: StoreServiceClient) {
   const action = new Action();
   dispatchActionRequest.setAction(action);
 
-  const displayResumeAction = new DisplayResumeAction();
-  action.setDisplayResumeAction(displayResumeAction);
+  const displayRedrawAction = new DisplayRedrawAction();
+  action.setDisplayRedrawAction(displayRedrawAction);
 
-  store.dispatchAction(dispatchActionRequest).then(console.log);
+  store.dispatchAction(dispatchActionRequest);
 }
 
 function subscribeToRenderEvents(

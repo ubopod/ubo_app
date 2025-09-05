@@ -13,8 +13,8 @@ from redux import (
 from ubo_app.store.services.display import (
     DisplayAction,
     DisplayPauseAction,
-    DisplayRerenderEvent,
-    DisplayResumeAction,
+    DisplayRedrawAction,
+    DisplayRedrawEvent,
     DisplayState,
 )
 
@@ -24,7 +24,7 @@ Action = InitAction | DisplayAction
 def reducer(
     state: DisplayState | None,
     action: Action,
-) -> ReducerResult[DisplayState, None, DisplayRerenderEvent]:
+) -> ReducerResult[DisplayState, None, DisplayRedrawEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return DisplayState()
@@ -34,10 +34,10 @@ def reducer(
         case DisplayPauseAction():
             return replace(state, is_paused=True)
 
-        case DisplayResumeAction():
+        case DisplayRedrawAction():
             return CompleteReducerResult(
                 state=replace(state, is_paused=False),
-                events=[DisplayRerenderEvent()],
+                events=[DisplayRedrawEvent()],
             )
 
         case _:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from kivy.clock import mainthread
 from redux import AutorunOptions
 from typing_extensions import override
 from ubo_gui.app import UboApp
@@ -12,7 +13,7 @@ from ubo_app.menu_app.menu_central import MenuAppCentral
 from ubo_app.menu_app.menu_footer import MenuAppFooter
 from ubo_app.menu_app.menu_header import MenuAppHeader
 from ubo_app.store.main import store
-from ubo_app.store.services.display import DisplayRerenderEvent
+from ubo_app.store.services.display import DisplayRedrawEvent
 
 if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
@@ -34,6 +35,7 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
     def rerender(self: MenuApp) -> None:
         """Re-render the application."""
         self.root.previous_frame = None
+        mainthread(self.root.process_frame)()
 
     @override
     def on_start(self: MenuApp) -> None:
@@ -46,7 +48,7 @@ class MenuApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
             lambda state: state.settings.visual_debug,
             options=AutorunOptions(keep_ref=False),
         )(self.set_visual_debug_mode)
-        store.subscribe_event(DisplayRerenderEvent, self.rerender, keep_ref=False)
+        store.subscribe_event(DisplayRedrawEvent, self.rerender, keep_ref=False)
 
     @override
     def stop(self, *largs: object) -> None:
