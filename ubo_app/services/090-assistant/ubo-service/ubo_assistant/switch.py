@@ -1,10 +1,9 @@
 """Implementation of switch service for the pipecat pipeline."""
 
 import uuid
-from collections.abc import Callable, Coroutine
-from types import CoroutineType
-from typing import Generic, Protocol, TypeVar
+from typing import Generic, TypeVar
 
+from betterproto.lib.google.protobuf import StringValue
 from pipecat.frames.frames import Frame, StartFrame, StopFrame, SystemFrame
 from pipecat.processors.frame_processor import (
     FrameDirection,
@@ -18,14 +17,6 @@ from ubo_bindings.ubo.v1 import AcceptableAssistanceFrame, Action, AssistantRepo
 T = TypeVar('T', bound=FrameProcessor)
 
 
-class _PushFrameSignature(Protocol):
-    def __call__(
-        self,
-        frame: Frame,
-        direction: FrameDirection = FrameDirection.DOWNSTREAM,
-    ) -> CoroutineType: ...
-
-
 class UboSwitchService(AIService, Generic[T]):
     """Switch service for pipecat, altering between sub services.
 
@@ -36,29 +27,15 @@ class UboSwitchService(AIService, Generic[T]):
     _assistance_id: str
     _assistance_index: int
 
-    def __init__(self, client: UboRPCClient) -> None:
+    def __init__(self, client: UboRPCClient, *, selector: str) -> None:
         """Initialize the ubo switch service."""
         self._reset_assistance()
         self.client = client
-
-        def push_frame_wrapper(
-            original_push_frame: Callable[
-                [Frame, FrameDirection],
-                Coroutine[None, None, None],
-            ],
-        ) -> _PushFrameSignature:
-            async def push_frame(
-                frame: Frame,
-                direction: FrameDirection = FrameDirection.DOWNSTREAM,
-            ) -> None:
-                await original_push_frame(frame, direction)
-                if not isinstance(frame, SystemFrame):
-                    await self.push_frame(frame, direction)
-
-            return push_frame
+        self._start_frame: StartFrame | None = None
+        self._store_selector = selector
 
         for service in self.services.values():
-            service.push_frame = push_frame_wrapper(service.push_frame)
+            service.push_frame = self.push_frame
         self.selected_service: T | None = None
 
     def _reset_assistance(self) -> None:
@@ -83,10 +60,17 @@ class UboSwitchService(AIService, Generic[T]):
             id: service for id, service in self._services.items() if service is not None
         }
 
+    def _start(self) -> None:
+        @self.client.autorun([self._store_selector])
+        def handle_stt_service_change(data: list[StringValue]) -> None:
+            selected_stt = data[0].value
+            self.create_task(self.set_selected_service(selected_stt))
+
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process frame with the selected service."""
         if isinstance(frame, StartFrame):
             self._start_frame = frame
+            self._start()
         if isinstance(frame, SystemFrame):
             await super().process_frame(frame, direction)
         if self.selected_service:
@@ -98,13 +82,14 @@ class UboSwitchService(AIService, Generic[T]):
         for service in self.services.values():
             await service.setup(setup)
 
-    def set_selected_service(self, id: str) -> None:
+    async def set_selected_service(self, id: str) -> None:
         """Set the currently selected service."""
         if id not in self.services:
             msg = f'Service {id} is not available in the switch service `{type(self)}`.'
             raise ValueError(msg)
         if self.selected_service:
-            self.create_task(self.selected_service.queue_frame(StopFrame()))
-        self.selected_service = self.services.get(id, None)
-        if self.selected_service:
-            self.create_task(self.selected_service.queue_frame(self._start_frame))
+            await self.selected_service.queue_frame(StopFrame())
+        newly_selected_service = self.services.get(id, None)
+        if newly_selected_service and self._start_frame:
+            await newly_selected_service.queue_frame(self._start_frame)
+        self.selected_service = newly_selected_service

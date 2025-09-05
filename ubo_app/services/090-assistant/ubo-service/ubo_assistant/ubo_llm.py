@@ -1,13 +1,10 @@
 """LLM service that wraps multiple LLM services allowing switching between them."""
 
+import asyncio
 import json
 
 from loguru import logger
-from pipecat.frames.frames import (
-    Frame,
-    LLMFullResponseStartFrame,
-    LLMTextFrame,
-)
+from pipecat.frames.frames import Frame, LLMFullResponseStartFrame, LLMTextFrame
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.google.llm_vertex import GoogleVertexLLMService
 from pipecat.services.grok.llm import GrokLLMService
@@ -106,7 +103,19 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
 
     async def get_image(self, params: FunctionCallParams) -> None:
         """Get an image from the video stream based on a question."""
-        _ = params
+        prompt = params.arguments['prompt']
+        await params.llm.request_image_frame(
+            user_id='-',
+            video_source=params.arguments['source'],
+            function_name=params.function_name,
+            tool_call_id=params.tool_call_id,
+            text_content=prompt,
+        )
+        await asyncio.sleep(0.5)
+        await params.result_callback(
+            "I've captured an image from your camera and I'm analyzing what you asked "
+            f'about: {prompt}',
+        )
 
     async def push_frame(
         self,

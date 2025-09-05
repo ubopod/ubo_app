@@ -6,19 +6,18 @@ import asyncio
 import os
 from typing import TYPE_CHECKING
 
-from betterproto.lib.google.protobuf import StringValue
 from loguru import logger
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import Frame
+from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.processors.consumer_processor import ConsumerProcessor
 from pipecat.processors.producer_processor import ProducerProcessor
-from pipecat.services.google.image import GoogleImageGenService
 from pipecat.transports.base_transport import TransportParams
 from ubo_bindings.client import UboRPCClient
 
@@ -49,6 +48,7 @@ class Assistant:
                 audio_in_enabled=True,
                 audio_in_channels=1,
                 audio_in_sample_rate=16000,
+                video_in_enabled=True,
                 vad_analyzer=vad_analyzer,
             ),
             client=self.client,
@@ -146,13 +146,19 @@ engage in a conversation with them.""",
             description='Take an image from the video stream and answer a question '
             'about it.',
             properties={
-                'question': {
+                'source': {
                     'type': 'string',
-                    'description': 'The question that the user is asking about the '
-                    'image.',
+                    'description': 'The video stream source to take the image from.'
+                    'Camera captures the main camera stream, display captures what the '
+                    'user is seeing on their display.',
+                    'enum': ['camera', 'display'],
+                },
+                'prompt': {
+                    'type': 'string',
+                    'description': 'The question that is asked about the image.',
                 },
             },
-            required=['question'],
+            required=['source', 'prompt'],
         )
         tools = ToolsSchema(standard_tools=[draw_image_function, get_image_function])
 
@@ -187,33 +193,36 @@ engage in a conversation with them.""",
             filter=is_image_gen_frame,
             passthrough=False,
         )
+        image_consumer = ConsumerProcessor(producer=image_producer)
         pipeline = Pipeline(
             [
                 ubo_input_transport,
-                ubo_stt_service,
-                context_aggregator.user(),
-                ubo_llm_service,
-                image_producer,
-                ubo_tts_service,
-                context_aggregator.assistant(),
+                ParallelPipeline(
+                    [
+                        ubo_stt_service,
+                        context_aggregator.user(),
+                        ubo_llm_service,
+                        image_producer,
+                        ubo_tts_service,
+                    ],
+                    [
+                        image_consumer,
+                        ubo_image_generator_service,
+                    ],
+                ),
                 ubo_output_transport,
+                context_aggregator.assistant(),
             ],
         )
 
-        task = PipelineTask(pipeline, params=PipelineParams(audio_in_sample_rate=16000))
+        task = PipelineTask(
+            pipeline,
+            params=PipelineParams(audio_in_sample_rate=16000),
+            cancel_on_idle_timeout=False,
+        )
         runner = PipelineRunner(handle_sigint=True)
 
-        image_generator_pipeline = Pipeline(
-            [
-                ConsumerProcessor(producer=image_producer),
-                ubo_image_generator_service,
-                context_aggregator.assistant(),
-                ubo_output_transport,
-            ],
-        )
-        image_generator_task = PipelineTask(image_generator_pipeline)
-
-        await asyncio.gather(runner.run(task), runner.run(image_generator_task))
+        await runner.run(task)
 
 
 def main() -> None:

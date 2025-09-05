@@ -19,6 +19,7 @@
 - fix(assistant): improve pipecat service switch mechanism
 - refactor(assistant): move selected service sync autorun functions from main.py to `UboSwitch`
 - fix(core): improve force redraw mechanism to guarantee an immediate redraw
+- feat(assistant): the assistant can now see the screen content of the pod's display on user demand
 
 ## Version 1.6.0
 
