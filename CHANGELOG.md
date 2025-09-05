@@ -21,6 +21,7 @@
 - fix(core): improve force redraw mechanism to guarantee an immediate redraw
 - feat(assistant): the assistant can now see the screen content of the pod's display on user demand
 - chore(deploy): add deploy script to the ubo-assistant service
+- fix(rpc): fix `get_class` not being able to find class names having acronyms in them like, `QRCodeInputDescription`
 
 ## Version 1.6.0
 
