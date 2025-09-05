@@ -4,7 +4,6 @@ from __future__ import annotations
 import datetime
 import functools
 import re
-from dataclasses import replace
 
 from redux import (
     CompleteReducerResult,
@@ -53,7 +52,7 @@ def prompt_notification(description: QRCodeInputDescription) -> NotificationsAdd
         notification=Notification(
             id=f'camera:qrcode:{description.id}',
             icon='󰄀󰐲',
-            title='QR Code',
+            title=description.title or 'QR Code',
             content=f'[size=18dp]{description.prompt}[/size]',
             display_type=NotificationDisplayType.STICKY,
             is_read=True,
@@ -103,7 +102,7 @@ def pop_queue(
     if queue:
         actions.append(prompt_notification(queue[0]))
     return CompleteReducerResult(
-        state=replace(state, queue=queue),
+        state=state(queue=queue),
         actions=actions,
         events=events,
     )
@@ -125,15 +124,14 @@ def reducer(
     match action:
         case InputDemandAction(description=QRCodeInputDescription() as description):
             return CompleteReducerResult(
-                state=replace(state, queue=[*state.queue, description]),
+                state=state(queue=[*state.queue, description]),
                 actions=[] if state.queue else [prompt_notification(description)],
             )
 
         case InputResolveAction(id=id):
             if state.queue and state.queue[0].id == id:
                 return pop_queue(state)
-            return replace(
-                state,
+            return state(
                 queue=[
                     description for description in state.queue if description.id != id
                 ],
@@ -141,13 +139,13 @@ def reducer(
 
         case CameraStartViewfinderAction(pattern=pattern):
             return CompleteReducerResult(
-                state=replace(state),
+                state=state,
                 events=[CameraStartViewfinderEvent(pattern=pattern)],
             )
 
         case CameraReportBarcodeAction(codes=codes) if state.queue:
-            for code in codes:
-                if state.queue[0].pattern:
+            if state.queue[0].pattern:
+                for code in codes:
                     match_ = re.match(state.queue[0].pattern, code)
                     if match_:
                         return CompleteReducerResult(
@@ -168,17 +166,17 @@ def reducer(
                                 ),
                             ],
                         )
-                else:
-                    return CompleteReducerResult(
-                        state=state,
-                        actions=[
-                            InputProvideAction(
-                                id=state.queue[0].id,
-                                value=code,
-                                result=None,
-                            ),
-                        ],
-                    )
+            else:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        InputProvideAction(
+                            id=state.queue[0].id,
+                            value=codes[0] if len(codes) > 0 else '',
+                            result=None,
+                        ),
+                    ],
+                )
             return state
 
         case _:
