@@ -1,7 +1,6 @@
 """Ubo Input Transport for Pipecat Reading Audio Samples from UBO RPC Client."""
 
 import asyncio
-import threading
 import time
 from dataclasses import dataclass
 from enum import StrEnum
@@ -59,8 +58,7 @@ class UboInputTransport(BaseInputTransport):
     ) -> None:
         """Initialize the UboInputTransport with the given parameters and client."""
         self.client = client
-        self.audio_subscription = None
-        self.audio_subscription_lock = threading.Lock()
+        self._is_muted = True
 
         self._image_set_events: dict[VideoSource, asyncio.Event] = {
             key: asyncio.Event() for key in VideoSource
@@ -82,6 +80,10 @@ class UboInputTransport(BaseInputTransport):
             ),
         )
 
+        client.subscribe_event(
+            event_type=Event(audio_report_sample_event=AudioReportSampleEvent()),
+            callback=self._queue_audio_sample,
+        )
         client.subscribe_event(
             event_type=Event(display_render_event=DisplayRenderEvent()),
             callback=self._render_display,
@@ -136,6 +138,21 @@ class UboInputTransport(BaseInputTransport):
             image_frame.transport_source = video_source
             await self.push_video_frame(image_frame)
 
+    def _queue_audio_sample(self, event: Event) -> None:
+        """Queue the audio sample from the event."""
+        if event.audio_report_sample_event:
+            audio = event.audio_report_sample_event.sample_speech_recognition
+            self.task_manager.create_task(
+                self.push_audio_frame(
+                    InputAudioRawFrame(
+                        audio=b'\x00' * len(audio) if self._is_muted else audio,
+                        sample_rate=16000,
+                        num_channels=1,
+                    ),
+                ),
+                name='ubo_provider_audio_input',
+            )
+
     def _render_display(self, event: Event) -> None:
         """Render the display from a DisplayRenderEvent on an in-memory buffer."""
         if render_event := event.display_render_event:
@@ -182,22 +199,11 @@ class UboInputTransport(BaseInputTransport):
             self._image_set_events[VideoSource.CAMERA].set()
 
     def _set_is_listening(self, *, is_listening: bool) -> None:
-        with self.audio_subscription_lock:
-            if is_listening:
-                if self.audio_subscription is None:
-                    self.audio_subscription = self.client.subscribe_event(
-                        Event(audio_report_sample_event=AudioReportSampleEvent()),
-                        self.queue_sample,
-                    )
-                    logger.info(
-                        'UboInputTransport is now listening for audio samples.',
-                    )
-            elif self.audio_subscription:
-                self.audio_subscription()
-                self.audio_subscription = None
-                logger.info(
-                    'UboInputTransport is no longer listening for audio samples.',
-                )
+        self._is_muted = not is_listening
+        if is_listening:
+            logger.info('UboInputTransport is now listening for audio samples.')
+        else:
+            logger.info('UboInputTransport is no longer listening for audio samples.')
 
     async def start(self, frame: StartFrame) -> None:
         """Start the transport and subscribe to audio sample events."""
@@ -206,14 +212,3 @@ class UboInputTransport(BaseInputTransport):
         self.client.autorun(['state.assistant.is_listening'])(
             lambda results: self._set_is_listening(is_listening=results[0].value),
         )
-
-    def queue_sample(self, event: Event) -> None:
-        """Queue the audio sample from the event."""
-        if event.audio_report_sample_event:
-            audio = event.audio_report_sample_event.sample_speech_recognition
-            self.task_manager.create_task(
-                self.push_audio_frame(
-                    InputAudioRawFrame(audio=audio, sample_rate=16000, num_channels=1),
-                ),
-                name='ubo_provider_audio_input',
-            )
