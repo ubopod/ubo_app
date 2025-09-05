@@ -4,6 +4,7 @@ from __future__ import annotations
 import errno
 import logging
 import math
+import threading
 import time
 from typing import TYPE_CHECKING, Literal, cast
 
@@ -13,8 +14,10 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 from ubo_app.store.services.audio import AudioDevice, AudioSetMuteStatusAction
 from ubo_app.store.services.keypad import (
     Key,
+    KeypadKeyHoldAction,
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
+    KeypadKeyUnholdAction,
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.eeprom import get_eeprom_data
@@ -64,6 +67,10 @@ class Keypad:
         self.logger.info('Initialising keypad...')
         self.previous_inputs = 0
         self.aw = None
+        self.held_buttons: set[int] = set()
+        self.button_release_events: dict[int, threading.Event] = {
+            index: threading.Event() for index in KEY_INDEX
+        }
         self.init_i2c()
 
     @staticmethod
@@ -153,7 +160,7 @@ class Keypad:
             extra={'inputs': f'{inputs:016b}'},
         )
         self.previous_inputs = inputs
-        time.sleep(0.5)
+        time.sleep(0.3)
 
         # Interrupt callback when any button is pressed
         button.when_pressed = self.key_press_cb
@@ -162,11 +169,49 @@ class Keypad:
         self.on_button_event(
             index=MIC_INDEX,
             status='released' if is_mic_active else 'pressed',
-            pressed_buttons=[],
         )
 
         # This should always be the last line of this method
         self.clear_interrupt_flags(new_i2c)
+
+    def start_button_press_lifecycle(self, index: int) -> None:
+        if index in KEY_INDEX:
+            from ubo_app.store.main import store
+
+            store.dispatch(
+                KeypadKeyPressAction(
+                    key=KEY_INDEX[index],
+                    held_keys={KEY_INDEX[i] for i in self.held_buttons},
+                    pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                ),
+            )
+
+            if not self.button_release_events[index].wait(timeout=0.5):
+                self.held_buttons.add(index)
+                store.dispatch(
+                    KeypadKeyHoldAction(
+                        key=KEY_INDEX[index],
+                        held_keys={KEY_INDEX[i] for i in self.held_buttons},
+                        pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                    ),
+                )
+                self.button_release_events[index].wait()
+                self.held_buttons.remove(index)
+                store.dispatch(
+                    KeypadKeyUnholdAction(
+                        key=KEY_INDEX[index],
+                        held_keys={KEY_INDEX[i] for i in self.held_buttons},
+                        pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                    ),
+                )
+
+            store.dispatch(
+                KeypadKeyReleaseAction(
+                    key=KEY_INDEX[index],
+                    held_keys={KEY_INDEX[i] for i in self.held_buttons},
+                    pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                ),
+            )
 
     def key_press_cb(self: Keypad, _: object) -> None:
         """Handle key press dispatched by GPIO interrupt.
@@ -210,37 +255,33 @@ class Keypad:
         self.logger.info('button index', extra={'button_index': index})
 
         # Check for multiple button presses
-        pressed_buttons = [
+        self.pressed_buttons = {
             i for i in range(8) if i in KEY_INDEX and inputs & 1 << i == 0
-        ]
+        }
 
         # Check for rising edge or falling edge action (press or release)
         if (self.previous_inputs & change_mask) == 0:
             self.logger.info(
-                'Button pressed',
-                extra={
-                    'button': str(index),
-                    'pressed_buttons': pressed_buttons,
-                },
-            )
-            self.on_button_event(
-                index=index,
-                status='released',
-                pressed_buttons=pressed_buttons,
-            )
-        else:
-            self.logger.info(
                 'Button released',
                 extra={
                     'button': str(index),
-                    'pressed_buttons': pressed_buttons,
+                    'pressed_buttons': self.pressed_buttons,
                 },
             )
-            self.on_button_event(
-                index=index,
-                status='pressed',
-                pressed_buttons=pressed_buttons,
+            self.button_release_events[index].set()
+        else:
+            self.logger.info(
+                'Button pressed',
+                extra={
+                    'button': str(index),
+                    'pressed_buttons': self.pressed_buttons,
+                },
             )
+            self.button_release_events[index].clear()
+            threading.Thread(
+                target=self.start_button_press_lifecycle,
+                args=(index,),
+            ).start()
 
         self.previous_inputs = inputs
 
@@ -249,25 +290,9 @@ class Keypad:
         *,
         index: int,
         status: ButtonStatus,
-        pressed_buttons: list[int],
     ) -> None:
         from ubo_app.store.main import store
 
-        if index in KEY_INDEX:
-            if status == 'pressed':
-                store.dispatch(
-                    KeypadKeyPressAction(
-                        key=KEY_INDEX[index],
-                        pressed_keys={KEY_INDEX[i] for i in pressed_buttons},
-                    ),
-                )
-            elif status == 'released':
-                store.dispatch(
-                    KeypadKeyReleaseAction(
-                        key=KEY_INDEX[index],
-                        pressed_keys={KEY_INDEX[i] for i in pressed_buttons},
-                    ),
-                )
         if index == MIC_INDEX:
             store.dispatch(
                 AudioSetMuteStatusAction(

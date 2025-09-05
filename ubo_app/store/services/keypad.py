@@ -22,10 +22,17 @@ class Key(StrEnum):
 class KeypadAction(BaseAction):
     key: Key
     pressed_keys: set[Key]
+    held_keys: set[Key] = field(default_factory=set)
     time: float = field(default_factory=time.time)
 
 
 class KeypadKeyPressAction(KeypadAction): ...
+
+
+class KeypadKeyHoldAction(KeypadAction): ...
+
+
+class KeypadKeyUnholdAction(KeypadAction): ...
 
 
 class KeypadKeyReleaseAction(KeypadAction): ...
@@ -33,3 +40,4 @@ class KeypadKeyReleaseAction(KeypadAction): ...
 
 class KeypadState(Immutable):
     depth: int = 0
+    is_consumed: bool = False
