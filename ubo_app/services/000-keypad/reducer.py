@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from redux import (
@@ -29,6 +28,7 @@ from ubo_app.store.core.types import (
     ToggleRecordingAction,
 )
 from ubo_app.store.services.assistant import (
+    AssistantAction,
     AssistantStartListeningAction,
     AssistantStopListeningAction,
 )
@@ -41,8 +41,10 @@ from ubo_app.store.services.audio import (
 from ubo_app.store.services.keypad import (
     Key,
     KeypadAction,
+    KeypadKeyHoldAction,
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
+    KeypadKeyUnholdAction,
     KeypadState,
 )
 from ubo_app.store.services.notifications import Notification, NotificationsAddAction
@@ -63,8 +65,7 @@ def reducer(
         | NotificationsAddAction
         | ToggleRecordingAction
         | ReplayRecordedSequenceAction
-        | AssistantStartListeningAction
-        | AssistantStopListeningAction,
+        | AssistantAction,
         FinishEvent | MenuEvent | MainEvent,
     ]
     | None
@@ -101,13 +102,22 @@ def reducer(
                     ),
                 ],
             )
-        case KeypadKeyPressAction(key=Key.BACK) if (
+        case KeypadKeyPressAction(key=Key.HOME) if (
             state.depth == 1 and action.pressed_keys == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
                 actions=[
                     AssistantStartListeningAction(),
+                ],
+            )
+        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.HOME) if (
+            state.depth == 1
+        ):
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    AssistantStopListeningAction(),
                 ],
             )
         case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {action.key}:
@@ -229,15 +239,28 @@ def reducer(
         case KeypadKeyPressAction():
             return state
 
-        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK) if (
-            state.depth == 1
+        case KeypadKeyHoldAction(key=Key.HOME) if (
+            action.pressed_keys
+            == {
+                Key.HOME,
+            }
+            and action.held_keys == {Key.HOME}
+            and state.depth > 1
         ):
             return CompleteReducerResult(
-                state=state,
-                actions=[
-                    AssistantStopListeningAction(),
-                ],
+                state=state(is_consumed=True),
+                actions=[AssistantStartListeningAction()],
             )
+
+        case KeypadKeyUnholdAction(key=Key.HOME):
+            return CompleteReducerResult(
+                state=state(is_consumed=True),
+                actions=[AssistantStopListeningAction()],
+            )
+
+        case KeypadKeyReleaseAction() if state.is_consumed:
+            return state(is_consumed=False)
+
         case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK):
             return CompleteReducerResult(
                 state=state,
@@ -246,13 +269,12 @@ def reducer(
         case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.HOME):
             return CompleteReducerResult(
                 state=state,
+                actions=[AssistantStopListeningAction()],
                 events=[MenuGoHomeEvent()],
             )
-        case KeypadKeyReleaseAction():
-            return state
 
         case SetMenuPathAction():
-            return replace(state, depth=action.depth)
+            return state(depth=action.depth)
 
         case _:
             return state

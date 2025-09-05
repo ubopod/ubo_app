@@ -149,7 +149,8 @@
   },
   "keypad": {
     "_type": "KeypadState",
-    "depth": 1
+    "depth": 1,
+    "is_consumed": false
   },
   "lightdm": {
     "_type": "LightDMState",
