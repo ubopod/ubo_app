@@ -20,7 +20,7 @@ from ubo_app.store.services.camera import (
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
 )
-from ubo_app.store.services.display import DisplayPauseAction, DisplayResumeAction
+from ubo_app.store.services.display import DisplayPauseAction, DisplayRedrawAction
 from ubo_app.store.ubo_actions import register_application
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
@@ -92,7 +92,7 @@ class CameraApplication(UboPageWidget):
                 feed_viewfinder_scheduler.cancel()
                 store.dispatch(
                     CloseApplicationAction(application_instance_id=self.id),
-                    DisplayResumeAction(),
+                    DisplayRedrawAction(),
                 )
                 if picamera2:
                     picamera2.stop()
