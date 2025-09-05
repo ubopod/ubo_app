@@ -168,7 +168,10 @@ engage in a conversation with them.""",
         async def g() -> None:
             while True:
                 await asyncio.sleep(10)
-                print(str(context.messages)[:5000])  # noqa: T201
+                if len(context.messages) > 10:  # noqa: PLR2004
+                    print('...trimmed messages')  # noqa: T201
+                for message in context.messages[-10:]:
+                    print('-', str(message)[:300])  # noqa: T201
 
         self.client.event_loop.create_task(g())
 
