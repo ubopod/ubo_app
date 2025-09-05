@@ -2,6 +2,7 @@
 # ruff: noqa: D100, D101, D103, D107
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING, cast
@@ -10,13 +11,14 @@ import headless_kivy.config
 import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
-from kivy.clock import Clock, mainthread
+from kivy.clock import Clock
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraReportBarcodeAction,
+    CameraReportImageEvent,
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
 )
@@ -164,18 +166,16 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
         from pyzbar.pyzbar import decode
 
         barcodes = decode(data)
-        if len(barcodes) > 0:
-            create_task(
-                check_codes(
-                    codes=[barcode.data.decode() for barcode in barcodes],
-                ),
-            )
+        create_task(
+            check_codes(codes=[barcode.data.decode() for barcode in barcodes]),
+        )
 
         data = resize_image(data, new_size=(width, height))
-        data = np.rot90(data, 2)
 
         # Mirror the image
-        data = data[:, ::-1, :3].astype(np.uint16)
+        data = np.rot90(data, 2)[:, ::-1, :3]
+
+        viewfinder_data = data.astype(np.uint16)
 
         # Render an empty rounded rectangle
         margin = 15
@@ -197,14 +197,14 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
             ),
         ]
         for line in lines:
-            data[line[0][0] : line[0][1], line[1][0] : line[1][1]] = (
-                0xFF - data[line[0][0] : line[0][1], line[1][0] : line[1][1]]
+            viewfinder_data[line[0][0] : line[0][1], line[1][0] : line[1][1]] = (
+                0xFF - viewfinder_data[line[0][0] : line[0][1], line[1][0] : line[1][1]]
             ) // 2
 
         color = (
-            (data[:, :, 2] & 0xF8) << 8
-            | (data[:, :, 1] & 0xFC) << 3
-            | data[:, :, 0] >> 3
+            (viewfinder_data[:, :, 2] & 0xF8) << 8
+            | (viewfinder_data[:, :, 1] & 0xFC) << 3
+            | viewfinder_data[:, :, 0] >> 3
         )
 
         data_bytes = bytes(
@@ -219,10 +219,22 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
             bypass_pause=True,
         )
 
+        store._dispatch(  # noqa: SLF001
+            [
+                CameraReportImageEvent(
+                    timestamp=time.time(),
+                    data=data.tobytes(),
+                    width=width,
+                    height=height,
+                ),
+            ],
+        )
 
-@mainthread
+
 def start_camera_viewfinder() -> None:
-    store.dispatch(OpenApplicationAction(application_id='camera:viewfinder'))
+    store.dispatch(
+        OpenApplicationAction(application_id='camera:viewfinder'),
+    )
 
 
 def init_service() -> Subscriptions:
