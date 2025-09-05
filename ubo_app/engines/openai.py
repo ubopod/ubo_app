@@ -66,8 +66,8 @@ class OpenAIEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                         InputFieldDescription(
                             name='api_key',
                             type=InputFieldType.TEXT,
-                            label='Service Account Key',
-                            description='Enter your OpenAI API key.',
+                            label='API key',
+                            description='Enter your OpenAI API key',
                             required=True,
                             pattern=OPENAI_API_KEY_PATTERN,
                         ),

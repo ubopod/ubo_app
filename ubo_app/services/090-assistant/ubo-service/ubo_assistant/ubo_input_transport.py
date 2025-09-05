@@ -80,6 +80,7 @@ class UboInputTransport(BaseInputTransport):
             ),
         )
 
+        super().__init__(params, **kwargs)
         client.subscribe_event(
             event_type=Event(audio_report_sample_event=AudioReportSampleEvent()),
             callback=self._queue_audio_sample,
@@ -92,7 +93,6 @@ class UboInputTransport(BaseInputTransport):
             event_type=Event(camera_report_image_event=CameraReportImageEvent()),
             callback=self._store_camera_image,
         )
-        super().__init__(params, **kwargs)
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process incoming frames including user image requests."""

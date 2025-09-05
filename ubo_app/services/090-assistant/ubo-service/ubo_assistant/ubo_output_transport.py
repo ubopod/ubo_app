@@ -33,7 +33,7 @@ class UboOutputTransport(BaseOutputTransport):
         """Initialize the UboOutputTransport with the given parameters and client."""
         self.client = client
         self._assistance_id = uuid.uuid4().hex
-        self._assistance_index = 0
+        self._audio_assistance_index = self._video_assistance_index = 0
         super().__init__(params, **kwargs)
 
     async def start(self, frame: StartFrame) -> None:
@@ -50,7 +50,6 @@ class UboOutputTransport(BaseOutputTransport):
                 ),
             ),
         )
-        self._assistance_index += 1
 
     async def write_audio_frame(self, frame: OutputAudioRawFrame) -> None:
         """Write an audio frame to the UBO RPC Client."""
@@ -65,14 +64,15 @@ class UboOutputTransport(BaseOutputTransport):
                     ),
                     timestamp=self.client.event_loop.time(),
                     id=self._assistance_id,
-                    index=self._assistance_index,
+                    index=self._audio_assistance_index,
                 ),
             ),
         )
+        self._audio_assistance_index += 1
 
     async def write_video_frame(self, frame: OutputImageRawFrame) -> None:
         """Write a video frame to the UBO RPC Client."""
-        if frame.format in ('RGB', None):
+        if frame.format in ('PNG', 'JPEG', 'RGB', None):
             self._report_assistance_frame(
                 AcceptableAssistanceFrame(
                     assistance_image_frame=AssistanceImageFrame(
@@ -83,7 +83,8 @@ class UboOutputTransport(BaseOutputTransport):
                         metadata=frame.metadata,
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
-                        index=self._assistance_index,
+                        index=self._video_assistance_index,
                     ),
                 ),
             )
+            self._video_assistance_index += 1
