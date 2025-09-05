@@ -161,7 +161,7 @@ def init_service() -> Subscriptions:
         else:
             to_thread(
                 _run_async_in_thread,
-                ToThreadOptions(name='AudioManager.play_sequence'),
+                ToThreadOptions(name='AudioManager.play_sample'),
                 audio_manager.play_sample,
                 event.sample,
             )

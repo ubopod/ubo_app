@@ -68,8 +68,8 @@ class GoogleEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                         InputFieldDescription(
                             name='api_key',
                             type=InputFieldType.TEXT,
-                            label='Service Account Key',
-                            description='Enter your Google API key.',
+                            label='API key',
+                            description='Enter your Google AI Studio API key',
                             required=True,
                             pattern=GOOGLE_API_KEY_PATTERN,
                         ),

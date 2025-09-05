@@ -66,8 +66,8 @@ class GrokEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                         InputFieldDescription(
                             name='api_key',
                             type=InputFieldType.TEXT,
-                            label='Service Account Key',
-                            description='Enter your Grok API key.',
+                            label='API Key',
+                            description='Enter your Grok API key',
                             required=True,
                             pattern=GROK_API_KEY_PATTERN,
                         ),
