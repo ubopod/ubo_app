@@ -25,6 +25,7 @@
 - refactor(rpc): introduce `AvailableInputDescription` so that rpc clients can send actions with different types of `InputDescription`, previosuly they could only impossibly send abstract `InputDescription` itself
 - feat(camera): make camera service constantly report its input to the redux bus when viewfinder is open
 - feat(assistant): implement tool call for providing camera-feed/display-content-feed to the llm
+- refactor(assistant): improve the mechanism of applying `is_listening` changes to the input transport of the assistant client
 
 ## Version 1.6.0
 
