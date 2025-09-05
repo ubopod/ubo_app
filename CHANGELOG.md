@@ -22,6 +22,7 @@
 - feat(assistant): the assistant can now see the screen content of the pod's display on user demand
 - chore(deploy): add deploy script to the ubo-assistant service
 - fix(rpc): fix `get_class` not being able to find class names having acronyms in them like, `QRCodeInputDescription`
+- refactor(rpc): introduce `AvailableInputDescription` so that rpc clients can send actions with different types of `InputDescription`, previosuly they could only impossibly send abstract `InputDescription` itself
 
 ## Version 1.6.0
 

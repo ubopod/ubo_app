@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import field
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -102,10 +102,15 @@ class InputAction(BaseAction):
     """Base class for input actions."""
 
 
+AvailableInputDescription: TypeAlias = (
+    WebUIInputDescription | QRCodeInputDescription | PathInputDescription
+)
+
+
 class InputDemandAction(InputAction):
     """Action for demanding input from the user."""
 
-    description: InputDescription
+    description: AvailableInputDescription
 
 
 class InputResolveAction(InputAction):

@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING, cast, overload
 from typing_extensions import TypeVar
 
 from ubo_app.store.input.types import (
+    AvailableInputDescription,
     InputCancelEvent,
     InputDemandAction,
-    InputDescription,
     InputMethod,
     InputProvideEvent,
     InputResult,
@@ -51,8 +51,8 @@ METHOD_ICONS = {
 
 
 async def select_input_description(
-    descriptions: Sequence[InputDescription],
-) -> InputDescription | None:
+    descriptions: Sequence[AvailableInputDescription],
+) -> AvailableInputDescription | None:
     """Select the input method."""
     if len(descriptions) == 1:
         return descriptions[0]
@@ -137,14 +137,14 @@ async def ubo_input(
     *,
     prompt: str | None = None,
     title: str | None = None,
-    descriptions: Sequence[InputDescription],
+    descriptions: Sequence[AvailableInputDescription],
 ) -> tuple[str, InputResult]: ...
 @overload
 async def ubo_input(
     *,
     prompt: str | None = None,
     title: str | None = None,
-    descriptions: Sequence[InputDescription],
+    descriptions: Sequence[AvailableInputDescription],
     resolver: Callable[[str, InputResult | None], ReturnType]
     | Callable[[str], ReturnType],
 ) -> ReturnType: ...
@@ -152,7 +152,7 @@ async def ubo_input(
     *,
     prompt: str | None = None,
     title: str | None = None,
-    descriptions: Sequence[InputDescription],
+    descriptions: Sequence[AvailableInputDescription],
     resolver: Callable[[str, InputResult | None], ReturnType]
     | Callable[[str], ReturnType]
     | None = None,

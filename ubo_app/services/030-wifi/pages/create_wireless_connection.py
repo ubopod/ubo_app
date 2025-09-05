@@ -14,7 +14,7 @@ from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.input.types import (
-    InputDescription,
+    AvailableInputDescription,
     InputFieldDescription,
     InputFieldType,
     InputMethod,
@@ -47,7 +47,7 @@ BARCODE_PATTERN = (
     r'(?:P:(?P<Password_>[^;]*);)?(?:H:(?P<Hidden_>(?i:true|false|));)?;?$'
 )
 HOTSPOT_GRACE_TIME = 5
-INPUT_DESCRIPTIONS: Sequence[InputDescription] = [
+INPUT_DESCRIPTIONS: Sequence[AvailableInputDescription] = [
     QRCodeInputDescription(
         pattern=BARCODE_PATTERN,
         instructions=ReadableInformation(
