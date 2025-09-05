@@ -28,6 +28,15 @@ class CameraStartViewfinderEvent(CameraEvent):
     pattern: str | None
 
 
+class CameraReportImageEvent(CameraEvent):
+    """Event for reporting an image from the camera."""
+
+    timestamp: float
+    data: bytes
+    width: int
+    height: int
+
+
 class CameraStopViewfinderEvent(CameraEvent): ...
 
 
