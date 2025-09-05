@@ -20,6 +20,7 @@
 - refactor(assistant): move selected service sync autorun functions from main.py to `UboSwitch`
 - fix(core): improve force redraw mechanism to guarantee an immediate redraw
 - feat(assistant): the assistant can now see the screen content of the pod's display on user demand
+- chore(deploy): add deploy script to the ubo-assistant service
 
 ## Version 1.6.0
 
