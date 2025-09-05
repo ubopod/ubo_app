@@ -60,7 +60,9 @@ def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
 
     destination_module = importlib.import_module(destination_module_path)
 
-    return getattr(destination_module, class_name, None)
+    lowercase_keys = {i.lower(): i for i in dir(destination_module)}
+
+    return getattr(destination_module, lowercase_keys.get(class_name.lower(), ''), None)
 
 
 def reduce_group(message: betterproto.Message) -> betterproto.Message:
