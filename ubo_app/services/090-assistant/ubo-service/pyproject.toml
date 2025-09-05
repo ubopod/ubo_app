@@ -45,6 +45,14 @@ lint = "ruff check ."
 typecheck = "pyright -p pyproject.toml ."
 sanity = ["typecheck", "lint"]
 
+[tool.poe.tasks.deploy-to-device]
+args = [
+  { name = "deps", type = "boolean" },
+  { name = "offline", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
+]
+cmd = "scripts/deploy.sh"
+
 [tool.ruff]
 target-version = 'py311'
 
