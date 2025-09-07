@@ -5,6 +5,7 @@ import functools
 import queue
 import re
 from collections.abc import Iterator
+from pathlib import Path
 from threading import Thread
 
 from ubo_app.logger import get_logger
@@ -64,31 +65,10 @@ class InfraredManager:
 
     async def _monitor_ir(self) -> None:
         """Monitor infrared signals and put received IR codes in the queue."""
-        # First, find the correct IR receiver device index
+        # First, find the correct IR receiver device index by checking symlinks
         logger.info('Finding IR receiver device index')
-        find_device_process = await asyncio.create_subprocess_exec(
-            'ir-keytable',
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await find_device_process.communicate()
 
-        # Parse the output to find the gpio_ir_recv device
-        device_index = None
-        lines = stdout.decode().split('\n')
-        for i, line in enumerate(lines):
-            if line.strip().startswith('Found /sys/class/rc/rc'):
-                # Extract the rc index from the line
-                match = re.search(r'Found /sys/class/rc/rc(\d+)/', line)
-                if match and i + 1 < len(lines) and \
-                        'Name: gpio_ir_recv' in lines[i + 1]:
-                    device_index = f'rc{match.group(1)}'
-                    logger.info(
-                        'Found IR receiver device index',
-                        extra={'device_index': device_index},
-                    )
-                    break
-
+        device_index = self._get_ir_receiver_index()
         if not device_index:
             logger.error('Failed to find IR receiver device index')
             return
@@ -155,6 +135,35 @@ class InfraredManager:
             code_str = f'{protocol}:{scancode}'
             # Put the code in the queue
             self.ir_code_queue.put(code_str)
+
+    def _get_ir_receiver_index(self) -> str | None:
+        """Get the IR receiver device index by checking symlinks."""
+        try:
+            # Scan /sys/class/rc/ directory for ir-receiver symlinks
+            rc_dir = '/sys/class/rc'
+            if Path(rc_dir).exists():
+                for rc_device in Path(rc_dir).iterdir():
+                    if rc_device.is_symlink():
+                        link_target = Path.readlink(rc_device)
+                        logger.debug(
+                            'Found RC device',
+                            extra={'device': rc_device, 'link_target': link_target},
+                        )
+                        if 'ir-receiver' in str(link_target):
+                            device_name = rc_device.name
+                            logger.info(
+                                'Found IR receiver device index',
+                                extra={
+                                    'device_index': device_name,
+                                    'link_target': link_target,
+                                },
+                            )
+                            return device_name
+        except OSError:
+            logger.exception('Error scanning /sys/class/rc/')
+
+        logger.error('Failed to find IR receiver device index')
+        return None
 
 
 infrared_manager = InfraredManager()
