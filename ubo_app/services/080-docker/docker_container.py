@@ -10,6 +10,7 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 from docker.models.images import Image
+from docker.types import IPAMConfig, IPAMPool
 from docker_images import IMAGES
 from redux import FinishEvent
 
@@ -152,18 +153,42 @@ async def run_container(
                 logger.error('Failed to prepare the container', extra={'image': id})
                 return
 
+        # if IMAGES[id].network_mode == 'macvlan':
+        #     if not docker_client.networks.list(names=[IMAGES[id].path + '_macvlan']):
+        #         logger.error(
+        #             'Macvlan network not found, creating a new one',
+        #             extra={'image': id, 'network': IMAGES[id].id + '_macvlan'},
+        #         )
+        #         subnet = ??
+        #         docker_client.networks.create(
+        #             IMAGES[id].id + '_macvlan',
+        #             driver='macvlan',
+        #             ipam=IPAMConfig(
+        #                 pool_configs=[IPAMPool(
+        #                     subnet=subnet
+        #                 )]
+        #             ),
+        #         )
+
         docker_client.containers.run(
             IMAGES[id].path,
-            hostname=id,
+            hostname=IMAGES[id].hostname or id,
             publish_all_ports=True,
             detach=True,
             volumes=IMAGES[id].volumes,
             ports=IMAGES[id].ports,
-            network_mode=IMAGES[id].network_mode,
             environment=await _process_environment_variables(id),
             extra_hosts=hosts,
             restart_policy={'Name': 'always'},
             command=await _process_str(IMAGES[id].command),
+            dns=IMAGES[id].dns,
+            # **{
+            #     'network_mode': IMAGES[id].network_mode,
+            # }
+            # if IMAGES[id].network_mode != 'macvlan'
+            # else {
+            #     'network': 'ha_macvlan',
+            # },
         )
     docker_client.close()
 

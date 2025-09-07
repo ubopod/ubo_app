@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
 from ubo_app.store.services.speech_synthesis import ReadableInformation
@@ -76,7 +76,7 @@ class ContainerEntry(Immutable):
         ]
         | None
     ) = None
-    network_mode: str = 'bridge'
+    network_mode: Literal['bridge', 'host', 'macvlan', 'none'] = 'bridge'
     dns: list[str] | None = None
     volumes: list[str] | None = None
     command: (
@@ -97,7 +97,7 @@ IMAGES = {
             icon='󰟐',
             path='homeassistant/home-assistant:stable',
             registry='docker.io',
-            ports={'8123/tcp': 8123},
+            network_mode='macvlan',
         ),
         ContainerEntry(
             id='home_bridge',

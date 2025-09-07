@@ -1,0 +1,34 @@
+version: '3'
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    ports:
+      - '1883:1883'
+      - '9001:9001'
+    restart: unless-stopped
+    networks:
+      - default
+
+  homeassistant:
+    image: homeassistant/home-assistant:stable
+    container_name: homeassistant
+    volumes:
+      - ./homeassistant/config:/config
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+    networks:
+      - default
+      - macvlan
+
+networks:
+  macvlan:
+    external: true
+  default:
+    driver: bridge
