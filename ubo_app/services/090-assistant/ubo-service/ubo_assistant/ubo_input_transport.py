@@ -23,8 +23,8 @@ from ubo_bindings.ubo.v1 import (
     AudioReportSampleEvent,
     AvailableInputDescription,
     CameraReportImageEvent,
-    DisplayRedrawAction,
     DisplayRenderEvent,
+    DisplayResumeAction,
     Event,
     InputDemandAction,
     QrCodeInputDescription,
@@ -76,7 +76,7 @@ class UboInputTransport(BaseInputTransport):
 
         client.dispatch(
             action=Action(
-                display_redraw_action=DisplayRedrawAction(),
+                display_redraw_action=DisplayResumeAction(),
             ),
         )
 
