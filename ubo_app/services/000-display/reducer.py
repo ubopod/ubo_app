@@ -15,6 +15,7 @@ from ubo_app.store.services.display import (
     DisplayPauseAction,
     DisplayRedrawAction,
     DisplayRedrawEvent,
+    DisplayResumeAction,
     DisplayState,
 )
 
@@ -34,9 +35,14 @@ def reducer(
         case DisplayPauseAction():
             return replace(state, is_paused=True)
 
-        case DisplayRedrawAction():
+        case DisplayResumeAction():
             return CompleteReducerResult(
                 state=replace(state, is_paused=False),
+                events=[DisplayRedrawEvent()],
+            )
+
+        case DisplayRedrawAction():
+            return CompleteReducerResult(
                 events=[DisplayRedrawEvent()],
             )
 
