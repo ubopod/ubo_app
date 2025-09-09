@@ -81,18 +81,6 @@ class UboInputTransport(BaseInputTransport):
         )
 
         super().__init__(params, **kwargs)
-        client.subscribe_event(
-            event_type=Event(audio_report_sample_event=AudioReportSampleEvent()),
-            callback=self._queue_audio_sample,
-        )
-        client.subscribe_event(
-            event_type=Event(display_render_event=DisplayRenderEvent()),
-            callback=self._render_display,
-        )
-        client.subscribe_event(
-            event_type=Event(camera_report_image_event=CameraReportImageEvent()),
-            callback=self._store_camera_image,
-        )
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process incoming frames including user image requests."""
@@ -209,6 +197,21 @@ class UboInputTransport(BaseInputTransport):
         """Start the transport and subscribe to audio sample events."""
         await super().start(frame)
         await self.set_transport_ready(frame)
+
+        # Subscribe to events after task_manager is initialized
+        self.client.subscribe_event(
+            event_type=Event(audio_report_sample_event=AudioReportSampleEvent()),
+            callback=self._queue_audio_sample,
+        )
+        self.client.subscribe_event(
+            event_type=Event(display_render_event=DisplayRenderEvent()),
+            callback=self._render_display,
+        )
+        self.client.subscribe_event(
+            event_type=Event(camera_report_image_event=CameraReportImageEvent()),
+            callback=self._store_camera_image,
+        )
+
         self.client.autorun(['state.assistant.is_listening'])(
             lambda results: self._set_is_listening(is_listening=results[0].value),
         )
