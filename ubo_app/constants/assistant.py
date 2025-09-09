@@ -50,6 +50,10 @@ OPENAI_API_KEY_PATTERN = '^sk-[a-zA-Z0-9-_]{32,}$'
 GROK_API_KEY_SECRET_ID = 'grok_api_key'  # noqa: S105
 GROK_API_KEY_PATTERN = '^xai-[a-zA-Z0-9]{80}$'
 
+ELEVENLABS_API_KEY_SECRET_ID = 'elevenlabs_api_key'  # noqa: S105
+ELEVENLABS_API_KEY_PATTERN = '^[a-f0-9]{64}$'
+ELEVENLABS_VOICE_ID = 'elevenlabs_voice_id'
+ELEVENLABS_VOICE_ID_PATTERN = '^[a-zA-Z0-9-_]{20,}$'
 
 VOSK_MODEL = 'vosk-model-small-en-us-0.15'
 VOSK_MODEL_URL = f'https://alphacephei.com/vosk/models/{VOSK_MODEL}.zip'

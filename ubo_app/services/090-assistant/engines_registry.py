@@ -1,6 +1,7 @@
 """Engines registry."""
 
 from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+from ubo_app.engines.elevenlabs import ElevenLabsEngine
 from ubo_app.engines.google import GoogleEngine
 from ubo_app.engines.google_cloud import GoogleCloudEngine
 from ubo_app.engines.grok import GrokEngine
@@ -33,6 +34,7 @@ TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.PIPER: PiperEngine(),
     AssistantTTSName.GOOGLE: GoogleCloudEngine(label='Google'),
     AssistantTTSName.OPENAI: OpenAIEngine(),
+    AssistantTTSName.ELEVENLABS: ElevenLabsEngine(),
 }
 
 IMAGE_GENERATOR_ENGINES: dict[

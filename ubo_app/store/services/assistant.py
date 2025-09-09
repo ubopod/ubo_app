@@ -54,6 +54,7 @@ class AssistantTTSName(StrEnum):
     PIPER = 'piper'
     GOOGLE = 'google'
     OPENAI = 'openai'
+    ELEVENLABS = 'elevenlabs'
 
 
 class AssistantImageGeneratorName(StrEnum):
