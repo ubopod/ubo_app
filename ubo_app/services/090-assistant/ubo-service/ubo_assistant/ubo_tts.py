@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 
 from loguru import logger
 from pipecat.frames.frames import Frame
+from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.services.google.tts import GoogleTTSService
 from pipecat.services.openai.tts import OpenAITTSService
 from pipecat.services.tts_service import TTSService
@@ -22,9 +23,11 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         *,
         google_credentials: str | None,
         openai_api_key: str | None,
+        elevenlabs_api_key: str | None,
+        elevenlabs_voice_id: str | None,
         selector: str,
     ) -> None:
-        """Initialize the TTS service with Google, OpenAI, and Piper TTS services."""
+        """Initialize TTS service with Google, OpenAI, ElevenLabs, and Piper."""
         try:
             if google_credentials:
                 self.google_tts = GoogleTTSService(credentials=google_credentials)
@@ -44,6 +47,18 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             self.openai_tts = None
 
         try:
+            if elevenlabs_api_key and elevenlabs_voice_id:
+                self.elevenlabs_tts = ElevenLabsTTSService(
+                    api_key=elevenlabs_api_key,
+                    voice_id=elevenlabs_voice_id,
+                )
+            else:
+                self.elevenlabs_tts = None
+        except Exception:
+            logger.exception('Error while initializing ElevenLabs TTS')
+            self.elevenlabs_tts = None
+
+        try:
             self.piper_tts = PiperTTSService()
         except Exception:
             logger.exception('Error while initializing Piper TTS')
@@ -52,6 +67,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         self._services = {
             'google': self.google_tts,
             'openai': self.openai_tts,
+            'elevenlabs': self.elevenlabs_tts,
             'piper': self.piper_tts,
         }
 

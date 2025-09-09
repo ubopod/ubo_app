@@ -85,6 +85,14 @@ class Assistant:
             os.environ['GROK_API_KEY_SECRET_ID'],
         )
 
+        elevenlabs_api_key = await self.client.query_secret(
+            os.environ['ELEVENLABS_API_KEY_SECRET_ID'],
+        )
+
+        elevenlabs_voice_id = await self.client.query_secret(
+            os.environ['ELEVENLABS_VOICE_ID'],
+        )
+
         ubo_stt_service = UboSTTService(
             client=self.client,
             google_credentials=google_credentials,
@@ -179,6 +187,8 @@ engage in a conversation with them.""",
             client=self.client,
             google_credentials=google_credentials,
             openai_api_key=openai_api_key,
+            elevenlabs_api_key=elevenlabs_api_key,
+            elevenlabs_voice_id=elevenlabs_voice_id,
             selector='state.assistant.selected_tts',
         )
 
