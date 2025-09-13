@@ -24,6 +24,10 @@ DEFAULT_LLM_GROK_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_GROK_MODEL',
     'grok-4-0709',
 )
+DEFAULT_LLM_CEREBRAS_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_CEREBRAS_MODEL',
+    'qwen-3-235b-a22b-instruct-2507',
+)
 
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
 GOOGLE_API_KEY_PATTERN = '^AIza[0-9A-Za-z\\-_]{35}$'
@@ -76,3 +80,6 @@ PICOVOICE_ACCESS_KEY_SECRET_ID = 'picovoice_access_key'  # noqa: S105
 
 DEEPGRAM_API_KEY_SECRET_ID = 'deepgram_api_key'  # noqa: S105
 DEEPGRAM_API_KEY_PATTERN = '^[a-f0-9]{40}$'
+
+CEREBRAS_API_KEY_SECRET_ID = 'cerebras_api_key'  # noqa: S105
+CEREBRAS_API_KEY_PATTERN = '^csk-[a-zA-Z0-9-_]{40,}$'

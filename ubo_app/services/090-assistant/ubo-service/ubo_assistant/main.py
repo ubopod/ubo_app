@@ -85,6 +85,10 @@ class Assistant:
             os.environ['GROK_API_KEY_SECRET_ID'],
         )
 
+        cerebras_api_key = await self.client.query_secret(
+            os.environ['CEREBRAS_API_KEY_SECRET_ID'],
+        )
+
         elevenlabs_api_key = await self.client.query_secret(
             os.environ['ELEVENLABS_API_KEY_SECRET_ID'],
         )
@@ -110,6 +114,7 @@ class Assistant:
             google_credentials=google_credentials,
             openai_api_key=openai_api_key,
             grok_api_key=grok_api_key,
+            cerebras_api_key=cerebras_api_key,
             selector='state.assistant.selected_llm',
         )
 

@@ -16,6 +16,7 @@ from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 from ubo_app.colors import INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
 from ubo_app.constants.assistant import (
+    CEREBRAS_API_KEY_SECRET_ID,
     DEEPGRAM_API_KEY_SECRET_ID,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
@@ -153,6 +154,7 @@ async def init_service() -> None:
             'grok': secrets.read_secret(GROK_API_KEY_SECRET_ID),
             'elevenlabs_key': secrets.read_secret(ELEVENLABS_API_KEY_SECRET_ID),
             'elevenlabs_voice': secrets.read_secret(ELEVENLABS_VOICE_ID),
+            'cerebras': secrets.read_secret(CEREBRAS_API_KEY_SECRET_ID),
             'deepgram': secrets.read_secret(DEEPGRAM_API_KEY_SECRET_ID),
         }
 

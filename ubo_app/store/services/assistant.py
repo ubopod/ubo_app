@@ -11,6 +11,7 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 from ubo_app.constants.assistant import (
+    DEFAULT_LLM_CEREBRAS_MODEL,
     DEFAULT_LLM_GOOGLE_MODEL,
     DEFAULT_LLM_GROK_MODEL,
     DEFAULT_LLM_OLLAMA_MODEL,
@@ -39,6 +40,7 @@ class AssistantLLMName(StrEnum):
     GOOGLE = 'google_vertex'
     OPENAI = 'openai'
     GROK = 'grok'
+    CEREBRAS = 'cerebras'
 
 
 DEFAULT_MODELS = {
@@ -46,6 +48,7 @@ DEFAULT_MODELS = {
     AssistantLLMName.GOOGLE: DEFAULT_LLM_GOOGLE_MODEL,
     AssistantLLMName.OPENAI: DEFAULT_LLM_OPENAI_MODEL,
     AssistantLLMName.GROK: DEFAULT_LLM_GROK_MODEL,
+    AssistantLLMName.CEREBRAS: DEFAULT_LLM_CEREBRAS_MODEL,
 }
 
 
