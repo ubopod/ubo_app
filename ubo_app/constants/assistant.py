@@ -4,8 +4,8 @@ import os
 
 from ubo_app.constants import DATA_PATH
 
-INTENTS_WAKE_WORD = os.environ.get('UBO_INTENTS_WAKE_WORD', 'hey pod')
-ASSISTANT_WAKE_WORD = os.environ.get('UBO_ASSISTANT_WAKE_WORD', 'hey there')
+INTENTS_WAKE_WORD = os.environ.get('UBO_INTENTS_WAKE_WORD', 'short voice command')
+ASSISTANT_WAKE_WORD = os.environ.get('UBO_ASSISTANT_WAKE_WORD', 'can you help me')
 ASSISTANT_END_WORD = os.environ.get('UBO_ASSISTANT_END_WORD', 'roger that')
 ASSISTANT_DEBUG_PATH = os.environ.get('UBO_ASSISTANT_DEBUG_PATH')
 DEFAULT_LLM_OLLAMA_MODEL = os.environ.get(
