@@ -1,6 +1,6 @@
 """Ubo Input Transport for Pipecat Reading Audio Samples from UBO RPC Client."""
 
-import asyncio
+import asyncio  # noqa: I001
 import time
 from dataclasses import dataclass
 from enum import StrEnum
@@ -8,7 +8,6 @@ from enum import StrEnum
 import numpy as np
 from loguru import logger
 from pipecat.frames.frames import (
-    DisplayRedrawAction,
     Frame,
     InputAudioRawFrame,
     StartFrame,
@@ -28,6 +27,7 @@ from ubo_bindings.ubo.v1 import (
     Event,
     InputDemandAction,
     QrCodeInputDescription,
+    DisplayRedrawAction,
 )
 
 
