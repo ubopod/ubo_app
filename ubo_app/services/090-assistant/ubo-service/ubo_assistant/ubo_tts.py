@@ -19,7 +19,7 @@ from ubo_assistant.switch import UboSwitchService
 class UboTTSService(UboSwitchService[TTSService], TTSService):
     """TTS service that wraps multiple TTS services allowing switching between them."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         client: UboRPCClient,
         *,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 from engines_registry import (
@@ -13,7 +14,7 @@ from engines_registry import (
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
-from ubo_app.colors import INFO_COLOR, WARNING_COLOR
+from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
 from ubo_app.constants.assistant import (
     ASSEMBLYAI_API_KEY_SECRET_ID,
@@ -28,11 +29,23 @@ from ubo_app.constants.assistant import (
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.logger import logger
+from ubo_app.store.core.types import (
+    MenuGoBackAction,
+    RegisterSettingAppAction,
+    SettingsCategory,
+)
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistanceAudioFrame,
     AssistanceImageFrame,
+    AssistantAddMCPServerEvent,
+    AssistantDeleteMCPServerEvent,
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
@@ -41,21 +54,27 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
     AssistantSTTName,
+    AssistantSyncMCPServersAction,
+    AssistantSyncMCPServersEvent,
     AssistantTTSName,
     AssistantUpdateProvidersEvent,
+    MCPServerMetadata,
+    MCPServerType,
 )
 from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import secrets
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
     ItemParameters,
 )
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -92,6 +111,102 @@ def _get_not_setup_item_parameters(*, is_offline: bool | None = None) -> ItemPar
     if is_offline is not None:
         parameters['color'] = INFO_COLOR if is_offline else WARNING_COLOR
     return parameters
+
+
+def input_mcp_server() -> None:
+    """Input MCP server configuration via WebUI."""
+
+    async def act() -> None:
+        import asyncio
+        import contextlib
+
+        from mcp_servers import save_mcp_server, validate_sse_url, validate_stdio_config
+
+        from ubo_app.store.services.assistant import (
+            AssistantAddMCPServerAction,
+        )
+
+        with contextlib.suppress(asyncio.CancelledError):
+            _, result = await ubo_input(
+                prompt='Add MCP Server',
+                descriptions=[
+                    WebUIInputDescription(
+                        fields=[
+                            InputFieldDescription(
+                                name='name',
+                                label='Server Name',
+                                type=InputFieldType.TEXT,
+                                description='Friendly name for this MCP server',
+                                required=True,
+                            ),
+                            InputFieldDescription(
+                                name='type',
+                                label='Server Type',
+                                type=InputFieldType.SELECT,
+                                description='Type of MCP server',
+                                options=['stdio', 'sse'],
+                                required=True,
+                            ),
+                            InputFieldDescription(
+                                name='config',
+                                label='Configuration',
+                                type=InputFieldType.LONG,
+                                description='For stdio: paste full JSON with '
+                                'mcpServers. For sse: paste URL',
+                                required=True,
+                            ),
+                        ],
+                    ),
+                ],
+            )
+
+            if not result or not result.data:
+                return
+
+            name = result.data.get('name', '').strip()
+            server_type_str = result.data.get('type', '').strip()
+            config_str = result.data.get('config', '').strip()
+
+            if not name or not server_type_str or not config_str:
+                return
+
+            server_type = MCPServerType(server_type_str)
+
+            # Validate configuration
+            if server_type == MCPServerType.STDIO:
+                is_valid, error_msg, parsed_config = validate_stdio_config(config_str)
+                if not is_valid or not parsed_config:
+                    logger.error(
+                        'Invalid stdio configuration',
+                        extra={'error': error_msg},
+                    )
+                    return
+                config: dict | str = parsed_config
+            else:  # SSE
+                is_valid, error_msg = validate_sse_url(config_str)
+                if not is_valid:
+                    logger.error('Invalid SSE URL', extra={'error': error_msg})
+                    return
+                config = config_str
+
+            # Save to filesystem
+            server_id = save_mcp_server(name, server_type, config)
+
+            # Dispatch action to update state
+            store.dispatch(
+                AssistantAddMCPServerAction(
+                    name=name,
+                    type=server_type,
+                    config=config,
+                ),
+            )
+
+            logger.info(
+                'MCP server added',
+                extra={'server_id': server_id, 'server_name': name},
+            )
+
+    create_task(act())
 
 
 def _communicate(event: AssistantHandleReportEvent) -> None:
@@ -139,6 +254,10 @@ async def init_service() -> None:
     register_persistent_store(
         'assistant:selected_image_generator',
         lambda state: state.assistant.selected_image_generator,
+    )
+    register_persistent_store(
+        'assistant:enabled_mcp_servers',
+        lambda state: json.dumps(list(state.assistant.enabled_mcp_servers)),
     )
 
     # Secrets file monitor - tracks API key changes
@@ -457,9 +576,158 @@ async def init_service() -> None:
         ),
     )
 
+    # MCP Tools menu - main list
+    @store.autorun(
+        lambda state: (
+            state.assistant.mcp_servers,
+            state.assistant.enabled_mcp_servers,
+        ),
+    )
+    def mcp_servers_menu(
+        state_data: tuple[dict[str, MCPServerMetadata], set[str]],
+    ) -> Sequence[Item]:
+        """Return items for MCP servers menu."""
+        # Use state as source of truth (already loaded from filesystem in reducer)
+        loaded_servers, enabled_servers = state_data
+
+        logger.debug(
+            'MCP servers menu autorun triggered',
+            extra={
+                'server_count': len(loaded_servers),
+                'server_ids': list(loaded_servers.keys()),
+                'enabled_count': len(enabled_servers),
+            },
+        )
+
+        items: list[Item] = [
+            ActionItem(
+                label='Add Server',
+                icon='󰌉',
+                action=input_mcp_server,
+            ),
+        ]
+
+        for server_id, server in loaded_servers.items():
+            is_enabled = server_id in enabled_servers
+            items.append(
+                SubMenuItem(
+                    label=server.name,
+                    sub_menu=mcp_server_menu(server_id),
+                    icon='󰄬' if is_enabled else '󰖭',
+                    background_color=INFO_COLOR if is_enabled else WARNING_COLOR,
+                ),
+            )
+
+        return items
+
+    def mcp_server_menu(server_id: str) -> Callable[[], HeadedMenu]:
+        """Generate a dynamic menu for a specific MCP server."""
+        from ubo_app.store.services.assistant import (
+            AssistantDeleteMCPServerAction,
+            AssistantToggleMCPServerAction,
+        )
+
+        @store.autorun(
+            lambda state: (
+                state.assistant.mcp_servers.get(server_id),
+                server_id in state.assistant.enabled_mcp_servers,
+            ),
+            options=AutorunOptions(default_value=None),
+        )
+        def menu(
+            state_data: tuple[MCPServerMetadata | None, bool],
+        ) -> HeadedMenu:
+            server, is_enabled = state_data
+
+            if not server:
+                return HeadedMenu(
+                    title='MCP Server',
+                    heading='Server Not Found',
+                    sub_heading='',
+                    items=[],
+                )
+
+            status_text = 'Enabled' if is_enabled else 'Disabled'
+
+            return HeadedMenu(
+                title=f'MCP: {server.name}',
+                heading=server.name,
+                sub_heading=f'Type: {server.type.value} • {status_text}',
+                items=[
+                    UboDispatchItem(
+                        label='Disable' if is_enabled else 'Enable',
+                        icon='󰖭' if is_enabled else '󰄬',
+                        background_color=WARNING_COLOR if is_enabled else INFO_COLOR,
+                        store_action=AssistantToggleMCPServerAction(
+                            server_id=server_id,
+                        ),
+                    ),
+                    UboDispatchItem(
+                        label='Delete',
+                        icon='󰆴',
+                        background_color=DANGER_COLOR,
+                        store_action=AssistantDeleteMCPServerAction(
+                            server_id=server_id,
+                        ),
+                    ),
+                ],
+            )
+
+        return menu
+
+    # Event handlers for MCP servers
+    def handle_add_mcp_server(_event: AssistantAddMCPServerEvent) -> None:
+        """Handle MCP server add event."""
+        # Trigger sync to reload from filesystem
+        store.dispatch(
+            AssistantSyncMCPServersAction(),
+        )
+
+    def handle_delete_mcp_server(event: AssistantDeleteMCPServerEvent) -> None:
+        """Handle MCP server delete event."""
+        from mcp_servers import delete_mcp_server
+
+        delete_mcp_server(event.server_id)
+        # Navigate back to server list
+        store.dispatch(MenuGoBackAction())
+        # Trigger sync to update state
+        store.dispatch(AssistantSyncMCPServersAction())
+
+    def handle_sync_mcp_servers(_event: AssistantSyncMCPServersEvent) -> None:
+        """Handle MCP servers sync event."""
+        # State update already happened in the reducer
+        logger.debug(
+            'MCP servers synced',
+            extra={'server_count': len(_event.__dict__.get('servers', {}))},
+        )
+
+    store.dispatch(
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=15,
+            key='mcp_tools',
+            menu_item=SubMenuItem(
+                label='MCP Tools',
+                icon='󰒋',
+                sub_menu=HeadedMenu(
+                    title='󰒋MCP Tools',
+                    heading='Model Context Protocol Tools',
+                    sub_heading='Add and manage MCP servers',
+                    items=mcp_servers_menu,
+                ),
+            ),
+        ),
+    )
+
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
     store.subscribe_event(AssistantUpdateProvidersEvent, providers)
     store.subscribe_event(AssistantUpdateProvidersEvent, stt_providers)
     store.subscribe_event(AssistantUpdateProvidersEvent, llm_providers)
     store.subscribe_event(AssistantUpdateProvidersEvent, tts_providers)
     store.subscribe_event(AssistantUpdateProvidersEvent, image_generator_providers)
+    store.subscribe_event(AssistantAddMCPServerEvent, handle_add_mcp_server)
+    store.subscribe_event(AssistantDeleteMCPServerEvent, handle_delete_mcp_server)
+    store.subscribe_event(AssistantSyncMCPServersEvent, handle_sync_mcp_servers)
+
+    # Initial sync of MCP servers from filesystem
+    store.dispatch(AssistantSyncMCPServersAction())
