@@ -73,3 +73,6 @@ PIPER_MODEL_JSON_PATH = (DATA_PATH / PIPER_MODEL).with_suffix('.onnx.json')
 PIPER_DOWNLOAD_NOTIFICATION_ID = 'speech_synthesis:download-piper'
 
 PICOVOICE_ACCESS_KEY_SECRET_ID = 'picovoice_access_key'  # noqa: S105
+
+DEEPGRAM_API_KEY_SECRET_ID = 'deepgram_api_key'  # noqa: S105
+DEEPGRAM_API_KEY_PATTERN = '^[a-f0-9]{40}$'

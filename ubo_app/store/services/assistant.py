@@ -29,6 +29,7 @@ class AssistantSTTName(StrEnum):
     GOOGLE_SEGMENTED = 'google_segmented'
     GOOGLE = 'google'
     OPENAI = 'openai'
+    DEEPGRAM = 'deepgram'
 
 
 class AssistantLLMName(StrEnum):
