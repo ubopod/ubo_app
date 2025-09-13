@@ -2,7 +2,7 @@
 
 import os
 
-from ubo_app.constants import DATA_PATH
+from ubo_app.constants import CONFIG_PATH, DATA_PATH
 
 INTENTS_WAKE_WORD = os.environ.get('UBO_INTENTS_WAKE_WORD', 'short voice command')
 ASSISTANT_WAKE_WORD = os.environ.get('UBO_ASSISTANT_WAKE_WORD', 'can you help me')
@@ -59,6 +59,9 @@ ELEVENLABS_API_KEY_PATTERN = '^[a-f0-9]{64}$'
 ELEVENLABS_VOICE_ID = 'elevenlabs_voice_id'
 ELEVENLABS_VOICE_ID_PATTERN = '^[a-zA-Z0-9-_]{20,}$'
 
+BRAVE_SEARCH_API_KEY_SECRET_ID = 'brave_search_api_key'  # noqa: S105
+BRAVE_SEARCH_API_KEY_PATTERN = '^BS[a-zA-Z0-9-_]{20,}$'
+
 VOSK_MODEL = 'vosk-model-small-en-us-0.15'
 VOSK_MODEL_URL = f'https://alphacephei.com/vosk/models/{VOSK_MODEL}.zip'
 VOSK_MODEL_PATH = DATA_PATH / VOSK_MODEL
@@ -89,3 +92,6 @@ ASSEMBLYAI_API_KEY_PATTERN = '^[a-f0-9]{32}$'
 
 RIME_API_KEY_SECRET_ID = 'rime_api_key'  # noqa: S105
 RIME_API_KEY_PATTERN = '^[a-zA-Z0-9-_]{32,}$'
+
+
+ASSISTANT_MCP_SERVERS_PATH = CONFIG_PATH / 'assistant_mcp_servers'

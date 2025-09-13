@@ -14,7 +14,11 @@ from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.cerebras.llm import CerebrasLLMService
 from pipecat.services.google.llm_vertex import GoogleVertexLLMService
 from pipecat.services.grok.llm import GrokLLMService
-from pipecat.services.llm_service import FunctionCallParams, LLMService
+from pipecat.services.llm_service import (
+    FunctionCallHandler,
+    FunctionCallParams,
+    LLMService,
+)
 from pipecat.services.ollama.llm import OLLamaLLMService
 from pipecat.services.openai.llm import OpenAILLMService
 from ubo_bindings.client import UboRPCClient
@@ -31,7 +35,7 @@ from ubo_assistant.switch import UboSwitchService
 class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
     """LLM service that wraps multiple LLM services allowing switching between them."""
 
-    def __init__(
+    def __init__(  # noqa: C901, PLR0912, PLR0913
         self,
         client: UboRPCClient,
         *,
@@ -120,6 +124,26 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         for service in self.services.values():
             service.register_function('draw_image', self.draw_image)
             service.register_function('get_image', self.get_image)
+
+    def register_function(
+        self,
+        function_name: str | None,
+        handler: FunctionCallHandler,
+        start_callback=None,  # noqa: ANN001
+        *,
+        cancel_on_interruption: bool = True,
+    ) -> None:
+        """Register a function with all underlying LLM services.
+
+        This method is called by MCP clients to register external tools.
+        """
+        for service in self.services.values():
+            service.register_function(
+                function_name,
+                handler,
+                start_callback,
+                cancel_on_interruption=cancel_on_interruption,
+            )
 
     async def draw_image(self, params: FunctionCallParams) -> None:
         """Generate an image based on a text prompt."""
