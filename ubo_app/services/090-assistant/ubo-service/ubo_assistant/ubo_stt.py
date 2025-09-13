@@ -9,6 +9,7 @@ from pipecat.frames.frames import (
     InterimTranscriptionFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
+from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
 from pipecat.services.google.stt import GoogleSTTService
 from pipecat.services.openai.stt import OpenAISTTService
 from pipecat.services.stt_service import STTService
@@ -32,6 +33,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         *,
         google_credentials: str | None,
         openai_api_key: str | None,
+        deepgram_api_key: str | None,
         selector: str,
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
@@ -77,11 +79,28 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             logger.exception('Error while initializing Vosk STT')
             self.vosk_stt = None
 
+        try:
+            if deepgram_api_key:
+                self.deepgram_stt = DeepgramSTTService(
+                    api_key=deepgram_api_key,
+                    live_options=LiveOptions(
+                        model='nova-3',
+                        language='multi',
+                        smart_format=True,
+                    ),
+                )
+            else:
+                self.deepgram_stt = None
+        except Exception:
+            logger.exception('Error while initializing Deepgram STT')
+            self.deepgram_stt = None
+
         self._services = {
             'google_segmented': self.segmented_google_stt,
             'google': self.google_stt,
             'openai': self.openai_stt,
             'vosk': self.vosk_stt,
+            'deepgram': self.deepgram_stt,
         }
 
         UboSwitchService.__init__(self, client=client, selector=selector)

@@ -1,6 +1,7 @@
 """Engines registry."""
 
 from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+from ubo_app.engines.deepgram import DeepgramEngine
 from ubo_app.engines.elevenlabs import ElevenLabsEngine
 from ubo_app.engines.google import GoogleEngine
 from ubo_app.engines.google_cloud import GoogleCloudEngine
@@ -21,6 +22,7 @@ STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.GOOGLE: GoogleCloudEngine(label='Google (continuous)'),
     AssistantSTTName.GOOGLE_SEGMENTED: GoogleCloudEngine(label='Google (segmented)'),
     AssistantSTTName.OPENAI: OpenAIEngine(),
+    AssistantSTTName.DEEPGRAM: DeepgramEngine(),
 }
 
 LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
