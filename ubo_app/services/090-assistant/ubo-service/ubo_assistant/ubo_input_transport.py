@@ -8,10 +8,10 @@ from enum import StrEnum
 import numpy as np
 from loguru import logger
 from pipecat.frames.frames import (
+    DisplayRedrawAction,
     Frame,
     InputAudioRawFrame,
     StartFrame,
-    UserImageRawFrame,
     UserImageRequestFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
@@ -76,7 +76,7 @@ class UboInputTransport(BaseInputTransport):
 
         client.dispatch(
             action=Action(
-                display_redraw_action=DisplayResumeAction(),
+                display_redraw_action=DisplayRedrawAction(),
             ),
         )
 
