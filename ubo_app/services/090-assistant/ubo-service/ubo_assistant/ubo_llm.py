@@ -11,6 +11,7 @@ from pipecat.frames.frames import (
     OutputImageRawFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
+from pipecat.services.cerebras.llm import CerebrasLLMService
 from pipecat.services.google.llm_vertex import GoogleVertexLLMService
 from pipecat.services.grok.llm import GrokLLMService
 from pipecat.services.llm_service import FunctionCallParams, LLMService
@@ -37,6 +38,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         google_credentials: str | None,
         openai_api_key: str | None,
         grok_api_key: str | None,
+        cerebras_api_key: str | None,
         selector: str,
     ) -> None:
         """Initialize the LLM service with Google, OpenAI, and Ollama LLM services."""
@@ -81,6 +83,22 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             self.grok_llm = None
 
         try:
+            if cerebras_api_key:
+                self.cerebras_llm = CerebrasLLMService(
+                    api_key=cerebras_api_key,
+                    model='qwen-3-235b-a22b-instruct-2507',
+                    params=CerebrasLLMService.InputParams(
+                        temperature=0.7,
+                        max_completion_tokens=1000,
+                    ),
+                )
+            else:
+                self.cerebras_llm = None
+        except Exception:
+            logger.exception('Error while initializing Cerebras LLM')
+            self.cerebras_llm = None
+
+        try:
             self.ollama_llm = OLLamaLLMService(
                 model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
             )
@@ -92,6 +110,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             'google_vertex': self.google_vertex_llm,
             'openai': self.openai_llm,
             'grok': self.grok_llm,
+            'cerebras': self.cerebras_llm,
             'ollama': self.ollama_llm,
         }
 
