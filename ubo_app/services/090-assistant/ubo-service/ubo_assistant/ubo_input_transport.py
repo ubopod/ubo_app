@@ -12,6 +12,7 @@ from pipecat.frames.frames import (
     Frame,
     InputAudioRawFrame,
     StartFrame,
+    UserImageRawFrame,
     UserImageRequestFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
@@ -24,7 +25,6 @@ from ubo_bindings.ubo.v1 import (
     AvailableInputDescription,
     CameraReportImageEvent,
     DisplayRenderEvent,
-    DisplayResumeAction,
     Event,
     InputDemandAction,
     QrCodeInputDescription,
