@@ -32,17 +32,16 @@ def get_service() -> UboServiceThread:
             return thread.ubo_service
 
         stack = traceback.extract_stack()
-        matching_path = next(
-            (
-                registered_path
-                for frame in stack[-2::-1]
-                for registered_path in SERVICES_BY_PATH.copy()
-                if frame.filename.startswith(registered_path.as_posix())
-            ),
-            None,
-        )
-        if matching_path in SERVICES_BY_PATH:
-            return SERVICES_BY_PATH[matching_path]
+        services_by_path = SERVICES_BY_PATH.copy()
+
+        # Optimize by checking stack frames in reverse order and breaking early
+        for frame in stack[-2::-1]:
+            frame_path = frame.filename
+            for registered_path in services_by_path:
+                if frame_path.startswith(registered_path.as_posix()):
+                    if registered_path in SERVICES_BY_PATH:
+                        return SERVICES_BY_PATH[registered_path]
+                    break  # Move to next frame if path not found in current services
 
     msg = 'Service is not available.'
     raise ServiceUnavailableError(msg)
