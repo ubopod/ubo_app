@@ -19,6 +19,7 @@ async def setup(register_reducer: ReducerRegistrar) -> None:
 
 def binary_env_provider() -> dict[str, str]:
     from ubo_app.constants.assistant import (
+        CEREBRAS_API_KEY_SECRET_ID,
         DEEPGRAM_API_KEY_SECRET_ID,
         ELEVENLABS_API_KEY_SECRET_ID,
         ELEVENLABS_VOICE_ID,
@@ -35,6 +36,8 @@ def binary_env_provider() -> dict[str, str]:
         ),
         'OPENAI_API_KEY_SECRET_ID': OPENAI_API_KEY_SECRET_ID,
         'GROK_API_KEY_SECRET_ID': GROK_API_KEY_SECRET_ID,
+        'CEREBRAS_API_KEY_SECRET_ID': CEREBRAS_API_KEY_SECRET_ID,
+        'CEREBRAS_API_KEY_SECRET_ID': CEREBRAS_API_KEY_SECRET_ID,
         'ELEVENLABS_API_KEY_SECRET_ID': ELEVENLABS_API_KEY_SECRET_ID,
         'ELEVENLABS_VOICE_ID': ELEVENLABS_VOICE_ID,
         'DEEPGRAM_API_KEY_SECRET_ID': DEEPGRAM_API_KEY_SECRET_ID,

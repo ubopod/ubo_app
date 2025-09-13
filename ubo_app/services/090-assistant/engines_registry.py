@@ -1,6 +1,7 @@
 """Engines registry."""
 
 from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+from ubo_app.engines.cerebras import CerebrasEngine
 from ubo_app.engines.deepgram import DeepgramEngine
 from ubo_app.engines.elevenlabs import ElevenLabsEngine
 from ubo_app.engines.google import GoogleEngine
@@ -29,6 +30,7 @@ LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.OLLAMA: OllamaEngine(),
     AssistantLLMName.GOOGLE: GoogleCloudEngine(label='Google Vertex'),
     AssistantLLMName.GROK: GrokEngine(),
+    AssistantLLMName.CEREBRAS: CerebrasEngine(),
     AssistantLLMName.OPENAI: OpenAIEngine(),
 }
 
