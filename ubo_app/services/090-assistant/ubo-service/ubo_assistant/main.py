@@ -7,7 +7,6 @@ import os
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import Frame
@@ -21,6 +20,7 @@ from pipecat.processors.producer_processor import ProducerProcessor
 from pipecat.transports.base_transport import TransportParams
 from ubo_bindings.client import UboRPCClient
 
+from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
@@ -127,68 +127,12 @@ class Assistant:
             selector='state.assistant.selected_llm',
         )
 
-        messages: list[ChatCompletionMessageParam] = [
-            {
-                'role': 'system',
-                'content': """You are a helpful assistant who converses with a user \
-and answers questions.
+        messages: list[ChatCompletionMessageParam] = [{
+            'role': 'system',
+            'content': DEFAULT_SYSTEM_MESSAGE,
+        }]
 
-Your goals are to be helpful and brief in your responses.
-Respond with one or two sentences at most, unless you are asked to respond at more \
-length.
-Your output will be converted to audio so don't include special characters in your \
-answers.
-
-You have access to two tools: "draw_image" and "get_image".
-these tools
-
-You can respond to requests about generating images by using the "draw_image" tool.
-
-You can answer questions about the user's video stream using the get_image tool.
-Some examples of phrases that indicate you should use the "get_image" tool are:
-- What do you see?
-- What's in the video?
-- Can you describe the video?
-- Tell me about what you see.
-- Tell me something interesting about what you see.
-- What's happening in the video?
-
-You are not limited to these tools, you can answer general questions of the user and
-engage in a conversation with them.""",
-            },
-        ]
-        draw_image_function = FunctionSchema(
-            name='draw_image',
-            description='Generate an image based on a text prompt.',
-            properties={
-                'prompt': {
-                    'type': 'string',
-                    'description': 'The text description to generate an image from.',
-                },
-            },
-            required=['prompt'],
-        )
-        get_image_function = FunctionSchema(
-            name='get_image',
-            description='Take an image from the video stream and answer a question '
-            'about it.',
-            properties={
-                'source': {
-                    'type': 'string',
-                    'description': 'The video stream source to take the image from.'
-                    'Camera captures the main camera stream, display captures what the '
-                    'user is seeing on their display.',
-                    'enum': ['camera', 'display'],
-                },
-                'prompt': {
-                    'type': 'string',
-                    'description': 'The question that is asked about the image.',
-                },
-            },
-            required=['source', 'prompt'],
-        )
-        tools = ToolsSchema(standard_tools=[draw_image_function, get_image_function])
-
+        tools = ToolsSchema(standard_tools=[])
         context = OpenAILLMContext(messages, tools)
         context_aggregator = ubo_llm_service.create_context_aggregator(context)
 
@@ -199,6 +143,13 @@ engage in a conversation with them.""",
                     print('...trimmed messages')  # noqa: T201
                 for message in context.messages[-10:]:
                     print('-', str(message)[:300])  # noqa: T201
+                # Print current tools from context
+                if context.tools:
+                    print('=== Current Tools in Context ===')  # noqa: T201
+                    for tool in context.tools:
+                        print(f'Tool: {tool}')  # noqa: T201
+                else:
+                    print('=== No tools currently in context ===')  # noqa: T201
 
         self.client.event_loop.create_task(g())
 

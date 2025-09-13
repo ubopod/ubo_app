@@ -3,11 +3,17 @@
   "_type": "RootState",
   "assistant": {
     "_type": "AssistantState",
+    "enabled_mcp_servers": {
+      "_type": "set",
+      "value": []
+    },
     "is_active": false,
     "is_listening": false,
+    "mcp_servers": {},
     "selected_image_generator": "google",
     "selected_llm": "ollama",
     "selected_models": {
+      "cerebras": "qwen-3-235b-a22b-instruct-2507",
       "google_vertex": "gemini-2.5-flash-preview-05-20",
       "grok": "grok-4-0709",
       "ollama": "gemma3:1b",
@@ -7559,9 +7565,11 @@
     "settings_items_priorities": {
       "assistant:image_generator": 20,
       "assistant:llm": 40,
+      "assistant:mcp_tools": 15,
       "assistant:providers": 10,
       "assistant:stt": 50,
       "assistant:tts": 30,
+      "camera:": 1,
       "docker:registries": 2,
       "docker:service": 1,
       "infrared:infrared": null,

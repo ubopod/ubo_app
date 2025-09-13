@@ -1,8 +1,9 @@
 """STT service that wraps multiple STT services allowing switching between them."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator  # noqa: I001
 
 from loguru import logger
+from deepgram import LiveOptions
 from pipecat.frames.frames import (
     EmulateUserStartedSpeakingFrame,
     Frame,
@@ -31,7 +32,7 @@ from ubo_assistant.vosk import VoskSTTService
 class UboSTTService(UboSwitchService[STTService], STTService):
     """STT service that wraps multiple STT services allowing switching between them."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0912
         self,
         client: UboRPCClient,
         *,
