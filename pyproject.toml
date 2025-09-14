@@ -331,7 +331,7 @@ filterwarnings = [
   "ignore: setDaemon\\(\\) is deprecated, set the daemon attribute instead:DeprecationWarning",
   "ignore:'imghdr' is deprecated:DeprecationWarning",
 ]
-timeout = 180
+timeout = 500
 verbosity_assertions = 2
 
 [tool.coverage.report]

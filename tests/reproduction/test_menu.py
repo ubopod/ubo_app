@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from fake import Fake
 
 from ubo_app.constants import CORE_SERVICE_IDS, TEST_INVESTIGATION_MODE
 from ubo_app.logger import logger
@@ -28,11 +29,16 @@ INVESTIGATION_MODE_TIMEOUT = 1000000
 )
 @pytest.mark.repeat(1000 if TEST_INVESTIGATION_MODE else 1)
 async def test_root_menu_bad_state(
+    monkeypatch: pytest.MonkeyPatch,
     app_context: AppContext,
     stability: Stability,
     load_services: LoadServices,
 ) -> None:
     """Test navigation."""
+    import asyncio
+
+    monkeypatch.setattr(asyncio.subprocess, 'create_subprocess_exec', Fake())
+
     from ubo_app.store.core.types import MenuChooseByIconAction
     from ubo_app.store.main import store
 
