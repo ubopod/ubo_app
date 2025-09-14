@@ -28,6 +28,7 @@
 - refactor(assistant): improve the mechanism of applying `is_listening` changes to the input transport of the assistant client
 - feat(keypad): add hold and unhold actions and use them to run assistant anywhere by holding the home key in
 - chore: update to pipecat 0.0.84, fixing an issue in image generation flow
+- fix(tests): disable external processes in `test_menu` as grpc does not load in it
 
 ## Version 1.6.0
 
