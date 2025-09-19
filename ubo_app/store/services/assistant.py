@@ -31,6 +31,7 @@ class AssistantSTTName(StrEnum):
     GOOGLE = 'google'
     OPENAI = 'openai'
     DEEPGRAM = 'deepgram'
+    ASSEMBLYAI = 'assemblyai'
 
 
 class AssistantLLMName(StrEnum):
