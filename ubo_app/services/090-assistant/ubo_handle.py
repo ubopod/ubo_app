@@ -19,6 +19,8 @@ async def setup(register_reducer: ReducerRegistrar) -> None:
 
 def binary_env_provider() -> dict[str, str]:
     from ubo_app.constants.assistant import (
+        ASSEMBLYAI_API_KEY_SECRET_ID,
+        BRAVE_SEARCH_API_KEY_SECRET_ID,
         CEREBRAS_API_KEY_SECRET_ID,
         DEEPGRAM_API_KEY_SECRET_ID,
         ELEVENLABS_API_KEY_SECRET_ID,
@@ -30,6 +32,8 @@ def binary_env_provider() -> dict[str, str]:
     )
 
     return {
+        'ASSEMBLYAI_API_KEY_SECRET_ID': ASSEMBLYAI_API_KEY_SECRET_ID,
+        'BRAVE_SEARCH_API_KEY_SECRET_ID': BRAVE_SEARCH_API_KEY_SECRET_ID,
         'GOOGLE_API_KEY_SECRET_ID': GOOGLE_API_KEY_SECRET_ID,
         'GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID': (
             GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID

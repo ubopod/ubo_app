@@ -9,7 +9,11 @@ from pipecat.frames.frames import (
     InterimTranscriptionFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
-from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
+from pipecat.services.assemblyai.stt import (
+    AssemblyAIConnectionParams,
+    AssemblyAISTTService,
+)
+from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.google.stt import GoogleSTTService
 from pipecat.services.openai.stt import OpenAISTTService
 from pipecat.services.stt_service import STTService
@@ -34,6 +38,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         google_credentials: str | None,
         openai_api_key: str | None,
         deepgram_api_key: str | None,
+        assemblyai_api_key: str | None,
         selector: str,
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
@@ -95,12 +100,30 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             logger.exception('Error while initializing Deepgram STT')
             self.deepgram_stt = None
 
+        try:
+            if assemblyai_api_key:
+                self.assemblyai_stt = AssemblyAISTTService(
+                    api_key=assemblyai_api_key,
+                    vad_force_turn_endpoint=False,  # Use AssemblyAI's STT-based turn detection
+                    connection_params=AssemblyAIConnectionParams(
+                        end_of_turn_confidence_threshold=0.7,  # Default confidence threshold
+                        min_end_of_turn_silence_when_confident=160,  # 160ms minimum silence
+                        max_turn_silence=2400,  # 2.4s maximum turn silence
+                    ),
+                )
+            else:
+                self.assemblyai_stt = None
+        except Exception:
+            logger.exception('Error while initializing AssemblyAI STT')
+            self.assemblyai_stt = None
+
         self._services = {
             'google_segmented': self.segmented_google_stt,
             'google': self.google_stt,
             'openai': self.openai_stt,
             'vosk': self.vosk_stt,
             'deepgram': self.deepgram_stt,
+            'assemblyai': self.assemblyai_stt,
         }
 
         UboSwitchService.__init__(self, client=client, selector=selector)
