@@ -101,11 +101,16 @@ class Assistant:
             os.environ['DEEPGRAM_API_KEY_SECRET_ID'],
         )
 
+        assemblyai_api_key = await self.client.query_secret(
+            os.environ['ASSEMBLYAI_API_KEY_SECRET_ID'],
+        )
+
         ubo_stt_service = UboSTTService(
             client=self.client,
             google_credentials=google_credentials,
             openai_api_key=openai_api_key,
             deepgram_api_key=deepgram_api_key,
+            assemblyai_api_key=assemblyai_api_key,
             selector='state.assistant.selected_stt',
         )
 
