@@ -29,6 +29,7 @@ def binary_env_provider() -> dict[str, str]:
         GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
         GROK_API_KEY_SECRET_ID,
         OPENAI_API_KEY_SECRET_ID,
+        RIME_API_KEY_SECRET_ID,
     )
 
     return {
@@ -45,6 +46,7 @@ def binary_env_provider() -> dict[str, str]:
         'ELEVENLABS_API_KEY_SECRET_ID': ELEVENLABS_API_KEY_SECRET_ID,
         'ELEVENLABS_VOICE_ID': ELEVENLABS_VOICE_ID,
         'DEEPGRAM_API_KEY_SECRET_ID': DEEPGRAM_API_KEY_SECRET_ID,
+        'RIME_API_KEY_SECRET_ID': RIME_API_KEY_SECRET_ID,
     }
 
 

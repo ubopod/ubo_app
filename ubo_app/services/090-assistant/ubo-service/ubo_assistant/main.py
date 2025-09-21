@@ -105,6 +105,10 @@ class Assistant:
             os.environ['ASSEMBLYAI_API_KEY_SECRET_ID'],
         )
 
+        rime_api_key = await self.client.query_secret(
+            os.environ['RIME_API_KEY_SECRET_ID'],
+        )
+
         ubo_stt_service = UboSTTService(
             client=self.client,
             google_credentials=google_credentials,
@@ -204,6 +208,7 @@ engage in a conversation with them.""",
             openai_api_key=openai_api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             elevenlabs_voice_id=elevenlabs_voice_id,
+            rime_api_key=rime_api_key,
             selector='state.assistant.selected_tts',
         )
 

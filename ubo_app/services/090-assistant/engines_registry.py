@@ -11,6 +11,7 @@ from ubo_app.engines.grok import GrokEngine
 from ubo_app.engines.ollama import OllamaEngine
 from ubo_app.engines.openai import OpenAIEngine
 from ubo_app.engines.piper import PiperEngine
+from ubo_app.engines.rime import RimeEngine
 from ubo_app.engines.vosk import VoskEngine
 from ubo_app.store.services.assistant import (
     AssistantImageGeneratorName,
@@ -41,6 +42,7 @@ TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.GOOGLE: GoogleCloudEngine(label='Google'),
     AssistantTTSName.OPENAI: OpenAIEngine(),
     AssistantTTSName.ELEVENLABS: ElevenLabsEngine(),
+    AssistantTTSName.RIME: RimeEngine(),
 }
 
 IMAGE_GENERATOR_ENGINES: dict[
