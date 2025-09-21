@@ -60,6 +60,7 @@ class AssistantTTSName(StrEnum):
     GOOGLE = 'google'
     OPENAI = 'openai'
     ELEVENLABS = 'elevenlabs'
+    RIME = 'rime'
 
 
 class AssistantImageGeneratorName(StrEnum):
