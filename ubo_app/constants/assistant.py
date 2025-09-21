@@ -86,3 +86,6 @@ CEREBRAS_API_KEY_PATTERN = '^csk-[a-zA-Z0-9-_]{40,}$'
 
 ASSEMBLYAI_API_KEY_SECRET_ID = 'assemblyai_api_key'  # noqa: S105
 ASSEMBLYAI_API_KEY_PATTERN = '^[a-f0-9]{32}$'
+
+RIME_API_KEY_SECRET_ID = 'rime_api_key'  # noqa: S105
+RIME_API_KEY_PATTERN = '^[a-zA-Z0-9-_]{32,}$'

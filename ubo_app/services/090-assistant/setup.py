@@ -24,6 +24,7 @@ from ubo_app.constants.assistant import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
     GROK_API_KEY_SECRET_ID,
     OPENAI_API_KEY_SECRET_ID,
+    RIME_API_KEY_SECRET_ID,
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
