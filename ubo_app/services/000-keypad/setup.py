@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Literal, cast
 import board
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 
+from ubo_app.logger import logger
 from ubo_app.store.services.audio import AudioDevice, AudioSetMuteStatusAction
 from ubo_app.store.services.keypad import (
     Key,
@@ -62,8 +63,7 @@ class Keypad:
         Initializes various parameters including
         loggers and button names.
         """
-        self.logger = logging.getLogger('keypad')
-        self.logger.setLevel(logging.WARNING)
+        self.logger = logger
         self.logger.info('Initialising keypad...')
         self.previous_inputs = 0
         self.aw = None
@@ -166,8 +166,7 @@ class Keypad:
         button.when_pressed = self.key_press_cb
 
         is_mic_active = inputs & 1 << MIC_INDEX != 0
-        self.on_button_event(
-            index=MIC_INDEX,
+        self.mute_button_event(
             status='released' if is_mic_active else 'pressed',
         )
 
@@ -259,47 +258,56 @@ class Keypad:
             i for i in range(8) if i in KEY_INDEX and inputs & 1 << i == 0
         }
 
-        # Check for rising edge or falling edge action (press or release)
-        if (self.previous_inputs & change_mask) == 0:
-            self.logger.info(
-                'Button released',
-                extra={
-                    'button': str(index),
-                    'pressed_buttons': self.pressed_buttons,
-                },
+        if index == MIC_INDEX:
+            is_mic_active = inputs & 1 << MIC_INDEX != 0
+            logger.info(
+                'Mic status:',
+                extra={'is_mic_active': is_mic_active},
             )
-            self.button_release_events[index].set()
-        else:
-            self.logger.info(
-                'Button pressed',
-                extra={
-                    'button': str(index),
-                    'pressed_buttons': self.pressed_buttons,
-                },
+            self.mute_button_event(
+                status='released' if is_mic_active else 'pressed',
             )
-            self.button_release_events[index].clear()
-            threading.Thread(
-                target=self.start_button_press_lifecycle,
-                args=(index,),
-            ).start()
+
+        if index in KEY_INDEX:
+            # Check for rising edge or falling edge action (press or release)
+            if (self.previous_inputs & change_mask) == 0:
+                self.logger.info(
+                    'Button released',
+                    extra={
+                        'button': str(index),
+                        'pressed_buttons': self.pressed_buttons,
+                    },
+                )
+                self.button_release_events[index].set()
+            else:
+                self.logger.info(
+                    'Button pressed',
+                    extra={
+                        'button': str(index),
+                        'pressed_buttons': self.pressed_buttons,
+                    },
+                )
+                self.button_release_events[index].clear()
+                threading.Thread(
+                    target=self.start_button_press_lifecycle,
+                    args=(index,),
+                ).start()
 
         self.previous_inputs = inputs
 
     @staticmethod
-    def on_button_event(
+    def mute_button_event(
         *,
-        index: int,
         status: ButtonStatus,
     ) -> None:
         from ubo_app.store.main import store
 
-        if index == MIC_INDEX:
-            store.dispatch(
-                AudioSetMuteStatusAction(
-                    device=AudioDevice.INPUT,
-                    is_mute=status == 'pressed',
-                ),
-            )
+        store.dispatch(
+            AudioSetMuteStatusAction(
+                device=AudioDevice.INPUT,
+                is_mute=status == 'pressed',
+            ),
+        )
 
 
 def init_service() -> None:
