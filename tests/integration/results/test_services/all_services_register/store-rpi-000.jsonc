@@ -27,7 +27,11 @@
   },
   "camera": {
     "_type": "CameraState",
-    "queue": []
+    "available_cameras": [
+      0
+    ],
+    "queue": [],
+    "selected_camera_index": 0
   },
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
   "display": {
@@ -6338,6 +6342,60 @@
                               1,
                               1
                             ],
+                            "icon": "",
+                            "is_short": false,
+                            "key": "camera:",
+                            "label": "Camera",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Select Camera Device",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:<lambda>>",
+                                  "background_color": "#00ff00",
+                                  "color": "#000000",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Camera 0",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:<lambda>>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄄",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Detect Cameras",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Current: Camera 0",
+                              "title": "Camera Settings"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
                             "icon": "󰻅",
                             "is_short": false,
                             "key": "infrared:infrared",
@@ -6483,6 +6541,30 @@
                                   "label": "OpenAI",
                                   "opacity": null,
                                   "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "deepgram",
+                                  "label": "Deepgram",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "assemblyai",
+                                  "label": "AssemblyAI",
+                                  "opacity": null,
+                                  "progress": null
                                 }
                               ],
                               "placeholder": null,
@@ -6542,6 +6624,18 @@
                                   "is_short": false,
                                   "key": "grok",
                                   "label": "Grok",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "cerebras",
+                                  "label": "Cerebras",
                                   "opacity": null,
                                   "progress": null
                                 },
@@ -6617,6 +6711,30 @@
                                   "label": "OpenAI",
                                   "opacity": null,
                                   "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "elevenlabs",
+                                  "label": "ElevenLabs",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "rime",
+                                  "label": "Rime",
+                                  "opacity": null,
+                                  "progress": null
                                 }
                               ],
                               "placeholder": null,
@@ -6671,6 +6789,48 @@
                               "placeholder": null,
                               "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
                               "title": "󰁤Image Generator"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰒋",
+                            "is_short": false,
+                            "key": "assistant:mcp_tools",
+                            "label": "MCP Tools",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Model Context Protocol Tools",
+                              "items": [
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:input_mcp_server>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰌉",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Add Server",
+                                  "opacity": null,
+                                  "progress": null
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Add and manage MCP servers",
+                              "title": "󰒋MCP Tools"
                             }
                           },
                           {
@@ -6755,6 +6915,74 @@
                                   ],
                                   "icon": "",
                                   "is_short": false,
+                                  "key": "assemblyai",
+                                  "label": "AssemblyAI",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "cerebras",
+                                  "label": "Cerebras",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "deepgram",
+                                  "label": "Deepgram",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "elevenlabs",
+                                  "label": "ElevenLabs",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
                                   "key": "google",
                                   "label": "Google",
                                   "opacity": null,
@@ -6808,6 +7036,23 @@
                                   "is_short": false,
                                   "key": "openai",
                                   "label": "OpenAI",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "rime",
+                                  "label": "Rime",
                                   "opacity": null,
                                   "progress": null
                                 }
