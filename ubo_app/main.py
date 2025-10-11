@@ -49,6 +49,7 @@ def main() -> None:
     from ubo_app.constants import (
         BYTES_PER_PIXEL,
         DISABLE_GRPC,
+        DISABLE_MCP,
         DISPLAY_BAUDRATE,
         HEIGHT,
         WIDTH,
@@ -78,6 +79,12 @@ def main() -> None:
         from ubo_app.service import worker_thread
 
         worker_thread.run_coroutine(grpc_serve())
+
+    if not DISABLE_MCP:
+        from ubo_app.mcp.server import mcp_server
+        from ubo_app.service import worker_thread
+
+        worker_thread.run_coroutine(mcp_server())
 
     load_services()
     app = MenuApp()

@@ -41,6 +41,8 @@ GRPC_LISTEN_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 GRPC_ENVOY_LISTEN_ADDRESS = os.environ.get('UBO_GRPC_ENVOY_LISTEN_ADDRESS', '0.0.0.0')  # noqa: S104
 GRPC_ENVOY_LISTEN_PORT = int(os.environ.get('UBO_GRPC_ENVOY_LISTEN_PORT', '50052'))
 
+DISABLE_MCP = str_to_bool(os.environ.get('UBO_DISABLE_MCP', 'False'))
+
 # Most of these should be changed in ubo-app and ubo-system-manager simultaneously to
 # avoid breaking the system.
 # TODO(sassanh): Make above comment visible to the end user when a change # noqa: FIX002

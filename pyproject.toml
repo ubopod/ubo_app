@@ -61,6 +61,7 @@ dependencies = [
   # gRPC
   "betterproto[compiler]==2.0.0b7",
   "pillow>=11.3.0",
+  "fastmcp>=2.12.4",
 ]
 
 [tool.uv]
