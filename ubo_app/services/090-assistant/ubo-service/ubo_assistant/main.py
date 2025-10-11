@@ -20,7 +20,7 @@ from pipecat.processors.producer_processor import ProducerProcessor
 from pipecat.transports.base_transport import TransportParams
 from ubo_bindings.client import UboRPCClient
 
-from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE
+from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
@@ -129,7 +129,7 @@ class Assistant:
 
         messages: list[ChatCompletionMessageParam] = [{
             'role': 'system',
-            'content': DEFAULT_SYSTEM_MESSAGE,
+            'content': DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE,
         }]
 
         tools = ToolsSchema(standard_tools=[])

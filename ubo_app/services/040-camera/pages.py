@@ -31,7 +31,7 @@ def camera_settings_menu(state: CameraState) -> HeadedMenu:
         items.append(
             ActionItem(
                 label=f'Camera {index}',
-                icon='' if is_selected else '',
+                icon='' if is_selected else '',  # noqa: RUF034
                 background_color='#00ff00' if is_selected else None,
                 color='#000000' if is_selected else None,
                 action=lambda i=index: store.dispatch(CameraSetIndexAction(index=i)),
