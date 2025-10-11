@@ -34,13 +34,13 @@ KeyActionType = type[KeypadKeyPressAction] | type[KeypadKeyReleaseAction]
 
 KEY_TO_INFRARED_CODES: dict[KeyActionType, dict[Key, tuple[str, str]]] = {
     KeypadKeyPressAction: {
-        Key.L1: ('necx', '0x7076c'),
-        Key.L2: ('necx', '0x70714'),
-        Key.L3: ('necx', '0x70715'),
-        Key.UP: ('necx', '0x70760'),
-        Key.DOWN: ('necx', '0x70761'),
-        Key.BACK: ('necx', '0x70757'),
-        Key.HOME: ('necx', '0x70778'),
+        Key.L1: ('necx', '0xbf10'),
+        Key.L2: ('necx', '0xbf11'),
+        Key.L3: ('necx', '0xbf12'),
+        Key.UP: ('nex', '0xbf05'),
+        Key.DOWN: ('necx', '0xbf0d'),
+        Key.BACK: ('necx', '0x1a'),
+        Key.HOME: ('necx', '0x1c'),
     },
     KeypadKeyReleaseAction: {
         Key.L1: ('necx', '0x7076d'),
@@ -48,8 +48,8 @@ KEY_TO_INFRARED_CODES: dict[KeyActionType, dict[Key, tuple[str, str]]] = {
         Key.L3: ('necx', '0x70716'),
         Key.UP: ('necx', '0xbf06'),
         Key.DOWN: ('necx', '0x00feb05f'),
-        Key.BACK: ('necx', '0x70758'),
-        Key.HOME: ('necx', '0x70779'),
+        Key.BACK: ('necx', '0xbf0e'),
+        Key.HOME: ('necx', '0xbf09'),
     },
 }
 INFRARED_CODES_TO_KEY: dict[tuple[str, str], tuple[KeyActionType, Key]] = {
@@ -60,8 +60,8 @@ INFRARED_CODES_TO_KEY: dict[tuple[str, str], tuple[KeyActionType, Key]] = {
 
 # Define mappings for IR codes that should trigger Assistant actions
 ASSISTANT_IR_CODES = {
-    ('necx', '0x70749'): AssistantStartListeningAction,
-    ('necx', '0x70746'): AssistantStopListeningAction,
+    ('necx', '0xbf04'): AssistantStartListeningAction,
+    ('necx', '0xbf06'): AssistantStopListeningAction,
 }
 
 
