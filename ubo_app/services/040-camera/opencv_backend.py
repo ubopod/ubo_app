@@ -14,13 +14,13 @@ if TYPE_CHECKING:
 class OpenCVCameraBackend:
     """Camera backend implementation using OpenCV for macOS/Linux."""
 
-    def __init__(self, width: int, height: int, camera_index: int = 2) -> None:
+    def __init__(self, width: int, height: int, camera_index: int) -> None:
         """Initialize the OpenCV camera backend.
 
         Args:
             width: Desired frame width
             height: Desired frame height
-            camera_index: Camera device index (default: 1 for built-in camera)
+            camera_index: Camera device index
 
         """
         self._width = width

@@ -14,11 +14,18 @@ from debouncer import DebounceOptions, debounce
 from kivy.clock import Clock
 
 from ubo_app.logger import logger
-from ubo_app.store.core.types import CloseApplicationAction, OpenApplicationAction
+from ubo_app.store.core.types import (
+    CloseApplicationAction,
+    OpenApplicationAction,
+    RegisterSettingAppAction,
+    SettingsCategory,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
+    CameraDetectEvent,
     CameraReportBarcodeAction,
     CameraReportImageEvent,
+    CameraSetAvailableCamerasAction,
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
 )
@@ -28,6 +35,7 @@ from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.gui import UboPageWidget
+from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
     from numpy._typing._array_like import NDArray
@@ -68,8 +76,20 @@ class CameraApplication(UboPageWidget):
         **kwargs: object,
     ) -> None:
         super().__init__(**kwargs)
-        camera = initialize_camera()
+        camera = None
         is_running = True
+
+        @store.autorun(lambda state: state.camera.selected_camera_index)
+        def _handle_camera_change(index: int) -> None:
+            nonlocal camera
+            if not is_running:
+                return
+            # Close existing camera if any
+            if camera:
+                camera.stop()
+                camera.close()
+            # Initialize new camera with current index
+            camera = initialize_camera(index)
 
         fs_lock = Lock()
 
@@ -111,8 +131,11 @@ class CameraApplication(UboPageWidget):
 register_application(application_id='camera:viewfinder', application=CameraApplication)
 
 
-def initialize_camera() -> CameraBackend | None:
+def initialize_camera(camera_index: int = 0) -> CameraBackend | None:
     """Initialize the appropriate camera backend based on platform.
+
+    Args:
+        camera_index: Camera device index (default: 0, only used on non-RPI platforms)
 
     Returns:
         Camera backend instance or None if initialization fails
@@ -124,10 +147,28 @@ def initialize_camera() -> CameraBackend | None:
 
         if IS_RPI:
             from picamera2_backend import PiCamera2Backend
-            camera = PiCamera2Backend(width=width, height=height)
+
+            logger.info(
+                'Initializing camera with index {index}',
+                extra={'index': camera_index},
+            )
+            camera = PiCamera2Backend(
+                width=width,
+                height=height,
+                camera_index=camera_index,
+            )
         else:
             from opencv_backend import OpenCVCameraBackend
-            camera = OpenCVCameraBackend(width=width, height=height)
+
+            logger.info(
+                'Initializing camera with index {index}',
+                extra={'index': camera_index},
+            )
+            camera = OpenCVCameraBackend(
+                width=width,
+                height=height,
+                camera_index=camera_index,
+            )
 
         camera.start()
     except Exception:
@@ -238,10 +279,64 @@ def start_camera_viewfinder() -> None:
     )
 
 
+async def detect_and_update_cameras() -> None:
+    """Detect available cameras and update state."""
+    try:
+        if IS_RPI:
+            from utils import detect_available_cameras_picamera2
+
+            logger.info('Starting Picamera2 camera detection...')
+            available = detect_available_cameras_picamera2()
+        else:
+            from utils import detect_available_cameras
+
+            logger.info('Starting OpenCV camera detection...')
+            available = detect_available_cameras()
+
+        logger.info(
+            'Camera detection complete: {count} camera(s) found',
+            extra={'count': len(available), 'indices': available},
+        )
+        store.dispatch(CameraSetAvailableCamerasAction(available_cameras=available))
+    except Exception:
+        logger.exception('Error during camera detection')
+        store.dispatch(CameraSetAvailableCamerasAction(available_cameras=[]))
+
+
+def handle_camera_detect(_: CameraDetectEvent) -> None:
+    """Handle camera detection event."""
+    logger.info('Camera detect event received, starting detection...')
+    create_task(detect_and_update_cameras())
+
+
 def init_service() -> Subscriptions:
+    from pages import CameraSettingsMenu
+
+    # Register camera settings menu
+    store.dispatch(
+        RegisterSettingAppAction(
+            priority=1,
+            category=SettingsCategory.HARDWARE,
+            menu_item=CameraSettingsMenu,
+        ),
+    )
+
+    # Detect cameras on startup
+    create_task(detect_and_update_cameras())
+
+    # Register persistent storage for selected camera index
+    register_persistent_store(
+        'camera_selected_index',
+        lambda state: state.camera.selected_camera_index,
+    )
+
     return [
         store.subscribe_event(
             CameraStartViewfinderEvent,
             start_camera_viewfinder,
+        ),
+        store.subscribe_event(
+            CameraDetectEvent,
+            handle_camera_detect,
         ),
     ]

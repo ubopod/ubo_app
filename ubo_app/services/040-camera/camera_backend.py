@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     import numpy as np
-    from numpy._typing._array_like import NDArray
+    from numpy.typing import NDArray
 
 
 class CameraBackend(Protocol):

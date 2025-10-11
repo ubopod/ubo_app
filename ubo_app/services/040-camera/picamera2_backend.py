@@ -9,29 +9,31 @@ from ubo_app.logger import logger
 
 if TYPE_CHECKING:
     import numpy as np
-    from numpy._typing._array_like import NDArray
+    from numpy.typing import NDArray
 
 
 class PiCamera2Backend:
     """Camera backend implementation using PiCamera2 for Raspberry Pi."""
 
-    def __init__(self, width: int, height: int) -> None:
+    def __init__(self, width: int, height: int, camera_index: int = 0) -> None:
         """Initialize the PiCamera2 backend.
 
         Args:
             width: Desired frame width
             height: Desired frame height
+            camera_index: Camera device index (default: 0)
 
         """
         self._picamera2: Picamera2 | None = None
         self._width = width
         self._height = height
+        self._camera_index = camera_index
         self._initialize()
 
     def _initialize(self) -> None:
         """Initialize the PiCamera2 instance."""
         try:
-            self._picamera2 = Picamera2()
+            self._picamera2 = Picamera2(self._camera_index)
             preview_config = cast(
                 'str',
                 self._picamera2.create_still_configuration(
@@ -42,7 +44,10 @@ class PiCamera2Backend:
                 ),
             )
             self._picamera2.configure(preview_config)
-            self._picamera2.set_controls({'AwbEnable': True})
+            try:
+                self._picamera2.set_controls({'AwbEnable': True})
+            except Exception:
+                logger.exception('Failed to set camera controls.')
         except IndexError:
             logger.exception('Camera not found.')
             self._picamera2 = None
