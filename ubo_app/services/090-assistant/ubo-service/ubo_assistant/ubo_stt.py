@@ -36,10 +36,10 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         self,
         client: UboRPCClient,
         *,
-        google_credentials: str | None,
-        openai_api_key: str | None,
-        deepgram_api_key: str | None,
-        assemblyai_api_key: str | None,
+        google_credentials: str | None = None,
+        openai_api_key: str | None = None,
+        deepgram_api_key: str | None = None,
+        assemblyai_api_key: str | None = None,
         selector: str,
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""

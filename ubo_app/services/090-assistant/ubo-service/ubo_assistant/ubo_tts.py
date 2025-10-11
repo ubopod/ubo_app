@@ -30,7 +30,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         rime_api_key: str | None,
         selector: str,
     ) -> None:
-        """Initialize TTS service with Google, OpenAI, ElevenLabs, and Piper."""
+        """Initialize TTS service with Google, OpenAI, ElevenLabs, Piper, and Rime."""
         try:
             if google_credentials:
                 self.google_tts = GoogleTTSService(credentials=google_credentials)
@@ -56,6 +56,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
                     voice_id=elevenlabs_voice_id,
                     sample_rate=24000,
                     model='eleven_turbo_v2_5',
+                    enable_logging=True,
                 )
                 logger.info('ElevenLabs TTS initialized successfully')
             else:
