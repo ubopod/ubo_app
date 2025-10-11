@@ -25,8 +25,13 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraAction,
+    CameraDetectAction,
+    CameraDetectedEvent,
+    CameraDetectEvent,
     CameraEvent,
     CameraReportBarcodeAction,
+    CameraSetAvailableCamerasAction,
+    CameraSetIndexAction,
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
@@ -40,8 +45,9 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
     NotificationsClearByIdAction,
 )
+from ubo_app.utils.persistent_store import read_from_persistent_store
 
-Action = InitAction | CameraAction | InputAction | KeypadKeyPressAction
+Action = InitAction | CameraAction | CameraEvent | InputAction | KeypadKeyPressAction
 DispatchAction = (
     NotificationsAddAction | NotificationsClearByIdAction | InputResolveAction
 )
@@ -118,7 +124,16 @@ def reducer(
 ]:
     if state is None:
         if isinstance(action, InitAction):
-            return CameraState(queue=[])
+            # Load persisted camera index
+            selected_camera_index = read_from_persistent_store(
+                'camera_selected_index',
+                default=0,
+                output_type=int,
+            )
+            return CameraState(
+                queue=[],
+                selected_camera_index=selected_camera_index,
+            )
         raise InitializationActionError(action)
 
     match action:
@@ -141,6 +156,41 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 events=[CameraStartViewfinderEvent(pattern=pattern)],
+            )
+
+        case CameraSetIndexAction(index=index):
+            return state(selected_camera_index=index)
+
+        case CameraSetAvailableCamerasAction(available_cameras=available_cameras):
+            # If current selection is not in available cameras, select first available
+            new_index = state.selected_camera_index
+            if (
+                available_cameras
+                and state.selected_camera_index not in available_cameras
+            ):
+                new_index = available_cameras[0]
+            return state(
+                available_cameras=tuple(available_cameras),
+                selected_camera_index=new_index,
+            )
+
+        case CameraDetectAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[CameraDetectEvent()],
+            )
+
+        case CameraDetectedEvent(available_cameras=available_cameras):
+            # If current selection is not in available cameras, select first available
+            new_index = state.selected_camera_index
+            if (
+                available_cameras
+                and state.selected_camera_index not in available_cameras
+            ):
+                new_index = available_cameras[0]
+            return state(
+                available_cameras=tuple(available_cameras),
+                selected_camera_index=new_index,
             )
 
         case CameraReportBarcodeAction(codes=codes) if state.queue:
