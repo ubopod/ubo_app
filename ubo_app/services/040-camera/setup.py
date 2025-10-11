@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from threading import Lock
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import headless_kivy.config
 import numpy as np
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from ubo_app.utils.types import Subscriptions
 
-from picamera2.picamera2 import Picamera2
+    from .camera_backend import CameraBackend
 
 THROTTL_TIME = 0.5
 
@@ -68,7 +68,7 @@ class CameraApplication(UboPageWidget):
         **kwargs: object,
     ) -> None:
         super().__init__(**kwargs)
-        picamera2 = initialize_camera()
+        camera = initialize_camera()
         is_running = True
 
         fs_lock = Lock()
@@ -77,7 +77,7 @@ class CameraApplication(UboPageWidget):
             with fs_lock:
                 if not is_running:
                     return
-                feed_viewfinder(picamera2)
+                feed_viewfinder(camera)
 
         feed_viewfinder_scheduler = Clock.schedule_interval(
             feed_viewfinder_locked,
@@ -96,9 +96,9 @@ class CameraApplication(UboPageWidget):
                     CloseApplicationAction(application_instance_id=self.id),
                     DisplayResumeAction(),
                 )
-                if picamera2:
-                    picamera2.stop()
-                    picamera2.close()
+                if camera:
+                    camera.stop()
+                    camera.close()
 
         self.bind(on_close=handle_stop_viewfinder)
 
@@ -111,34 +111,35 @@ class CameraApplication(UboPageWidget):
 register_application(application_id='camera:viewfinder', application=CameraApplication)
 
 
-def initialize_camera() -> Picamera2 | None:
+def initialize_camera() -> CameraBackend | None:
+    """Initialize the appropriate camera backend based on platform.
+
+    Returns:
+        Camera backend instance or None if initialization fails
+
+    """
     try:
-        picamera2 = Picamera2()
-    except IndexError:
+        width = headless_kivy.config.width() * 2
+        height = headless_kivy.config.height() * 2
+
+        if IS_RPI:
+            from picamera2_backend import PiCamera2Backend
+            camera = PiCamera2Backend(width=width, height=height)
+        else:
+            from opencv_backend import OpenCVCameraBackend
+            camera = OpenCVCameraBackend(width=width, height=height)
+
+        camera.start()
+    except Exception:
         report_service_error()
-        logger.exception('Camera not found.')
+        logger.exception('Failed to initialize camera.')
         return None
-    preview_config = cast(
-        'str',
-        picamera2.create_still_configuration(
-            {
-                'format': 'RGB888',
-                'size': (
-                    headless_kivy.config.width() * 2,
-                    headless_kivy.config.height() * 2,
-                ),
-            },
-        ),
-    )
-    picamera2.configure(preview_config)
-    picamera2.set_controls({'AwbEnable': True})
-
-    picamera2.start()
-
-    return picamera2
+    else:
+        return camera
 
 
-def feed_viewfinder(picamera2: Picamera2 | None) -> None:
+
+def feed_viewfinder(camera: CameraBackend | None) -> None:
     width = headless_kivy.config.width()
     height = headless_kivy.config.height()
 
@@ -157,8 +158,8 @@ def feed_viewfinder(picamera2: Picamera2 | None) -> None:
             width, height, data, _ = reader.read()
             data = np.array(list(data)).reshape((height, width, 4))
         qrcode_path.unlink(missing_ok=True)
-    elif picamera2:
-        data = picamera2.capture_array('main')
+    elif camera:
+        data = camera.capture_array('main')
     else:
         data = None
 
