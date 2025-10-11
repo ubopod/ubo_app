@@ -86,7 +86,14 @@ class DeepgramEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                 ),
             ],
         )
+        if result is None:
+            return
+
+        api_key = result.data.get('api_key')
+        if not api_key:
+            return
+
         secrets.write_secret(
             key=DEEPGRAM_API_KEY_SECRET_ID,
-            value=result.data['api_key'],
+            value=api_key,
         )

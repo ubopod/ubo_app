@@ -137,7 +137,16 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
 
         This method is called by MCP clients to register external tools.
         """
+        super().register_function(
+            function_name,
+            handler,
+            start_callback,
+            cancel_on_interruption=cancel_on_interruption,
+        )
+
         for service in self.services.values():
+            if service is None:
+                continue
             service.register_function(
                 function_name,
                 handler,
