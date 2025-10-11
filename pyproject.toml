@@ -56,8 +56,10 @@ dependencies = [
   "pyalsaaudio==0.11.0 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
   "rpi-lgpio==0.6 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
   # Desktop dependencies
+  # TODO: test on Ubuntu/Linux
   "pyaudio==0.2.14 ; platform_machine != 'aarch64' or sys_platform != 'linux'",
   "gpiozero==2.0.1 ; platform_machine != 'aarch64'",
+  "opencv-python==4.10.0.84 ; platform_machine != 'aarch64' or sys_platform != 'linux'",
   # gRPC
   "betterproto[compiler]==2.0.0b7",
   "pillow>=11.3.0",
