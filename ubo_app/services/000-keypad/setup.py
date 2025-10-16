@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import errno
-import logging
 import math
 import threading
 import time

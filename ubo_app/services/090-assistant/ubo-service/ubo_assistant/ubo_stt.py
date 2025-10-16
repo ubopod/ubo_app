@@ -1,6 +1,6 @@
 """STT service that wraps multiple STT services allowing switching between them."""
 
-from collections.abc import AsyncGenerator  # noqa: I001
+from collections.abc import AsyncGenerator, Callable  # noqa: I001
 
 from loguru import logger
 from deepgram import LiveOptions
@@ -10,10 +10,8 @@ from pipecat.frames.frames import (
     InterimTranscriptionFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
-from pipecat.services.assemblyai.stt import (
-    AssemblyAIConnectionParams,
-    AssemblyAISTTService,
-)
+from pipecat.services.assemblyai.stt import AssemblyAISTTService
+from pipecat.services.assemblyai.models import AssemblyAIConnectionParams
 from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.google.stt import GoogleSTTService
 from pipecat.services.openai.stt import OpenAISTTService
@@ -32,7 +30,37 @@ from ubo_assistant.vosk import VoskSTTService
 class UboSTTService(UboSwitchService[STTService], STTService):
     """STT service that wraps multiple STT services allowing switching between them."""
 
-    def __init__(  # noqa: PLR0912
+    def _initialize_service(
+        self,
+        service_name: str,
+        service_factory: Callable[[], STTService | None],
+    ) -> STTService | None:
+        """Initialize a STT service with error handling.
+
+        Args:
+            service_name: Name of the service for logging
+            service_factory: Callable that returns the service instance or None
+
+        Returns:
+            Initialized service or None if initialization failed
+
+        """
+        try:
+            service = service_factory()
+            if service is not None:
+                logger.info('STT initialized successfully',
+                        extra={'service_name': service_name})
+            else:
+                logger.info('STT not initialized',
+                        extra={'service_name': service_name})
+        except Exception:
+            logger.exception('Error while initializing STT',
+                        extra={'service_name': service_name})
+            return None
+        else:
+            return service
+
+    def __init__(  # noqa: PLR0913
         self,
         client: UboRPCClient,
         *,
@@ -44,50 +72,53 @@ class UboSTTService(UboSwitchService[STTService], STTService):
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
         self._assistance_index = 0
-        try:
-            if google_credentials:
-                self.segmented_google_stt = SegmentedGoogleSTTService(
+
+        # Initialize Segmented Google STT
+        self.segmented_google_stt = self._initialize_service(
+            'Google Segmented',
+            lambda: (
+                SegmentedGoogleSTTService(
                     credentials=google_credentials,
                     model='long',
                     sample_rate=16000,
                 )
-            else:
-                self.segmented_google_stt = None
-        except Exception:
-            logger.exception('Error while initializing Google STT')
-            self.segmented_google_stt = None
+                if google_credentials
+                else None
+            ),
+        )
 
-        try:
-            if google_credentials:
-                self.google_stt = GoogleSTTService(
+        # Initialize Google STT
+        self.google_stt = self._initialize_service(
+            'Google',
+            lambda: (
+                GoogleSTTService(
                     credentials=google_credentials,
                     model='long',
                     sample_rate=16000,
                 )
-            else:
-                self.google_stt = None
-        except Exception:
-            logger.exception('Error while initializing Google STT')
-            self.google_stt = None
+                if google_credentials
+                else None
+            ),
+        )
 
-        try:
-            if openai_api_key:
-                self.openai_stt = OpenAISTTService(api_key=openai_api_key)
-            else:
-                self.openai_stt = None
-        except Exception:
-            logger.exception('Error while initializing OpenAI STT')
-            self.openai_stt = None
+        # Initialize OpenAI STT
+        self.openai_stt = self._initialize_service(
+            'OpenAI',
+            lambda: OpenAISTTService(api_key=openai_api_key) if \
+                    openai_api_key else None,
+        )
 
-        try:
-            self.vosk_stt = VoskSTTService()
-        except Exception:
-            logger.exception('Error while initializing Vosk STT')
-            self.vosk_stt = None
+        # Initialize Vosk STT
+        self.vosk_stt = self._initialize_service(
+            'Vosk',
+            lambda: VoskSTTService() if VoskSTTService else None,
+        )
 
-        try:
-            if deepgram_api_key:
-                self.deepgram_stt = DeepgramSTTService(
+        # Initialize Deepgram STT
+        self.deepgram_stt = self._initialize_service(
+            'Deepgram',
+            lambda: (
+                DeepgramSTTService(
                     api_key=deepgram_api_key,
                     live_options=LiveOptions(
                         model='nova-3',
@@ -95,28 +126,28 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                         smart_format=True,
                     ),
                 )
-            else:
-                self.deepgram_stt = None
-        except Exception:
-            logger.exception('Error while initializing Deepgram STT')
-            self.deepgram_stt = None
+                if deepgram_api_key
+                else None
+            ),
+        )
 
-        try:
-            if assemblyai_api_key:
-                self.assemblyai_stt = AssemblyAISTTService(
+        # Initialize AssemblyAI STT
+        self.assemblyai_stt = self._initialize_service(
+            'AssemblyAI',
+            lambda: (
+                AssemblyAISTTService(
                     api_key=assemblyai_api_key,
-                    vad_force_turn_endpoint=False,  # Use AssemblyAI's STT-based turn detection
+                    vad_force_turn_endpoint=False,
                     connection_params=AssemblyAIConnectionParams(
-                        end_of_turn_confidence_threshold=0.7,  # Default confidence threshold
-                        min_end_of_turn_silence_when_confident=160,  # 160ms minimum silence
-                        max_turn_silence=2400,  # 2.4s maximum turn silence
+                        end_of_turn_confidence_threshold=0.7,
+                        min_end_of_turn_silence_when_confident=160,
+                        max_turn_silence=2400,
                     ),
                 )
-            else:
-                self.assemblyai_stt = None
-        except Exception:
-            logger.exception('Error while initializing AssemblyAI STT')
-            self.assemblyai_stt = None
+                if assemblyai_api_key
+                else None
+            ),
+        )
 
         self._services = {
             'google_segmented': self.segmented_google_stt,
