@@ -1,6 +1,6 @@
 """TTS service that wraps multiple TTS services allowing switching between them."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 
 from loguru import logger
 from pipecat.frames.frames import Frame
@@ -19,6 +19,36 @@ from ubo_assistant.switch import UboSwitchService
 class UboTTSService(UboSwitchService[TTSService], TTSService):
     """TTS service that wraps multiple TTS services allowing switching between them."""
 
+    def _initialize_service(
+        self,
+        service_name: str,
+        service_factory: Callable[[], TTSService | None],
+    ) -> TTSService | None:
+        """Initialize a TTS service with error handling.
+
+        Args:
+            service_name: Name of the service for logging
+            service_factory: Callable that returns the service instance or None
+
+        Returns:
+            Initialized service or None if initialization failed
+
+        """
+        try:
+            service = service_factory()
+            if service is not None:
+                logger.info('TTS initialized successfully',
+                        extra={'service_name': service_name})
+            else:
+                logger.info('TTS not initialized',
+                        extra={'service_name': service_name})
+        except Exception:
+            logger.exception('Error while initializing TTS',
+                        extra={'service_name': service_name})
+            return None
+        else:
+            return service
+
     def __init__(  # noqa: PLR0913
         self,
         client: UboRPCClient,
@@ -31,50 +61,47 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         selector: str,
     ) -> None:
         """Initialize TTS service with Google, OpenAI, ElevenLabs, Piper, and Rime."""
-        try:
-            if google_credentials:
-                self.google_tts = GoogleTTSService(credentials=google_credentials)
-            else:
-                self.google_tts = None
-        except Exception:
-            logger.exception('Error while initializing Google TTS')
-            self.google_tts = None
+        # Initialize Google TTS
+        self.google_tts = self._initialize_service(
+            'Google',
+            lambda: GoogleTTSService(credentials=google_credentials) if \
+            google_credentials else None,
+        )
 
-        try:
-            if openai_api_key:
-                self.openai_tts = OpenAITTSService(api_key=openai_api_key)
-            else:
-                self.openai_tts = None
-        except Exception:
-            logger.exception('Error while initializing OpenAI TTS')
-            self.openai_tts = None
+        # Initialize OpenAI TTS
+        self.openai_tts = self._initialize_service(
+            'OpenAI',
+            lambda: OpenAITTSService(api_key=openai_api_key) if \
+                    openai_api_key else None,
+        )
 
-        try:
-            if elevenlabs_api_key and elevenlabs_voice_id:
-                self.elevenlabs_tts = ElevenLabsTTSService(
+        # Initialize ElevenLabs TTS
+        self.elevenlabs_tts = self._initialize_service(
+            'ElevenLabs',
+            lambda: (
+                ElevenLabsTTSService(
                     api_key=elevenlabs_api_key,
                     voice_id=elevenlabs_voice_id,
                     sample_rate=24000,
                     model='eleven_turbo_v2_5',
                     enable_logging=True,
                 )
-                logger.info('ElevenLabs TTS initialized successfully')
-            else:
-                self.elevenlabs_tts = None
-                logger.info('ElevenLabs TTS not initialized')
-        except Exception:
-            logger.exception('Error while initializing ElevenLabs TTS')
-            self.elevenlabs_tts = None
+                if elevenlabs_api_key and elevenlabs_voice_id
+                else None
+            ),
+        )
 
-        try:
-            self.piper_tts = PiperTTSService()
-        except Exception:
-            logger.exception('Error while initializing Piper TTS')
-            self.piper_tts = None
+        # Initialize Piper TTS
+        self.piper_tts = self._initialize_service(
+            'Piper',
+            lambda: PiperTTSService() if PiperTTSService else None,
+        )
 
-        try:
-            if rime_api_key:
-                self.rime_tts = RimeTTSService(
+        # Initialize Rime TTS
+        self.rime_tts = self._initialize_service(
+            'Rime',
+            lambda: (
+                RimeTTSService(
                     api_key=rime_api_key,
                     voice_id='antoine',
                     model='mistv2',
@@ -86,13 +113,10 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
                         phonemize_between_brackets=False,
                     ),
                 )
-                logger.info('Rime TTS initialized successfully')
-            else:
-                self.rime_tts = None
-                logger.info('Rime TTS not initialized')
-        except Exception:
-            logger.exception('Error while initializing Rime TTS')
-            self.rime_tts = None
+                if rime_api_key
+                else None
+            ),
+        )
 
         self._services = {
             'google': self.google_tts,

@@ -47,7 +47,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
-Action = InitAction | CameraAction | CameraEvent | InputAction | KeypadKeyPressAction
+Action = InitAction | CameraAction | InputAction | KeypadKeyPressAction
 DispatchAction = (
     NotificationsAddAction | NotificationsClearByIdAction | InputResolveAction
 )

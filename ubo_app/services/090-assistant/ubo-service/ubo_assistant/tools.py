@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -14,7 +15,23 @@ from pipecat.services.mcp_service import MCPClient
 if TYPE_CHECKING:
     from pipecat.adapters.schemas.direct_function import DirectFunction
     from pipecat.services.llm_service import LLMService
-    from ubo_app.store.services.assistant import MCPServerMetadata
+
+
+@dataclass
+class MCPServerMetadata:
+    """Metadata for an MCP server.
+
+    This is a local definition that mirrors the structure
+    from ubo_app.store.services.assistant.
+    Since ubo-service runs in a separate virtual environment
+    and communicates via gRPC, it cannot import from the core
+    ubo_app package.
+    """
+
+    server_id: str  # Format: {name}_{uuid}
+    name: str  # User-friendly name
+    type: str  # 'stdio' or 'sse'
+    config: dict | str  # Full JSON config for stdio, URL string for sse
 
 
 
@@ -120,13 +137,13 @@ async def create_mcp_client_from_metadata(
             'Unknown MCP server type',
             extra={'server_id': server.server_id, 'type': server.type},
         )
-        return None
-
     except Exception:
         logger.exception(
             'Failed to create MCP client',
             extra={'server_id': server.server_id},
         )
+        return None
+    else:
         return None
 
 

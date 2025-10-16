@@ -148,14 +148,14 @@ def toggle_mcp_server(server_id: str) -> bool:
             'Toggled MCP server state',
             extra={'server_id': server_id, 'enabled': new_state},
         )
-        return new_state
-
     except (json.JSONDecodeError, OSError) as e:
         logger.exception(
             'Failed to toggle MCP server state',
             extra={'server_id': server_id, 'error': str(e)},
         )
         return False
+    else:
+        return new_state
 
 
 def delete_mcp_server(server_id: str) -> None:

@@ -32,8 +32,11 @@ def detect_available_cameras_picamera2() -> list[int]:
             'Picamera2 detection complete: {count} camera(s) found',
             extra={'count': len(available), 'indices': available},
         )
-    except Exception:
-        logger.exception('Failed to detect Picamera2 cameras')
+    except (ImportError, RuntimeError, OSError) as e:
+        logger.exception(
+            'Failed to detect Picamera2 cameras',
+            extra={'error': e},
+        )
     else:
         return available
 
@@ -68,10 +71,10 @@ def detect_available_cameras(max_index: int = 10) -> list[int]:
                         'Found working camera at index {index}',
                         extra={'index': i},
                     )
-        except Exception:
+        except (cv2.error, OSError, RuntimeError) as e:
             logger.debug(
                 'Failed to open camera at index {index}',
-                extra={'index': i},
+                extra={'index': i, 'error': e},
             )
         finally:
             if cap is not None:

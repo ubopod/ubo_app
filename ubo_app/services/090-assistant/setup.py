@@ -242,8 +242,8 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
             )
 
 
-async def init_service() -> None:
-    """Initialize the assistant service."""
+def _register_persistent_stores() -> None:
+    """Register all persistent stores for assistant service."""
     register_persistent_store(
         'assistant:selected_stt',
         lambda state: state.assistant.selected_stt,
@@ -265,6 +265,17 @@ async def init_service() -> None:
         lambda state: json.dumps(list(state.assistant.enabled_mcp_servers)),
     )
 
+
+def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
+    """Set up all autorun functions and MCP event handlers.
+
+    Returns:
+        Tuple of (providers, stt_providers, llm_providers, tts_providers,
+                  image_generator_providers, mcp_servers_menu,
+                  handle_add_mcp_server, handle_delete_mcp_server,
+                  handle_sync_mcp_servers)
+
+    """
     # Secrets file monitor - tracks API key changes
     @store.autorun(
         lambda _: secrets_modification_time(),
@@ -492,93 +503,6 @@ async def init_service() -> None:
             for img_gen_name, engine in IMAGE_GENERATOR_ENGINES.items()
         ]
 
-    store.dispatch(
-        RegisterSettingAppAction(
-            category=SettingsCategory.ASSISTANT,
-            priority=10,
-            key='providers',
-            menu_item=SubMenuItem(
-                label='Manage',
-                icon='󰶗',
-                sub_menu=HeadedMenu(
-                    title='󰶗Manage',
-                    heading='Setup providers to be used by different '
-                    'assistant features',
-                    sub_heading='',
-                    items=providers,
-                ),
-            ),
-        ),
-        RegisterSettingAppAction(
-            category=SettingsCategory.ASSISTANT,
-            priority=50,
-            key='stt',
-            menu_item=SubMenuItem(
-                label='Speech Recognition',
-                icon='',
-                sub_menu=HeadedMenu(
-                    title='Speech Recognition',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=stt_providers,
-                ),
-            ),
-        ),
-        RegisterSettingAppAction(
-            category=SettingsCategory.ASSISTANT,
-            priority=40,
-            key='llm',
-            menu_item=SubMenuItem(
-                label='Language Model',
-                icon='󰁤',
-                sub_menu=HeadedMenu(
-                    title='󰁤Language Model',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=llm_providers,
-                ),
-            ),
-        ),
-        RegisterSettingAppAction(
-            category=SettingsCategory.ASSISTANT,
-            priority=30,
-            key='tts',
-            menu_item=SubMenuItem(
-                label='Speech Synthesis',
-                icon='󰔊',
-                sub_menu=HeadedMenu(
-                    title='󰁤Speech Synthesis',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=tts_providers,
-                ),
-            ),
-        ),
-        RegisterSettingAppAction(
-            category=SettingsCategory.ASSISTANT,
-            priority=20,
-            key='image_generator',
-            menu_item=SubMenuItem(
-                label='Image Generator',
-                icon='󰹉',
-                sub_menu=HeadedMenu(
-                    title='󰁤Image Generator',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=image_generator_providers,
-                ),
-            ),
-        ),
-    )
-
     # MCP Tools menu - main list
     @store.autorun(
         lambda state: (
@@ -704,7 +628,120 @@ async def init_service() -> None:
             extra={'server_count': len(_event.__dict__.get('servers', {}))},
         )
 
+    return (
+        providers,
+        stt_providers,
+        llm_providers,
+        tts_providers,
+        image_generator_providers,
+        mcp_servers_menu,
+        handle_add_mcp_server,
+        handle_delete_mcp_server,
+        handle_sync_mcp_servers,
+    )
+
+
+async def init_service() -> None:
+    """Initialize the assistant service."""
+    _register_persistent_stores()
+
+    (
+        providers,
+        stt_providers,
+        llm_providers,
+        tts_providers,
+        image_generator_providers,
+        mcp_servers_menu,
+        handle_add_mcp_server,
+        handle_delete_mcp_server,
+        handle_sync_mcp_servers,
+    ) = _setup_autorun_and_handlers()
+
     store.dispatch(
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=10,
+            key='providers',
+            menu_item=SubMenuItem(
+                label='Manage',
+                icon='󰶗',
+                sub_menu=HeadedMenu(
+                    title='󰶗Manage',
+                    heading='Setup providers to be used by different '
+                    'assistant features',
+                    sub_heading='',
+                    items=providers,
+                ),
+            ),
+        ),
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=50,
+            key='stt',
+            menu_item=SubMenuItem(
+                label='Speech Recognition',
+                icon='',
+                sub_menu=HeadedMenu(
+                    title='Speech Recognition',
+                    heading='Select Active Engine',
+                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
+                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
+                    'models',
+                    items=stt_providers,
+                ),
+            ),
+        ),
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=40,
+            key='llm',
+            menu_item=SubMenuItem(
+                label='Language Model',
+                icon='󰁤',
+                sub_menu=HeadedMenu(
+                    title='󰁤Language Model',
+                    heading='Select Active Engine',
+                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
+                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
+                    'models',
+                    items=llm_providers,
+                ),
+            ),
+        ),
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=30,
+            key='tts',
+            menu_item=SubMenuItem(
+                label='Speech Synthesis',
+                icon='󰔊',
+                sub_menu=HeadedMenu(
+                    title='󰁤Speech Synthesis',
+                    heading='Select Active Engine',
+                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
+                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
+                    'models',
+                    items=tts_providers,
+                ),
+            ),
+        ),
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=20,
+            key='image_generator',
+            menu_item=SubMenuItem(
+                label='Image Generator',
+                icon='󰹉',
+                sub_menu=HeadedMenu(
+                    title='󰁤Image Generator',
+                    heading='Select Active Engine',
+                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
+                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
+                    'models',
+                    items=image_generator_providers,
+                ),
+            ),
+        ),
         RegisterSettingAppAction(
             category=SettingsCategory.ASSISTANT,
             priority=15,

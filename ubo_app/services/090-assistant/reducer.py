@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from redux import CompleteReducerResult, InitializationActionError
 from redux.basic_types import InitAction
 
-from ubo_app.constants.assistant import VOSK_MODEL_PATH
 from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     AssistantAction,
@@ -41,6 +40,9 @@ if TYPE_CHECKING:
     from redux import ReducerResult
 
     from ubo_app.store.services.rgb_ring import RgbRingAction
+
+# MCP server_id format: name_uuid (2 parts when split by last underscore)
+_MCP_SERVER_ID_PARTS = 2
 
 
 def reducer(
@@ -165,7 +167,9 @@ def reducer(
 
             logger.debug(
                 'Syncing MCP servers from filesystem',
-                extra={'path': str(ASSISTANT_MCP_SERVERS_PATH), 'exists': ASSISTANT_MCP_SERVERS_PATH.exists()},
+                extra={'path': str(ASSISTANT_MCP_SERVERS_PATH),
+                        'exists': ASSISTANT_MCP_SERVERS_PATH.exists(),
+                    },
             )
 
             if ASSISTANT_MCP_SERVERS_PATH.exists():
@@ -185,7 +189,11 @@ def reducer(
                         server_id = server_dir.name
                         # Extract name from server_id (format: name_uuid)
                         name_parts = server_id.rsplit('_', 1)
-                        name = name_parts[0] if len(name_parts) == 2 else server_id
+                        name = (
+                            name_parts[0]
+                            if len(name_parts) == _MCP_SERVER_ID_PARTS
+                            else server_id
+                        )
 
                         loaded_servers[server_id] = MCPServerMetadata(
                             server_id=server_id,
@@ -206,7 +214,9 @@ def reducer(
 
             logger.debug(
                 'Finished syncing MCP servers',
-                extra={'server_count': len(loaded_servers), 'server_ids': list(loaded_servers.keys())},
+                extra={'server_count': len(loaded_servers),
+                    'server_ids': list(loaded_servers.keys()),
+                    },
             )
 
             return CompleteReducerResult(
