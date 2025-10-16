@@ -171,10 +171,10 @@ class UboSwitchService(AIService, Generic[T]):
                     name_parts = server_id.rsplit('_', 1)
                     name = name_parts[0] if len(name_parts) == 2 else server_id  # noqa: PLR2004
 
-                    # Create a simple object with attributes for dot notation access
-                    from types import SimpleNamespace
+                    # Create MCPServerMetadata instance
+                    from ubo_assistant.tools import MCPServerMetadata
 
-                    self._mcp_servers_data[server_id] = SimpleNamespace(
+                    self._mcp_servers_data[server_id] = MCPServerMetadata(
                         server_id=server_id,
                         name=name,
                         type=data['type'],

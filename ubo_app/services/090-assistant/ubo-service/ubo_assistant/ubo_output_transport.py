@@ -2,6 +2,7 @@
 
 import uuid
 
+from loguru import logger
 from pipecat.audio.resamplers.base_audio_resampler import BaseAudioResampler
 from pipecat.audio.utils import create_stream_resampler
 from pipecat.frames.frames import (
@@ -91,40 +92,69 @@ class UboOutputTransport(BaseOutputTransport):
             ),
         )
 
-    async def write_audio_frame(self, frame: OutputAudioRawFrame) -> None:
-        """Write an audio frame to the UBO RPC Client."""
-        self._report_assistance_frame(
-            AcceptableAssistanceFrame(
-                assistance_audio_frame=AssistanceAudioFrame(
-                    audio=AudioSample(
-                        data=frame.audio,
-                        channels=frame.num_channels,
-                        rate=frame.sample_rate,
-                        width=2,
-                    ),
-                    timestamp=self.client.event_loop.time(),
-                    id=self._assistance_id,
-                    index=self._audio_assistance_index,
-                ),
-            ),
-        )
-        self._audio_assistance_index += 1
+    async def write_audio_frame(self, frame: OutputAudioRawFrame) -> bool:
+        """Write an audio frame to the UBO RPC Client.
 
-    async def write_video_frame(self, frame: OutputImageRawFrame) -> None:
-        """Write a video frame to the UBO RPC Client."""
-        if frame.format in ('PNG', 'JPEG', 'RGB', None):
+        Returns:
+            True if the audio frame was written successfully, False otherwise.
+
+        """
+        try:
             self._report_assistance_frame(
                 AcceptableAssistanceFrame(
-                    assistance_image_frame=AssistanceImageFrame(
-                        image=frame.image,
-                        width=frame.size[0],
-                        height=frame.size[1],
-                        format='RGB',
-                        metadata=frame.metadata,
+                    assistance_audio_frame=AssistanceAudioFrame(
+                        audio=AudioSample(
+                            data=frame.audio,
+                            channels=frame.num_channels,
+                            rate=frame.sample_rate,
+                            width=2,
+                        ),
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
-                        index=self._video_assistance_index,
+                        index=self._audio_assistance_index,
                     ),
                 ),
             )
-            self._video_assistance_index += 1
+            self._audio_assistance_index += 1
+        except Exception as exception:
+            logger.exception(
+                'Error writing audio frame {extra}',
+                extra={'frame': frame, 'exception': exception},
+            )
+            return False
+        else:
+            return True
+
+    async def write_video_frame(self, frame: OutputImageRawFrame) -> bool:
+        """Write a video frame to the UBO RPC Client.
+
+        Returns:
+            True if the video frame was written successfully, False otherwise.
+
+        """
+        try:
+            if frame.format in ('PNG', 'JPEG', 'RGB', None):
+                self._report_assistance_frame(
+                    AcceptableAssistanceFrame(
+                        assistance_image_frame=AssistanceImageFrame(
+                            image=frame.image,
+                            width=frame.size[0],
+                            height=frame.size[1],
+                            format='RGB',
+                            metadata=frame.metadata,
+                            timestamp=self.client.event_loop.time(),
+                            id=self._assistance_id,
+                            index=self._video_assistance_index,
+                        ),
+                    ),
+                )
+                self._video_assistance_index += 1
+                return True
+        except Exception as exception:
+            logger.exception(
+                'Error writing video frame {extra}',
+                extra={'frame': frame, 'exception': exception},
+            )
+            return False
+        else:
+            return False
