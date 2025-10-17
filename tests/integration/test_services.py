@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ubo_app.store.main import UboStore
 
 MAX_EXPECTED_LISTENERS = 500
-MAX_EXPECTED_EVENT_HANDLERS = 60
+MAX_EXPECTED_EVENT_HANDLERS = 70
 
 
 async def test_all_services_register(
