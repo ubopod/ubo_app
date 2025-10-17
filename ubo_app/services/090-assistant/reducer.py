@@ -164,6 +164,7 @@ def reducer(
             )
 
             loaded_servers: dict[str, MCPServerMetadata] = {}
+            enabled_servers: set[str] = set()
 
             logger.debug(
                 'Syncing MCP servers from filesystem',
@@ -201,9 +202,18 @@ def reducer(
                             type=MCPServerType(data['type']),
                             config=data['config'],
                         )
+
+                        # Track enabled state from config file
+                        if data.get('enabled', False):
+                            enabled_servers.add(server_id)
+
                         logger.debug(
                             'Loaded MCP server',
-                            extra={'server_id': server_id, 'server_name': name},
+                            extra={
+                                'server_id': server_id,
+                                'server_name': name,
+                                'enabled': data.get('enabled', False),
+                            },
                         )
                     except Exception:
                         logger.exception(
@@ -216,11 +226,16 @@ def reducer(
                 'Finished syncing MCP servers',
                 extra={'server_count': len(loaded_servers),
                     'server_ids': list(loaded_servers.keys()),
+                    'enabled_count': len(enabled_servers),
                     },
             )
 
             return CompleteReducerResult(
-                state=replace(state, mcp_servers=loaded_servers),
+                state=replace(
+                    state,
+                    mcp_servers=loaded_servers,
+                    enabled_mcp_servers=enabled_servers,
+                ),
                 events=[AssistantSyncMCPServersEvent()],
             )
 
