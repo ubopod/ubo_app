@@ -42,6 +42,7 @@ dependencies = [
   "ubo-app-raw-bindings==1.6.0",
   "ubo-gui==0.13.17",
   "vosk==0.3.44",
+  "opencv-python==4.10.0.84",
   # Adafruit dependencies
   "adafruit-circuitpython-aw9523==1.1.12",
   "adafruit-circuitpython-irremote==5.0.4",
@@ -59,7 +60,6 @@ dependencies = [
   # TODO: test on Ubuntu/Linux
   "pyaudio==0.2.14 ; platform_machine != 'aarch64' or sys_platform != 'linux'",
   "gpiozero==2.0.1 ; platform_machine != 'aarch64'",
-  "opencv-python==4.10.0.84 ; platform_machine != 'aarch64' or sys_platform != 'linux'",
   # gRPC
   "betterproto[compiler]==2.0.0b7",
   "pillow>=11.3.0",
