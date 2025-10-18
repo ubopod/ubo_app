@@ -11,10 +11,12 @@ function cleanup() {
 trap cleanup ERR
 trap cleanup SIGINT
 
-copy=${copy:-"False"}
-deps=${deps:-"False"}
-run=${run:-"False"}
-results=${results:-"False"}
+deps="${deps:-False}"
+copy="${copy:-False}"
+run="${run:-False}"
+results="${results:-False}"
+index="${index:-1}"
+pytest_args="${pytest_args:-}"
 
 function run_on_pod() {
   if [ $# -lt 1 ]; then
@@ -22,11 +24,11 @@ function run_on_pod() {
     return 1
   fi
 
-  # Use SSH to execute commands read from stdin
-  ssh ubo@ubo-development-pod-$index "XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) bash -s" <<EOF
-cd
+  # Connect as pi user and run commands as ubo user
+  ssh pi@ubo-development-pod-$index "sudo -u ubo bash -c 'XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) bash -s'" <<EOF
+cd /home/ubo
 source /etc/profile
-source "\$HOME/.profile"
+source /home/ubo/.profile 2>/dev/null || true
 $*
 EOF
 }
@@ -37,15 +39,20 @@ function run_on_pod_as_root() {
     return 1
   fi
   if [ $# -eq 1 ]; then
-    ssh ubo-development-pod-$index "sudo bash -c '$1'"
+    ssh pi@ubo-development-pod-$index "sudo bash -c '$1'"
     return 0
   fi
   return 1
 }
 
 if [ "$copy" == "True" ]; then
+  # Generate proto files locally before copying
+  echo "Generating proto files locally..."
+  uv run poe proto:generate:raw proto:compile:raw || echo "Proto generation failed, continuing anyway..."
+  
   # Since rsync is not called with -r, it treats ./scripts as an empty directory and its content are ignored, it could be any other random directory inside "./". It is needed solely to create the root directory with ubo:ubo ownership.
-  (echo ./scripts; echo ./ubo_app/_version.py; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ ubo-development-pod-$index:/home/ubo/test-runner/ --chown ubo:ubo
+  # Connect as pi user and use sudo rsync to copy files with ubo:ubo ownership
+  (echo ./scripts; echo ./version.py; echo ./ubo_app/_version.py; find ./ubo_app/rpc/ubo_bindings/ubo -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/secrets -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/store -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/package_info -type f 2>/dev/null; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ pi@ubo-development-pod-$index:/home/ubo/test-runner/ --chown ubo:ubo
 fi
 
 if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
@@ -57,8 +64,8 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
     cmd_list+=("(uv --version || curl -LsSf https://astral.sh/uv/install.sh | sh) &&")
   fi
 
-  if [ "$copy" == "True" ]; then
-    cmd_list+=('perl -pi -e "s|source = \"vcs\"|path = \"ubo_app/_version.py\"\\npattern = \"version = '\''\(?P<version>[^'\'']+\)'\''\"|" ~/test-runner/pyproject.toml && cd ~/test-runner && uv python pin python3.11 && uv venv --system-site-packages && true')
+  if [ "$copy" == "True" ] || [ "$deps" == "True" ]; then
+    cmd_list+=('sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"ubo_app/_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../../../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/services/090-assistant/ubo-service/pyproject.toml && echo "Patched pyproject.toml files" && cd /home/ubo/test-runner && uv python pin python3.11 && uv venv --system-site-packages && true')
   fi
 
   if [ "$run" == "True" ]; then
@@ -66,16 +73,16 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
   fi
 
   # Common commands
-  cmd_list+=("cd ~/test-runner &&")
+  cmd_list+=("cd /home/ubo/test-runner &&")
   cmd_list+=("uv venv --system-site-packages &&")
   cmd_list+=("uv python pin python3.11 &&")
 
   if [ "$deps" == "True" ]; then
-    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv sync --frozen &&')
+    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv run poe proto:generate:raw proto:compile:raw && uv sync --frozen &&')
   fi
 
   if [ "$run" == "True" ]; then
-    cmd_list+=("uv run poe test --verbosity=2 --capture=no --make-screenshots -n1 $* 2>&1 || true &&")
+    cmd_list+=("uv run --no-sync poe test -vv --tb=long -s --override-store-snapshots --override-window-snapshots --make-screenshots -n1 $pytest_args 2>&1 || true &&")
   fi
 
   # Add a final true to ensure the command exits successfully
@@ -90,5 +97,5 @@ fi
 
 if [ "$run" == "True" ] || [ "$results" == True ]; then
   rm -rf tests/**/results/
-  run_on_pod "find ~/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --rsync-path="sudo rsync" --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args ubo-development-pod-$index:/home/ubo/test-runner ./
+  run_on_pod "find /home/ubo/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --rsync-path="sudo rsync" --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args pi@ubo-development-pod-$index:/home/ubo/test-runner ./
 fi
