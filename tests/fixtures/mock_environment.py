@@ -302,19 +302,16 @@ def _monkeypatch_asyncio_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, 'create_subprocess_exec', _fake_create_subprocess_exec)
 
 
-def _monkeypatch_pyaudio(monkeypatch: pytest.MonkeyPatch) -> None:
+def _monkeypatch_pyaudio() -> None:
     """Monkeypatch PyAudio to avoid actual audio input/output."""
-    import pyaudio
     from fake import Fake
 
-    monkeypatch.setattr(
-        pyaudio,
-        'PyAudio',
-        Fake(
-            _Fake__attrs={
-                'read': lambda *_: b'',
-            },
-        ),
+    sys.modules['pyaudio'] = Fake(
+    _Fake__attrs={
+    'PyAudio': Fake,
+    'paInt16': 8,
+    'Stream': Fake,
+    },
     )
 
 
@@ -337,7 +334,6 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     from ubo_app.store.update_manager import (
         installed_versions as update_manager_installed_versions,
     )
-    from ubo_app.utils import IS_RPI
 
     tracemalloc.start()
 
@@ -381,6 +377,34 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
             ),
         },
     )
+
+    # cv2 (OpenCV) requires native libraries not available in Docker test environment
+    class FakeVideoCapture(Fake):
+        def isOpened(self: FakeVideoCapture) -> bool:  # noqa: N802
+            return False
+
+        def read(self: FakeVideoCapture) -> tuple[bool, None]:
+            return False, None
+
+        def release(self: FakeVideoCapture) -> None:
+            pass
+
+    sys.modules['cv2'] = Fake(
+        _Fake__attrs={
+            'VideoCapture': lambda _: FakeVideoCapture(),
+            'CAP_PROP_FRAME_WIDTH': 3,
+            'CAP_PROP_FRAME_HEIGHT': 4,
+            'CAP_PROP_FPS': 5,
+            'COLOR_BGR2RGB': 4,
+            'ROTATE_180': 1,
+            'INTER_LINEAR': 1,
+            'cvtColor': lambda img, _: img,
+            'rotate': lambda img, _: img,
+            'resize': lambda img, _size, **_: img,
+            'error': Exception,
+        },
+    )
+
     sys.modules['ollama'] = Fake(
         _Fake__attrs={'list': lambda: Fake(_Fake__attrs={'models': []})},
     )
@@ -392,7 +416,6 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_aiohttp()
     _monkeypatch_piper()
     _monkeypatch_rpi_modules()
+    _monkeypatch_pyaudio()
     _monkeypatch_subprocess(monkeypatch)
     _monkeypatch_asyncio_subprocess(monkeypatch)
-    if not IS_RPI:
-        _monkeypatch_pyaudio(monkeypatch)
