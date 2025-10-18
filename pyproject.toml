@@ -176,6 +176,7 @@ args = [
   { name = "run", type = "boolean" },
   { name = "results", type = "boolean" },
   { name = "index", type = "integer", default = '1' },
+  { name = "pytest-args", type = "string", default = "" },
 ]
 cmd = "scripts/test_on_device.sh"
 
