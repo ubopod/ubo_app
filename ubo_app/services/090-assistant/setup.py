@@ -679,7 +679,7 @@ async def init_service() -> None:
                 label='Speech Recognition',
                 icon='',
                 sub_menu=HeadedMenu(
-                    title='Speech Recognition',
+                    title='Speech Recognition',
                     heading='Select Active Engine',
                     sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
                     f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
