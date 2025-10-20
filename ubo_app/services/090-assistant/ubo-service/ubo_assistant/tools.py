@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -31,8 +32,7 @@ class MCPServerMetadata:
     server_id: str  # Format: {name}_{uuid}
     name: str  # User-friendly name
     type: str  # 'stdio' or 'sse'
-    config: dict | str  # Full JSON config for stdio, URL string for sse
-
+    config: str  # JSON string for stdio, URL string for sse
 
 
 def create_ubo_standard_tools() -> ToolsSchema:
@@ -87,16 +87,25 @@ async def create_mcp_client_from_metadata(
     """
     try:
         if server.type == 'stdio':
-            # Parse stdio configuration
-            if not isinstance(server.config, dict):
+            # STDIO configuration - config is JSON string, parse it
+            if not isinstance(server.config, str):
                 logger.error(
                     'Invalid stdio config type',
                     extra={'server_id': server.server_id, 'type': type(server.config)},
                 )
                 return None
 
+            try:
+                config_dict = json.loads(server.config)
+            except json.JSONDecodeError:
+                logger.exception(
+                    'Failed to parse stdio config JSON',
+                    extra={'server_id': server.server_id},
+                )
+                return None
+
             # Extract the first (and only) server config
-            mcp_servers = server.config.get('mcpServers', {})
+            mcp_servers = config_dict.get('mcpServers', {})
             if not mcp_servers:
                 logger.error(
                     'No mcpServers found in config',
