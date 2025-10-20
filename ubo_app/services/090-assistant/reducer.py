@@ -10,16 +10,14 @@ from redux.basic_types import InitAction
 from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     AssistantAction,
-    AssistantAddMCPServerAction,
-    AssistantAddMCPServerEvent,
-    AssistantDeleteMCPServerAction,
-    AssistantDeleteMCPServerEvent,
+    AssistantAddMcpServerAction,
+    AssistantAddMcpServerEvent,
+    AssistantDeleteMcpServerAction,
+    AssistantDeleteMcpServerEvent,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantEvent,
     AssistantHandleReportEvent,
-    AssistantQueryMCPServersAction,
-    AssistantQueryMCPServersEvent,
     AssistantReportAction,
     AssistantSetIsActiveAction,
     AssistantSetSelectedImageGeneratorAction,
@@ -30,9 +28,8 @@ from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantState,
     AssistantStopListeningAction,
-    AssistantSyncMCPServersAction,
-    AssistantSyncMCPServersEvent,
-    AssistantToggleMCPServerAction,
+    AssistantSyncMcpServersAction,
+    AssistantToggleMcpServerAction,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingRainbowAction
 
@@ -109,11 +106,15 @@ def reducer(
                 actions=[RgbRingBlankAction()],
             )
 
-        case AssistantAddMCPServerAction():
+        case AssistantAddMcpServerAction():
+            logger.info(
+                'AssistantAddMcpServerAction received',
+                extra={'server_name': action.name, 'mcp_type': action.type.value},
+            )
             return CompleteReducerResult(
                 state=state,
                 events=[
-                    AssistantAddMCPServerEvent(
+                    AssistantAddMcpServerEvent(
                         name=action.name,
                         type=action.type,
                         config=action.config,
@@ -121,50 +122,99 @@ def reducer(
                 ],
             )
 
-        case AssistantToggleMCPServerAction():
+        case AssistantToggleMcpServerAction():
             from mcp_servers import toggle_mcp_server
 
             # Toggle in filesystem
             new_state = toggle_mcp_server(action.server_id)
+            logger.info(
+                'AssistantToggleMCPServerAction processed',
+                extra={'server_id': action.server_id, 'enabled': new_state},
+            )
 
             # Update in-memory state
-            enabled_servers = state.enabled_mcp_servers.copy()
+            enabled_servers = list(state.enabled_mcp_servers)
             if new_state:
-                enabled_servers.add(action.server_id)
-            else:
-                enabled_servers.discard(action.server_id)
+                if action.server_id not in enabled_servers:
+                    enabled_servers.append(action.server_id)
+            elif action.server_id in enabled_servers:
+                    enabled_servers.remove(action.server_id)
 
-            return replace(state, enabled_mcp_servers=enabled_servers)
+            # Serialize enabled servers with metadata for gRPC autorun
+            import json
 
-        case AssistantDeleteMCPServerAction():
+            enabled_with_metadata = [
+                {
+                    'server_id': state.mcp_servers[sid].server_id,
+                    'name': state.mcp_servers[sid].name,
+                    'type': state.mcp_servers[sid].type.value,  # Convert enum to string
+                    'config': state.mcp_servers[sid].config,
+                }
+                for sid in enabled_servers
+                if sid in state.mcp_servers
+            ]
+            enabled_mcp_servers_with_metadata_json = json.dumps(enabled_with_metadata)
+
+            return replace(
+                state,
+                enabled_mcp_servers=enabled_servers,
+                enabled_mcp_servers_with_metadata_json=enabled_mcp_servers_with_metadata_json,
+            )
+
+        case AssistantDeleteMcpServerAction():
             # Remove from enabled servers if present
-            enabled_servers = state.enabled_mcp_servers.copy()
-            enabled_servers.discard(action.server_id)
+            enabled_servers = list(state.enabled_mcp_servers)
+            if action.server_id in enabled_servers:
+                enabled_servers.remove(action.server_id)
             # Remove from mcp_servers dict
             mcp_servers = {
                 k: v for k, v in state.mcp_servers.items() if k != action.server_id
             }
+            # Serialize enabled servers with metadata for gRPC autorun
+            import json
+
+            enabled_with_metadata = [
+                {
+                    'server_id': mcp_servers[sid].server_id,
+                    'name': mcp_servers[sid].name,
+                    'type': mcp_servers[sid].type.value,  # Convert enum to string
+                    'config': mcp_servers[sid].config,
+                }
+                for sid in enabled_servers
+                if sid in mcp_servers
+            ]
+            enabled_mcp_servers_with_metadata_json = json.dumps(enabled_with_metadata)
+
+            logger.info(
+                'AssistantDeleteMCPServerAction processed',
+                extra={
+                    'server_id': action.server_id,
+                    'remaining_servers': len(mcp_servers),
+                    'remaining_enabled': len(enabled_servers),
+                },
+            )
             return CompleteReducerResult(
                 state=replace(
                     state,
                     enabled_mcp_servers=enabled_servers,
                     mcp_servers=mcp_servers,
+                    enabled_mcp_servers_with_metadata_json=enabled_mcp_servers_with_metadata_json,
                 ),
-                events=[AssistantDeleteMCPServerEvent(server_id=action.server_id)],
+                events=[AssistantDeleteMcpServerEvent(server_id=action.server_id)],
             )
 
-        case AssistantSyncMCPServersAction():
+        case AssistantSyncMcpServersAction():
             # Load servers from filesystem and update state
             import json
 
             from ubo_app.constants.assistant import ASSISTANT_MCP_SERVERS_PATH
             from ubo_app.store.services.assistant import (
-                MCPServerMetadata,
-                MCPServerType,
+                McpServerMetadata,
+                McpServerType,
             )
 
-            loaded_servers: dict[str, MCPServerMetadata] = {}
-            enabled_servers: set[str] = set()
+            loaded_servers: dict[str, McpServerMetadata] = {}
+            enabled_servers: list[str] = []
 
             logger.debug(
                 'Syncing MCP servers from filesystem',
@@ -196,16 +246,22 @@ def reducer(
                             else server_id
                         )
 
-                        loaded_servers[server_id] = MCPServerMetadata(
+                        # Ensure config is always a string
+                        # (JSON for dicts, plain string for URLs)
+                        config = data['config']
+                        if isinstance(config, dict):
+                            config = json.dumps(config)
+
+                        loaded_servers[server_id] = McpServerMetadata(
                             server_id=server_id,
                             name=name,
-                            type=MCPServerType(data['type']),
-                            config=data['config'],
+                            type=McpServerType(data['type']),  # Convert string to enum
+                            config=config,
                         )
 
                         # Track enabled state from config file
                         if data.get('enabled', False):
-                            enabled_servers.add(server_id)
+                            enabled_servers.append(server_id)
 
                         logger.debug(
                             'Loaded MCP server',
@@ -222,6 +278,19 @@ def reducer(
                         )
                         continue
 
+            # Serialize enabled servers with metadata for gRPC autorun
+            enabled_with_metadata = [
+                {
+                    'server_id': loaded_servers[sid].server_id,
+                    'name': loaded_servers[sid].name,
+                    'type': loaded_servers[sid].type.value,  # Convert enum to string
+                    'config': loaded_servers[sid].config,
+                }
+                for sid in enabled_servers
+                if sid in loaded_servers
+            ]
+            enabled_mcp_servers_with_metadata_json = json.dumps(enabled_with_metadata)
+
             logger.debug(
                 'Finished syncing MCP servers',
                 extra={'server_count': len(loaded_servers),
@@ -230,24 +299,11 @@ def reducer(
                     },
             )
 
-            return CompleteReducerResult(
-                state=replace(
-                    state,
-                    mcp_servers=loaded_servers,
-                    enabled_mcp_servers=enabled_servers,
-                ),
-                events=[AssistantSyncMCPServersEvent()],
-            )
-
-        case AssistantQueryMCPServersAction():
-            return CompleteReducerResult(
-                state=state,
-                events=[
-                    AssistantQueryMCPServersEvent(
-                        mcp_servers=state.mcp_servers,
-                        enabled_mcp_servers=state.enabled_mcp_servers,
-                    ),
-                ],
+            return replace(
+                state,
+                mcp_servers=loaded_servers,
+                enabled_mcp_servers=enabled_servers,
+                enabled_mcp_servers_with_metadata_json=enabled_mcp_servers_with_metadata_json,
             )
 
         case _:

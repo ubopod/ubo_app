@@ -33,6 +33,7 @@ from ubo_bindings.ubo.v1 import (
 )
 
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
+from ubo_assistant.tools import MCPServerMetadata
 
 if TYPE_CHECKING:
     from betterproto.lib.google.protobuf import StringValue
@@ -46,13 +47,6 @@ class UboSwitchService(AIService, Generic[T]):
 
     Allows switching between different pipecat services in the pipeline.
     """
-
-    _services: dict[str, T | None]
-    _assistance_id: str
-    _start_frame: StartFrame | None
-    _started: bool
-    _mcp_servers_data: dict
-    _enabled_mcp_servers: set[str]
 
     def __init__(self, client: UboRPCClient, *, selector: str) -> None:
         """Initialize the ubo switch service."""
@@ -99,12 +93,67 @@ class UboSwitchService(AIService, Generic[T]):
             selected_stt = data[0].value
             self.create_task(self.set_selected_service(selected_stt))
 
-        # Load MCP servers directly from filesystem
-        self._load_mcp_servers_from_filesystem()
+        # Only LLM services need to react to MCP server state changes
+        if isinstance(self, LLMService):
+            logger.info('Service is LLMService, subscribing to MCP state changes')
+
+            @self.client.autorun([
+                'state.assistant.enabled_mcp_servers_with_metadata_json',
+            ])
+            def handle_mcp_servers_change(data: list) -> None:
+                """Handle MCP servers state changes from Redux store."""
+                try:
+                    import json
+
+                    # Parse JSON string (wrapped in StringValue protobuf object)
+                    # StringValue.value -> str
+                    enabled_with_metadata_json = data[0].value
+
+                    # Deserialize JSON to Python objects
+                    # (list of enabled servers with metadata)
+                    enabled_with_metadata = json.loads(enabled_with_metadata_json)
+
+                    # Convert list to dict for internal use (O(1) lookups)
+                    mcp_servers_dict = {}
+                    enabled_servers_set = set()
+                    for server_dict in enabled_with_metadata:
+                        server_id = server_dict['server_id']
+                        mcp_servers_dict[server_id] = MCPServerMetadata(
+                            server_id=server_id,
+                            name=server_dict['name'],
+                            type=server_dict['type'],
+                            config=server_dict['config'],
+                        )
+                        enabled_servers_set.add(server_id)
+
+                    logger.info(
+                        'MCP servers state changed via autorun',
+                        extra={
+                            'servers_count': len(mcp_servers_dict),
+                            'enabled_count': len(enabled_servers_set),
+                            'server_ids': list(mcp_servers_dict.keys()),
+                        },
+                    )
+
+                    # Update internal state
+                    self._mcp_servers_data = mcp_servers_dict
+                    self._enabled_mcp_servers = enabled_servers_set
+
+                    # Schedule async tool update
+                    self.create_task(self._update_llm_tools())
+
+                except Exception:
+                    logger.exception('Error handling MCP servers state change')
+                    self._mcp_servers_data = {}
+                    self._enabled_mcp_servers = set()
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process frame with the selected service."""
         if isinstance(frame, StartFrame):
+            logger.info(
+                'UboSwitchService received StartFrame',
+                extra={'class_name': self.__class__.__name__},
+            )
             self._start_frame = frame
             self._start()
         if self.selected_service:
@@ -118,93 +167,6 @@ class UboSwitchService(AIService, Generic[T]):
         for service in self.services.values():
             await service.setup(setup)
 
-    def _load_mcp_servers_from_filesystem(self) -> None:
-        """Load MCP servers directly from filesystem."""
-        import json
-        import os
-        from pathlib import Path
-
-        import platformdirs
-
-        try:
-            # Get the MCP servers path - use platformdirs to match main app
-            config_path_env = os.environ.get('CONFIG_PATH')
-            if config_path_env:
-                config_path = Path(config_path_env)
-            else:
-                config_path = platformdirs.user_config_path(
-                    appname='ubo',
-                    ensure_exists=True,
-                )
-            mcp_servers_path = config_path / 'assistant_mcp_servers'
-
-            logger.info(
-                'Loading MCP servers from filesystem {extra}',
-                extra={
-                    'config_path': str(config_path),
-                    'mcp_servers_path': str(mcp_servers_path),
-                    'exists': mcp_servers_path.exists(),
-                },
-            )
-
-            if not mcp_servers_path.exists():
-                logger.info('MCP servers directory does not exist')
-                self._mcp_servers_data = {}
-                self._enabled_mcp_servers = set()
-                return
-
-            # Load all server configs
-            for server_dir in mcp_servers_path.iterdir():
-                if not server_dir.is_dir():
-                    continue
-
-                config_file = server_dir / 'config.json'
-                if not config_file.exists():
-                    continue
-
-                try:
-                    with config_file.open() as f:
-                        data = json.load(f)
-
-                    server_id = server_dir.name
-                    # Extract name from server_id (format: name_uuid)
-                    name_parts = server_id.rsplit('_', 1)
-                    name = name_parts[0] if len(name_parts) == 2 else server_id  # noqa: PLR2004
-
-                    # Create MCPServerMetadata instance
-                    from ubo_assistant.tools import MCPServerMetadata
-
-                    self._mcp_servers_data[server_id] = MCPServerMetadata(
-                        server_id=server_id,
-                        name=name,
-                        type=data['type'],
-                        config=data['config'],
-                    )
-
-                    # Check if enabled from JSON config
-                    if data.get('enabled', False):
-                        self._enabled_mcp_servers.add(server_id)
-
-                except Exception:
-                    logger.exception(
-                        'Failed to load MCP server',
-                        extra={'config_file': str(config_file)},
-                    )
-                    continue
-
-            logger.info(
-                'MCP servers loaded from filesystem {extra}',
-                extra={
-                    'servers_count': len(self._mcp_servers_data),
-                    'enabled_count': len(self._enabled_mcp_servers),
-                    'server_ids': list(self._mcp_servers_data.keys()),
-                },
-            )
-        except Exception:
-            logger.exception('Error loading MCP servers from filesystem')
-            self._mcp_servers_data = {}
-            self._enabled_mcp_servers = set()
-
     def _get_mcp_servers_from_state(self) -> list:
         """Get enabled MCP servers from stored state.
 
@@ -213,11 +175,19 @@ class UboSwitchService(AIService, Generic[T]):
 
         """
         # Filter to only enabled servers from stored data
-        return [
+        enabled_servers = [
             server
             for server_id, server in self._mcp_servers_data.items()
             if server_id in self._enabled_mcp_servers
         ]
+        logger.debug(
+            'Filtered enabled MCP servers',
+            extra={
+                'enabled_ids': list(self._enabled_mcp_servers),
+                'count': len(enabled_servers),
+            },
+        )
+        return enabled_servers
 
     async def _get_combined_tools(
         self,
@@ -250,19 +220,29 @@ class UboSwitchService(AIService, Generic[T]):
             },
         )
 
-        return await create_combined_tools(
+        combined_tools = await create_combined_tools(
             llm_service=llm_service,
             mcp_servers=mcp_servers,
         )
+        logger.info(
+            'Combined tools ready',
+            extra={'tool_count': len(combined_tools.standard_tools)},
+        )
+        return combined_tools
 
     async def _update_llm_tools(self) -> None:
         """Update LLM tools when MCP servers change."""
+        if self.selected_service is None:
+            return
         if not isinstance(self.selected_service, LLMService):
             return
-
         combined_tools = await self._get_combined_tools(
             self.selected_service,
             mcp_enabled=True,
+        )
+        logger.info(
+            'Queuing LLMSetToolsFrame after MCP update',
+            extra={'tool_count': len(combined_tools.standard_tools)},
         )
         await self.selected_service.queue_frame(
             LLMSetToolsFrame(tools=combined_tools),
