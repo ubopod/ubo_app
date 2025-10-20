@@ -70,20 +70,20 @@ class AssistantImageGeneratorName(StrEnum):
     OPENAI = 'openai'
 
 
-class MCPServerType(StrEnum):
+class McpServerType(StrEnum):
     """MCP server types."""
 
     STDIO = 'stdio'
     SSE = 'sse'
 
 
-class MCPServerMetadata(Immutable):
+class McpServerMetadata(Immutable):
     """Metadata for an MCP server."""
 
     server_id: str  # Format: {name}_{uuid}
     name: str  # User-friendly name
-    type: MCPServerType
-    config: dict | str  # Full JSON config for stdio, URL string for sse
+    type: McpServerType  # Server type enum
+    config: str  # JSON string for stdio, URL string for sse
 
 
 class AssistantAction(BaseAction):
@@ -187,32 +187,28 @@ class AssistantUpdateProvidersAction(AssistantAction):
     """Action to signal change in the state of available providers."""
 
 
-class AssistantAddMCPServerAction(AssistantAction):
+class AssistantAddMcpServerAction(AssistantAction):
     """Action to add a new MCP server."""
 
     name: str
-    type: MCPServerType
-    config: dict | str
+    type: McpServerType
+    config: str  # JSON string for stdio, URL string for sse
 
 
-class AssistantToggleMCPServerAction(AssistantAction):
+class AssistantToggleMcpServerAction(AssistantAction):
     """Action to enable/disable an MCP server."""
 
     server_id: str
 
 
-class AssistantDeleteMCPServerAction(AssistantAction):
+class AssistantDeleteMcpServerAction(AssistantAction):
     """Action to delete an MCP server."""
 
     server_id: str
 
 
-class AssistantSyncMCPServersAction(AssistantAction):
+class AssistantSyncMcpServersAction(AssistantAction):
     """Action to sync MCP servers from filesystem."""
-
-
-class AssistantQueryMCPServersAction(AssistantAction):
-    """Action to query current MCP servers (for subprocess)."""
 
 
 class AssistantEvent(BaseEvent):
@@ -236,29 +232,18 @@ class AssistantUpdateProvidersEvent(AssistantEvent):
     """Event to signal change in the state of available providers."""
 
 
-class AssistantAddMCPServerEvent(AssistantEvent):
+class AssistantAddMcpServerEvent(AssistantEvent):
     """Event to add a new MCP server."""
 
     name: str
-    type: MCPServerType
-    config: dict | str
+    type: McpServerType
+    config: str  # JSON string for stdio, URL string for sse
 
 
-class AssistantDeleteMCPServerEvent(AssistantEvent):
+class AssistantDeleteMcpServerEvent(AssistantEvent):
     """Event to delete an MCP server."""
 
     server_id: str
-
-
-class AssistantSyncMCPServersEvent(AssistantEvent):
-    """Event to sync MCP servers from filesystem."""
-
-
-class AssistantQueryMCPServersEvent(AssistantEvent):
-    """Event with current MCP server data (response to query)."""
-
-    mcp_servers: dict[str, MCPServerMetadata]
-    enabled_mcp_servers: set[str]
 
 
 class AssistantState(Immutable):
@@ -314,13 +299,15 @@ class AssistantState(Immutable):
             else AssistantImageGeneratorName.GOOGLE,
         ),
     )
-    mcp_servers: dict[str, MCPServerMetadata] = field(default_factory=dict)
-    enabled_mcp_servers: set[str] = field(
+    mcp_servers: dict[str, McpServerMetadata] = field(default_factory=dict)
+    enabled_mcp_servers: list[str] = field(
         default_factory=lambda: read_from_persistent_store(
             'assistant:enabled_mcp_servers',
-            default=set(),
-            mapper=lambda value: set(json.loads(value))
+            default=[],
+            mapper=lambda value: json.loads(value)
             if isinstance(value, str)
-            else set(value),
+            else list(value),
         ),
     )
+    # JSON string for gRPC autorun - enabled servers with full metadata
+    enabled_mcp_servers_with_metadata_json: str = '[]'

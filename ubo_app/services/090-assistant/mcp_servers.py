@@ -9,7 +9,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from ubo_app.constants.assistant import ASSISTANT_MCP_SERVERS_PATH
-from ubo_app.store.services.assistant import MCPServerMetadata, MCPServerType
+from ubo_app.store.services.assistant import McpServerMetadata, McpServerType
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -18,14 +18,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def load_mcp_servers() -> dict[str, MCPServerMetadata]:
+def load_mcp_servers() -> dict[str, McpServerMetadata]:
     """Load all MCP servers from filesystem.
 
     Returns:
-        Dictionary mapping server_id to MCPServerMetadata
+        Dictionary mapping server_id to McpServerMetadata
 
     """
-    servers: dict[str, MCPServerMetadata] = {}
+    servers: dict[str, McpServerMetadata] = {}
 
     if not ASSISTANT_MCP_SERVERS_PATH.exists():
         ASSISTANT_MCP_SERVERS_PATH.mkdir(parents=True, exist_ok=True)
@@ -47,7 +47,7 @@ def load_mcp_servers() -> dict[str, MCPServerMetadata]:
             with config_file.open() as f:
                 data = json.load(f)
 
-            server_type = MCPServerType(data['type'])
+            server_type = McpServerType(data['type'])
             config = data['config']
 
             # Extract server name from directory name (format: {name}_{uuid})
@@ -55,7 +55,7 @@ def load_mcp_servers() -> dict[str, MCPServerMetadata]:
             name_parts = server_id.rsplit('_', 1)
             name = name_parts[0] if len(name_parts) == 2 else server_id  # noqa: PLR2004
 
-            servers[server_id] = MCPServerMetadata(
+            servers[server_id] = McpServerMetadata(
                 server_id=server_id,
                 name=name,
                 type=server_type,
@@ -73,15 +73,15 @@ def load_mcp_servers() -> dict[str, MCPServerMetadata]:
 
 def save_mcp_server(
     name: str,
-    server_type: MCPServerType,
-    config: dict | str,
+    server_type: McpServerType,
+    config: str,
 ) -> str:
     """Save MCP server configuration to filesystem.
 
     Args:
         name: User-friendly server name
         server_type: Type of MCP server (stdio or sse)
-        config: Server configuration (dict for stdio, str URL for sse)
+        config: Server configuration (JSON string for stdio, URL string for sse)
 
     Returns:
         server_id: The generated server ID

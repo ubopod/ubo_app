@@ -44,8 +44,8 @@ from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistanceAudioFrame,
     AssistanceImageFrame,
-    AssistantAddMCPServerEvent,
-    AssistantDeleteMCPServerEvent,
+    AssistantAddMcpServerEvent,
+    AssistantDeleteMcpServerEvent,
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
@@ -54,12 +54,11 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
     AssistantSTTName,
-    AssistantSyncMCPServersAction,
-    AssistantSyncMCPServersEvent,
+    AssistantSyncMcpServersAction,
     AssistantTTSName,
     AssistantUpdateProvidersEvent,
-    MCPServerMetadata,
-    MCPServerType,
+    McpServerMetadata,
+    McpServerType,
 )
 from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
 from ubo_app.store.ubo_actions import UboDispatchItem
@@ -128,7 +127,7 @@ def input_mcp_server() -> None:
         from mcp_servers import save_mcp_server, validate_sse_url, validate_stdio_config
 
         from ubo_app.store.services.assistant import (
-            AssistantAddMCPServerAction,
+            AssistantAddMcpServerAction,
         )
 
         with contextlib.suppress(asyncio.CancelledError):
@@ -175,10 +174,10 @@ def input_mcp_server() -> None:
             if not name or not server_type_str or not config_str:
                 return
 
-            server_type = MCPServerType(server_type_str)
+            server_type = McpServerType(server_type_str)
 
             # Validate configuration
-            if server_type == MCPServerType.STDIO:
+            if server_type == McpServerType.STDIO:
                 is_valid, error_msg, parsed_config = validate_stdio_config(config_str)
                 if not is_valid or not parsed_config:
                     logger.error(
@@ -186,7 +185,8 @@ def input_mcp_server() -> None:
                         extra={'error': error_msg},
                     )
                     return
-                config: dict | str = parsed_config
+                # Convert dict to JSON string for gRPC compatibility
+                config: str = json.dumps(parsed_config)
             else:  # SSE
                 is_valid, error_msg = validate_sse_url(config_str)
                 if not is_valid:
@@ -199,7 +199,7 @@ def input_mcp_server() -> None:
 
             # Dispatch action to update state
             store.dispatch(
-                AssistantAddMCPServerAction(
+                AssistantAddMcpServerAction(
                     name=name,
                     type=server_type,
                     config=config,
@@ -511,7 +511,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         ),
     )
     def mcp_servers_menu(
-        state_data: tuple[dict[str, MCPServerMetadata], set[str]],
+        state_data: tuple[dict[str, McpServerMetadata], list[str]],
     ) -> Sequence[Item]:
         """Return items for MCP servers menu."""
         # Use state as source of truth (already loaded from filesystem in reducer)
@@ -550,8 +550,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
     def mcp_server_menu(server_id: str) -> Callable[[], HeadedMenu]:
         """Generate a dynamic menu for a specific MCP server."""
         from ubo_app.store.services.assistant import (
-            AssistantDeleteMCPServerAction,
-            AssistantToggleMCPServerAction,
+            AssistantDeleteMcpServerAction,
+            AssistantToggleMcpServerAction,
         )
 
         @store.autorun(
@@ -562,7 +562,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             options=AutorunOptions(default_value=None),
         )
         def menu(
-            state_data: tuple[MCPServerMetadata | None, bool],
+            state_data: tuple[McpServerMetadata | None, bool],
         ) -> HeadedMenu:
             server, is_enabled = state_data
 
@@ -579,13 +579,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             return HeadedMenu(
                 title=f'MCP: {server.name}',
                 heading=server.name,
-                sub_heading=f'Type: {server.type.value} • {status_text}',
+                sub_heading=f'Type: {server.type} • {status_text}',
                 items=[
                     UboDispatchItem(
                         label='Disable' if is_enabled else 'Enable',
                         icon='󰖭' if is_enabled else '󰄬',
                         background_color=WARNING_COLOR if is_enabled else INFO_COLOR,
-                        store_action=AssistantToggleMCPServerAction(
+                        store_action=AssistantToggleMcpServerAction(
                             server_id=server_id,
                         ),
                     ),
@@ -593,7 +593,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
                         label='Delete',
                         icon='󰆴',
                         background_color=DANGER_COLOR,
-                        store_action=AssistantDeleteMCPServerAction(
+                        store_action=AssistantDeleteMcpServerAction(
                             server_id=server_id,
                         ),
                     ),
@@ -603,30 +603,28 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         return menu
 
     # Event handlers for MCP servers
-    def handle_add_mcp_server(_event: AssistantAddMCPServerEvent) -> None:
+    def handle_add_mcp_server(_event: AssistantAddMcpServerEvent) -> None:
         """Handle MCP server add event."""
         # Trigger sync to reload from filesystem
+        logger.info('handle_add_mcp_server invoked, dispatching sync')
         store.dispatch(
-            AssistantSyncMCPServersAction(),
+            AssistantSyncMcpServersAction(),
         )
 
-    def handle_delete_mcp_server(event: AssistantDeleteMCPServerEvent) -> None:
+    def handle_delete_mcp_server(event: AssistantDeleteMcpServerEvent) -> None:
         """Handle MCP server delete event."""
         from mcp_servers import delete_mcp_server
 
+        logger.info(
+            'handle_delete_mcp_server invoked',
+            extra={'server_id': event.server_id},
+        )
         delete_mcp_server(event.server_id)
         # Navigate back to server list
         store.dispatch(MenuGoBackAction())
         # Trigger sync to update state
-        store.dispatch(AssistantSyncMCPServersAction())
-
-    def handle_sync_mcp_servers(_event: AssistantSyncMCPServersEvent) -> None:
-        """Handle MCP servers sync event."""
-        # State update already happened in the reducer
-        logger.debug(
-            'MCP servers synced',
-            extra={'server_count': len(_event.__dict__.get('servers', {}))},
-        )
+        logger.info('Dispatching AssistantSyncMcpServersAction after delete')
+        store.dispatch(AssistantSyncMcpServersAction())
 
     return (
         providers,
@@ -637,7 +635,6 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
-        handle_sync_mcp_servers,
     )
 
 
@@ -654,7 +651,6 @@ async def init_service() -> None:
         mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
-        handle_sync_mcp_servers,
     ) = _setup_autorun_and_handlers()
 
     store.dispatch(
@@ -765,9 +761,8 @@ async def init_service() -> None:
     store.subscribe_event(AssistantUpdateProvidersEvent, llm_providers)
     store.subscribe_event(AssistantUpdateProvidersEvent, tts_providers)
     store.subscribe_event(AssistantUpdateProvidersEvent, image_generator_providers)
-    store.subscribe_event(AssistantAddMCPServerEvent, handle_add_mcp_server)
-    store.subscribe_event(AssistantDeleteMCPServerEvent, handle_delete_mcp_server)
-    store.subscribe_event(AssistantSyncMCPServersEvent, handle_sync_mcp_servers)
+    store.subscribe_event(AssistantAddMcpServerEvent, handle_add_mcp_server)
+    store.subscribe_event(AssistantDeleteMcpServerEvent, handle_delete_mcp_server)
 
     # Initial sync of MCP servers from filesystem
-    store.dispatch(AssistantSyncMCPServersAction())
+    store.dispatch(AssistantSyncMcpServersAction())
