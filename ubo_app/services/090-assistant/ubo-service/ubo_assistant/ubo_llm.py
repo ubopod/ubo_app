@@ -1,6 +1,7 @@
 """LLM service that wraps multiple LLM services allowing switching between them."""
 
 import json
+from dataclasses import dataclass
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -32,102 +33,38 @@ from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.switch import UboSwitchService
 
 
+@dataclass
+class LLMServiceConfig:
+    """Configuration for LLM services."""
+
+    google_credentials: str | None = None
+    openai_api_key: str | None = None
+    grok_api_key: str | None = None
+    cerebras_api_key: str | None = None
+    ollama_onprem_url: str | None = None
+
+
 class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
     """LLM service that wraps multiple LLM services allowing switching between them."""
 
     def __init__(
         self,
         client: UboRPCClient,
-        *,
-        google_credentials: str | None,
-        openai_api_key: str | None,
-        grok_api_key: str | None,
-        cerebras_api_key: str | None,
-        ollama_onprem_url: str | None,
+        config: LLMServiceConfig,
         selector: str,
     ) -> None:
         """Initialize LLM service with various services including remote Ollama."""
-        try:
-            if google_credentials:
-                project_id = json.loads(google_credentials).get('project_id')
-                self.google_vertex_llm = GoogleVertexLLMService(
-                    credentials=google_credentials,
-                    params=GoogleVertexLLMService.InputParams(project_id=project_id),
-                )
-            else:
-                self.google_vertex_llm = None
-        except Exception as exception:
-            logger.exception(
-                'Error while initializing Google Vertex LLM',
-                extra={'exception': exception},
-            )
-            self.google_vertex_llm = None
+        self._config = config
 
-        try:
-            if openai_api_key:
-                self.openai_llm = OpenAILLMService(
-                    model='gpt-3.5-turbo',
-                    api_key=openai_api_key,
-                )
-            else:
-                self.openai_llm = None
-        except Exception:
-            logger.exception('Error while initializing OpenAI LLM')
-            self.openai_llm = None
+        # Initialize all services
+        self.google_vertex_llm = self._create_google_vertex_service()
+        self.openai_llm = self._create_openai_service()
+        self.grok_llm = self._create_grok_service()
+        self.cerebras_llm = self._create_cerebras_service()
+        self.ollama_llm = self._create_ollama_service()
+        self.ollama_onprem_llm = self._create_ollama_onprem_service()
 
-        try:
-            if grok_api_key:
-                self.grok_llm = GrokLLMService(
-                    model='grok-4-0709',
-                    api_key=grok_api_key,
-                )
-            else:
-                self.grok_llm = None
-        except Exception:
-            logger.exception('Error while initializing Grok LLM')
-            self.grok_llm = None
-
-        try:
-            if cerebras_api_key:
-                self.cerebras_llm = CerebrasLLMService(
-                    api_key=cerebras_api_key,
-                    model='qwen-3-235b-a22b-instruct-2507',
-                    params=CerebrasLLMService.InputParams(
-                        temperature=0.7,
-                        max_completion_tokens=1000,
-                    ),
-                )
-            else:
-                self.cerebras_llm = None
-        except Exception:
-            logger.exception('Error while initializing Cerebras LLM')
-            self.cerebras_llm = None
-
-        try:
-            self.ollama_llm = OLLamaLLMService(
-                model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
-            )
-        except Exception:
-            logger.exception('Error while initializing Ollama LLM')
-            self.ollama_llm = None
-
-        try:
-            if ollama_onprem_url:
-                # Ollama's OpenAI-compatible API is at /v1 endpoint
-                base_url = ollama_onprem_url.rstrip('/') + '/v1'
-                self.ollama_onprem_llm = OLLamaLLMService(
-                    model='granite3.3:8b',
-                    base_url=base_url,
-                )
-            else:
-                self.ollama_onprem_llm = None
-        except Exception:
-            logger.exception(
-                'Error while initializing remote Ollama LLM',
-                extra={'url': ollama_onprem_url},
-            )
-            self.ollama_onprem_llm = None
-
+        # Build services dictionary
         self._services = {
             'google_vertex': self.google_vertex_llm,
             'openai': self.openai_llm,
@@ -137,9 +74,108 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             'ollama_onprem': self.ollama_onprem_llm,
         }
 
+        # Initialize parent classes
         UboSwitchService.__init__(self, client=client, selector=selector)
         LLMService.__init__(self)
 
+        # Register built-in functions
+        self._register_builtin_functions()
+
+    def _create_google_vertex_service(self) -> GoogleVertexLLMService | None:
+        """Create Google Vertex LLM service if credentials are provided."""
+        if not self._config.google_credentials:
+            return None
+
+        try:
+            project_id = json.loads(self._config.google_credentials).get('project_id')
+            return GoogleVertexLLMService(
+                credentials=self._config.google_credentials,
+                params=GoogleVertexLLMService.InputParams(project_id=project_id),
+            )
+        except Exception as exception:
+            logger.exception(
+                'Error while initializing Google Vertex LLM',
+                extra={'exception': exception},
+            )
+            return None
+
+    def _create_openai_service(self) -> OpenAILLMService | None:
+        """Create OpenAI LLM service if API key is provided."""
+        if not self._config.openai_api_key:
+            return None
+
+        try:
+            return OpenAILLMService(
+                model='gpt-3.5-turbo',
+                api_key=self._config.openai_api_key,
+            )
+        except Exception:
+            logger.exception('Error while initializing OpenAI LLM')
+            return None
+
+    def _create_grok_service(self) -> GrokLLMService | None:
+        """Create Grok LLM service if API key is provided."""
+        if not self._config.grok_api_key:
+            return None
+
+        try:
+            return GrokLLMService(
+                model='grok-4-0709',
+                api_key=self._config.grok_api_key,
+            )
+        except Exception:
+            logger.exception('Error while initializing Grok LLM')
+            return None
+
+    def _create_cerebras_service(self) -> CerebrasLLMService | None:
+        """Create Cerebras LLM service if API key is provided."""
+        if not self._config.cerebras_api_key:
+            return None
+
+        try:
+            return CerebrasLLMService(
+                api_key=self._config.cerebras_api_key,
+                model='qwen-3-235b-a22b-instruct-2507',
+                params=CerebrasLLMService.InputParams(
+                    temperature=0.7,
+                    max_completion_tokens=1000,
+                ),
+            )
+        except Exception:
+            logger.exception('Error while initializing Cerebras LLM')
+            return None
+
+    def _create_ollama_service(self) -> OLLamaLLMService | None:
+        """Create local Ollama LLM service."""
+        try:
+            return OLLamaLLMService(
+                model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
+            )
+        except Exception:
+            logger.exception('Error while initializing Ollama LLM')
+            return None
+
+    def _create_ollama_onprem_service(self) -> OLLamaLLMService | None:
+        """Create remote Ollama LLM service if URL is provided."""
+        if not self._config.ollama_onprem_url:
+            return None
+
+        try:
+            # Ollama's OpenAI-compatible API is at /v1 endpoint
+            base_url = self._config.ollama_onprem_url.rstrip('/') + '/v1'
+            return OLLamaLLMService(
+                model='granite3.3:8b',
+                base_url=base_url,
+            )
+        except Exception:
+            logger.exception(
+                'Error while initializing remote Ollama LLM',
+                extra={'url': self._config.ollama_onprem_url},
+            )
+            return None
+
+    def _register_builtin_functions(self) -> None:
+        """Register built-in functions with all services."""
         for service in self.services.values():
             service.register_function('draw_image', self.draw_image)
             service.register_function('get_image', self.get_image)
