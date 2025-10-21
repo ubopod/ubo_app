@@ -9,6 +9,7 @@ from ubo_app.engines.google import GoogleEngine
 from ubo_app.engines.google_cloud import GoogleCloudEngine
 from ubo_app.engines.grok import GrokEngine
 from ubo_app.engines.ollama import OllamaEngine
+from ubo_app.engines.ollama_onprem import OllamaOnPremEngine
 from ubo_app.engines.openai import OpenAIEngine
 from ubo_app.engines.piper import PiperEngine
 from ubo_app.engines.rime import RimeEngine
@@ -31,6 +32,7 @@ STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
 
 LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.OLLAMA: OllamaEngine(),
+    AssistantLLMName.OLLAMA_ONPREM: OllamaOnPremEngine(),
     AssistantLLMName.GOOGLE: GoogleCloudEngine(label='Google Vertex'),
     AssistantLLMName.GROK: GrokEngine(),
     AssistantLLMName.CEREBRAS: CerebrasEngine(),

@@ -35,7 +35,7 @@ from ubo_assistant.switch import UboSwitchService
 class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
     """LLM service that wraps multiple LLM services allowing switching between them."""
 
-    def __init__(  # noqa: C901, PLR0912, PLR0913
+    def __init__(
         self,
         client: UboRPCClient,
         *,
@@ -43,9 +43,10 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         openai_api_key: str | None,
         grok_api_key: str | None,
         cerebras_api_key: str | None,
+        ollama_onprem_url: str | None,
         selector: str,
     ) -> None:
-        """Initialize the LLM service with Google, OpenAI, and Ollama LLM services."""
+        """Initialize LLM service with various services including remote Ollama."""
         try:
             if google_credentials:
                 project_id = json.loads(google_credentials).get('project_id')
@@ -110,12 +111,30 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             logger.exception('Error while initializing Ollama LLM')
             self.ollama_llm = None
 
+        try:
+            if ollama_onprem_url:
+                # Ollama's OpenAI-compatible API is at /v1 endpoint
+                base_url = ollama_onprem_url.rstrip('/') + '/v1'
+                self.ollama_onprem_llm = OLLamaLLMService(
+                    model='granite3.3:8b',
+                    base_url=base_url,
+                )
+            else:
+                self.ollama_onprem_llm = None
+        except Exception:
+            logger.exception(
+                'Error while initializing remote Ollama LLM',
+                extra={'url': ollama_onprem_url},
+            )
+            self.ollama_onprem_llm = None
+
         self._services = {
             'google_vertex': self.google_vertex_llm,
             'openai': self.openai_llm,
             'grok': self.grok_llm,
             'cerebras': self.cerebras_llm,
             'ollama': self.ollama_llm,
+            'ollama_onprem': self.ollama_onprem_llm,
         }
 
         UboSwitchService.__init__(self, client=client, selector=selector)

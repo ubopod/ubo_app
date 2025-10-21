@@ -15,6 +15,7 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_GOOGLE_MODEL,
     DEFAULT_LLM_GROK_MODEL,
     DEFAULT_LLM_OLLAMA_MODEL,
+    DEFAULT_LLM_OLLAMA_ONPREM_MODEL,
     DEFAULT_LLM_OPENAI_MODEL,
 )
 from ubo_app.utils.persistent_store import read_from_persistent_store
@@ -38,6 +39,7 @@ class AssistantLLMName(StrEnum):
     """Available assistant llms."""
 
     OLLAMA = 'ollama'
+    OLLAMA_ONPREM = 'ollama_onprem'
     GOOGLE = 'google_vertex'
     OPENAI = 'openai'
     GROK = 'grok'
@@ -46,6 +48,7 @@ class AssistantLLMName(StrEnum):
 
 DEFAULT_MODELS = {
     AssistantLLMName.OLLAMA: DEFAULT_LLM_OLLAMA_MODEL,
+    AssistantLLMName.OLLAMA_ONPREM: DEFAULT_LLM_OLLAMA_ONPREM_MODEL,
     AssistantLLMName.GOOGLE: DEFAULT_LLM_GOOGLE_MODEL,
     AssistantLLMName.OPENAI: DEFAULT_LLM_OPENAI_MODEL,
     AssistantLLMName.GROK: DEFAULT_LLM_GROK_MODEL,
