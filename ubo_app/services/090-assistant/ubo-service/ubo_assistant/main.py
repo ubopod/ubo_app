@@ -24,7 +24,7 @@ from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAG
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
-from ubo_assistant.ubo_llm import UboLLMService
+from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
 from ubo_assistant.ubo_output_transport import UboOutputTransport
 from ubo_assistant.ubo_stt import UboSTTService
 from ubo_assistant.ubo_tts import UboTTSService
@@ -124,11 +124,13 @@ class Assistant:
 
         ubo_llm_service = UboLLMService(
             client=self.client,
-            google_credentials=google_credentials,
-            openai_api_key=openai_api_key,
-            grok_api_key=grok_api_key,
-            cerebras_api_key=cerebras_api_key,
-            ollama_onprem_url=ollama_onprem_url,
+            config=LLMServiceConfig(
+                google_credentials=google_credentials,
+                openai_api_key=openai_api_key,
+                grok_api_key=grok_api_key,
+                cerebras_api_key=cerebras_api_key,
+                ollama_onprem_url=ollama_onprem_url,
+            ),
             selector='state.assistant.selected_llm',
         )
 
