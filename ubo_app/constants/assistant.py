@@ -28,6 +28,10 @@ DEFAULT_LLM_CEREBRAS_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_CEREBRAS_MODEL',
     'qwen-3-235b-a22b-instruct-2507',
 )
+DEFAULT_LLM_OLLAMA_ONPREM_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_OLLAMA_ONPREM_MODEL',
+    'granite3.3:8b',
+)
 
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
 GOOGLE_API_KEY_PATTERN = '^AIza[0-9A-Za-z\\-_]{35}$'
@@ -69,6 +73,10 @@ VOSK_DOWNLOAD_PATH = VOSK_MODEL_PATH.with_suffix('.zip')
 VOSK_DOWNLOAD_NOTIFICATION_ID = 'assistant:download-vosk'
 
 OLLAMA_SETUP_NOTIFICATION_ID = 'assistant:ollama:setup'
+
+OLLAMA_ONPREM_URL_SECRET_ID = 'ollama_onprem_url'  # noqa: S105
+OLLAMA_ONPREM_URL_PATTERN = r'^https?://[a-zA-Z0-9.-]+(:[0-9]+)?/?$'
+OLLAMA_ONPREM_SETUP_NOTIFICATION_ID = 'assistant:ollama_onprem:setup'
 
 PIPER_MODEL = 'en/en_US/kristin/medium/en_US-kristin-medium'
 PIPER_MODEL_URL = (

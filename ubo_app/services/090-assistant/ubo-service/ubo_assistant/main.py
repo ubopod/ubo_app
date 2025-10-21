@@ -109,6 +109,10 @@ class Assistant:
             os.environ['RIME_API_KEY_SECRET_ID'],
         )
 
+        ollama_onprem_url = await self.client.query_secret(
+            os.environ['OLLAMA_ONPREM_URL_SECRET_ID'],
+        )
+
         ubo_stt_service = UboSTTService(
             client=self.client,
             google_credentials=google_credentials,
@@ -124,6 +128,7 @@ class Assistant:
             openai_api_key=openai_api_key,
             grok_api_key=grok_api_key,
             cerebras_api_key=cerebras_api_key,
+            ollama_onprem_url=ollama_onprem_url,
             selector='state.assistant.selected_llm',
         )
 
