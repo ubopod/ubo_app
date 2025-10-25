@@ -130,6 +130,12 @@ class DockerImageRemoveContainerAction(DockerImageAction):
     """Remove container."""
 
 
+class DockerPresetInstallAction(DockerAction):
+    """Install a preset composition."""
+
+    preset_id: str
+
+
 class DockerEvent(BaseEvent):
     """Docker event."""
 
@@ -207,6 +213,12 @@ class DockerImageReleaseCompositionEvent(DockerImageEvent):
 
 class DockerImageRemoveContainerEvent(DockerImageEvent):
     """Remove container."""
+
+
+class DockerPresetInstallEvent(DockerEvent):
+    """Install a preset composition."""
+
+    preset_id: str
 
 
 class ImageState(Immutable):
