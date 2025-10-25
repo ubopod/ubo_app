@@ -146,7 +146,7 @@ IMAGES = {
             registry='ghcr.io',
             dependencies=['ollama'],
             ports={'8080/tcp': 8080},
-            hosts={'host.docker.internal': 'ollama'},
+            hosts={'host.docker.internal': 'host-gateway'},
         ),
         ContainerEntry(
             id='ngrok',

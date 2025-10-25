@@ -47,6 +47,8 @@ from ubo_app.store.services.docker import (
     DockerInstallAction,
     DockerInstallEvent,
     DockerItemStatus,
+    DockerPresetInstallAction,
+    DockerPresetInstallEvent,
     DockerRemoveUsernameAction,
     DockerServiceState,
     DockerSetStatusAction,
@@ -112,6 +114,12 @@ def service_reducer(
             return CompleteReducerResult(
                 state=replace(state, status=DockerStatus.UNKNOWN),
                 events=[DockerStopEvent()],
+            )
+
+        case DockerPresetInstallAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[DockerPresetInstallEvent(preset_id=action.preset_id)],
             )
 
         case _:
