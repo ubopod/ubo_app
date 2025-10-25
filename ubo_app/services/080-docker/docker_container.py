@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import ipaddress
 from asyncio import iscoroutine
 from typing import TYPE_CHECKING, Any, overload
 
@@ -33,6 +34,14 @@ from ubo_app.utils.async_ import to_thread
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+
+
+def get_full_image_path(image_id: str) -> str:
+    """Get full image path including registry if specified."""
+    image_entry = IMAGES[image_id]
+    if image_entry.registry:
+        return f'{image_entry.registry}/{image_entry.path}'
+    return image_entry.path
 
 
 def find_container(client: docker.DockerClient, *, image: str) -> Container | None:
@@ -109,14 +118,42 @@ async def run_container(
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=IMAGES[id].path)
+    container = find_container(docker_client, image=get_full_image_path(id))
     if container:
         if container.status != 'running':
             container.start()
     else:
         hosts = {}
+        # Special Docker host values that should be passed through literally
+        special_hosts = {'host-gateway', 'host.docker.internal'}
+
         for key, value in IMAGES[id].hosts.items():
-            if not hasattr(docker_state, value):
+            # Check if it's a special Docker value or IP address
+            is_ip_address = False
+            with contextlib.suppress(ValueError):
+                ipaddress.ip_address(value)
+                is_ip_address = True
+
+            if value in special_hosts or is_ip_address:
+                # Pass through special values and IPs directly
+                hosts[key] = value
+            elif hasattr(docker_state, value):
+                # It's a container name - look up its IP
+                container_ip = getattr(docker_state, value).container_ip
+                if not container_ip:
+                    store.dispatch(
+                        NotificationsAddAction(
+                            notification=Notification(
+                                title='Dependency error',
+                                content=f'Container "{value}" does not have an IP address',
+                                importance=Importance.MEDIUM,
+                            ),
+                        ),
+                    )
+                    return
+                hosts[key] = container_ip
+            else:
+                # Unknown container - show error
                 store.dispatch(
                     NotificationsAddAction(
                         notification=Notification(
@@ -127,21 +164,6 @@ async def run_container(
                     ),
                 )
                 return
-            if not getattr(docker_state, value).container_ip:
-                store.dispatch(
-                    NotificationsAddAction(
-                        notification=Notification(
-                            title='Dependency error',
-                            content=f'Container "{value}" does not have an IP address',
-                            importance=Importance.MEDIUM,
-                        ),
-                    ),
-                )
-                return
-            if hasattr(docker_state, value):
-                hosts[key] = getattr(docker_state, value).container_ip
-            else:
-                hosts[key] = value
 
         prepare_function = IMAGES[id].prepare
         if prepare_function:
@@ -153,7 +175,7 @@ async def run_container(
                 return
 
         docker_client.containers.run(
-            IMAGES[id].path,
+            get_full_image_path(id),
             hostname=id,
             publish_all_ports=True,
             detach=True,
@@ -173,7 +195,7 @@ def stop_container(event: DockerImageStopContainerEvent) -> None:
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=IMAGES[id].path)
+    container = find_container(docker_client, image=get_full_image_path(id))
     if container and container.status != 'exited':
         container.stop()
     docker_client.close()
@@ -184,7 +206,7 @@ def remove_container(event: DockerImageRemoveContainerEvent) -> None:
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=IMAGES[id].path)
+    container = find_container(docker_client, image=get_full_image_path(id))
     if container:
         container.remove(v=True, force=True)
     docker_client.close()
@@ -195,7 +217,7 @@ def update_container(*, image_id: str, container: Container) -> None:
     if container.status == 'running':
         logger.debug(
             'Container running image found',
-            extra={'image': image_id, 'path': IMAGES[image_id].path},
+            extra={'image': image_id, 'path': get_full_image_path(image_id)},
         )
         store.dispatch(
             DockerImageSetStatusAction(
@@ -215,7 +237,7 @@ def update_container(*, image_id: str, container: Container) -> None:
         return
     logger.debug(
         "Container for the image found, but it's not running",
-        extra={'image': image_id, 'path': IMAGES[image_id].path},
+        extra={'image': image_id, 'path': get_full_image_path(image_id)},
     )
     store.dispatch(
         DockerImageSetStatusAction(
@@ -229,7 +251,7 @@ def _monitor_events(  # noqa: C901
     image_id: str,
     get_docker_id: Callable[[], str],
 ) -> None:
-    path = IMAGES[image_id].path
+    path = get_full_image_path(image_id)
     docker_client = docker.from_env()
     events = docker_client.events(
         decode=True,
@@ -300,7 +322,7 @@ def _monitor_events(  # noqa: C901
 
 def check_container(*, image_id: str) -> None:
     """Check the container status."""
-    path = IMAGES[image_id].path
+    path = get_full_image_path(image_id)
 
     def act() -> None:
         logger.debug('Checking image', extra={'image': image_id, 'path': path})

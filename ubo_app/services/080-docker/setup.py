@@ -26,7 +26,9 @@ from docker_composition import (
 from docker_container import remove_container, run_container, stop_container
 from docker_image import fetch_image, remove_image
 from docker_images import IMAGES
-from menus import docker_item_menu
+from docker_preset_installer import handle_preset_install
+from docker_presets import PRESET_COMPOSITIONS
+from menus import docker_item_menu, docker_preset_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
@@ -60,6 +62,7 @@ from ubo_app.store.services.docker import (
     DockerImageStopContainerEvent,
     DockerInstallAction,
     DockerInstallEvent,
+    DockerPresetInstallEvent,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
     DockerStartAction,
@@ -513,35 +516,67 @@ def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     ]
 
 
+def _register_preset_entry(image_id: str) -> None:
+    """Register a preset composition in the main menu."""
+    preset_id = image_id.removeprefix('preset_')
+    preset = PRESET_COMPOSITIONS.get(preset_id)
+    if not preset:
+        logger.error('Preset not found', extra={'preset_id': preset_id})
+        return
+    store.dispatch(
+        RegisterRegularAppAction(
+            menu_item=ActionItem(
+                label=preset.label,
+                icon=preset.icon,
+                action=functools.partial(docker_preset_menu, preset_id),
+            ),
+            key=f'preset_{preset_id}',
+        ),
+    )
+
+
+def _register_composition_entry(image_id: str) -> None:
+    """Register a manual composition in the main menu."""
+    path = COMPOSITIONS_PATH / image_id
+    if not path.exists():
+        logger.error('Composition not found', extra={'image': image_id})
+        return
+    metadata = json.load((path / 'metadata.json').open())
+    store.dispatch(
+        RegisterRegularAppAction(
+            menu_item=ActionItem(
+                label=metadata['label'],
+                icon=metadata['icon'] or '󰣆',
+                action=functools.partial(docker_item_menu, image_id),
+            ),
+            key=image_id,
+        ),
+    )
+
+
+def _register_container_entry(image_id: str) -> None:
+    """Register a regular container in the main menu."""
+    store.dispatch(
+        RegisterRegularAppAction(
+            menu_item=ActionItem(
+                label=IMAGES[image_id].label,
+                icon=IMAGES[image_id].icon,
+                action=functools.partial(docker_item_menu, image_id),
+            ),
+            key=image_id,
+        ),
+    )
+
+
 def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
-    if event.image in IMAGES:
-        image = IMAGES[event.image]
-        store.dispatch(
-            RegisterRegularAppAction(
-                menu_item=ActionItem(
-                    label=image.label,
-                    icon=image.icon,
-                    action=functools.partial(docker_item_menu, image.id),
-                ),
-                key=image.id,
-            ),
-        )
-    else:
-        path = COMPOSITIONS_PATH / event.image
-        if not path.exists():
-            logger.error('Composition not found', extra={'image': event.image})
-            return
-        metadata = json.load((path / 'metadata.json').open())
-        store.dispatch(
-            RegisterRegularAppAction(
-                menu_item=ActionItem(
-                    label=metadata['label'],
-                    icon=metadata['icon'] or '󰣆',
-                    action=functools.partial(docker_item_menu, event.image),
-                ),
-                key=event.image,
-            ),
-        )
+    """Register the image as an entry in the main menu."""
+    match event.image:
+        case str(image_id) if image_id.startswith('preset_'):
+            _register_preset_entry(image_id)
+        case str(image_id) if image_id.startswith('composition_'):
+            _register_composition_entry(image_id)
+        case str(image_id):
+            _register_container_entry(image_id)
 
 
 def _load_images() -> None:
@@ -554,6 +589,18 @@ def _load_images() -> None:
                 payload={'label': IMAGES[image_id].label},
             )
             for image_id in IMAGES
+        ],
+        [
+            CombineReducerRegisterAction(
+                combine_reducers_id=reducer_id,
+                key=f'preset_{preset_id}',
+                reducer=image_reducer,
+                payload={
+                    'label': preset.label,
+                    'instructions': preset.instructions,
+                },
+            )
+            for preset_id, preset in PRESET_COMPOSITIONS.items()
         ],
         [
             CombineReducerRegisterAction(
@@ -616,6 +663,7 @@ def init_service() -> Subscriptions:
         ),
     )
 
+
     subscriptions = [
         store.subscribe_event(
             DockerImageRegisterAppEvent,
@@ -634,6 +682,10 @@ def init_service() -> Subscriptions:
         store.subscribe_event(DockerImageStopContainerEvent, stop_container),
         store.subscribe_event(DockerImageReleaseCompositionEvent, release_composition),
         store.subscribe_event(DockerImageRemoveContainerEvent, remove_container),
+        store.subscribe_event(
+            DockerPresetInstallEvent,
+            handle_preset_install,
+        ),
     ]
 
     create_task(

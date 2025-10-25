@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from docker_composition import (
-    check_composition,
-)
+from docker_composition import check_composition
 from docker_container import check_container
 from docker_images import IMAGES
+from docker_presets import PRESET_COMPOSITIONS
 from docker_qrcode_page import DockerQRCodePage
 from redux import AutorunOptions
 from ubo_gui.menu.types import (
@@ -33,6 +32,7 @@ from ubo_app.store.services.docker import (
     DockerImageStopCompositionAction,
     DockerImageStopContainerAction,
     DockerItemStatus,
+    DockerPresetInstallAction,
     ImageState,
 )
 from ubo_app.store.services.notifications import (
@@ -77,9 +77,13 @@ def image_menu(  # noqa: C901
     if image.status == DockerItemStatus.NOT_AVAILABLE:
         items.append(
             UboDispatchItem(
-                label='Fetch',
+                label='Pull Images' \
+                    if image.id.startswith(('composition_', 'preset_')) \
+                    else 'Fetch',
                 icon='󰇚',
-                store_action=DockerImageFetchAction(image=image.id),
+                store_action=DockerImageFetchCompositionAction(image=image.id)
+                if image.id.startswith(('composition_', 'preset_'))
+                else DockerImageFetchAction(image=image.id),
             ),
         )
     elif image.status == DockerItemStatus.FETCHING:
@@ -91,32 +95,19 @@ def image_menu(  # noqa: C901
                     label='Start',
                     icon='󰐊',
                     store_action=DockerImageRunCompositionAction(image=image.id)
-                    if image.id.startswith('composition_')
+                    if image.id.startswith(('composition_', 'preset_'))
                     else DockerImageRunContainerAction(image=image.id),
-                ),
-                *(
-                    [
-                        UboDispatchItem(
-                            label='Pull Images',
-                            icon='󰇚',
-                            store_action=DockerImageFetchCompositionAction(
-                                image=image.id,
-                            ),
-                        ),
-                    ]
-                    if image.id.startswith('composition_')
-                    else []
                 ),
                 UboDispatchItem(
                     label='Delete Application'
-                    if image.id.startswith('composition_')
+                    if image.id.startswith(('composition_', 'preset_'))
                     else 'Remove Image',
                     icon='󰆴',
                     store_action=DockerImageRemoveCompositionAction(image=image.id)
-                    if image.id.startswith('composition_')
+                    if image.id.startswith(('composition_', 'preset_'))
                     else DockerImageRemoveAction(image=image.id),
                     background_color=DANGER_COLOR
-                    if image.id.startswith('composition_')
+                    if image.id.startswith(('composition_', 'preset_'))
                     else None,
                 ),
             ],
@@ -128,16 +119,16 @@ def image_menu(  # noqa: C901
                     label='Start',
                     icon='󰐊',
                     store_action=DockerImageRunCompositionAction(image=image.id)
-                    if image.id.startswith('composition_')
+                    if image.id.startswith(('composition_', 'preset_'))
                     else DockerImageRunContainerAction(image=image.id),
                 ),
                 UboDispatchItem(
                     label='Release Resources'
-                    if image.id.startswith('composition_')
+                    if image.id.startswith(('composition_', 'preset_'))
                     else 'Remove Container',
                     icon='󰆴',
                     store_action=DockerImageReleaseCompositionAction(image=image.id)
-                    if image.id.startswith('composition_')
+                    if image.id.startswith(('composition_', 'preset_'))
                     else DockerImageRemoveContainerAction(image=image.id),
                 ),
             ],
@@ -149,11 +140,11 @@ def image_menu(  # noqa: C901
                 key='stop',
                 icon='󰓛',
                 store_action=DockerImageStopCompositionAction(image=image.id)
-                if image.id.startswith('composition_')
+                if image.id.startswith(('composition_', 'preset_'))
                 else DockerImageStopContainerAction(image=image.id),
             ),
         )
-        if image.id.startswith('composition_'):
+        if image.id.startswith(('composition_', 'preset_')):
             items.append(
                 UboDispatchItem(
                     label='Instructions',
@@ -199,7 +190,7 @@ def image_menu(  # noqa: C901
     elif image.status == DockerItemStatus.PROCESSING:
         pass
 
-    if image.id.startswith('composition_'):
+    if image.id.startswith(('composition_', 'preset_')):
         messages = {
             DockerItemStatus.NOT_AVAILABLE: 'Need to fetch images',
             DockerItemStatus.FETCHING: 'Images are being fetched',
@@ -211,12 +202,19 @@ def image_menu(  # noqa: C901
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
     else:
+        # For containers, use note from IMAGES
+        # For compositions/presets, use generic message
+        running_message = (
+            IMAGES[image.id].note
+            if image.id in IMAGES
+            else 'Container is running'
+        )
         messages = {
             DockerItemStatus.NOT_AVAILABLE: 'Need to fetch the image',
             DockerItemStatus.FETCHING: 'Image is being fetched',
             DockerItemStatus.AVAILABLE: 'Image is ready but container is not running',
             DockerItemStatus.CREATED: 'Container is created but not running',
-            DockerItemStatus.RUNNING: IMAGES[image.id].note or 'Container is running',
+            DockerItemStatus.RUNNING: running_message or 'Container is running',
             DockerItemStatus.ERROR: 'We have an error, please check the logs',
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
@@ -232,10 +230,16 @@ def image_menu(  # noqa: C901
 
 def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
     """Get the menu items for the Docker service."""
-    if image_id.startswith('composition_'):
-        create_task(check_composition(id=image_id))
-    else:
-        check_container(image_id=image_id)
+    # Don't check status during ongoing operations (FETCHING, PROCESSING)
+    # The operation itself manages the status
+    def menu_with_check(image: ImageState) -> HeadedMenu:
+        # Only check status if not in middle of an operation
+        if image.status not in (DockerItemStatus.FETCHING, DockerItemStatus.PROCESSING):
+            if image_id.startswith(('composition_', 'preset_')):
+                create_task(check_composition(id=image_id))
+            else:
+                check_container(image_id=image_id)
+        return image_menu(image)
 
     return store.autorun(
         lambda state: getattr(state.docker, image_id),
@@ -244,4 +248,54 @@ def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
             state.ip.interfaces if hasattr(state, 'ip') else None,
         ),
         options=AutorunOptions(default_value=None),
-    )(image_menu)
+    )(menu_with_check)
+
+
+def docker_preset_menu(preset_id: str) -> Callable[[], HeadedMenu]:
+    """Get menu for preset composition (for installation)."""
+    preset = PRESET_COMPOSITIONS.get(preset_id)
+    if not preset:
+        # Return empty menu if preset not found
+        return lambda: HeadedMenu(
+            title='Docker',
+            heading='Error',
+            sub_heading='Preset not found',
+            items=[],
+        )
+
+    composition_id = f'preset_{preset_id}'
+
+
+    def preset_menu_func(image: ImageState | None) -> HeadedMenu:
+        """Define a menu function that switches between install and normal menu."""
+        if image is not None:
+            # Composition is installed - show the normal menu
+            # Only check status if not in middle of an operation
+            if image.status not in (
+                DockerItemStatus.FETCHING,
+                DockerItemStatus.PROCESSING,
+            ):
+                create_task(check_composition(id=composition_id))
+            return image_menu(image)
+
+        # Not installed yet, show install option
+        return HeadedMenu(
+            title=f'Docker - {preset.label}',
+            heading=preset.label,
+            sub_heading='Not installed',
+            items=[
+                UboDispatchItem(
+                    label='Install',
+                    icon='󰇚',
+                    store_action=DockerPresetInstallAction(
+                        preset_id=preset_id,
+                    ),
+                ),
+            ],
+        )
+
+    # Watch the composition state and call preset_menu_func
+    return store.autorun(
+        lambda state: getattr(state.docker, composition_id, None),
+        options=AutorunOptions(default_value=None),
+    )(preset_menu_func)
