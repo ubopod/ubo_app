@@ -48,6 +48,9 @@ class UboSwitchService(AIService, Generic[T]):
     Allows switching between different pipecat services in the pipeline.
     """
 
+    # Subclasses must define this before calling parent __init__
+    _services: dict[str, T | None]
+
     def __init__(self, client: UboRPCClient, *, selector: str) -> None:
         """Initialize the ubo switch service."""
         self._reset_assistance()
