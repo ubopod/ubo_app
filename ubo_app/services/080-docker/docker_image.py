@@ -35,7 +35,7 @@ def get_full_image_path(image_id: str) -> str:
 
 
 @store.with_state(lambda state: state.docker.service.usernames)
-def fetch_image(
+def fetch_image(  # noqa: C901
     usernames: dict[str, str],
     event: DockerImageFetchEvent,
 ) -> None:
