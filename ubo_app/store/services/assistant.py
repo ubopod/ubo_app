@@ -314,3 +314,5 @@ class AssistantState(Immutable):
     )
     # JSON string for gRPC autorun - enabled servers with full metadata
     enabled_mcp_servers_with_metadata_json: str = '[]'
+    # Setup status for all provider engines - source of truth for UI
+    provider_setup_status: dict[str, bool] = field(default_factory=dict)

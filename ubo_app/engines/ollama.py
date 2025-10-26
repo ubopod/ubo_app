@@ -17,6 +17,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistantLLMName,
     AssistantSetSelectedModelAction,
+    AssistantUpdateProvidersAction,
 )
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
@@ -107,6 +108,10 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                 )
                 report_service_error()
             else:
+                logger.info(
+                    'Ollama model download complete, updating providers',
+                    extra={'model': model},
+                )
                 store.dispatch(
                     NotificationsAddAction(
                         notification=progress_notification(
@@ -118,6 +123,7 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                         ),
                     ),
                     AssistantSetSelectedModelAction(model=model),
+                    AssistantUpdateProvidersAction(),
                 )
             finally:
                 self.event.set()
