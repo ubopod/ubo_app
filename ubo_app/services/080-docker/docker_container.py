@@ -32,6 +32,9 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils.async_ import to_thread
 
+# Track which event monitors are already running to prevent duplicates
+_active_monitors: set[str] = set()
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
@@ -52,8 +55,17 @@ def find_container(client: docker.DockerClient, *, image: str) -> Container | No
 
         with contextlib.suppress(docker.errors.DockerException):
             container_image = container.image
-            if isinstance(container_image, Image) and image in container_image.tags:
-                return container
+            if isinstance(container_image, Image):
+                # Match with or without registry prefix
+                # Handles: docker.io/image:tag ↔ image:tag, ghcr.io/image ↔ image, etc.
+                matches = any(
+                    tag in image or image in tag
+                    for tag in container_image.tags
+                )
+
+                if matches:
+                    return container
+
     return None
 
 
@@ -118,7 +130,8 @@ async def run_container(
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=get_full_image_path(id))
+    path = get_full_image_path(id)
+    container = find_container(docker_client, image=path)
     if container:
         if container.status != 'running':
             container.start()
@@ -145,7 +158,8 @@ async def run_container(
                         NotificationsAddAction(
                             notification=Notification(
                                 title='Dependency error',
-                                content=f'Container "{value}" does not have an IP address',
+                                content=f'Container "{value}" does not \
+                                        have an IP address',
                                 importance=Importance.MEDIUM,
                             ),
                         ),
@@ -264,7 +278,7 @@ def _monitor_events(  # noqa: C901
     for event in events:
         logger.verbose('Docker image event', extra={'event': event})
         if event['Type'] == 'image':
-            if event['status'] == 'pull' and event['id'] == path:
+            if event['status'] == 'pull' and event['id'] in path:
                 try:
                     image = docker_client.images.get(path)
                     store.dispatch(
@@ -304,6 +318,11 @@ def _monitor_events(  # noqa: C901
                 container = find_container(docker_client, image=path)
                 if container:
                     update_container(image_id=image_id, container=container)
+                else:
+                    logger.warning(
+                        '_monitor_events: Container not found after start event',
+                        extra={'image_id': image_id, 'image_path': path},
+                    )
             elif event['status'] == 'die' and event['from'] == path:
                 store.dispatch(
                     DockerImageSetStatusAction(
@@ -375,10 +394,23 @@ def check_container(*, image_id: str) -> None:
         finally:
             docker_client.close()
 
-            @store.autorun(lambda state: getattr(state.docker, image_id).docker_id)
-            def get_docker_id(docker_id: str) -> str:
-                return docker_id
+            # Only start event monitor if not already running for this image
+            if image_id not in _active_monitors:
+                _active_monitors.add(image_id)
+                logger.debug(
+                    'Starting event monitor',
+                    extra={'image_id': image_id},
+                )
 
-            _monitor_events(image_id, get_docker_id)
+                @store.autorun(lambda state: getattr(state.docker, image_id).docker_id)
+                def get_docker_id(docker_id: str) -> str:
+                    return docker_id
+
+                _monitor_events(image_id, get_docker_id)
+            else:
+                logger.debug(
+                    'Event monitor already running, skipping',
+                    extra={'image_id': image_id},
+                )
 
     to_thread(act)
