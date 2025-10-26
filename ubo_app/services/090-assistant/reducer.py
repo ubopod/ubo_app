@@ -4,6 +4,12 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from engines_registry import (
+    IMAGE_GENERATOR_ENGINES,
+    LLM_ENGINES,
+    STT_ENGINES,
+    TTS_ENGINES,
+)
 from redux import CompleteReducerResult, InitializationActionError
 from redux.basic_types import InitAction
 
@@ -30,6 +36,7 @@ from ubo_app.store.services.assistant import (
     AssistantStopListeningAction,
     AssistantSyncMcpServersAction,
     AssistantToggleMcpServerAction,
+    AssistantUpdateProvidersAction,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingRainbowAction
 
@@ -81,6 +88,24 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 events=[AssistantDownloadOllamaModelEvent(model=action.model)],
+            )
+
+        case AssistantUpdateProvidersAction():
+            all_engines = {
+                **STT_ENGINES,
+                **TTS_ENGINES,
+                **LLM_ENGINES,
+                **IMAGE_GENERATOR_ENGINES,
+            }
+            # Build setup status dict - this is the source of truth
+            # Use getattr since not all engines have is_setup (only NeedsSetupMixin)
+            provider_setup_status = {
+                engine.name: getattr(engine, 'is_setup', True)
+                for engine in all_engines.values()
+            }
+            return replace(
+                state,
+                provider_setup_status=provider_setup_status,
             )
 
         case AssistantReportAction():
