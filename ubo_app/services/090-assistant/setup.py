@@ -56,7 +56,7 @@ from ubo_app.store.services.assistant import (
     AssistantSTTName,
     AssistantSyncMcpServersAction,
     AssistantTTSName,
-    AssistantUpdateProvidersEvent,
+    AssistantUpdateProvidersAction,
     McpServerMetadata,
     McpServerType,
 )
@@ -293,12 +293,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         }
 
     @store.autorun(
-        lambda _: (
-            SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
+        lambda state: (
+            SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0,
+            state.assistant.provider_setup_status,
         ),
         options=AutorunOptions(memoization=False),
     )
-    def providers(_: float) -> Sequence[Item]:
+    def providers(_: tuple[float, dict[str, bool]]) -> Sequence[Item]:
         """Return items for recognition engine selection."""
         providers = sorted(
             {
@@ -340,14 +341,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         lambda state: (
             state.assistant.selected_stt,
             SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0,
+            state.assistant.provider_setup_status,
         ),
         options=AutorunOptions(memoization=False),
     )
     def stt_providers(
-        selected_and_secrets: tuple[AssistantSTTName, float],
+        selected_and_data: tuple[AssistantSTTName, float, dict[str, bool]],
     ) -> Sequence[Item]:
         """Return items for recognition engine selection."""
-        selected_stt, _ = selected_and_secrets
+        selected_stt, _, _ = selected_and_data
         return [
             ActionItem(
                 key=engine.name,
@@ -380,15 +382,22 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
     @store.autorun(
         lambda state: (
             state.assistant.selected_llm,
+            state.assistant.selected_models,
             SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0,
+            state.assistant.provider_setup_status,
         ),
         options=AutorunOptions(memoization=False),
     )
     def llm_providers(
-        selected_and_secrets: tuple[AssistantLLMName, float],
+        selected_llm_model_data: tuple[
+            AssistantLLMName,
+            dict[AssistantLLMName, str],
+            float,
+            dict[str, bool],
+        ],
     ) -> Sequence[Item]:
         """Return items for LLM engine selection."""
-        selected_llm, _ = selected_and_secrets
+        selected_llm, _, _, _ = selected_llm_model_data
         return [
             ActionItem(
                 key=engine.name,
@@ -422,14 +431,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         lambda state: (
             state.assistant.selected_tts,
             SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0,
+            state.assistant.provider_setup_status,
         ),
         options=AutorunOptions(memoization=False),
     )
     def tts_providers(
-        selected_and_secrets: tuple[AssistantTTSName, float],
+        selected_and_data: tuple[AssistantTTSName, float, dict[str, bool]],
     ) -> Sequence[Item]:
         """Return items for TTS engine selection."""
-        selected_tts, _ = selected_and_secrets
+        selected_tts, _, _ = selected_and_data
         return [
             ActionItem(
                 key=engine.name,
@@ -463,14 +473,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         lambda state: (
             state.assistant.selected_image_generator,
             SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0,
+            state.assistant.provider_setup_status,
         ),
         options=AutorunOptions(memoization=False),
     )
     def image_generator_providers(
-        selected_and_secrets: tuple[AssistantImageGeneratorName, float],
+        selected_and_data: tuple[AssistantImageGeneratorName, float, dict[str, bool]],
     ) -> Sequence[Item]:
         """Return items for image generator engine selection."""
-        selected_image_generator, _ = selected_and_secrets
+        selected_image_generator, _, _ = selected_and_data
         return [
             ActionItem(
                 key=engine.name,
@@ -753,13 +764,8 @@ async def init_service() -> None:
     )
 
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
-    store.subscribe_event(AssistantUpdateProvidersEvent, providers)
-    store.subscribe_event(AssistantUpdateProvidersEvent, stt_providers)
-    store.subscribe_event(AssistantUpdateProvidersEvent, llm_providers)
-    store.subscribe_event(AssistantUpdateProvidersEvent, tts_providers)
-    store.subscribe_event(AssistantUpdateProvidersEvent, image_generator_providers)
     store.subscribe_event(AssistantAddMcpServerEvent, handle_add_mcp_server)
     store.subscribe_event(AssistantDeleteMcpServerEvent, handle_delete_mcp_server)
 
-    # Initial sync of MCP servers from filesystem
+    store.dispatch(AssistantUpdateProvidersAction())
     store.dispatch(AssistantSyncMcpServersAction())

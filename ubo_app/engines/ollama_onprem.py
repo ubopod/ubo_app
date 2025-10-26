@@ -29,6 +29,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistantLLMName,
     AssistantSetSelectedModelAction,
+    AssistantUpdateProvidersAction,
 )
 from ubo_app.store.services.notifications import (
     Notification,
@@ -144,6 +145,10 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                 )
                 report_service_error()
             else:
+                logger.info(
+                    'Ollama on-prem model download complete, updating providers',
+                    extra={'model': model, 'url': url},
+                )
                 store.dispatch(
                     NotificationsAddAction(
                         notification=progress_notification(
@@ -158,6 +163,7 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                         ),
                     ),
                     AssistantSetSelectedModelAction(model=model),
+                    AssistantUpdateProvidersAction(),
                 )
             finally:
                 self.event.set()
