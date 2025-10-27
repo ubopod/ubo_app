@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from docker_composition import check_composition
+from docker_composition import COMPOSITIONS_PATH, check_composition
 from docker_container import check_container
 from docker_images import IMAGES
 from docker_presets import PRESET_COMPOSITIONS
@@ -268,7 +268,10 @@ def docker_preset_menu(preset_id: str) -> Callable[[], HeadedMenu]:
 
     def preset_menu_func(image: ImageState | None) -> HeadedMenu:
         """Define a menu function that switches between install and normal menu."""
-        if image is not None:
+        # Check if composition directory actually exists
+        composition_path = COMPOSITIONS_PATH / composition_id
+
+        if image is not None and composition_path.exists():
             # Composition is installed - show the normal menu
             # Only check status if not in middle of an operation
             if image.status not in (
