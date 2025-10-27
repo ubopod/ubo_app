@@ -186,6 +186,10 @@ class AssistantStopListeningAction(AssistantAction):
     """Action to stop listening for the assistant."""
 
 
+class AssistantToggleListeningAction(AssistantAction):
+    """Action to toggle listening state for the assistant."""
+
+
 class AssistantUpdateProvidersAction(AssistantAction):
     """Action to signal change in the state of available providers."""
 

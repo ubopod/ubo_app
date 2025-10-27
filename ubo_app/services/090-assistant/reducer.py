@@ -35,6 +35,7 @@ from ubo_app.store.services.assistant import (
     AssistantState,
     AssistantStopListeningAction,
     AssistantSyncMcpServersAction,
+    AssistantToggleListeningAction,
     AssistantToggleMcpServerAction,
     AssistantUpdateProvidersAction,
 )
@@ -161,6 +162,35 @@ def reducer(
             return CompleteReducerResult(
                 state=state(is_listening=False),
                 actions=[RgbRingBlankAction()],
+            )
+
+        case AssistantToggleListeningAction():
+            if state.is_listening:
+                # Currently listening, stop it
+                return CompleteReducerResult(
+                    state=state(is_listening=False),
+                    actions=[RgbRingBlankAction()],
+                )
+            # Not listening, start it (with mute check)
+            if state.is_microphone_mute:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        NotificationsAddAction(
+                            notification=Notification(
+                                title='Microphone Muted',
+                                content='Microphone is mute. Unmute to speak.',
+                                importance=Importance.HIGH,
+                                icon='󰍭',
+                                display_type=NotificationDisplayType.STICKY,
+                                chime=Chime.FAILURE,
+                            ),
+                        ),
+                    ],
+                )
+            return CompleteReducerResult(
+                state=state(is_listening=True),
+                actions=[RgbRingRainbowAction(rounds=0, wait=800)],
             )
 
         case AssistantAddMcpServerAction():
