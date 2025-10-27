@@ -3,13 +3,26 @@
   "_type": "RootState",
   "assistant": {
     "_type": "AssistantState",
-    "enabled_mcp_servers": {
-      "_type": "set",
-      "value": []
-    },
+    "enabled_mcp_servers": [],
+    "enabled_mcp_servers_with_metadata_json": "[]",
     "is_active": false,
     "is_listening": false,
     "mcp_servers": {},
+    "provider_setup_status": {
+      "assemblyai": false,
+      "cerebras": false,
+      "deepgram": false,
+      "elevenlabs": false,
+      "google": false,
+      "google_cloud": false,
+      "grok": false,
+      "ollama": false,
+      "ollama_onprem": false,
+      "openai": false,
+      "piper": false,
+      "rime": false,
+      "vosk": false
+    },
     "selected_image_generator": "google",
     "selected_llm": "ollama",
     "selected_models": {
@@ -17,6 +30,7 @@
       "google_vertex": "gemini-2.5-flash-preview-05-20",
       "grok": "grok-4-0709",
       "ollama": "gemma3:1b",
+      "ollama_onprem": "granite3.3:8b",
       "openai": "gpt-4o"
     },
     "selected_stt": "vosk",
@@ -122,6 +136,16 @@
       "id": "portainer",
       "instructions": null,
       "label": "Portainer",
+      "ports": [],
+      "status": "not_available"
+    },
+    "preset_immich": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "preset_immich",
+      "instructions": "Immich is installed and running!\n\nAccess the web interface at:\nhttp://{{hostname}}:2283\n\nOn first visit, create an admin account to start uploading your photos and videos.\n\nDefault locations:\n- Upload directory: ./library\n- Database directory: ./postgres\n\nThe database credentials have been automatically generated and stored securely.",
+      "label": "Immich",
       "ports": [],
       "status": "not_available"
     },
@@ -359,6 +383,23 @@
                       "is_short": false,
                       "key": "docker:portainer",
                       "label": "Portainer",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<functools.partial:<function:docker_preset_menu>>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "",
+                      "is_short": false,
+                      "key": "docker:preset_immich",
+                      "label": "Immich",
                       "opacity": null,
                       "progress": null
                     },
@@ -6537,6 +6578,18 @@
                                   "color": "#FFC107",
                                   "icon": "",
                                   "is_short": false,
+                                  "key": "ollama_onprem",
+                                  "label": "Ollama (On-Prem)",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": "#FFC107",
+                                  "icon": "",
+                                  "is_short": false,
                                   "key": "google_cloud",
                                   "label": "Google Vertex",
                                   "opacity": null,
@@ -6946,6 +6999,23 @@
                                   "is_short": false,
                                   "key": "grok",
                                   "label": "Grok",
+                                  "opacity": null,
+                                  "progress": null
+                                },
+                                {
+                                  "_type": "ActionItem",
+                                  "action": "<function:setup>",
+                                  "background_color": "#000000",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "",
+                                  "is_short": false,
+                                  "key": "ollama_onprem",
+                                  "label": "Ollama (On-Prem)",
                                   "opacity": null,
                                   "progress": null
                                 },
