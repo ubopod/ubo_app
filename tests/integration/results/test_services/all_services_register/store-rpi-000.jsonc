@@ -7,6 +7,7 @@
     "enabled_mcp_servers_with_metadata_json": "[]",
     "is_active": false,
     "is_listening": false,
+    "is_microphone_mute": true,
     "mcp_servers": {},
     "provider_setup_status": {
       "assemblyai": false,

@@ -38,11 +38,24 @@ from ubo_app.store.services.assistant import (
     AssistantToggleMcpServerAction,
     AssistantUpdateProvidersAction,
 )
+from ubo_app.store.services.audio import (
+    AudioAction,
+    AudioDevice,
+    AudioSetMuteStatusAction,
+)
+from ubo_app.store.services.notifications import (
+    Chime,
+    Importance,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
 from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingRainbowAction
 
 if TYPE_CHECKING:
     from redux import ReducerResult
 
+    from ubo_app.store.services.notifications import NotificationsAction
     from ubo_app.store.services.rgb_ring import RgbRingAction
 
 # MCP server_id format: name_uuid (2 parts when split by last underscore)
@@ -51,8 +64,8 @@ _MCP_SERVER_ID_PARTS = 2
 
 def reducer(
     state: AssistantState | None,
-    action: AssistantAction,
-) -> ReducerResult[AssistantState, RgbRingAction, AssistantEvent]:
+    action: AssistantAction | AudioAction,
+) -> ReducerResult[AssistantState, RgbRingAction | NotificationsAction, AssistantEvent]:
     if state is None:
         if isinstance(action, InitAction):
             return AssistantState()
@@ -119,7 +132,26 @@ def reducer(
                 ],
             )
 
+        case AudioSetMuteStatusAction(device=AudioDevice.INPUT):
+            return replace(state, is_microphone_mute=action.is_mute)
+
         case AssistantStartListeningAction():
+            if state.is_microphone_mute:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[
+                        NotificationsAddAction(
+                            notification=Notification(
+                                title='Microphone Muted',
+                                content='Microphone is mute. Unmute to speak.',
+                                importance=Importance.HIGH,
+                                icon='󰍭',
+                                display_type=NotificationDisplayType.STICKY,
+                                chime=Chime.FAILURE,
+                            ),
+                        ),
+                    ],
+                )
             return CompleteReducerResult(
                 state=state(is_listening=True),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],

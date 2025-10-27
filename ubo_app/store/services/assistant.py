@@ -253,6 +253,7 @@ class AssistantState(Immutable):
     """State for the assistant service."""
 
     is_listening: bool = False
+    is_microphone_mute: bool = False
     is_active: bool = field(
         default=read_from_persistent_store(
             'assistant:is_active',
