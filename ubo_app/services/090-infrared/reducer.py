@@ -13,6 +13,7 @@ from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantStopListeningAction,
+    AssistantToggleListeningAction,
 )
 from ubo_app.store.services.infrared import (
     InfraredAction,
@@ -62,6 +63,7 @@ INFRARED_CODES_TO_KEY: dict[tuple[str, str], tuple[KeyActionType, Key]] = {
 ASSISTANT_IR_CODES = {
     ('necx', '0xbf04'): AssistantStartListeningAction,
     ('necx', '0xbf06'): AssistantStopListeningAction,
+    ('nec', '0xa01b'): AssistantToggleListeningAction,
 }
 
 
