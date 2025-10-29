@@ -157,16 +157,15 @@ async def stop_docker() -> None:
     await send_command('docker', 'stop')
 
 
-async def check_docker() -> None:
-    """Check if Docker is installed."""
+async def sync_docker_containers() -> None:
+    """Sync container states from Docker daemon."""
     from docker_container import update_container
 
-    is_installed = await is_package_installed('docker')
-
-    is_running = False
     with contextlib.suppress(Exception):
         docker_client = docker.from_env()
-        is_running = docker_client.ping()
+        if not docker_client.ping():
+            docker_client.close()
+            return
 
         for container in docker_client.containers.list(all=True):
             if not isinstance(container, Container):
@@ -183,8 +182,20 @@ async def check_docker() -> None:
 
         docker_client.close()
 
+
+async def check_docker() -> None:
+    """Check if Docker is installed and set status."""
+    is_installed = await is_package_installed('docker')
+
+    is_running = False
+    with contextlib.suppress(Exception):
+        docker_client = docker.from_env()
+        is_running = docker_client.ping()
+        docker_client.close()
+
     if is_running:
         store.dispatch(DockerSetStatusAction(status=DockerStatus.RUNNING))
+        await sync_docker_containers()
     elif is_installed:
         store.dispatch(DockerSetStatusAction(status=DockerStatus.NOT_RUNNING))
     else:
@@ -697,16 +708,25 @@ def init_service() -> Subscriptions:
         ),
     ]
 
+    async def handle_docker_status(status: str) -> None:
+        """Handle Docker status changes from systemd."""
+        is_running = status in ('active', 'activating', 'reloading')
+        store.dispatch(
+            DockerSetStatusAction(
+                status=DockerStatus.RUNNING if is_running else DockerStatus.NOT_RUNNING,
+            ),
+        )
+        if is_running:
+            await sync_docker_containers()
+
+    def docker_status_callback(status: str) -> None:
+        """Run task for Docker status changes."""
+        create_task(handle_docker_status(status))
+
     create_task(
         monitor_unit(
             'docker.socket',
-            lambda status: store.dispatch(
-                DockerSetStatusAction(
-                    status=DockerStatus.RUNNING
-                    if status in ('active', 'activating', 'reloading')
-                    else DockerStatus.NOT_RUNNING,
-                ),
-            ),
+            docker_status_callback,
         ),
     )
 
