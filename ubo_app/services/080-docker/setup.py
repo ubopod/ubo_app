@@ -628,7 +628,7 @@ def _load_images() -> None:
     )
 
 
-def init_service() -> Subscriptions:
+async def init_service() -> Subscriptions:
     """Initialize the service."""
     register_persistent_store(
         'docker_usernames',
@@ -714,13 +714,13 @@ def init_service() -> Subscriptions:
         """Run task for Docker status changes."""
         create_task(handle_docker_status(status))
 
+    _load_images()
+    await check_docker()
     create_task(
         monitor_unit(
             'docker.socket',
             docker_status_callback,
         ),
     )
-
-    _load_images()
 
     return subscriptions

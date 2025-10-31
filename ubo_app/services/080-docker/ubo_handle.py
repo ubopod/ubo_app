@@ -9,14 +9,14 @@ if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
 
 
-def setup(register_reducer: ReducerRegistrar) -> Subscriptions:
+async def setup(register_reducer: ReducerRegistrar) -> Subscriptions:
     from reducer import reducer
 
     register_reducer(reducer)
 
     from setup import init_service
 
-    return init_service()
+    return await init_service()
 
 
 register(
