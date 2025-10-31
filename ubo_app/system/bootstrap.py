@@ -164,10 +164,10 @@ def daemon_reload() -> None:
     )
 
 
-def configure_device() -> None:
+def configure_device() -> None:  # noqa: C901
     """Configure the device."""
-    # Add the GPIO fan overlay, SPI0 CS overlay, and GPIO IR TX/RX overlays to the
-    # config.txt file
+    # Add the GPIO fan overlay, SPI0 CS overlay, GPIO IR TX/RX overlays, and PCIe
+    # configuration to the config.txt file
     current_content = Path('/boot/firmware/config.txt').read_text()
     with Path('/boot/firmware/config.txt').open('a') as config_file:
         if 'dtoverlay=gpio-fan,gpiopin=22,temp=60000' not in current_content:
@@ -184,6 +184,12 @@ def configure_device() -> None:
 
         if 'dtoverlay=gpio-ir,gpio_pin=24' not in current_content:
             config_file.write('dtoverlay=gpio-ir,gpio_pin=24\n')
+
+        if 'dtparam=pciex1' not in current_content:
+            config_file.write('dtparam=pciex1\n')
+
+        if 'dtparam=pciex1_gen=3' not in current_content:
+            config_file.write('dtparam=pciex1_gen=3\n')
 
     # Remove the banner from the SSH config
     try:
