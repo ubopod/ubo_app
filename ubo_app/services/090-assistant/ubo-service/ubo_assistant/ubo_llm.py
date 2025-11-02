@@ -106,7 +106,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
 
         try:
             return OpenAILLMService(
-                model='gpt-3.5-turbo',
+                model='gpt-4o-mini',  # Vision-capable model for image_url support
                 api_key=self._config.openai_api_key,
             )
         except Exception:
