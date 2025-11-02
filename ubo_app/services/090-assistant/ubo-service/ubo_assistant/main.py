@@ -4,7 +4,6 @@
 
 import asyncio
 import os
-from typing import TYPE_CHECKING
 
 from loguru import logger
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
@@ -14,7 +13,13 @@ from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.processors.aggregators.llm_context import (
+    LLMContext,
+    LLMContextMessage,
+)
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+)
 from pipecat.processors.consumer_processor import ConsumerProcessor
 from pipecat.processors.producer_processor import ProducerProcessor
 from pipecat.transports.base_transport import TransportParams
@@ -28,9 +33,6 @@ from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
 from ubo_assistant.ubo_output_transport import UboOutputTransport
 from ubo_assistant.ubo_stt import UboSTTService
 from ubo_assistant.ubo_tts import UboTTSService
-
-if TYPE_CHECKING:
-    from openai.types.chat import ChatCompletionMessageParam
 
 
 class Assistant:
@@ -134,29 +136,35 @@ class Assistant:
             selector='state.assistant.selected_llm',
         )
 
-        messages: list[ChatCompletionMessageParam] = [{
+        messages: list[LLMContextMessage] = [{
             'role': 'system',
             'content': DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE,
         }]
 
         tools = ToolsSchema(standard_tools=[])
-        context = OpenAILLMContext(messages, tools)
-        context_aggregator = ubo_llm_service.create_context_aggregator(context)
+        context = LLMContext(messages, tools)
+        context_aggregator = LLMContextAggregatorPair(context)
 
         async def g() -> None:
             while True:
                 await asyncio.sleep(10)
-                if len(context.messages) > 10:  # noqa: PLR2004
-                    print('...trimmed messages')  # noqa: T201
-                for message in context.messages[-10:]:
-                    print('-', str(message)[:300])  # noqa: T201
-                # Print current tools from context
-                if context.tools:
-                    print('=== Current Tools in Context ===')  # noqa: T201
-                    for tool in context.tools:
-                        print(f'Tool: {tool}')  # noqa: T201
+                messages_list = context.get_messages()
+                if len(messages_list) > 10:  # noqa: PLR2004
+                    logger.debug('...trimmed messages')
+                for message in messages_list[-10:]:
+                    logger.debug('Message: {extra}',
+                                 extra={'mesg:': str(message)[:300]},
+                                )
+                # Log current tools from context
+                tools_schema = context.tools
+                if tools_schema and hasattr(tools_schema, 'standard_tools'):
+                    tool_names = [tool.name for tool in tools_schema.standard_tools]
+                    logger.debug(
+                        'Current tools in context {extra}',
+                        extra={'tool_count': len(tool_names), 'tools': tool_names},
+                    )
                 else:
-                    print('=== No tools currently in context ===')  # noqa: T201
+                    logger.debug('No tools currently in context')
 
         self.client.event_loop.create_task(g())
 
