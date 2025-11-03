@@ -101,7 +101,7 @@ class UboInputTransport(BaseInputTransport):
                                 qr_code_input_description=QrCodeInputDescription(
                                     pattern=None,
                                     title='Assistant Vision',
-                                    prompt=f'For prompt: {frame.context}',
+                                    prompt=f'For prompt: {frame.text}',
                                 ),
                             ),
                         ),
@@ -118,7 +118,8 @@ class UboInputTransport(BaseInputTransport):
 
             image_frame = UserImageRawFrame(
                 user_id='-',
-                request=frame,
+                text=frame.text,
+                append_to_context=frame.append_to_context,
                 image=last_reported_image.data.tobytes(),
                 size=(w, h),
                 format='RGB',
