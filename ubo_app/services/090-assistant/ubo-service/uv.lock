@@ -1392,7 +1392,7 @@ wheels = [
 
 [[package]]
 name = "pipecat-ai"
-version = "0.0.90"
+version = "0.0.92"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },

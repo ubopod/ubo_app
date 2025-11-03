@@ -10,6 +10,7 @@ from pipecat.frames.frames import (
     LLMFullResponseStartFrame,
     LLMTextFrame,
     OutputImageRawFrame,
+    UserImageRequestFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.cerebras.llm import CerebrasLLMService
@@ -90,7 +91,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             project_id = json.loads(self._config.google_credentials).get('project_id')
             return GoogleVertexLLMService(
                 credentials=self._config.google_credentials,
-                params=GoogleVertexLLMService.InputParams(project_id=project_id),
+                project_id=project_id,
             )
         except Exception as exception:
             logger.exception(
@@ -221,12 +222,14 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         """Get an image from the video stream based on a question."""
         prompt = params.arguments['prompt']
         source = params.arguments['source']
-        await params.llm.request_image_frame(
-            user_id='-',
-            video_source=source,
-            function_name=params.function_name,
-            tool_call_id=params.tool_call_id,
-            text_content=prompt,
+        await params.llm.push_frame(
+            UserImageRequestFrame(
+                user_id='-',
+                text=prompt,
+                video_source=source,
+                append_to_context=True,
+            ),
+            FrameDirection.UPSTREAM,
         )
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
