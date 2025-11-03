@@ -8,8 +8,10 @@ import uuid
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
+from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.notifications import (
@@ -49,6 +51,10 @@ from sdbus_async.networkmanager.enums import DeviceType
 RETRIES = 3
 
 T = TypeVar('T')
+
+
+class WiFiDeviceNotAvailableError(Exception):
+    """Exception raised when WiFi device is not yet available."""
 
 
 def wait_for(task: _FutureLike[T]) -> Coroutine[Any, Any, T]:
@@ -220,6 +226,52 @@ async def get_saved_ssids() -> list[str]:
     ]
 
 
+async def wait_for_device_available(
+    wifi_device: NetworkDeviceWireless,
+) -> None:
+    """Wait for WiFi device to become available.
+
+    After enabling wireless, the device may be in UNAVAILABLE or UNMANAGED state.
+    This function polls the device state until it becomes ready for connections.
+
+    Args:
+    ----
+        wifi_device: The WiFi device to check
+
+    Raises:
+    ------
+        WiFiDeviceNotAvailableError: If device does not become available after retries
+
+    """
+    from ubo_app.logger import logger
+
+    async for attempt in AsyncRetrying(
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(1),
+        reraise=True,
+    ):
+        with attempt:
+            state = await wifi_device.state
+            if state in (
+                DeviceState.UNAVAILABLE,
+                DeviceState.UNMANAGED,
+                DeviceState.UNKNOWN,
+            ):
+                logger.debug(
+                    'Waiting for WiFi device to become available',
+                    extra={
+                        'state': state,
+                        'attempt': attempt.retry_state.attempt_number,
+                    },
+                )
+                raise WiFiDeviceNotAvailableError
+
+            logger.debug(
+                'WiFi device became available',
+                extra={'state': state, 'attempt': attempt.retry_state.attempt_number},
+            )
+
+
 async def add_wireless_connection(
     ssid: str,
     password: str,
@@ -232,8 +284,16 @@ async def add_wireless_connection(
 
     wifi_device = await get_wifi_device()
     if not wifi_device:
+        logger.error('WiFi device not found')
         return
 
+    # Wait for device to become available after enabling wireless
+    try:
+        await wait_for_device_available(wifi_device)
+    except WiFiDeviceNotAvailableError:
+        logger.warning(
+            'WiFi device did not become available, connection may fail',
+        )
     access_points = [
         (
             access_point,
@@ -269,7 +329,6 @@ async def add_wireless_connection(
             'auth-alg': ('s', 'open'),
             'psk': ('s', password),
         }
-    from ubo_app.logger import logger
 
     properties: NetworkManagerConnectionProperties = {
         'connection': {
