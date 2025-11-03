@@ -15,15 +15,14 @@ from pipecat.frames.frames import (
     StopFrame,
     SystemFrame,
 )
+from pipecat.processors.aggregators.llm_context import NOT_GIVEN
 from pipecat.processors.frame_processor import (
     FrameDirection,
     FrameProcessor,
     FrameProcessorSetup,
 )
 from pipecat.services.ai_service import AIService
-from pipecat.services.cerebras.llm import CerebrasLLMService
 from pipecat.services.llm_service import LLMService
-from pipecat.services.ollama.llm import OLLamaLLMService
 from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
 from ubo_bindings.ubo.v1 import (
@@ -63,6 +62,7 @@ class UboSwitchService(AIService, Generic[T]):
         for service in self.services.values():
             service.push_frame = self.push_frame
         self.selected_service: T | None = None
+        self._current_service_id: str | None = None
 
     def _reset_assistance(self) -> None:
         self._assistance_id = uuid.uuid4().hex
@@ -91,10 +91,19 @@ class UboSwitchService(AIService, Generic[T]):
             return
         self._started = True
 
+        # Autorun is called immediately with initial state value,
+        # then again on changes. This handles all service types:
+        # STT, LLM, TTS, and Image Generator
         @self.client.autorun([self._store_selector])
-        def handle_stt_service_change(data: list[StringValue]) -> None:
-            selected_stt = data[0].value
-            self.create_task(self.set_selected_service(selected_stt))
+        def handle_service_change(data: list[StringValue]) -> None:
+            selected_service_id = data[0].value
+            logger.info('Service selection changed via autorun {extra}',
+                extra={
+                    'service_id': selected_service_id,
+                    'selector': self._store_selector,
+                },
+            )
+            self.create_task(self.set_selected_service(selected_service_id))
 
         # Only LLM services need to react to MCP server state changes
         if isinstance(self, LLMService):
@@ -142,8 +151,13 @@ class UboSwitchService(AIService, Generic[T]):
                     self._mcp_servers_data = mcp_servers_dict
                     self._enabled_mcp_servers = enabled_servers_set
 
-                    # Schedule async tool update
-                    self.create_task(self._update_llm_tools())
+                    # Schedule async tool update with current service ID
+                    if self._current_service_id:
+                        self.create_task(
+                            self._update_llm_tools(
+                                service_id=self._current_service_id,
+                                ),
+                        )
 
                 except Exception:
                     logger.exception('Error handling MCP servers state change')
@@ -233,26 +247,77 @@ class UboSwitchService(AIService, Generic[T]):
         )
         return combined_tools
 
-    async def _update_llm_tools(self) -> None:
-        """Update LLM tools when MCP servers change."""
+    def _check_tools_support(self, service_id: str | None) -> bool:
+        """Check if the given service supports tools.
+
+        Args:
+            service_id: Service identifier ('ollama', 'ollama_onprem', etc.)
+
+        Returns:
+            True if tools are supported, False otherwise
+
+        """
+        # Cerebras does not supports tools (known limitation with JSON schema)
+        # Ollama and Ollama OnPrem do not support tools
+        if service_id in ['cerebras', 'ollama', 'ollama_onprem']:
+            logger.info('{extra} does not support tools',
+                        extra={'service_id': service_id},
+                        )
+            return False
+        # All other services (OpenAI, Google Vertex, Grok) support tools by default
+        return True
+
+    async def _update_llm_tools(
+        self,
+        *,
+        service_id: str,
+    ) -> None:
+        """Update LLM tools and optionally messages.
+
+        Args:
+            service_id: Service ID to check tool support for
+
+        """
         if self.selected_service is None:
             return
         if not isinstance(self.selected_service, LLMService):
             return
-        combined_tools = await self._get_combined_tools(
-            self.selected_service,
-            mcp_enabled=True,
+
+        tools_supported = self._check_tools_support(service_id)
+
+        if tools_supported:
+            logger.info('Registering tools for: {extra}',
+                extra={'service': self.selected_service},
+            )
+            combined_tools = await self._get_combined_tools(
+                self.selected_service,
+                mcp_enabled=True,
+            )
+            system_message = DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE
+            tool_count = len(combined_tools.standard_tools)
+        else:
+            logger.info('Not registering tools for: {extra}',
+                extra={'service': self.selected_service},
+            )
+            combined_tools = NOT_GIVEN
+            system_message = DEFAULT_SYSTEM_MESSAGE
+            tool_count = 0
+
+        await self.selected_service.queue_frame(
+            LLMMessagesUpdateFrame(
+                messages=[{'role': 'system', 'content': system_message}],
+            ),
         )
-        logger.info(
-            'Queuing LLMSetToolsFrame after MCP update',
-            extra={'tool_count': len(combined_tools.standard_tools)},
-        )
+
         await self.selected_service.queue_frame(
             LLMSetToolsFrame(tools=combined_tools),
         )
         logger.info(
             'Updated LLM tools',
-            extra={'tool_count': len(combined_tools.standard_tools)},
+            extra={
+                'tools_supported': tools_supported,
+                'tool_count': tool_count,
+            },
         )
 
     async def set_selected_service(self, id: str) -> None:
@@ -277,44 +342,14 @@ class UboSwitchService(AIService, Generic[T]):
             },
         )
         if newly_selected_service and self._start_frame:
+            # Set selected_service so _update_llm_tools can queue frames
+            self.selected_service = newly_selected_service
+
             try:
                 await newly_selected_service.queue_frame(self._start_frame)
                 if isinstance(newly_selected_service, LLMService):
-                    if isinstance(newly_selected_service,
-                                    (OLLamaLLMService,
-                                    CerebrasLLMService,
-                                    ),
-                                ):
-                        new_messages = [
-                            {'role': 'system', 'content': DEFAULT_SYSTEM_MESSAGE },
-                        ]
-                        combined_tools = []
-                        logger.info('Not registering tools for: {extra}',
-                            extra={
-                                'service': newly_selected_service,
-                            },
-                        )
-                    else:
-                        logger.info('Registering tools for: {extra}',
-                            extra={
-                                'service': newly_selected_service,
-                            },
-                        )
-                        new_messages = [
-                            {'role': 'system',
-                            'content': DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE },
-                        ]
-                        # Load tools (standard + MCP if enabled)
-                        combined_tools = await self._get_combined_tools(
-                            newly_selected_service,
-                            mcp_enabled=True,
-                        )
-                    await newly_selected_service.queue_frame(
-                        LLMMessagesUpdateFrame(messages=new_messages),
-                    )
-                    await newly_selected_service.queue_frame(
-                        LLMSetToolsFrame(tools=combined_tools),
-                    )
+                    # Update tools and messages for LLM service
+                    await self._update_llm_tools(service_id=id)
 
                 # Add a small delay for STT and TTS services
                 # to establish WebSocket connections.
@@ -339,8 +374,14 @@ class UboSwitchService(AIService, Generic[T]):
                     },
                 )
                 # Don't set the service if starting failed
+                self.selected_service = None
+                self._current_service_id = None
                 return
-        self.selected_service = newly_selected_service
+        else:
+            self.selected_service = newly_selected_service
+
+        # Track the service ID for MCP updates
+        self._current_service_id = id
         logger.info('Selected: {extra}',
             extra={
                 'selected_service': self.selected_service,
