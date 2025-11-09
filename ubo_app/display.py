@@ -9,6 +9,7 @@ import numpy as np
 from adafruit_rgb_display.st7789 import ST7789
 from fake import Fake
 
+from ubo_app.logger import logger
 from ubo_app.store.services.display import (
     DisplayCompressedRenderEvent,
     DisplayRenderEvent,
@@ -42,6 +43,7 @@ class Display:
                 eeprom_data['lcd'] is not None
                 and eeprom_data['lcd']['model'] == 'st7789'
             ):
+                logger.debug('LCD display found.')
                 import board
                 import digitalio
 
@@ -59,6 +61,7 @@ class Display:
                     baudrate=DISPLAY_BAUDRATE,
                 )
         else:
+            logger.debug('No physical display found.')
             self.display = cast('ST7789', Fake())
 
     def turn_off(self: Display) -> None:

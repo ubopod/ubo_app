@@ -183,6 +183,7 @@ def get_eeprom_data() -> EepromData:
         return EMPTY_EEPROM_DATA
     else:
         if 'serial_number' not in data or 'version' not in data:
+            logger.debug('Invalid EEPROM data')
             return EMPTY_EEPROM_DATA
         eeprom_data: EepromData = data
         return {**EMPTY_EEPROM_DATA, **eeprom_data}
