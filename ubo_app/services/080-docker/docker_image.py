@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import docker
 import docker.errors
+from calculate_progress import LayerProgressTracker
 from docker_images import IMAGES
 
 from ubo_app.colors import DANGER_COLOR
@@ -25,6 +28,26 @@ from ubo_app.store.services.notifications import (
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import to_thread
 
+# Notification IDs for progress tracking
+DOCKER_FETCH_PROGRESS_NOTIFICATION_ID = 'docker:fetch_progress:{}'
+
+
+def _create_fetch_progress_notification(
+    image_id: str,
+    content: str = 'Starting download...',
+    progress: float | None = 0.0,
+) -> Notification:
+    """Create a fetch progress notification for an image."""
+    return Notification(
+        id=DOCKER_FETCH_PROGRESS_NOTIFICATION_ID.format(image_id),
+        title=f'{IMAGES[image_id].label}',
+        content=content,
+        display_type=NotificationDisplayType.BACKGROUND,
+        icon=IMAGES[image_id].icon,
+        show_dismiss_action=False,
+        progress=progress,
+    )
+
 
 def get_full_image_path(image_id: str) -> str:
     """Get full image path including registry if specified."""
@@ -43,12 +66,18 @@ def fetch_image(  # noqa: C901
     id = event.image
 
     def act() -> None:
+        # Create base notification
+        base_notification = _create_fetch_progress_notification(id)
+
+        # Dispatch initial status and notification
         store.dispatch(
             DockerImageSetStatusAction(
                 image=id,
                 status=DockerItemStatus.FETCHING,
             ),
+            NotificationsAddAction(notification=base_notification),
         )
+
         try:
             # Construct full image path with registry if specified
             image_entry = IMAGES[id]
@@ -71,7 +100,7 @@ def fetch_image(  # noqa: C901
                         registry=registry,
                     )
 
-            # Pull the image with progress logging
+            # Pull the image with progress tracking
             logger.info(
                 'Starting image pull',
                 extra={'full_path': full_image_path, 'image': id},
@@ -82,34 +111,47 @@ def fetch_image(  # noqa: C901
                 decode=True,
             )
 
-            # Log progress updates
-            layers_status = {}
+            # Initialize progress tracker
+            progress_tracker = LayerProgressTracker(id)
+
             for line in pull_result:
                 if 'status' in line:
                     layer_id = line.get('id', 'unknown')
                     status = line['status']
                     progress = line.get('progress', '')
 
+                    # Update progress tracker
+                    progress_tracker.update_layer(layer_id, status, progress)
+
+                    # Update UI periodically (debounced)
+                    if progress_tracker.should_update_ui():
+                        current_progress = progress_tracker.calculate_progress()
+                        store.dispatch(
+                            NotificationsAddAction(
+                                notification=replace(
+                                    base_notification,
+                                    content='Downloading image...',
+                                    progress=current_progress,
+                                ),
+                            ),
+                        )
+
                     # Log significant status changes
-                    if layer_id not in layers_status or layers_status[
-                        layer_id
-                    ] != status:
-                        layers_status[layer_id] = status
-                        if status in (
-                            'Downloading',
-                            'Extracting',
-                            'Pull complete',
-                            'Already exists',
-                        ):
-                            logger.debug(
-                                'Image pull progress',
-                                extra={
-                                    'image': id,
-                                    'layer': layer_id,
-                                    'status': status,
-                                    'progress': progress,
-                                },
-                            )
+                    if status in (
+                        'Downloading',
+                        'Extracting',
+                        'Pull complete',
+                        'Already exists',
+                    ):
+                        logger.debug(
+                            'Image pull progress',
+                            extra={
+                                'image': id,
+                                'layer': layer_id,
+                                'status': status,
+                                'progress': progress,
+                            },
+                        )
 
                 if 'error' in line:
                     error_msg = line['error']
@@ -126,12 +168,13 @@ def fetch_image(  # noqa: C901
             # Dispatch success notification
             store.dispatch(
                 NotificationsAddAction(
-                    notification=Notification(
-                        id=f'docker_fetch_success_{id}',
-                        title=f'{IMAGES[id].label} Downloaded',
-                        content='Image pulled successfully. Ready to start.',
+                    notification=replace(
+                        base_notification,
+                        content='Download complete!',
+                        progress=1.0,
+                        show_dismiss_action=True,
                         display_type=NotificationDisplayType.FLASH,
-                        icon=IMAGES[id].icon,
+                        dismiss_on_close=True,
                         chime=Chime.DONE,
                     ),
                 ),
@@ -145,6 +188,17 @@ def fetch_image(  # noqa: C901
                 DockerImageSetStatusAction(
                     image=id,
                     status=DockerItemStatus.ERROR,
+                ),
+                NotificationsAddAction(
+                    notification=replace(
+                        base_notification,
+                        display_type=NotificationDisplayType.FLASH,
+                        content='Download failed',
+                        color=DANGER_COLOR,
+                        show_dismiss_action=True,
+                        progress=None,
+                        chime=Chime.FAILURE,
+                    ),
                 ),
                 NotificationsAddAction(
                     notification=Notification(
