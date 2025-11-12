@@ -4,8 +4,12 @@ import asyncio
 import time
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 from loguru import logger
 from pipecat.frames.frames import (
     Frame,
@@ -58,7 +62,9 @@ class UboInputTransport(BaseInputTransport):
     ) -> None:
         """Initialize the UboInputTransport with the given parameters and client."""
         self.client = client
-        self._is_muted = True
+        self._is_listening = False
+        self._zero_frame_task: asyncio.Task[None] | None = None
+        self._audio_subscription: Callable[[], None] | None = None
 
         self._image_set_events: dict[VideoSource, asyncio.Event] = {
             key: asyncio.Event() for key in VideoSource
@@ -134,7 +140,7 @@ class UboInputTransport(BaseInputTransport):
             self.task_manager.create_task(
                 self.push_audio_frame(
                     InputAudioRawFrame(
-                        audio=b'\x00' * len(audio) if self._is_muted else audio,
+                        audio=audio,
                         sample_rate=16000,
                         num_channels=1,
                     ),
@@ -187,23 +193,65 @@ class UboInputTransport(BaseInputTransport):
             )
             self._image_set_events[VideoSource.CAMERA].set()
 
-    def _set_is_listening(self, *, is_listening: bool) -> None:
-        self._is_muted = not is_listening
+    async def _send_zero_frames(self) -> None:
+        """Send zero audio frames.
+
+        This is used to keep streaming STT services alive when not listening.
+        """
+        try:
+            # Send zero frames at 50ms intervals (16kHz * 0.05s = 800 samples)
+            frame_duration = 0.05  # 50ms
+            samples_per_frame = int(16000 * frame_duration)
+            zero_audio = b'\x00' * (samples_per_frame * 2)  # 2 bytes per sample (int16)
+
+            while not self._is_listening:
+                await self.push_audio_frame(
+                    InputAudioRawFrame(
+                        audio=zero_audio,
+                        sample_rate=16000,
+                        num_channels=1,
+                    ),
+                )
+                await asyncio.sleep(frame_duration)
+        except asyncio.CancelledError:
+            # Task was cancelled when switching to listening mode
+            pass
+
+    def _on_listening_state_changed(self, *, is_listening: bool) -> None:
+        """Handle changes to the listening state."""
+        self._is_listening = is_listening
+
         if is_listening:
             logger.info('UboInputTransport is now listening for audio samples.')
+            # Subscribe to audio events when listening
+            if self._audio_subscription is None:
+                self._audio_subscription = self.client.subscribe_event(
+                    event_type=Event(audio_report_sample_event=AudioReportSampleEvent()),
+                    callback=self._queue_audio_sample,
+                )
+            # Stop sending zero frames when actively listening
+            if self._zero_frame_task and not self._zero_frame_task.done():
+                self._zero_frame_task.cancel()
+                self._zero_frame_task = None
         else:
             logger.info('UboInputTransport is no longer listening for audio samples.')
+            # Unsubscribe from audio events when not listening
+            if self._audio_subscription is not None:
+                self._audio_subscription()
+                self._audio_subscription = None
+            # Start sending zero frames when not listening
+            if not self._zero_frame_task or self._zero_frame_task.done():
+                self._zero_frame_task = self.task_manager.create_task(
+                    self._send_zero_frames(),
+                    name='ubo_zero_frame_sender',
+                )
 
     async def start(self, frame: StartFrame) -> None:
         """Start the transport and subscribe to audio sample events."""
         await super().start(frame)
         await self.set_transport_ready(frame)
 
-        # Subscribe to events after task_manager is initialized
-        self.client.subscribe_event(
-            event_type=Event(audio_report_sample_event=AudioReportSampleEvent()),
-            callback=self._queue_audio_sample,
-        )
+        # Subscribe to display and camera events (always active)
         self.client.subscribe_event(
             event_type=Event(display_render_event=DisplayRenderEvent()),
             callback=self._render_display,
@@ -213,6 +261,9 @@ class UboInputTransport(BaseInputTransport):
             callback=self._store_camera_image,
         )
 
+        # Monitor assistant listening state to conditionally subscribe to audio events
         self.client.autorun(['state.assistant.is_listening'])(
-            lambda results: self._set_is_listening(is_listening=results[0].value),
+            lambda results: self._on_listening_state_changed(
+                is_listening=results[0].value,
+            ),
         )
