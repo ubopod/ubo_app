@@ -165,7 +165,9 @@ def reducer(
                 )
                 if state.is_recording
                 else state,
-                events=[
+                events=[]
+                if state.is_capture_mute
+                else [
                     AudioReportSampleEvent(
                         timestamp=action.timestamp,
                         sample=action.sample,
