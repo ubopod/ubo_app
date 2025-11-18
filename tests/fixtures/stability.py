@@ -83,7 +83,7 @@ async def stability(
     """Wait for the screen and store to stabilize."""
 
     async def wrapper(
-        initial_wait: float = 0.2,
+        initial_wait: float = 2,
         attempts: int = 2,
         wait: float = 1,
     ) -> None:
