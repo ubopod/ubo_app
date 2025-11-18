@@ -1457,7 +1457,7 @@ name = "opencv-python"
 version = "4.10.0.84"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "numpy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4a/e7/b70a2d9ab205110d715906fc8ec83fbb00404aeb3a37a0654fdb68eb0c8c/opencv-python-4.10.0.84.tar.gz", hash = "sha256:72d234e4582e9658ffea8e9cae5b63d488ad06994ef12d81dc303b17472f3526", size = 95103981 }
 wheels = [
@@ -2483,6 +2483,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
+version = "1.6.1.dev8825111810355574951"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
@@ -2507,7 +2508,7 @@ dependencies = [
     { name = "netifaces" },
     { name = "ollama" },
     { name = "onnxruntime", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "opencv-python", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "opencv-python" },
     { name = "pillow" },
     { name = "piper-tts" },
     { name = "platformdirs" },
@@ -2590,7 +2591,7 @@ requires-dist = [
     { name = "objgraph", marker = "extra == 'test-investigation'", specifier = ">=3.6.2" },
     { name = "ollama", specifier = "==0.5.1" },
     { name = "onnxruntime", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = ">=1.22.0" },
-    { name = "opencv-python", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = "==4.10.0.84" },
+    { name = "opencv-python", specifier = "==4.10.0.84" },
     { name = "pillow", specifier = ">=11.3.0" },
     { name = "piper-tts", specifier = "==1.3.0" },
     { name = "platformdirs" },
@@ -2643,6 +2644,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
+version = "1.6.1.dev8825111810349985049"
 source = { editable = "ubo_app/rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
