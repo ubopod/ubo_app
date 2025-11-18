@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 import aiohttp
 from docker_composition import COMPOSITIONS_PATH, check_composition
-from redux import CombineReducerRegisterAction
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
@@ -30,22 +29,9 @@ from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
 
     from docker_presets import CredentialConfig, PresetCompositionEntry
-    from redux import BaseAction, BaseEvent, CombineReducerAction, ReducerResult
-
-    from ubo_app.store.services.docker import DockerImageAction, ImageState
-    from ubo_app.store.services.ip import IpUpdateInterfacesAction
-
-    ImageReducerType = Callable[
-        [
-            ImageState | None,
-            DockerImageAction | CombineReducerAction | IpUpdateInterfacesAction,
-        ],
-        ReducerResult[ImageState | None, BaseAction, BaseEvent],
-    ]
 
 
 
@@ -182,8 +168,6 @@ def process_env_template(
 async def install_preset(
     preset: PresetCompositionEntry,
     composition_id: str,
-    reducer_id: str,
-    image_reducer_func: ImageReducerType,
 ) -> None:
     """Install a preset composition with automatic setup."""
     try:
@@ -259,15 +243,8 @@ async def install_preset(
         }
         (composition_path / 'metadata.json').write_text(json.dumps(metadata))
 
-        # Register the composition in Redux store
-        store.dispatch(
-            CombineReducerRegisterAction(
-                combine_reducers_id=reducer_id,
-                key=composition_id,
-                reducer=image_reducer_func,
-                payload=metadata,
-            ),
-        )
+        # Note: Preset reducer is already registered on startup in _load_images()
+        # No need to dispatch CombineReducerRegisterAction again
 
         _show_success_notification(preset)
 
@@ -291,8 +268,6 @@ async def install_preset(
 
 def handle_preset_install(
     event: DockerPresetInstallEvent,
-    reducer_id: str,
-    image_reducer_func: ImageReducerType,
 ) -> None:
     """Handle preset installation event."""
     from docker_presets import PRESET_COMPOSITIONS
@@ -317,5 +292,5 @@ def handle_preset_install(
         return
 
     create_task(
-        install_preset(preset, composition_id, reducer_id, image_reducer_func),
+        install_preset(preset, composition_id),
     )

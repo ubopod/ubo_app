@@ -674,15 +674,6 @@ async def init_service() -> Subscriptions:
         ),
     )
 
-    def _handle_preset_install_wrapper(
-        event: DockerPresetInstallEvent,
-    ) -> None:
-        """Wrap handle_preset_install with captured reducer context."""
-        handle_preset_install(
-            event=event,
-            reducer_id=reducer_id,
-            image_reducer_func=image_reducer,
-        )
 
     subscriptions = [
         store.subscribe_event(
@@ -704,7 +695,7 @@ async def init_service() -> Subscriptions:
         store.subscribe_event(DockerImageRemoveContainerEvent, remove_container),
         store.subscribe_event(
             DockerPresetInstallEvent,
-            _handle_preset_install_wrapper,
+            handle_preset_install,
         ),
     ]
 
