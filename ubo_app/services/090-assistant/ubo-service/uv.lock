@@ -1413,9 +1413,9 @@ dependencies = [
     { name = "soxr" },
     { name = "wait-for2", marker = "python_full_version < '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/08/123da763e9cf369d590f6d5c7606e90194eb2b799373815badf5005b2c3f/pipecat_ai-0.0.90.tar.gz", hash = "sha256:6af969d55d5e39dd71a534661877b08a817aada0b9edb116d014b7ea51912393", size = 10704690 }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/84/5379694e9bec5b974b9ad43e0fe50eb3530ead24a1077be61b99cceb28f0/pipecat_ai-0.0.92.tar.gz", hash = "sha256:22e2dfc596bc32b0a4c888df9130451c25c82b4c667f6a4619d792ca2f0fbcb1", size = 10711798 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/6f/e263b0029c678bd841440610861ae37d0650861a364b92edd9d96f2be102/pipecat_ai-0.0.90-py3-none-any.whl", hash = "sha256:88f54e969ba24d19aeec5b3fb776249fa4d4e11e55875946ae4436cc60880a9c", size = 10375049 },
+    { url = "https://files.pythonhosted.org/packages/a9/ea/eaf71b7a5e66909246ca0d1ed6eb1dd369caab4bf06789580b56810bb7bc/pipecat_ai-0.0.92-py3-none-any.whl", hash = "sha256:0b057c1ccd01cef1eff65e6054202e29b00a6da443bb3ee40ec27a56381d5e26", size = 10393881 },
 ]
 
 [package.optional-dependencies]
@@ -2372,7 +2372,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "pipecat-ai", extras = ["anthropic", "assemblyai", "cerebras", "deepgram", "elevenlabs", "fal", "google", "grok", "mcp", "openai", "rime", "silero"], specifier = "==0.0.90" },
+    { name = "pipecat-ai", extras = ["anthropic", "assemblyai", "cerebras", "deepgram", "elevenlabs", "fal", "google", "grok", "mcp", "openai", "rime", "silero"], specifier = "==0.0.92" },
     { name = "piper-tts", specifier = ">=1.3.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "python-fake", specifier = ">=0.2.0" },
@@ -2389,7 +2389,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "1.5.1.dev8225100210352979954"
+version = "1.6.1.dev8625111910399519955"
 source = { editable = "../../../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
