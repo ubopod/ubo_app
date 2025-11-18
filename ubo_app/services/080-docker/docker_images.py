@@ -231,7 +231,6 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
                 if IS_RPI
                 else {
                     'ports': {
-                        f'{GRPC_LISTEN_PORT}/tcp': GRPC_LISTEN_PORT,
                         f'{GRPC_ENVOY_LISTEN_PORT}/tcp': GRPC_ENVOY_LISTEN_PORT,
                     },
                 },
