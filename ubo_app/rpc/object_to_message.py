@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import Enum
+from functools import cache
 from typing import TYPE_CHECKING, TypeAlias, TypeVar, cast, overload
 
 import betterproto
@@ -26,23 +27,66 @@ ReturnType: TypeAlias = (
 )
 
 
-def get_class(object_: Immutable) -> type[betterproto.Message]:
+@cache
+def _get_class_by_type(type_: type) -> type[betterproto.Message]:
     return getattr(
         ubo_bindings.ubo.v1,
-        betterproto.casing.pascal_case(type(object_).__name__),
+        betterproto.casing.pascal_case(type_.__name__),
+    )
+
+
+def get_class(object_: Immutable) -> type[betterproto.Message]:
+    return _get_class_by_type(type(object_))
+
+
+@cache
+def _get_enum_by_type(type_: type) -> type[betterproto.Enum]:
+    return getattr(
+        ubo_bindings.ubo.v1,
+        betterproto.casing.pascal_case(type_.__name__),
     )
 
 
 def get_enum(object_: Enum) -> type[betterproto.Enum]:
-    return getattr(
-        ubo_bindings.ubo.v1,
-        betterproto.casing.pascal_case(type(object_).__name__),
-    )
+    return _get_enum_by_type(type(object_))
 
 
 T = TypeVar('T', bound=betterproto.Message)
 
 GRPCSerializable: TypeAlias = 'Enum | Immutable | datetime | None'
+
+
+@cache
+def _build_immutable_message(
+    object_: Immutable,
+    expected_type: type[betterproto.Message] | None = None,
+) -> betterproto.Message:
+    keys = object_.__dataclass_fields__.keys()
+
+    message_class = get_class(object_)
+    if expected_type and (
+        message_class is None or not issubclass(message_class, expected_type)
+    ):
+        msg = f'Expected {expected_type}, got {message_class}'
+        raise ValueError(msg)
+
+    fields = {
+        betterproto.casing.snake_case(key): build_message(
+            getattr(object_, key),
+            expected_type=message_class._betterproto.cls_by_field[key],
+        )
+        for key in keys
+    }
+
+    if message_class is None:
+        msg = f'Class not found for {object_}'
+        raise ValueError(msg)
+
+    if issubclass(message_class, betterproto.Message):
+        return message_class(**fields)
+
+    msg = f'Building message from {object_} is not implemented yet'
+    raise NotImplementedError(msg)
 
 
 @overload
@@ -58,6 +102,9 @@ def build_message(  # noqa: C901
     object_: GRPCSerializable,
     expected_type: type[T] | None = None,
 ) -> ReturnType | T:
+    if hasattr(object_, '__dataclass_fields__'):
+        return _build_immutable_message(object_, expected_type)
+
     if isinstance(object_, datetime):
         return object_.astimezone(UTC).timestamp()
 
@@ -103,30 +150,6 @@ def build_message(  # noqa: C901
                 build_message(item, expected_type=expected_type) for item in object_
             ]
         return [build_message(item) for item in object_]
-
-    keys = object_.__dataclass_fields__.keys()
-
-    message_class = get_class(object_)
-    if expected_type and (
-        message_class is None or not issubclass(message_class, expected_type)
-    ):
-        msg = f'Expected {expected_type}, got {message_class}'
-        raise ValueError(msg)
-
-    fields = {
-        betterproto.casing.snake_case(key): build_message(
-            getattr(object_, key),
-            expected_type=message_class._betterproto.cls_by_field[key],
-        )
-        for key in keys
-    }
-
-    if message_class is None:
-        msg = f'Class not found for {object_}'
-        raise ValueError(msg)
-
-    if issubclass(message_class, betterproto.Message):
-        return message_class(**fields)
 
     msg = f'Building message from {object_} is not implemented yet'
     raise NotImplementedError(msg)

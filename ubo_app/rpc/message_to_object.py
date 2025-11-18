@@ -4,6 +4,7 @@ from __future__ import annotations
 import enum
 import importlib
 from datetime import UTC, datetime
+from functools import cache
 from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin
 
 import betterproto
@@ -35,18 +36,21 @@ META_FIELD_PREFIX_PACKAGE_NAME = 'meta_field_package_name_'
 META_FIELD_PREFIX_PACKAGE_NAME_INDEX = 1000
 
 
-def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
-    class_name = type(message).__name__
-    if isinstance(message, betterproto.Enum):
-        unspecified_member = next(iter(type(message).__members__.keys()))
+@cache
+def _get_class_by_type(
+    type_: type[betterproto.Message | betterproto.Enum],
+) -> type | None:
+    class_name = type_.__name__
+    if issubclass(type_, betterproto.Enum):
+        unspecified_member = next(iter(type_.__members__.keys()))
         destination_module_path = (
             unspecified_member[: -len('_UNSPECIFIED')].lower().replace('_dot_', '.')
         )
     elif (
         META_FIELD_PREFIX_PACKAGE_NAME_INDEX
-        in type(message)._betterproto.field_name_by_number
+        in type_._betterproto.field_name_by_number
     ):
-        field_name = type(message)._betterproto.field_name_by_number[
+        field_name = type_._betterproto.field_name_by_number[
             META_FIELD_PREFIX_PACKAGE_NAME_INDEX
         ]
         if field_name.startswith(META_FIELD_PREFIX_PACKAGE_NAME):
@@ -63,6 +67,10 @@ def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
     lowercase_keys = {i.lower(): i for i in dir(destination_module)}
 
     return getattr(destination_module, lowercase_keys.get(class_name.lower(), ''), None)
+
+
+def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
+    return _get_class_by_type(type(message))
 
 
 def reduce_group(message: betterproto.Message) -> betterproto.Message:
