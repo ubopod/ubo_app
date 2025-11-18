@@ -27,6 +27,7 @@ def main() -> None:
             },
         )
 
+        subprocess.run(['/bin/systemctl', 'enable', 'dhcpcd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'restart', 'dhcpcd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'enable', 'dnsmasq.service'], check=True)
         subprocess.run(['/bin/systemctl', 'restart', 'dnsmasq.service'], check=True)
@@ -42,6 +43,8 @@ def main() -> None:
                 '# Leave this blank for automatic configuration\n',
             )
 
+        subprocess.run(['/bin/systemctl', 'stop', 'dhcpcd.service'], check=True)
+        subprocess.run(['/bin/systemctl', 'disable', 'dhcpcd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'stop', 'hostapd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'disable', 'hostapd.service'], check=True)
         subprocess.run(['/bin/systemctl', 'mask', 'hostapd.service'], check=True)

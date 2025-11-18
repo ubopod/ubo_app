@@ -152,6 +152,10 @@ apt-get -y autoremove
 systemctl stop dnsmasq
 systemctl disable dnsmasq
 
+systemctl stop dhcpcd
+systemctl disable dhcpcd
+systemctl mask dhcpcd
+
 if id -u "$USERNAME" >/dev/null 2>&1; then
   echo "User $USERNAME already exists."
 else
