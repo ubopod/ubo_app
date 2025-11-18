@@ -110,6 +110,7 @@ packages = ["ubo_app"]
 exclude = [
   "ubo_app/services/090-web-ui/web-app/node_modules",
   "ubo_app/services/*/ubo-service",
+  "ubo_app/services/080-docker/assets/envoy.yaml",
 ]
 artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
 
