@@ -17,6 +17,9 @@ from ubo_app.store.core.types import (
     OpenApplicationAction,
 )
 from ubo_app.store.input.types import InputMethod
+from ubo_app.store.services.assistant import (
+    AssistantStartListeningAction,
+)
 from ubo_app.store.services.audio import (
     AudioChangeVolumeAction,
     AudioDevice,
@@ -242,18 +245,29 @@ def reducer(
 
         case SpeechRecognitionReportWakeWordDetectionAction(
             wake_word=wake_word,
-        ) if (
-            wake_word in (INTENTS_WAKE_WORD, ASSISTANT_WAKE_WORD)
-            and state.status is SpeechRecognitionStatus.IDLE
         ):
-            new_status = (
+            if (
+                wake_word == INTENTS_WAKE_WORD
+                and state.status is SpeechRecognitionStatus.IDLE
+            ):
+                new_status = (
                 SpeechRecognitionStatus.INTENTS_WAITING
-                if wake_word == INTENTS_WAKE_WORD
-                else SpeechRecognitionStatus.ASSISTANT_WAITING
             )
+                return CompleteReducerResult(
+                    state=replace(state, status=new_status),
+                    actions=[RgbRingSetAllAction(color=(0, 0, 255))],
+                )
+            if (
+                wake_word == ASSISTANT_WAKE_WORD
+                and state.status is SpeechRecognitionStatus.IDLE
+            ):
+                return CompleteReducerResult(
+                    state=replace(state, status=SpeechRecognitionStatus.IDLE),
+                    actions=[AssistantStartListeningAction()],
+                )
             return CompleteReducerResult(
-                state=replace(state, status=new_status),
-                actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+                state=replace(state, status=SpeechRecognitionStatus.IDLE),
+                actions=[],
             )
 
         case SpeechRecognitionReportIntentDetectionAction():
