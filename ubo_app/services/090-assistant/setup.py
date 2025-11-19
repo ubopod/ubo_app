@@ -14,6 +14,14 @@ from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import INFO_COLOR, WARNING_COLOR
+from ubo_app.constants import SECRETS_PATH
+from ubo_app.constants.assistant import (
+    ELEVENLABS_API_KEY_SECRET_ID,
+    ELEVENLABS_VOICE_ID,
+    GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
+    GROK_API_KEY_SECRET_ID,
+    OPENAI_API_KEY_SECRET_ID,
+)
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
@@ -34,6 +42,7 @@ from ubo_app.store.services.assistant import (
 )
 from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
 from ubo_app.store.ubo_actions import UboDispatchItem
+from ubo_app.utils import secrets
 from ubo_app.utils.gui import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
@@ -79,6 +88,11 @@ def _get_not_setup_item_parameters(*, is_offline: bool | None = None) -> ItemPar
     if is_offline is not None:
         parameters['color'] = INFO_COLOR if is_offline else WARNING_COLOR
     return parameters
+
+
+def secrets_modification_time() -> float:
+    """Return the modification time of the secrets file."""
+    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
 
 
 def _communicate(event: AssistantHandleReportEvent) -> None:
@@ -128,11 +142,28 @@ async def init_service() -> None:
         lambda state: state.assistant.selected_image_generator,
     )
 
+    # Secrets file monitor - tracks API key changes
     @store.autorun(
-        lambda _: None,
+        lambda _: secrets_modification_time(),
         options=AutorunOptions(memoization=False),
     )
-    def providers(_: None) -> Sequence[Item]:
+    def secrets_monitor(_: float) -> dict[str, str | None]:
+        """Monitor secrets file changes and return current API keys."""
+        return {
+            'openai': secrets.read_secret(OPENAI_API_KEY_SECRET_ID),
+            'google_cloud': secrets.read_secret(
+                GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
+            ),
+            'grok': secrets.read_secret(GROK_API_KEY_SECRET_ID),
+            'elevenlabs_key': secrets.read_secret(ELEVENLABS_API_KEY_SECRET_ID),
+            'elevenlabs_voice': secrets.read_secret(ELEVENLABS_VOICE_ID),
+        }
+
+    @store.autorun(
+        lambda _: secrets_modification_time(),
+        options=AutorunOptions(memoization=False),
+    )
+    def providers(_: float) -> Sequence[Item]:
         """Return items for recognition engine selection."""
         providers = sorted(
             {
@@ -171,11 +202,17 @@ async def init_service() -> None:
         ]
 
     @store.autorun(
-        lambda state: state.assistant.selected_stt,
+        lambda state: (
+            state.assistant.selected_stt,
+            secrets_modification_time(),
+        ),
         options=AutorunOptions(memoization=False),
     )
-    def stt_providers(selected_llm: AssistantSTTName) -> Sequence[Item]:
+    def stt_providers(
+        data: tuple[AssistantSTTName, float],
+    ) -> Sequence[Item]:
         """Return items for recognition engine selection."""
+        selected_stt, _ = data
         return [
             ActionItem(
                 key=engine.name,
@@ -196,7 +233,7 @@ async def init_service() -> None:
                     _get_selected_item_parameters(
                         is_offline=not isinstance(engine, RemoteMixin),
                     )
-                    if selected_llm == engine_name
+                    if selected_stt == engine_name
                     else _get_unselected_item_parameters(
                         is_offline=not isinstance(engine, RemoteMixin),
                     )
@@ -206,11 +243,17 @@ async def init_service() -> None:
         ]
 
     @store.autorun(
-        lambda state: state.assistant.selected_llm,
+        lambda state: (
+            state.assistant.selected_llm,
+            secrets_modification_time(),
+        ),
         options=AutorunOptions(memoization=False),
     )
-    def llm_providers(selected_llm: AssistantLLMName) -> Sequence[Item]:
+    def llm_providers(
+        data: tuple[AssistantLLMName, float],
+    ) -> Sequence[Item]:
         """Return items for LLM engine selection."""
+        selected_llm, _ = data
         return [
             ActionItem(
                 key=engine.name,
@@ -241,11 +284,17 @@ async def init_service() -> None:
         ]
 
     @store.autorun(
-        lambda state: state.assistant.selected_tts,
+        lambda state: (
+            state.assistant.selected_tts,
+            secrets_modification_time(),
+        ),
         options=AutorunOptions(memoization=False),
     )
-    def tts_providers(selected_llm: AssistantTTSName) -> Sequence[Item]:
+    def tts_providers(
+        data: tuple[AssistantTTSName, float],
+    ) -> Sequence[Item]:
         """Return items for TTS engine selection."""
+        selected_tts, _ = data
         return [
             ActionItem(
                 key=engine.name,
@@ -266,7 +315,7 @@ async def init_service() -> None:
                     _get_selected_item_parameters(
                         is_offline=not isinstance(engine, RemoteMixin),
                     )
-                    if selected_llm == tts_name
+                    if selected_tts == tts_name
                     else _get_unselected_item_parameters(
                         is_offline=not isinstance(engine, RemoteMixin),
                     )
@@ -276,13 +325,17 @@ async def init_service() -> None:
         ]
 
     @store.autorun(
-        lambda state: state.assistant.selected_image_generator,
+        lambda state: (
+            state.assistant.selected_image_generator,
+            secrets_modification_time(),
+        ),
         options=AutorunOptions(memoization=False),
     )
     def image_generator_providers(
-        selected_llm: AssistantImageGeneratorName,
+        data: tuple[AssistantImageGeneratorName, float],
     ) -> Sequence[Item]:
         """Return items for image generator engine selection."""
+        selected_image_generator, _ = data
         return [
             ActionItem(
                 key=engine.name,
@@ -303,7 +356,7 @@ async def init_service() -> None:
                     _get_selected_item_parameters(
                         is_offline=not isinstance(engine, RemoteMixin),
                     )
-                    if selected_llm == img_gen_name
+                    if selected_image_generator == img_gen_name
                     else _get_unselected_item_parameters(
                         is_offline=not isinstance(engine, RemoteMixin),
                     )
