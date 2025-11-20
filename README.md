@@ -97,7 +97,7 @@ For features that require add-on hardware that is not natively supported by Rasp
 
 For more details check out the [hardware section](#🛠️-hardware) below.
 
-🙏 Please consider supporting this project by pre-ordering an Ubo Pod Dev Edition on [Kickstarter](https://www.kickstarter.com/projects/ubopod/ubo-pod-dev-edition). 
+🙏 Please consider supporting this project by pre-ordering an Ubo Pod Dev Edition on [Kickstarter](https://www.kickstarter.com/projects/ubopod/ubo-pod-hackable-personal-ai-assistant). 
 
 The sales proceeds from the hardware will be used to support continued development and maintenance of Ubo App and its open source dependencies.
 
@@ -214,6 +214,10 @@ Then, navigate to the project directory and install the dependencies:
 ```bash
 uv sync --dev
 ```
+
+Next, you need to compile protobuf files and build the web application. You only need to do this once or whenever you update store actions/events or the web app.
+Please refer to [Generating the protobuf files](#generating-the-protobuf-files) and [Building the web application](#building-the-web-application) sections for the steps.
+
 
 Now you can run the app with:
 
