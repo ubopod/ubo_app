@@ -129,13 +129,17 @@ apt-get -y install \
   libgl1 \
   libmtdev1 \
   libzbar0 \
+  pipewire \
+  portaudio19-dev \
   python3-alsaaudio \
   python3-apt \
   python3-dev \
   python3-gpiozero \
   python3-libcamera \
   python3-pip \
+  python3-pyaudio \
   python3-virtualenv \
+  wireplumber \
   --no-install-recommends --no-install-suggests
 if [ "$IS_RPI" = true ]; then
   apt-get -y install \
