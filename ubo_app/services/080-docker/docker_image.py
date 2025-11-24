@@ -54,7 +54,7 @@ def fetch_image(  # noqa: C901
     usernames: dict[str, str],
     event: DockerImageFetchEvent,
 ) -> None:
-    """Fetch an image."""
+    """Fetch a container image."""
     id = event.image
 
     def act() -> None:
@@ -212,6 +212,34 @@ def fetch_image(  # noqa: C901
 def remove_image(event: DockerImageRemoveEvent) -> None:
     """Remove an image."""
     id = event.image
+    logger.info(
+        'remove_image called',
+        extra={'image_id': id, 'path': IMAGES[id].full_path},
+    )
     docker_client = docker.from_env()
-    docker_client.images.remove(IMAGES[id].full_path, force=True)
-    docker_client.close()
+    try:
+        docker_client.images.remove(IMAGES[id].full_path, force=True)
+        logger.info(
+            'Image removed successfully - waiting for delete event',
+            extra={'image_id': id},
+        )
+    except docker.errors.ImageNotFound:
+        logger.warning(
+            'Image already removed or not found',
+            extra={'image_id': id, 'path': IMAGES[id].full_path},
+        )
+        # Still update status to NOT_AVAILABLE since image doesn't exist
+        store.dispatch(
+            DockerImageSetStatusAction(
+                image=id,
+                status=DockerItemStatus.NOT_AVAILABLE,
+            ),
+        )
+    except docker.errors.DockerException as e:
+        logger.exception(
+            'Failed to remove image',
+            extra={'image_id': id, 'error': str(e)},
+        )
+        raise
+    finally:
+        docker_client.close()

@@ -3,28 +3,27 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import secrets as py_secrets
+import string
+from dataclasses import field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
-from ubo_app.store.services.speech_synthesis import ReadableInformation
-from ubo_app.utils import IS_RPI
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
-
-
-from dataclasses import field
-from typing import TYPE_CHECKING
-
+import aiohttp
 from immutable import Immutable
 
 from ubo_app.constants import (
+    CONFIG_PATH,
     DEBUG_DOCKER,
     GRPC_ENVOY_LISTEN_PORT,
     GRPC_LISTEN_PORT,
 )
+from ubo_app.logger import logger
+from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
+from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.utils import IS_RPI, secrets
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
 
 ENVOY_TEMPLATE_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml.tmpl'
 ENVOY_CONFIG_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml'
+COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 
 
 async def prepare_envoy() -> bool:
@@ -50,6 +50,102 @@ async def prepare_envoy() -> bool:
     )
     await process.wait()
     return process.returncode == 0
+
+
+async def prepare_immich() -> bool:
+    """Prepare Immich for Docker Composition."""
+    try:
+        composition_id = 'immich'
+        composition_path = COMPOSITIONS_PATH / composition_id
+        logger.info(
+            'Preparing Immich composition',
+            extra={'composition_path': str(composition_path)},
+        )
+        composition_path.mkdir(exist_ok=True, parents=True)
+
+        # Check if already set up
+        if (composition_path / 'docker-compose.yml').exists() and (
+            composition_path / '.env'
+        ).exists():
+            return True
+
+        # Download docker-compose.yml
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                'https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml',
+            ) as response:
+                response.raise_for_status()
+                compose_content = await response.text()
+                (composition_path / 'docker-compose.yml').write_text(compose_content)
+
+            # Download .env template
+            async with session.get(
+                'https://github.com/immich-app/immich/releases/latest/download/example.env',
+            ) as response:
+                response.raise_for_status()
+                env_content = await response.text()
+
+        # Generate credentials
+        creds = {
+            'IMMICH_DB_PASSWORD': ''.join(
+                py_secrets.choice(string.ascii_letters + string.digits)
+                for _ in range(32)
+            ),
+            'IMMICH_DB_USERNAME': 'user_'
+            + ''.join(
+                py_secrets.choice(string.ascii_lowercase + string.digits)
+                for _ in range(16)
+            ),
+        }
+
+        # Save credentials
+        for key, value in creds.items():
+            secrets.write_secret(key=key, value=value)
+
+        # Process .env content
+        env_mappings = {
+            'IMMICH_VERSION': 'release',
+            'DB_DATABASE_NAME': 'immich',
+            'TZ': os.environ.get('TZ', 'UTC'),
+            'DB_PASSWORD': creds['IMMICH_DB_PASSWORD'],
+            'DB_USERNAME': creds['IMMICH_DB_USERNAME'],
+        }
+
+        for key, value in env_mappings.items():
+            env_content = env_content.replace(f'{key}=', f'{key}={value}\n# Original: ')
+            env_content = env_content.replace(f'${{{key}}}', value)
+
+        # Path replacements
+        path_replacements = {
+            './library': str(composition_path / 'library'),
+            './postgres': str(composition_path / 'postgres'),
+        }
+
+        for rel, abs_path in path_replacements.items():
+            env_content = env_content.replace(f'={rel}', f'={abs_path}')
+            env_content = env_content.replace(rel, abs_path)
+
+        (composition_path / '.env').write_text(env_content)
+
+        # Create metadata.json
+        metadata = {
+            'label': 'Immich',
+            'icon': '',
+            'instructions': """Immich is installed and running!
+
+Access the web interface at:
+http://{{hostname}}:2283
+
+On first visit, create an admin account to start uploading your photos and videos.""",
+            'compose_id': 'immich',
+        }
+        (composition_path / 'metadata.json').write_text(json.dumps(metadata))
+
+    except Exception:
+        logger.exception('Failed to prepare Immich')
+        return False
+    else:
+        return True
 
 
 class ContainerEntry(Immutable):
@@ -86,6 +182,8 @@ class ContainerEntry(Immutable):
         | None
     ) = None
     prepare: Callable[[], Coroutine[Any, Any, bool] | bool] | None = None
+    is_composition: bool = False
+
     @property
     def full_path(self) -> str:
         """Get full image path including registry if specified."""
@@ -204,6 +302,16 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
                     WebUIInputDescription(),
                 ],
             ),
+        ),
+        ContainerEntry(
+            id='immich',
+            label='Immich',
+            icon='',
+            path='immich-app/immich-server:release',
+            registry='ghcr.io',
+            prepare=prepare_immich,
+            is_composition=True,
+            ports={'2283/tcp': 2283},
         ),
         *(
             [

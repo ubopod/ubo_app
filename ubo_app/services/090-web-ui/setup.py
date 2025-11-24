@@ -31,8 +31,8 @@ from ubo_app.store.services.docker import (
     DockerImageFetchAction,
     DockerImageRemoveAction,
     DockerImageRemoveContainerAction,
-    DockerImageRunContainerAction,
-    DockerImageStopContainerAction,
+    DockerImageRunAction,
+    DockerImageStopAction,
     DockerInstallAction,
     DockerStartAction,
     DockerStopAction,
@@ -302,9 +302,9 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
         elif action == 'download envoy':
             store.dispatch(DockerImageFetchAction(image='envoy_grpc'))
         elif action == 'run envoy':
-            store.dispatch(DockerImageRunContainerAction(image='envoy_grpc'))
+            store.dispatch(DockerImageRunAction(image='envoy_grpc'))
         elif action == 'remove envoy':
-            store.dispatch(DockerImageStopContainerAction(image='envoy_grpc'))
+            store.dispatch(DockerImageStopAction(image='envoy_grpc'))
             await asyncio.sleep(2)
             store.dispatch(DockerImageRemoveContainerAction(image='envoy_grpc'))
             await asyncio.sleep(2)

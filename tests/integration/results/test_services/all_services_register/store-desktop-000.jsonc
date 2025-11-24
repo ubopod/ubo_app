@@ -90,6 +90,16 @@
       "ports": [],
       "status": "not_available"
     },
+    "immich": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "immich",
+      "instructions": null,
+      "label": "Immich",
+      "ports": [],
+      "status": "not_available"
+    },
     "ngrok": {
       "_type": "ImageState",
       "container_ip": null,
@@ -137,16 +147,6 @@
       "id": "portainer",
       "instructions": null,
       "label": "Portainer",
-      "ports": [],
-      "status": "not_available"
-    },
-    "preset_immich": {
-      "_type": "ImageState",
-      "container_ip": null,
-      "docker_id": null,
-      "id": "preset_immich",
-      "instructions": "Immich is installed and running!\n\nAccess the web interface at:\nhttp://{{hostname}}:2283\n\nOn first visit, create an admin account to start uploading your photos and videos.\n\nDefault locations:\n- Upload directory: ./library\n- Database directory: ./postgres\n\nThe database credentials have been automatically generated and stored securely.",
-      "label": "Immich",
       "ports": [],
       "status": "not_available"
     },
@@ -312,6 +312,23 @@
                         1,
                         1
                       ],
+                      "icon": "",
+                      "is_short": false,
+                      "key": "docker:immich",
+                      "label": "Immich",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
                       "icon": "󰛶",
                       "is_short": false,
                       "key": "docker:ngrok",
@@ -384,23 +401,6 @@
                       "is_short": false,
                       "key": "docker:portainer",
                       "label": "Portainer",
-                      "opacity": null,
-                      "progress": null
-                    },
-                    {
-                      "_type": "ActionItem",
-                      "action": "<functools.partial:<function:docker_preset_menu>>",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "",
-                      "is_short": false,
-                      "key": "docker:preset_immich",
-                      "label": "Immich",
                       "opacity": null,
                       "progress": null
                     },

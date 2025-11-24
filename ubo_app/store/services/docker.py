@@ -90,50 +90,34 @@ class DockerImageSetDockerIdAction(DockerImageAction):
     docker_id: str
 
 
-class DockerImageFetchCompositionAction(DockerImageAction):
-    """Fetch composition."""
+class DockerImageUpdateMetadataAction(DockerImageAction):
+    """Update image metadata (e.g., instructions)."""
+
+    instructions: str | None = None
 
 
 class DockerImageFetchAction(DockerImageAction):
-    """Fetch image."""
-
-
-class DockerImageRemoveCompositionAction(DockerImageAction):
-    """Remove composition."""
+    """Fetch image or composition."""
 
 
 class DockerImageRemoveAction(DockerImageAction):
-    """Remove image."""
+    """Remove image or composition."""
 
 
-class DockerImageRunCompositionAction(DockerImageAction):
-    """Run composition."""
+class DockerImageRunAction(DockerImageAction):
+    """Run container or composition."""
 
 
-class DockerImageRunContainerAction(DockerImageAction):
-    """Run container."""
+class DockerImageStopAction(DockerImageAction):
+    """Stop container or composition."""
 
 
-class DockerImageStopCompositionAction(DockerImageAction):
-    """Stop composition."""
-
-
-class DockerImageStopContainerAction(DockerImageAction):
-    """Stop container."""
-
-
-class DockerImageReleaseCompositionAction(DockerImageAction):
-    """Release composition."""
+class DockerImageReleaseAction(DockerImageAction):
+    """Release composition resources (stop + cleanup)."""
 
 
 class DockerImageRemoveContainerAction(DockerImageAction):
     """Remove container."""
-
-
-class DockerPresetInstallAction(DockerAction):
-    """Install a preset composition."""
-
-    preset_id: str
 
 
 class DockerEvent(BaseEvent):
@@ -213,13 +197,6 @@ class DockerImageReleaseCompositionEvent(DockerImageEvent):
 
 class DockerImageRemoveContainerEvent(DockerImageEvent):
     """Remove container."""
-
-
-class DockerPresetInstallEvent(DockerEvent):
-    """Install a preset composition."""
-
-    preset_id: str
-
 
 class ImageState(Immutable):
     """Image state."""

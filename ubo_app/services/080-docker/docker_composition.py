@@ -11,7 +11,6 @@ from dataclasses import replace
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.logger import logger
-from ubo_app.store.core.types import DeregisterRegularAppAction
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchCompositionEvent,
@@ -259,7 +258,14 @@ async def _handle_pull_error(
 
 async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
     """Pull the composition images with progress tracking."""
+    from docker_app import prepare_app
+
     id = event.image
+
+    # Prepare the composition (download files, generate credentials, update metadata)
+    if not await prepare_app(id):
+        return
+
     composition_label = await get_composition_label(id)
     total_images = await _get_composition_image_count(id)
 
@@ -520,10 +526,4 @@ async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
     # Remove composition directory
     shutil.rmtree(COMPOSITIONS_PATH / id)
 
-    # Only deregister manual compositions, not presets
-    # Presets should remain in the app list so users can reinstall
-    if not id.startswith('preset_'):
-        store.dispatch(DeregisterRegularAppAction(key=id))
-    else:
-        # Reset preset status to NOT_AVAILABLE
-        await check_composition(id=id)
+    await check_composition(id=id)

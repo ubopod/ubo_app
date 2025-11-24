@@ -119,6 +119,8 @@ async def run_container(
     event: DockerImageRunContainerEvent,
 ) -> None:
     """Run a container."""
+    from docker_app import prepare_app
+
     id = event.image
 
     docker_client = docker.from_env()
@@ -171,14 +173,10 @@ async def run_container(
                 )
                 return
 
-        prepare_function = IMAGES[id].prepare
-        if prepare_function:
-            result = prepare_function()
-            if iscoroutine(result):
-                result = await result
-            if not result:
-                logger.error('Failed to prepare the container', extra={'image': id})
-                return
+        # Prepare the container (if needed)
+        if not await prepare_app(id):
+            docker_client.close()
+            return
 
         docker_client.containers.run(
             IMAGES[id].full_path,
@@ -253,11 +251,15 @@ def update_container(*, image_id: str, container: Container) -> None:
     )
 
 
-def _monitor_events(  # noqa: C901
+def _monitor_events(  # noqa: C901, PLR0912
     image_id: str,
     get_docker_id: Callable[[], str],
 ) -> None:
     path = IMAGES[image_id].full_path
+    logger.info(
+        'Starting event monitor',
+        extra={'image_id': image_id, 'path': path},
+    )
     docker_client = docker.from_env()
     events = docker_client.events(
         decode=True,
@@ -268,9 +270,25 @@ def _monitor_events(  # noqa: C901
         events.close,
     )
     for event in events:
-        logger.verbose('Docker image event', extra={'event': event})
-        if event['Type'] == 'image':
-            if event['status'] == 'pull' and event['id'] in path:
+        logger.verbose('Docker event received',
+        extra={
+            'event': event,
+            'image_id': image_id,
+        })
+        if event.get('Type') == 'image':
+            # Docker image events use 'Action' key, not 'status'
+            action = event.get('Action') or event.get('status')
+            logger.debug(
+                'Image event received',
+                extra={
+                    'image_id': image_id,
+                    'action': action,
+                    'event_id': event.get('id'),
+                    'docker_id': get_docker_id(),
+                    'path': path,
+                },
+            )
+            if action == 'pull' and event.get('id', '') in path:
                 try:
                     image = docker_client.images.get(path)
                     store.dispatch(
@@ -294,19 +312,46 @@ def _monitor_events(  # noqa: C901
                         ),
                     )
                     raise
-            elif event['status'] == 'delete' and event['id'] == get_docker_id():
-                store.dispatch(
-                    DockerImageSetStatusAction(
-                        image=image_id,
-                        status=DockerItemStatus.NOT_AVAILABLE,
-                    ),
+            elif action == 'delete':
+                # For delete events, event.get('id') is often None
+                # Check if we have a docker_id tracked
+                # (meaning we're monitoring this image)
+                current_docker_id = get_docker_id()
+                if current_docker_id:
+                    store.dispatch(
+                        DockerImageSetStatusAction(
+                            image=image_id,
+                            status=DockerItemStatus.NOT_AVAILABLE,
+                        ),
+                    )
+        elif event.get('Type') == 'container':
+            # Container events use 'Action' key (like 'start', 'die', 'destroy')
+            # but some older events might use 'status'
+            status = event.get('Action') or event.get('status')
+            # Get the image path from Actor.Attributes.image or 'from' field
+            event_image = event.get('from') or (
+                event.get('Actor', {}).get('Attributes', {}).get('image')
+            )
+            logger.debug(
+                'Container event received',
+                extra={
+                    'image_id': image_id,
+                    'status': status,
+                    'event_image': event_image,
+                    'path': path,
+                    'matches_path': event_image == path,
+                },
+            )
+            if status is None:
+                logger.warning(
+                    'Container event missing Action/status key',
+                    extra={'event': event, 'image_id': image_id},
                 )
-        elif event['Type'] == 'container':
+                continue
+
             if (
-                event['status'] in 'start'
-                or event['status'].startswith('exec_create')
-                or event['status'].startswith('exec_start')
-            ) and event['from'] == path:
+                status == 'start' or status.startswith(('exec_create', 'exec_start'))
+            ) and event_image == path:
                 container = find_container(docker_client, image=path)
                 if container:
                     update_container(image_id=image_id, container=container)
@@ -315,19 +360,45 @@ def _monitor_events(  # noqa: C901
                         '_monitor_events: Container not found after start event',
                         extra={'image_id': image_id, 'image_path': path},
                     )
-            elif event['status'] == 'die' and event['from'] == path:
+            elif status == 'die' and event_image == path:
+                logger.info(
+                    'Container die event detected - setting status to CREATED',
+                    extra={'image_id': image_id, 'event_image': event_image},
+                )
                 store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
                         status=DockerItemStatus.CREATED,
                     ),
                 )
-            elif event['status'] == 'destroy' and event['from'] == path:
+                logger.info(
+                    'Status updated to CREATED',
+                    extra={'image_id': image_id},
+                )
+            elif status == 'destroy' and event_image == path:
+                logger.info(
+                    'Container destroy event detected - setting status to AVAILABLE',
+                    extra={'image_id': image_id, 'event_image': event_image},
+                )
                 store.dispatch(
                     DockerImageSetStatusAction(
                         image=image_id,
                         status=DockerItemStatus.AVAILABLE,
                     ),
+                )
+                logger.info(
+                    'Status updated to AVAILABLE',
+                    extra={'image_id': image_id},
+                )
+            # Log unhandled container events for this image
+            elif event_image == path:
+                logger.debug(
+                    'Unhandled container event for this image',
+                    extra={
+                        'image_id': image_id,
+                        'status': status,
+                        'event_image': event_image,
+                    },
                 )
 
 
