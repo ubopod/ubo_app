@@ -22,33 +22,28 @@ from ubo_app.store.services.docker import (
     DockerImageAction,
     DockerImageEvent,
     DockerImageFetchAction,
-    DockerImageFetchCompositionAction,
     DockerImageFetchCompositionEvent,
     DockerImageFetchEvent,
     DockerImageRegisterAppEvent,
-    DockerImageReleaseCompositionAction,
+    DockerImageReleaseAction,
     DockerImageReleaseCompositionEvent,
     DockerImageRemoveAction,
-    DockerImageRemoveCompositionAction,
     DockerImageRemoveCompositionEvent,
     DockerImageRemoveContainerAction,
     DockerImageRemoveContainerEvent,
     DockerImageRemoveEvent,
-    DockerImageRunCompositionAction,
+    DockerImageRunAction,
     DockerImageRunCompositionEvent,
-    DockerImageRunContainerAction,
     DockerImageRunContainerEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
-    DockerImageStopCompositionAction,
+    DockerImageStopAction,
     DockerImageStopCompositionEvent,
-    DockerImageStopContainerAction,
     DockerImageStopContainerEvent,
+    DockerImageUpdateMetadataAction,
     DockerInstallAction,
     DockerInstallEvent,
     DockerItemStatus,
-    DockerPresetInstallAction,
-    DockerPresetInstallEvent,
     DockerRemoveUsernameAction,
     DockerServiceState,
     DockerSetStatusAction,
@@ -116,12 +111,6 @@ def service_reducer(
                 events=[DockerStopEvent()],
             )
 
-        case DockerPresetInstallAction():
-            return CompleteReducerResult(
-                state=state,
-                events=[DockerPresetInstallEvent(preset_id=action.preset_id)],
-            )
-
         case _:
             return state
 
@@ -162,55 +151,67 @@ def image_reducer(
         case DockerImageSetDockerIdAction():
             return replace(state, docker_id=action.docker_id)
 
-        case DockerImageFetchCompositionAction():
-            return CompleteReducerResult(
-                state=state,
-                events=[DockerImageFetchCompositionEvent(image=state.id)],
+        case DockerImageUpdateMetadataAction():
+            return replace(
+                state,
+                instructions=action.instructions
+                if action.instructions is not None
+                else state.instructions,
             )
 
         case DockerImageFetchAction():
+            from docker_images import IMAGES
+
+            if IMAGES[state.id].is_composition:
+                return CompleteReducerResult(
+                    state=replace(state, status=DockerItemStatus.FETCHING),
+                    events=[DockerImageFetchCompositionEvent(image=state.id)],
+                )
             return CompleteReducerResult(
                 state=replace(state, status=DockerItemStatus.FETCHING),
                 events=[DockerImageFetchEvent(image=state.id)],
             )
 
-        case DockerImageRemoveCompositionAction():
-            return CompleteReducerResult(
-                state=state,
-                events=[DockerImageRemoveCompositionEvent(image=state.id)],
-            )
-
         case DockerImageRemoveAction():
+            from docker_images import IMAGES
+
+            if IMAGES[state.id].is_composition:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[DockerImageRemoveCompositionEvent(image=state.id)],
+                )
             return CompleteReducerResult(
                 state=state,
                 events=[DockerImageRemoveEvent(image=state.id)],
             )
 
-        case DockerImageRunCompositionAction():
-            return CompleteReducerResult(
-                state=state,
-                events=[DockerImageRunCompositionEvent(image=state.id)],
-            )
+        case DockerImageRunAction():
+            from docker_images import IMAGES
 
-        case DockerImageRunContainerAction():
+            if IMAGES[state.id].is_composition:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[DockerImageRunCompositionEvent(image=state.id)],
+                )
             return CompleteReducerResult(
                 state=state,
                 events=[DockerImageRunContainerEvent(image=state.id)],
             )
 
-        case DockerImageStopCompositionAction():
-            return CompleteReducerResult(
-                state=state,
-                events=[DockerImageStopCompositionEvent(image=state.id)],
-            )
+        case DockerImageStopAction():
+            from docker_images import IMAGES
 
-        case DockerImageStopContainerAction():
+            if IMAGES[state.id].is_composition:
+                return CompleteReducerResult(
+                    state=state,
+                    events=[DockerImageStopCompositionEvent(image=state.id)],
+                )
             return CompleteReducerResult(
                 state=state,
                 events=[DockerImageStopContainerEvent(image=state.id)],
             )
 
-        case DockerImageReleaseCompositionAction():
+        case DockerImageReleaseAction():
             return CompleteReducerResult(
                 state=state,
                 events=[DockerImageReleaseCompositionEvent(image=state.id)],

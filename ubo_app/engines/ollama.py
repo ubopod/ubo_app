@@ -21,7 +21,7 @@ from ubo_app.store.services.assistant import (
 )
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
-    DockerImageRunContainerAction,
+    DockerImageRunAction,
     DockerItemStatus,
 )
 from ubo_app.store.services.notifications import (
@@ -193,7 +193,7 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                             NotificationDispatchItem(
                                 label='Run Ollama Container',
                                 icon='󰐊',
-                                store_action=DockerImageRunContainerAction(
+                                store_action=DockerImageRunAction(
                                     image='ollama',
                                 ),
                             ),
