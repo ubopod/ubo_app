@@ -7,8 +7,13 @@ import json
 import re
 import shutil
 from dataclasses import replace
-from docker_images import IMAGES
 
+from calculate_progress import (
+    LayerProgressTracker,
+    ServiceTrackers,
+    calculate_composition_progress,
+)
+from docker_images import IMAGES
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import CONFIG_PATH
@@ -130,6 +135,13 @@ async def get_composition_label(composition_id: str) -> str:
 
 async def _get_composition_image_count(composition_id: str) -> int:
     """Get the number of images in a composition."""
+    logger.debug(
+        'Starting composition image count',
+        extra={
+            'composition_id': composition_id,
+            'path': COMPOSITIONS_PATH / composition_id,
+        },
+    )
     try:
         config_process = await asyncio.subprocess.create_subprocess_exec(
             'docker',
@@ -140,30 +152,140 @@ async def _get_composition_image_count(composition_id: str) -> int:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, _ = await config_process.communicate()
+        logger.info('Process created, waiting for output',
+                    extra={'composition_id': composition_id})
+        stdout, stderr = await config_process.communicate()
+        logger.info(
+            'Got process output',
+            extra={
+                'composition_id': composition_id,
+                'stdout': stdout.decode(),
+                'stderr': stderr.decode(),
+                'returncode': config_process.returncode,
+            },
+        )
         image_list = [img for img in stdout.decode().strip().split('\n') if img]
+        logger.info(
+            'Got composition image list',
+            extra={'composition_id': composition_id, 'image_list': image_list},
+        )
         return len(image_list)
     except (OSError, ValueError) as e:
-        logger.debug(
+        logger.exception(
             'Failed to get composition image count',
             extra={'composition_id': composition_id, 'error': str(e)},
         )
         return 0
 
+def _process_layer_line(
+    layer_match: re.Match[str],
+    current_service: str | None,
+    service_trackers: ServiceTrackers,
+) -> None:
+    """Process a layer progress line from docker compose output.
+
+    Args:
+        layer_match: Regex match object for layer line
+        current_service: Name of the current service being processed
+        service_trackers: Dict mapping service names to their trackers
+
+    """
+    if not current_service:
+        return
+
+    layer_id = layer_match.group(1)
+    rest_of_line = layer_match.group(2)
+
+    # Check if there's bracketed progress info
+    bracket_match = re.search(r'\[(.+?)\]\s*(.+)$', rest_of_line)
+    if bracket_match:
+        # Format: "status [progress bar] size_info"  # noqa: ERA001
+        # Extract status (everything before bracket)
+        status = rest_of_line[:rest_of_line.index('[')].strip()
+        progress = bracket_match.group(2).strip()  # Size info after bracket
+    else:
+        # No brackets, entire rest is status
+        status = rest_of_line.strip()
+        progress = ''
+
+    if current_service in service_trackers:
+        service_trackers[current_service].update_layer(
+            layer_id,
+            status,
+            progress,
+        )
+        logger.debug(
+            'Layer update',
+            extra={
+                'service': current_service,
+                'layer': layer_id,
+                'status': status,
+                'progress': progress,
+            },
+        )
+
+
+def _process_service_line(
+    service_match: re.Match[str],
+    service_trackers: ServiceTrackers,
+    completed_services: set[str],
+) -> str | None:
+    """Process a service-level status line from docker compose output.
+
+    Args:
+        service_match: Regex match object for service line
+        service_trackers: Dict mapping service names to their trackers
+        completed_services: Set to track which services have completed
+
+    Returns:
+        The service name if it's currently pulling, None otherwise
+
+    """
+    service_name = service_match.group(1)
+    status = service_match.group(2)
+
+    # Track which service we're currently processing
+    if 'Pulling' in status:
+        if service_name not in service_trackers:
+            service_trackers[service_name] = LayerProgressTracker(service_name)
+        logger.info(
+            'Service pulling started',
+            extra={'service_name': service_name},
+        )
+        return service_name
+
+    # Mark service as complete
+    if 'Pulled' in status or 'Already exists' in status:
+        completed_services.add(service_name)
+        # Mark all layers of this service as complete
+        if service_name in service_trackers:
+            service_trackers[service_name].mark_all_complete()
+        logger.info('Service completed', extra={
+            'service_name': service_name,
+            'status': status,
+            'total_completed': len(completed_services),
+        })
+
+    return None
+
 
 async def _stream_pull_output(
     process: asyncio.subprocess.Process,
-    pulled_images: set[str],
+    service_trackers: ServiceTrackers,
+    completed_services: set[str],
 ) -> None:
-    """Stream docker compose pull output and track completed images.
+    """Stream docker compose pull output and track service progress.
 
     Args:
         process: The subprocess running docker compose pull
-        pulled_images: Set to track which images have been pulled
+        service_trackers: Dict mapping service names to their LayerProgressTracker
+        completed_services: Set to track which services have completed
 
     """
     if not process.stdout:
         return
+
+    current_service = None
 
     while True:
         line_bytes = await process.stdout.readline()
@@ -171,41 +293,34 @@ async def _stream_pull_output(
             break
 
         line = line_bytes.decode('utf-8', errors='ignore').strip()
+        if not line:
+            continue
 
-        # Docker Compose outputs lines like:
-        # "service-name Pulled" or "service-name Already exists"
-        # We only care about completion status
-        if line and not line.startswith(' '):
+        logger.debug('Got line', extra={'line': line})
+
+        # Docker Compose outputs two types of lines:
+        # 1. Service-level: "service-name Pulling" or "service-name Pulled"
+        # 2. Layer-level: "hash-id status [progress]" (12-char hex hash)
+
+        # Check if this is a layer hash line (12-character hex at start)
+        # Format examples:
+        # "22f7f53393bf Already exists"
+        # "9a80f9a05524 Download complete"
+        # "6f22bf4a69c6 Downloading [==> ] 1.5MB/10MB" # noqa: ERA001
+        layer_match = re.match(r'^([a-f0-9]{12})\s+(.+)$', line)
+        if layer_match:
+            _process_layer_line(layer_match, current_service, service_trackers)
+        else:
+            # Service-level status line
             service_match = re.match(r'^([\w-]+)\s+(.+)', line)
             if service_match:
-                service_name = service_match.group(1)
-                status = service_match.group(2)
-
-                # Mark image as pulled when complete
-                if 'Pulled' in status or 'Already exists' in status:
-                    pulled_images.add(service_name)
-
-
-def _calculate_composition_progress(
-    pulled_images: set[str],
-    total_count: int,
-) -> float:
-    """Calculate overall progress for composition pull.
-
-    Args:
-        pulled_images: Set of completed image names
-        total_count: Total number of images expected
-
-    Returns:
-        Overall progress as float between 0.0 and 1.0
-
-    """
-    if total_count == 0:
-        # Unknown total, show indeterminate progress
-        return 0.5
-
-    # Calculate progress based on completed images
-    return min(len(pulled_images) / total_count, 0.99)
+                new_service = _process_service_line(
+                    service_match,
+                    service_trackers,
+                    completed_services,
+                )
+                if new_service:
+                    current_service = new_service
 
 
 async def _handle_pull_success(
@@ -265,6 +380,7 @@ async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
     id = event.image
     container = IMAGES[id]
 
+    logger.info('About to call prepare_app', extra={'image': id})
     # Prepare the composition (download files, generate credentials, update metadata)
     if not await prepare_app(container):
         logger.error('prepare_app returned False, exiting', extra={'image': id})
@@ -286,8 +402,9 @@ async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
         NotificationsAddAction(notification=base_notification),
     )
 
-    # Track which images have been pulled
-    pulled_images: set[str] = set()
+    # Track service progress
+    service_trackers: ServiceTrackers = {}
+    completed_services: set[str] = set()
     update_interval = 1.0
 
     try:
@@ -302,7 +419,7 @@ async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
 
         # Stream output and track progress in background
         stream_task = asyncio.create_task(
-            _stream_pull_output(run_process, pulled_images),
+            _stream_pull_output(run_process, service_trackers, completed_services),
         )
 
         # Update progress periodically while streaming
@@ -315,19 +432,20 @@ async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
 
             # Update progress if task is still running
             if not done:
-                progress = _calculate_composition_progress(
-                    pulled_images,
+                progress = calculate_composition_progress(
+                    service_trackers,
+                    completed_services,
                     total_images,
                 )
-                # Count completed images
-                completed = len(pulled_images)
+                # Count completed services
+                completed = len(completed_services)
                 store.dispatch(
                     NotificationsAddAction(
                         notification=replace(
                             base_notification,
                             content=(
                                 f'Pulling images... ({completed}/'
-                                f'{total_images if total_images > 0 else "?"})'
+                                f'{total_images if total_images > 0 else "?"}'
                             ),
                             progress=progress,
                         ),
@@ -351,6 +469,14 @@ async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
         await _handle_pull_error(base_notification)
 
     finally:
+        # Clean up progress trackers to prevent memory leak
+        # Each tracker contains layer dictionaries that can grow large
+        service_trackers.clear()
+        completed_services.clear()
+        logger.debug(
+            'Cleaned up progress trackers',
+            extra={'composition_id': id},
+        )
         await check_composition(id=id)
 
 
