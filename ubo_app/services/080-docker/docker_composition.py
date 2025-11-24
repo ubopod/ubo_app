@@ -7,6 +7,8 @@ import json
 import re
 import shutil
 from dataclasses import replace
+from docker_images import IMAGES
+
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import CONFIG_PATH
@@ -261,9 +263,11 @@ async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
     from docker_app import prepare_app
 
     id = event.image
+    container = IMAGES[id]
 
     # Prepare the composition (download files, generate credentials, update metadata)
-    if not await prepare_app(id):
+    if not await prepare_app(container):
+        logger.error('prepare_app returned False, exiting', extra={'image': id})
         return
 
     composition_label = await get_composition_label(id)

@@ -174,7 +174,7 @@ async def run_container(
                 return
 
         # Prepare the container (if needed)
-        if not await prepare_app(id):
+        if not await prepare_app(IMAGES[id]):
             docker_client.close()
             return
 
