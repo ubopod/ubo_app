@@ -9,6 +9,10 @@ from ubo_app.constants import INSTALLATION_PATH
 
 def get_installed_versions() -> list[Path]:
     """Get a list of installed versions of ubo."""
+    installation_path = Path(INSTALLATION_PATH)
+    if not installation_path.exists():
+        return []
+
     return [
         item
         for item in Path(INSTALLATION_PATH).iterdir()
