@@ -39,14 +39,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
 
-def get_full_image_path(image_id: str) -> str:
-    """Get full image path including registry if specified."""
-    image_entry = IMAGES[image_id]
-    if image_entry.registry:
-        return f'{image_entry.registry}/{image_entry.path}'
-    return image_entry.path
-
-
 def find_container(client: docker.DockerClient, *, image: str) -> Container | None:
     """Find a container."""
     for container in client.containers.list(all=True):
@@ -130,7 +122,7 @@ async def run_container(
     id = event.image
 
     docker_client = docker.from_env()
-    path = get_full_image_path(id)
+    path = IMAGES[id].full_path
     container = find_container(docker_client, image=path)
     if container:
         if container.status != 'running':
@@ -189,7 +181,7 @@ async def run_container(
                 return
 
         docker_client.containers.run(
-            get_full_image_path(id),
+            IMAGES[id].full_path,
             hostname=id,
             publish_all_ports=True,
             detach=True,
@@ -209,7 +201,7 @@ def stop_container(event: DockerImageStopContainerEvent) -> None:
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=get_full_image_path(id))
+    container = find_container(docker_client, image=IMAGES[id].full_path)
     if container and container.status != 'exited':
         container.stop()
     docker_client.close()
@@ -220,7 +212,7 @@ def remove_container(event: DockerImageRemoveContainerEvent) -> None:
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=get_full_image_path(id))
+    container = find_container(docker_client, image=IMAGES[id].full_path)
     if container:
         container.remove(v=True, force=True)
     docker_client.close()
@@ -231,7 +223,7 @@ def update_container(*, image_id: str, container: Container) -> None:
     if container.status == 'running':
         logger.debug(
             'Container running image found',
-            extra={'image': image_id, 'path': get_full_image_path(image_id)},
+            extra={'image': image_id, 'path': IMAGES[image_id].full_path},
         )
         store.dispatch(
             DockerImageSetStatusAction(
@@ -251,7 +243,7 @@ def update_container(*, image_id: str, container: Container) -> None:
         return
     logger.debug(
         "Container for the image found, but it's not running",
-        extra={'image': image_id, 'path': get_full_image_path(image_id)},
+        extra={'image': image_id, 'path': IMAGES[image_id].full_path},
     )
     store.dispatch(
         DockerImageSetStatusAction(
@@ -265,7 +257,7 @@ def _monitor_events(  # noqa: C901
     image_id: str,
     get_docker_id: Callable[[], str],
 ) -> None:
-    path = get_full_image_path(image_id)
+    path = IMAGES[image_id].full_path
     docker_client = docker.from_env()
     events = docker_client.events(
         decode=True,
@@ -341,7 +333,7 @@ def _monitor_events(  # noqa: C901
 
 def check_container(*, image_id: str) -> None:
     """Check the container status."""
-    path = get_full_image_path(image_id)
+    path = IMAGES[image_id].full_path
 
     def act() -> None:
         logger.debug('Checking image', extra={'image': image_id, 'path': path})

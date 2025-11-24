@@ -49,14 +49,6 @@ def _create_fetch_progress_notification(
     )
 
 
-def get_full_image_path(image_id: str) -> str:
-    """Get full image path including registry if specified."""
-    image_entry = IMAGES[image_id]
-    if image_entry.registry:
-        return f'{image_entry.registry}/{image_entry.path}'
-    return image_entry.path
-
-
 @store.with_state(lambda state: state.docker.service.usernames)
 def fetch_image(  # noqa: C901
     usernames: dict[str, str],
@@ -221,5 +213,5 @@ def remove_image(event: DockerImageRemoveEvent) -> None:
     """Remove an image."""
     id = event.image
     docker_client = docker.from_env()
-    docker_client.images.remove(get_full_image_path(id), force=True)
+    docker_client.images.remove(IMAGES[id].full_path, force=True)
     docker_client.close()
