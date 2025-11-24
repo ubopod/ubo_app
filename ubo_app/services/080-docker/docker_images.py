@@ -86,6 +86,10 @@ class ContainerEntry(Immutable):
         | None
     ) = None
     prepare: Callable[[], Coroutine[Any, Any, bool] | bool] | None = None
+    @property
+    def full_path(self) -> str:
+        """Get full image path including registry if specified."""
+        return f'{self.registry}/{self.path}'
 
 
 IMAGES = {
