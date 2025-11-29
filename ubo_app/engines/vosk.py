@@ -18,6 +18,7 @@ from ubo_app.constants.assistant import (
 from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.store.main import store
+from ubo_app.store.services.assistant import AssistantUpdateProvidersAction
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -129,6 +130,7 @@ the screen.""",
                 await process.wait()
                 store.dispatch(
                     SpeechRecognitionSetIsIntentsActiveAction(is_active=True),
+                    AssistantUpdateProvidersAction(),
                 )
             except Exception:
                 self._handle_error()
