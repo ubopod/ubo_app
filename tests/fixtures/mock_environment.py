@@ -306,13 +306,7 @@ def _monkeypatch_pyaudio() -> None:
     """Monkeypatch PyAudio to avoid actual audio input/output."""
     from fake import Fake
 
-    sys.modules['pyaudio'] = Fake(
-    _Fake__attrs={
-    'PyAudio': Fake,
-    'paInt16': 8,
-    'Stream': Fake,
-    },
-    )
+    sys.modules['pyaudio'] = Fake(_Fake__attrs={'paInt16': 8})
 
 
 @pytest.fixture
