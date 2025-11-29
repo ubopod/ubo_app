@@ -185,9 +185,11 @@ def configure_device() -> None:  # noqa: C901
         if 'dtoverlay=gpio-ir,gpio_pin=24' not in current_content:
             config_file.write('dtoverlay=gpio-ir,gpio_pin=24\n')
 
+        # This is required for the PCIe to work on Pi 5
         if 'dtparam=pciex1' not in current_content:
             config_file.write('dtparam=pciex1\n')
 
+        # Set the PCIe speed to Gen 3.0
         if 'dtparam=pciex1_gen=3' not in current_content:
             config_file.write('dtparam=pciex1_gen=3\n')
 
