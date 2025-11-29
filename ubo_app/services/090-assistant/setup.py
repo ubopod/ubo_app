@@ -350,10 +350,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         options=AutorunOptions(memoization=False),
     )
     def stt_providers(
-        selected_and_secrets: tuple[AssistantSTTName, float],
+        data: tuple[AssistantSTTName, float],
     ) -> Sequence[Item]:
         """Return items for recognition engine selection."""
-        selected_stt, _ = selected_and_secrets
+        selected_stt, _ = data
         return [
             ActionItem(
                 key=engine.name,
@@ -391,10 +391,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         options=AutorunOptions(memoization=False),
     )
     def llm_providers(
-        selected_and_secrets: tuple[AssistantLLMName, float],
+        data: tuple[AssistantLLMName, float],
     ) -> Sequence[Item]:
         """Return items for LLM engine selection."""
-        selected_llm, _ = selected_and_secrets
+        selected_llm, _ = data
         return [
             ActionItem(
                 key=engine.name,
@@ -432,10 +432,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         options=AutorunOptions(memoization=False),
     )
     def tts_providers(
-        selected_and_secrets: tuple[AssistantTTSName, float],
+        data: tuple[AssistantTTSName, float],
     ) -> Sequence[Item]:
         """Return items for TTS engine selection."""
-        selected_tts, _ = selected_and_secrets
+        selected_tts, _ = data
         return [
             ActionItem(
                 key=engine.name,
@@ -473,10 +473,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
         options=AutorunOptions(memoization=False),
     )
     def image_generator_providers(
-        selected_and_secrets: tuple[AssistantImageGeneratorName, float],
+        data: tuple[AssistantImageGeneratorName, float],
     ) -> Sequence[Item]:
         """Return items for image generator engine selection."""
-        selected_image_generator, _ = selected_and_secrets
+        selected_image_generator, _ = data
         return [
             ActionItem(
                 key=engine.name,
