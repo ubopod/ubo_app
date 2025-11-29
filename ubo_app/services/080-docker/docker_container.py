@@ -39,8 +39,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
 
-def find_container(client: docker.DockerClient, *, image: str) -> Container | None:
-    """Find a container."""
+def find_container(client: docker.DockerClient, *, image_path: str) -> Container | None:
+    """Find a container by image path (without registry).
+
+    Args:
+        client: Docker client instance.
+        image_path: Image path without registry (e.g., 'homebridge/homebridge:latest').
+
+    """
     for container in client.containers.list(all=True):
         if not isinstance(container, Container):
             continue
@@ -48,15 +54,11 @@ def find_container(client: docker.DockerClient, *, image: str) -> Container | No
         with contextlib.suppress(docker.errors.DockerException):
             container_image = container.image
             if isinstance(container_image, Image):
-                # Match with or without registry prefix
-                # Handles: docker.io/image:tag ↔ image:tag, ghcr.io/image ↔ image, etc.
-                matches = any(
-                    tag in image or image in tag
-                    for tag in container_image.tags
-                )
-
-                if matches:
-                    return container
+                # Check if any tag matches exactly or ends with the image path
+                # (to handle registry prefixes like docker.io/path or ghcr.io/path)
+                for tag in container_image.tags:
+                    if tag == image_path or tag.endswith(f'/{image_path}'):
+                        return container
 
     return None
 
@@ -124,8 +126,7 @@ async def run_container(
     id = event.image
 
     docker_client = docker.from_env()
-    path = IMAGES[id].full_path
-    container = find_container(docker_client, image=path)
+    container = find_container(docker_client, image_path=IMAGES[id].path)
     if container:
         if container.status != 'running':
             container.start()
@@ -199,7 +200,7 @@ def stop_container(event: DockerImageStopContainerEvent) -> None:
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=IMAGES[id].full_path)
+    container = find_container(docker_client, image_path=IMAGES[id].path)
     if container and container.status != 'exited':
         container.stop()
     docker_client.close()
@@ -210,7 +211,7 @@ def remove_container(event: DockerImageRemoveContainerEvent) -> None:
     id = event.image
 
     docker_client = docker.from_env()
-    container = find_container(docker_client, image=IMAGES[id].full_path)
+    container = find_container(docker_client, image_path=IMAGES[id].path)
     if container:
         container.remove(v=True, force=True)
     docker_client.close()
@@ -352,7 +353,10 @@ def _monitor_events(  # noqa: C901, PLR0912
             if (
                 status == 'start' or status.startswith(('exec_create', 'exec_start'))
             ) and event_image == path:
-                container = find_container(docker_client, image=path)
+                container = find_container(
+                    docker_client,
+                    image_path=IMAGES[image_id].path,
+                )
                 if container:
                     update_container(image_id=image_id, container=container)
                 else:
@@ -423,7 +427,7 @@ def check_container(*, image_id: str) -> None:
                 )
             logger.debug('Image found', extra={'image': image_id, 'path': path})
 
-            container = find_container(docker_client, image=path)
+            container = find_container(docker_client, image_path=IMAGES[image_id].path)
             if container:
                 update_container(image_id=image_id, container=container)
                 return
