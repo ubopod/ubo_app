@@ -153,18 +153,37 @@ class StoreService(StoreServiceBase):
                         },
                     )
 
-            store.subscribe_event(event_class, queue_event)
-            while True:
-                event = await queue.get()
-                yield SubscribeEventResponse(
-                    event=Event(
-                        **{
-                            betterproto.casing.snake_case(
-                                type(event).__name__,
-                            ): cast('Any', build_message(event)),
-                        },
-                    ),
+            unsubscribe = store.subscribe_event(
+                event_class,
+                queue_event,
+                keep_ref=False,
+            )
+            try:
+                while True:
+                    event = await queue.get()
+                    yield SubscribeEventResponse(
+                        event=Event(
+                            **{
+                                betterproto.casing.snake_case(
+                                    type(event).__name__,
+                                ): cast('Any', build_message(event)),
+                            },
+                        ),
+                    )
+            except Exception:
+                logger.exception(
+                    'Exception in event subscription',
+                    extra={
+                        'event_type': subscribe_event_request.event,
+                    },
                 )
+                report_service_error()
+            finally:
+                logger.info(
+                    'Unsubscribing from event subscription over gRPC',
+                    extra={'request': subscribe_event_request},
+                )
+                unsubscribe()
 
     async def subscribe_store(
         self,
