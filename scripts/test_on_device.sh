@@ -52,7 +52,7 @@ if [ "$copy" == "True" ]; then
   
   # Since rsync is not called with -r, it treats ./scripts as an empty directory and its content are ignored, it could be any other random directory inside "./". It is needed solely to create the root directory with ubo:ubo ownership.
   # Connect as pi user and use sudo rsync to copy files with ubo:ubo ownership
-  (echo ./scripts; echo ./version.py; echo ./ubo_app/_version.py; find ./ubo_app/rpc/ubo_bindings/ubo -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/secrets -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/store -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/package_info -type f 2>/dev/null; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ pi@ubo-development-pod-$index:/home/ubo/test-runner/ --chown ubo:ubo
+  (echo ./scripts; echo ./version.py; echo ./ubo_app/_version.py; echo ./ubo_app/rpc/ubo_bindings/__init__.py; find ./ubo_app/rpc/ubo_bindings/ubo -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/secrets -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/store -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/package_info -type f 2>/dev/null; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ pi@ubo-development-pod-$index:/home/ubo/test-runner/ --chown ubo:ubo
 fi
 
 if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
@@ -65,7 +65,7 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
   fi
 
   if [ "$copy" == "True" ] || [ "$deps" == "True" ]; then
-    cmd_list+=('sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"ubo_app/_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../../../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/services/090-assistant/ubo-service/pyproject.toml && echo "Patched pyproject.toml files" && cd /home/ubo/test-runner && uv python pin python3.11 && uv venv --system-site-packages && true')
+    cmd_list+=('sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"ubo_app/_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../../../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/services/090-assistant/ubo-service/pyproject.toml && echo "DEBUG: POST-SED PYPROJECT:" && cat /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && echo "Patched pyproject.toml files" && cd /home/ubo/test-runner && uv python pin python3.11 && uv venv --system-site-packages && true')
   fi
 
   if [ "$run" == "True" ]; then
