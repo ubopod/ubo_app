@@ -18,6 +18,7 @@ from docker_images import IMAGES
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.logger import logger
+from ubo_app.store.core.types import DeregisterRegularAppAction
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchCompositionEvent,
@@ -34,8 +35,10 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.log_process import log_async_process
+from ubo_app.utils.server import send_command
 
 COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 DOCKER_COMPOSITION_FETCH_PROGRESS_NOTIFICATION_ID = (
@@ -112,6 +115,51 @@ async def run_composition(event: DockerImageRunCompositionEvent) -> None:
         ),
     )
     await check_composition(id=id)
+
+
+async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
+    """Remove the composition."""
+    id = event.image
+    logger.info('Removing composition', extra={'composition_id': id})
+
+    store.dispatch(
+        DockerImageSetStatusAction(image=id, status=DockerItemStatus.PROCESSING),
+    )
+
+    # Remove composition directory
+    # On Pi: use system manager with elevated privileges
+    # (Docker creates root-owned directories)
+    # On Mac/dev: use shutil.rmtree (no elevated privileges needed)
+    try:
+        if IS_RPI:
+            composition_path = COMPOSITIONS_PATH / id
+            await send_command(
+                'docker',
+                'composition_delete',
+                str(composition_path),
+            )
+        else:
+            # Development environment - use shutil directly
+            target_path = COMPOSITIONS_PATH / id
+            if target_path.exists():
+                shutil.rmtree(target_path)
+    except Exception:
+        logger.exception(
+            'Failed to remove composition directory',
+            extra={'composition_id': id},
+        )
+
+    # Remove from IMAGES dictionary and unregister from Redux
+    if id in IMAGES:
+        del IMAGES[id]
+        logger.info('Removed composition from IMAGES', extra={'composition_id': id})
+
+        # Remove from menu
+        store.dispatch(
+            DeregisterRegularAppAction(
+                key=id,
+            ),
+        )
 
 
 async def get_composition_label(composition_id: str) -> str:
@@ -623,15 +671,3 @@ async def check_composition(*, id: str) -> None:
         store.dispatch(
             DockerImageSetStatusAction(image=id, status=DockerItemStatus.NOT_AVAILABLE),
         )
-
-
-async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
-    """Delete the composition."""
-    id = event.image
-
-    await _release_composition(id)
-
-    # Remove composition directory
-    shutil.rmtree(COMPOSITIONS_PATH / id)
-
-    await check_composition(id=id)

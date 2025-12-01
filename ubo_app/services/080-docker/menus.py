@@ -30,7 +30,9 @@ from ubo_app.store.services.docker import (
     ImageState,
 )
 from ubo_app.store.services.notifications import (
+    Importance,
     Notification,
+    NotificationActionItem,
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
@@ -43,6 +45,34 @@ if TYPE_CHECKING:
     from ubo_gui.page import PageWidget
 
     from ubo_app.store.services.ip import IpNetworkInterface
+
+
+def _show_delete_confirmation(image_id: str) -> None:
+    """Show confirmation dialog before deleting a composition."""
+    def _delete_action() -> None:
+        """Execute the delete action."""
+        store.dispatch(DockerImageRemoveAction(image=image_id))
+
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title='Delete Application?',
+                content='All application data and files will be permanently deleted. '
+                'This action cannot be undone.',
+                importance=Importance.HIGH,
+                icon='󰆴',
+                actions=[
+                    NotificationActionItem(
+                        action=_delete_action,
+                        icon='󰆴',
+                        background_color=DANGER_COLOR,
+                        label='Delete',
+                    ),
+                ],
+            ),
+        ),
+    )
+
 
 @store.with_state(lambda state: state.ip.interfaces if hasattr(state, 'ip') else None)
 def image_menu(  # noqa: C901
@@ -81,8 +111,13 @@ def image_menu(  # noqa: C901
                     icon='󰐊',
                     store_action=DockerImageRunAction(image=image.id),
                 ),
-                UboDispatchItem(
+                ActionItem(
                     label='Delete Application' if is_composition else 'Remove Image',
+                    icon='󰆴',
+                    background_color=DANGER_COLOR,
+                    action=lambda img_id=image.id: _show_delete_confirmation(img_id),
+                ) if is_composition else UboDispatchItem(
+                    label='Remove Image',
                     icon='󰆴',
                     store_action=DockerImageRemoveAction(image=image.id),
                     background_color=DANGER_COLOR,
