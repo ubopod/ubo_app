@@ -137,8 +137,8 @@ async def test_setup_flow(
 
     # Dismiss the notification informing the user that the connection was added
     await check_icon('󰤨')
-    await wait_for_menu_item(label='', icon='󰆴')
-    store.dispatch(MenuChooseByIconAction(icon='󰆴'))
+    await wait_for_menu_item(label='', icon='')
+    store.dispatch(MenuChooseByIconAction(icon=''))
     await stability()
 
     # Select "Select" to open the wireless connection list and see the new connection
@@ -191,9 +191,9 @@ async def test_setup_flow(
     store_snapshot.take(selector=store_snapshot_selector)
 
     # Dismiss the notification informing the user that the connection was deleted
-    await wait_for_menu_item(label='', icon='󰆴')
+    await wait_for_menu_item(label='', icon='')
     window_snapshot.take()
-    store.dispatch(MenuChooseByIconAction(icon='󰆴'))
+    store.dispatch(MenuChooseByIconAction(icon=''))
 
     await wait_for_empty_menu(placeholder='No Wi-Fi connections found')
     window_snapshot.take()

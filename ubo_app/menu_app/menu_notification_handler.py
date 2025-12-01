@@ -15,7 +15,7 @@ from ubo_gui.menu.types import HeadlessMenu
 from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PAGE_MAX_ITEMS
 
-from ubo_app.colors import DANGER_COLOR, INFO_COLOR
+from ubo_app.colors import INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.menu_app.notification_info import NotificationInfo
 from ubo_app.store.core.types import CloseApplicationAction
@@ -244,11 +244,11 @@ class MenuNotificationHandler(UboApp):
             bottom_items.append(
                 NotificationActionItem(
                     key='dismiss',
-                    icon='󰆴',
+                    icon='',
                     action=dismiss,
                     label='',
                     is_short=True,
-                    background_color=DANGER_COLOR,
+                    background_color='#C0C0C0',
                 ),
             )
 
