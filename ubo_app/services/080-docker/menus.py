@@ -55,9 +55,7 @@ def image_menu(  # noqa: C901
         ip for interface in interfaces or [] for ip in interface.ip_addresses
     ]
     items: list[Item] = []
-    is_composition = image.id.startswith('composition_') or (
-        image.id in IMAGES and IMAGES[image.id].is_composition
-    )
+    is_composition = image.id in IMAGES and IMAGES[image.id].is_composition
 
     def open_qrcode(port: str) -> Callable[[], PageWidget]:
         def action() -> PageWidget:
@@ -209,9 +207,7 @@ def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
     def menu_with_check(image: ImageState) -> HeadedMenu:
         # Only check status if not in middle of an operation
         if image.status not in (DockerItemStatus.FETCHING, DockerItemStatus.PROCESSING):
-            is_composition = image_id.startswith('composition_') or (
-                image_id in IMAGES and IMAGES[image_id].is_composition
-            )
+            is_composition = image_id in IMAGES and IMAGES[image_id].is_composition
             if is_composition:
                 create_task(check_composition(id=image_id))
             else:

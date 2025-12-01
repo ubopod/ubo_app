@@ -629,29 +629,7 @@ async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
     """Delete the composition."""
     id = event.image
 
-    # Stop containers and remove images
-    store.dispatch(
-        DockerImageSetStatusAction(image=id, status=DockerItemStatus.PROCESSING),
-    )
-    down_process = await asyncio.subprocess.create_subprocess_exec(
-        'docker',
-        'compose',
-        'down',
-        '--rmi',
-        'all',
-        '--volumes',
-        cwd=COMPOSITIONS_PATH / id,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    await down_process.wait()
-    store.dispatch(
-        await log_async_process(
-            down_process,
-            title='Docker Composition Error',
-            message='Failed to remove composition.',
-        ),
-    )
+    await _release_composition(id)
 
     # Remove composition directory
     shutil.rmtree(COMPOSITIONS_PATH / id)
