@@ -7,6 +7,7 @@ import contextlib
 import functools
 import json
 import math
+import re
 import uuid
 from io import BytesIO
 from typing import TYPE_CHECKING
@@ -25,7 +26,7 @@ from docker_composition import (
 )
 from docker_container import remove_container, run_container, stop_container
 from docker_image import fetch_image, remove_image
-from docker_images import IMAGES
+from docker_images import IMAGES, ContainerEntry
 from menus import docker_item_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
@@ -384,8 +385,29 @@ default.""",
     create_task(act())
 
 
+def _slugify(text: str) -> str:
+    """Convert text to a URL-friendly slug.
+
+    Args:
+        text: The text to slugify
+
+    Returns:
+        A lowercase string with spaces and special characters replaced by underscores
+
+    """
+    # Convert to lowercase
+    slug = text.lower()
+    # Replace spaces and special characters with underscores
+    slug = re.sub(r'[^a-z0-9]+', '_', slug)
+    # Remove leading/trailing underscores
+    slug = slug.strip('_')
+    # Collapse multiple underscores
+    slug = re.sub(r'_+', '_', slug)
+    return slug or 'composition'
+
+
 def input_docker_composition() -> None:
-    """Input the Docker credentials."""
+    """Input the Docker composition."""
 
     async def act() -> None:
         with contextlib.suppress(asyncio.CancelledError):
@@ -444,7 +466,9 @@ supported""",
             if not result or not data['yaml-config'] or not data['label']:
                 return
 
-            id = f'composition_{uuid.uuid4().hex}'
+            # Generate a user-friendly ID: slugified_label_uuid
+            label_slug = _slugify(data['label'])
+            id = f'{label_slug}_{uuid.uuid4().hex}'
             composition_path = COMPOSITIONS_PATH / id
             composition_path.mkdir(exist_ok=True, parents=True)
             with (composition_path / 'docker-compose.yml').open('w') as file:
@@ -469,6 +493,15 @@ supported""",
 
                     with tarfile.open(fileobj=directory_content_io) as tar_file:
                         tar_file.extractall(path=composition_path)  # noqa: S202
+
+            IMAGES[id] = ContainerEntry(
+                id=id,
+                label=data['label'],
+                icon=data.get('icon', '󰣆'),
+                path=str(composition_path),
+                registry='docker.io',
+                is_composition=True,
+            )
 
             store.dispatch(
                 CombineReducerRegisterAction(
@@ -525,17 +558,17 @@ def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
 
 
 def _register_composition_entry(image_id: str) -> None:
-    """Register a manual composition in the main menu."""
-    path = COMPOSITIONS_PATH / image_id
-    if not path.exists():
-        logger.error('Composition not found', extra={'image': image_id})
+    """Register a composition in the main menu."""
+    if image_id not in IMAGES:
+        logger.error('Composition not found in IMAGES', extra={'image': image_id})
         return
-    metadata = json.load((path / 'metadata.json').open())
+
+    image_entry = IMAGES[image_id]
     store.dispatch(
         RegisterRegularAppAction(
             menu_item=ActionItem(
-                label=metadata['label'],
-                icon=metadata['icon'] or '󰣆',
+                label=image_entry.label,
+                icon=image_entry.icon or '󰣆',
                 action=functools.partial(docker_item_menu, image_id),
             ),
             key=image_id,
@@ -559,14 +592,42 @@ def _register_container_entry(image_id: str) -> None:
 
 def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
     """Register the image as an entry in the main menu."""
-    match event.image:
-        case str(image_id) if image_id.startswith('composition_'):
-            _register_composition_entry(image_id)
-        case str(image_id):
-            _register_container_entry(image_id)
+    image_id = event.image
+    if image_id in IMAGES and IMAGES[image_id].is_composition:
+        _register_composition_entry(image_id)
+    else:
+        _register_container_entry(image_id)
 
 
 def _load_images() -> None:
+    # First, populate IMAGES with dynamically imported compositions from disk
+    for item in (
+        COMPOSITIONS_PATH.iterdir() if COMPOSITIONS_PATH.is_dir() else []
+    ):
+        if not item.is_dir():
+            continue
+        if item.stem in IMAGES:
+            continue
+        if not (item / 'metadata.json').exists():
+            continue
+
+        try:
+            metadata = json.load((item / 'metadata.json').open())
+            IMAGES[item.stem] = ContainerEntry(
+                id=item.stem,
+                label=metadata['label'],
+                icon=metadata.get('icon', '󰣆'),
+                path=str(item),
+                registry='docker.io',
+                is_composition=True,
+            )
+        except Exception:
+            logger.exception(
+                'Failed to load composition',
+                extra={'composition': item.stem},
+            )
+
+    # Now register all images (both predefined and dynamically imported) with Redux
     store.dispatch(
         [
             CombineReducerRegisterAction(
@@ -583,18 +644,6 @@ def _load_images() -> None:
                 ),
             )
             for image_id in IMAGES
-        ],
-        [
-            CombineReducerRegisterAction(
-                combine_reducers_id=reducer_id,
-                key=item.stem,
-                reducer=image_reducer,
-                payload=json.load((item / 'metadata.json').open()),
-            )
-            for item in (
-                COMPOSITIONS_PATH.iterdir() if COMPOSITIONS_PATH.is_dir() else []
-            )
-            if item.stem.startswith('composition_')
         ],
     )
 
