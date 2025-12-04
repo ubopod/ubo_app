@@ -29,6 +29,76 @@
 - feat(keypad): add hold and unhold actions and use them to run assistant anywhere by holding the home key in
 - chore: update to pipecat 0.0.84, fixing an issue in image generation flow
 - fix(tests): disable external processes in `test_menu` as grpc does not load in it
+- feat(assistant): add support for eleventh lab TTS
+- fix(assistant): custom audio resampling to handle multiple input rates
+- fix(assistant): move audio event subscriptions to start() to ensure task_manager is initialized
+- feat(assistant): add secrets file monitoring to update providers on API key changes
+- feat(assistant): add support for Deepgram STT engine
+- feat(assistant): add Cerebras LLM integration
+- chore(assistant): update wake word handling and visual indicators
+- feat(assistant): add AssemblyAI STT engine
+- feat(assistant): add Rime TTS engine support
+- fix(keypad): fix KeyError issue of microphone mute button
+- chore(assistant): seperate tool message from system prompt
+- feat(camera): add camera backend with OpenCV and PiCamera2 for MacOS
+- feat(camera): add UI for selecting camera index
+- feat(assistant): add MCP server management with GUI
+- chore(infrared): update codes for small remote
+- chore(assistant): code clean up
+- refactor(assistant): address lint and typecheck issues
+- fix(assistant): bug related to mcp enable status sync
+- fix(test): increase MAX_EXPECTED_EVENT_HANDLERS to 70
+- fix(test): pyaudio and cv2 mocking issues
+- chore(test): update test on device script
+- feat(assistant): dynamically update MCP tools used by LLms
+- feat(assistant): add support for on-premise Ollama with URL
+- refactor(assistant): reduce initialization complexity to address lint issues
+- feat(docker): add compose presets and registery path bug fixes
+- feat(assistant): update UI after ollama, vosk, piper models are download
+- fix(docker): path issues and duplicate monitoring events
+- fix(assistant): add type hint for _services in UboSwitchService
+- fix(lint): disable complexity check for fetch_image function
+- fix(docker): check if composition directory exists for preset installs
+- feat(assistant): show mic mute notification when triggered
+- feat(assistant): add toggle listening action
+- feat(infrared): add SKIP remote assistant toggle key
+- fix(docker): improve docker status updates and sync
+- fix(envoy): use configurable host for gRPC server in Envoy template
+- fix(build): let latest ubo raw bindings package be used.
+- feat(boostrap): add PCIe configuration to device setup
+- fix(tests): update Docker service initialization flow
+- refactor(assistant): migrate to universal LLM context and improve logging
+- fix(assistant): improve service switching and tools management
+- chore(assistant): update image request handling for pipecat 0.0.92
+- fix(wifi): Address WiFi availability at first add action - closes #324
+- chore(logging): add debug logging for hardware detection
+- feat(docker): show progress for Docker image & composition pulls
+- feat(assistant): optimize audio streaming with conditional subscription and zero-frame keepalive
+- chore(audio): do not emit audio event when mic is muted
+- fix(hotspot): ensure dhcpcd service is properly managed during boot and hotspot configuration
+- chore(uv): update uv lock file
+- fix(assistant): add back missing icon in speech recognition title
+- fix(tests): increase initial wait in test_all_services_register
+- docs(readme): update Kickstarter URL and add setup instructions for protobuf and web app
+- feat(install): add audio system dependencies for PipeWire and PortAudio
+- refactor(docker): replace get_full_image_path helper with full_path property
+- refactor(docker): unify container and compose operations
+- fix(tests): increase initial wait in test_all_services_register from 3 to 6 seconds
+- refactor(docker): pass ContainerEntry object instead of ID to prepare_app and update_composition_metadata
+- fix(update_manager): handle missing installation path in get_installed_versions
+- fix(docker): enhance progress tracking with service-segmented calculation
+- chore(assistant): use generic `data` param name when multiple items are provided by the selector
+- fix(grpc): unsubscribe from event handler when grpc stream is closed to prevent memory leak
+- fix(assistant): fix issue related to UI not being updated after vosk, piper, ollama models download
+- chore(tests): improve pyaudio mocking
+- chore(bootstrap): add comment lines for PCIe overlays
+- chore(docker): refine Docker container image name matching logic.
+- chore(assistant): remove anthropic from packages as it is not yet used
+- fix(tests): increase stability retry attempts and wait in test_services
+- fix(scripts): address dependency issue with test on device
+- fix(docker): unified compositions added by webUI import or compose hardcoded presets
+- chore(notification): change dismiss icon and background color
+- fix(docker): remove composition directory with elevated privilege special send_command on Pi and double confirm with user.
 
 ## Version 1.6.0
 
