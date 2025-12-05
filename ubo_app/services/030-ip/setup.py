@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from collections import defaultdict
+from contextlib import suppress
 from typing import TYPE_CHECKING
 
 import psutil
@@ -91,23 +92,44 @@ async def monitor_connections(end_event: asyncio.Event) -> None:
     loop = asyncio.get_event_loop()
 
     async def ping_process() -> None:
-        process = await asyncio.create_subprocess_exec(
-            '/usr/bin/env',
-            'ping',
-            '8.8.8.8',
-            '-s',
-            '0',
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        if process.stdout:
-            async for line in process.stdout:
-                if end_event.is_set():
-                    return
-                received_lines.append((line, loop.time()))
+        while not end_event.is_set():
+            process = None
+            try:
+                logger.debug(
+                    'Starting ping subprocess to monitor internet connectivity',
+                )
+                process = await asyncio.create_subprocess_exec(
+                    '/usr/bin/env',
+                    'ping',
+                    '8.8.8.8',
+                    '-s',
+                    '0',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                )
+                if process.stdout:
+                    async for line in process.stdout:
+                        if end_event.is_set():
+                            logger.debug('End event set, terminating ping process')
+                            process.terminate()
+                            return
+                        received_lines.append((line, loop.time()))
+                # If we reach here, ping process exited - wait before retry
+                logger.warning(
+                    'Ping process exited, restarting in 1 second...',
+                    extra={'return_code': process.returncode if process else None},
+                )
+                await asyncio.sleep(1)
+            except Exception:
+                logger.exception('Error in ping process, restarting in 1 second...')
+                if process:
+                    with suppress(Exception):
+                        process.terminate()
+                await asyncio.sleep(1)
 
     create_task(ping_process())
 
+    previous_state = None
     while not end_event.is_set():
         received_lines = [
             line
@@ -115,10 +137,19 @@ async def monitor_connections(end_event: asyncio.Event) -> None:
             if loop.time() - line[1] < PING_TIMEOUT
             and line[0].startswith(b'8 bytes from')
         ]
-        if received_lines and received_lines[-1][0].startswith(b'8 bytes from'):
-            store.dispatch(IpSetIsConnectedAction(is_connected=True))
-        else:
-            store.dispatch(IpSetIsConnectedAction(is_connected=False))
+        is_connected = bool(
+            received_lines and received_lines[-1][0].startswith(b'8 bytes from'),
+        )
+        if is_connected != previous_state:
+            logger.info(
+                'Internet connectivity state changed',
+                extra={
+                    'is_connected': is_connected,
+                    'received_lines_count': len(received_lines),
+                },
+            )
+            previous_state = is_connected
+        store.dispatch(IpSetIsConnectedAction(is_connected=is_connected))
         await asyncio.sleep(0.25)
 
 
