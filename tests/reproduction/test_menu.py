@@ -57,7 +57,7 @@ async def test_root_menu_bad_state(
     store.dispatch(MenuChooseByIconAction(icon='󰍜'))
 
     logger.info('Waiting for stability')
-    await stability()
+    await stability(initial_wait=3, attempts=3, wait=2)
 
     from headless_kivy import HeadlessWidget
 
