@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from headless_kivy_pytest.fixtures import WindowSnapshot
-    from redux_pytest.fixtures import StoreSnapshot
+    from redux_pytest.fixtures import StoreSnapshot, WaitFor
     from ubo_handle import (  # pyright: ignore [reportMissingModuleSource]
         ReducerRegistrar,
     )
@@ -24,6 +24,7 @@ async def test_all_services_register(
     store_snapshot: StoreSnapshot,
     load_services: LoadServices,
     stability: Stability,
+    wait_for: WaitFor,
     store: UboStore,
 ) -> None:
     """Test all services load."""
@@ -33,6 +34,50 @@ async def test_all_services_register(
     unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=50, run_async=True)
 
     await stability(initial_wait=6, attempts=5, wait=2)
+
+    from tenacity import wait_fixed
+
+    @wait_for(run_async=True, timeout=20, wait=wait_fixed(1))
+    def wait_for_docker_ready() -> None:
+        state = store._state  # noqa: SLF001
+        assert state is not None
+        docker_state = state.docker
+        # ensure reducer registered and well-known images are present
+        assert docker_state.combine_reducers_id
+        # service status should have been determined
+        from ubo_app.store.services.docker import DockerStatus
+
+        assert docker_state.service.status != DockerStatus.UNKNOWN
+
+    await wait_for_docker_ready()
+
+    @wait_for(run_async=True, timeout=120, wait=wait_fixed(2))
+    def wait_for_docker_menu_items() -> None:
+        state = store._state  # noqa: SLF001
+        assert state is not None
+        main_menu = state.main.menu
+        # Drill into main -> apps submenu where app entries are registered
+        main_items = list(getattr(main_menu, 'items', []))
+        main_entry = next(
+            (i for i in main_items if getattr(i, 'key', None) == 'main'),
+            None,
+        )
+        assert main_entry is not None
+        apps_menu = getattr(main_entry, 'sub_menu', None)
+        assert apps_menu is not None
+        apps_items = list(getattr(apps_menu, 'items', []))
+        apps_entry = next(
+            (i for i in apps_items if getattr(i, 'key', None) == 'apps'),
+            None,
+            )
+        assert apps_entry is not None
+        apps_sub_menu = getattr(apps_entry, 'sub_menu', None)
+        assert apps_sub_menu is not None
+        app_items = list(getattr(apps_sub_menu, 'items', []))
+        keys = {getattr(item, 'key', None) for item in app_items}
+        assert 'docker:envoy_grpc' in keys
+
+    await wait_for_docker_menu_items()
 
     assert len(store._listeners) < MAX_EXPECTED_LISTENERS  # noqa: SLF001
     assert len(store._event_handlers) < MAX_EXPECTED_EVENT_HANDLERS  # noqa: SLF001
