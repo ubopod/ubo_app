@@ -17,6 +17,7 @@ from ubo_app.store.services.display import (
     DisplayUpdateActivityAction,
 )
 from ubo_app.store.services.keypad import KeypadKeyPressAction
+from ubo_app.utils import IS_TEST_ENV
 
 splash_screen = None
 
@@ -126,4 +127,10 @@ def init_service() -> None:
     store.subscribe_event(DisplayBlankEvent, handle_blank_event)
     store.subscribe_event(DisplayUnblankEvent, handle_unblank_event)
 
-    create_task(monitor_inactivity())
+    # Don't start monitor task during tests to prevent screen blanking
+    # during screenshots
+    if not IS_TEST_ENV:
+        create_task(monitor_inactivity())
+        logger.info('Screen blanking monitor task started')
+    else:
+        logger.info('Screen blanking disabled during tests')
