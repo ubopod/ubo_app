@@ -55,7 +55,10 @@
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
   "display": {
     "_type": "DisplayState",
-    "is_paused": false
+    "blank_timeout": 15.0,
+    "is_blanked": false,
+    "is_paused": false,
+    "last_activity_time": 1672531200.0
   },
   "docker": {
     "_type": "DockerState",

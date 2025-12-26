@@ -164,7 +164,7 @@ def render_on_display(*, regions: list[Region]) -> None:
             ((data[:, :, 0] & 0xF8) << 8)
             | ((data[:, :, 1] & 0xFC) << 3)
             | (data[:, :, 2] >> 3)
-        )
+        ).copy()
         data_bytes = (
             color.astype(np.uint16).view(np.uint8).reshape(-1, 2)[:, ::-1].tobytes()
         )

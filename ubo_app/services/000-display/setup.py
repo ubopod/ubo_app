@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import time
+import datetime
 
 from ubo_app.display import display
 from ubo_app.logger import logger
@@ -66,18 +66,19 @@ async def monitor_inactivity() -> None:
                 logger.warning('Display state not available')
                 continue
 
+            current_time = datetime.datetime.now(tz=datetime.UTC).timestamp()
             logger.info(
                 'Inactivity check',
                 extra={
                     'last_activity': display_state.last_activity_time,
                     'blank_timeout': display_state.blank_timeout,
                     'is_blanked': display_state.is_blanked,
-                    'current_time': time.time(),
+                    'current_time': current_time,
                 },
             )
 
             if display_state.last_activity_time is not None:
-                inactive_duration = time.time() - display_state.last_activity_time
+                inactive_duration = current_time - display_state.last_activity_time
                 logger.info(
                     'Checking inactivity duration',
                     extra={
