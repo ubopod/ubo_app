@@ -82,7 +82,7 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
   fi
 
   if [ "$run" == "True" ]; then
-    cmd_list+=("uv run --no-sync poe test -vv --tb=long -s --override-store-snapshots --override-window-snapshots --make-screenshots -n1 $pytest_args 2>&1 || true &&")
+    cmd_list+=("UBO_TEST_ENV=1 uv run --no-sync poe test -vv --tb=long -s --override-store-snapshots --override-window-snapshots --make-screenshots -n1 $pytest_args 2>&1 || true &&")
   fi
 
   # Add a final true to ensure the command exits successfully
@@ -96,6 +96,5 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
 fi
 
 if [ "$run" == "True" ] || [ "$results" == True ]; then
-  rm -rf tests/**/results/
   run_on_pod "find /home/ubo/test-runner -printf %P\\\\n | grep '^tests/.*/results$'" | rsync --rsync-path="sudo rsync" --info=progress2 --delete -are ssh --files-from=- --ignore-missing-args pi@ubo-development-pod-$index:/home/ubo/test-runner ./
 fi

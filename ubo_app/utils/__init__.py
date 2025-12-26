@@ -1,6 +1,7 @@
 """Provides `IS_RPI` and `IS_TEST_ENV` constants."""
 
 import contextlib
+import os
 import sys
 from pathlib import Path
 
@@ -10,7 +11,10 @@ with contextlib.suppress(Exception):
     IS_RPI_4 = IS_RPI and Path('/proc/device-tree/model').read_text().startswith(
         'Raspberry Pi 4',
     )
-IS_TEST_ENV = any('pytest' in arg.lower() for arg in sys.argv)
+# Check for pytest in argv (local tests) or UBO_TEST_ENV env var (device tests)
+IS_TEST_ENV = any('pytest' in arg.lower() for arg in sys.argv) or bool(
+    os.environ.get('UBO_TEST_ENV'),
+)
 
 from ubo_app.utils.eeprom import (  # noqa: E402
     UNAVAILABLE_SERIAL_NUMBER,
