@@ -20,7 +20,22 @@ class DisplayResumeAction(DisplayAction): ...
 class DisplayRedrawAction(DisplayAction): ...
 
 
+class DisplayBlankAction(DisplayAction): ...
+
+
+class DisplayUnblankAction(DisplayAction): ...
+
+
+class DisplayUpdateActivityAction(DisplayAction): ...
+
+
 class DisplayRedrawEvent(DisplayEvent): ...
+
+
+class DisplayBlankEvent(DisplayEvent): ...
+
+
+class DisplayUnblankEvent(DisplayEvent): ...
 
 
 class DisplayRenderEvent(DisplayEvent):
@@ -39,3 +54,6 @@ class DisplayCompressedRenderEvent(DisplayEvent):
 
 class DisplayState(Immutable):
     is_paused: bool = False
+    is_blanked: bool = False
+    last_activity_time: float | None = None
+    blank_timeout: float = 15.0
