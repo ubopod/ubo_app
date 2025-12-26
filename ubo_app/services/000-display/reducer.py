@@ -1,7 +1,7 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
-import time
+import datetime
 from dataclasses import replace
 
 from redux import (
@@ -79,17 +79,18 @@ def reducer(
                 state=replace(
                     state,
                     is_blanked=False,
-                    last_activity_time=time.time(),
+                    last_activity_time=datetime.datetime.now(tz=datetime.UTC).timestamp(),
                 ),
                 events=[DisplayUnblankEvent(), DisplayRedrawEvent()],
             )
 
         case DisplayUpdateActivityAction():
+            timestamp = datetime.datetime.now(tz=datetime.UTC).timestamp()
             logger.debug(
                 'DisplayUpdateActivityAction received',
-                extra={'timestamp': time.time()},
+                extra={'timestamp': timestamp},
             )
-            return replace(state, last_activity_time=time.time())
+            return replace(state, last_activity_time=timestamp)
 
         case _:
             return state
