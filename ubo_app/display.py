@@ -156,12 +156,6 @@ def render_on_display(*, regions: list[Region]) -> None:
     """Transfer data to the display via SPI controller."""
     from ubo_app.store.main import store
 
-    # Skip rendering entirely if display is paused
-    # Note: is_blanked check is in render_block to allow unblanking to work
-    state = store._state  # noqa: SLF001
-    if hasattr(state, 'display') and state.display.is_blanked:
-        logger.info('Skipping render - display is blanked')
-        return
 
     for region in regions:
         rectangle = region['rectangle']
