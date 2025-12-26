@@ -106,7 +106,6 @@ def handle_blank_event(_: DisplayBlankEvent) -> None:
     logger.info('=== HANDLE_BLANK_EVENT CALLED ===')
     logger.info('Blanking screen and turning off backlight')
     display.set_backlight(enabled=False)
-    display.render_blank()
     logger.info('=== BLANK EVENT HANDLING COMPLETE ===')
 
 
