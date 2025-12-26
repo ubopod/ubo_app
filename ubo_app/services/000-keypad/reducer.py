@@ -38,6 +38,10 @@ from ubo_app.store.services.audio import (
     AudioPlayRecordingAction,
     AudioToggleRecordingAction,
 )
+from ubo_app.store.services.display import (
+    DisplayUnblankAction,
+    DisplayUpdateActivityAction,
+)
 from ubo_app.store.services.keypad import (
     Key,
     KeypadAction,
@@ -65,7 +69,9 @@ def reducer(
         | NotificationsAddAction
         | ToggleRecordingAction
         | ReplayRecordedSequenceAction
-        | AssistantAction,
+        | AssistantAction
+        | DisplayUnblankAction
+        | DisplayUpdateActivityAction,
         FinishEvent | MenuEvent | MainEvent,
     ]
     | None
@@ -77,6 +83,23 @@ def reducer(
 
         raise InitializationActionError(action)
 
+    # Check if this key press should wake up a blanked screen
+    if isinstance(action, KeypadKeyPressAction) and not state.is_consumed:
+        from ubo_app.store.main import store
+
+        @store.with_state(
+            lambda s: s.display.is_blanked if hasattr(s, 'display') else False,
+        )
+        def is_display_blanked(is_blanked: bool) -> bool:  # noqa: FBT001
+            return is_blanked
+
+        if is_display_blanked():
+            # Screen is blanked, wake it up and consume this key press
+            return CompleteReducerResult(
+                state=state(is_consumed=True),
+                actions=[DisplayUnblankAction()],
+            )
+
     match action:
         case KeypadKeyPressAction(key=Key.UP) if (
             state.depth == 1 and action.pressed_keys == {action.key}
@@ -84,6 +107,7 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 actions=[
+                    DisplayUpdateActivityAction(),
                     AudioChangeVolumeAction(
                         amount=0.05,
                         device=AudioDevice.OUTPUT,
@@ -96,6 +120,7 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 actions=[
+                    DisplayUpdateActivityAction(),
                     AudioChangeVolumeAction(
                         amount=-0.05,
                         device=AudioDevice.OUTPUT,
@@ -108,6 +133,7 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 actions=[
+                    DisplayUpdateActivityAction(),
                     AssistantStartListeningAction(),
                 ],
             )
@@ -123,26 +149,31 @@ def reducer(
         case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {action.key}:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=0)],
             )
         case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {action.key}:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=1)],
             )
         case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {action.key}:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=2)],
             )
         case KeypadKeyPressAction(key=Key.UP) if action.pressed_keys == {action.key}:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
             )
         case KeypadKeyPressAction(key=Key.DOWN) if action.pressed_keys == {action.key}:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[MenuScrollEvent(direction=MenuScrollDirection.DOWN)],
             )
         case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {
@@ -151,6 +182,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[ScreenshotEvent()],
             )
         case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {
@@ -159,6 +191,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[SnapshotEvent()],
             )
         case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {
@@ -167,7 +200,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
-                actions=[ToggleRecordingAction()],
+                actions=[DisplayUpdateActivityAction(), ToggleRecordingAction()],
             )
         case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {
             Key.BACK,
@@ -175,7 +208,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
-                actions=[AudioToggleRecordingAction()],
+                actions=[DisplayUpdateActivityAction(), AudioToggleRecordingAction()],
             )
         case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {
             Key.BACK,
@@ -183,7 +216,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
-                actions=[AudioPlayRecordingAction()],
+                actions=[DisplayUpdateActivityAction(), AudioPlayRecordingAction()],
             )
         case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {
             Key.BACK,
@@ -191,7 +224,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
-                actions=[ReplayRecordedSequenceAction()],
+                actions=[DisplayUpdateActivityAction(), ReplayRecordedSequenceAction()],
             )
         case KeypadKeyPressAction(key=Key.BACK) if action.pressed_keys == {
             Key.HOME,
@@ -199,6 +232,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
+                actions=[DisplayUpdateActivityAction()],
                 events=[FinishEvent()],
             )
         # DEMO {
@@ -209,6 +243,7 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 actions=[
+                    DisplayUpdateActivityAction(),
                     NotificationsAddAction(
                         notification=Notification(
                             title='Test notification with progress',
@@ -225,9 +260,10 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 actions=[
+                    DisplayUpdateActivityAction(),
                     NotificationsAddAction(
                         notification=Notification(
-                            icon='',
+                            icon='',
                             title='Test notification with spinner',
                             content='This is a test notification with spinner',
                             progress=math.nan,
