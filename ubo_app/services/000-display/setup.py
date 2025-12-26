@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 
+from ubo_app.constants import DISPLAY_BLANK_TIMEOUT
 from ubo_app.display import display
 from ubo_app.logger import logger
 from ubo_app.store.main import store
@@ -71,7 +72,7 @@ async def monitor_inactivity() -> None:
                 'Inactivity check',
                 extra={
                     'last_activity': display_state.last_activity_time,
-                    'blank_timeout': display_state.blank_timeout,
+                    'blank_timeout': DISPLAY_BLANK_TIMEOUT,
                     'is_blanked': display_state.is_blanked,
                     'current_time': current_time,
                 },
@@ -83,15 +84,15 @@ async def monitor_inactivity() -> None:
                     'Checking inactivity duration',
                     extra={
                         'inactive_duration': inactive_duration,
-                        'blank_timeout': display_state.blank_timeout,
+                        'blank_timeout': DISPLAY_BLANK_TIMEOUT,
                         'will_blank': (
-                            inactive_duration >= display_state.blank_timeout
+                            inactive_duration >= DISPLAY_BLANK_TIMEOUT
                             and not display_state.is_blanked
                         ),
                     },
                 )
                 if (
-                    inactive_duration >= display_state.blank_timeout
+                    inactive_duration >= DISPLAY_BLANK_TIMEOUT
                     and not display_state.is_blanked
                 ):
                     logger.info(
