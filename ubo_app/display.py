@@ -159,8 +159,8 @@ def render_on_display(*, regions: list[Region]) -> None:
     # Skip rendering entirely if display is paused
     # Note: is_blanked check is in render_block to allow unblanking to work
     state = store._state  # noqa: SLF001
-    if hasattr(state, 'display') and state.display.is_paused:
-        logger.info('Skipping render - display is paused')
+    if hasattr(state, 'display') and state.display.is_blanked:
+        logger.info('Skipping render - display is blanked')
         return
 
     for region in regions:
@@ -170,7 +170,7 @@ def render_on_display(*, regions: list[Region]) -> None:
             ((data[:, :, 0] & 0xF8) << 8)
             | ((data[:, :, 1] & 0xFC) << 3)
             | (data[:, :, 2] >> 3)
-        ).copy()
+        )
         data_bytes = (
             color.astype(np.uint16).view(np.uint8).reshape(-1, 2)[:, ::-1].tobytes()
         )
