@@ -16,10 +16,12 @@ from ubo_app.store.services.display import (
     DisplayAction,
     DisplayBlankAction,
     DisplayBlankEvent,
+    DisplayBlankTimeout,
     DisplayPauseAction,
     DisplayRedrawAction,
     DisplayRedrawEvent,
     DisplayResumeAction,
+    DisplaySetBlankTimeoutAction,
     DisplayState,
     DisplayUnblankAction,
     DisplayUnblankEvent,
@@ -39,8 +41,15 @@ def reducer(
 ]:
     if state is None:
         if isinstance(action, InitAction):
+            from ubo_app.utils.persistent_store import read_from_persistent_store
+
             logger.info('Display reducer initialized')
-            return DisplayState()
+            selected_timeout = read_from_persistent_store(
+                'display:selected_blank_timeout',
+                output_type=DisplayBlankTimeout,
+                default=DisplayBlankTimeout.TEN_MINUTES,
+            )
+            return DisplayState(selected_blank_timeout=selected_timeout)
         raise InitializationActionError(action)
 
     # Log all display actions
@@ -91,6 +100,13 @@ def reducer(
                 extra={'timestamp': timestamp},
             )
             return replace(state, last_activity_time=timestamp)
+
+        case DisplaySetBlankTimeoutAction():
+            logger.info(
+                'DisplaySetBlankTimeoutAction received',
+                extra={'timeout': action.timeout},
+            )
+            return replace(state, selected_blank_timeout=action.timeout)
 
         case _:
             return state
