@@ -57,10 +57,10 @@
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
   "display": {
     "_type": "DisplayState",
-    "blank_timeout": 15.0,
     "is_blanked": false,
     "is_paused": false,
-    "last_activity_time": 1672531200.0
+    "last_activity_time": 1672531200.0,
+    "selected_blank_timeout": "ten_minutes"
   },
   "docker": {
     "_type": "DockerState",
@@ -6393,6 +6393,157 @@
                               1,
                               1
                             ],
+                            "icon": "󰍹",
+                            "is_short": false,
+                            "key": "display:",
+                            "label": "Display",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Screen Timeout",
+                              "items": [
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "one_minute",
+                                  "label": "1 minute",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "one_minute"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "five_minutes",
+                                  "label": "5 minutes",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "five_minutes"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#03F7AE",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰱒",
+                                  "is_short": false,
+                                  "key": "ten_minutes",
+                                  "label": "10 minutes",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "ten_minutes"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "thirty_minutes",
+                                  "label": "30 minutes",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "thirty_minutes"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "one_hour",
+                                  "label": "1 hour",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "one_hour"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "off",
+                                  "label": "Off",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "off"
+                                  }
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Select screen blank timeout",
+                              "title": "Display Settings"
+                            }
+                          },
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
                             "icon": "",
                             "is_short": false,
                             "key": "camera:",
@@ -7644,6 +7795,7 @@
       "assistant:stt": 50,
       "assistant:tts": 30,
       "camera:": 1,
+      "display:": 10,
       "docker:registries": 2,
       "docker:service": 1,
       "infrared:infrared": null,
