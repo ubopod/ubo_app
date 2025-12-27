@@ -18,11 +18,9 @@ from ubo_app.store.services.display import (
     DisplayBlankTimeout,
     DisplaySetBlankTimeoutAction,
     DisplayState,
-    DisplayUnblankAction,
     DisplayUnblankEvent,
     DisplayUpdateActivityAction,
 )
-from ubo_app.store.services.keypad import KeypadKeyPressAction
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import IS_TEST_ENV
 from ubo_app.utils.gui import (
@@ -37,24 +35,6 @@ if TYPE_CHECKING:
     from ubo_gui.menu.types import Item
 
 splash_screen = None
-
-
-@store.with_state(
-    lambda state: (
-        state.display.is_blanked if hasattr(state, 'display') else False,
-        state.keypad.is_consumed if hasattr(state, 'keypad') else False,
-    ),
-)
-def handle_keypad_wake(is_blanked: bool, is_consumed: bool) -> None:  # noqa: FBT001
-    """Wake up screen on any keypad press when blanked."""
-    if is_blanked and not is_consumed:
-
-        def on_keypress(_: KeypadKeyPressAction) -> None:
-            logger.info('Waking up screen from keypad press - consuming key')
-            store.dispatch(DisplayUnblankAction())
-
-        return store.subscribe_action(KeypadKeyPressAction, on_keypress)
-    return None
 
 
 async def monitor_inactivity() -> None:
