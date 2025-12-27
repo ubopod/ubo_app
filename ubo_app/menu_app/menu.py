@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from kivy.clock import mainthread
-from kivy.graphics import Color, Rectangle
+from kivy.graphics.context_instructions import Color
+from kivy.graphics.vertex_instructions import Rectangle
 from kivy.uix.widget import Widget
 from redux import AutorunOptions
 from typing_extensions import override
@@ -32,7 +33,7 @@ class BlankOverlay(Widget):
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
-    def _update_rect(self: BlankOverlay, *args: object) -> None:
+    def _update_rect(self: BlankOverlay, *_args: object) -> None:
         """Update rectangle size and position."""
         self.rect.size = self.size
         self.rect.pos = self.pos
