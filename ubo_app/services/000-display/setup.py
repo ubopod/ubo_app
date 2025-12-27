@@ -4,21 +4,37 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+from typing import TYPE_CHECKING
 
-from ubo_app.constants import DISPLAY_BLANK_TIMEOUT
+from ubo_gui.menu.types import HeadedMenu, SubMenuItem
+
 from ubo_app.display import display
 from ubo_app.logger import logger
+from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.display import (
     DisplayBlankAction,
     DisplayBlankEvent,
+    DisplayBlankTimeout,
+    DisplaySetBlankTimeoutAction,
     DisplayState,
     DisplayUnblankAction,
     DisplayUnblankEvent,
     DisplayUpdateActivityAction,
 )
 from ubo_app.store.services.keypad import KeypadKeyPressAction
+from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import IS_TEST_ENV
+from ubo_app.utils.gui import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+)
+from ubo_app.utils.persistent_store import register_persistent_store
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from ubo_gui.menu.types import Item
 
 splash_screen = None
 
@@ -67,12 +83,17 @@ async def monitor_inactivity() -> None:
                 logger.warning('Display state not available')
                 continue
 
+            # Skip blanking if timeout is OFF
+            timeout_seconds = display_state.selected_blank_timeout.get_timeout_seconds()
+            if timeout_seconds is None:
+                continue
+
             current_time = datetime.datetime.now(tz=datetime.UTC).timestamp()
             logger.info(
                 'Inactivity check',
                 extra={
                     'last_activity': display_state.last_activity_time,
-                    'blank_timeout': DISPLAY_BLANK_TIMEOUT,
+                    'blank_timeout': timeout_seconds,
                     'is_blanked': display_state.is_blanked,
                     'current_time': current_time,
                 },
@@ -84,15 +105,15 @@ async def monitor_inactivity() -> None:
                     'Checking inactivity duration',
                     extra={
                         'inactive_duration': inactive_duration,
-                        'blank_timeout': DISPLAY_BLANK_TIMEOUT,
+                        'blank_timeout': timeout_seconds,
                         'will_blank': (
-                            inactive_duration >= DISPLAY_BLANK_TIMEOUT
+                            inactive_duration >= timeout_seconds
                             and not display_state.is_blanked
                         ),
                     },
                 )
                 if (
-                    inactive_duration >= DISPLAY_BLANK_TIMEOUT
+                    inactive_duration >= timeout_seconds
                     and not display_state.is_blanked
                 ):
                     logger.info(
@@ -118,9 +139,51 @@ def handle_unblank_event(_: DisplayUnblankEvent) -> None:
     display.set_backlight(enabled=True)
 
 
+@store.autorun(lambda state: state.display.selected_blank_timeout)
+def timeout_options(selected_timeout: DisplayBlankTimeout) -> Sequence[Item]:
+    """Generate menu items for timeout selection."""
+    return [
+        UboDispatchItem(
+            key=timeout.value,
+            label=timeout.get_label(),
+            store_action=DisplaySetBlankTimeoutAction(timeout=timeout),
+            **(
+                SELECTED_ITEM_PARAMETERS
+                if selected_timeout == timeout
+                else UNSELECTED_ITEM_PARAMETERS
+            ),
+        )
+        for timeout in DisplayBlankTimeout
+    ]
+
+
 def init_service() -> None:
     """Initialize the display service."""
     from ubo_app.utils.async_ import create_task
+
+    # Register persistent store
+    register_persistent_store(
+        'display:selected_blank_timeout',
+        lambda state: state.display.selected_blank_timeout,
+    )
+
+    # Register settings menu
+    store.dispatch(
+        RegisterSettingAppAction(
+            category=SettingsCategory.HARDWARE,
+            priority=10,
+            menu_item=SubMenuItem(
+                label='Display',
+                icon='󰍹',
+                sub_menu=HeadedMenu(
+                    title='Display Settings',
+                    heading='Screen Timeout',
+                    sub_heading='Select screen blank timeout',
+                    items=timeout_options,
+                ),
+            ),
+        ),
+    )
 
     # Initialize activity tracking
     store.dispatch(DisplayUpdateActivityAction())
