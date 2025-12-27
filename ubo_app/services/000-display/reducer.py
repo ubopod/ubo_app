@@ -12,6 +12,11 @@ from redux import (
 )
 
 from ubo_app.logger import logger
+from ubo_app.store.services.assistant import (
+    AssistantStartListeningAction,
+    AssistantStopListeningAction,
+    AssistantToggleListeningAction,
+)
 from ubo_app.store.services.display import (
     DisplayAction,
     DisplayBlankAction,
@@ -28,7 +33,13 @@ from ubo_app.store.services.display import (
     DisplayUpdateActivityAction,
 )
 
-Action = InitAction | DisplayAction
+Action = (
+    InitAction
+    | DisplayAction
+    | AssistantStartListeningAction
+    | AssistantStopListeningAction
+    | AssistantToggleListeningAction
+)
 
 
 def reducer(
@@ -46,7 +57,7 @@ def reducer(
             logger.info('Display reducer initialized')
             selected_timeout = read_from_persistent_store(
                 'display:selected_blank_timeout',
-                output_type=DisplayBlankTimeout,
+                mapper=lambda value: DisplayBlankTimeout(value),
                 default=DisplayBlankTimeout.TEN_MINUTES,
             )
             return DisplayState(selected_blank_timeout=selected_timeout)
@@ -107,6 +118,31 @@ def reducer(
                 extra={'timeout': action.timeout},
             )
             return replace(state, selected_blank_timeout=action.timeout)
+
+        case (
+            AssistantStartListeningAction()
+            | AssistantStopListeningAction()
+            | AssistantToggleListeningAction()
+        ):
+            timestamp = datetime.datetime.now(tz=datetime.UTC).timestamp()
+            logger.info(
+                'Assistant action - updating activity and waking screen if blanked',
+                extra={
+                    'action_type': type(action).__name__,
+                    'is_blanked': state.is_blanked,
+                },
+            )
+
+            if state.is_blanked:
+                return CompleteReducerResult(
+                    state=replace(
+                        state,
+                        is_blanked=False,
+                        last_activity_time=timestamp,
+                    ),
+                    events=[DisplayUnblankEvent(), DisplayRedrawEvent()],
+                )
+            return replace(state, last_activity_time=timestamp)
 
         case _:
             return state
