@@ -93,7 +93,7 @@ if TYPE_CHECKING:
         InfraredState,
     )
     from ubo_app.store.services.ip import IpAction, IpEvent, IpState
-    from ubo_app.store.services.keypad import KeypadAction
+    from ubo_app.store.services.keypad import KeypadAction, KeypadState
     from ubo_app.store.services.lightdm import LightDMAction, LightDMState
     from ubo_app.store.services.notifications import (
         NotificationsAction,
@@ -191,6 +191,7 @@ class RootState(BaseCombineReducerState):
     docker: DockerState
     infrared: InfraredState
     ip: IpState
+    keypad: KeypadState
     lightdm: LightDMState
     notifications: NotificationsState
     rgb_ring: RgbRingState
