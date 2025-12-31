@@ -443,6 +443,7 @@ jobs:
 
       - name: Build Artifact
         env:
+          PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PKR_VAR_ubo_app_version: ${{ needs.version.outputs.version }}
           PKR_VAR_image_url: ${{ steps.generate-image-url.outputs.image_url }}
           PKR_VAR_image_name: ${{ steps.generate-image-url.outputs.image_name }}
