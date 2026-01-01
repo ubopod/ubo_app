@@ -2056,15 +2056,15 @@ wheels = [
 
 [[package]]
 name = "python-redux"
-version = "0.24.1.dev1250523103975755100"
+version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-immutable" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c0/c9/992133f3791ffdde9c6702e364ebc51828ef4978d09395f5914127f0574c/python_redux-0.24.1.dev1250523103975755100.tar.gz", hash = "sha256:ea825aaae3796784c6dfe06b518f7cee659ab553a5fd2ed9a466e556103049ec", size = 23097 }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/de/e5c7492cea183f31105d00dc419eda7b48aed9ef91b85e602d6661890414/python_redux-0.24.0.tar.gz", hash = "sha256:0c0008a43fa9d8c72fbb2dbd68da743906b05ca4d4e8d2158fee69c61098bf35", size = 23025 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/39/3b88a9d977563cbcbe4e4e28b514b6f1aff5662b2124d6176a0a2a402c60/python_redux-0.24.1.dev1250523103975755100-py3-none-any.whl", hash = "sha256:2d19dacef7020daa7eac993bd2395f90702a69dccda25f5193e760334ef9363d", size = 29206 },
+    { url = "https://files.pythonhosted.org/packages/1e/b4/ad1abb49f1143cd043394b9df26bcad91652c4658ffbd728e14433b3e65e/python_redux-0.24.0-py3-none-any.whl", hash = "sha256:765ec99e9602966c9a3ef8df272ef95f500ff7e561b28918b6e9eaa5f6a073b5", size = 28864 },
 ]
 
 [[package]]
@@ -2483,6 +2483,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
+version = "1.6.1.dev12126010110398515150"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
@@ -2603,7 +2604,7 @@ requires-dist = [
     { name = "python-debouncer", specifier = "==0.1.5" },
     { name = "python-dotenv", specifier = "==1.1.0" },
     { name = "python-fake", specifier = "==0.2.0" },
-    { name = "python-redux", specifier = "==0.24.1.dev1250523103975755100" },
+    { name = "python-redux", specifier = "==0.24.0" },
     { name = "python-strtobool", specifier = "==1.0.3" },
     { name = "pyzbar", specifier = "==0.1.9" },
     { name = "quart", specifier = "==0.20.0" },
@@ -2643,6 +2644,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
+version = "1.6.1.dev10525122610397539951"
 source = { editable = "ubo_app/rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
