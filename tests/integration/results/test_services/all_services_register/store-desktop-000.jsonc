@@ -62,7 +62,7 @@
   },
   "docker": {
     "_type": "DockerState",
-    "combine_reducers_id": "eb1167b367a9c3787c65c1e582e2e662",
+    "combine_reducers_id": "f728b4fa42485e3a0a5d2f346baa9455",
     "envoy_grpc": {
       "_type": "ImageState",
       "container_ip": null,
