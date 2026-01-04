@@ -59,6 +59,7 @@ class StoreMenuWidget(BoxLayout):
 
     # Stack property for backward compatibility with tests
     _stack: list[StackItem] = ListProperty([])
+    _current_items: Sequence[Item | None] = ListProperty([])
 
     def __init__(self: StoreMenuWidget, **kwargs: object) -> None:
         """Initialize the store menu widget."""
@@ -82,18 +83,30 @@ class StoreMenuWidget(BoxLayout):
                 return
             self_.handle_stack_change(stack)
 
+        @store.autorun(select_current_items)
+        def on_items_change(items: Sequence[Item | None]) -> None:
+            self_ = _self()
+            if self_ is None:
+                return
+            self_.set_current_items(items)
+
         # Store the unsubscribe function for cleanup
         self._unsubscribe_stack = on_stack_change
+        self._unsubscribe_items = on_items_change
 
     @property
     def stack(self: StoreMenuWidget) -> list[StackItem]:
-        """Return navigation stack from store for backward compatibility."""
-        return list(store.state.main.navigation_stack)
+        """Return navigation stack for backward compatibility."""
+        return list(self._stack)
 
     @property
     def current_menu_items(self: StoreMenuWidget) -> Sequence[Item | None]:
-        """Get current menu items from store."""
-        return select_current_items(store.state)
+        """Get current menu items (cached from store autorun)."""
+        return self._current_items
+
+    def set_current_items(self: StoreMenuWidget, items: Sequence[Item | None]) -> None:
+        """Set current menu items (called by autorun)."""
+        self._current_items = list(items)
 
     def handle_stack_change(
         self: StoreMenuWidget,
