@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D101, D103
 """Platform-agnostic UI data models for store-driven rendering."""
 
 from __future__ import annotations

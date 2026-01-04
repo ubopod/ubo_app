@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Computed selectors for navigation state."""
 
 from __future__ import annotations

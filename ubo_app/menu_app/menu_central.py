@@ -25,7 +25,10 @@ from ubo_app.store.core.types import (
     MenuGoHomeEvent,
     MenuScrollDirection,
     MenuScrollEvent,
+    NavigateClearAction,
+    NavigatePopAction,
     OpenApplicationEvent,
+    PushApplicationAction,
     SetAreEnclosuresVisibleAction,
     SetMenuPathAction,
 )
@@ -178,8 +181,18 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     @mainthread_if_needed
     def open_application(self: MenuAppCentral, event: OpenApplicationEvent) -> None:
         application = get_registered_application(event.application_id)
-        self.menu_widget.open_application(
-            application(*event.initialization_args, **event.initialization_kwargs),
+        app_instance = application(
+            *event.initialization_args,
+            **event.initialization_kwargs,
+        )
+        self.menu_widget.open_application(app_instance)
+        # Also dispatch to update navigation_stack in store
+        store.dispatch(
+            PushApplicationAction(
+                application_id=event.application_id,
+                instance_id=getattr(app_instance, 'id', app_instance.name or ''),
+                title=getattr(app_instance, 'title', '') or '',
+            ),
         )
 
     def close_application(self: MenuAppCentral, event: CloseApplicationEvent) -> None:
@@ -195,9 +208,13 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
     def go_home(self: MenuAppCentral, _: MenuGoHomeEvent) -> None:
         self.menu_widget.go_home()
+        # Also dispatch to update navigation_stack in store
+        store.dispatch(NavigateClearAction())
 
     def go_back(self: MenuAppCentral, _: MenuGoBackEvent) -> None:
         self.menu_widget.go_back()
+        # Also dispatch to update navigation_stack in store
+        store.dispatch(NavigatePopAction())
 
     def select_by_icon(self: MenuAppCentral, event: MenuChooseByIconEvent) -> None:
         current_page = self.menu_widget.current_screen

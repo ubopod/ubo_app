@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Selectors that produce rendered UI types from state."""
 
 from __future__ import annotations
