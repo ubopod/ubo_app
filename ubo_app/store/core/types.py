@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from immutable import Immutable
@@ -81,8 +81,11 @@ class ApplicationStackItem(StackItem):
     type: StackItemType = StackItemType.APPLICATION
     application_id: str = ''
     instance_id: str = field(default_factory=_generate_instance_id)
-    initialization_args: tuple[Any, ...] = ()
-    initialization_kwargs: dict[str, Any] = field(default_factory=dict)
+    initialization_args: tuple[BasicType, ...] = ()
+    initialization_kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
 
 
 class MainAction(BaseAction): ...
@@ -196,8 +199,11 @@ class PushApplicationAction(MenuAction):
     application_id: str
     instance_id: str = field(default_factory=_generate_instance_id)
     title: str = ''
-    initialization_args: tuple[Any, ...] = ()
-    initialization_kwargs: dict[str, Any] = field(default_factory=dict)
+    initialization_args: tuple[BasicType, ...] = ()
+    initialization_kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
 
 
 class PopApplicationAction(MenuAction):
