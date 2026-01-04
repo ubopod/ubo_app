@@ -14,6 +14,7 @@ from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
 from ubo_app.store.core.menus import HOME_MENU
 from ubo_app.store.core.types import (
+    ApplicationStackItem,
     CloseApplicationAction,
     CloseApplicationEvent,
     DeregisterRegularAppAction,
@@ -33,10 +34,16 @@ from ubo_app.store.core.types import (
     MenuGoHomeEvent,
     MenuScrollAction,
     MenuScrollEvent,
+    MenuStackItem,
+    NavigateClearAction,
+    NavigatePopAction,
+    NavigatePushMenuAction,
     OpenApplicationAction,
     OpenApplicationEvent,
+    PopApplicationAction,
     PowerOffAction,
     PowerOffEvent,
+    PushApplicationAction,
     RebootAction,
     RebootEvent,
     RegisterRegularAppAction,
@@ -46,6 +53,8 @@ from ubo_app.store.core.types import (
     ReportReplayingDoneAction,
     SetAreEnclosuresVisibleAction,
     SetMenuPathAction,
+    SetPageIndexAction,
+    StackItem,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
 )
@@ -116,6 +125,92 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 events=[MenuScrollEvent(direction=action.direction)],
+            )
+
+        # Navigation Stack Actions
+
+        case NavigatePushMenuAction():
+            # Build the new menu path by appending the item key
+            current_path: tuple[str, ...] = ()
+            if state.navigation_stack:
+                top = state.navigation_stack[-1]
+                if isinstance(top, MenuStackItem):
+                    current_path = top.menu_path
+            new_path = (*current_path, action.item_key)
+            new_stack_item = MenuStackItem(
+                key=action.item_key,
+                title=action.title,
+                menu_path=new_path,
+                page_index=0,
+            )
+            return replace(
+                state,
+                navigation_stack=(*state.navigation_stack, new_stack_item),
+            )
+
+        case NavigatePopAction():
+            if not state.navigation_stack:
+                return state
+            return replace(
+                state,
+                navigation_stack=state.navigation_stack[:-1],
+            )
+
+        case NavigateClearAction():
+            return replace(
+                state,
+                navigation_stack=(),
+            )
+
+        case SetPageIndexAction():
+            if not state.navigation_stack:
+                return state
+            top = state.navigation_stack[-1]
+            if not isinstance(top, MenuStackItem):
+                return state
+            updated_top = MenuStackItem(
+                key=top.key,
+                title=top.title,
+                menu_path=top.menu_path,
+                page_index=action.page_index,
+            )
+            return replace(
+                state,
+                navigation_stack=(*state.navigation_stack[:-1], updated_top),
+            )
+
+        case PushApplicationAction():
+            new_stack_item = ApplicationStackItem(
+                key=action.application_id,
+                title=action.title,
+                application_id=action.application_id,
+                instance_id=action.instance_id,
+                initialization_args=action.initialization_args,
+                initialization_kwargs=action.initialization_kwargs,
+            )
+            return replace(
+                state,
+                navigation_stack=(*state.navigation_stack, new_stack_item),
+            )
+
+        case PopApplicationAction():
+            # Find and remove the application by instance_id
+            new_stack: list[StackItem] = []
+            found = False
+            for item in state.navigation_stack:
+                if (
+                    isinstance(item, ApplicationStackItem)
+                    and item.instance_id == action.instance_id
+                ):
+                    found = True
+                    # Skip this item (pop it)
+                else:
+                    new_stack.append(item)
+            if not found:
+                return state
+            return replace(
+                state,
+                navigation_stack=tuple(new_stack),
             )
 
         case OpenApplicationAction():

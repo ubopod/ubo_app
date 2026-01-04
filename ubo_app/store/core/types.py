@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -33,6 +34,13 @@ class MenuScrollDirection(StrEnum):
     DOWN = 'down'
 
 
+class StackItemType(StrEnum):
+    """Type of item in the navigation stack."""
+
+    MENU = 'menu'
+    APPLICATION = 'application'
+
+
 SETTINGS_ICONS = {
     SettingsCategory.NETWORK: '󰛳',
     SettingsCategory.REMOTE: '󰑔',
@@ -42,6 +50,39 @@ SETTINGS_ICONS = {
     SettingsCategory.DOCKER: '󰡨',
     SettingsCategory.ACCESSIBILITY: '󰙋',
 }
+
+
+# Navigation Stack Types
+
+
+class StackItem(Immutable):
+    """Base item in the navigation stack."""
+
+    type: StackItemType
+    key: str | None = None
+    title: str = ''
+
+
+class MenuStackItem(StackItem):
+    """Stack item for a menu level."""
+
+    type: StackItemType = StackItemType.MENU
+    menu_path: tuple[str, ...] = ()
+    page_index: int = 0
+
+
+def _generate_instance_id() -> str:
+    return str(uuid4())
+
+
+class ApplicationStackItem(StackItem):
+    """Stack item for an open application."""
+
+    type: StackItemType = StackItemType.APPLICATION
+    application_id: str = ''
+    instance_id: str = field(default_factory=_generate_instance_id)
+    initialization_args: tuple[Any, ...] = ()
+    initialization_kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 class MainAction(BaseAction): ...
@@ -123,6 +164,46 @@ class MenuChooseByIndexAction(MenuAction):
 
 class MenuScrollAction(MenuAction):
     direction: MenuScrollDirection
+
+
+# Navigation Stack Actions
+
+
+class NavigatePushMenuAction(MenuAction):
+    """Push a menu onto the navigation stack."""
+
+    item_key: str
+    title: str = ''
+
+
+class NavigatePopAction(MenuAction):
+    """Pop one level from the navigation stack."""
+
+
+class NavigateClearAction(MenuAction):
+    """Clear stack to root (go home)."""
+
+
+class SetPageIndexAction(MenuAction):
+    """Update scroll position in current menu."""
+
+    page_index: int
+
+
+class PushApplicationAction(MenuAction):
+    """Push an application onto the navigation stack."""
+
+    application_id: str
+    instance_id: str = field(default_factory=_generate_instance_id)
+    title: str = ''
+    initialization_args: tuple[Any, ...] = ()
+    initialization_kwargs: dict[str, Any] = field(default_factory=dict)
+
+
+class PopApplicationAction(MenuAction):
+    """Pop application by instance_id from stack."""
+
+    instance_id: str
 
 
 class OpenApplicationAction(MainAction):
@@ -223,6 +304,7 @@ class ReportReplayingDoneAction(MainAction):
 
 class MainState(Immutable):
     menu: Menu | None = None
+    navigation_stack: tuple[StackItem, ...] = ()
     path: Sequence[str] = field(default_factory=list)
     depth: int = 0
     is_header_visible: bool = True
@@ -232,3 +314,4 @@ class MainState(Immutable):
     is_recording: bool = False
     is_replaying: bool = False
     recorded_sequence: list[BaseAction] = field(default_factory=list)
+
