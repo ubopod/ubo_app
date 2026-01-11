@@ -1,0 +1,2530 @@
+2026-01-02T05:52:32.0265176Z Current runner version: '2.330.0'
+2026-01-02T05:52:32.0308261Z Runner name: 'ubo-ok'
+2026-01-02T05:52:32.0311779Z Runner group name: 'Default'
+2026-01-02T05:52:32.0316056Z Machine name: 'ubo-ok'
+2026-01-02T05:52:32.0329833Z ##[group]GITHUB_TOKEN Permissions
+2026-01-02T05:52:32.0341620Z Contents: read
+2026-01-02T05:52:32.0344651Z Metadata: read
+2026-01-02T05:52:32.0347662Z Packages: read
+2026-01-02T05:52:32.0350584Z ##[endgroup]
+2026-01-02T05:52:32.0363336Z Secret source: Actions
+2026-01-02T05:52:32.0367770Z Prepare workflow directory
+2026-01-02T05:52:32.3093683Z Prepare all required actions
+2026-01-02T05:52:32.3293844Z Getting action download info
+2026-01-02T05:52:33.1986875Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-01-02T05:52:34.0739708Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-01-02T05:52:35.3671694Z Download action repository 'astral-sh/setup-uv@v5' (SHA:d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86)
+2026-01-02T05:52:36.6270020Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-01-02T05:52:38.2419252Z Download action repository 'codecov/codecov-action@v4' (SHA:b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238)
+2026-01-02T05:52:39.4571610Z Complete job name: Test (ubo-pod-pi4)
+2026-01-02T05:52:39.7510970Z ##[group]Run actions/checkout@v4
+2026-01-02T05:52:39.7514246Z with:
+2026-01-02T05:52:39.7515480Z   repository: ubopod/ubo_app
+2026-01-02T05:52:39.7517468Z   token: ***
+2026-01-02T05:52:39.7518681Z   ssh-strict: true
+2026-01-02T05:52:39.7519983Z   ssh-user: git
+2026-01-02T05:52:39.7521127Z   persist-credentials: true
+2026-01-02T05:52:39.7522498Z   clean: true
+2026-01-02T05:52:39.7523762Z   sparse-checkout-cone-mode: true
+2026-01-02T05:52:39.7525215Z   fetch-depth: 1
+2026-01-02T05:52:39.7526528Z   fetch-tags: false
+2026-01-02T05:52:39.7528491Z   show-progress: true
+2026-01-02T05:52:39.7529700Z   lfs: false
+2026-01-02T05:52:39.7530833Z   submodules: false
+2026-01-02T05:52:39.7532225Z   set-safe-directory: true
+2026-01-02T05:52:39.7535685Z env:
+2026-01-02T05:52:39.7536894Z   PYTHON_VERSION: 3.11.9
+2026-01-02T05:52:39.7538228Z ##[endgroup]
+2026-01-02T05:52:40.2329151Z Syncing repository: ubopod/ubo_app
+2026-01-02T05:52:40.2342107Z ##[group]Getting Git version info
+2026-01-02T05:52:40.2345013Z Working directory is '/home/ubo/actions-runner/_work/ubo_app/ubo_app'
+2026-01-02T05:52:40.2350706Z [command]/usr/bin/git version
+2026-01-02T05:52:40.2353340Z git version 2.39.5
+2026-01-02T05:52:40.2361078Z ##[endgroup]
+2026-01-02T05:52:40.2431553Z Copying '/home/ubo/.gitconfig' to '/home/ubo/actions-runner/_work/_temp/7a40798a-b916-45c3-b829-fcea5f94ffc4/.gitconfig'
+2026-01-02T05:52:40.2497111Z Temporarily overriding HOME='/home/ubo/actions-runner/_work/_temp/7a40798a-b916-45c3-b829-fcea5f94ffc4' before making global git config changes
+2026-01-02T05:52:40.2502238Z Adding repository directory to the temporary git global config as a safe directory
+2026-01-02T05:52:40.2528938Z [command]/usr/bin/git config --global --add safe.directory /home/ubo/actions-runner/_work/ubo_app/ubo_app
+2026-01-02T05:52:40.2682237Z [command]/usr/bin/git config --local --get remote.origin.url
+2026-01-02T05:52:40.2747952Z https://github.com/ubopod/ubo_app
+2026-01-02T05:52:40.2839985Z ##[group]Removing previously created refs, to avoid conflicts
+2026-01-02T05:52:40.2859201Z [command]/usr/bin/git rev-parse --symbolic-full-name --verify --quiet HEAD
+2026-01-02T05:52:40.2933019Z HEAD
+2026-01-02T05:52:40.3082683Z ##[endgroup]
+2026-01-02T05:52:40.3096316Z [command]/usr/bin/git submodule status
+2026-01-02T05:52:40.3577041Z ##[group]Cleaning the repository
+2026-01-02T05:52:40.3595041Z [command]/usr/bin/git clean -ffdx
+2026-01-02T05:52:43.2566373Z Removing .venv/
+2026-01-02T05:52:43.2575680Z Removing __pycache__/
+2026-01-02T05:52:43.2578127Z Removing headless-kivy.log
+2026-01-02T05:52:43.2580974Z Removing headless_kivy_buffer-0_0.raw
+2026-01-02T05:52:43.2583021Z Removing headless_kivy_buffer.raw
+2026-01-02T05:52:43.2587076Z Removing tests/__pycache__/
+2026-01-02T05:52:43.2588643Z Removing tests/fixtures/__pycache__/
+2026-01-02T05:52:43.2590384Z Removing tests/flows/__pycache__/
+2026-01-02T05:52:43.2592635Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-000.png
+2026-01-02T05:52:43.2595133Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-001.png
+2026-01-02T05:52:43.2597536Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-002.png
+2026-01-02T05:52:43.2599949Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-003.png
+2026-01-02T05:52:43.2602245Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-004.png
+2026-01-02T05:52:43.2604663Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-005.png
+2026-01-02T05:52:43.2608152Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-006.png
+2026-01-02T05:52:43.2610968Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-007.png
+2026-01-02T05:52:43.2613350Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-008.png
+2026-01-02T05:52:43.2615886Z Removing tests/flows/results/test_wifi/setup_flow/window-rpi-009.png
+2026-01-02T05:52:43.2617930Z Removing tests/integration/__pycache__/
+2026-01-02T05:52:43.2620148Z Removing tests/integration/results/test_core/app_runs_and_exits/window-rpi-000.png
+2026-01-02T05:52:43.2624474Z Removing tests/integration/results/test_services/all_services_register/window-rpi-000.png
+2026-01-02T05:52:43.2627638Z Removing tests/reproduction/__pycache__/
+2026-01-02T05:52:43.2629378Z Removing tests/reproduction/results/
+2026-01-02T05:52:43.2630932Z Removing tests/store/__pycache__/
+2026-01-02T05:52:43.2632497Z Removing ubo-app.log
+2026-01-02T05:52:43.2633892Z Removing ubo-gui.log
+2026-01-02T05:52:43.2635395Z Removing ubo_app/__pycache__/
+2026-01-02T05:52:43.2636785Z Removing ubo_app/_version.py
+2026-01-02T05:52:43.2638289Z Removing ubo_app/constants/__pycache__/
+2026-01-02T05:52:43.2640513Z Removing ubo_app/engines/__pycache__/
+2026-01-02T05:52:43.2642797Z Removing ubo_app/engines/abstraction/__pycache__/
+2026-01-02T05:52:43.2644925Z Removing ubo_app/menu_app/__pycache__/
+2026-01-02T05:52:43.2659167Z Removing ubo_app/rpc/__pycache__/
+2026-01-02T05:52:43.2661540Z Removing ubo_app/rpc/generator/__pycache__/
+2026-01-02T05:52:43.2663375Z Removing ubo_app/rpc/proto/ubo/
+2026-01-02T05:52:43.2665448Z Removing ubo_app/rpc/ubo_bindings/__init__.py
+2026-01-02T05:52:43.2667625Z Removing ubo_app/rpc/ubo_bindings/__pycache__/
+2026-01-02T05:52:43.2669992Z Removing ubo_app/rpc/ubo_bindings/package_info/
+2026-01-02T05:52:43.2672276Z Removing ubo_app/rpc/ubo_bindings/secrets/
+2026-01-02T05:52:43.2674123Z Removing ubo_app/rpc/ubo_bindings/store/
+2026-01-02T05:52:43.2675736Z Removing ubo_app/rpc/ubo_bindings/ubo/
+2026-01-02T05:52:43.2677598Z Removing ubo_app/services/000-audio/__pycache__/
+2026-01-02T05:52:43.2679535Z Removing ubo_app/services/000-display/__pycache__/
+2026-01-02T05:52:43.2681431Z Removing ubo_app/services/000-keypad/__pycache__/
+2026-01-02T05:52:43.2683443Z Removing ubo_app/services/010-notifications/__pycache__/
+2026-01-02T05:52:43.2685824Z Removing ubo_app/services/010-speech-synthesis/__pycache__/
+2026-01-02T05:52:43.2688359Z Removing ubo_app/services/020-keyboard/__pycache__/
+2026-01-02T05:52:43.2690330Z Removing ubo_app/services/030-ethernet/__pycache__/
+2026-01-02T05:52:43.2692331Z Removing ubo_app/services/030-ip/__pycache__/
+2026-01-02T05:52:43.2694179Z Removing ubo_app/services/030-wifi/__pycache__/
+2026-01-02T05:52:43.2696142Z Removing ubo_app/services/030-wifi/pages/__pycache__/
+2026-01-02T05:52:43.2698132Z Removing ubo_app/services/040-camera/__pycache__/
+2026-01-02T05:52:43.2700021Z Removing ubo_app/services/040-rgb-ring/__pycache__/
+2026-01-02T05:52:43.2701822Z Removing ubo_app/services/040-sensors/__pycache__/
+2026-01-02T05:52:43.2703616Z Removing ubo_app/services/050-lightdm/__pycache__/
+2026-01-02T05:52:43.2705519Z Removing ubo_app/services/050-rpi-connect/__pycache__/
+2026-01-02T05:52:43.2707483Z Removing ubo_app/services/050-ssh/__pycache__/
+2026-01-02T05:52:43.2711705Z Removing ubo_app/services/050-users/__pycache__/
+2026-01-02T05:52:43.2713971Z Removing ubo_app/services/050-vscode/__pycache__/
+2026-01-02T05:52:43.2716592Z Removing ubo_app/services/080-docker/__pycache__/
+2026-01-02T05:52:43.2718838Z Removing ubo_app/services/090-assistant/__pycache__/
+2026-01-02T05:52:43.2721204Z Removing ubo_app/services/090-assistant/ubo-service/.venv/
+2026-01-02T05:52:43.2723486Z Removing ubo_app/services/090-assistant/ubo-service/ubo_assistant/__pycache__/
+2026-01-02T05:52:43.2725812Z Removing ubo_app/services/090-file-system/__pycache__/
+2026-01-02T05:52:43.2728352Z Removing ubo_app/services/090-infrared/__pycache__/
+2026-01-02T05:52:43.2730745Z Removing ubo_app/services/090-speech-recognition/__pycache__/
+2026-01-02T05:52:43.2733838Z Removing ubo_app/services/090-speech-recognition/abstraction/__pycache__/
+2026-01-02T05:52:43.2736067Z Removing ubo_app/services/090-web-ui/__pycache__/
+2026-01-02T05:52:43.2737759Z Removing ubo_app/store/__pycache__/
+2026-01-02T05:52:43.2739543Z Removing ubo_app/store/core/__pycache__/
+2026-01-02T05:52:43.2741232Z Removing ubo_app/store/input/__pycache__/
+2026-01-02T05:52:43.2742974Z Removing ubo_app/store/services/__pycache__/
+2026-01-02T05:52:43.2744808Z Removing ubo_app/store/settings/__pycache__/
+2026-01-02T05:52:43.2747488Z Removing ubo_app/store/status_icons/__pycache__/
+2026-01-02T05:52:43.2749666Z Removing ubo_app/store/update_manager/__pycache__/
+2026-01-02T05:52:43.2751452Z Removing ubo_app/utils/__pycache__/
+2026-01-02T05:52:43.2753234Z Removing ubo_app/utils/async_evicting_queue/__pycache__/
+2026-01-02T05:52:43.2755098Z Removing ubo_app/utils/gui/__pycache__/
+2026-01-02T05:52:43.2762774Z [command]/usr/bin/git reset --hard HEAD
+2026-01-02T05:52:43.2772403Z HEAD is now at e52230a Merge 108664e1dc571ce9f8ad987612334c43899618d7 into a5c3495c1c1df4d7c836e1a8008dae052abef5d3
+2026-01-02T05:52:43.2788695Z ##[endgroup]
+2026-01-02T05:52:43.2795367Z ##[group]Disabling automatic garbage collection
+2026-01-02T05:52:43.2821824Z [command]/usr/bin/git config --local gc.auto 0
+2026-01-02T05:52:43.2944125Z ##[endgroup]
+2026-01-02T05:52:43.2946982Z ##[group]Setting up auth
+2026-01-02T05:52:43.2949383Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-01-02T05:52:43.3038779Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-01-02T05:52:43.3575058Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-01-02T05:52:43.3667717Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-01-02T05:52:43.4173438Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-01-02T05:52:43.4263285Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-01-02T05:52:43.4813731Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-01-02T05:52:43.5557123Z ##[endgroup]
+2026-01-02T05:52:43.5562471Z ##[group]Fetching the repository
+2026-01-02T05:52:43.5598060Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +e52230a5189465046745881db7ef9a675bda518b:refs/remotes/pull/347/merge
+2026-01-02T05:52:44.0461419Z ##[endgroup]
+2026-01-02T05:52:44.0465691Z ##[group]Determining the checkout info
+2026-01-02T05:52:44.0470287Z ##[endgroup]
+2026-01-02T05:52:44.0490835Z [command]/usr/bin/git sparse-checkout disable
+2026-01-02T05:52:44.0734289Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-01-02T05:52:44.0834649Z ##[group]Checking out the ref
+2026-01-02T05:52:44.0878744Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/347/merge
+2026-01-02T05:52:44.0969535Z HEAD is now at e52230a Merge 108664e1dc571ce9f8ad987612334c43899618d7 into a5c3495c1c1df4d7c836e1a8008dae052abef5d3
+2026-01-02T05:52:44.0986393Z ##[endgroup]
+2026-01-02T05:52:44.1087623Z [command]/usr/bin/git log -1 --format=%H
+2026-01-02T05:52:44.1159509Z e52230a5189465046745881db7ef9a675bda518b
+2026-01-02T05:52:44.2054854Z ##[group]Run astral-sh/setup-uv@v5
+2026-01-02T05:52:44.2056319Z with:
+2026-01-02T05:52:44.2057416Z   enable-cache: true
+2026-01-02T05:52:44.2058602Z   cache-suffix: ubo-pod
+2026-01-02T05:52:44.2060533Z   github-token: ***
+2026-01-02T05:52:44.2061996Z   cache-dependency-glob: **/uv.lock
+**/requirements*.txt
+
+2026-01-02T05:52:44.2063529Z   prune-cache: true
+2026-01-02T05:52:44.2064803Z   ignore-nothing-to-cache: false
+2026-01-02T05:52:44.2066110Z   ignore-empty-workdir: false
+2026-01-02T05:52:44.2067372Z env:
+2026-01-02T05:52:44.2068503Z   PYTHON_VERSION: 3.11.9
+2026-01-02T05:52:44.2069729Z ##[endgroup]
+2026-01-02T05:52:45.7702168Z Found uv in tool-cache for 0.9.21
+2026-01-02T05:52:45.7739081Z Added /home/ubo/.local/bin to the path
+2026-01-02T05:52:45.7795833Z Added /home/ubo/actions-runner/_work/_tool/uv/0.9.21/aarch64 to the path
+2026-01-02T05:52:45.8022914Z Set UV_CACHE_DIR to /home/ubo/actions-runner/_work/_temp/setup-uv-cache
+2026-01-02T05:52:45.8025396Z Successfully installed uv version 0.9.21
+2026-01-02T05:52:45.8028622Z Searching files using cache dependency glob: **/uv.lock,**/requirements*.txt
+2026-01-02T05:52:46.5852912Z /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/rpc/uv.lock
+2026-01-02T05:52:46.6367113Z /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/uv.lock
+2026-01-02T05:52:46.6844554Z /home/ubo/actions-runner/_work/ubo_app/ubo_app/uv.lock
+2026-01-02T05:52:46.6938553Z Found 3 files to hash.
+2026-01-02T05:52:47.0050307Z Trying to restore uv cache from GitHub Actions cache with key: setup-uv-1-aarch64-unknown-linux-gnu-3.11.2-cd02dd615b1d5b3d5fc21ba50da1234386618ab499456dd33e141e5c9ecf909c-ubo-pod
+2026-01-02T05:52:47.3599314Z Cache hit for: setup-uv-1-aarch64-unknown-linux-gnu-3.11.2-cd02dd615b1d5b3d5fc21ba50da1234386618ab499456dd33e141e5c9ecf909c-ubo-pod
+2026-01-02T05:52:48.4863340Z Received 4299067 of 4299067 (100.0%), 5.4 MBs/sec
+2026-01-02T05:52:48.4870541Z Cache Size: ~4 MB (4299067 B)
+2026-01-02T05:52:48.4935159Z [command]/usr/bin/tar -xf /home/ubo/actions-runner/_work/_temp/079b2a57-54bd-47c6-93f3-604ed8be1faf/cache.tzst -P -C /home/ubo/actions-runner/_work/ubo_app/ubo_app --use-compress-program unzstd
+2026-01-02T05:52:48.6431526Z Cache restored successfully
+2026-01-02T05:52:48.6469071Z uv cache restored from GitHub Actions cache with key: setup-uv-1-aarch64-unknown-linux-gnu-3.11.2-cd02dd615b1d5b3d5fc21ba50da1234386618ab499456dd33e141e5c9ecf909c-ubo-pod
+2026-01-02T05:52:48.6873990Z ##[group]Run uv venv --system-site-packages
+2026-01-02T05:52:48.6875862Z [36;1muv venv --system-site-packages[0m
+2026-01-02T05:52:48.6925610Z shell: /usr/bin/bash -e {0}
+2026-01-02T05:52:48.6927339Z env:
+2026-01-02T05:52:48.6928627Z   PYTHON_VERSION: 3.11.9
+2026-01-02T05:52:48.6930214Z   UV_CACHE_DIR: /home/ubo/actions-runner/_work/_temp/setup-uv-cache
+2026-01-02T05:52:48.6931930Z ##[endgroup]
+2026-01-02T05:52:48.7332366Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:52:48.8372613Z Using CPython 3.11.2 interpreter at: /usr/bin/python3
+2026-01-02T05:52:48.8375270Z Creating virtual environment at: .venv
+2026-01-02T05:52:48.8389434Z Activate with: source .venv/bin/activate
+2026-01-02T05:52:48.8578769Z ##[group]Run uv sync --frozen
+2026-01-02T05:52:48.8580344Z [36;1muv sync --frozen[0m
+2026-01-02T05:52:48.8601599Z shell: /usr/bin/bash -e {0}
+2026-01-02T05:52:48.8602968Z env:
+2026-01-02T05:52:48.8604152Z   PYTHON_VERSION: 3.11.9
+2026-01-02T05:52:48.8605768Z   UV_CACHE_DIR: /home/ubo/actions-runner/_work/_temp/setup-uv-cache
+2026-01-02T05:52:48.8607628Z ##[endgroup]
+2026-01-02T05:52:48.8912327Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:52:48.8961227Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:52:49.1044384Z    Building ubo-app @ file:///home/ubo/actions-runner/_work/ubo_app/ubo_app
+2026-01-02T05:52:49.1084720Z    Building ubo-app-raw-bindings @ file:///home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/rpc
+2026-01-02T05:52:49.1814346Z Downloading pygments (1.2MiB)
+2026-01-02T05:52:49.2700144Z Downloading pyright (5.6MiB)
+2026-01-02T05:52:49.2740053Z Downloading jedi (1.5MiB)
+2026-01-02T05:52:49.2776259Z Downloading setuptools (1.1MiB)
+2026-01-02T05:52:49.2798695Z Downloading sympy (6.0MiB)
+2026-01-02T05:52:49.2840294Z Downloading ruff (11.9MiB)
+2026-01-02T05:52:49.2865937Z Downloading onnxruntime (13.8MiB)
+2026-01-02T05:52:49.2878535Z Downloading grpcio (6.0MiB)
+2026-01-02T05:52:49.2892604Z Downloading pvorca (10.2MiB)
+2026-01-02T05:52:49.2925996Z Downloading vosk (2.3MiB)
+2026-01-02T05:52:49.2940316Z Downloading shapely (2.9MiB)
+2026-01-02T05:52:49.2953800Z Downloading aiohttp (1.7MiB)
+2026-01-02T05:52:49.2978175Z Downloading ubo-gui (8.2MiB)
+2026-01-02T05:52:49.2992485Z Downloading grpcio-tools (2.5MiB)
+2026-01-02T05:52:49.3017777Z Downloading google-cloud-aiplatform (7.3MiB)
+2026-01-02T05:52:49.3032321Z Downloading numpy (13.6MiB)
+2026-01-02T05:52:49.3071543Z Downloading kivy (21.7MiB)
+2026-01-02T05:52:49.3086567Z Downloading opencv-python (39.8MiB)
+2026-01-02T05:52:49.3102216Z Downloading piper-tts (13.2MiB)
+2026-01-02T05:52:49.3117345Z Downloading pillow (5.7MiB)
+2026-01-02T05:52:49.3145898Z Downloading pydantic-core (1.8MiB)
+2026-01-02T05:52:53.2477054Z  Downloaded aiohttp
+2026-01-02T05:52:53.4618922Z  Downloaded pydantic-core
+2026-01-02T05:52:53.6598829Z  Downloaded pygments
+2026-01-02T05:52:54.0634155Z  Downloaded vosk
+2026-01-02T05:52:54.3046259Z  Downloaded grpcio-tools
+2026-01-02T05:52:54.7846598Z  Downloaded setuptools
+2026-01-02T05:52:54.7987941Z  Downloaded shapely
+2026-01-02T05:52:58.0485936Z  Downloaded pillow
+2026-01-02T05:53:00.1240823Z       Built ubo-app @ file:///home/ubo/actions-runner/_work/ubo_app/ubo_app
+2026-01-02T05:53:00.5098770Z  Downloaded grpcio
+2026-01-02T05:53:02.1439112Z  Downloaded ubo-gui
+2026-01-02T05:53:02.5915410Z  Downloaded pvorca
+2026-01-02T05:53:02.9606132Z  Downloaded sympy
+2026-01-02T05:53:03.5035085Z  Downloaded ruff
+2026-01-02T05:53:03.8301230Z       Built ubo-app-raw-bindings @ file:///home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/rpc
+2026-01-02T05:53:04.0895747Z  Downloaded google-cloud-aiplatform
+2026-01-02T05:53:04.3994053Z  Downloaded piper-tts
+2026-01-02T05:53:04.4379521Z  Downloaded numpy
+2026-01-02T05:53:05.2462437Z  Downloaded jedi
+2026-01-02T05:53:06.1612300Z  Downloaded kivy
+2026-01-02T05:53:06.1724635Z  Downloaded opencv-python
+2026-01-02T05:53:06.1995107Z  Downloaded onnxruntime
+2026-01-02T05:53:07.7574735Z  Downloaded pyright
+2026-01-02T05:53:07.8586935Z Prepared 190 packages in 18.78s
+2026-01-02T05:53:17.7876426Z Installed 190 packages in 9.92s
+2026-01-02T05:53:17.7884589Z  + adafruit-blinka==8.66.0
+2026-01-02T05:53:17.7886231Z  + adafruit-blinka-raspberry-pi5-neopixel==1.0.0rc2
+2026-01-02T05:53:17.7896560Z  + adafruit-circuitpython-aw9523==1.1.12
+2026-01-02T05:53:17.7898211Z  + adafruit-circuitpython-busdevice==5.2.13
+2026-01-02T05:53:17.7899798Z  + adafruit-circuitpython-connectionmanager==3.1.5
+2026-01-02T05:53:17.7915665Z  + adafruit-circuitpython-irremote==5.0.4
+2026-01-02T05:53:17.7917547Z  + adafruit-circuitpython-neopixel==6.3.16
+2026-01-02T05:53:17.7929292Z  + adafruit-circuitpython-pct2075==1.1.24
+2026-01-02T05:53:17.7931250Z  + adafruit-circuitpython-pixelbuf==2.0.8
+2026-01-02T05:53:17.7932748Z  + adafruit-circuitpython-register==1.10.4
+2026-01-02T05:53:17.7934389Z  + adafruit-circuitpython-requests==4.1.13
+2026-01-02T05:53:17.7943985Z  + adafruit-circuitpython-rgb-display==3.14.0
+2026-01-02T05:53:17.7945646Z  + adafruit-circuitpython-typing==1.12.2
+2026-01-02T05:53:17.7947314Z  + adafruit-circuitpython-veml7700==2.1.3
+2026-01-02T05:53:17.7948942Z  + adafruit-platformdetect==3.83.1
+2026-01-02T05:53:17.7950458Z  + adafruit-pureio==1.1.11
+2026-01-02T05:53:17.7951774Z  + aiofiles==24.1.0
+2026-01-02T05:53:17.7953083Z  + aiohappyeyeballs==2.6.1
+2026-01-02T05:53:17.7954465Z  + aiohttp==3.12.9
+2026-01-02T05:53:17.7956024Z  + aiosignal==1.4.0
+2026-01-02T05:53:17.7957431Z  + aiostream==0.6.4
+2026-01-02T05:53:17.7958972Z  + annotated-types==0.7.0
+2026-01-02T05:53:17.7960348Z  + anyio==4.10.0
+2026-01-02T05:53:17.7961778Z  + asttokens==3.0.0
+2026-01-02T05:53:17.7963104Z  + attrs==25.3.0
+2026-01-02T05:53:17.7964463Z  + betterproto==2.0.0b7
+2026-01-02T05:53:17.7966036Z  + binho-host-adapter==0.1.6
+2026-01-02T05:53:17.7968126Z  + black==25.9.0
+2026-01-02T05:53:17.7969402Z  + blinker==1.9.0
+2026-01-02T05:53:17.7970754Z  + cachetools==5.5.2
+2026-01-02T05:53:17.7972299Z  + certifi==2025.8.3
+2026-01-02T05:53:17.7973651Z  + cffi==2.0.0
+2026-01-02T05:53:17.7974816Z  + charset-normalizer==3.4.3
+2026-01-02T05:53:17.7976199Z  + click==8.3.0
+2026-01-02T05:53:17.7977553Z  + coloredlogs==15.0.1
+2026-01-02T05:53:17.7978970Z  + coverage==7.10.6
+2026-01-02T05:53:17.7980361Z  + decorator==5.2.1
+2026-01-02T05:53:17.7981709Z  + dill==0.4.0
+2026-01-02T05:53:17.7983054Z  + docker==7.1.0
+2026-01-02T05:53:17.7984422Z  + docstring-parser==0.17.0
+2026-01-02T05:53:17.7985859Z  + docutils==0.22.1
+2026-01-02T05:53:17.7987285Z  + execnet==2.1.1
+2026-01-02T05:53:17.7988738Z  + executing==2.2.1
+2026-01-02T05:53:17.7990020Z  + fancycompleter==0.11.1
+2026-01-02T05:53:17.7991376Z  + fasteners==0.19
+2026-01-02T05:53:17.7992647Z  + filetype==1.2.0
+2026-01-02T05:53:17.7993863Z  + flask==3.1.2
+2026-01-02T05:53:17.7995130Z  + flatbuffers==25.2.10
+2026-01-02T05:53:17.7996449Z  + frozenlist==1.7.0
+2026-01-02T05:53:17.7997620Z  + google-api-core==2.25.1
+2026-01-02T05:53:17.7998962Z  + google-auth==2.40.3
+2026-01-02T05:53:17.8000161Z  + google-cloud-aiplatform==1.96.0
+2026-01-02T05:53:17.8001705Z  + google-cloud-bigquery==3.38.0
+2026-01-02T05:53:17.8003145Z  + google-cloud-core==2.4.3
+2026-01-02T05:53:17.8004643Z  + google-cloud-resource-manager==1.14.2
+2026-01-02T05:53:17.8006202Z  + google-cloud-speech==2.32.0
+2026-01-02T05:53:17.8008707Z  + google-cloud-storage==2.19.0
+2026-01-02T05:53:17.8010209Z  + google-crc32c==1.7.1
+2026-01-02T05:53:17.8011526Z  + google-genai==1.38.0
+2026-01-02T05:53:17.8012952Z  + google-resumable-media==2.7.2
+2026-01-02T05:53:17.8014768Z  + googleapis-common-protos==1.70.0
+2026-01-02T05:53:17.8016320Z  + grpc-google-iam-v1==0.14.2
+2026-01-02T05:53:17.8017616Z  + grpcio==1.75.0
+2026-01-02T05:53:17.8018942Z  + grpcio-status==1.75.0
+2026-01-02T05:53:17.8020301Z  + grpcio-tools==1.75.0
+2026-01-02T05:53:17.8021659Z  + grpclib==0.4.8
+2026-01-02T05:53:17.8022903Z  + h11==0.16.0
+2026-01-02T05:53:17.8024126Z  + h2==4.3.0
+2026-01-02T05:53:17.8025321Z  + hatch-vcs==0.5.0
+2026-01-02T05:53:17.8026601Z  + hatchling==1.27.0
+2026-01-02T05:53:17.8027952Z  + headless-kivy==0.12.4
+2026-01-02T05:53:17.8029294Z  + hpack==4.1.0
+2026-01-02T05:53:17.8030550Z  + httpcore==1.0.9
+2026-01-02T05:53:17.8031818Z  + httpx==0.28.1
+2026-01-02T05:53:17.8033018Z  + humanfriendly==10.0
+2026-01-02T05:53:17.8034184Z  + hypercorn==0.17.3
+2026-01-02T05:53:17.8035528Z  + hyperframe==6.1.0
+2026-01-02T05:53:17.8036885Z  + idna==3.10
+2026-01-02T05:53:17.8038092Z  + iniconfig==2.1.0
+2026-01-02T05:53:17.8039324Z  + ipdb==0.13.13
+2026-01-02T05:53:17.8040609Z  + ipython==9.5.0
+2026-01-02T05:53:17.8042858Z  + ipython-pygments-lexers==1.1.1
+2026-01-02T05:53:17.8044568Z  + isort==5.13.2
+2026-01-02T05:53:17.8071079Z  + itsdangerous==2.2.0
+2026-01-02T05:53:17.8072850Z  + jedi==0.19.2
+2026-01-02T05:53:17.8074004Z  + jinja2==3.1.6
+2026-01-02T05:53:17.8075257Z  + kivy==2.3.1
+2026-01-02T05:53:17.8076428Z  + kivy-garden==0.1.5
+2026-01-02T05:53:17.8077633Z  + lgpio==0.2.2.0
+2026-01-02T05:53:17.8078881Z  + markupsafe==3.0.2
+2026-01-02T05:53:17.8081389Z  + matplotlib-inline==0.1.7
+2026-01-02T05:53:17.8082799Z  + mpmath==1.3.0
+2026-01-02T05:53:17.8084107Z  + multidict==6.6.4
+2026-01-02T05:53:17.8085284Z  + mypy-extensions==1.1.0
+2026-01-02T05:53:17.8086649Z  + netifaces==0.11.0
+2026-01-02T05:53:17.8088947Z  + nodeenv==1.9.1
+2026-01-02T05:53:17.8090143Z  + numpy==1.26.4
+2026-01-02T05:53:17.8091528Z  + ollama==0.5.1
+2026-01-02T05:53:17.8092858Z  + onnxruntime==1.22.1
+2026-01-02T05:53:17.8094263Z  + opencv-python==4.10.0.84
+2026-01-02T05:53:17.8096150Z  + packaging==25.0
+2026-01-02T05:53:17.8097452Z  + parso==0.8.5
+2026-01-02T05:53:17.8098846Z  + pastel==0.2.1
+2026-01-02T05:53:17.8100145Z  + pathspec==0.12.1
+2026-01-02T05:53:17.8101405Z  + pdbpp==0.11.7
+2026-01-02T05:53:17.8102646Z  + pexpect==4.9.0
+2026-01-02T05:53:17.8103809Z  + pillow==11.3.0
+2026-01-02T05:53:17.8105079Z  + piper-tts==1.3.0
+2026-01-02T05:53:17.8106417Z  + platformdirs==4.3.8
+2026-01-02T05:53:17.8107744Z  + pluggy==1.6.0
+2026-01-02T05:53:17.8108983Z  + poethepoet==0.37.0
+2026-01-02T05:53:17.8110435Z  + priority==2.0.0
+2026-01-02T05:53:17.8111760Z  + prompt-toolkit==3.0.52
+2026-01-02T05:53:17.8113034Z  + propcache==0.3.2
+2026-01-02T05:53:17.8114264Z  + proto-plus==1.26.1
+2026-01-02T05:53:17.8115552Z  + protobuf==6.32.1
+2026-01-02T05:53:17.8116889Z  + psutil==7.0.0
+2026-01-02T05:53:17.8118072Z  + ptyprocess==0.7.0
+2026-01-02T05:53:17.8119296Z  + pulsectl==24.12.0
+2026-01-02T05:53:17.8120618Z  + pure-eval==0.2.3
+2026-01-02T05:53:17.8121907Z  + pvorca==1.1.1
+2026-01-02T05:53:17.8123224Z  + pyalsaaudio==0.11.0
+2026-01-02T05:53:17.8124572Z  + pyasn1==0.6.1
+2026-01-02T05:53:17.8125807Z  + pyasn1-modules==0.4.2
+2026-01-02T05:53:17.8127553Z  + pycparser==2.23
+2026-01-02T05:53:17.8128955Z  + pydantic==2.11.9
+2026-01-02T05:53:17.8130528Z  + pydantic-core==2.33.2
+2026-01-02T05:53:17.8131903Z  + pyfakefs==5.9.3
+2026-01-02T05:53:17.8133214Z  + pyftdi==0.57.1
+2026-01-02T05:53:17.8134444Z  + pygments==2.19.2
+2026-01-02T05:53:17.8135728Z  + pypng==0.20220715.0
+2026-01-02T05:53:17.8137221Z  + pyrepl==0.11.4
+2026-01-02T05:53:17.8138489Z  + pyright==1.1.405
+2026-01-02T05:53:17.8139649Z  + pyserial==3.5
+2026-01-02T05:53:17.8140955Z  + pytest==8.4.2
+2026-01-02T05:53:17.8142238Z  + pytest-asyncio==1.2.0
+2026-01-02T05:53:17.8143598Z  + pytest-cov==7.0.0
+2026-01-02T05:53:17.8144957Z  + pytest-mock==3.15.1
+2026-01-02T05:53:17.8146300Z  + pytest-repeat==0.9.4
+2026-01-02T05:53:17.8147681Z  + pytest-timeout==2.4.0
+2026-01-02T05:53:17.8149124Z  + pytest-xdist==3.8.0
+2026-01-02T05:53:17.8150510Z  + python-dateutil==2.9.0.post0
+2026-01-02T05:53:17.8152019Z  + python-debouncer==0.1.5
+2026-01-02T05:53:17.8153661Z  + python-dotenv==1.1.0
+2026-01-02T05:53:17.8155139Z  + python-fake==0.2.0
+2026-01-02T05:53:17.8156425Z  + python-immutable==1.2.2
+2026-01-02T05:53:17.8157832Z  + python-redux==0.24.0
+2026-01-02T05:53:17.8159098Z  + python-strtobool==1.0.3
+2026-01-02T05:53:17.8160464Z  + pytokens==0.1.10
+2026-01-02T05:53:17.8161650Z  + pyusb==1.3.1
+2026-01-02T05:53:17.8162971Z  + pyyaml==6.0.2
+2026-01-02T05:53:17.8164298Z  + pyzbar==0.1.9
+2026-01-02T05:53:17.8165560Z  + qrcode==8.2
+2026-01-02T05:53:17.8166733Z  + quart==0.20.0
+2026-01-02T05:53:17.8168692Z  + requests==2.32.5
+2026-01-02T05:53:17.8169962Z  + rpi-lgpio==0.6
+2026-01-02T05:53:17.8171154Z  + rpi-ws281x==5.0.0
+2026-01-02T05:53:17.8172418Z  + rsa==4.9.1
+2026-01-02T05:53:17.8173646Z  + ruff==0.13.1
+2026-01-02T05:53:17.8174903Z  + sdbus==0.14.1.post0
+2026-01-02T05:53:17.8176248Z  + sdbus-networkmanager==2.0.0
+2026-01-02T05:53:17.8177525Z  + sentry-sdk==2.29.1
+2026-01-02T05:53:17.8178930Z  + setuptools==80.9.0
+2026-01-02T05:53:17.8181348Z  + setuptools-scm==9.2.0
+2026-01-02T05:53:17.8183059Z  + shapely==2.1.1
+2026-01-02T05:53:17.8184378Z  + simpleaudio==1.0.4
+2026-01-02T05:53:17.8185670Z  + six==1.17.0
+2026-01-02T05:53:17.8186772Z  + sniffio==1.3.1
+2026-01-02T05:53:17.8188018Z  + soxr==0.5.0.post1
+2026-01-02T05:53:17.8189256Z  + srt==3.5.3
+2026-01-02T05:53:17.8190493Z  + stack-data==0.6.3
+2026-01-02T05:53:17.8191785Z  + sympy==1.14.0
+2026-01-02T05:53:17.8194052Z  + sysv-ipc==1.1.0
+2026-01-02T05:53:17.8195206Z  + tenacity==9.1.2
+2026-01-02T05:53:17.8196471Z  + toml==0.10.2
+2026-01-02T05:53:17.8197733Z  + tqdm==4.67.1
+2026-01-02T05:53:17.8198985Z  + traitlets==5.14.3
+2026-01-02T05:53:17.8200389Z  + trove-classifiers==2025.9.11.17
+2026-01-02T05:53:17.8201882Z  + typing-extensions==4.15.0
+2026-01-02T05:53:17.8203361Z  + typing-inspection==0.4.1
+2026-01-02T05:53:17.8205431Z  + ubo-app==0.1.dev126010210310153505 (from file:///home/ubo/actions-runner/_work/ubo_app/ubo_app)
+2026-01-02T05:53:17.8209861Z  + ubo-app-raw-bindings==0.1.dev126010210310153505 (from file:///home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/rpc)
+2026-01-02T05:53:17.8212487Z  + ubo-gui==0.13.17
+2026-01-02T05:53:17.8213705Z  + urllib3==2.5.0
+2026-01-02T05:53:17.8215036Z  + vosk==0.3.44
+2026-01-02T05:53:17.8216345Z  + wcwidth==0.2.13
+2026-01-02T05:53:17.8217570Z  + websockets==15.0.1
+2026-01-02T05:53:17.8241607Z  + werkzeug==3.1.3
+2026-01-02T05:53:17.8243550Z  + wsproto==1.2.0
+2026-01-02T05:53:17.8245014Z  + yarl==1.20.1
+2026-01-02T05:53:17.8615439Z ##[group]Run uv run --frozen poe proto:generate:raw
+2026-01-02T05:53:17.8617380Z [36;1muv run --frozen poe proto:generate:raw[0m
+2026-01-02T05:53:17.8619041Z [36;1muv run --frozen poe proto:compile:raw[0m
+2026-01-02T05:53:17.8641314Z shell: /usr/bin/bash -e {0}
+2026-01-02T05:53:17.8642642Z env:
+2026-01-02T05:53:17.8643815Z   PYTHON_VERSION: 3.11.9
+2026-01-02T05:53:17.8645323Z   UV_CACHE_DIR: /home/ubo/actions-runner/_work/_temp/setup-uv-cache
+2026-01-02T05:53:17.8647391Z ##[endgroup]
+2026-01-02T05:53:17.9298645Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:53:18.4586161Z [37mPoe =>[0m [94mpython ubo_app/rpc/generator/generate_proto.py[0m
+2026-01-02T05:53:18.4807642Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:53:20.0280448Z 🚀 Generating proto files...
+2026-01-02T05:53:20.0291334Z ⚡ Generating proto for ubo_gui.menu.types . Done
+2026-01-02T05:53:20.0295084Z ⚡ Generating proto for ubo_app.store.core.types . Done
+2026-01-02T05:53:20.0298687Z ⚡ Generating proto for ubo_app.store.ubo_actions . Done
+2026-01-02T05:53:20.0302309Z ⚡ Generating proto for ubo_app.store.input.types . Done
+2026-01-02T05:53:20.0305407Z ⚡ Generating proto for ubo_app.store.settings.types . Done
+2026-01-02T05:53:20.0308742Z ⚡ Generating proto for ubo_app.store.status_icons.types . Done
+2026-01-02T05:53:20.0311703Z ⚡ Generating proto for ubo_app.store.update_manager.types . Done
+2026-01-02T05:53:20.0314459Z ⚡ Generating proto for ubo_app.store.services.assistant . Done
+2026-01-02T05:53:20.0317278Z ⚡ Generating proto for ubo_app.store.services.audio . Done
+2026-01-02T05:53:20.0319962Z ⚡ Generating proto for ubo_app.store.services.camera . Done
+2026-01-02T05:53:20.0323220Z ⚡ Generating proto for ubo_app.store.services.display . Done
+2026-01-02T05:53:20.0326175Z ⚡ Generating proto for ubo_app.store.services.docker . Done
+2026-01-02T05:53:20.0337668Z ⚡ Generating proto for ubo_app.store.services.ethernet . Done
+2026-01-02T05:53:20.0340847Z ⚡ Generating proto for ubo_app.store.services.file_system . Done
+2026-01-02T05:53:20.0343735Z ⚡ Generating proto for ubo_app.store.services.infrared . Done
+2026-01-02T05:53:20.0346494Z ⚡ Generating proto for ubo_app.store.services.ip . Done
+2026-01-02T05:53:20.0349383Z ⚡ Generating proto for ubo_app.store.services.keypad . Done
+2026-01-02T05:53:20.0352125Z ⚡ Generating proto for ubo_app.store.services.lightdm . Done
+2026-01-02T05:53:20.0355008Z ⚡ Generating proto for ubo_app.store.services.notifications . Done
+2026-01-02T05:53:20.0357794Z ⚡ Generating proto for ubo_app.store.services.rgb_ring . Done
+2026-01-02T05:53:20.0360461Z ⚡ Generating proto for ubo_app.store.services.rpi_connect . Done
+2026-01-02T05:53:20.0363425Z ⚡ Generating proto for ubo_app.store.services.sensors . Done
+2026-01-02T05:53:20.0369606Z ⚡ Generating proto for ubo_app.store.services.speech_recognition . Done
+2026-01-02T05:53:20.0373445Z ⚡ Generating proto for ubo_app.store.services.speech_synthesis . Done
+2026-01-02T05:53:20.0376255Z ⚡ Generating proto for ubo_app.store.services.ssh . Done
+2026-01-02T05:53:20.0378887Z ⚡ Generating proto for ubo_app.store.services.users . Done
+2026-01-02T05:53:20.0381263Z ⚡ Generating proto for ubo_app.store.services.vscode . Done
+2026-01-02T05:53:20.0383586Z ⚡ Generating proto for ubo_app.store.services.web_ui . Done
+2026-01-02T05:53:20.0386273Z ⚡ Generating proto for ubo_app.store.services.wifi . Done
+2026-01-02T05:53:20.0388660Z 🎉 Proto files generated successfully!
+2026-01-02T05:53:20.2876056Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:53:20.6516847Z [37mPoe =>[0m [94msh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto ubo_app/rpc/proto/secrets/v1/secrets.proto'[0m
+2026-01-02T05:53:20.6734141Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:55:07.6835721Z Writing __init__.py
+2026-01-02T05:55:07.6841901Z Writing package_info/__init__.py
+2026-01-02T05:55:07.6843499Z Writing package_info/v1/__init__.py
+2026-01-02T05:55:07.6849952Z Writing secrets/__init__.py
+2026-01-02T05:55:07.6851525Z Writing secrets/v1/__init__.py
+2026-01-02T05:55:07.6853108Z Writing store/__init__.py
+2026-01-02T05:55:07.6854674Z Writing store/v1/__init__.py
+2026-01-02T05:55:07.6855953Z Writing ubo/__init__.py
+2026-01-02T05:55:07.6857335Z Writing ubo/v1/__init__.py
+2026-01-02T05:55:08.4375895Z ##[group]Run mkdir -p $HOME/.kivy/mods
+2026-01-02T05:55:08.4377562Z [36;1mmkdir -p $HOME/.kivy/mods[0m
+2026-01-02T05:55:08.4380049Z [36;1muv run --frozen poe test --showlocals --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG[0m
+2026-01-02T05:55:08.4402741Z shell: /usr/bin/bash -e {0}
+2026-01-02T05:55:08.4404123Z env:
+2026-01-02T05:55:08.4405262Z   PYTHON_VERSION: 3.11.9
+2026-01-02T05:55:08.4407195Z   UV_CACHE_DIR: /home/ubo/actions-runner/_work/_temp/setup-uv-cache
+2026-01-02T05:55:08.4408903Z ##[endgroup]
+2026-01-02T05:55:08.4721674Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:55:08.8651070Z [37mPoe =>[0m [94mpytest --showlocals --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG[0m
+2026-01-02T05:55:08.8901894Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`, `ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T05:55:14.1473256Z ============================= test session starts ==============================
+2026-01-02T05:55:14.1489716Z platform linux -- Python 3.11.2, pytest-8.4.2, pluggy-1.6.0
+2026-01-02T05:55:14.1499039Z rootdir: /home/ubo/actions-runner/_work/ubo_app/ubo_app
+2026-01-02T05:55:14.1501007Z configfile: pyproject.toml
+2026-01-02T05:55:14.1503829Z plugins: xdist-3.8.0, timeout-2.4.0, cov-7.0.0, python-redux-0.24.0, asyncio-1.2.0, headless-kivy-0.12.4, mock-3.15.1, pyfakefs-5.9.3, anyio-4.10.0, repeat-0.9.4
+2026-01-02T05:55:14.1506534Z timeout: 500.0s
+2026-01-02T05:55:14.1507807Z timeout method: signal
+2026-01-02T05:55:14.1509139Z timeout func_only: False
+2026-01-02T05:55:14.1511432Z asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+2026-01-02T05:55:14.1513989Z collected 7 items
+2026-01-02T05:55:14.1516300Z 
+2026-01-02T05:57:48.7528916Z tests/flows/test_wifi.py .                                               [ 14%]
+2026-01-02T05:58:02.6541884Z tests/integration/test_core.py .                                         [ 28%]
+2026-01-02T06:04:27.6729930Z tests/integration/test_services.py F.                                    [ 57%]
+2026-01-02T06:10:06.5045400Z tests/reproduction/test_menu.py .                                        [ 71%]
+2026-01-02T06:10:32.1717863Z tests/store/test_subscribe_event.py .                                    [ 85%]
+2026-01-02T06:12:00.8634261Z ubo_app/utils/async_evicting_queue/test_.py .                            [100%]
+2026-01-02T06:12:00.8637367Z 
+2026-01-02T06:12:00.8638357Z =================================== FAILURES ===================================
+2026-01-02T06:12:00.8640383Z __________________________ test_all_services_register __________________________
+2026-01-02T06:12:00.8641785Z 
+2026-01-02T06:12:00.8642891Z     @wait_for(run_async=True, timeout=120, wait=wait_fixed(2))
+2026-01-02T06:12:00.8645075Z     def wait_for_docker_menu_items() -> None:
+2026-01-02T06:12:00.8647449Z         state = store._state  # noqa: SLF001
+2026-01-02T06:12:00.8649475Z         assert state is not None
+2026-01-02T06:12:00.8651081Z         main_menu = state.main.menu
+2026-01-02T06:12:00.8653239Z         # Drill into main -> apps submenu where app entries are registered
+2026-01-02T06:12:00.8655456Z         main_items = list(getattr(main_menu, 'items', []))
+2026-01-02T06:12:00.8657289Z         main_entry = next(
+2026-01-02T06:12:00.8685412Z             (i for i in main_items if getattr(i, 'key', None) == 'main'),
+2026-01-02T06:12:00.8695092Z             None,
+2026-01-02T06:12:00.8696443Z         )
+2026-01-02T06:12:00.8697691Z         assert main_entry is not None
+2026-01-02T06:12:00.8703242Z         apps_menu = getattr(main_entry, 'sub_menu', None)
+2026-01-02T06:12:00.8705934Z         assert apps_menu is not None
+2026-01-02T06:12:00.8709260Z         apps_items = list(getattr(apps_menu, 'items', []))
+2026-01-02T06:12:00.8712265Z         apps_entry = next(
+2026-01-02T06:12:00.8713858Z             (i for i in apps_items if getattr(i, 'key', None) == 'apps'),
+2026-01-02T06:12:00.8715606Z             None,
+2026-01-02T06:12:00.8719502Z             )
+2026-01-02T06:12:00.8722081Z         assert apps_entry is not None
+2026-01-02T06:12:00.8726042Z         apps_sub_menu = getattr(apps_entry, 'sub_menu', None)
+2026-01-02T06:12:00.8729024Z         assert apps_sub_menu is not None
+2026-01-02T06:12:00.8733611Z         app_items = list(getattr(apps_sub_menu, 'items', []))
+2026-01-02T06:12:00.8736099Z         keys = {getattr(item, 'key', None) for item in app_items}
+2026-01-02T06:12:00.8740747Z >       assert 'docker:envoy_grpc' in keys
+2026-01-02T06:12:00.8744776Z E       AssertionError: assert 'docker:envoy_grpc' in {'docker:_import', 'file_system:file-system'}
+2026-01-02T06:12:00.8747228Z 
+2026-01-02T06:12:00.8752100Z app_items  = [ActionItem(key='docker:_import', label='Import YAML file', color='black', background_color='#FFC107', icon='\U000f02f...#68B7FF', icon='\U000f024b', is_short=False, opacity=None, progress=None, action=<function open_path at 0x7f76426ca0>)]
+2026-01-02T06:12:00.8761251Z apps_entry = SubMenuItem(key='apps', label='Apps', color=(1, 1, 1, 1), background_color='#68B7FF', icon='\U000f003b', is_short=Fals...b', is_short=False, opacity=None, progress=None, action=<function open_path at 0x7f76426ca0>)], placeholder='No apps'))
+2026-01-02T06:12:00.8771253Z apps_items = [SubMenuItem(key='apps', label='Apps', color=(1, 1, 1, 1), background_color='#68B7FF', icon='\U000f003b', is_short=Fal...8B7FF', icon='\uf129', is_short=False, opacity=None, progress=None, action=<function open_about_menu at 0x7fa6aaf7e0>)]
+2026-01-02T06:12:00.8781289Z apps_menu  = HeadlessMenu(title='\U000f035cMain', items=[SubMenuItem(key='apps', label='Apps', color=(1, 1, 1, 1), background_color...9', is_short=False, opacity=None, progress=None, action=<function open_about_menu at 0x7fa6aaf7e0>)], placeholder=None)
+2026-01-02T06:12:00.8794401Z apps_sub_menu = HeadlessMenu(title='\U000f003bDocker Apps', items=[ActionItem(key='docker:_import', label='Import YAML file', color='b...4b', is_short=False, opacity=None, progress=None, action=<function open_path at 0x7f76426ca0>)], placeholder='No apps')
+2026-01-02T06:12:00.8801257Z keys       = {'docker:_import', 'file_system:file-system'}
+2026-01-02T06:12:00.8807966Z main_entry = SubMenuItem(key='main', label='', color=(1, 1, 1, 1), background_color='#68B7FF', icon='\U000f035c', is_short=True, op...', is_short=False, opacity=None, progress=None, action=<function open_about_menu at 0x7fa6aaf7e0>)], placeholder=None))
+2026-01-02T06:12:00.8818187Z main_items = [SubMenuItem(key='main', label='', color=(1, 1, 1, 1), background_color='#68B7FF', icon='\U000f035c', is_short=True, o...action=<function _default_action.<locals>.action at 0x7fa6ab42c0>, store_action=PowerOffAction())], placeholder=None))]
+2026-01-02T06:12:00.8827309Z main_menu  = HeadlessMenu(title='\U000f02dctest-hostname.local', items=[SubMenuItem(key='main', label='', color=(1, 1, 1, 1), backg...efault_action.<locals>.action at 0x7fa6ab42c0>, store_action=PowerOffAction())], placeholder=None))], placeholder=None)
+2026-01-02T06:12:00.8838604Z state      = RootState(combine_reducers_id='e3e70682c2094cac629f6fbed82c07cd', settings=SettingsState(pdb_signal=False, visual_debu...n.DOWN: 'down'>))], is_intents_active=False, is_assistant_active=False, status=<SpeechRecognitionStatus.IDLE: 'idle'>))
+2026-01-02T06:12:00.8845376Z store      = <ubo_app.store.main.UboStore object at 0x7fa6b934d0>
+2026-01-02T06:12:00.8848896Z 
+2026-01-02T06:12:00.8850622Z tests/integration/test_services.py:78: AssertionError
+2026-01-02T06:12:00.8857319Z 
+2026-01-02T06:12:00.8859021Z The above exception was the direct cause of the following exception:
+2026-01-02T06:12:00.8861925Z 
+2026-01-02T06:12:00.8863396Z app_context = <tests.fixtures.app.AppContext object at 0x7fa6d30710>
+2026-01-02T06:12:00.8870696Z window_snapshot = <headless_kivy_pytest.fixtures.snapshot.WindowSnapshot object at 0x7f74682350>
+2026-01-02T06:12:00.8876504Z store_snapshot = <redux_pytest.fixtures.snapshot.StoreSnapshot object at 0x7fa6ad81d0>
+2026-01-02T06:12:00.8879568Z load_services = <function load_services.<locals>.load_services_and_wait at 0x7fa6adc900>
+2026-01-02T06:12:00.8883919Z stability = <function stability.<locals>.wrapper at 0x7fa6addee0>
+2026-01-02T06:12:00.8887535Z wait_for = <redux_pytest.fixtures.wait_for.WaitFor object at 0x7fa6ad8410>
+2026-01-02T06:12:00.8938121Z store = <ubo_app.store.main.UboStore object at 0x7fa6b934d0>
+2026-01-02T06:12:00.8939595Z 
+2026-01-02T06:12:00.8940344Z     async def test_all_services_register(
+2026-01-02T06:12:00.8943382Z         app_context: AppContext,
+2026-01-02T06:12:00.8945180Z         window_snapshot: WindowSnapshot,
+2026-01-02T06:12:00.8946813Z         store_snapshot: StoreSnapshot,
+2026-01-02T06:12:00.8950110Z         load_services: LoadServices,
+2026-01-02T06:12:00.8951782Z         stability: Stability,
+2026-01-02T06:12:00.8953536Z         wait_for: WaitFor,
+2026-01-02T06:12:00.8956269Z         store: UboStore,
+2026-01-02T06:12:00.8957893Z     ) -> None:
+2026-01-02T06:12:00.8959384Z         """Test all services load."""
+2026-01-02T06:12:00.8962406Z         from ubo_app.constants import CORE_SERVICE_IDS
+2026-01-02T06:12:00.8964225Z     
+2026-01-02T06:12:00.8965500Z         app_context.set_app()
+2026-01-02T06:12:00.8969050Z         unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=50, run_async=True)
+2026-01-02T06:12:00.8971329Z     
+2026-01-02T06:12:00.8972890Z         await stability(initial_wait=6, attempts=5, wait=2)
+2026-01-02T06:12:00.8975905Z     
+2026-01-02T06:12:00.8977363Z         from tenacity import wait_fixed
+2026-01-02T06:12:00.8979005Z     
+2026-01-02T06:12:00.8981927Z         @wait_for(run_async=True, timeout=20, wait=wait_fixed(1))
+2026-01-02T06:12:00.8983896Z         def wait_for_docker_ready() -> None:
+2026-01-02T06:12:00.8986753Z             state = store._state  # noqa: SLF001
+2026-01-02T06:12:00.8990805Z             assert state is not None
+2026-01-02T06:12:00.8993803Z             docker_state = state.docker
+2026-01-02T06:12:00.8995943Z             # ensure reducer registered and well-known images are present
+2026-01-02T06:12:00.8998075Z             assert docker_state.combine_reducers_id
+2026-01-02T06:12:00.9001472Z             # service status should have been determined
+2026-01-02T06:12:00.9003547Z             from ubo_app.store.services.docker import DockerStatus
+2026-01-02T06:12:00.9007127Z     
+2026-01-02T06:12:00.9008958Z             assert docker_state.service.status != DockerStatus.UNKNOWN
+2026-01-02T06:12:00.9012138Z     
+2026-01-02T06:12:00.9013903Z         await wait_for_docker_ready()
+2026-01-02T06:12:00.9015589Z     
+2026-01-02T06:12:00.9018250Z         @wait_for(run_async=True, timeout=120, wait=wait_fixed(2))
+2026-01-02T06:12:00.9020726Z         def wait_for_docker_menu_items() -> None:
+2026-01-02T06:12:00.9022532Z             state = store._state  # noqa: SLF001
+2026-01-02T06:12:00.9026469Z             assert state is not None
+2026-01-02T06:12:00.9028136Z             main_menu = state.main.menu
+2026-01-02T06:12:00.9031462Z             # Drill into main -> apps submenu where app entries are registered
+2026-01-02T06:12:00.9033975Z             main_items = list(getattr(main_menu, 'items', []))
+2026-01-02T06:12:00.9035966Z             main_entry = next(
+2026-01-02T06:12:00.9039456Z                 (i for i in main_items if getattr(i, 'key', None) == 'main'),
+2026-01-02T06:12:00.9041336Z                 None,
+2026-01-02T06:12:00.9043918Z             )
+2026-01-02T06:12:00.9045740Z             assert main_entry is not None
+2026-01-02T06:12:00.9048215Z             apps_menu = getattr(main_entry, 'sub_menu', None)
+2026-01-02T06:12:00.9051490Z             assert apps_menu is not None
+2026-01-02T06:12:00.9053440Z             apps_items = list(getattr(apps_menu, 'items', []))
+2026-01-02T06:12:00.9056567Z             apps_entry = next(
+2026-01-02T06:12:00.9060795Z                 (i for i in apps_items if getattr(i, 'key', None) == 'apps'),
+2026-01-02T06:12:00.9064862Z                 None,
+2026-01-02T06:12:00.9066472Z                 )
+2026-01-02T06:12:00.9069813Z             assert apps_entry is not None
+2026-01-02T06:12:00.9072659Z             apps_sub_menu = getattr(apps_entry, 'sub_menu', None)
+2026-01-02T06:12:00.9076315Z             assert apps_sub_menu is not None
+2026-01-02T06:12:00.9078710Z             app_items = list(getattr(apps_sub_menu, 'items', []))
+2026-01-02T06:12:00.9080761Z             keys = {getattr(item, 'key', None) for item in app_items}
+2026-01-02T06:12:00.9083960Z             assert 'docker:envoy_grpc' in keys
+2026-01-02T06:12:00.9085543Z     
+2026-01-02T06:12:00.9087947Z >       await wait_for_docker_menu_items()
+2026-01-02T06:12:00.9089157Z 
+2026-01-02T06:12:00.9090333Z CORE_SERVICE_IDS = ['assistant', 'audio', 'camera', 'display', 'docker', 'ethernet', ...]
+2026-01-02T06:12:00.9094271Z app_context = <tests.fixtures.app.AppContext object at 0x7fa6d30710>
+2026-01-02T06:12:00.9097359Z load_services = <function load_services.<locals>.load_services_and_wait at 0x7fa6adc900>
+2026-01-02T06:12:00.9101284Z stability  = <function stability.<locals>.wrapper at 0x7fa6addee0>
+2026-01-02T06:12:00.9103642Z store      = <ubo_app.store.main.UboStore object at 0x7fa6b934d0>
+2026-01-02T06:12:00.9107712Z store_snapshot = <redux_pytest.fixtures.snapshot.StoreSnapshot object at 0x7fa6ad81d0>
+2026-01-02T06:12:00.9111083Z unload_waiter = <function load_services.<locals>.load_services_and_wait.<locals>.__unload_waiter at 0x7f8af7bd80>
+2026-01-02T06:12:00.9115531Z wait_fixed = <class 'tenacity.wait.wait_fixed'>
+2026-01-02T06:12:00.9117800Z wait_for   = <redux_pytest.fixtures.wait_for.WaitFor object at 0x7fa6ad8410>
+2026-01-02T06:12:00.9122385Z wait_for_docker_menu_items = <function WaitFor.__call__.<locals>.async_decorator.<locals>.async_wrapper at 0x7f7c2f5080>
+2026-01-02T06:12:00.9128296Z wait_for_docker_ready = <function WaitFor.__call__.<locals>.async_decorator.<locals>.async_wrapper at 0x7f765eed40>
+2026-01-02T06:12:00.9135349Z window_snapshot = <headless_kivy_pytest.fixtures.snapshot.WindowSnapshot object at 0x7f74682350>
+2026-01-02T06:12:00.9139343Z 
+2026-01-02T06:12:00.9140572Z tests/integration/test_services.py:80: 
+2026-01-02T06:12:00.9142406Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-01-02T06:12:00.9146194Z .venv/lib/python3.11/site-packages/redux_pytest/fixtures/wait_for.py:140: in async_wrapper
+2026-01-02T06:12:00.9148735Z     async for attempt in AsyncRetrying(**parameters):
+2026-01-02T06:12:00.9152359Z         args       = ()
+2026-01-02T06:12:00.9154330Z         attempt    = <tenacity.AttemptManager object at 0x7f7c3b77d0>
+2026-01-02T06:12:00.9158506Z         check      = <function test_all_services_register.<locals>.wait_for_docker_menu_items at 0x7f3af79260>
+2026-01-02T06:12:00.9161125Z         kwargs     = {}
+2026-01-02T06:12:00.9165595Z         parameters = {'stop': <tenacity.stop.stop_after_delay object at 0x7f763bf050>, 'wait': <tenacity.wait.wait_fixed object at 0x7f7d45ca50>}
+2026-01-02T06:12:00.9171194Z .venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py:166: in __anext__
+2026-01-02T06:12:00.9173905Z     do = await self.iter(retry_state=self._retry_state)
+2026-01-02T06:12:00.9177051Z          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:00.9182525Z         self       = <AsyncRetrying object at 0x7f763bea10 (stop=<tenacity.stop.stop_after_delay object at 0x7f763bf050>, wait=<tenacity.wa...ct at 0x7fb75f1050>, before=<function before_nothing at 0x7fb7692b60>, after=<function after_nothing at 0x7fb7692de0>)>
+2026-01-02T06:12:00.9189508Z .venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py:153: in iter
+2026-01-02T06:12:00.9192458Z     result = await action(retry_state)
+2026-01-02T06:12:00.9195547Z              ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:00.9197815Z         action     = <function wrap_to_async_func.<locals>.inner at 0x7f76623380>
+2026-01-02T06:12:00.9202286Z         result     = None
+2026-01-02T06:12:00.9206223Z         retry_state = <RetryCallState 547444480336: attempt #61; slept for 120.0; last result: failed (AssertionError assert 'docker:envoy_grpc' in {'docker:_import', 'file_system:file-system'})>
+2026-01-02T06:12:00.9213458Z         self       = <AsyncRetrying object at 0x7f763bea10 (stop=<tenacity.stop.stop_after_delay object at 0x7f763bf050>, wait=<tenacity.wa...ct at 0x7fb75f1050>, before=<function before_nothing at 0x7fb7692b60>, after=<function after_nothing at 0x7fb7692de0>)>
+2026-01-02T06:12:00.9218126Z .venv/lib/python3.11/site-packages/tenacity/_utils.py:99: in inner
+2026-01-02T06:12:00.9220174Z     return call(*args, **kwargs)
+2026-01-02T06:12:00.9221820Z            ^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:00.9225200Z         args       = (<RetryCallState 547444480336: attempt #61; slept for 120.0; last result: failed (AssertionError assert 'docker:envoy_grpc' in {'docker:_import', 'file_system:file-system'})>,)
+2026-01-02T06:12:00.9229402Z         call       = <function BaseRetrying._post_stop_check_actions.<locals>.exc_check at 0x7f766234c0>
+2026-01-02T06:12:00.9232022Z         kwargs     = {}
+2026-01-02T06:12:00.9233842Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-01-02T06:12:00.9234994Z 
+2026-01-02T06:12:00.9237364Z rs = <RetryCallState 547444480336: attempt #61; slept for 120.0; last result: failed (AssertionError assert 'docker:envoy_grpc' in {'docker:_import', 'file_system:file-system'})>
+2026-01-02T06:12:00.9240173Z 
+2026-01-02T06:12:00.9241012Z     def exc_check(rs: "RetryCallState") -> None:
+2026-01-02T06:12:00.9243142Z         fut = t.cast(Future, rs.outcome)
+2026-01-02T06:12:00.9245225Z         retry_exc = self.retry_error_cls(fut)
+2026-01-02T06:12:00.9248043Z         if self.reraise:
+2026-01-02T06:12:00.9250014Z             raise retry_exc.reraise()
+2026-01-02T06:12:00.9252011Z >       raise retry_exc from fut.exception()
+2026-01-02T06:12:00.9254541Z E       tenacity.RetryError: RetryError[<Future at 0x7f76523990 state=finished raised AssertionError>]
+2026-01-02T06:12:00.9258453Z 
+2026-01-02T06:12:00.9259477Z fut        = <Future at 0x7f76523990 state=finished raised AssertionError>
+2026-01-02T06:12:00.9261833Z retry_exc  = RetryError(<Future at 0x7f76523990 state=finished raised AssertionError>)
+2026-01-02T06:12:00.9265452Z rs         = <RetryCallState 547444480336: attempt #61; slept for 120.0; last result: failed (AssertionError assert 'docker:envoy_grpc' in {'docker:_import', 'file_system:file-system'})>
+2026-01-02T06:12:00.9271021Z self       = <AsyncRetrying object at 0x7f763bea10 (stop=<tenacity.stop.stop_after_delay object at 0x7f763bf050>, wait=<tenacity.wa...ct at 0x7fb75f1050>, before=<function before_nothing at 0x7fb7692b60>, after=<function after_nothing at 0x7fb7692de0>)>
+2026-01-02T06:12:00.9274616Z 
+2026-01-02T06:12:00.9275888Z .venv/lib/python3.11/site-packages/tenacity/__init__.py:421: RetryError
+2026-01-02T06:12:00.9278587Z ---------------------------- Captured stdout setup -----------------------------
+2026-01-02T06:12:00.9281399Z All Wi-Fi connections have been disconnected and deleted.
+2026-01-02T06:12:00.9285149Z [92m1767333487.205596 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9287849Z   "event_type": "FinishEvent",
+2026-01-02T06:12:00.9289724Z   "event_type_id": 364226512,
+2026-01-02T06:12:00.9292785Z   "event_type_module": "redux.basic_types",
+2026-01-02T06:12:00.9295185Z   "handler_name": "close"
+2026-01-02T06:12:00.9298023Z }[0m
+2026-01-02T06:12:00.9300111Z ------------------------------ Captured log setup ------------------------------
+2026-01-02T06:12:00.9302070Z Using selector: EpollSelector
+2026-01-02T06:12:00.9303535Z Kivy: v2.3.1
+2026-01-02T06:12:00.9305845Z Kivy: Installed at "/home/ubo/actions-runner/_work/ubo_app/ubo_app/.venv/lib/python3.11/site-packages/kivy/__init__.py"
+2026-01-02T06:12:00.9308463Z Python: v3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0]
+2026-01-02T06:12:00.9312506Z Python: Interpreter at "/home/ubo/actions-runner/_work/ubo_app/ubo_app/.venv/bin/python3"
+2026-01-02T06:12:00.9315646Z Factory: 195 symbols loaded
+2026-01-02T06:12:00.9317153Z Using selector: EpollSelector
+2026-01-02T06:12:00.9318802Z Using selector: EpollSelector
+2026-01-02T06:12:00.9320636Z ----------------------------- Captured stdout call -----------------------------
+2026-01-02T06:12:00.9323697Z [97m1767333491.854940 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9325639Z   "label": "Audio",
+2026-01-02T06:12:00.9327687Z   "service_id": "audio"
+2026-01-02T06:12:00.9329886Z }[0m
+2026-01-02T06:12:00.9333430Z [97m1767333491.859156 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9336046Z   "label": "Display",
+2026-01-02T06:12:00.9337806Z   "service_id": "display"
+2026-01-02T06:12:00.9340303Z }[0m
+2026-01-02T06:12:00.9342514Z [97m1767333491.863334 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9344381Z   "label": "Keypad",
+2026-01-02T06:12:00.9345866Z   "service_id": "keypad"
+2026-01-02T06:12:00.9347653Z }[0m
+2026-01-02T06:12:00.9349802Z [97m1767333491.867398 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9351845Z   "label": "Notifications",
+2026-01-02T06:12:00.9353534Z   "service_id": "notifications"
+2026-01-02T06:12:00.9355863Z }[0m
+2026-01-02T06:12:00.9357930Z [97m1767333491.872068 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9359895Z   "label": "Speech Synthesis",
+2026-01-02T06:12:00.9361939Z   "service_id": "speech_synthesis"
+2026-01-02T06:12:00.9363842Z }[0m
+2026-01-02T06:12:00.9365773Z [97m1767333491.876234 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9368624Z   "label": "Keyboard",
+2026-01-02T06:12:00.9370322Z   "service_id": "keyboard"
+2026-01-02T06:12:00.9372462Z }[0m
+2026-01-02T06:12:00.9374917Z [97m1767333491.881075 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9377055Z   "label": "Ethernet",
+2026-01-02T06:12:00.9378559Z   "service_id": "ethernet"
+2026-01-02T06:12:00.9380559Z }[0m
+2026-01-02T06:12:00.9382590Z [97m1767333491.885281 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9384619Z   "label": "IP",
+2026-01-02T06:12:00.9388455Z   "service_id": "ip"
+2026-01-02T06:12:00.9390404Z }[0m
+2026-01-02T06:12:00.9392243Z [97m1767333491.889273 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9393975Z   "label": "WiFi",
+2026-01-02T06:12:00.9395322Z   "service_id": "wifi"
+2026-01-02T06:12:00.9397062Z }[0m
+2026-01-02T06:12:00.9399138Z [97m1767333491.893813 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9402573Z   "label": "Camera",
+2026-01-02T06:12:00.9404522Z   "service_id": "camera"
+2026-01-02T06:12:00.9406382Z }[0m
+2026-01-02T06:12:00.9408838Z [97m1767333491.898094 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9410647Z   "label": "RGB Ring",
+2026-01-02T06:12:00.9412164Z   "service_id": "rgb_ring"
+2026-01-02T06:12:00.9413923Z }[0m
+2026-01-02T06:12:00.9415827Z [97m1767333491.902387 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9417680Z   "label": "Sensors",
+2026-01-02T06:12:00.9419303Z   "service_id": "sensors"
+2026-01-02T06:12:00.9421049Z }[0m
+2026-01-02T06:12:00.9425500Z [97m1767333491.907186 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9427924Z   "label": "LightDM",
+2026-01-02T06:12:00.9429415Z   "service_id": "lightdm"
+2026-01-02T06:12:00.9431507Z }[0m
+2026-01-02T06:12:00.9435166Z [97m1767333491.911375 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9437653Z   "label": "RPi Connect",
+2026-01-02T06:12:00.9439083Z   "service_id": "rpi_connect"
+2026-01-02T06:12:00.9442143Z }[0m
+2026-01-02T06:12:00.9444544Z [97m1767333491.915519 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9446613Z   "label": "SSH",
+2026-01-02T06:12:00.9449693Z   "service_id": "ssh"
+2026-01-02T06:12:00.9451896Z }[0m
+2026-01-02T06:12:00.9454039Z [97m1767333491.919641 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9456541Z   "label": "Users",
+2026-01-02T06:12:00.9458138Z   "service_id": "users"
+2026-01-02T06:12:00.9460282Z }[0m
+2026-01-02T06:12:00.9463364Z [97m1767333491.924439 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9467411Z   "label": "VSCode",
+2026-01-02T06:12:00.9470360Z   "service_id": "vscode"
+2026-01-02T06:12:00.9474269Z }[0m
+2026-01-02T06:12:00.9477024Z [97m1767333491.928849 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9479406Z   "label": "Docker",
+2026-01-02T06:12:00.9482609Z   "service_id": "docker"
+2026-01-02T06:12:00.9484885Z }[0m
+2026-01-02T06:12:00.9487506Z [97m1767333491.933900 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9490269Z   "label": "Assistant",
+2026-01-02T06:12:00.9492831Z   "service_id": "assistant"
+2026-01-02T06:12:00.9494926Z }[0m
+2026-01-02T06:12:00.9497789Z [97m1767333491.938087 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9500126Z   "label": "File System",
+2026-01-02T06:12:00.9502510Z   "service_id": "file_system"
+2026-01-02T06:12:00.9504735Z }[0m
+2026-01-02T06:12:00.9506905Z [97m1767333491.942176 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9509591Z   "label": "Infrared",
+2026-01-02T06:12:00.9511503Z   "service_id": "infrared"
+2026-01-02T06:12:00.9513962Z }[0m
+2026-01-02T06:12:00.9516787Z [97m1767333491.946369 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9519223Z   "label": "Speech Recognition",
+2026-01-02T06:12:00.9521020Z   "service_id": "speech_recognition"
+2026-01-02T06:12:00.9523922Z }[0m
+2026-01-02T06:12:00.9527713Z [97m1767333491.951159 [DEBUG] Ubo service registered! - {
+2026-01-02T06:12:00.9529717Z   "label": "Web UI",
+2026-01-02T06:12:00.9533575Z   "service_id": "web_ui"
+2026-01-02T06:12:00.9535725Z }[0m
+2026-01-02T06:12:00.9537931Z [92m1767333491.953925 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9541115Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9543680Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9548912Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9551366Z   "handler_name": "start"
+2026-01-02T06:12:00.9553721Z }[0m
+2026-01-02T06:12:00.9556763Z [92m1767333491.971374 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9559557Z   "event_type": "SettingsStopServiceEvent",
+2026-01-02T06:12:00.9562977Z   "event_type_id": 460271264,
+2026-01-02T06:12:00.9565289Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9568028Z   "handler_name": "stop"
+2026-01-02T06:12:00.9570205Z }[0m
+2026-01-02T06:12:00.9572753Z [92m1767333492.035145 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9575429Z   "event_type": "NotificationsDisplayEvent",
+2026-01-02T06:12:00.9577511Z   "event_type_id": 459596128,
+2026-01-02T06:12:00.9581006Z   "event_type_module": "ubo_app.store.services.notifications",
+2026-01-02T06:12:00.9583671Z   "handler_name": "display_notification"
+2026-01-02T06:12:00.9586608Z }[0m
+2026-01-02T06:12:00.9589520Z [92m1767333492.077864 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9591779Z   "event_type": "OpenApplicationEvent",
+2026-01-02T06:12:00.9593531Z   "event_type_id": 459874688,
+2026-01-02T06:12:00.9596155Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:00.9598490Z   "handler_name": "open_application"
+2026-01-02T06:12:00.9626316Z }[0m
+2026-01-02T06:12:00.9629750Z [92m1767333492.207802 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9632083Z   "event_type": "CloseApplicationEvent",
+2026-01-02T06:12:00.9634030Z   "event_type_id": 459952480,
+2026-01-02T06:12:00.9636072Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:00.9638164Z   "handler_name": "close_application"
+2026-01-02T06:12:00.9640220Z }[0m
+2026-01-02T06:12:00.9642377Z [92m1767333492.322028 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9644466Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9646196Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9649214Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9651133Z   "handler": "start",
+2026-01-02T06:12:00.9652693Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9655352Z }[0m
+2026-01-02T06:12:00.9659905Z [92m1767333492.346179 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9662958Z   "event_type": "MenuGoHomeEvent",
+2026-01-02T06:12:00.9664778Z   "event_type_id": 459890848,
+2026-01-02T06:12:00.9666665Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:00.9668768Z   "handler_name": "go_home"
+2026-01-02T06:12:00.9670941Z }[0m
+2026-01-02T06:12:00.9673089Z [92m1767333492.362112 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9675202Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9676979Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9679097Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9680920Z   "handler": "start",
+2026-01-02T06:12:00.9682413Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9684425Z }[0m
+2026-01-02T06:12:00.9686428Z [92m1767333492.374728 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9689201Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9690943Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9693671Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9695548Z   "handler": "start",
+2026-01-02T06:12:00.9697141Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9699176Z }[0m
+2026-01-02T06:12:00.9701411Z [92m1767333492.400158 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9703492Z   "event_type": "MenuGoBackEvent",
+2026-01-02T06:12:00.9705110Z   "event_type_id": 459885136,
+2026-01-02T06:12:00.9706853Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:00.9711566Z   "handler_name": "go_back"
+2026-01-02T06:12:00.9713862Z }[0m
+2026-01-02T06:12:00.9715806Z [92m1767333492.408800 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9717827Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9719594Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9721336Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9723130Z   "handler": "start",
+2026-01-02T06:12:00.9724584Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9726700Z }[0m
+2026-01-02T06:12:00.9731190Z [92m1767333492.419705 [INFO] Starting service thread - {
+2026-01-02T06:12:00.9734196Z   "service_id": "audio",
+2026-01-02T06:12:00.9735816Z   "service_label": "Audio",
+2026-01-02T06:12:00.9737544Z   "thread_native_id": 35901
+2026-01-02T06:12:00.9739871Z }[0m
+2026-01-02T06:12:00.9742198Z [92m1767333492.432897 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9744911Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9746797Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9749018Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9751188Z   "handler": "start",
+2026-01-02T06:12:00.9752923Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9755224Z }[0m
+2026-01-02T06:12:00.9757599Z [92m1767333492.442235 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9760338Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9762566Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9764929Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9768156Z   "handler": "start",
+2026-01-02T06:12:00.9770295Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9772603Z }[0m
+2026-01-02T06:12:00.9775066Z [92m1767333492.474917 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9777650Z   "event_type": "MenuChooseByIconEvent",
+2026-01-02T06:12:00.9779476Z   "event_type_id": 459900304,
+2026-01-02T06:12:00.9781451Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:00.9783824Z   "handler_name": "select_by_icon"
+2026-01-02T06:12:00.9786530Z }[0m
+2026-01-02T06:12:00.9788933Z [92m1767333492.481564 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9791234Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9793151Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9795025Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9796934Z   "handler": "start",
+2026-01-02T06:12:00.9801248Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9804760Z }[0m
+2026-01-02T06:12:00.9808251Z [92m1767333492.501923 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9810924Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9813033Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9815463Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9817768Z   "handler": "start",
+2026-01-02T06:12:00.9819935Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9823091Z }[0m
+2026-01-02T06:12:00.9825936Z [92m1767333492.516484 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9828606Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9830959Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9833320Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9835578Z   "handler": "start",
+2026-01-02T06:12:00.9838186Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9872636Z }[0m
+2026-01-02T06:12:00.9875997Z [97m1767333492.531702 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:00.9878381Z   "label": "Audio",
+2026-01-02T06:12:00.9880763Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/000-audio:reducer.reducer",
+2026-01-02T06:12:00.9884364Z   "service_id": "audio"
+2026-01-02T06:12:00.9887993Z }[0m
+2026-01-02T06:12:00.9892584Z [92m1767333492.546582 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9895216Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9897168Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9898987Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9900970Z   "handler": "start",
+2026-01-02T06:12:00.9902631Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9905019Z }[0m
+2026-01-02T06:12:00.9907326Z [92m1767333492.568597 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9909539Z   "event_type": "MenuChooseByLabelEvent",
+2026-01-02T06:12:00.9911327Z   "event_type_id": 459907408,
+2026-01-02T06:12:00.9913184Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:00.9917491Z   "handler_name": "select_by_label"
+2026-01-02T06:12:00.9919550Z }[0m
+2026-01-02T06:12:00.9921682Z [92m1767333492.577029 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9923917Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9925863Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9928478Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9930273Z   "handler": "start",
+2026-01-02T06:12:00.9931823Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9935424Z }[0m
+2026-01-02T06:12:00.9937702Z [92m1767333492.600365 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9939807Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9941672Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9943499Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9945432Z   "handler": "start",
+2026-01-02T06:12:00.9946939Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9949233Z }[0m
+2026-01-02T06:12:00.9951555Z [92m1767333492.616114 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9953760Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9955552Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9957254Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9958954Z   "handler": "start",
+2026-01-02T06:12:00.9960459Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9962426Z }[0m
+2026-01-02T06:12:00.9964559Z [92m1767333492.626940 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:00.9966607Z   "event_type": "MenuChooseByIndexEvent",
+2026-01-02T06:12:00.9968912Z   "event_type_id": 459871328,
+2026-01-02T06:12:00.9970615Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:00.9972497Z   "handler_name": "select_by_index"
+2026-01-02T06:12:00.9974627Z }[0m
+2026-01-02T06:12:00.9976889Z [92m1767333492.630863 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9980518Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9983075Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9984759Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:00.9986572Z   "handler": "start",
+2026-01-02T06:12:00.9988286Z   "has_coroutine_runner": true
+2026-01-02T06:12:00.9990505Z }[0m
+2026-01-02T06:12:00.9992574Z [92m1767333492.644080 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:00.9994840Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:00.9996565Z   "event_type_id": 460285216,
+2026-01-02T06:12:00.9998316Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0000165Z   "handler": "start",
+2026-01-02T06:12:01.0001782Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0003837Z }[0m
+2026-01-02T06:12:01.0006156Z [92m1767333492.663656 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0008753Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0010438Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0012550Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0014480Z   "handler": "start",
+2026-01-02T06:12:01.0016315Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0019043Z }[0m
+2026-01-02T06:12:01.0021061Z [92m1767333492.667370 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0023104Z   "event_type": "MenuScrollEvent",
+2026-01-02T06:12:01.0024994Z   "event_type_id": 459872528,
+2026-01-02T06:12:01.0026939Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:01.0028931Z   "handler_name": "scroll"
+2026-01-02T06:12:01.0030996Z }[0m
+2026-01-02T06:12:01.0033195Z [92m1767333492.674364 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0035439Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0037267Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0039127Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0040866Z   "handler": "start",
+2026-01-02T06:12:01.0042389Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0046400Z }[0m
+2026-01-02T06:12:01.0049053Z [92m1767333492.686390 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0051177Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0053033Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0054803Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0056873Z   "handler": "start",
+2026-01-02T06:12:01.0059092Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0061456Z }[0m
+2026-01-02T06:12:01.0063760Z [92m1767333492.694489 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0065878Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0067562Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0069285Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0070963Z   "handler": "start",
+2026-01-02T06:12:01.0101136Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0104937Z }[0m
+2026-01-02T06:12:01.0108148Z [92m1767333492.722894 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0110639Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0112523Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0114413Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0116442Z   "handler": "start",
+2026-01-02T06:12:01.0118233Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0120751Z }[0m
+2026-01-02T06:12:01.0123067Z [92m1767333492.733271 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0125580Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0128306Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0130454Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0133857Z   "handler": "start",
+2026-01-02T06:12:01.0136114Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0139174Z }[0m
+2026-01-02T06:12:01.0142009Z [92m1767333492.737350 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0146800Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0149668Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0151426Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0153317Z   "handler": "start",
+2026-01-02T06:12:01.0154923Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0157456Z }[0m
+2026-01-02T06:12:01.0159737Z [92m1767333492.748005 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0162146Z   "event_type": "SettingsStartServiceEvent",
+2026-01-02T06:12:01.0164418Z   "event_type_id": 460285216,
+2026-01-02T06:12:01.0166747Z   "event_type_module": "ubo_app.store.settings.types",
+2026-01-02T06:12:01.0169884Z   "handler": "start",
+2026-01-02T06:12:01.0171341Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0173395Z }[0m
+2026-01-02T06:12:01.0175339Z [92m1767333492.775335 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0177184Z   "service_id": "display",
+2026-01-02T06:12:01.0178765Z   "service_label": "Display",
+2026-01-02T06:12:01.0180384Z   "thread_native_id": 35903
+2026-01-02T06:12:01.0182594Z }[0m
+2026-01-02T06:12:01.0184655Z [92m1767333493.003024 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0186654Z   "service_id": "keypad",
+2026-01-02T06:12:01.0188289Z   "service_label": "Keypad",
+2026-01-02T06:12:01.0190019Z   "thread_native_id": 35904
+2026-01-02T06:12:01.0192211Z }[0m
+2026-01-02T06:12:01.0194401Z [97m1767333493.110522 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0196239Z   "label": "Display",
+2026-01-02T06:12:01.0198529Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/000-display:reducer.reducer",
+2026-01-02T06:12:01.0201114Z   "service_id": "display"
+2026-01-02T06:12:01.0203250Z }[0m
+2026-01-02T06:12:01.0205283Z [92m1767333493.158844 [INFO] Display reducer initialized[0m
+2026-01-02T06:12:01.0208408Z [92m1767333493.183419 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0210398Z   "service_id": "notifications",
+2026-01-02T06:12:01.0211985Z   "service_label": "Notifications",
+2026-01-02T06:12:01.0213595Z   "thread_native_id": 35905
+2026-01-02T06:12:01.0217791Z }[0m
+2026-01-02T06:12:01.0220068Z [97m1767333493.284307 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0222210Z   "label": "Keypad",
+2026-01-02T06:12:01.0224658Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/000-keypad:reducer.reducer",
+2026-01-02T06:12:01.0226994Z   "service_id": "keypad"
+2026-01-02T06:12:01.0228867Z }[0m
+2026-01-02T06:12:01.0230564Z [92m1767333493.421401 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0232416Z   "service_id": "speech_synthesis",
+2026-01-02T06:12:01.0234040Z   "service_label": "Speech Synthesis",
+2026-01-02T06:12:01.0235695Z   "thread_native_id": 35906
+2026-01-02T06:12:01.0237690Z }[0m
+2026-01-02T06:12:01.0240011Z [97m1767333493.481243 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0242175Z   "label": "Notifications",
+2026-01-02T06:12:01.0244910Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/010-notifications:reducer.reducer",
+2026-01-02T06:12:01.0248521Z   "service_id": "notifications"
+2026-01-02T06:12:01.0250612Z }[0m
+2026-01-02T06:12:01.0252510Z [97m1767333493.563326 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0254451Z   "label": "Speech Synthesis",
+2026-01-02T06:12:01.0256865Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/010-speech-synthesis:reducer.reducer",
+2026-01-02T06:12:01.0259511Z   "service_id": "speech_synthesis"
+2026-01-02T06:12:01.0261413Z }[0m
+2026-01-02T06:12:01.0263263Z [92m1767333493.639366 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0265145Z   "service_id": "keyboard",
+2026-01-02T06:12:01.0266717Z   "service_label": "Keyboard",
+2026-01-02T06:12:01.0268378Z   "thread_native_id": 35907
+2026-01-02T06:12:01.0270512Z }[0m
+2026-01-02T06:12:01.0272622Z [92m1767333493.885971 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0274562Z   "service_id": "ethernet",
+2026-01-02T06:12:01.0276086Z   "service_label": "Ethernet",
+2026-01-02T06:12:01.0279143Z   "thread_native_id": 35908
+2026-01-02T06:12:01.0281372Z }[0m
+2026-01-02T06:12:01.0283160Z [92m1767333494.122506 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0284897Z   "service_id": "ip",
+2026-01-02T06:12:01.0286340Z   "service_label": "IP",
+2026-01-02T06:12:01.0288786Z   "thread_native_id": 35909
+2026-01-02T06:12:01.0292117Z }[0m
+2026-01-02T06:12:01.0294693Z [97m1767333494.280244 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0296655Z   "label": "IP",
+2026-01-02T06:12:01.0298838Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-ip:reducer.reducer",
+2026-01-02T06:12:01.0301430Z   "service_id": "ip"
+2026-01-02T06:12:01.0303432Z }[0m
+2026-01-02T06:12:01.0305238Z [92m1767333494.364032 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0306993Z   "service_id": "wifi",
+2026-01-02T06:12:01.0331444Z   "service_label": "WiFi",
+2026-01-02T06:12:01.0334022Z   "thread_native_id": 35910
+2026-01-02T06:12:01.0336173Z }[0m
+2026-01-02T06:12:01.0338791Z [97m1767333494.550950 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0341030Z   "label": "WiFi",
+2026-01-02T06:12:01.0343186Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-wifi:reducer.reducer",
+2026-01-02T06:12:01.0345863Z   "service_id": "wifi"
+2026-01-02T06:12:01.0347862Z }[0m
+2026-01-02T06:12:01.0350142Z [92m1767333494.564139 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0352048Z   "service_id": "camera",
+2026-01-02T06:12:01.0353495Z   "service_label": "Camera",
+2026-01-02T06:12:01.0354955Z   "thread_native_id": 35911
+2026-01-02T06:12:01.0356835Z }[0m
+2026-01-02T06:12:01.0358944Z [97m1767333494.729578 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0360929Z   "label": "Camera",
+2026-01-02T06:12:01.0363282Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/040-camera:reducer.reducer",
+2026-01-02T06:12:01.0365672Z   "service_id": "camera"
+2026-01-02T06:12:01.0368525Z }[0m
+2026-01-02T06:12:01.0373186Z [92m1767333494.766240 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0375159Z   "service_id": "rgb_ring",
+2026-01-02T06:12:01.0376753Z   "service_label": "RGB Ring",
+2026-01-02T06:12:01.0378410Z   "thread_native_id": 35912
+2026-01-02T06:12:01.0380410Z }[0m
+2026-01-02T06:12:01.0382525Z [92m1767333494.810109 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0384464Z   "event_type": "PowerOffEvent",
+2026-01-02T06:12:01.0386033Z   "event_type_id": 459957072,
+2026-01-02T06:12:01.0387839Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:01.0389658Z   "handler_name": "_power_off"
+2026-01-02T06:12:01.0391805Z }[0m
+2026-01-02T06:12:01.0394097Z [97m1767333494.829309 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0396313Z   "label": "RGB Ring",
+2026-01-02T06:12:01.0398672Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/040-rgb-ring:reducer.reducer",
+2026-01-02T06:12:01.0401357Z   "service_id": "rgb_ring"
+2026-01-02T06:12:01.0403565Z }[0m
+2026-01-02T06:12:01.0405802Z [92m1767333494.861336 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0408381Z   "event_type": "RebootEvent",
+2026-01-02T06:12:01.0410107Z   "event_type_id": 459978624,
+2026-01-02T06:12:01.0412069Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:01.0413857Z   "handler_name": "_reboot"
+2026-01-02T06:12:01.0415853Z }[0m
+2026-01-02T06:12:01.0417982Z [92m1767333494.904285 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0420123Z   "event_type": "UpdateManagerUpdateEvent",
+2026-01-02T06:12:01.0421921Z   "event_type_id": 460389760,
+2026-01-02T06:12:01.0423842Z   "event_type_module": "ubo_app.store.update_manager.types",
+2026-01-02T06:12:01.0425695Z   "handler_name": "update"
+2026-01-02T06:12:01.0427730Z }[0m
+2026-01-02T06:12:01.0429851Z [92m1767333494.933163 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0431996Z   "event_type": "UpdateManagerCheckEvent",
+2026-01-02T06:12:01.0435563Z   "event_type_id": 460358672,
+2026-01-02T06:12:01.0438274Z   "event_type_module": "ubo_app.store.update_manager.types",
+2026-01-02T06:12:01.0440165Z   "handler_name": "check_version"
+2026-01-02T06:12:01.0442499Z }[0m
+2026-01-02T06:12:01.0444757Z [92m1767333494.983840 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0447488Z   "event_type": "ScreenshotEvent",
+2026-01-02T06:12:01.0449367Z   "event_type_id": 459979872,
+2026-01-02T06:12:01.0451006Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:01.0452813Z   "handler_name": "_take_screenshot"
+2026-01-02T06:12:01.0455161Z }[0m
+2026-01-02T06:12:01.0457253Z [92m1767333494.987878 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0459011Z   "service_id": "sensors",
+2026-01-02T06:12:01.0460478Z   "service_label": "Sensors",
+2026-01-02T06:12:01.0461882Z   "thread_native_id": 35913
+2026-01-02T06:12:01.0463769Z }[0m
+2026-01-02T06:12:01.0465832Z [92m1767333495.037395 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0467958Z   "event_type": "SnapshotEvent",
+2026-01-02T06:12:01.0469700Z   "event_type_id": 459987328,
+2026-01-02T06:12:01.0471469Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:01.0473221Z   "handler_name": "_take_snapshot"
+2026-01-02T06:12:01.0475388Z }[0m
+2026-01-02T06:12:01.0477420Z [97m1767333495.099667 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0479326Z   "label": "Sensors",
+2026-01-02T06:12:01.0481709Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/040-sensors:reducer.reducer",
+2026-01-02T06:12:01.0484413Z   "service_id": "sensors"
+2026-01-02T06:12:01.0486203Z }[0m
+2026-01-02T06:12:01.0489031Z [92m1767333495.103973 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0492412Z   "event_type": "StoreRecordedSequenceEvent",
+2026-01-02T06:12:01.0494685Z   "event_type_id": 460003440,
+2026-01-02T06:12:01.0496518Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:01.0498382Z   "handler_name": "_store_recorded_sequence"
+2026-01-02T06:12:01.0502941Z }[0m
+2026-01-02T06:12:01.0505004Z [92m1767333495.158626 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0507288Z   "event_type": "ReplayRecordedSequenceEvent",
+2026-01-02T06:12:01.0509101Z   "event_type_id": 460034784,
+2026-01-02T06:12:01.0510793Z   "event_type_module": "ubo_app.store.core.types",
+2026-01-02T06:12:01.0512595Z   "handler_name": "_replay_recorded_sequence"
+2026-01-02T06:12:01.0514748Z }[0m
+2026-01-02T06:12:01.0516733Z [92m1767333495.198067 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0518656Z   "service_id": "lightdm",
+2026-01-02T06:12:01.0520168Z   "service_label": "LightDM",
+2026-01-02T06:12:01.0521833Z   "thread_native_id": 35914
+2026-01-02T06:12:01.0523788Z }[0m
+2026-01-02T06:12:01.0525916Z [97m1767333495.334800 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0552933Z   "label": "LightDM",
+2026-01-02T06:12:01.0556283Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/050-lightdm:reducer.reducer",
+2026-01-02T06:12:01.0559045Z   "service_id": "lightdm"
+2026-01-02T06:12:01.0561295Z }[0m
+2026-01-02T06:12:01.0563428Z [92m1767333495.371070 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.0565814Z   "event_type": "UpdateManagerCheckEvent",
+2026-01-02T06:12:01.0568247Z   "event_type_id": 460358672,
+2026-01-02T06:12:01.0570339Z   "event_type_module": "ubo_app.store.update_manager.types",
+2026-01-02T06:12:01.0572388Z   "handler": "check_version",
+2026-01-02T06:12:01.0573949Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.0575985Z }[0m
+2026-01-02T06:12:01.0577989Z [92m1767333495.435314 [INFO] Checking for updates... - {
+2026-01-02T06:12:01.0579967Z   "beta_versions": false
+2026-01-02T06:12:01.0581907Z }[0m
+2026-01-02T06:12:01.0583972Z [92m1767333495.477180 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0585875Z   "service_id": "rpi_connect",
+2026-01-02T06:12:01.0587376Z   "service_label": "RPi Connect",
+2026-01-02T06:12:01.0590869Z   "thread_native_id": 35915
+2026-01-02T06:12:01.0593705Z }[0m
+2026-01-02T06:12:01.0595635Z [92m1767333495.484132 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.0597774Z   "event_type": "DisplayRedrawEvent",
+2026-01-02T06:12:01.0599330Z   "event_type_id": 457021424,
+2026-01-02T06:12:01.0601266Z   "event_type_module": "ubo_app.store.services.display",
+2026-01-02T06:12:01.0603606Z   "handler_name": "rerender"
+2026-01-02T06:12:01.0605588Z }[0m
+2026-01-02T06:12:01.0607900Z [92m1767333495.574873 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0609847Z   "service_id": "ssh",
+2026-01-02T06:12:01.0611325Z   "service_label": "SSH",
+2026-01-02T06:12:01.0613010Z   "thread_native_id": 35917
+2026-01-02T06:12:01.0615661Z }[0m
+2026-01-02T06:12:01.0617940Z [97m1767333495.645471 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0620015Z   "label": "RPi Connect",
+2026-01-02T06:12:01.0622645Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/050-rpi-connect:reducer.reducer",
+2026-01-02T06:12:01.0625595Z   "service_id": "rpi_connect"
+2026-01-02T06:12:01.0627832Z }[0m
+2026-01-02T06:12:01.0630014Z [92m1767333495.793569 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0632028Z   "service_id": "users",
+2026-01-02T06:12:01.0633592Z   "service_label": "Users",
+2026-01-02T06:12:01.0635101Z   "thread_native_id": 35919
+2026-01-02T06:12:01.0636927Z }[0m
+2026-01-02T06:12:01.0639003Z [97m1767333495.943533 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0640997Z   "label": "SSH",
+2026-01-02T06:12:01.0643164Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/050-ssh:reducer.reducer",
+2026-01-02T06:12:01.0645840Z   "service_id": "ssh"
+2026-01-02T06:12:01.0648605Z }[0m
+2026-01-02T06:12:01.0651007Z [92m1767333496.031528 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0653016Z   "service_id": "vscode",
+2026-01-02T06:12:01.0654578Z   "service_label": "VSCode",
+2026-01-02T06:12:01.0656210Z   "thread_native_id": 35920
+2026-01-02T06:12:01.0658508Z }[0m
+2026-01-02T06:12:01.0662861Z [92m1767333496.179059 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0664761Z   "service_id": "docker",
+2026-01-02T06:12:01.0666220Z   "service_label": "Docker",
+2026-01-02T06:12:01.0667696Z   "thread_native_id": 35921
+2026-01-02T06:12:01.0669669Z }[0m
+2026-01-02T06:12:01.0671692Z [97m1767333496.253400 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0673506Z   "label": "Users",
+2026-01-02T06:12:01.0675853Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/050-users:reducer.reducer",
+2026-01-02T06:12:01.0678208Z   "service_id": "users"
+2026-01-02T06:12:01.0680224Z }[0m
+2026-01-02T06:12:01.0682224Z [92m1767333496.410733 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0684161Z   "service_id": "assistant",
+2026-01-02T06:12:01.0685877Z   "service_label": "Assistant",
+2026-01-02T06:12:01.0688259Z   "thread_native_id": 35924
+2026-01-02T06:12:01.0690530Z }[0m
+2026-01-02T06:12:01.0694155Z [97m1767333496.514409 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0696297Z   "label": "VSCode",
+2026-01-02T06:12:01.0698694Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/050-vscode:reducer.reducer",
+2026-01-02T06:12:01.0701235Z   "service_id": "vscode"
+2026-01-02T06:12:01.0703493Z }[0m
+2026-01-02T06:12:01.0706055Z [92m1767333496.601361 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0708447Z   "service_id": "file_system",
+2026-01-02T06:12:01.0710081Z   "service_label": "File System",
+2026-01-02T06:12:01.0711871Z   "thread_native_id": 35925
+2026-01-02T06:12:01.0713985Z }[0m
+2026-01-02T06:12:01.0716121Z [97m1767333496.653948 [DEBUG] `uuid.uuid4` is being called - {
+2026-01-02T06:12:01.0718146Z   "counter": 2,
+2026-01-02T06:12:01.0719794Z   "generated_uuid": "f728b4fa42485e3a0a5d2f346baa9455",
+2026-01-02T06:12:01.0722081Z   "traceback": "  File \"/usr/lib/python3.11/threading.py\", line 995, in _bootstrap
+2026-01-02T06:12:01.0724295Z     self._bootstrap_inner()
+2026-01-02T06:12:01.0727300Z 
+2026-01-02T06:12:01.0728879Z   File \"/usr/lib/python3.11/threading.py\", line 1038, in _bootstrap_inner
+2026-01-02T06:12:01.0731087Z     self.run()
+2026-01-02T06:12:01.0731969Z 
+2026-01-02T06:12:01.0733418Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 408, in run
+2026-01-02T06:12:01.0735868Z     self.loop.run_forever()
+2026-01-02T06:12:01.0736852Z 
+2026-01-02T06:12:01.0738067Z   File \"/usr/lib/python3.11/asyncio/base_events.py\", line 607, in run_forever
+2026-01-02T06:12:01.0740198Z     self._run_once()
+2026-01-02T06:12:01.0741036Z 
+2026-01-02T06:12:01.0742045Z   File \"/usr/lib/python3.11/asyncio/base_events.py\", line 1922, in _run_once
+2026-01-02T06:12:01.0744275Z     handle._run()
+2026-01-02T06:12:01.0745140Z 
+2026-01-02T06:12:01.0746103Z   File \"/usr/lib/python3.11/asyncio/events.py\", line 80, in _run
+2026-01-02T06:12:01.0748174Z     self._context.run(self._callback, *self._args)
+2026-01-02T06:12:01.0749351Z 
+2026-01-02T06:12:01.0751064Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 342, in setup_wrapper
+2026-01-02T06:12:01.0753785Z     subscriptions = await result
+2026-01-02T06:12:01.0754835Z 
+2026-01-02T06:12:01.0756647Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/080-docker/ubo_handle.py\", line 13, in setup
+2026-01-02T06:12:01.0783178Z     from reducer import reducer
+2026-01-02T06:12:01.0784349Z 
+2026-01-02T06:12:01.0785398Z   File \"<frozen importlib._bootstrap>\", line 1178, in _find_and_load
+2026-01-02T06:12:01.0786794Z 
+2026-01-02T06:12:01.0788667Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.0791786Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.0792799Z 
+2026-01-02T06:12:01.0794708Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.0797733Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.0801106Z 
+2026-01-02T06:12:01.0802336Z   File \"<frozen importlib._bootstrap>\", line 1149, in _find_and_load_unlocked
+2026-01-02T06:12:01.0803847Z 
+2026-01-02T06:12:01.0804915Z   File \"<frozen importlib._bootstrap>\", line 690, in _load_unlocked
+2026-01-02T06:12:01.0806456Z 
+2026-01-02T06:12:01.0808624Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 99, in exec_module
+2026-01-02T06:12:01.0811285Z     super().exec_module(module)
+2026-01-02T06:12:01.0812295Z 
+2026-01-02T06:12:01.0813418Z   File \"<frozen importlib._bootstrap_external>\", line 940, in exec_module
+2026-01-02T06:12:01.0815002Z 
+2026-01-02T06:12:01.0816219Z   File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed
+2026-01-02T06:12:01.0817969Z 
+2026-01-02T06:12:01.0819968Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/080-docker/reducer.py\", line 243, in <module>
+2026-01-02T06:12:01.0822969Z     reducer, reducer_id = combine_reducers(
+2026-01-02T06:12:01.0824307Z 
+2026-01-02T06:12:01.0826456Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/.venv/lib/python3.11/site-packages/redux/combine_reducers.py\", line 47, in combine_reducers
+2026-01-02T06:12:01.0829683Z     id_ = uuid.uuid4().hex
+2026-01-02T06:12:01.0831155Z "
+2026-01-02T06:12:01.0833119Z }[0m
+2026-01-02T06:12:01.0835124Z [97m1767333496.684139 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0837267Z   "label": "Docker",
+2026-01-02T06:12:01.0839060Z   "reducer": "redux.combine_reducers.combined_reducer",
+2026-01-02T06:12:01.0840931Z   "service_id": "docker"
+2026-01-02T06:12:01.0842915Z }[0m
+2026-01-02T06:12:01.0844929Z [92m1767333496.811543 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0846672Z   "service_id": "infrared",
+2026-01-02T06:12:01.0848975Z   "service_label": "Infrared",
+2026-01-02T06:12:01.0850723Z   "thread_native_id": 35926
+2026-01-02T06:12:01.0852730Z }[0m
+2026-01-02T06:12:01.0856261Z [92m1767333497.019196 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0859103Z   "service_id": "speech_recognition",
+2026-01-02T06:12:01.0860802Z   "service_label": "Speech Recognition",
+2026-01-02T06:12:01.0862538Z   "thread_native_id": 35928
+2026-01-02T06:12:01.0864717Z }[0m
+2026-01-02T06:12:01.0866844Z [92m1767333497.178941 [INFO] Starting service thread - {
+2026-01-02T06:12:01.0868707Z   "service_id": "web_ui",
+2026-01-02T06:12:01.0870239Z   "service_label": "Web UI",
+2026-01-02T06:12:01.0871809Z   "thread_native_id": 35930
+2026-01-02T06:12:01.0877047Z }[0m
+2026-01-02T06:12:01.0879290Z [97m1767333498.517399 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0881234Z   "label": "Assistant",
+2026-01-02T06:12:01.0883499Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant:reducer.reducer",
+2026-01-02T06:12:01.0885973Z   "service_id": "assistant"
+2026-01-02T06:12:01.0888499Z }[0m
+2026-01-02T06:12:01.0890701Z [97m1767333498.596500 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0894291Z   "label": "File System",
+2026-01-02T06:12:01.0896804Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-file-system:reducer.reducer",
+2026-01-02T06:12:01.0899467Z   "service_id": "file_system"
+2026-01-02T06:12:01.0901661Z }[0m
+2026-01-02T06:12:01.0903803Z [97m1767333498.692590 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0905947Z   "label": "Web UI",
+2026-01-02T06:12:01.0908290Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-web-ui:reducer.reducer",
+2026-01-02T06:12:01.0910876Z   "service_id": "web_ui"
+2026-01-02T06:12:01.0912670Z }[0m
+2026-01-02T06:12:01.0914667Z [97m1767333498.831425 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0916805Z   "label": "Infrared",
+2026-01-02T06:12:01.0919153Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-infrared:reducer.reducer",
+2026-01-02T06:12:01.0921801Z   "service_id": "infrared"
+2026-01-02T06:12:01.0926097Z }[0m
+2026-01-02T06:12:01.0928752Z [97m1767333498.897556 [DEBUG] Registering ubo service reducer - {
+2026-01-02T06:12:01.0930836Z   "label": "Speech Recognition",
+2026-01-02T06:12:01.0933513Z   "reducer": "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-speech-recognition:reducer.reducer",
+2026-01-02T06:12:01.0936327Z   "service_id": "speech_recognition"
+2026-01-02T06:12:01.0938721Z }[0m
+2026-01-02T06:12:01.0941482Z [92m1767333498.900424 [INFO] All reducers registered successfully - {
+2026-01-02T06:12:01.0943717Z   "service_ids": [
+2026-01-02T06:12:01.0945308Z     "audio",
+2026-01-02T06:12:01.0946673Z     "display",
+2026-01-02T06:12:01.0948158Z     "keypad",
+2026-01-02T06:12:01.0949713Z     "notifications",
+2026-01-02T06:12:01.0951310Z     "speech_synthesis",
+2026-01-02T06:12:01.0952936Z     "keyboard",
+2026-01-02T06:12:01.0954493Z     "ethernet",
+2026-01-02T06:12:01.0955916Z     "ip",
+2026-01-02T06:12:01.0957326Z     "wifi",
+2026-01-02T06:12:01.0958767Z     "camera",
+2026-01-02T06:12:01.0960319Z     "rgb_ring",
+2026-01-02T06:12:01.0961648Z     "sensors",
+2026-01-02T06:12:01.0963030Z     "lightdm",
+2026-01-02T06:12:01.0964657Z     "rpi_connect",
+2026-01-02T06:12:01.0966166Z     "ssh",
+2026-01-02T06:12:01.0967985Z     "users",
+2026-01-02T06:12:01.0969360Z     "vscode",
+2026-01-02T06:12:01.0970726Z     "docker",
+2026-01-02T06:12:01.0972233Z     "assistant",
+2026-01-02T06:12:01.0973575Z     "file_system",
+2026-01-02T06:12:01.0975054Z     "infrared",
+2026-01-02T06:12:01.0976459Z     "speech_recognition",
+2026-01-02T06:12:01.0978002Z     "web_ui"
+2026-01-02T06:12:01.0979332Z   ]
+2026-01-02T06:12:01.0981458Z }[0m
+2026-01-02T06:12:01.0983939Z [92m1767333499.655155 [INFO] Display service initialized with activity tracking[0m
+2026-01-02T06:12:01.0986809Z [92m1767333499.693320 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1011548Z   "event_type": "AudioReportSampleEvent",
+2026-01-02T06:12:01.1013873Z   "event_type_id": 460832864,
+2026-01-02T06:12:01.1017142Z   "event_type_module": "ubo_app.store.services.audio",
+2026-01-02T06:12:01.1019619Z   "handler_name": "_queue_chunk"
+2026-01-02T06:12:01.1021974Z }[0m
+2026-01-02T06:12:01.1024140Z [92m1767333499.693982 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1026346Z   "event_type": "DisplayBlankEvent",
+2026-01-02T06:12:01.1028125Z   "event_type_id": 457040896,
+2026-01-02T06:12:01.1029974Z   "event_type_module": "ubo_app.store.services.display",
+2026-01-02T06:12:01.1031928Z   "handler_name": "handle_blank_event"
+2026-01-02T06:12:01.1034237Z }[0m
+2026-01-02T06:12:01.1036426Z [92m1767333499.728654 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1038563Z   "event_type": "DisplayUnblankEvent",
+2026-01-02T06:12:01.1040429Z   "event_type_id": 457034880,
+2026-01-02T06:12:01.1042243Z   "event_type_module": "ubo_app.store.services.display",
+2026-01-02T06:12:01.1044255Z   "handler_name": "handle_unblank_event"
+2026-01-02T06:12:01.1046731Z }[0m
+2026-01-02T06:12:01.1050091Z [92m1767333499.743307 [INFO] Screen blanking disabled during tests[0m
+2026-01-02T06:12:01.1053249Z [97m1767333499.758036 [DEBUG] Display reducer received action - {
+2026-01-02T06:12:01.1055359Z   "action_type": "DisplayUpdateActivityAction"
+2026-01-02T06:12:01.1057523Z }[0m
+2026-01-02T06:12:01.1059661Z [92m1767333499.775671 [INFO] Internet connectivity state changed - {
+2026-01-02T06:12:01.1061795Z   "is_connected": false,
+2026-01-02T06:12:01.1063468Z   "received_lines_count": 0
+2026-01-02T06:12:01.1065750Z }[0m
+2026-01-02T06:12:01.1068524Z [97m1767333499.814404 [DEBUG] DisplayUpdateActivityAction received - {
+2026-01-02T06:12:01.1070951Z   "timestamp": 1672531200.0
+2026-01-02T06:12:01.1072811Z }[0m
+2026-01-02T06:12:01.1075083Z [92m1767333500.920928 [INFO] Internet connectivity state changed - {
+2026-01-02T06:12:01.1077210Z   "is_connected": true,
+2026-01-02T06:12:01.1078883Z   "received_lines_count": 1
+2026-01-02T06:12:01.1080823Z }[0m
+2026-01-02T06:12:01.1083046Z [92m1767333501.413440 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1087662Z   "event_type": "FileSystemSelectEvent",
+2026-01-02T06:12:01.1089301Z   "event_type_id": 546467863456,
+2026-01-02T06:12:01.1092417Z   "event_type_module": "ubo_app.store.services.file_system",
+2026-01-02T06:12:01.1094952Z   "handler_name": "handle_open_path_event"
+2026-01-02T06:12:01.1097072Z }[0m
+2026-01-02T06:12:01.1099127Z [92m1767333501.418828 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1101111Z   "event_type": "FileSystemCopyEvent",
+2026-01-02T06:12:01.1102846Z   "event_type_id": 546467859504,
+2026-01-02T06:12:01.1104695Z   "event_type_module": "ubo_app.store.services.file_system",
+2026-01-02T06:12:01.1106775Z   "handler_name": "handle_copy_event"
+2026-01-02T06:12:01.1108784Z }[0m
+2026-01-02T06:12:01.1110754Z [92m1767333501.444502 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1112754Z   "event_type": "FileSystemMoveEvent",
+2026-01-02T06:12:01.1114374Z   "event_type_id": 546467865216,
+2026-01-02T06:12:01.1116290Z   "event_type_module": "ubo_app.store.services.file_system",
+2026-01-02T06:12:01.1118379Z   "handler_name": "handle_move_event"
+2026-01-02T06:12:01.1120909Z }[0m
+2026-01-02T06:12:01.1122740Z [92m1767333501.458077 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1124650Z   "event_type": "FileSystemRemoveEvent",
+2026-01-02T06:12:01.1126358Z   "event_type_id": 546467659648,
+2026-01-02T06:12:01.1128743Z   "event_type_module": "ubo_app.store.services.file_system",
+2026-01-02T06:12:01.1130857Z   "handler_name": "handle_remove_event"
+2026-01-02T06:12:01.1133068Z }[0m
+2026-01-02T06:12:01.1135227Z [92m1767333502.267533 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1137520Z   "event_type": "AudioInstallDriverEvent",
+2026-01-02T06:12:01.1139162Z   "event_type_id": 460826224,
+2026-01-02T06:12:01.1140970Z   "event_type_module": "ubo_app.store.services.audio",
+2026-01-02T06:12:01.1143074Z   "handler_name": "_install_driver"
+2026-01-02T06:12:01.1145508Z }[0m
+2026-01-02T06:12:01.1149978Z [92m1767333502.277010 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1153019Z   "event_type": "AudioPlayChimeEvent",
+2026-01-02T06:12:01.1154834Z   "event_type_id": 460827200,
+2026-01-02T06:12:01.1156791Z   "event_type_module": "ubo_app.store.services.audio",
+2026-01-02T06:12:01.1158764Z   "handler_name": "play_chime"
+2026-01-02T06:12:01.1161191Z }[0m
+2026-01-02T06:12:01.1163633Z [92m1767333502.286853 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1165785Z   "event_type": "AudioPlayAudioSampleEvent",
+2026-01-02T06:12:01.1168253Z   "event_type_id": 460767472,
+2026-01-02T06:12:01.1170144Z   "event_type_module": "ubo_app.store.services.audio",
+2026-01-02T06:12:01.1172046Z   "handler_name": "play_audio"
+2026-01-02T06:12:01.1174148Z }[0m
+2026-01-02T06:12:01.1176284Z [92m1767333502.309298 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1178511Z   "event_type": "AudioPlayAudioSequenceEvent",
+2026-01-02T06:12:01.1180457Z   "event_type_id": 460762608,
+2026-01-02T06:12:01.1182389Z   "event_type_module": "ubo_app.store.services.audio",
+2026-01-02T06:12:01.1184320Z   "handler_name": "play_audio"
+2026-01-02T06:12:01.1186491Z }[0m
+2026-01-02T06:12:01.1188575Z [97m1767333502.943013 [DEBUG] `uuid.uuid4` is being called - {
+2026-01-02T06:12:01.1190616Z   "counter": 3,
+2026-01-02T06:12:01.1192243Z   "generated_uuid": "eb1167b367a9c3787c65c1e582e2e662",
+2026-01-02T06:12:01.1194662Z   "traceback": "  File \"/usr/lib/python3.11/threading.py\", line 995, in _bootstrap
+2026-01-02T06:12:01.1197055Z     self._bootstrap_inner()
+2026-01-02T06:12:01.1198006Z 
+2026-01-02T06:12:01.1199141Z   File \"/usr/lib/python3.11/threading.py\", line 1038, in _bootstrap_inner
+2026-01-02T06:12:01.1201277Z     self.run()
+2026-01-02T06:12:01.1202076Z 
+2026-01-02T06:12:01.1203594Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 408, in run
+2026-01-02T06:12:01.1206069Z     self.loop.run_forever()
+2026-01-02T06:12:01.1207432Z 
+2026-01-02T06:12:01.1208868Z   File \"/usr/lib/python3.11/asyncio/base_events.py\", line 607, in run_forever
+2026-01-02T06:12:01.1213224Z     self._run_once()
+2026-01-02T06:12:01.1214078Z 
+2026-01-02T06:12:01.1215202Z   File \"/usr/lib/python3.11/asyncio/base_events.py\", line 1922, in _run_once
+2026-01-02T06:12:01.1242560Z     handle._run()
+2026-01-02T06:12:01.1243524Z 
+2026-01-02T06:12:01.1244554Z   File \"/usr/lib/python3.11/asyncio/events.py\", line 80, in _run
+2026-01-02T06:12:01.1246740Z     self._context.run(self._callback, *self._args)
+2026-01-02T06:12:01.1248899Z 
+2026-01-02T06:12:01.1250363Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 336, in setup_wrapper
+2026-01-02T06:12:01.1252841Z     result = cast(
+2026-01-02T06:12:01.1253708Z 
+2026-01-02T06:12:01.1255331Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-wifi/ubo_handle.py\", line 17, in setup
+2026-01-02T06:12:01.1257872Z     from setup import init_service
+2026-01-02T06:12:01.1258835Z 
+2026-01-02T06:12:01.1259936Z   File \"<frozen importlib._bootstrap>\", line 1178, in _find_and_load
+2026-01-02T06:12:01.1261475Z 
+2026-01-02T06:12:01.1263289Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1266194Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1267213Z 
+2026-01-02T06:12:01.1269060Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1271994Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1273016Z 
+2026-01-02T06:12:01.1274114Z   File \"<frozen importlib._bootstrap>\", line 1149, in _find_and_load_unlocked
+2026-01-02T06:12:01.1275618Z 
+2026-01-02T06:12:01.1276657Z   File \"<frozen importlib._bootstrap>\", line 690, in _load_unlocked
+2026-01-02T06:12:01.1277922Z 
+2026-01-02T06:12:01.1280816Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 99, in exec_module
+2026-01-02T06:12:01.1283990Z     super().exec_module(module)
+2026-01-02T06:12:01.1284994Z 
+2026-01-02T06:12:01.1285967Z   File \"<frozen importlib._bootstrap_external>\", line 940, in exec_module
+2026-01-02T06:12:01.1287998Z 
+2026-01-02T06:12:01.1289243Z   File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed
+2026-01-02T06:12:01.1290765Z 
+2026-01-02T06:12:01.1293367Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-wifi/setup.py\", line 8, in <module>
+2026-01-02T06:12:01.1296409Z     from pages import create_wireless_connection, main
+2026-01-02T06:12:01.1297592Z 
+2026-01-02T06:12:01.1298595Z   File \"<frozen importlib._bootstrap>\", line 1234, in _handle_fromlist
+2026-01-02T06:12:01.1299950Z 
+2026-01-02T06:12:01.1301024Z   File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed
+2026-01-02T06:12:01.1302616Z 
+2026-01-02T06:12:01.1303613Z   File \"<frozen importlib._bootstrap>\", line 1178, in _find_and_load
+2026-01-02T06:12:01.1305076Z 
+2026-01-02T06:12:01.1307008Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1309923Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1311065Z 
+2026-01-02T06:12:01.1312854Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1315622Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1316622Z 
+2026-01-02T06:12:01.1317681Z   File \"<frozen importlib._bootstrap>\", line 1149, in _find_and_load_unlocked
+2026-01-02T06:12:01.1319171Z 
+2026-01-02T06:12:01.1320130Z   File \"<frozen importlib._bootstrap>\", line 690, in _load_unlocked
+2026-01-02T06:12:01.1321579Z 
+2026-01-02T06:12:01.1322715Z   File \"<frozen importlib._bootstrap_external>\", line 940, in exec_module
+2026-01-02T06:12:01.1324145Z 
+2026-01-02T06:12:01.1325313Z   File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed
+2026-01-02T06:12:01.1330150Z 
+2026-01-02T06:12:01.1332209Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-wifi/pages/create_wireless_connection.py\", line 51, in <module>
+2026-01-02T06:12:01.1335426Z     QRCodeInputDescription(
+2026-01-02T06:12:01.1336388Z 
+2026-01-02T06:12:01.1337095Z   File \"<string>\", line 4, in __init__
+2026-01-02T06:12:01.1338048Z 
+2026-01-02T06:12:01.1339627Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/store/input/types.py\", line 71, in <lambda>
+2026-01-02T06:12:01.1342336Z     id: str = field(default_factory=lambda: uuid.uuid4().hex)
+2026-01-02T06:12:01.1343984Z "
+2026-01-02T06:12:01.1346055Z }[0m
+2026-01-02T06:12:01.1348115Z [97m1767333502.989404 [DEBUG] `uuid.uuid4` is being called - {
+2026-01-02T06:12:01.1350087Z   "counter": 4,
+2026-01-02T06:12:01.1351540Z   "generated_uuid": "f7c1bd874da5e709d4713d60c8a70639",
+2026-01-02T06:12:01.1353826Z   "traceback": "  File \"/usr/lib/python3.11/threading.py\", line 995, in _bootstrap
+2026-01-02T06:12:01.1356204Z     self._bootstrap_inner()
+2026-01-02T06:12:01.1357084Z 
+2026-01-02T06:12:01.1358265Z   File \"/usr/lib/python3.11/threading.py\", line 1038, in _bootstrap_inner
+2026-01-02T06:12:01.1360376Z     self.run()
+2026-01-02T06:12:01.1361277Z 
+2026-01-02T06:12:01.1362710Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 408, in run
+2026-01-02T06:12:01.1365220Z     self.loop.run_forever()
+2026-01-02T06:12:01.1366076Z 
+2026-01-02T06:12:01.1367710Z   File \"/usr/lib/python3.11/asyncio/base_events.py\", line 607, in run_forever
+2026-01-02T06:12:01.1369887Z     self._run_once()
+2026-01-02T06:12:01.1370815Z 
+2026-01-02T06:12:01.1371934Z   File \"/usr/lib/python3.11/asyncio/base_events.py\", line 1922, in _run_once
+2026-01-02T06:12:01.1374124Z     handle._run()
+2026-01-02T06:12:01.1374920Z 
+2026-01-02T06:12:01.1375856Z   File \"/usr/lib/python3.11/asyncio/events.py\", line 80, in _run
+2026-01-02T06:12:01.1379486Z     self._context.run(self._callback, *self._args)
+2026-01-02T06:12:01.1381423Z 
+2026-01-02T06:12:01.1383132Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 336, in setup_wrapper
+2026-01-02T06:12:01.1385656Z     result = cast(
+2026-01-02T06:12:01.1386462Z 
+2026-01-02T06:12:01.1388153Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-wifi/ubo_handle.py\", line 17, in setup
+2026-01-02T06:12:01.1390923Z     from setup import init_service
+2026-01-02T06:12:01.1391923Z 
+2026-01-02T06:12:01.1392922Z   File \"<frozen importlib._bootstrap>\", line 1178, in _find_and_load
+2026-01-02T06:12:01.1394362Z 
+2026-01-02T06:12:01.1396251Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1399328Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1400420Z 
+2026-01-02T06:12:01.1402332Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1405253Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1406291Z 
+2026-01-02T06:12:01.1407977Z   File \"<frozen importlib._bootstrap>\", line 1149, in _find_and_load_unlocked
+2026-01-02T06:12:01.1409507Z 
+2026-01-02T06:12:01.1410418Z   File \"<frozen importlib._bootstrap>\", line 690, in _load_unlocked
+2026-01-02T06:12:01.1411865Z 
+2026-01-02T06:12:01.1413343Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/service_thread.py\", line 99, in exec_module
+2026-01-02T06:12:01.1415946Z     super().exec_module(module)
+2026-01-02T06:12:01.1416907Z 
+2026-01-02T06:12:01.1418030Z   File \"<frozen importlib._bootstrap_external>\", line 940, in exec_module
+2026-01-02T06:12:01.1419475Z 
+2026-01-02T06:12:01.1420556Z   File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed
+2026-01-02T06:12:01.1422086Z 
+2026-01-02T06:12:01.1423731Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-wifi/setup.py\", line 8, in <module>
+2026-01-02T06:12:01.1428798Z     from pages import create_wireless_connection, main
+2026-01-02T06:12:01.1429977Z 
+2026-01-02T06:12:01.1430890Z   File \"<frozen importlib._bootstrap>\", line 1234, in _handle_fromlist
+2026-01-02T06:12:01.1432409Z 
+2026-01-02T06:12:01.1433553Z   File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed
+2026-01-02T06:12:01.1434967Z 
+2026-01-02T06:12:01.1436007Z   File \"<frozen importlib._bootstrap>\", line 1178, in _find_and_load
+2026-01-02T06:12:01.1437457Z 
+2026-01-02T06:12:01.1439586Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1442799Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1443976Z 
+2026-01-02T06:12:01.1445948Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/_ignore_this_in_back_track.py\", line 33, in _ignore_this_in_backtraack
+2026-01-02T06:12:01.1449780Z     return ignore_this_in_backtraack(
+2026-01-02T06:12:01.1451072Z 
+2026-01-02T06:12:01.1452116Z   File \"<frozen importlib._bootstrap>\", line 1149, in _find_and_load_unlocked
+2026-01-02T06:12:01.1453612Z 
+2026-01-02T06:12:01.1454696Z   File \"<frozen importlib._bootstrap>\", line 690, in _load_unlocked
+2026-01-02T06:12:01.1456149Z 
+2026-01-02T06:12:01.1457307Z   File \"<frozen importlib._bootstrap_external>\", line 940, in exec_module
+2026-01-02T06:12:01.1458756Z 
+2026-01-02T06:12:01.1459934Z   File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed
+2026-01-02T06:12:01.1461464Z 
+2026-01-02T06:12:01.1463513Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/030-wifi/pages/create_wireless_connection.py\", line 60, in <module>
+2026-01-02T06:12:01.1466485Z     WebUIInputDescription(
+2026-01-02T06:12:01.1467526Z 
+2026-01-02T06:12:01.1468284Z   File \"<string>\", line 4, in __init__
+2026-01-02T06:12:01.1469303Z 
+2026-01-02T06:12:01.1472307Z   File \"/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/store/input/types.py\", line 71, in <lambda>
+2026-01-02T06:12:01.1473652Z     id: str = field(default_factory=lambda: uuid.uuid4().hex)
+2026-01-02T06:12:01.1474203Z "
+2026-01-02T06:12:01.1475385Z }[0m
+2026-01-02T06:12:01.1476738Z [92m1767333503.100749 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1477608Z   "event_type": "WiFiUpdateRequestEvent",
+2026-01-02T06:12:01.1478350Z   "event_type_id": 545662338688,
+2026-01-02T06:12:01.1479224Z   "event_type_module": "ubo_app.store.services.wifi",
+2026-01-02T06:12:01.1479917Z   "handler_name": "request_scan"
+2026-01-02T06:12:01.1481087Z }[0m
+2026-01-02T06:12:01.1482426Z [92m1767333503.156080 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1483181Z   "event_type": "WiFiInputConnectionEvent",
+2026-01-02T06:12:01.1483799Z   "event_type_id": 545662358384,
+2026-01-02T06:12:01.1511203Z   "event_type_module": "ubo_app.store.services.wifi",
+2026-01-02T06:12:01.1511998Z   "handler_name": "<lambda>"
+2026-01-02T06:12:01.1513497Z }[0m
+2026-01-02T06:12:01.1514835Z [92m1767333504.508389 [INFO] Docker init_service starting[0m
+2026-01-02T06:12:01.1516089Z [92m1767333504.547435 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1516912Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1517655Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1518548Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1519330Z   "handler_name": "_register_image_app_entry"
+2026-01-02T06:12:01.1520289Z }[0m
+2026-01-02T06:12:01.1521505Z [92m1767333504.567786 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1522214Z   "event_type": "DockerInstallEvent",
+2026-01-02T06:12:01.1522885Z   "event_type_id": 547340414448,
+2026-01-02T06:12:01.1523701Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1524463Z   "handler_name": "install_docker"
+2026-01-02T06:12:01.1525479Z }[0m
+2026-01-02T06:12:01.1527451Z [92m1767333504.593950 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1530351Z   "event_type": "DockerStartEvent",
+2026-01-02T06:12:01.1531063Z   "event_type_id": 547340349536,
+2026-01-02T06:12:01.1531879Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1532590Z   "handler_name": "start_docker"
+2026-01-02T06:12:01.1533701Z }[0m
+2026-01-02T06:12:01.1535042Z [92m1767333504.623682 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1535791Z   "event_type": "DockerStopEvent",
+2026-01-02T06:12:01.1536513Z   "event_type_id": 547340700304,
+2026-01-02T06:12:01.1537337Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1537942Z   "handler_name": "stop_docker"
+2026-01-02T06:12:01.1538934Z }[0m
+2026-01-02T06:12:01.1540231Z [92m1767333504.662540 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1541112Z   "event_type": "DockerImageFetchCompositionEvent",
+2026-01-02T06:12:01.1541807Z   "event_type_id": 547340613760,
+2026-01-02T06:12:01.1542847Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1543735Z   "handler_name": "pull_composition"
+2026-01-02T06:12:01.1544767Z }[0m
+2026-01-02T06:12:01.1546169Z [92m1767333504.677192 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1546938Z   "event_type": "DockerImageFetchEvent",
+2026-01-02T06:12:01.1547571Z   "event_type_id": 547340550528,
+2026-01-02T06:12:01.1548501Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1549155Z   "handler_name": "fetch_image"
+2026-01-02T06:12:01.1550094Z }[0m
+2026-01-02T06:12:01.1551378Z [92m1767333504.712609 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1552158Z   "event_type": "DockerImageRemoveCompositionEvent",
+2026-01-02T06:12:01.1552830Z   "event_type_id": 547340547696,
+2026-01-02T06:12:01.1553679Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1554395Z   "handler_name": "remove_composition"
+2026-01-02T06:12:01.1555439Z }[0m
+2026-01-02T06:12:01.1558549Z [92m1767333504.724033 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1560041Z   "event_type": "DockerImageRemoveEvent",
+2026-01-02T06:12:01.1560731Z   "event_type_id": 547340797408,
+2026-01-02T06:12:01.1561693Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1562351Z   "handler_name": "remove_image"
+2026-01-02T06:12:01.1563467Z }[0m
+2026-01-02T06:12:01.1564758Z [92m1767333504.751437 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1565591Z   "event_type": "DockerImageRunCompositionEvent",
+2026-01-02T06:12:01.1566199Z   "event_type_id": 547340785376,
+2026-01-02T06:12:01.1567468Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1568377Z   "handler_name": "run_composition"
+2026-01-02T06:12:01.1569712Z }[0m
+2026-01-02T06:12:01.1571020Z [92m1767333504.803484 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1571816Z   "event_type": "DockerImageRunContainerEvent",
+2026-01-02T06:12:01.1572573Z   "event_type_id": 547340519824,
+2026-01-02T06:12:01.1573746Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1574524Z   "handler_name": "run_container"
+2026-01-02T06:12:01.1575651Z }[0m
+2026-01-02T06:12:01.1577001Z [92m1767333504.852264 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1577887Z   "event_type": "DockerImageStopCompositionEvent",
+2026-01-02T06:12:01.1578506Z   "event_type_id": 547340718544,
+2026-01-02T06:12:01.1579368Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1580026Z   "handler_name": "stop_composition"
+2026-01-02T06:12:01.1580903Z }[0m
+2026-01-02T06:12:01.1582176Z [92m1767333504.869179 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1582946Z   "event_type": "DockerImageStopContainerEvent",
+2026-01-02T06:12:01.1583601Z   "event_type_id": 547340722192,
+2026-01-02T06:12:01.1584432Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1585128Z   "handler_name": "stop_container"
+2026-01-02T06:12:01.1586063Z }[0m
+2026-01-02T06:12:01.1587392Z [92m1767333504.892636 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1590486Z   "event_type": "DockerImageReleaseCompositionEvent",
+2026-01-02T06:12:01.1591285Z   "event_type_id": 547340723280,
+2026-01-02T06:12:01.1592232Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1592975Z   "handler_name": "release_composition"
+2026-01-02T06:12:01.1594376Z }[0m
+2026-01-02T06:12:01.1595590Z [92m1767333504.908080 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1596431Z   "event_type": "DockerImageRemoveContainerEvent",
+2026-01-02T06:12:01.1597095Z   "event_type_id": 547340710416,
+2026-01-02T06:12:01.1597997Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1598624Z   "handler_name": "remove_container"
+2026-01-02T06:12:01.1599477Z }[0m
+2026-01-02T06:12:01.1601257Z [92m1767333504.927063 [INFO] Loading Docker images - dispatching CombineReducerRegisterAction - {
+2026-01-02T06:12:01.1601866Z   "image_count": 9,
+2026-01-02T06:12:01.1602597Z   "image_ids": [
+2026-01-02T06:12:01.1603308Z     "home_assistant",
+2026-01-02T06:12:01.1603907Z     "home_bridge",
+2026-01-02T06:12:01.1604520Z     "portainer",
+2026-01-02T06:12:01.1605198Z     "pi_hole",
+2026-01-02T06:12:01.1605839Z     "ollama",
+2026-01-02T06:12:01.1606499Z     "open_webui",
+2026-01-02T06:12:01.1607629Z     "ngrok",
+2026-01-02T06:12:01.1608503Z     "immich",
+2026-01-02T06:12:01.1609218Z     "envoy_grpc"
+2026-01-02T06:12:01.1609931Z   ]
+2026-01-02T06:12:01.1611192Z }[0m
+2026-01-02T06:12:01.1612495Z [97m1767333505.426824 [DEBUG] Checked VSCode Tunnel Status - {
+2026-01-02T06:12:01.1613180Z   "is_binary_installed": false,
+2026-01-02T06:12:01.1613775Z   "is_logged_in": false,
+2026-01-02T06:12:01.1614387Z   "status": null
+2026-01-02T06:12:01.1615228Z }[0m
+2026-01-02T06:12:01.1616462Z [92m1767333505.455120 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1617183Z   "event_type": "VSCodeRestartEvent",
+2026-01-02T06:12:01.1617805Z   "event_type_id": 546333348800,
+2026-01-02T06:12:01.1620379Z   "event_type_module": "ubo_app.store.services.vscode",
+2026-01-02T06:12:01.1621652Z   "handler_name": "restart"
+2026-01-02T06:12:01.1623044Z }[0m
+2026-01-02T06:12:01.1624568Z [92m1767333505.574380 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1625165Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1625970Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1626553Z   "image_key": "home_assistant",
+2026-01-02T06:12:01.1627261Z   "label": "Home Assistant"
+2026-01-02T06:12:01.1628402Z }[0m
+2026-01-02T06:12:01.1630343Z [92m1767333505.618849 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1631140Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1631807Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1632393Z   "image": "home_assistant"
+2026-01-02T06:12:01.1633342Z }[0m
+2026-01-02T06:12:01.1635301Z [92m1767333505.655780 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1636143Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1637008Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1637731Z   "image_key": "home_bridge",
+2026-01-02T06:12:01.1638421Z   "label": "Home Bridge"
+2026-01-02T06:12:01.1639410Z }[0m
+2026-01-02T06:12:01.1640927Z [92m1767333505.687614 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1641625Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1642263Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1642799Z   "image": "home_bridge"
+2026-01-02T06:12:01.1643599Z }[0m
+2026-01-02T06:12:01.1645124Z [92m1767333505.718567 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1645805Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1646720Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1648307Z   "image_key": "portainer",
+2026-01-02T06:12:01.1649082Z   "label": "Portainer"
+2026-01-02T06:12:01.1652275Z }[0m
+2026-01-02T06:12:01.1654257Z [92m1767333505.756303 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1655024Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1655682Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1656301Z   "image": "portainer"
+2026-01-02T06:12:01.1657256Z }[0m
+2026-01-02T06:12:01.1658295Z [92m1767333505.779480 [INFO] Checking Wi-Fi - {
+2026-01-02T06:12:01.1658879Z   "has_gateway": true,
+2026-01-02T06:12:01.1659512Z   "saved_wifi_ssids": []
+2026-01-02T06:12:01.1660293Z }[0m
+2026-01-02T06:12:01.1661760Z [92m1767333505.806819 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1662413Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1663247Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1663972Z   "image_key": "pi_hole",
+2026-01-02T06:12:01.1664591Z   "label": "Pi-hole"
+2026-01-02T06:12:01.1665519Z }[0m
+2026-01-02T06:12:01.1667385Z [92m1767333505.838057 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1668194Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1668857Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1669521Z   "image": "pi_hole"
+2026-01-02T06:12:01.1670470Z }[0m
+2026-01-02T06:12:01.1671960Z [92m1767333505.868716 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1672589Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1673454Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1674093Z   "image_key": "ollama",
+2026-01-02T06:12:01.1674747Z   "label": "Ollama"
+2026-01-02T06:12:01.1675641Z }[0m
+2026-01-02T06:12:01.1677168Z [92m1767333505.893332 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1677993Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1678640Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1680936Z   "image": "ollama"
+2026-01-02T06:12:01.1682674Z }[0m
+2026-01-02T06:12:01.1684256Z [92m1767333505.963199 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1684935Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1685750Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1686489Z   "image_key": "open_webui",
+2026-01-02T06:12:01.1688063Z   "label": "Open WebUI"
+2026-01-02T06:12:01.1689661Z }[0m
+2026-01-02T06:12:01.1693504Z [92m1767333506.001264 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1695054Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1695846Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1696461Z   "image": "open_webui"
+2026-01-02T06:12:01.1719864Z }[0m
+2026-01-02T06:12:01.1722499Z [92m1767333506.020114 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1723229Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1724128Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1724858Z   "image_key": "ngrok",
+2026-01-02T06:12:01.1725523Z   "label": "Ngrok"
+2026-01-02T06:12:01.1726571Z }[0m
+2026-01-02T06:12:01.1728456Z [92m1767333506.060879 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1729283Z   "event_type": "RgbRingCommandEvent",
+2026-01-02T06:12:01.1730020Z   "event_type_id": 545796672192,
+2026-01-02T06:12:01.1730900Z   "event_type_module": "ubo_app.store.services.rgb_ring",
+2026-01-02T06:12:01.1731665Z   "handler_name": "handle_rgb_ring_command"
+2026-01-02T06:12:01.1733014Z }[0m
+2026-01-02T06:12:01.1734669Z [92m1767333506.064582 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1735427Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1736077Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1736650Z   "image": "ngrok"
+2026-01-02T06:12:01.1737630Z }[0m
+2026-01-02T06:12:01.1738958Z [92m1767333506.075030 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1741405Z   "event_type": "AssistantHandleReportEvent",
+2026-01-02T06:12:01.1742086Z   "event_type_id": 545931000288,
+2026-01-02T06:12:01.1742948Z   "event_type_module": "ubo_app.store.services.assistant",
+2026-01-02T06:12:01.1743641Z   "handler_name": "_communicate"
+2026-01-02T06:12:01.1744915Z }[0m
+2026-01-02T06:12:01.1746420Z [92m1767333506.096517 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1747080Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1747913Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1748553Z   "image_key": "immich",
+2026-01-02T06:12:01.1749164Z   "label": "Immich"
+2026-01-02T06:12:01.1750234Z }[0m
+2026-01-02T06:12:01.1751497Z [92m1767333506.117766 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1752263Z   "event_type": "AssistantAddMcpServerEvent",
+2026-01-02T06:12:01.1752919Z   "event_type_id": 545931001920,
+2026-01-02T06:12:01.1753928Z   "event_type_module": "ubo_app.store.services.assistant",
+2026-01-02T06:12:01.1754720Z   "handler_name": "handle_add_mcp_server"
+2026-01-02T06:12:01.1755736Z }[0m
+2026-01-02T06:12:01.1757333Z [92m1767333506.154057 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1758072Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1758668Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1759306Z   "image": "immich"
+2026-01-02T06:12:01.1760206Z }[0m
+2026-01-02T06:12:01.1761485Z [92m1767333506.159405 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1762403Z   "event_type": "AssistantDeleteMcpServerEvent",
+2026-01-02T06:12:01.1763116Z   "event_type_id": 545931037440,
+2026-01-02T06:12:01.1763939Z   "event_type_module": "ubo_app.store.services.assistant",
+2026-01-02T06:12:01.1764688Z   "handler_name": "handle_delete_mcp_server"
+2026-01-02T06:12:01.1765832Z }[0m
+2026-01-02T06:12:01.1767820Z [92m1767333506.185662 [INFO] image_reducer: Emitting DockerImageRegisterAppEvent - {
+2026-01-02T06:12:01.1770277Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1771510Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.1772198Z   "image_key": "envoy_grpc",
+2026-01-02T06:12:01.1772882Z   "label": "Envoy for gRPC"
+2026-01-02T06:12:01.1774043Z }[0m
+2026-01-02T06:12:01.1775653Z [92m1767333506.248099 [INFO] event_middleware: DockerImageRegisterAppEvent received - {
+2026-01-02T06:12:01.1776411Z   "event_type": "DockerImageRegisterAppEvent",
+2026-01-02T06:12:01.1777057Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.1777701Z   "image": "envoy_grpc"
+2026-01-02T06:12:01.1778645Z }[0m
+2026-01-02T06:12:01.1779924Z [92m1767333506.276033 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1780644Z   "event_type": "InfraredSendCodeEvent",
+2026-01-02T06:12:01.1781348Z   "event_type_id": 546601946944,
+2026-01-02T06:12:01.1782211Z   "event_type_module": "ubo_app.store.services.infrared",
+2026-01-02T06:12:01.1782891Z   "handler_name": "_send_code"
+2026-01-02T06:12:01.1783887Z }[0m
+2026-01-02T06:12:01.1785291Z [97m1767333506.494491 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1785942Z   "enabled_count": 0,
+2026-01-02T06:12:01.1786606Z   "server_count": 0,
+2026-01-02T06:12:01.1787261Z   "server_ids": []
+2026-01-02T06:12:01.1788186Z }[0m
+2026-01-02T06:12:01.1789369Z [92m1767333506.930443 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1790277Z   "event_type": "SpeechSynthesisSynthesizeTextEvent",
+2026-01-02T06:12:01.1790929Z   "event_type_id": 461674512,
+2026-01-02T06:12:01.1791878Z   "event_type_module": "ubo_app.store.services.speech_synthesis",
+2026-01-02T06:12:01.1792577Z   "handler_name": "<lambda>"
+2026-01-02T06:12:01.1793717Z }[0m
+2026-01-02T06:12:01.1795105Z [92m1767333507.114787 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1795870Z   "event_type": "UsersCreateUserEvent",
+2026-01-02T06:12:01.1796495Z   "event_type_id": 546199139600,
+2026-01-02T06:12:01.1797420Z   "event_type_module": "ubo_app.store.services.users",
+2026-01-02T06:12:01.1800382Z   "handler_name": "create_account"
+2026-01-02T06:12:01.1801615Z }[0m
+2026-01-02T06:12:01.1803006Z [92m1767333507.130735 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1803734Z   "event_type": "UsersDeleteUserEvent",
+2026-01-02T06:12:01.1804500Z   "event_type_id": 546199254032,
+2026-01-02T06:12:01.1805480Z   "event_type_module": "ubo_app.store.services.users",
+2026-01-02T06:12:01.1806267Z   "handler_name": "delete_account"
+2026-01-02T06:12:01.1807886Z }[0m
+2026-01-02T06:12:01.1809569Z [92m1767333507.146517 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1810396Z   "event_type": "UsersResetPasswordEvent",
+2026-01-02T06:12:01.1811124Z   "event_type_id": 546199287904,
+2026-01-02T06:12:01.1811978Z   "event_type_module": "ubo_app.store.services.users",
+2026-01-02T06:12:01.1812738Z   "handler_name": "reset_password"
+2026-01-02T06:12:01.1813750Z }[0m
+2026-01-02T06:12:01.1815303Z [97m1767333510.621897 [DEBUG] Syncing MCP servers from filesystem - {
+2026-01-02T06:12:01.1816126Z   "exists": false,
+2026-01-02T06:12:01.1816964Z   "path": "/home/ubo/.config/ubo/assistant_mcp_servers"
+2026-01-02T06:12:01.1818029Z }[0m
+2026-01-02T06:12:01.1819305Z [97m1767333510.653757 [DEBUG] Finished syncing MCP servers - {
+2026-01-02T06:12:01.1819997Z   "enabled_count": 0,
+2026-01-02T06:12:01.1820614Z   "server_count": 0,
+2026-01-02T06:12:01.1821228Z   "server_ids": []
+2026-01-02T06:12:01.1822096Z }[0m
+2026-01-02T06:12:01.1823475Z [92m1767333530.145813 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1824199Z   "event_type": "WebUIInitializeEvent",
+2026-01-02T06:12:01.1824829Z   "event_type_id": 546937327552,
+2026-01-02T06:12:01.1825760Z   "event_type_module": "ubo_app.store.services.web_ui",
+2026-01-02T06:12:01.1826405Z   "handler_name": "initialize"
+2026-01-02T06:12:01.1827300Z }[0m
+2026-01-02T06:12:01.1828635Z [92m1767333530.173463 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1829345Z   "event_type": "WebUIStopEvent",
+2026-01-02T06:12:01.1831294Z   "event_type_id": 546937289408,
+2026-01-02T06:12:01.1832543Z   "event_type_module": "ubo_app.store.services.web_ui",
+2026-01-02T06:12:01.1833164Z   "handler_name": "stop_hotspot"
+2026-01-02T06:12:01.1834254Z }[0m
+2026-01-02T06:12:01.1835524Z [92m1767333530.242523 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1836343Z   "event_type": "CameraStartViewfinderEvent",
+2026-01-02T06:12:01.1837033Z   "event_type_id": 545595186048,
+2026-01-02T06:12:01.1837857Z   "event_type_module": "ubo_app.store.services.camera",
+2026-01-02T06:12:01.1838588Z   "handler_name": "start_camera_viewfinder"
+2026-01-02T06:12:01.1839615Z }[0m
+2026-01-02T06:12:01.1840824Z [92m1767333530.275035 [INFO] UboStore.subscribe_event called - {
+2026-01-02T06:12:01.1841515Z   "event_type": "CameraDetectEvent",
+2026-01-02T06:12:01.1842279Z   "event_type_id": 545595255472,
+2026-01-02T06:12:01.1843254Z   "event_type_module": "ubo_app.store.services.camera",
+2026-01-02T06:12:01.1844068Z   "handler_name": "handle_camera_detect"
+2026-01-02T06:12:01.1845032Z }[0m
+2026-01-02T06:12:01.1846169Z [97m1767333530.291475 [DEBUG] Physical keypad found.[0m
+2026-01-02T06:12:01.1847929Z [92m1767333530.306738 [INFO] Initialising keypad...[0m
+2026-01-02T06:12:01.1849511Z [92m1767333530.320009 [INFO] Starting Picamera2 camera detection...[0m
+2026-01-02T06:12:01.1850780Z [92m1767333530.328737 [INFO] Detecting available Picamera2 cameras...[0m
+2026-01-02T06:12:01.1852012Z [92m1767333530.332819 [INFO] Found camera at index {index}: {info} - {
+2026-01-02T06:12:01.1852660Z   "index": 0,
+2026-01-02T06:12:01.1853309Z   "info": "Fake"
+2026-01-02T06:12:01.1854311Z }[0m
+2026-01-02T06:12:01.1856134Z [92m1767333530.362793 [INFO] Picamera2 detection complete: {count} camera(s) found - {
+2026-01-02T06:12:01.1856907Z   "count": 1,
+2026-01-02T06:12:01.1857641Z   "indices": [
+2026-01-02T06:12:01.1858341Z     0
+2026-01-02T06:12:01.1858952Z   ]
+2026-01-02T06:12:01.1860098Z }[0m
+2026-01-02T06:12:01.1861904Z [92m1767333530.369194 [INFO] Camera detection complete: {count} camera(s) found - {
+2026-01-02T06:12:01.1865015Z   "count": 1,
+2026-01-02T06:12:01.1865695Z   "indices": [
+2026-01-02T06:12:01.1866390Z     0
+2026-01-02T06:12:01.1867042Z   ]
+2026-01-02T06:12:01.1868375Z }[0m
+2026-01-02T06:12:01.1869502Z [97m1767333533.140816 [DEBUG] Initializing inputs - {
+2026-01-02T06:12:01.1870209Z   "inputs": "0000000001111111"
+2026-01-02T06:12:01.1871054Z }[0m
+2026-01-02T06:12:01.1872451Z [97m1767333557.295031 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1873140Z   "enabled_count": 0,
+2026-01-02T06:12:01.1873803Z   "server_count": 0,
+2026-01-02T06:12:01.1874450Z   "server_ids": []
+2026-01-02T06:12:01.1878884Z }[0m
+2026-01-02T06:12:01.1880672Z [97m1767333575.609750 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1881355Z   "enabled_count": 0,
+2026-01-02T06:12:01.1881914Z   "server_count": 0,
+2026-01-02T06:12:01.1882529Z   "server_ids": []
+2026-01-02T06:12:01.1883510Z }[0m
+2026-01-02T06:12:01.1885185Z [97m1767333596.158820 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1886048Z   "enabled_count": 0,
+2026-01-02T06:12:01.1886723Z   "server_count": 0,
+2026-01-02T06:12:01.1887771Z   "server_ids": []
+2026-01-02T06:12:01.1888812Z }[0m
+2026-01-02T06:12:01.1890213Z [97m1767333616.622148 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1890911Z   "enabled_count": 0,
+2026-01-02T06:12:01.1892591Z   "server_count": 0,
+2026-01-02T06:12:01.1893299Z   "server_ids": []
+2026-01-02T06:12:01.1894370Z }[0m
+2026-01-02T06:12:01.1895695Z [97m1767333636.959808 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1896357Z   "enabled_count": 0,
+2026-01-02T06:12:01.1897053Z   "server_count": 0,
+2026-01-02T06:12:01.1897727Z   "server_ids": []
+2026-01-02T06:12:01.1898728Z }[0m
+2026-01-02T06:12:01.1900071Z [97m1767333657.590389 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1900702Z   "enabled_count": 0,
+2026-01-02T06:12:01.1901332Z   "server_count": 0,
+2026-01-02T06:12:01.1903931Z   "server_ids": []
+2026-01-02T06:12:01.1905489Z }[0m
+2026-01-02T06:12:01.1906887Z [97m1767333678.015342 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1907594Z   "enabled_count": 0,
+2026-01-02T06:12:01.1908266Z   "server_count": 0,
+2026-01-02T06:12:01.1908872Z   "server_ids": []
+2026-01-02T06:12:01.1949332Z }[0m
+2026-01-02T06:12:01.1952088Z [97m1767333698.634405 [DEBUG] MCP servers menu autorun triggered - {
+2026-01-02T06:12:01.1952798Z   "enabled_count": 0,
+2026-01-02T06:12:01.1953471Z   "server_count": 0,
+2026-01-02T06:12:01.1954155Z   "server_ids": []
+2026-01-02T06:12:01.1955126Z }[0m
+2026-01-02T06:12:01.1956215Z ----------------------------- Captured stderr call -----------------------------
+2026-01-02T06:12:01.1958226Z warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T06:12:01.1959039Z Using CPython 3.11.2 interpreter at: /usr/bin/python3
+2026-01-02T06:12:01.1960058Z Creating virtual environment at: .venv
+2026-01-02T06:12:01.1963908Z warning: The `tool.uv.dev-dependencies` field (used in `/home/ubo/actions-runner/_work/ubo_app/ubo_app/pyproject.toml`, `/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/rpc/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+2026-01-02T06:12:01.1964588Z Installed 122 packages in 286ms
+2026-01-02T06:12:01.1967662Z 2026-01-01 21:58:27.110 | INFO     | pipecat:<module>:14 - ᓚᘏᗢ Pipecat 0.0.92 (Python 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0]) ᓚᘏᗢ
+2026-01-02T06:12:01.1969149Z 2026-01-01 21:58:49.331 | DEBUG    | pipecat.audio.vad.silero:__init__:147 - Loading Silero VAD model...
+2026-01-02T06:12:01.1970353Z 2026-01-01 21:58:49.600 | DEBUG    | pipecat.audio.vad.silero:__init__:169 - Loaded Silero VAD
+2026-01-02T06:12:01.1971656Z [2026-01-01 21:58:50 -0800] [35546] [INFO] Running on http://0.0.0.0:4321 (CTRL + C to quit)
+2026-01-02T06:12:01.1972925Z 2026-01-01 21:58:52.332 | INFO     | ubo_assistant.main:main:232 - An error occurred
+2026-01-02T06:12:01.1975637Z Traceback (most recent call last):
+2026-01-02T06:12:01.2017658Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/.venv/bin/ubo-assistant", line 10, in <module>
+2026-01-02T06:12:01.2018614Z     sys.exit(main())
+2026-01-02T06:12:01.2019198Z              ^^^^^^
+2026-01-02T06:12:01.2021597Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/ubo_assistant/main.py", line 230, in main
+2026-01-02T06:12:01.2022555Z     asyncio.get_event_loop().run_until_complete(assistant.run())
+2026-01-02T06:12:01.2023962Z   File "/usr/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+2026-01-02T06:12:01.2024692Z     return future.result()
+2026-01-02T06:12:01.2025277Z            ^^^^^^^^^^^^^^^
+2026-01-02T06:12:01.2027487Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/ubo_assistant/main.py", line 74, in run
+2026-01-02T06:12:01.2028481Z     google_credentials = await self.client.query_secret(
+2026-01-02T06:12:01.2029125Z                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:01.2030902Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/rpc/ubo_bindings/client.py", line 149, in query_secret
+2026-01-02T06:12:01.2031694Z     result = await self.secrets_service.query_secret(
+2026-01-02T06:12:01.2032369Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:01.2034590Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/rpc/ubo_bindings/secrets/v1/__init__.py", line 41, in query_secret
+2026-01-02T06:12:01.2035294Z     return await self._unary_unary(
+2026-01-02T06:12:01.2035941Z            ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:01.2040502Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/.venv/lib/python3.11/site-packages/betterproto/grpc/grpclib_client.py", line 84, in _unary_unary
+2026-01-02T06:12:01.2041884Z     await stream.send_message(request, end=True)
+2026-01-02T06:12:01.2044833Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/.venv/lib/python3.11/site-packages/grpclib/client.py", line 242, in send_message
+2026-01-02T06:12:01.2045552Z     await self.send_request()
+2026-01-02T06:12:01.2049042Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/.venv/lib/python3.11/site-packages/grpclib/client.py", line 174, in send_request
+2026-01-02T06:12:01.2050030Z     protocol = await self._channel.__connect__()
+2026-01-02T06:12:01.2050746Z                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:01.2053689Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/.venv/lib/python3.11/site-packages/grpclib/client.py", line 748, in __connect__
+2026-01-02T06:12:01.2054668Z     self._protocol = await self._create_connection()
+2026-01-02T06:12:01.2055733Z                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:01.2059059Z   File "/home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/services/090-assistant/ubo-service/.venv/lib/python3.11/site-packages/grpclib/client.py", line 725, in _create_connection
+2026-01-02T06:12:01.2060105Z     _, protocol = await self._loop.create_connection(
+2026-01-02T06:12:01.2060761Z                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-02T06:12:01.2062277Z   File "/usr/lib/python3.11/asyncio/base_events.py", line 1093, in create_connection
+2026-01-02T06:12:01.2063412Z     raise OSError('Multiple exceptions: {}'.format(
+2026-01-02T06:12:01.2065266Z OSError: Multiple exceptions: [Errno 111] Connect call failed ('::1', 50051, 0, 0), [Errno 111] Connect call failed ('127.0.0.1', 50051)
+2026-01-02T06:12:01.2066370Z ------------------------------ Captured log call -------------------------------
+2026-01-02T06:12:01.2067029Z Text: Provider: sdl2
+2026-01-02T06:12:01.2067795Z Window: Provider: sdl2
+2026-01-02T06:12:01.2070661Z GL: Using the "OpenGL" graphics system
+2026-01-02T06:12:01.2071371Z GL: Backend used <sdl2>
+2026-01-02T06:12:01.2072216Z GL: OpenGL version <b'3.1 Mesa 24.2.8-1~bpo12+rpt3'>
+2026-01-02T06:12:01.2072850Z GL: OpenGL vendor <b'Broadcom'>
+2026-01-02T06:12:01.2073587Z GL: OpenGL renderer <b'V3D 4.2.14.0'>
+2026-01-02T06:12:01.2074232Z GL: OpenGL parsed version: 3, 1
+2026-01-02T06:12:01.2074945Z GL: Shading version <b'1.40'>
+2026-01-02T06:12:01.2075612Z GL: Texture max size <4096>
+2026-01-02T06:12:01.2076395Z GL: Texture max units <24>
+2026-01-02T06:12:01.2077174Z Window: auto add sdl2 input provider
+2026-01-02T06:12:01.2078168Z Window: virtual keyboard not allowed, single mode, not docked
+2026-01-02T06:12:01.2079544Z Image: Providers: img_tex, img_dds, img_sdl2, img_pil (img_ffpyplayer ignored)
+2026-01-02T06:12:01.2080482Z Using selector: EpollSelector
+2026-01-02T06:12:01.2081625Z Using selector: EpollSelector
+2026-01-02T06:12:01.2082616Z Using selector: EpollSelector
+2026-01-02T06:12:01.2083775Z Using selector: EpollSelector
+2026-01-02T06:12:01.2084753Z Using selector: EpollSelector
+2026-01-02T06:12:01.2085499Z Using selector: EpollSelector
+2026-01-02T06:12:01.2086261Z Using selector: EpollSelector
+2026-01-02T06:12:01.2087586Z Using selector: EpollSelector
+2026-01-02T06:12:01.2088765Z Using selector: EpollSelector
+2026-01-02T06:12:01.2089566Z Using selector: EpollSelector
+2026-01-02T06:12:01.2090299Z Using selector: EpollSelector
+2026-01-02T06:12:01.2091979Z Using selector: EpollSelector
+2026-01-02T06:12:01.2093081Z Using selector: EpollSelector
+2026-01-02T06:12:01.2093877Z Using selector: EpollSelector
+2026-01-02T06:12:01.2094896Z Using selector: EpollSelector
+2026-01-02T06:12:01.2095753Z Base: Start application main loop
+2026-01-02T06:12:01.2096654Z Using selector: EpollSelector
+2026-01-02T06:12:01.2097553Z Using selector: EpollSelector
+2026-01-02T06:12:01.2098340Z Using selector: EpollSelector
+2026-01-02T06:12:01.2099087Z Using selector: EpollSelector
+2026-01-02T06:12:01.2101846Z Using selector: EpollSelector
+2026-01-02T06:12:01.2103336Z Using selector: EpollSelector
+2026-01-02T06:12:01.2104047Z Using selector: EpollSelector
+2026-01-02T06:12:01.2104769Z Using selector: EpollSelector
+2026-01-02T06:12:01.2105794Z Running on http://0.0.0.0:4321 (CTRL + C to quit) - {
+2026-01-02T06:12:01.2106579Z   "asctime": "[2026-01-01 21:58:50 -0800]"
+2026-01-02T06:12:01.2107228Z }
+2026-01-02T06:12:01.2108252Z --------------------------- Captured stdout teardown ---------------------------
+2026-01-02T06:12:01.2110302Z [92m1767333826.473031 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2110939Z   "service_id": "display",
+2026-01-02T06:12:01.2111847Z   "service_label": "Display",
+2026-01-02T06:12:01.2112504Z   "thread_native_id": 35903
+2026-01-02T06:12:01.2113712Z }[0m
+2026-01-02T06:12:01.2114957Z [92m1767333826.474740 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2115558Z   "service_id": "audio",
+2026-01-02T06:12:01.2116202Z   "service_label": "Audio",
+2026-01-02T06:12:01.2117050Z   "tasks": [
+2026-01-02T06:12:01.2121276Z     "<Task pending name='Task-9713' coro=<task_wrapper_coroutine:AudioManager.stream_mic() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[_chain_future.<locals>._call_check_cancel() at /usr/lib/python3.11/asyncio/futures.py:387, Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2121971Z   ],
+2026-01-02T06:12:01.2123124Z   "thread_": "<UboServiceThread id=audio label=Audio name=000-audio is_alive=True>"
+2026-01-02T06:12:01.2124238Z }[0m
+2026-01-02T06:12:01.2125514Z [92m1767333826.507760 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2126236Z   "service_id": "ethernet",
+2026-01-02T06:12:01.2127759Z   "service_label": "Ethernet",
+2026-01-02T06:12:01.2128723Z   "tasks": [
+2026-01-02T06:12:01.2132000Z     "<Task pending name='Task-9836' coro=<task_wrapper_coroutine:setup_listeners() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2134612Z   ],
+2026-01-02T06:12:01.2135996Z   "thread_": "<UboServiceThread id=ethernet label=Ethernet name=030-ethernet is_alive=True>"
+2026-01-02T06:12:01.2137231Z }[0m
+2026-01-02T06:12:01.2138587Z [92m1767333826.509408 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2139345Z   "service_id": "ip",
+2026-01-02T06:12:01.2140019Z   "service_label": "IP",
+2026-01-02T06:12:01.2140554Z   "tasks": [
+2026-01-02T06:12:01.2143330Z     "<Task pending name='Task-9579' coro=<task_wrapper_coroutine:monitor_connections() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+2026-01-02T06:12:01.2146076Z     "<Task pending name='Task-9580' coro=<task_wrapper_coroutine:monitor_interfaces() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+2026-01-02T06:12:01.2149056Z     "<Task pending name='Task-9604' coro=<task_wrapper_coroutine:monitor_connections.<locals>.ping_process() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2149679Z   ],
+2026-01-02T06:12:01.2150688Z   "thread_": "<UboServiceThread id=ip label=IP name=030-ip is_alive=True>"
+2026-01-02T06:12:01.2151690Z }[0m
+2026-01-02T06:12:01.2153022Z [92m1767333826.523350 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2153626Z   "service_id": "keyboard",
+2026-01-02T06:12:01.2154328Z   "service_label": "Keyboard",
+2026-01-02T06:12:01.2155027Z   "thread_native_id": 35907
+2026-01-02T06:12:01.2155933Z }[0m
+2026-01-02T06:12:01.2157368Z [92m1767333826.556593 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2158013Z   "service_id": "notifications",
+2026-01-02T06:12:01.2158710Z   "service_label": "Notifications",
+2026-01-02T06:12:01.2159468Z   "thread_native_id": 35905
+2026-01-02T06:12:01.2161929Z }[0m
+2026-01-02T06:12:01.2163915Z [92m1767333826.558465 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2164642Z   "service_id": "wifi",
+2026-01-02T06:12:01.2165384Z   "service_label": "WiFi",
+2026-01-02T06:12:01.2166060Z   "tasks": [
+2026-01-02T06:12:01.2169478Z     "<Task pending name='Task-9738' coro=<task_wrapper_coroutine:setup_listeners() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2170176Z   ],
+2026-01-02T06:12:01.2171342Z   "thread_": "<UboServiceThread id=wifi label=WiFi name=030-wifi is_alive=True>"
+2026-01-02T06:12:01.2172495Z }[0m
+2026-01-02T06:12:01.2173975Z [92m1767333826.568559 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2174890Z   "service_id": "camera",
+2026-01-02T06:12:01.2175620Z   "service_label": "Camera",
+2026-01-02T06:12:01.2176250Z   "thread_native_id": 35911
+2026-01-02T06:12:01.2177227Z }[0m
+2026-01-02T06:12:01.2178802Z [92m1767333826.579921 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2179679Z   "service_id": "rgb_ring",
+2026-01-02T06:12:01.2180555Z   "service_label": "RGB Ring",
+2026-01-02T06:12:01.2181239Z   "thread_native_id": 35912
+2026-01-02T06:12:01.2182270Z }[0m
+2026-01-02T06:12:01.2183851Z [92m1767333826.583310 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2184634Z   "service_id": "keypad",
+2026-01-02T06:12:01.2185358Z   "service_label": "Keypad",
+2026-01-02T06:12:01.2186102Z   "thread_native_id": 35904
+2026-01-02T06:12:01.2187054Z }[0m
+2026-01-02T06:12:01.2188330Z [92m1767333826.585159 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2189039Z   "service_id": "lightdm",
+2026-01-02T06:12:01.2189684Z   "service_label": "LightDM",
+2026-01-02T06:12:01.2190348Z   "tasks": [
+2026-01-02T06:12:01.2193379Z     "<Task pending name='Task-9849' coro=<task_wrapper_coroutine:monitor_unit() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2196117Z   ],
+2026-01-02T06:12:01.2197418Z   "thread_": "<UboServiceThread id=lightdm label=LightDM name=050-lightdm is_alive=True>"
+2026-01-02T06:12:01.2198660Z }[0m
+2026-01-02T06:12:01.2200071Z [92m1767333826.587144 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2200852Z   "service_id": "speech_synthesis",
+2026-01-02T06:12:01.2201685Z   "service_label": "Speech Synthesis",
+2026-01-02T06:12:01.2202332Z   "thread_native_id": 35906
+2026-01-02T06:12:01.2203372Z }[0m
+2026-01-02T06:12:01.2204691Z [92m1767333826.597812 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2205543Z   "service_id": "sensors",
+2026-01-02T06:12:01.2206286Z   "service_label": "Sensors",
+2026-01-02T06:12:01.2207402Z   "tasks": [
+2026-01-02T06:12:01.2210510Z     "<Task pending name='Task-9670' coro=<task_wrapper_coroutine:_monitor_sensors() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2211332Z   ],
+2026-01-02T06:12:01.2212693Z   "thread_": "<UboServiceThread id=sensors label=Sensors name=040-sensors is_alive=True>"
+2026-01-02T06:12:01.2214059Z }[0m
+2026-01-02T06:12:01.2215519Z [92m1767333826.605281 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2216292Z   "service_id": "rpi_connect",
+2026-01-02T06:12:01.2239213Z   "service_label": "RPi Connect",
+2026-01-02T06:12:01.2240332Z   "thread_native_id": 35915
+2026-01-02T06:12:01.2241591Z }[0m
+2026-01-02T06:12:01.2242826Z [92m1767333826.611403 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2243588Z   "service_id": "vscode",
+2026-01-02T06:12:01.2244289Z   "service_label": "VSCode",
+2026-01-02T06:12:01.2244933Z   "tasks": [
+2026-01-02T06:12:01.2250443Z     "<Task pending name='Task-9833' coro=<task_wrapper_coroutine:_monitor_status() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+2026-01-02T06:12:01.2254805Z     "<Task pending name='Task-12233' coro=<_timer_expired.<locals>.act() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/.venv/lib/python3.11/site-packages/debouncer/debounce.py:123> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2255593Z   ],
+2026-01-02T06:12:01.2256833Z   "thread_": "<UboServiceThread id=vscode label=VSCode name=050-vscode is_alive=True>"
+2026-01-02T06:12:01.2258125Z }[0m
+2026-01-02T06:12:01.2259299Z [92m1767333826.618948 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2260038Z   "service_id": "docker",
+2026-01-02T06:12:01.2260881Z   "service_label": "Docker",
+2026-01-02T06:12:01.2261578Z   "tasks": [
+2026-01-02T06:12:01.2264300Z     "<Task pending name='Task-9828' coro=<task_wrapper_coroutine:monitor_unit() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2264944Z   ],
+2026-01-02T06:12:01.2266228Z   "thread_": "<UboServiceThread id=docker label=Docker name=080-docker is_alive=True>"
+2026-01-02T06:12:01.2267575Z }[0m
+2026-01-02T06:12:01.2268835Z [92m1767333826.620763 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2269487Z   "service_id": "users",
+2026-01-02T06:12:01.2270120Z   "service_label": "Users",
+2026-01-02T06:12:01.2270717Z   "tasks": [
+2026-01-02T06:12:01.2273885Z     "<Task pending name='Task-9926' coro=<task_wrapper_coroutine:init_service.<locals>.monitor_user_deleted() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+2026-01-02T06:12:01.2277010Z     "<Task pending name='Task-9925' coro=<task_wrapper_coroutine:init_service.<locals>.monitor_user_added() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2277576Z   ],
+2026-01-02T06:12:01.2278778Z   "thread_": "<UboServiceThread id=users label=Users name=050-users is_alive=True>"
+2026-01-02T06:12:01.2281903Z }[0m
+2026-01-02T06:12:01.2283193Z [92m1767333826.629358 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2284002Z   "service_id": "speech_recognition",
+2026-01-02T06:12:01.2284713Z   "service_label": "Speech Recognition",
+2026-01-02T06:12:01.2285429Z   "tasks": [
+2026-01-02T06:12:01.2289506Z     "<Task pending name='SpeechRecognitionMonitor' coro=<task_wrapper_coroutine:EnginesManager._monitor_speech_recognitions() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+2026-01-02T06:12:01.2293970Z     "<Task pending name='WakeWordMonitor' coro=<task_wrapper_coroutine:EnginesManager._monitor_wake_word_recognitions() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2294727Z   ],
+2026-01-02T06:12:01.2296546Z   "thread_": "<UboServiceThread id=speech_recognition label=Speech Recognition name=090-speech-recognition is_alive=True>"
+2026-01-02T06:12:01.2297988Z }[0m
+2026-01-02T06:12:01.2299399Z [92m1767333826.637194 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2300145Z   "service_id": "file_system",
+2026-01-02T06:12:01.2300945Z   "service_label": "File System",
+2026-01-02T06:12:01.2301787Z   "thread_native_id": 35925
+2026-01-02T06:12:01.2302893Z }[0m
+2026-01-02T06:12:01.2304367Z [92m1767333826.656276 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2305111Z   "service_id": "ssh",
+2026-01-02T06:12:01.2305898Z   "service_label": "SSH",
+2026-01-02T06:12:01.2306647Z   "tasks": [
+2026-01-02T06:12:01.2309753Z     "<Task pending name='Task-9866' coro=<task_wrapper_coroutine:monitor_unit() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2310448Z   ],
+2026-01-02T06:12:01.2313352Z   "thread_": "<UboServiceThread id=ssh label=SSH name=050-ssh is_alive=True>"
+2026-01-02T06:12:01.2315222Z }[0m
+2026-01-02T06:12:01.2316672Z [92m1767333826.664603 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2317378Z   "service_id": "assistant",
+2026-01-02T06:12:01.2318085Z   "service_label": "Assistant",
+2026-01-02T06:12:01.2318730Z   "thread_native_id": 35924
+2026-01-02T06:12:01.2319703Z }[0m
+2026-01-02T06:12:01.2320933Z [92m1767333826.682988 [INFO] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2321608Z   "service_id": "web_ui",
+2026-01-02T06:12:01.2322330Z   "service_label": "Web UI",
+2026-01-02T06:12:01.2322977Z   "tasks": [
+2026-01-02T06:12:01.2325674Z     "<Task pending name='Task-10118' coro=<task_wrapper_coroutine:serve() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+2026-01-02T06:12:01.2329750Z     "<Task pending name='Task-10121' coro=<raise_shutdown() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/.venv/lib/python3.11/site-packages/hypercorn/utils.py:164> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[TaskGroup._on_task_done()]>",
+2026-01-02T06:12:01.2333336Z     "<Task pending name='Task-10122' coro=<raise_shutdown() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/.venv/lib/python3.11/site-packages/hypercorn/utils.py:164> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[TaskGroup._on_task_done()]>",
+2026-01-02T06:12:01.2336704Z     "<Task pending name='Task-10119' coro=<Lifespan.handle_lifespan() running at /home/ubo/actions-runner/_work/ubo_app/ubo_app/.venv/lib/python3.11/site-packages/hypercorn/asyncio/lifespan.py:55> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+2026-01-02T06:12:01.2337283Z   ],
+2026-01-02T06:12:01.2338424Z   "thread_": "<UboServiceThread id=web_ui label=Web UI name=090-web-ui is_alive=True>"
+2026-01-02T06:12:01.2339601Z }[0m
+2026-01-02T06:12:01.2340942Z [92m1767333826.697737 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2343708Z   "service_id": "infrared",
+2026-01-02T06:12:01.2344379Z   "service_label": "Infrared",
+2026-01-02T06:12:01.2345111Z   "thread_native_id": 35926
+2026-01-02T06:12:01.2346177Z }[0m
+2026-01-02T06:12:01.2347628Z [92m1767333826.862012 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2348396Z   "service_id": "audio",
+2026-01-02T06:12:01.2349107Z   "service_label": "Audio",
+2026-01-02T06:12:01.2349775Z   "thread_native_id": 35901
+2026-01-02T06:12:01.2350831Z }[0m
+2026-01-02T06:12:01.2352096Z [92m1767333826.913973 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2352791Z   "service_id": "ethernet",
+2026-01-02T06:12:01.2353492Z   "service_label": "Ethernet",
+2026-01-02T06:12:01.2354147Z   "thread_native_id": 35908
+2026-01-02T06:12:01.2355061Z }[0m
+2026-01-02T06:12:01.2356305Z [92m1767333826.940559 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2357011Z   "service_id": "ip",
+2026-01-02T06:12:01.2357736Z   "service_label": "IP",
+2026-01-02T06:12:01.2358606Z   "thread_native_id": 35909
+2026-01-02T06:12:01.2359657Z }[0m
+2026-01-02T06:12:01.2360991Z [92m1767333826.975308 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2361697Z   "service_id": "wifi",
+2026-01-02T06:12:01.2362359Z   "service_label": "WiFi",
+2026-01-02T06:12:01.2362996Z   "thread_native_id": 35910
+2026-01-02T06:12:01.2364025Z }[0m
+2026-01-02T06:12:01.2365491Z [92m1767333827.016630 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2366183Z   "service_id": "lightdm",
+2026-01-02T06:12:01.2367404Z   "service_label": "LightDM",
+2026-01-02T06:12:01.2368187Z   "thread_native_id": 35914
+2026-01-02T06:12:01.2369345Z }[0m
+2026-01-02T06:12:01.2370748Z [92m1767333827.039469 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2371435Z   "service_id": "sensors",
+2026-01-02T06:12:01.2372055Z   "service_label": "Sensors",
+2026-01-02T06:12:01.2372687Z   "thread_native_id": 35913
+2026-01-02T06:12:01.2373540Z }[0m
+2026-01-02T06:12:01.2376472Z [92m1767333827.078485 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2377762Z   "service_id": "docker",
+2026-01-02T06:12:01.2378513Z   "service_label": "Docker",
+2026-01-02T06:12:01.2379192Z   "thread_native_id": 35921
+2026-01-02T06:12:01.2380404Z }[0m
+2026-01-02T06:12:01.2381733Z [92m1767333827.080962 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2382425Z   "service_id": "vscode",
+2026-01-02T06:12:01.2383112Z   "service_label": "VSCode",
+2026-01-02T06:12:01.2383770Z   "thread_native_id": 35920
+2026-01-02T06:12:01.2384678Z }[0m
+2026-01-02T06:12:01.2386083Z [92m1767333827.087574 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2386750Z   "service_id": "users",
+2026-01-02T06:12:01.2387366Z   "service_label": "Users",
+2026-01-02T06:12:01.2388083Z   "thread_native_id": 35919
+2026-01-02T06:12:01.2389005Z }[0m
+2026-01-02T06:12:01.2390313Z [92m1767333827.093868 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2391118Z   "service_id": "speech_recognition",
+2026-01-02T06:12:01.2391907Z   "service_label": "Speech Recognition",
+2026-01-02T06:12:01.2392560Z   "thread_native_id": 35928
+2026-01-02T06:12:01.2393519Z }[0m
+2026-01-02T06:12:01.2394780Z [92m1767333827.114402 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2395372Z   "service_id": "ssh",
+2026-01-02T06:12:01.2396046Z   "service_label": "SSH",
+2026-01-02T06:12:01.2396681Z   "thread_native_id": 35917
+2026-01-02T06:12:01.2397642Z }[0m
+2026-01-02T06:12:01.2399035Z [92m1767333827.189885 [INFO] Ubo service thread stopped gracefully - {
+2026-01-02T06:12:01.2399683Z   "service_id": "web_ui",
+2026-01-02T06:12:01.2400401Z   "service_label": "Web UI",
+2026-01-02T06:12:01.2401113Z   "thread_native_id": 35930
+2026-01-02T06:12:01.2402053Z }[0m
+2026-01-02T06:12:01.2403615Z [92m1767333841.387480 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2404283Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2405024Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2408326Z     547340525296
+2026-01-02T06:12:01.2409020Z   ],
+2026-01-02T06:12:01.2409756Z   "event_image": "home_assistant",
+2026-01-02T06:12:01.2410414Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2411306Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2411973Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2412679Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2414011Z }[0m
+2026-01-02T06:12:01.2415587Z [92m1767333841.390517 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2416284Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2416922Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2417476Z     547340525296
+2026-01-02T06:12:01.2418104Z   ],
+2026-01-02T06:12:01.2418840Z   "event_image": "home_bridge",
+2026-01-02T06:12:01.2419585Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2420489Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2421294Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2421997Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2423103Z }[0m
+2026-01-02T06:12:01.2424770Z [92m1767333841.393287 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2425473Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2426167Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2426721Z     547340525296
+2026-01-02T06:12:01.2427312Z   ],
+2026-01-02T06:12:01.2427964Z   "event_image": "portainer",
+2026-01-02T06:12:01.2428636Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2429457Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2430100Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2430800Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2431911Z }[0m
+2026-01-02T06:12:01.2433465Z [92m1767333841.397814 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2434098Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2434721Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2436929Z     547340525296
+2026-01-02T06:12:01.2438149Z   ],
+2026-01-02T06:12:01.2438929Z   "event_image": "pi_hole",
+2026-01-02T06:12:01.2439565Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2440474Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2441090Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2441769Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2443037Z }[0m
+2026-01-02T06:12:01.2444599Z [92m1767333841.400577 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2445196Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2445883Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2446584Z     547340525296
+2026-01-02T06:12:01.2447612Z   ],
+2026-01-02T06:12:01.2448432Z   "event_image": "ollama",
+2026-01-02T06:12:01.2469426Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2470864Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2471556Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2472318Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2473779Z }[0m
+2026-01-02T06:12:01.2475575Z [92m1767333841.403403 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2476285Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2476974Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2477509Z     547340525296
+2026-01-02T06:12:01.2478143Z   ],
+2026-01-02T06:12:01.2478833Z   "event_image": "open_webui",
+2026-01-02T06:12:01.2479489Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2480304Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2480961Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2481550Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2482524Z }[0m
+2026-01-02T06:12:01.2484106Z [92m1767333841.406137 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2484741Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2485396Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2486026Z     547340525296
+2026-01-02T06:12:01.2486586Z   ],
+2026-01-02T06:12:01.2490189Z   "event_image": "ngrok",
+2026-01-02T06:12:01.2490925Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2493279Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2494005Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2494714Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2496049Z }[0m
+2026-01-02T06:12:01.2497635Z [92m1767333841.408812 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2498271Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2498945Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2499737Z     547340525296
+2026-01-02T06:12:01.2500602Z   ],
+2026-01-02T06:12:01.2501582Z   "event_image": "immich",
+2026-01-02T06:12:01.2502531Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2503530Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2504220Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2504891Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2506111Z }[0m
+2026-01-02T06:12:01.2508087Z [92m1767333841.411513 [INFO] _run_event_handlers: DockerImageRegisterAppEvent lookup - {
+2026-01-02T06:12:01.2508743Z   "docker_keys_found": 1,
+2026-01-02T06:12:01.2509423Z   "docker_keys_ids": [
+2026-01-02T06:12:01.2510030Z     547340525296
+2026-01-02T06:12:01.2510575Z   ],
+2026-01-02T06:12:01.2511143Z   "event_image": "envoy_grpc",
+2026-01-02T06:12:01.2511805Z   "event_type_id": 547340525296,
+2026-01-02T06:12:01.2512755Z   "event_type_module": "ubo_app.store.services.docker",
+2026-01-02T06:12:01.2513500Z   "matching_handlers_count": 0,
+2026-01-02T06:12:01.2514207Z   "registered_keys_count": 63
+2026-01-02T06:12:01.2515204Z }[0m
+2026-01-02T06:12:01.2516596Z [92m1767333841.444431 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.2517437Z   "event_type": "RgbRingCommandEvent",
+2026-01-02T06:12:01.2518154Z   "event_type_id": 545796672192,
+2026-01-02T06:12:01.2519109Z   "event_type_module": "ubo_app.store.services.rgb_ring",
+2026-01-02T06:12:01.2521725Z   "handler": "init_service.<locals>.handle_rgb_ring_command",
+2026-01-02T06:12:01.2523019Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.2524121Z }[0m
+2026-01-02T06:12:01.2525445Z [92m1767333841.448465 [INFO] UboEventHandler.__call__ invoked - {
+2026-01-02T06:12:01.2526163Z   "event_type": "FinishEvent",
+2026-01-02T06:12:01.2527204Z   "event_type_id": 455815568,
+2026-01-02T06:12:01.2528045Z   "event_type_module": "redux.basic_types",
+2026-01-02T06:12:01.2528662Z   "handler": "WorkerThread.stop",
+2026-01-02T06:12:01.2529307Z   "has_coroutine_runner": true
+2026-01-02T06:12:01.2530361Z }[0m
+2026-01-02T06:12:01.2531562Z [92m1767333841.452173 [INFO] Stopping the worker thread[0m
+2026-01-02T06:12:01.2532778Z [97m1767333841.453562 [DEBUG] Waiting for tasks to finish - {
+2026-01-02T06:12:01.2533354Z   "tasks": [],
+2026-01-02T06:12:01.2534265Z   "thread_": "<WorkerThread(Worker Thread, started 547801198976)>"
+2026-01-02T06:12:01.2535182Z }[0m
+2026-01-02T06:12:01.2537101Z [97m1767333841.455509 [DEBUG] Stopping event loop of the worker thread[0m
+2026-01-02T06:12:01.2538561Z [92m1767333841.456408 [INFO] The worker thread is done[0m
+2026-01-02T06:12:04.9415623Z [92m1767333841.595314 [INFO] Scheduler stopped gracefully[0m
+2026-01-02T06:12:04.9417771Z ---------------------------- Captured log teardown -----------------------------
+2026-01-02T06:12:04.9421606Z Base: Leaving application in progress...
+2026-01-02T06:12:04.9423543Z Window: exiting mainloop and closing.
+2026-01-02T06:12:04.9425867Z ================================ tests coverage ================================
+2026-01-02T06:12:04.9428205Z _______________ coverage: platform linux, python 3.11.2-final-0 ________________
+2026-01-02T06:12:04.9429705Z 
+2026-01-02T06:12:04.9430451Z Coverage HTML written to dir htmlcov
+2026-01-02T06:12:04.9432853Z Coverage XML written to file coverage.xml
+2026-01-02T06:12:04.9434667Z =========================== short test summary info ============================
+2026-01-02T06:12:04.9441070Z FAILED tests/integration/test_services.py::test_all_services_register - tenacity.RetryError: RetryError[<Future at 0x7f76523990 state=finished raised AssertionError>]
+2026-01-02T06:12:04.9451606Z =================== 1 failed, 6 passed in 1007.47s (0:16:47) ===================
+2026-01-02T06:12:09.5638853Z ##[error]Process completed with exit code 1.
+2026-01-02T06:12:09.6028998Z ##[group]Run actions/upload-artifact@v4
+2026-01-02T06:12:09.6030536Z with:
+2026-01-02T06:12:09.6031708Z   name: screenshots-ubo-pod-pi4
+2026-01-02T06:12:09.6033151Z   path: tests/**/results/**/*.png
+2026-01-02T06:12:09.6034563Z   if-no-files-found: warn
+2026-01-02T06:12:09.6035917Z   compression-level: 6
+2026-01-02T06:12:09.6037158Z   overwrite: false
+2026-01-02T06:12:09.6038393Z   include-hidden-files: false
+2026-01-02T06:12:09.6039677Z env:
+2026-01-02T06:12:09.6040852Z   PYTHON_VERSION: 3.11.9
+2026-01-02T06:12:09.6042436Z   UV_CACHE_DIR: /home/ubo/actions-runner/_work/_temp/setup-uv-cache
+2026-01-02T06:12:09.6044110Z ##[endgroup]
+2026-01-02T06:12:10.6376761Z With the provided path, there will be 11 files uploaded
+2026-01-02T06:12:10.6412139Z Artifact name is valid!
+2026-01-02T06:12:10.6424348Z Root directory input is valid!
+2026-01-02T06:12:11.1054753Z Beginning upload of artifact content to blob storage
+2026-01-02T06:12:11.7424755Z Uploaded bytes 74869
+2026-01-02T06:12:11.8493386Z Finished uploading artifact content to blob storage!
+2026-01-02T06:12:11.8506868Z SHA256 digest of uploaded artifact zip is 82d032728e03372c5add36293f0b5bda2cb95a6b8755a5a1afbf1285f7f005b4
+2026-01-02T06:12:11.8515892Z Finalizing artifact upload
+2026-01-02T06:12:12.0145688Z Artifact screenshots-ubo-pod-pi4.zip successfully finalized. Artifact ID 5006234164
+2026-01-02T06:12:12.0149553Z Artifact screenshots-ubo-pod-pi4 has been successfully uploaded! Final size is 74869 bytes. Artifact ID is 5006234164
+2026-01-02T06:12:12.0172538Z Artifact download URL: https://github.com/ubopod/ubo_app/actions/runs/20651673344/artifacts/5006234164
+2026-01-02T06:12:12.0579381Z ##[group]Run actions/upload-artifact@v4
+2026-01-02T06:12:12.0582099Z with:
+2026-01-02T06:12:12.0583458Z   name: snapshots-ubo-pod-pi4
+2026-01-02T06:12:12.0584957Z   path: tests/**/results/**/*.jsonc
+2026-01-02T06:12:12.0586433Z   if-no-files-found: warn
+2026-01-02T06:12:12.0588471Z   compression-level: 6
+2026-01-02T06:12:12.0589875Z   overwrite: false
+2026-01-02T06:12:12.0591212Z   include-hidden-files: false
+2026-01-02T06:12:12.0592670Z env:
+2026-01-02T06:12:12.0594526Z   PYTHON_VERSION: 3.11.9
+2026-01-02T06:12:12.0596166Z   UV_CACHE_DIR: /home/ubo/actions-runner/_work/_temp/setup-uv-cache
+2026-01-02T06:12:12.0597963Z ##[endgroup]
+2026-01-02T06:12:12.9161416Z With the provided path, there will be 10 files uploaded
+2026-01-02T06:12:12.9187436Z Artifact name is valid!
+2026-01-02T06:12:12.9193068Z Root directory input is valid!
+2026-01-02T06:12:13.3401252Z Beginning upload of artifact content to blob storage
+2026-01-02T06:12:13.9034685Z Uploaded bytes 35068
+2026-01-02T06:12:13.9998755Z Finished uploading artifact content to blob storage!
+2026-01-02T06:12:14.0009315Z SHA256 digest of uploaded artifact zip is cf6756568e58772a57f3d31f3cf16000d5454fc3d2a760eeaecd24ea04bf2060
+2026-01-02T06:12:14.0016413Z Finalizing artifact upload
+2026-01-02T06:12:14.1508394Z Artifact snapshots-ubo-pod-pi4.zip successfully finalized. Artifact ID 5006234307
+2026-01-02T06:12:14.1511817Z Artifact snapshots-ubo-pod-pi4 has been successfully uploaded! Final size is 35068 bytes. Artifact ID is 5006234307
+2026-01-02T06:12:14.1536517Z Artifact download URL: https://github.com/ubopod/ubo_app/actions/runs/20651673344/artifacts/5006234307
+2026-01-02T06:12:14.2103404Z Post job cleanup.
+2026-01-02T06:12:14.5741659Z [command]/usr/bin/git version
+2026-01-02T06:12:14.5870019Z git version 2.39.5
+2026-01-02T06:12:14.6018386Z Copying '/home/ubo/.gitconfig' to '/home/ubo/actions-runner/_work/_temp/eb457e06-c0f7-4106-a1fc-8244fa27df15/.gitconfig'
+2026-01-02T06:12:14.6057321Z Temporarily overriding HOME='/home/ubo/actions-runner/_work/_temp/eb457e06-c0f7-4106-a1fc-8244fa27df15' before making global git config changes
+2026-01-02T06:12:14.6062324Z Adding repository directory to the temporary git global config as a safe directory
+2026-01-02T06:12:14.6083728Z [command]/usr/bin/git config --global --add safe.directory /home/ubo/actions-runner/_work/ubo_app/ubo_app
+2026-01-02T06:12:14.6212193Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-01-02T06:12:14.6321264Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-01-02T06:12:14.6839079Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-01-02T06:12:14.6905317Z http.https://github.com/.extraheader
+2026-01-02T06:12:14.6957480Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-01-02T06:12:14.7052173Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-01-02T06:12:14.7557626Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-01-02T06:12:14.7678333Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-01-02T06:12:14.8551519Z Evaluate and set environment url
+2026-01-02T06:12:14.8565948Z Evaluated environment url: https://app.codecov.io/gh/ubopod/ubo_app/
+2026-01-02T06:12:14.8573173Z Cleaning up orphan processes

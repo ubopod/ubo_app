@@ -1,0 +1,1343 @@
+[38;2;182;182;182m1767516021.607134 [DEBUG] No physical display found.[0m
+[38;2;100;200;100m1767516021.778866 [INFO] Starting scheduler async loop[0m
+[38;2;100;200;100m1767516022.563846 [INFO] ----------------------Starting the app----------------------[0m
+[38;2;182;182;182m1767516022.750757 [DEBUG] Ubo service registered! - {
+  "label": "Audio",
+  "service_id": "audio"
+}[0m
+[38;2;182;182;182m1767516022.751629 [DEBUG] Ubo service registered! - {
+  "label": "Display",
+  "service_id": "display"
+}[0m
+[38;2;182;182;182m1767516022.752308 [DEBUG] Ubo service registered! - {
+  "label": "Keypad",
+  "service_id": "keypad"
+}[0m
+[38;2;182;182;182m1767516022.752745 [DEBUG] Ubo service registered! - {
+  "label": "Notifications",
+  "service_id": "notifications"
+}[0m
+[38;2;182;182;182m1767516022.753307 [DEBUG] Ubo service registered! - {
+  "label": "Speech Synthesis",
+  "service_id": "speech_synthesis"
+}[0m
+[38;2;100;200;100m1767516022.754347 [INFO] Starting gRPC server - {
+  "host": "127.0.0.1",
+  "port": 50051
+}[0m
+[38;2;182;182;182m1767516022.754463 [DEBUG] Ubo service registered! - {
+  "label": "Keyboard",
+  "service_id": "keyboard"
+}[0m
+[38;2;182;182;182m1767516022.755229 [DEBUG] Ubo service registered! - {
+  "label": "Ethernet",
+  "service_id": "ethernet"
+}[0m
+[38;2;182;182;182m1767516022.755844 [DEBUG] Ubo service registered! - {
+  "label": "IP",
+  "service_id": "ip"
+}[0m
+[38;2;182;182;182m1767516022.756331 [DEBUG] Ubo service registered! - {
+  "label": "WiFi",
+  "service_id": "wifi"
+}[0m
+[38;2;182;182;182m1767516022.756636 [DEBUG] Ubo service registered! - {
+  "label": "Camera",
+  "service_id": "camera"
+}[0m
+[38;2;182;182;182m1767516022.756894 [DEBUG] Ubo service registered! - {
+  "label": "RGB Ring",
+  "service_id": "rgb_ring"
+}[0m
+[38;2;182;182;182m1767516022.757831 [DEBUG] Ubo service registered! - {
+  "label": "Sensors",
+  "service_id": "sensors"
+}[0m
+[38;2;182;182;182m1767516022.758100 [DEBUG] Ubo service registered! - {
+  "label": "LightDM",
+  "service_id": "lightdm"
+}[0m
+[38;2;182;182;182m1767516022.758355 [DEBUG] Ubo service registered! - {
+  "label": "RPi Connect",
+  "service_id": "rpi_connect"
+}[0m
+[38;2;182;182;182m1767516022.758652 [DEBUG] Ubo service registered! - {
+  "label": "SSH",
+  "service_id": "ssh"
+}[0m
+[38;2;182;182;182m1767516022.758988 [DEBUG] Ubo service registered! - {
+  "label": "Users",
+  "service_id": "users"
+}[0m
+[38;2;182;182;182m1767516022.759454 [DEBUG] Ubo service registered! - {
+  "label": "VSCode",
+  "service_id": "vscode"
+}[0m
+[38;2;182;182;182m1767516022.760088 [DEBUG] Ubo service registered! - {
+  "label": "Docker",
+  "service_id": "docker"
+}[0m
+[38;2;182;182;182m1767516022.760613 [DEBUG] Ubo service registered! - {
+  "label": "Assistant",
+  "service_id": "assistant"
+}[0m
+[38;2;182;182;182m1767516022.760998 [DEBUG] Ubo service registered! - {
+  "label": "File System",
+  "service_id": "file_system"
+}[0m
+[38;2;182;182;182m1767516022.761279 [DEBUG] Ubo service registered! - {
+  "label": "Infrared",
+  "service_id": "infrared"
+}[0m
+[38;2;182;182;182m1767516022.761563 [DEBUG] Ubo service registered! - {
+  "label": "Speech Recognition",
+  "service_id": "speech_recognition"
+}[0m
+[38;2;182;182;182m1767516022.761823 [DEBUG] Ubo service registered! - {
+  "label": "Web UI",
+  "service_id": "web_ui"
+}[0m
+[38;2;100;200;100m1767516022.773775 [INFO] Starting service thread - {
+  "service_id": "audio",
+  "service_label": "Audio",
+  "thread_native_id": 8438365
+}[0m
+[38;2;100;200;100m1767516022.774260 [INFO] Starting service thread - {
+  "service_id": "display",
+  "service_label": "Display",
+  "thread_native_id": 8438366
+}[0m
+[38;2;100;200;100m1767516022.778376 [INFO] Starting service thread - {
+  "service_id": "keypad",
+  "service_label": "Keypad",
+  "thread_native_id": 8438367
+}[0m
+[38;2;100;200;100m1767516022.779645 [INFO] Starting service thread - {
+  "service_id": "notifications",
+  "service_label": "Notifications",
+  "thread_native_id": 8438368
+}[0m
+[38;2;100;200;100m1767516022.780190 [INFO] Starting service thread - {
+  "service_id": "speech_synthesis",
+  "service_label": "Speech Synthesis",
+  "thread_native_id": 8438369
+}[0m
+[38;2;182;182;182m1767516022.780372 [DEBUG] Registering ubo service reducer - {
+  "label": "Audio",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/000-audio:reducer.reducer",
+  "service_id": "audio"
+}[0m
+[38;2;100;200;100m1767516022.780759 [INFO] Starting service thread - {
+  "service_id": "keyboard",
+  "service_label": "Keyboard",
+  "thread_native_id": 8438370
+}[0m
+[38;2;100;200;100m1767516022.781677 [INFO] Starting service thread - {
+  "service_id": "ethernet",
+  "service_label": "Ethernet",
+  "thread_native_id": 8438371
+}[0m
+[38;2;100;200;100m1767516022.783832 [INFO] Starting service thread - {
+  "service_id": "ip",
+  "service_label": "IP",
+  "thread_native_id": 8438372
+}[0m
+[38;2;100;200;100m1767516022.785682 [INFO] Starting service thread - {
+  "service_id": "camera",
+  "service_label": "Camera",
+  "thread_native_id": 8438374
+}[0m
+[38;2;100;200;100m1767516022.786063 [INFO] Starting service thread - {
+  "service_id": "wifi",
+  "service_label": "WiFi",
+  "thread_native_id": 8438373
+}[0m
+[38;2;100;200;100m1767516022.787492 [INFO] Starting service thread - {
+  "service_id": "rgb_ring",
+  "service_label": "RGB Ring",
+  "thread_native_id": 8438375
+}[0m
+[38;2;100;200;100m1767516022.790631 [INFO] Starting service thread - {
+  "service_id": "sensors",
+  "service_label": "Sensors",
+  "thread_native_id": 8438376
+}[0m
+[38;2;100;200;100m1767516022.791666 [INFO] Starting service thread - {
+  "service_id": "lightdm",
+  "service_label": "LightDM",
+  "thread_native_id": 8438377
+}[0m
+[38;2;100;200;100m1767516022.804433 [INFO] Starting service thread - {
+  "service_id": "rpi_connect",
+  "service_label": "RPi Connect",
+  "thread_native_id": 8438378
+}[0m
+[38;2;100;200;100m1767516022.805496 [INFO] Starting service thread - {
+  "service_id": "ssh",
+  "service_label": "SSH",
+  "thread_native_id": 8438379
+}[0m
+[38;2;100;200;100m1767516022.807035 [INFO] Starting service thread - {
+  "service_id": "users",
+  "service_label": "Users",
+  "thread_native_id": 8438380
+}[0m
+[38;2;100;200;100m1767516022.807776 [INFO] Starting service thread - {
+  "service_id": "vscode",
+  "service_label": "VSCode",
+  "thread_native_id": 8438381
+}[0m
+[38;2;100;200;100m1767516022.808699 [INFO] Starting service thread - {
+  "service_id": "docker",
+  "service_label": "Docker",
+  "thread_native_id": 8438382
+}[0m
+[38;2;100;200;100m1767516022.810268 [INFO] Starting service thread - {
+  "service_id": "assistant",
+  "service_label": "Assistant",
+  "thread_native_id": 8438383
+}[0m
+[38;2;182;182;182m1767516022.811665 [DEBUG] Registering ubo service reducer - {
+  "label": "Display",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/000-display:reducer.reducer",
+  "service_id": "display"
+}[0m
+[38;2;100;200;100m1767516022.814511 [INFO] Starting service thread - {
+  "service_id": "file_system",
+  "service_label": "File System",
+  "thread_native_id": 8438384
+}[0m
+[38;2;100;200;100m1767516022.817098 [INFO] Display reducer initialized[0m
+[38;2;182;182;182m1767516022.821289 [DEBUG] Registering ubo service reducer - {
+  "label": "Keypad",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/000-keypad:reducer.reducer",
+  "service_id": "keypad"
+}[0m
+[38;2;100;200;100m1767516022.824517 [INFO] Starting service thread - {
+  "service_id": "infrared",
+  "service_label": "Infrared",
+  "thread_native_id": 8438385
+}[0m
+[38;2;100;200;100m1767516022.825206 [INFO] Starting service thread - {
+  "service_id": "speech_recognition",
+  "service_label": "Speech Recognition",
+  "thread_native_id": 8438386
+}[0m
+[38;2;100;200;100m1767516022.825482 [INFO] Starting service thread - {
+  "service_id": "web_ui",
+  "service_label": "Web UI",
+  "thread_native_id": 8438387
+}[0m
+[38;2;182;182;182m1767516022.829964 [DEBUG] Registering ubo service reducer - {
+  "label": "IP",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/030-ip:reducer.reducer",
+  "service_id": "ip"
+}[0m
+[38;2;182;182;182m1767516022.839685 [DEBUG] Registering ubo service reducer - {
+  "label": "RGB Ring",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/040-rgb-ring:reducer.reducer",
+  "service_id": "rgb_ring"
+}[0m
+[38;2;182;182;182m1767516022.846392 [DEBUG] Registering ubo service reducer - {
+  "label": "SSH",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/050-ssh:reducer.reducer",
+  "service_id": "ssh"
+}[0m
+[38;2;182;182;182m1767516022.847362 [DEBUG] Registering ubo service reducer - {
+  "label": "Notifications",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/010-notifications:reducer.reducer",
+  "service_id": "notifications"
+}[0m
+[38;2;182;182;182m1767516022.857531 [DEBUG] Registering ubo service reducer - {
+  "label": "File System",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/090-file-system:reducer.reducer",
+  "service_id": "file_system"
+}[0m
+[38;2;182;182;182m1767516022.863454 [DEBUG] StoreMenuWidget: initialized with padding - {
+  "has_pending_stack": true,
+  "padding_bottom": 72.0,
+  "padding_top": 68.0
+}[0m
+[38;2;182;182;182m1767516022.864019 [DEBUG] StoreMenuWidget: stack changed - {
+  "stack_depth": 0
+}[0m
+[38;2;182;182;182m1767516022.865285 [DEBUG] Registering ubo service reducer - {
+  "label": "Infrared",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/090-infrared:reducer.reducer",
+  "service_id": "infrared"
+}[0m
+[38;2;182;182;182m1767516022.868686 [DEBUG] Registering ubo service reducer - {
+  "label": "Sensors",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/040-sensors:reducer.reducer",
+  "service_id": "sensors"
+}[0m
+[38;2;182;182;182m1767516022.877184 [DEBUG] Registering ubo service reducer - {
+  "label": "Users",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/050-users:reducer.reducer",
+  "service_id": "users"
+}[0m
+[38;2;182;182;182m1767516022.878718 [DEBUG] Registering ubo service reducer - {
+  "label": "Speech Synthesis",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/010-speech-synthesis:reducer.reducer",
+  "service_id": "speech_synthesis"
+}[0m
+[38;2;182;182;182m1767516022.890429 [DEBUG] Registering ubo service reducer - {
+  "label": "WiFi",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/030-wifi:reducer.reducer",
+  "service_id": "wifi"
+}[0m
+[38;2;182;182;182m1767516022.898533 [DEBUG] Registering ubo service reducer - {
+  "label": "LightDM",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/050-lightdm:reducer.reducer",
+  "service_id": "lightdm"
+}[0m
+[38;2;182;182;182m1767516022.912367 [DEBUG] Registering ubo service reducer - {
+  "label": "Docker",
+  "reducer": "redux.combine_reducers.combined_reducer",
+  "service_id": "docker"
+}[0m
+[38;2;182;182;182m1767516022.920759 [DEBUG] Registering ubo service reducer - {
+  "label": "Speech Recognition",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/090-speech-recognition:reducer.reducer",
+  "service_id": "speech_recognition"
+}[0m
+[38;2;182;182;182m1767516022.930237 [DEBUG] Registering ubo service reducer - {
+  "label": "VSCode",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/050-vscode:reducer.reducer",
+  "service_id": "vscode"
+}[0m
+[38;2;182;182;182m1767516022.932756 [DEBUG] StoreMenuWidget: rendering home menu - {
+  "padding_bottom": 72.0,
+  "padding_top": 68.0
+}[0m
+[38;2;182;182;182m1767516022.942161 [DEBUG] Registering ubo service reducer - {
+  "label": "Web UI",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/090-web-ui:reducer.reducer",
+  "service_id": "web_ui"
+}[0m
+[38;2;100;200;100m1767516023.083438 [INFO] Checking for updates... - {
+  "beta_versions": true
+}[0m
+[38;2;182;182;182m1767516024.436811 [DEBUG] Registering ubo service reducer - {
+  "label": "Assistant",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/090-assistant:reducer.reducer",
+  "service_id": "assistant"
+}[0m
+[38;2;182;182;182m1767516024.448691 [DEBUG] Registering ubo service reducer - {
+  "label": "Camera",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/040-camera:reducer.reducer",
+  "service_id": "camera"
+}[0m
+[38;2;182;182;182m1767516024.456103 [DEBUG] Registering ubo service reducer - {
+  "label": "RPi Connect",
+  "reducer": "/Users/martin/Documents/ubo-repos/ubo_app/ubo_app/services/050-rpi-connect:reducer.reducer",
+  "service_id": "rpi_connect"
+}[0m
+[38;2;100;200;100m1767516024.460467 [INFO] All reducers registered successfully - {
+  "service_ids": [
+    "audio",
+    "display",
+    "keypad",
+    "notifications",
+    "speech_synthesis",
+    "keyboard",
+    "ethernet",
+    "ip",
+    "wifi",
+    "camera",
+    "rgb_ring",
+    "sensors",
+    "lightdm",
+    "rpi_connect",
+    "ssh",
+    "users",
+    "vscode",
+    "docker",
+    "assistant",
+    "file_system",
+    "infrared",
+    "speech_recognition",
+    "web_ui"
+  ]
+}[0m
+[38;2;182;182;182m1767516024.607990 [DEBUG] Not a Raspberry Pi.[0m
+[38;2;182;182;182m1767516024.693143 [DEBUG] Checked VSCode Tunnel Status - {
+  "is_binary_installed": false,
+  "is_logged_in": false,
+  "status": null
+}[0m
+[38;2;182;182;182m1767516024.810862 [DEBUG] MCP servers menu autorun triggered - {
+  "enabled_count": 0,
+  "server_count": 0,
+  "server_ids": []
+}[0m
+[38;2;100;200;100m1767516026.688613 [INFO] Checking Wi-Fi - {
+  "has_gateway": true,
+  "saved_wifi_ssids": []
+}[0m
+[38;2;100;200;100m1767516027.728662 [INFO] Display service initialized with activity tracking[0m
+[38;2;100;200;100m1767516027.729046 [INFO] Screen blanking monitor task started[0m
+[38;2;100;200;100m1767516027.731222 [INFO] Internet connectivity state changed - {
+  "is_connected": false,
+  "received_lines_count": 0
+}[0m
+[38;2;100;200;100m1767516027.801303 [INFO] === MONITOR INACTIVITY TASK STARTED ===[0m
+[38;2;100;200;100m1767516027.836767 [INFO] Starting OpenCV camera detection...[0m
+[38;2;100;200;100m1767516027.850642 [INFO] User added - {
+  "path": "Fake"
+}[0m
+[38;2;100;200;100m1767516027.852160 [INFO] User deleted - {
+  "path": "Fake"
+}[0m
+[38;2;100;200;100m1767516028.045910 [INFO] Internet connectivity state changed - {
+  "is_connected": true,
+  "received_lines_count": 1
+}[0m
+[38;2;100;200;100m1767516028.700743 [INFO] Detecting available cameras...[0m
+[38;2;100;200;100m1767516040.760829 [INFO] Internet connectivity state changed - {
+  "is_connected": false,
+  "received_lines_count": 0
+}[0m
+[38;2;100;200;100m1767516040.824040 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516040.883549 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516040.882613,
+  "is_blanked": false,
+  "last_activity": null
+}[0m
+[38;2;100;200;100m1767516040.890897 [INFO] Found working camera at index {index} - {
+  "index": 0
+}[0m
+[38;2;182;182;182m1767516041.035169 [DEBUG] Syncing MCP servers from filesystem - {
+  "exists": true,
+  "path": "/Users/martin/Library/Application Support/ubo/assistant_mcp_servers"
+}[0m
+[38;2;100;200;100m1767516041.049246 [INFO] Internet connectivity state changed - {
+  "is_connected": true,
+  "received_lines_count": 8
+}[0m
+[38;2;182;182;182m1767516041.069243 [DEBUG] Loaded MCP server - {
+  "enabled": false,
+  "server_id": "OpenWeather_6c0f4f62",
+  "server_name": "OpenWeather"
+}[0m
+[38;2;182;182;182m1767516041.085246 [DEBUG] Finished syncing MCP servers - {
+  "enabled_count": 0,
+  "server_count": 1,
+  "server_ids": [
+    "OpenWeather_6c0f4f62"
+  ]
+}[0m
+[38;2;182;182;182m1767516041.134040 [DEBUG] MCP servers menu autorun triggered - {
+  "enabled_count": 0,
+  "server_count": 1,
+  "server_ids": [
+    "OpenWeather_6c0f4f62"
+  ]
+}[0m
+[38;2;182;182;182m1767516041.761965 [DEBUG] Display reducer received action - {
+  "action_type": "DisplayUpdateActivityAction"
+}[0m
+[38;2;182;182;182m1767516041.762530 [DEBUG] DisplayUpdateActivityAction received - {
+  "timestamp": 1767516041.762497
+}[0m
+[38;2;100;200;100m1767516042.941566 [INFO] Found working camera at index {index} - {
+  "index": 1
+}[0m
+[01/04 00:40:43.119107][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.119196][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.119207][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.119214][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.119223][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.119229][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.120000][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.120057][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.120069][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.120077][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.124547][info][8438374][Context.cpp:90] Context destroyed
+[01/04 00:40:43.196624][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.199247][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.199273][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.199283][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.199321][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.199339][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.200269][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.200303][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.200315][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.200325][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.201089][info][8438374][Context.cpp:90] Context destroyed
+[01/04 00:40:43.249463][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.249580][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.249602][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.249611][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.249626][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.249635][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.250081][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.250112][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.250128][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.250136][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.250442][info][8438374][Context.cpp:90] Context destroyed
+[01/04 00:40:43.293744][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.294033][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.294052][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.294062][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.294076][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.294084][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.294536][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.294560][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.294575][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.294583][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.295123][info][8438374][Context.cpp:90] Context destroyed
+[01/04 00:40:43.340283][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.340364][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.340398][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.340405][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.340416][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.340423][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.340902][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.340927][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.340938][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.340946][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.341467][info][8438374][Context.cpp:90] Context destroyed
+[01/04 00:40:43.382230][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.382603][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.382639][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.382650][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.382667][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.382678][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.383207][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.383238][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.383252][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.383279][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.383752][info][8438374][Context.cpp:90] Context destroyed
+[01/04 00:40:43.425097][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.425166][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.425180][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.425187][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.425197][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.425204][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.425577][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.425601][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.425611][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.425619][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.426450][info][8438374][Context.cpp:90] Context destroyed
+[01/04 00:40:43.585870][info][8438374][Context.cpp:69] Context created with config: default config!
+[01/04 00:40:43.585970][info][8438374][Context.cpp:74] Context work_dir=/Users/martin/Documents/ubo-repos/ubo_app
+[01/04 00:40:43.585982][info][8438374][Context.cpp:77] 	- SDK version: 1.9.4
+[01/04 00:40:43.585990][info][8438374][Context.cpp:78] 	- SDK stage version: main
+[01/04 00:40:43.586004][info][8438374][Context.cpp:82] get config EnumerateNetDevice:false
+[01/04 00:40:43.586014][info][8438374][MacPal.cpp:36] createObPal: create MacPal!
+[01/04 00:40:43.595069][info][8438374][MacPal.cpp:104] Create PollingDeviceWatcher!
+[01/04 00:40:43.595132][info][8438374][DeviceManager.cpp:15] Current found device(s): (0)
+[01/04 00:40:43.595149][info][8438374][Pipeline.cpp:15] Try to create pipeline with default device.
+[01/04 00:40:43.595162][warning][8438374][ObException.cpp:5] No device found, fail to create pipeline!
+[01/04 00:40:43.596309][info][8438374][Context.cpp:90] Context destroyed
+[38;2;100;200;100m1767516043.601902 [INFO] Camera detection complete: {count} camera(s) found - {
+  "count": 2,
+  "indices": [
+    0,
+    1
+  ]
+}[0m
+[38;2;100;200;100m1767516043.605804 [INFO] Camera detection complete: {count} camera(s) found - {
+  "count": 2,
+  "indices": [
+    0,
+    1
+  ]
+}[0m
+[38;2;182;182;182m1767516043.605125 [DEBUG] Display reducer received action - {
+  "action_type": "DisplayUpdateActivityAction"
+}[0m
+[38;2;182;182;182m1767516043.608687 [DEBUG] DisplayUpdateActivityAction received - {
+  "timestamp": 1767516043.608651
+}[0m
+[38;2;182;182;182m1767516044.403636 [DEBUG] StoreMenuWidget: stack changed - {
+  "stack_depth": 1
+}[0m
+[38;2;182;182;182m1767516044.404547 [DEBUG] StoreMenuWidget: rendering menu page - {
+  "padding_bottom": 72.0,
+  "padding_top": 68.0,
+  "title": ""
+}[0m
+[38;2;182;182;182m1767516048.754382 [DEBUG] Querying secret - {
+  "key": "google_cloud_service_account_key"
+}[0m
+[38;2;182;182;182m1767516050.434657 [DEBUG] Dispatching action coming from gRPC - {
+  "action": "DisplayRedrawAction()",
+  "request": "DispatchActionRequest(action=Action(display_redraw_action=DisplayRedrawAction(meta_field_package_name_ubo_app_dot_store_dot_services_dot_display=None)))"
+}[0m
+[38;2;182;182;182m1767516050.451061 [DEBUG] Querying secret - {
+  "key": "google_api_key"
+}[0m
+[38;2;182;182;182m1767516050.470006 [DEBUG] Querying secret - {
+  "key": "openai_api_key"
+}[0m
+[38;2;182;182;182m1767516050.486153 [DEBUG] Querying secret - {
+  "key": "grok_api_key"
+}[0m
+[38;2;182;182;182m1767516050.500715 [DEBUG] Querying secret - {
+  "key": "cerebras_api_key"
+}[0m
+[38;2;182;182;182m1767516050.512138 [DEBUG] Querying secret - {
+  "key": "elevenlabs_api_key"
+}[0m
+[38;2;182;182;182m1767516050.528427 [DEBUG] Querying secret - {
+  "key": "elevenlabs_voice_id"
+}[0m
+[38;2;182;182;182m1767516050.538549 [DEBUG] Querying secret - {
+  "key": "deepgram_api_key"
+}[0m
+[38;2;182;182;182m1767516050.550486 [DEBUG] Querying secret - {
+  "key": "assemblyai_api_key"
+}[0m
+[38;2;182;182;182m1767516050.560432 [DEBUG] Querying secret - {
+  "key": "rime_api_key"
+}[0m
+[38;2;182;182;182m1767516050.570474 [DEBUG] Querying secret - {
+  "key": "ollama_onprem_url"
+}[0m
+[38;2;182;182;182m1767516050.577643 [DEBUG] Display reducer received action - {
+  "action_type": "DisplayRedrawAction"
+}[0m
+[38;2;100;200;100m1767516050.937045 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516050.938283 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516050.938239,
+  "is_blanked": false,
+  "last_activity": 1767516043.608651
+}[0m
+[38;2;100;200;100m1767516050.938665 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 7.329588174819946,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516056.014168 [INFO] Received event subscription over gRPC - {
+  "request": "SubscribeEventRequest(event=Event(display_render_event=DisplayRenderEvent(meta_field_package_name_ubo_app_dot_store_dot_services_dot_display=None)))"
+}[0m
+[38;2;100;200;100m1767516056.055739 [INFO] Received event subscription over gRPC - {
+  "request": "SubscribeEventRequest(event=Event(camera_report_image_event=CameraReportImageEvent(meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera=None)))"
+}[0m
+[38;2;100;200;100m1767516060.939940 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516060.940305 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516060.940286,
+  "is_blanked": false,
+  "last_activity": 1767516043.608651
+}[0m
+[38;2;100;200;100m1767516060.940515 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 17.331634998321533,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516070.942319 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516070.943553 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516070.943535,
+  "is_blanked": false,
+  "last_activity": 1767516043.608651
+}[0m
+[38;2;100;200;100m1767516070.943941 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 27.33488416671753,
+  "will_blank": false
+}[0m
+[38;2;182;182;182m1767516076.665858 [DEBUG] Display reducer received action - {
+  "action_type": "DisplayUpdateActivityAction"
+}[0m
+[38;2;182;182;182m1767516076.666350 [DEBUG] DisplayUpdateActivityAction received - {
+  "timestamp": 1767516076.66633
+}[0m
+[38;2;182;182;182m1767516076.700073 [DEBUG] StoreMenuWidget: stack changed - {
+  "stack_depth": 2
+}[0m
+[38;2;182;182;182m1767516076.700618 [DEBUG] StoreMenuWidget: rendering menu page - {
+  "padding_bottom": 72.0,
+  "padding_top": 68.0,
+  "title": "Apps"
+}[0m
+[38;2;100;200;100m1767516080.945321 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516080.945575 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516080.945563,
+  "is_blanked": false,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516080.945719 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 4.279232978820801,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516090.946023 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516090.947500 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516090.947476,
+  "is_blanked": false,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516090.947735 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 14.281145811080933,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516100.948993 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516100.949242 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516100.949228,
+  "is_blanked": false,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516100.949405 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 24.28289794921875,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516110.950324 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516110.951315 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516110.951217,
+  "is_blanked": false,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516110.951856 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 34.284886837005615,
+  "will_blank": false
+}[0m
+[38;2;182;182;182m1767516117.184476 [DEBUG] StoreMenuWidget: stack changed - {
+  "stack_depth": 1
+}[0m
+[38;2;182;182;182m1767516117.185113 [DEBUG] StoreMenuWidget: rendering menu page - {
+  "padding_bottom": 72.0,
+  "padding_top": 68.0,
+  "title": ""
+}[0m
+[38;2;100;200;100m1767516120.953123 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516120.953496 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516120.953476,
+  "is_blanked": false,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516120.953735 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 44.2871458530426,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516130.955068 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516130.956828 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516130.956799,
+  "is_blanked": false,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516130.957342 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 54.29046893119812,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516140.959611 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516140.960763 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516140.960724,
+  "is_blanked": false,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516140.961228 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 64.29439401626587,
+  "will_blank": true
+}[0m
+[38;2;100;200;100m1767516140.961703 [INFO] Screen blanking due to inactivity - {
+  "inactive_duration": 64.29439401626587
+}[0m
+[38;2;182;182;182m1767516140.986292 [DEBUG] Display reducer received action - {
+  "action_type": "DisplayBlankAction"
+}[0m
+[38;2;100;200;100m1767516140.986871 [INFO] DisplayBlankAction received in reducer[0m
+[38;2;100;200;100m1767516141.038853 [INFO] === HANDLE_BLANK_EVENT CALLED ===[0m
+[38;2;100;200;100m1767516141.041778 [INFO] Blanking screen and turning off backlight[0m
+[38;2;100;200;100m1767516141.044393 [INFO] === BLANK EVENT HANDLING COMPLETE ===[0m
+[38;2;100;200;100m1767516150.963179 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516150.964932 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516150.964873,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516150.965551 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 74.2985429763794,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516160.966531 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516160.967344 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516160.967321,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516160.967594 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 84.30099081993103,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516170.967890 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516170.968434 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516170.968416,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516170.968624 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 94.30208587646484,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516180.969921 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516180.971635 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516180.971581,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516180.972021 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 104.30525088310242,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516190.973526 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516190.974893 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516190.974855,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516190.975725 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 114.30852484703064,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516200.976752 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516200.978384 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516200.978357,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516200.978691 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 124.31202697753906,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516210.980091 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516210.982027 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516210.98197,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516210.982874 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 134.31563997268677,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516220.984205 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516220.985353 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516220.985335,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516220.985526 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 144.3190050125122,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516230.986737 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516230.987655 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516230.987633,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516230.987884 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 154.3213028907776,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516240.988562 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516240.990036 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516240.990008,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516240.990288 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 164.3236780166626,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516242.085235 [INFO] Speech recognized - {
+  "engine_name": "vosk",
+  "result": "[unk]"
+}[0m
+[38;2;100;200;100m1767516245.133130 [INFO] Speech recognized - {
+  "engine_name": "vosk",
+  "result": "[unk]"
+}[0m
+[38;2;100;200;100m1767516250.990722 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516250.992071 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516250.992054,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516250.992229 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 174.32572388648987,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516254.071780 [INFO] Speech recognized - {
+  "engine_name": "vosk",
+  "result": "can"
+}[0m
+[38;2;100;200;100m1767516260.993439 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516260.994822 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516260.994797,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516260.995103 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 184.32846689224243,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516270.996678 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516270.997765 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516270.99775,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516270.997908 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 194.33141994476318,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516280.999087 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516281.000266 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516281.000251,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516281.000415 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 204.33392095565796,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516291.000745 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516291.002288 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516291.002262,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516291.002532 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 214.33593201637268,
+  "will_blank": false
+}[0m
+[38;2;100;200;100m1767516301.004196 [INFO] === INACTIVITY CHECK TICK ===[0m
+[38;2;100;200;100m1767516301.005908 [INFO] Inactivity check - {
+  "blank_timeout": 60.0,
+  "current_time": 1767516301.005876,
+  "is_blanked": true,
+  "last_activity": 1767516076.66633
+}[0m
+[38;2;100;200;100m1767516301.006264 [INFO] Checking inactivity duration - {
+  "blank_timeout": 60.0,
+  "inactive_duration": 224.3395459651947,
+  "will_blank": false
+}[0m
+[38;2;255;165;0m1767516302.213042 [WARNING] Ping process exited, restarting in 1 second... - {
+  "return_code": 0
+}[0m
+[38;2;182;182;182m1767516302.226212 [DEBUG] ThreadPoolExecutor-1_0
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+asyncio_3
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+asyncio_2
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+asyncio_1
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+asyncio_0
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+ThreadPoolExecutor-2_0
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 83, in _worker
+    work_item.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+
+  File "/Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/pyaudio/__init__.py", line 570, in read
+    return pa.read_stream(self._stream, num_frames,
+
+----------------------------------------------------------------------
+asyncio-waitpid-2
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1049, in _bootstrap_inner
+    self._delete()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 986, in run
+    del self._target, self._args, self._kwargs
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/unix_events.py", line 1424, in _do_waitpid
+    self._threads.pop(expected_pid)
+
+----------------------------------------------------------------------
+asyncio_5
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+ThreadPoolExecutor-0_1
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+asyncio_4
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 81, in _worker
+    work_item = work_queue.get(block=True)
+
+----------------------------------------------------------------------
+asyncio-waitpid-1
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/unix_events.py", line 1404, in _do_waitpid
+    pid, status = os.waitpid(expected_pid, 0)
+
+----------------------------------------------------------------------
+ThreadPoolExecutor-0_0
+-----
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1002, in _bootstrap
+    self._bootstrap_inner()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+
+  File "/opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+
+  File "/opt/homebrew/Cel...[0m
+[38;2;100;200;100m1767516302.226563 [INFO] Received signal 2, turning off the display...[0m
+[38;2;100;200;100m1767516302.230783 [INFO] Exiting gracefully, sending the signal again will force exit![0m
+[38;2;100;200;100m1767516302.234895 [INFO] Stopping the worker thread[0m
+[38;2;182;182;182m1767516302.235180 [DEBUG] Waiting for tasks to finish - {
+  "tasks": [
+    "<Task pending name='Task-2713' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-2709' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-2710' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-2712' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-2707' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-2708' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-2711' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-36' coro=<serve() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/rpc/server.py:26> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-2700' coro=<request_handler() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/grpclib/server.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+  ],
+  "thread_": "<WorkerThread(Worker Thread, started 6184988672)>"
+}[0m
+[38;2;100;200;100m1767516302.246620 [INFO] Waiting for tasks to finish - {
+  "service_id": "display",
+  "service_label": "Display",
+  "tasks": [
+    "<Task pending name='Task-558' coro=<task_wrapper_coroutine:monitor_inactivity() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+  ],
+  "thread_": "<UboServiceThread id=display label=Display name=000-display is_alive=True>"
+}[0m
+[38;2;100;200;100m1767516302.249631 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "keypad",
+  "service_label": "Keypad",
+  "thread_native_id": 8438367
+}[0m
+[38;2;100;200;100m1767516302.250272 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "speech_synthesis",
+  "service_label": "Speech Synthesis",
+  "thread_native_id": 8438369
+}[0m
+[38;2;100;200;100m1767516302.250889 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "keyboard",
+  "service_label": "Keyboard",
+  "thread_native_id": 8438370
+}[0m
+[38;2;100;200;100m1767516302.251561 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "notifications",
+  "service_label": "Notifications",
+  "thread_native_id": 8438368
+}[0m
+[38;2;100;200;100m1767516302.251654 [INFO] Waiting for tasks to finish - {
+  "service_id": "audio",
+  "service_label": "Audio",
+  "tasks": [
+    "<Task pending name='Task-579' coro=<task_wrapper_coroutine:AudioManager.stream_mic() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[_chain_future.<locals>._call_check_cancel() at /opt/homebrew/Cellar/python@3.11/3.11.10/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/futures.py:387, Task.task_wakeup()]>>"
+  ],
+  "thread_": "<UboServiceThread id=audio label=Audio name=000-audio is_alive=True>"
+}[0m
+[38;2;100;200;100m1767516302.251716 [INFO] Waiting for tasks to finish - {
+  "service_id": "ip",
+  "service_label": "IP",
+  "tasks": [
+    "<Task pending name='Task-548' coro=<task_wrapper_coroutine:monitor_connections.<locals>.ping_process() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-547' coro=<task_wrapper_coroutine:monitor_interfaces() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future finished result=None>>",
+    "<Task pending name='Task-546' coro=<task_wrapper_coroutine:monitor_connections() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+  ],
+  "thread_": "<UboServiceThread id=ip label=IP name=030-ip is_alive=True>"
+}[0m
+[38;2;100;200;100m1767516302.252286 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "ethernet",
+  "service_label": "Ethernet",
+  "thread_native_id": 8438371
+}[0m
+[38;2;100;200;100m1767516302.253712 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "rgb_ring",
+  "service_label": "RGB Ring",
+  "thread_native_id": 8438375
+}[0m
+[38;2;100;200;100m1767516302.254505 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "rpi_connect",
+  "service_label": "RPi Connect",
+  "thread_native_id": 8438378
+}[0m
+[38;2;100;200;100m1767516302.254971 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "lightdm",
+  "service_label": "LightDM",
+  "thread_native_id": 8438377
+}[0m
+[38;2;100;200;100m1767516302.255580 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "ssh",
+  "service_label": "SSH",
+  "thread_native_id": 8438379
+}[0m
+[38;2;100;200;100m1767516302.256241 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "wifi",
+  "service_label": "WiFi",
+  "thread_native_id": 8438373
+}[0m
+[38;2;100;200;100m1767516302.256819 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "sensors",
+  "service_label": "Sensors",
+  "thread_native_id": 8438376
+}[0m
+[38;2;100;200;100m1767516302.257569 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "camera",
+  "service_label": "Camera",
+  "thread_native_id": 8438374
+}[0m
+[38;2;100;200;100m1767516302.257885 [INFO] Waiting for tasks to finish - {
+  "service_id": "vscode",
+  "service_label": "VSCode",
+  "tasks": [
+    "<Task pending name='Task-443' coro=<task_wrapper_coroutine:_monitor_status() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-36690' coro=<_timer_expired.<locals>.act() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/debouncer/debounce.py:123> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+  ],
+  "thread_": "<UboServiceThread id=vscode label=VSCode name=050-vscode is_alive=True>"
+}[0m
+[38;2;100;200;100m1767516302.258376 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "users",
+  "service_label": "Users",
+  "thread_native_id": 8438380
+}[0m
+[38;2;100;200;100m1767516302.259096 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "docker",
+  "service_label": "Docker",
+  "thread_native_id": 8438382
+}[0m
+[38;2;100;200;100m1767516302.260086 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "infrared",
+  "service_label": "Infrared",
+  "thread_native_id": 8438385
+}[0m
+[38;2;100;200;100m1767516302.260598 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "file_system",
+  "service_label": "File System",
+  "thread_native_id": 8438384
+}[0m
+[38;2;100;200;100m1767516302.262252 [INFO] Waiting for tasks to finish - {
+  "service_id": "web_ui",
+  "service_label": "Web UI",
+  "tasks": [
+    "<Task pending name='Task-519' coro=<raise_shutdown() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/hypercorn/utils.py:164> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[TaskGroup._on_task_done()]>",
+    "<Task pending name='Task-520' coro=<raise_shutdown() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/hypercorn/utils.py:164> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[TaskGroup._on_task_done()]>",
+    "<Task pending name='Task-517' coro=<Lifespan.handle_lifespan() running at /Users/martin/Documents/ubo-repos/ubo_app/.venv/lib/python3.11/site-packages/hypercorn/asyncio/lifespan.py:55> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='Task-516' coro=<task_wrapper_coroutine:serve() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+  ],
+  "thread_": "<UboServiceThread id=web_ui label=Web UI name=090-web-ui is_alive=True>"
+}[0m
+[38;2;100;200;100m1767516302.265692 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "assistant",
+  "service_label": "Assistant",
+  "thread_native_id": 8438383
+}[0m
+[38;2;100;200;100m1767516302.304190 [INFO] Unsubscribing from event subscription over gRPC - {
+  "request": "SubscribeEventRequest(event=Event(display_render_event=DisplayRenderEvent(meta_field_package_name_ubo_app_dot_store_dot_services_dot_display=None)))"
+}[0m
+[38;2;100;200;100m1767516302.317756 [INFO] Unsubscribing from event subscription over gRPC - {
+  "request": "SubscribeEventRequest(event=Event(camera_report_image_event=CameraReportImageEvent(meta_field_package_name_ubo_app_dot_store_dot_services_dot_camera=None)))"
+}[0m
+[38;2;100;200;100m1767516302.374212 [INFO] Waiting for tasks to finish - {
+  "service_id": "speech_recognition",
+  "service_label": "Speech Recognition",
+  "tasks": [
+    "<Task pending name='WakeWordMonitor' coro=<task_wrapper_coroutine:EnginesManager._monitor_wake_word_recognitions() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>",
+    "<Task pending name='SpeechRecognitionMonitor' coro=<task_wrapper_coroutine:EnginesManager._monitor_speech_recognitions() running at /Users/martin/Documents/ubo-repos/ubo_app/ubo_app/utils/async_.py:39> wait_for=<Future pending cb=[Task.task_wakeup()]>>"
+  ],
+  "thread_": "<UboServiceThread id=speech_recognition label=Speech Recognition name=090-speech-recognition is_alive=True>"
+}[0m
+[38;2;100;200;100m1767516302.411066 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "vscode",
+  "service_label": "VSCode",
+  "thread_native_id": 8438381
+}[0m
+[38;2;100;200;100m1767516302.463128 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "display",
+  "service_label": "Display",
+  "thread_native_id": 8438366
+}[0m
+[38;2;100;200;100m1767516302.473514 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "audio",
+  "service_label": "Audio",
+  "thread_native_id": 8438365
+}[0m
+[38;2;100;200;100m1767516302.477131 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "ip",
+  "service_label": "IP",
+  "thread_native_id": 8438372
+}[0m
+[38;2;100;200;100m1767516302.523156 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "web_ui",
+  "service_label": "Web UI",
+  "thread_native_id": 8438387
+}[0m
+[38;2;100;200;100m1767516302.578103 [INFO] Ubo service thread stopped gracefully - {
+  "service_id": "speech_recognition",
+  "service_label": "Speech Recognition",
+  "thread_native_id": 8438386
+}[0m
