@@ -36,16 +36,17 @@ if TYPE_CHECKING:
 
 splash_screen = None
 
+# Event to signal when the display is unblanked
+# Python 3.10+ allows creation without running loop
+_unblank_event = asyncio.Event()
+
 
 async def monitor_inactivity() -> None:
     """Monitor user inactivity and blank screen after timeout."""
-    logger.info('=== MONITOR INACTIVITY TASK STARTED ===')
+    logger.verbose('=== MONITOR INACTIVITY TASK STARTED ===')
 
     try:
         while True:
-            await asyncio.sleep(10)
-            logger.info('=== INACTIVITY CHECK TICK ===')
-
             # Get current display state using with_state
             @store.with_state(
                 lambda state: (
@@ -61,15 +62,27 @@ async def monitor_inactivity() -> None:
 
             if display_state is None:
                 logger.warning('Display state not available')
+                await asyncio.sleep(10)
+                continue
+
+            # If display is already blanked, wait for unblank event instead of polling
+            if display_state.is_blanked:
+                logger.verbose(
+                    'Display is blanked, waiting for unblank event',
+                )
+                _unblank_event.clear()
+                await _unblank_event.wait()
+                logger.verbose('Display unblanked, resuming inactivity monitoring')
                 continue
 
             # Skip blanking if timeout is OFF
             timeout_seconds = display_state.selected_blank_timeout.get_timeout_seconds()
             if timeout_seconds is None:
+                await asyncio.sleep(10)
                 continue
 
             current_time = datetime.datetime.now(tz=datetime.UTC).timestamp()
-            logger.info(
+            logger.verbose(
                 'Inactivity check',
                 extra={
                     'last_activity': display_state.last_activity_time,
@@ -81,42 +94,38 @@ async def monitor_inactivity() -> None:
 
             if display_state.last_activity_time is not None:
                 inactive_duration = current_time - display_state.last_activity_time
-                logger.info(
+                logger.verbose(
                     'Checking inactivity duration',
                     extra={
                         'inactive_duration': inactive_duration,
                         'blank_timeout': timeout_seconds,
-                        'will_blank': (
-                            inactive_duration >= timeout_seconds
-                            and not display_state.is_blanked
-                        ),
+                        'will_blank': inactive_duration >= timeout_seconds,
                     },
                 )
-                if (
-                    inactive_duration >= timeout_seconds
-                    and not display_state.is_blanked
-                ):
+                if inactive_duration >= timeout_seconds:
                     logger.info(
                         'Screen blanking due to inactivity',
                         extra={'inactive_duration': inactive_duration},
                     )
                     store.dispatch(DisplayBlankAction())
+
+            await asyncio.sleep(10)
+            logger.verbose('=== INACTIVITY CHECK TICK ===')
     except Exception:
         logger.exception('Monitor inactivity task error')
 
 
 def handle_blank_event(_: DisplayBlankEvent) -> None:
     """Handle screen blanking event."""
-    logger.info('=== HANDLE_BLANK_EVENT CALLED ===')
     logger.info('Blanking screen and turning off backlight')
     display.set_backlight(enabled=False)
-    logger.info('=== BLANK EVENT HANDLING COMPLETE ===')
-
 
 def handle_unblank_event(_: DisplayUnblankEvent) -> None:
     """Handle screen unblanking event."""
     logger.info('Unblanking screen and turning on backlight')
     display.set_backlight(enabled=True)
+    # Signal the inactivity monitor to wake up
+    _unblank_event.set()
 
 
 @store.autorun(lambda state: state.display.selected_blank_timeout)
@@ -179,3 +188,4 @@ def init_service() -> None:
         logger.info('Screen blanking monitor task started')
     else:
         logger.info('Screen blanking disabled during tests')
+
