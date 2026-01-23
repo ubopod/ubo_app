@@ -23,7 +23,7 @@ if [ -z ${USERNAME+set} ]; then
   done
 
   # Create the user
-  useradd -m -s /bin/bash $USERNAME
+  useradd -m -s /bin/bash -G sudo $USERNAME
 fi
 
 # Check if the password is set
