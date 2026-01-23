@@ -84,5 +84,4 @@ class InfraredState(Immutable):
         ),
     )
     is_registering_device: bool = False
-    registration_last_code: tuple[str, str] | None = None
-    registration_repetition_count: int = 0
+    registration_signal_counts: dict[tuple[str, str], int] = field(default_factory=dict)
