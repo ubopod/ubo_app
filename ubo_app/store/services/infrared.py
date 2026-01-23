@@ -47,6 +47,20 @@ class InfraredRegisterDeviceAction(InfraredAction):
     """Action to register a new infrared device."""
 
 
+class InfraredSetIsRegisteringDeviceAction(InfraredAction):
+    """Action to set the is registering device flag."""
+
+    is_registering: bool
+
+
+class InfraredSetRegistrationCodeAction(InfraredAction):
+    """Action to set the registration code being tracked."""
+
+    protocol: str
+    scancode: str
+    repetition_count: int
+
+
 class InfraredSendCodeEvent(InfraredEvent):
     """Event to send an infrared code."""
 
@@ -69,3 +83,6 @@ class InfraredState(Immutable):
             default=False,
         ),
     )
+    is_registering_device: bool = False
+    registration_last_code: tuple[str, str] | None = None
+    registration_repetition_count: int = 0

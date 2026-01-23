@@ -21,6 +21,8 @@ from ubo_app.store.services.infrared import (
     InfraredRegisterDeviceAction,
     InfraredSendCodeAction,
     InfraredSendCodeEvent,
+    InfraredSetIsRegisteringDeviceAction,
+    InfraredSetRegistrationCodeAction,
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
     InfraredState,
@@ -107,14 +109,71 @@ def reducer(
 
         case InfraredRegisterDeviceAction():
             return CompleteReducerResult(
-                state=state,
+                state=replace(
+                    state,
+                    is_registering_device=True,
+                    registration_last_code=None,
+                    registration_repetition_count=0,
+                ),
                 actions=[
                     RgbRingBlinkAction(
                         color=(0, 255, 0),
                         repetitions=3,
                         wait=400,
                     ),
+                    InfraredSetShouldReceiveAction(should_receive=True),
                 ],
+            )
+
+        case InfraredSetIsRegisteringDeviceAction():
+            return replace(
+                state,
+                is_registering_device=action.is_registering,
+            )
+
+        case InfraredSetRegistrationCodeAction():
+            return replace(
+                state,
+                registration_last_code=(action.protocol, action.scancode),
+                registration_repetition_count=action.repetition_count,
+            )
+
+        case InfraredHandleReceivedCodeAction() if state.is_registering_device:
+            ir_code = (action.protocol, action.scancode)
+            if state.registration_last_code == ir_code:
+                # Same code repeated
+                new_count = state.registration_repetition_count + 1
+                if new_count >= 5:
+                    logger.info(
+                        'Device registration: Signal repeated 5 times',
+                        extra={
+                            'protocol': action.protocol,
+                            'scancode': action.scancode,
+                            'repetition_count': new_count,
+                        },
+                    )
+                    return replace(
+                        state,
+                        is_registering_device=False,
+                        registration_last_code=None,
+                        registration_repetition_count=0,
+                    )
+                return replace(
+                    state,
+                    registration_repetition_count=new_count,
+                )
+            # New code received, start tracking it
+            logger.info(
+                'Device registration: New signal received',
+                extra={
+                    'protocol': action.protocol,
+                    'scancode': action.scancode,
+                },
+            )
+            return replace(
+                state,
+                registration_last_code=ir_code,
+                registration_repetition_count=1,
             )
 
         case KeypadKeyPressAction() | KeypadKeyReleaseAction() if (
