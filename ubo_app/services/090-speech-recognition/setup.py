@@ -71,14 +71,15 @@ def init_service() -> Subscriptions:
         lambda state: (
             state.speech_recognition.is_intents_active,
             state.speech_recognition.selected_engine,
+            state.assistant.provider_setup_status,
         ),
         options=AutorunOptions(memoization=False),
     )
     def recognition_engine_items(
-        data: tuple[bool, SpeechRecognitionEngineName | None],
+        data: tuple[bool, SpeechRecognitionEngineName | None, dict[str, bool]],
     ) -> Sequence[Item]:
         """Return items for recognition engine selection."""
-        _, selected_engine = data
+        _, selected_engine, _ = data
         items: list[Item] = []
         for engine_name in SpeechRecognitionEngineName:
             engine = engines_manager.engines_by_name[engine_name]
