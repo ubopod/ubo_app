@@ -18,12 +18,14 @@ from ubo_app.store.services.assistant import (
 from ubo_app.store.services.infrared import (
     InfraredAction,
     InfraredHandleReceivedCodeAction,
+    InfraredRegisterDeviceAction,
     InfraredSendCodeAction,
     InfraredSendCodeEvent,
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
     InfraredState,
 )
+from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
 from ubo_app.store.services.keypad import (
     Key,
     KeypadAction,
@@ -72,7 +74,7 @@ def reducer(
     action: InfraredAction | KeypadAction,
 ) -> ReducerResult[
     InfraredState,
-    InfraredAction | KeypadKeyPressAction | KeypadKeyReleaseAction,
+    InfraredAction | KeypadKeyPressAction | KeypadKeyReleaseAction | RgbRingBlinkAction,
     InfraredSendCodeEvent,
 ]:
     """Reducer for infrared actions."""
@@ -102,6 +104,18 @@ def reducer(
 
         case InfraredSetShouldReceiveAction():
             return replace(state, should_receive_keypad_actions=action.should_receive)
+
+        case InfraredRegisterDeviceAction():
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    RgbRingBlinkAction(
+                        color=(0, 255, 0),
+                        repetitions=3,
+                        wait=400,
+                    ),
+                ],
+            )
 
         case KeypadKeyPressAction() | KeypadKeyReleaseAction() if (
             state.should_propagate_keypad_actions
