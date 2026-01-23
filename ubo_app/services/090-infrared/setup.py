@@ -153,6 +153,7 @@ def init_service() -> Subscriptions:
             UboDispatchItem(
                 key='register_device',
                 label='Register Device',
+                icon='+',
                 store_action=InfraredRegisterDeviceAction(),
             ),
         ]
