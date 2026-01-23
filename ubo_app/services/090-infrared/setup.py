@@ -12,6 +12,7 @@ from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
     InfraredHandleReceivedCodeAction,
+    InfraredRegisterDeviceAction,
     InfraredSendCodeEvent,
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
@@ -86,6 +87,12 @@ async def _wait_for_ir_code() -> None:
             raise
 
 
+async def _register_device(action: InfraredRegisterDeviceAction) -> None:
+    """Handle register device action."""
+    logger.info('Register Device button pressed')
+    # TODO: Implement device registration logic
+
+
 def init_service() -> Subscriptions:
     """Initialize the infrared service."""
     ir_code_task: asyncio.Handle | None = None
@@ -143,6 +150,11 @@ def init_service() -> Subscriptions:
                     else UNSELECTED_ITEM_PARAMETERS
                 ),
             ),
+            UboDispatchItem(
+                key='register_device',
+                label='Register Device',
+                store_action=InfraredRegisterDeviceAction(),
+            ),
         ]
 
     store.dispatch(
@@ -162,4 +174,5 @@ def init_service() -> Subscriptions:
 
     return [
         store.subscribe_event(InfraredSendCodeEvent, _send_code),
+        store.subscribe_action(InfraredRegisterDeviceAction, _register_device),
     ]

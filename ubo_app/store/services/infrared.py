@@ -43,6 +43,10 @@ class InfraredSetShouldReceiveAction(InfraredAction):
     should_receive: bool
 
 
+class InfraredRegisterDeviceAction(InfraredAction):
+    """Action to register a new infrared device."""
+
+
 class InfraredSendCodeEvent(InfraredEvent):
     """Event to send an infrared code."""
 
