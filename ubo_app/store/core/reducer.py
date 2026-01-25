@@ -16,9 +16,11 @@ from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 from ubo_app.store.core.menus import HOME_MENU
 from ubo_app.store.core.types import (
     ApplicationStackItem,
+    ApplicationViewData,
     CloseApplicationAction,
     CloseApplicationEvent,
     DeregisterRegularAppAction,
+    HomeViewData,
     InitEvent,
     MainAction,
     MainEvent,
@@ -33,10 +35,13 @@ from ubo_app.store.core.types import (
     MenuGoBackEvent,
     MenuGoHomeAction,
     MenuGoHomeEvent,
+    MenuItemData,
     MenuScrollAction,
     MenuScrollEvent,
     MenuStackItem,
+    MenuViewData,
     NotificationStackItem,
+    NotificationViewData,
     OpenApplicationAction,
     OpenApplicationEvent,
     PowerOffAction,
@@ -62,6 +67,8 @@ from ubo_app.store.core.types import (
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
+    ViewChangedEvent,
+    ViewData,
 )
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
 
@@ -131,6 +138,154 @@ def create_root_stack_item() -> tuple[MenuStackItem]:
             menu_key='',  # Root has empty key
             page_index=0,
         ),
+    )
+
+
+# =============================================================================
+# View Computation for Dumb UI Architecture
+# =============================================================================
+
+
+def convert_item_to_menu_item_data(
+    item: Item | None,
+    index: int,
+) -> MenuItemData | None:
+    """Convert a ubo_gui Item to a MenuItemData for rendering.
+
+    Returns None if the input item is None (placeholder slot).
+    """
+    if item is None:
+        return None
+
+    # Determine action_id based on item type
+    action_id: str | None = None
+    key_val = getattr(item, 'key', None)
+    if key_val and isinstance(key_val, str):
+        action_id = f'menu:select:{key_val}'
+
+    # Get values with safe defaults, handling callables
+    key: str = f'item_{index}'
+    if key_val:
+        key = key_val if isinstance(key_val, str) else f'item_{index}'
+
+    label_val = getattr(item, 'label', '')
+    label = label_val() if callable(label_val) else (label_val or '')
+
+    icon_val = getattr(item, 'icon', '')
+    icon = icon_val() if callable(icon_val) else (icon_val or '')
+
+    # Handle background_color
+    bg_color_val = getattr(item, 'background_color', None)
+    bg_color: str | None = None
+    if isinstance(bg_color_val, str):
+        bg_color = bg_color_val
+
+    # Handle icon_color
+    icon_color = '#ffffff'
+    icon_color_val = getattr(item, 'icon_color', None)
+    if icon_color_val:
+        if callable(icon_color_val):
+            resolved = icon_color_val()
+            if isinstance(resolved, str):
+                icon_color = resolved
+        elif isinstance(icon_color_val, str):
+            icon_color = icon_color_val
+
+    # Handle is_short - could be bool or callable
+    is_short_val = getattr(item, 'is_short', False)
+    is_short = is_short_val if isinstance(is_short_val, bool) else False
+
+    return MenuItemData(
+        key=key,
+        label=str(label),
+        icon=str(icon),
+        color=icon_color,
+        is_short=is_short,
+        background_color=bg_color,
+        action_id=action_id,
+    )
+
+
+def compute_view_from_stack(
+    state: MainState,
+) -> ViewData:
+    """Compute the ViewData from the current stack and menu state.
+
+    This is the core function for the dumb UI architecture.
+    It determines what the UI should render based on the Redux state.
+    """
+    stack = state.stack
+    menu = state.menu
+
+    if not stack:
+        # Empty stack - return home view with empty data
+        return HomeViewData()
+
+    top_item = stack[-1]
+
+    # Handle different stack item types
+    if isinstance(top_item, ApplicationStackItem):
+        return ApplicationViewData(
+            application_id=top_item.application_id,
+            show_status_bar=False,
+        )
+
+    if isinstance(top_item, NotificationStackItem):
+        return NotificationViewData(
+            notification_id=top_item.notification_id,
+            show_status_bar=False,
+        )
+
+    # Must be MenuStackItem - compute menu view
+    if not isinstance(top_item, MenuStackItem):
+        return HomeViewData()
+
+    # Get the current menu based on stack
+    current_menu = get_current_menu_from_stack(menu, stack)
+    if current_menu is None:
+        return HomeViewData()
+
+    # Get menu items
+    items = menu_items(current_menu)
+    page_index = top_item.page_index
+
+    # Convert items to MenuItemData
+    menu_item_data = tuple(
+        convert_item_to_menu_item_data(item, i) for i, item in enumerate(items)
+    )
+
+    # Determine title
+    title_value = current_menu.title
+    title = title_value() if callable(title_value) else (title_value or '')
+
+    # Calculate total pages (PAGE_SIZE = 3 items per page)
+    page_size = 3
+    total_pages = max(1, (len(items) + page_size - 1) // page_size)
+
+    # Determine if at home (depth 1) or in a submenu
+    depth = len([i for i in stack if isinstance(i, MenuStackItem)])
+    is_home = depth <= 1
+
+    if is_home:
+        # Home view shows special layout with gauges, volume
+        # Filter out None items for HomeViewData
+        home_items = tuple(item for item in menu_item_data if item is not None)
+        return HomeViewData(
+            show_status_bar=True,
+            menu_items=home_items,
+            # CPU/RAM/volume are updated separately via other state
+            cpu_percent=0.0,
+            ram_percent=0.0,
+            volume_level=0.0,
+        )
+
+    # Standard menu view
+    return MenuViewData(
+        show_status_bar=page_index == 0,  # Show status bar only on first page
+        title=cast('str', title),
+        items=menu_item_data,
+        page_index=page_index,
+        total_pages=total_pages,
     )
 
 
@@ -204,14 +359,21 @@ def reducer(
             )
             new_stack = (*state.stack, new_item)
             new_path = derive_path_from_stack(new_stack)
+            new_state = replace(
+                state,
+                stack=new_stack,
+                path=new_path,
+                depth=len(new_stack),
+            )
+            # Compute new view from updated state
+            new_view = compute_view_from_stack(new_state)
+            new_state = replace(new_state, current_view=new_view)
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    stack=new_stack,
-                    path=new_path,
-                    depth=len(new_stack),
-                ),
-                events=[StackChangedEvent(stack=new_stack)],
+                state=new_state,
+                events=[
+                    StackChangedEvent(stack=new_stack),
+                    ViewChangedEvent(view=new_view),
+                ],
             )
 
         case StackPushApplicationAction():
@@ -222,13 +384,19 @@ def reducer(
                 initialization_kwargs=action.initialization_kwargs,
             )
             new_stack = (*state.stack, new_item)
+            new_state = replace(
+                state,
+                stack=new_stack,
+                depth=len(new_stack),
+            )
+            new_view = compute_view_from_stack(new_state)
+            new_state = replace(new_state, current_view=new_view)
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    stack=new_stack,
-                    depth=len(new_stack),
-                ),
-                events=[StackChangedEvent(stack=new_stack)],
+                state=new_state,
+                events=[
+                    StackChangedEvent(stack=new_stack),
+                    ViewChangedEvent(view=new_view),
+                ],
             )
 
         case StackPushNotificationAction():
@@ -237,13 +405,19 @@ def reducer(
                 notification_id=action.notification_id,
             )
             new_stack = (*state.stack, new_item)
+            new_state = replace(
+                state,
+                stack=new_stack,
+                depth=len(new_stack),
+            )
+            new_view = compute_view_from_stack(new_state)
+            new_state = replace(new_state, current_view=new_view)
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    stack=new_stack,
-                    depth=len(new_stack),
-                ),
-                events=[StackChangedEvent(stack=new_stack)],
+                state=new_state,
+                events=[
+                    StackChangedEvent(stack=new_stack),
+                    ViewChangedEvent(view=new_view),
+                ],
             )
 
         case StackPopAction():
@@ -253,28 +427,40 @@ def reducer(
             pop_count = min(action.count, len(state.stack) - 1)
             new_stack = state.stack[:-pop_count] if pop_count > 0 else state.stack
             new_path = derive_path_from_stack(new_stack)
+            new_state = replace(
+                state,
+                stack=new_stack,
+                path=new_path,
+                depth=len(new_stack),
+            )
+            new_view = compute_view_from_stack(new_state)
+            new_state = replace(new_state, current_view=new_view)
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    stack=new_stack,
-                    path=new_path,
-                    depth=len(new_stack),
-                ),
-                events=[StackChangedEvent(stack=new_stack)],
+                state=new_state,
+                events=[
+                    StackChangedEvent(stack=new_stack),
+                    ViewChangedEvent(view=new_view),
+                ],
             )
 
         case StackPopToRootAction():
             if len(state.stack) <= 1:
                 return state  # Already at root
             new_stack = state.stack[:1]
+            new_state = replace(
+                state,
+                stack=new_stack,
+                path=[],
+                depth=1,
+            )
+            new_view = compute_view_from_stack(new_state)
+            new_state = replace(new_state, current_view=new_view)
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    stack=new_stack,
-                    path=[],
-                    depth=1,
-                ),
-                events=[StackChangedEvent(stack=new_stack)],
+                state=new_state,
+                events=[
+                    StackChangedEvent(stack=new_stack),
+                    ViewChangedEvent(view=new_view),
+                ],
             )
 
         case StackPopItemAction():
@@ -285,14 +471,20 @@ def reducer(
             if new_stack == state.stack:
                 return state  # Item not found, no change
             new_path = derive_path_from_stack(new_stack)
+            new_state = replace(
+                state,
+                stack=new_stack,
+                path=new_path,
+                depth=len(new_stack),
+            )
+            new_view = compute_view_from_stack(new_state)
+            new_state = replace(new_state, current_view=new_view)
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    stack=new_stack,
-                    path=new_path,
-                    depth=len(new_stack),
-                ),
-                events=[StackChangedEvent(stack=new_stack)],
+                state=new_state,
+                events=[
+                    StackChangedEvent(stack=new_stack),
+                    ViewChangedEvent(view=new_view),
+                ],
             )
 
         case StackSetPageIndexAction():
@@ -303,9 +495,15 @@ def reducer(
                 return state  # Can only set page index for menu items
             new_top = replace(top, page_index=action.page_index)
             new_stack = (*state.stack[:-1], new_top)
+            new_state = replace(state, stack=new_stack)
+            new_view = compute_view_from_stack(new_state)
+            new_state = replace(new_state, current_view=new_view)
             return CompleteReducerResult(
-                state=replace(state, stack=new_stack),
-                events=[StackPageIndexChangedEvent(page_index=action.page_index)],
+                state=new_state,
+                events=[
+                    StackPageIndexChangedEvent(page_index=action.page_index),
+                    ViewChangedEvent(view=new_view),
+                ],
             )
 
         case OpenApplicationAction():

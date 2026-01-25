@@ -2647,6 +2647,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
+version = "1.6.1.dev10525122610397539951"
 source = { editable = "ubo_app/rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
