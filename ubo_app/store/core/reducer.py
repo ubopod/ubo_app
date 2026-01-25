@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
+import uuid
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast
 
@@ -14,6 +15,7 @@ from ubo_gui.menu.types import Item, Menu, SubMenuItem, menu_items
 
 from ubo_app.store.core.menus import HOME_MENU
 from ubo_app.store.core.types import (
+    ApplicationStackItem,
     CloseApplicationAction,
     CloseApplicationEvent,
     DeregisterRegularAppAction,
@@ -33,6 +35,8 @@ from ubo_app.store.core.types import (
     MenuGoHomeEvent,
     MenuScrollAction,
     MenuScrollEvent,
+    MenuStackItem,
+    NotificationStackItem,
     OpenApplicationAction,
     OpenApplicationEvent,
     PowerOffAction,
@@ -46,6 +50,16 @@ from ubo_app.store.core.types import (
     ReportReplayingDoneAction,
     SetAreEnclosuresVisibleAction,
     SetMenuPathAction,
+    StackChangedEvent,
+    StackItemType,
+    StackPageIndexChangedEvent,
+    StackPopAction,
+    StackPopItemAction,
+    StackPopToRootAction,
+    StackPushApplicationAction,
+    StackPushMenuAction,
+    StackPushNotificationAction,
+    StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
 )
@@ -63,13 +77,73 @@ def find_sub_menu_item(items: Sequence[Item], key: str) -> SubMenuItem:
     return item
 
 
+# =============================================================================
+# Stack Helper Functions
+# =============================================================================
+
+
+def derive_path_from_stack(stack: tuple[StackItemType, ...]) -> list[str]:
+    """Derive the menu path from the stack.
+
+    Returns a list of menu keys representing the navigation path.
+    Only MenuStackItems contribute to the path (apps and notifications don't).
+    """
+    return [item.menu_key for item in stack if isinstance(item, MenuStackItem)][1:]
+
+
+def get_current_menu_from_stack(
+    root_menu: Menu | None,
+    stack: tuple[StackItemType, ...],
+) -> Menu | None:
+    """Traverse menu tree based on stack to get current menu.
+
+    This follows the stack path to find the menu currently at the top.
+    Only works when the top of stack is a MenuStackItem.
+    """
+    if not root_menu or not stack:
+        return None
+
+    # Only consider MenuStackItems for menu traversal
+    menu_path = [item for item in stack if isinstance(item, MenuStackItem)]
+    if not menu_path:
+        return None
+
+    current_menu: Menu | None = root_menu
+    for item in menu_path[1:]:  # Skip root
+        if current_menu is None:
+            return None
+        items = menu_items(current_menu)
+        try:
+            sub_item = find_sub_menu_item(items, item.menu_key)
+            sub_menu = sub_item.sub_menu
+            current_menu = sub_menu() if callable(sub_menu) else sub_menu
+        except (TypeError, StopIteration):
+            # Menu key not found or not a submenu
+            return None
+    return current_menu
+
+
+def create_root_stack_item() -> tuple[MenuStackItem]:
+    """Create the initial root stack item for the home menu."""
+    return (
+        MenuStackItem(
+            id=uuid.uuid4().hex,
+            menu_key='',  # Root has empty key
+            page_index=0,
+        ),
+    )
+
+
 def reducer(
     state: MainState | None,
     action: MainAction,
 ) -> ReducerResult[MainState, None, InitEvent | MainEvent]:
     if state is None:
         if isinstance(action, InitAction):
-            return MainState(menu=HOME_MENU)
+            return MainState(
+                menu=HOME_MENU,
+                stack=create_root_stack_item(),
+            )
         raise InitializationActionError(action)
 
     if state.is_recording:
@@ -116,6 +190,122 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 events=[MenuScrollEvent(direction=action.direction)],
+            )
+
+        # =====================================================================
+        # Stack Management Actions
+        # =====================================================================
+
+        case StackPushMenuAction():
+            new_item = MenuStackItem(
+                id=uuid.uuid4().hex,
+                menu_key=action.menu_key,
+                page_index=0,
+            )
+            new_stack = (*state.stack, new_item)
+            new_path = derive_path_from_stack(new_stack)
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    stack=new_stack,
+                    path=new_path,
+                    depth=len(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_stack)],
+            )
+
+        case StackPushApplicationAction():
+            new_item = ApplicationStackItem(
+                id=uuid.uuid4().hex,
+                application_id=action.application_id,
+                initialization_args=action.initialization_args,
+                initialization_kwargs=action.initialization_kwargs,
+            )
+            new_stack = (*state.stack, new_item)
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    stack=new_stack,
+                    depth=len(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_stack)],
+            )
+
+        case StackPushNotificationAction():
+            new_item = NotificationStackItem(
+                id=uuid.uuid4().hex,
+                notification_id=action.notification_id,
+            )
+            new_stack = (*state.stack, new_item)
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    stack=new_stack,
+                    depth=len(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_stack)],
+            )
+
+        case StackPopAction():
+            if len(state.stack) <= 1:
+                return state  # Can't pop root
+            # Pop 'count' items but always keep at least root
+            pop_count = min(action.count, len(state.stack) - 1)
+            new_stack = state.stack[:-pop_count] if pop_count > 0 else state.stack
+            new_path = derive_path_from_stack(new_stack)
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    stack=new_stack,
+                    path=new_path,
+                    depth=len(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_stack)],
+            )
+
+        case StackPopToRootAction():
+            if len(state.stack) <= 1:
+                return state  # Already at root
+            new_stack = state.stack[:1]
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    stack=new_stack,
+                    path=[],
+                    depth=1,
+                ),
+                events=[StackChangedEvent(stack=new_stack)],
+            )
+
+        case StackPopItemAction():
+            # Find and remove the specific item from stack
+            new_stack = tuple(
+                item for item in state.stack if item.id != action.item_id
+            )
+            if new_stack == state.stack:
+                return state  # Item not found, no change
+            new_path = derive_path_from_stack(new_stack)
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    stack=new_stack,
+                    path=new_path,
+                    depth=len(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_stack)],
+            )
+
+        case StackSetPageIndexAction():
+            if not state.stack:
+                return state
+            top = state.stack[-1]
+            if not isinstance(top, MenuStackItem):
+                return state  # Can only set page index for menu items
+            new_top = replace(top, page_index=action.page_index)
+            new_stack = (*state.stack[:-1], new_top)
+            return CompleteReducerResult(
+                state=replace(state, stack=new_stack),
+                events=[StackPageIndexChangedEvent(page_index=action.page_index)],
             )
 
         case OpenApplicationAction():
