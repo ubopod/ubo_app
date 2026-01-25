@@ -33,6 +33,79 @@ class MenuScrollDirection(StrEnum):
     DOWN = 'down'
 
 
+# =============================================================================
+# Stack Item Types for Redux State
+# =============================================================================
+# These are serializable representations of the navigation stack.
+# Unlike ubo_gui's StackItem classes which hold object references (Menu, PageWidget),
+# these use IDs to enable Redux serialization and single source of truth.
+
+
+class MenuStackItem(Immutable):
+    """Redux representation of a menu in the navigation stack.
+
+    Attributes
+    ----------
+    id : str
+        Unique identifier for this stack item instance.
+    menu_key : str
+        Key of the menu item used to navigate here (e.g., 'main', 'settings', 'wifi').
+        For root menu, this is empty string.
+    page_index : int
+        Current page index within the menu (0-indexed).
+
+    """
+
+    id: str  # Unique stack item ID
+    menu_key: str  # Key used to navigate here
+    page_index: int = 0
+
+
+class ApplicationStackItem(Immutable):
+    """Redux representation of an application in the navigation stack.
+
+    Attributes
+    ----------
+    id : str
+        Unique identifier for this stack item instance.
+    application_id : str
+        Registered application ID (e.g., 'camera:viewfinder').
+    initialization_args : tuple
+        Arguments passed when opening the application.
+    initialization_kwargs : dict
+        Keyword arguments passed when opening the application.
+
+    """
+
+    id: str  # Unique stack item ID
+    application_id: str  # Registered application ID
+    initialization_args: tuple[BasicType, ...] = ()
+    initialization_kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+
+
+class NotificationStackItem(Immutable):
+    """Redux representation of a notification overlay in the navigation stack.
+
+    Attributes
+    ----------
+    id : str
+        Unique identifier for this stack item instance.
+    notification_id : str
+        ID of the notification being displayed.
+
+    """
+
+    id: str  # Unique stack item ID
+    notification_id: str  # ID of the notification
+
+
+# Type alias for any stack item
+StackItemType = MenuStackItem | ApplicationStackItem | NotificationStackItem
+
+
 SETTINGS_ICONS = {
     SettingsCategory.NETWORK: '󰛳',
     SettingsCategory.REMOTE: '󰑔',
@@ -125,6 +198,75 @@ class MenuScrollAction(MenuAction):
     direction: MenuScrollDirection
 
 
+# =============================================================================
+# Stack Management Actions (Redux controls navigation state)
+# =============================================================================
+
+
+class StackAction(MainAction):
+    """Base class for stack manipulation actions."""
+
+
+class StackPushMenuAction(StackAction):
+    """Push a menu onto the navigation stack.
+
+    This should be dispatched when navigating into a sub-menu.
+    """
+
+    menu_key: str  # Key of the SubMenuItem that was selected
+
+
+class StackPushApplicationAction(StackAction):
+    """Push an application onto the navigation stack.
+
+    This should be dispatched when opening an application.
+    """
+
+    application_id: str
+    initialization_args: tuple[BasicType, ...] = ()
+    initialization_kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+
+
+class StackPushNotificationAction(StackAction):
+    """Push a notification overlay onto the navigation stack."""
+
+    notification_id: str
+
+
+class StackPopAction(StackAction):
+    """Pop the top item from the navigation stack.
+
+    Optionally pop multiple items by specifying count.
+    """
+
+    count: int = 1  # Number of items to pop
+
+
+class StackPopToRootAction(StackAction):
+    """Pop all items except root, returning to home screen."""
+
+
+class StackPopItemAction(StackAction):
+    """Pop a specific item from the stack by its ID.
+
+    Used for closing specific applications or notifications.
+    """
+
+    item_id: str  # ID of the stack item to remove
+
+
+class StackSetPageIndexAction(StackAction):
+    """Set the page index of the current menu.
+
+    Only valid when the top of stack is a MenuStackItem.
+    """
+
+    page_index: int
+
+
 class OpenApplicationAction(MainAction):
     application_id: str
     initialization_args: tuple[BasicType, ...] = ()
@@ -167,6 +309,26 @@ class MenuChooseByIndexEvent(MenuEvent):
 
 class MenuScrollEvent(MenuEvent):
     direction: MenuScrollDirection
+
+
+# =============================================================================
+# Stack Change Events (GUI subscribes to these for rendering)
+# =============================================================================
+
+
+class StackChangedEvent(MainEvent):
+    """Emitted when the navigation stack changes.
+
+    The GUI should update its display based on the new stack state.
+    """
+
+    stack: tuple[StackItemType, ...]
+
+
+class StackPageIndexChangedEvent(MainEvent):
+    """Emitted when the page index of the current menu changes."""
+
+    page_index: int
 
 
 class OpenApplicationEvent(MainEvent):
@@ -223,6 +385,9 @@ class ReportReplayingDoneAction(MainAction):
 
 class MainState(Immutable):
     menu: Menu | None = None
+    # New: Full navigation stack as source of truth
+    stack: tuple[StackItemType, ...] = ()
+    # Legacy: These are derived from stack for backward compatibility
     path: Sequence[str] = field(default_factory=list)
     depth: int = 0
     is_header_visible: bool = True
