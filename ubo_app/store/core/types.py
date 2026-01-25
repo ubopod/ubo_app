@@ -106,6 +106,120 @@ class NotificationStackItem(Immutable):
 StackItemType = MenuStackItem | ApplicationStackItem | NotificationStackItem
 
 
+# =============================================================================
+# View Data Types for Dumb UI Architecture
+# =============================================================================
+# These types describe what the UI should render. The reducer computes these
+# from the stack and other state. The UI layer receives this data and renders it.
+# This enables multi-client support (Apple Watch, Web UI, MCU).
+
+
+class MenuItemData(Immutable):
+    """Serializable representation of a menu item for rendering.
+
+    This is what the UI receives to render a menu item.
+    Clicking dispatches the action_id if provided.
+    """
+
+    key: str  # Unique key for this item
+    label: str  # Display label
+    icon: str  # Icon character/code
+    color: str = '#ffffff'  # Icon/label color
+    is_short: bool = False  # Whether to use short display mode
+    action_id: str | None = None  # Action to dispatch on click (if any)
+    background_color: str | None = None  # Optional background color
+
+
+class StatusIconData(Immutable):
+    """Status bar icon data for rendering."""
+
+    symbol: str
+    color: tuple[float, float, float, float]  # RGBA tuple
+
+
+class ProgressNotificationData(Immutable):
+    """Progress notification for status bar rendering."""
+
+    id: str
+    progress: float | None  # None = indeterminate (spinner), 0-1 = progress ring
+    color: tuple[float, float, float, float]
+
+
+class StatusBarData(Immutable):
+    """All data needed to render the status bar (header + footer).
+
+    This consolidates header and footer state into a single source of truth.
+    """
+
+    # Header
+    title: str = ''
+    is_recording: bool = False
+    is_replaying: bool = False
+    is_recording_audio: bool = False
+    progress_notifications: tuple[ProgressNotificationData, ...] = ()
+
+    # Footer
+    clock: str = ''  # "14:30"
+    temperature: float | None = None
+    light_level: float | None = None
+    icons: tuple[StatusIconData, ...] = ()
+
+
+class HomeViewData(Immutable):
+    """Data for rendering the home screen view.
+
+    Home screen includes: menu items, CPU/RAM gauges, volume level.
+    """
+
+    type: str = 'home'  # Literal discriminator
+    show_status_bar: bool = True
+    menu_items: tuple[MenuItemData, ...] = ()  # Main, Notifications, Power
+    cpu_percent: float = 0.0
+    ram_percent: float = 0.0
+    volume_level: float = 0.0  # 0.0-1.0
+
+
+class MenuViewData(Immutable):
+    """Data for rendering a menu view.
+
+    Standard menu with title, items, and pagination.
+    """
+
+    type: str = 'menu'  # Literal discriminator
+    show_status_bar: bool = True  # Based on page_index == 0
+    title: str = ''
+    items: tuple[MenuItemData | None, ...] = ()  # Items for current page
+    page_index: int = 0
+    total_pages: int = 1
+
+
+class ApplicationViewData(Immutable):
+    """Data for rendering an application view.
+
+    Application views have their own state managed separately.
+    """
+
+    type: str = 'application'  # Literal discriminator
+    show_status_bar: bool = False
+    application_id: str = ''
+
+
+class NotificationViewData(Immutable):
+    """Data for rendering a notification overlay view."""
+
+    type: str = 'notification'  # Literal discriminator
+    show_status_bar: bool = False
+    notification_id: str = ''
+    title: str = ''
+    content: str = ''
+    icon: str = ''
+    color: str = '#ffffff'
+
+
+# Union type for all view data types
+ViewData = HomeViewData | MenuViewData | ApplicationViewData | NotificationViewData
+
+
 SETTINGS_ICONS = {
     SettingsCategory.NETWORK: '󰛳',
     SettingsCategory.REMOTE: '󰑔',
@@ -331,6 +445,17 @@ class StackPageIndexChangedEvent(MainEvent):
     page_index: int
 
 
+class ViewChangedEvent(MainEvent):
+    """Emitted when the current view data changes.
+
+    The UI should re-render based on this new view data.
+    This is the primary event for the dumb UI architecture.
+    """
+
+    view: ViewData
+    status_bar: StatusBarData | None = None
+
+
 class OpenApplicationEvent(MainEvent):
     application_id: str
     initialization_args: tuple[BasicType, ...] = ()
@@ -397,3 +522,6 @@ class MainState(Immutable):
     is_recording: bool = False
     is_replaying: bool = False
     recorded_sequence: list[BaseAction] = field(default_factory=list)
+    # New: Computed view data for dumb UI architecture
+    current_view: ViewData | None = None
+    status_bar: StatusBarData | None = None
