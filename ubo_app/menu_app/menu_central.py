@@ -28,6 +28,14 @@ from ubo_app.store.core.types import (
     OpenApplicationEvent,
     SetAreEnclosuresVisibleAction,
     SetMenuPathAction,
+    StackPopAction,
+    StackPopToRootAction,
+    StackPushApplicationAction,
+    StackPushMenuAction,
+    StackSetPageIndexAction,
+)
+from ubo_app.store.core.types import (
+    MenuStackItem as ReduxMenuStackItem,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
@@ -82,6 +90,61 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 return
             self.menu_widget.set_root_menu(menu)
 
+        # Phase 2.5: Validation autorun to verify Redux stack stays in sync
+        if DEBUG_MENU:
+
+            @store.autorun(lambda state: state.main.stack)
+            def _validate_stack_sync(redux_stack: object) -> None:
+                if not isinstance(redux_stack, tuple):
+                    return
+                self = _self()
+                if not self:
+                    return
+                gui_stack = self.menu_widget.stack
+                gui_len = len(gui_stack)
+                redux_len = len(redux_stack)
+
+                # Compare lengths
+                if gui_len != redux_len:
+                    logger.warning(
+                        f'[STACK SYNC] Length mismatch! '
+                        f'GUI: {gui_len}, Redux: {redux_len}',
+                    )
+                    return
+
+                # Compare stack items
+                for i, (gui_item, redux_item) in enumerate(
+                    zip(gui_stack, redux_stack, strict=True),
+                ):
+                    gui_type = type(gui_item).__name__
+                    redux_type = type(redux_item).__name__
+                    if isinstance(gui_item, StackMenuItem):
+                        if not isinstance(redux_item, ReduxMenuStackItem):
+                            logger.warning(
+                                f'[STACK SYNC] Type mismatch at [{i}]: '
+                                f'GUI={gui_type}, Redux={redux_type}',
+                            )
+                        elif gui_item.page_index != redux_item.page_index:
+                            logger.warning(
+                                f'[STACK SYNC] Page index mismatch at [{i}]: '
+                                f'GUI={gui_item.page_index}, '
+                                f'Redux={redux_item.page_index}',
+                            )
+                    elif isinstance(gui_item, StackApplicationItem):
+                        from ubo_app.store.core.types import (
+                            ApplicationStackItem as ReduxAppItem,
+                        )
+
+                        if not isinstance(redux_item, ReduxAppItem):
+                            logger.warning(
+                                f'[STACK SYNC] Type mismatch at [{i}]: '
+                                f'GUI={gui_type}, Redux={redux_type}',
+                            )
+
+                logger.debug(
+                    f'[STACK SYNC] ✓ Stacks in sync: {redux_len} items',
+                )
+
     def build(self) -> Widget | None:
         root = super().build()
         if root:
@@ -108,18 +171,106 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     def handle_stack_change(
         self: MenuAppCentral,
         _: MenuWidget,
-        stack: list[StackItem],
+        gui_stack: list[StackItem],
     ) -> None:
+        # Legacy: Dispatch path for backward compatibility
         store.dispatch(
             SetMenuPathAction(
                 path=[
                     stack_item.selection.key
-                    for stack_item in stack
+                    for stack_item in gui_stack
                     if isinstance(stack_item, StackMenuItem) and stack_item.selection
                 ],
-                depth=len(stack),
+                depth=len(gui_stack),
             ),
         )
+
+        # Phase 2.5: Sync Redux stack with GUI stack
+        # This validates our Redux stack actions produce correct state
+        self._sync_redux_stack_with_gui(gui_stack)
+
+    def _sync_redux_stack_with_gui(
+        self: MenuAppCentral,
+        gui_stack: list[StackItem],
+    ) -> None:
+        """Sync the Redux stack state with the GUI stack.
+
+        This is an intermediate validation step (Phase 2.5) that ensures
+        the Redux stack matches the GUI stack. After full migration,
+        this will be inverted (GUI will follow Redux state).
+        """
+        state = store._state  # noqa: SLF001
+        if state is None:
+            return
+
+        redux_stack = state.main.stack
+        gui_len = len(gui_stack)
+        redux_len = len(redux_stack)
+
+        if gui_len > redux_len:
+            self._handle_stack_push(gui_stack, redux_len)
+        elif gui_len < redux_len:
+            self._handle_stack_pop(gui_len, redux_len)
+        elif gui_len > 0:
+            self._handle_page_index_sync(gui_stack[-1], redux_stack[-1])
+
+    def _handle_stack_push(
+        self: MenuAppCentral,
+        gui_stack: list[StackItem],
+        start_index: int,
+    ) -> None:
+        """Push new items from GUI stack to Redux stack."""
+        for i in range(start_index, len(gui_stack)):
+            gui_item = gui_stack[i]
+            if isinstance(gui_item, StackMenuItem):
+                menu_key = self._get_menu_key_for_item(gui_stack, i, gui_item)
+                store.dispatch(StackPushMenuAction(menu_key=menu_key))
+            elif isinstance(gui_item, StackApplicationItem):
+                app_id = getattr(gui_item.application, 'id', gui_item.application.name)
+                store.dispatch(StackPushApplicationAction(application_id=app_id))
+
+    def _get_menu_key_for_item(
+        self: MenuAppCentral,
+        gui_stack: list[StackItem],
+        index: int,
+        gui_item: StackMenuItem,
+    ) -> str:
+        """Get the menu key for a stack item from parent's selection."""
+        if index > 0:
+            parent = gui_stack[index - 1]
+            if (
+                isinstance(parent, StackMenuItem)
+                and parent.selection
+                and parent.selection.item is gui_item
+            ):
+                return parent.selection.key
+            menu_title = gui_item.menu.title
+            return menu_title() if callable(menu_title) else (menu_title or '')
+        return ''
+
+    def _handle_stack_pop(
+        self: MenuAppCentral,
+        gui_len: int,
+        redux_len: int,
+    ) -> None:
+        """Pop items from Redux stack to match GUI stack."""
+        if gui_len == 1:
+            store.dispatch(StackPopToRootAction())
+        else:
+            store.dispatch(StackPopAction(count=redux_len - gui_len))
+
+    def _handle_page_index_sync(
+        self: MenuAppCentral,
+        gui_top: StackItem,
+        redux_top: ReduxMenuStackItem | object,  # Could be any StackItemType
+    ) -> None:
+        """Sync page index if top items are menus with different indices."""
+        if (
+            isinstance(gui_top, StackMenuItem)
+            and isinstance(redux_top, ReduxMenuStackItem)
+            and gui_top.page_index != redux_top.page_index
+        ):
+            store.dispatch(StackSetPageIndexAction(page_index=gui_top.page_index))
 
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:

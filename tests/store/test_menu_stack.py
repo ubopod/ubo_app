@@ -115,7 +115,7 @@ class TestDerivePathFromStack:
         assert derive_path_from_stack(stack) == ['main']
 
     def test_mixed_stack(self) -> None:
-        """Verify path is correct for mixed stack with menus, apps, and notifications."""
+        """Verify path is correct for mixed stack with menus, apps, notifications."""
         stack: tuple[StackItemType, ...] = (
             MenuStackItem(id='root', menu_key='', page_index=0),
             MenuStackItem(id='main', menu_key='main', page_index=0),
