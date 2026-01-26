@@ -17,6 +17,7 @@ from ubo_app.constants import DEBUG_MENU, USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     ApplicationViewData,
+    DynamicMenuChangedEvent,
     HomeViewData,
     MenuItemData,
     MenuViewData,
@@ -230,6 +231,8 @@ class ViewRenderer:
         self.app = app
         self._current_view_type: str | None = None
         self._last_status_bar: StatusBarData | None = None
+        self._last_view: ViewData | None = None
+        self._view_changed_count: int = 0
 
         if USE_DUMB_UI:
             self._setup_subscription()
@@ -257,6 +260,13 @@ class ViewRenderer:
         store.subscribe_event(
             ViewChangedEvent,
             self._on_view_changed,
+            keep_ref=False,
+        )
+
+        # Subscribe to dynamic menu changes for logging/debugging
+        store.subscribe_event(
+            DynamicMenuChangedEvent,
+            self._on_dynamic_menu_changed,
             keep_ref=False,
         )
 
@@ -337,6 +347,33 @@ class ViewRenderer:
             status_bar = compute_status_bar_data(state)
             self._render_status_bar(status_bar)
 
+    def _on_dynamic_menu_changed(self, event: DynamicMenuChangedEvent) -> None:
+        """Handle DynamicMenuChangedEvent for logging and future rendering.
+
+        This logs dynamic menu updates to verify the pilot service migration
+        is working correctly.
+        """
+        if DEBUG_MENU:
+            state = store._state  # noqa: SLF001
+            if state is not None and hasattr(state, 'dynamic_menus'):
+                menu_data = state.dynamic_menus.menus.get(event.menu_id)
+                if menu_data:
+                    item_labels = [
+                        item.label if item else '<empty>' for item in menu_data.items
+                    ]
+                    logger.info(
+                        '[ViewRenderer] Dynamic menu updated: id=%s, title=%s, '
+                        'items=%s',
+                        event.menu_id,
+                        menu_data.title,
+                        item_labels,
+                    )
+                else:
+                    logger.info(
+                        '[ViewRenderer] Dynamic menu cleared: id=%s',
+                        event.menu_id,
+                    )
+
     @mainthread
     def _on_view_changed(self, event: ViewChangedEvent) -> None:
         """Handle ViewChangedEvent by rendering the appropriate view.
@@ -346,11 +383,24 @@ class ViewRenderer:
 
         """
         view = event.view
+        self._view_changed_count += 1
+
+        # Skip if view hasn't actually changed (de-duplication)
+        if self._last_view == view:
+            if DEBUG_MENU:
+                logger.debug(
+                    '[ViewRenderer] Skipping duplicate ViewChangedEvent #%d',
+                    self._view_changed_count,
+                )
+            return
+        self._last_view = view
+
         if DEBUG_MENU:
             # Log the full view data structure with looked-up details
             view_dict = _view_to_dict(view)
             logger.info(
-                '[ViewRenderer] ViewChanged:\n%s',
+                '[ViewRenderer] ViewChanged #%d:\n%s',
+                self._view_changed_count,
                 json.dumps(view_dict, indent=2, ensure_ascii=False),
             )
 
@@ -417,16 +467,72 @@ class ViewRenderer:
             )
 
     def _render_menu_view(self, view: MenuViewData) -> None:
-        """Render a menu view."""
-        _ = view
+        """Render a menu view with title, items, and pagination.
+
+        Currently validates and logs the menu state. The actual menu rendering
+        is still handled by MenuWidget's internal state. Full Redux → GUI
+        inversion would require MenuWidget changes.
+        """
+        if DEBUG_MENU:
+            # Show items for current page (PAGE_SIZE = 3)
+            page_size = 3
+            start = view.page_index * page_size
+            end = start + page_size
+            page_items = view.items[start:end] if view.items else ()
+            item_labels = [
+                item.label if item else '<empty>' for item in page_items
+            ]
+            logger.info(
+                '[ViewRenderer] Menu view: title=%s, page=%d/%d, items=%s',
+                view.title,
+                view.page_index + 1,
+                view.total_pages,
+                item_labels,
+            )
+
+        # Verify title matches (MenuWidget has its own title binding)
+        current_title = getattr(self.menu_widget, 'title', None)
+        if current_title and current_title != view.title and DEBUG_MENU:
+            logger.warning(
+                '[ViewRenderer] Title mismatch: widget=%s, view=%s',
+                current_title,
+                view.title,
+            )
+
+        # Verify page index matches
+        current_page = getattr(self.menu_widget, 'page_index', None)
+        if current_page is not None and current_page != view.page_index and DEBUG_MENU:
+            logger.warning(
+                '[ViewRenderer] Page index mismatch: widget=%d, view=%d',
+                current_page,
+                view.page_index,
+            )
 
     def _render_application_view(self, view: ApplicationViewData) -> None:
-        """Render an application view."""
-        _ = view
+        """Render an application view.
+
+        Applications are rendered by their own widget classes. ViewRenderer
+        logs the application state for debugging and future integration.
+        """
+        if DEBUG_MENU:
+            logger.info(
+                '[ViewRenderer] Application view: id=%s, extra_data=%s',
+                view.application_id,
+                view.extra_data if view.extra_data else '{}',
+            )
 
     def _render_notification_view(self, view: NotificationViewData) -> None:
-        """Render a notification view."""
-        _ = view
+        """Render a notification view.
+
+        Notifications are rendered by NotificationWidget. ViewRenderer
+        logs the notification state for debugging.
+        """
+        if DEBUG_MENU:
+            logger.info(
+                '[ViewRenderer] Notification view: id=%s, title=%s',
+                view.notification_id,
+                view.title,
+            )
 
     def _render_status_bar(self, status_bar: StatusBarData) -> None:
         """Render the status bar (header and footer) from StatusBarData.

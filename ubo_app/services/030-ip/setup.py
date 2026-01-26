@@ -10,8 +10,14 @@ from typing import TYPE_CHECKING
 import psutil
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
+from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.ip import (
     IpNetworkInterface,
@@ -26,7 +32,57 @@ if TYPE_CHECKING:
 
     from ubo_app.utils.types import Subscriptions
 
+from constants import IP_ADDRESSES_MENU_ID
+
 PING_TIMEOUT = 3.0
+
+
+def _get_interface_icon(name: str) -> str:
+    """Get the icon for a network interface based on its name."""
+    if name.startswith('eth'):
+        return '󰈀'
+    if name.startswith('wlan'):
+        return ''
+    if name.startswith('lo'):
+        return '󰕇'
+    return '󰛳'
+
+
+@store.autorun(lambda state: state.ip.interfaces)
+def update_ip_dynamic_menu(interfaces: Sequence[IpNetworkInterface]) -> None:
+    """Update the dynamic menu for IP addresses (dumb UI architecture).
+
+    This autorun dispatches UpdateDynamicMenuAction with serializable MenuItemData.
+    The dynamic menus state is then used by ViewRenderer for rendering.
+    """
+    if not USE_DUMB_UI:
+        return
+
+    items: tuple[MenuItemData | None, ...] = ()
+    if interfaces:
+        items = tuple(
+            MenuItemData(
+                key=f'interface:{interface.name}',
+                label=interface.name,
+                icon=_get_interface_icon(interface.name),
+                action_id=f'ip:open-interface:{interface.name}',
+            )
+            for interface in interfaces
+        )
+
+    logger.debug(
+        '[IP Service] Updating dynamic menu: %d interfaces',
+        len(interfaces) if interfaces else 0,
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=IP_ADDRESSES_MENU_ID,
+            title='󰩟IP Addresses',
+            items=items,
+            placeholder='No IP addresses',
+        ),
+    )
 
 
 @store.autorun(lambda state: state.ip.interfaces)
@@ -59,21 +115,29 @@ def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuIt
     ]
 
 
+_last_interfaces: list[IpNetworkInterface] | None = None
+
+
 def load_network_interfaces() -> None:
+    global _last_interfaces  # noqa: PLW0603
+
     ip_addresses_by_interface = defaultdict(list)
     for interface_name, ip_addresses in psutil.net_if_addrs().items():
         for address in ip_addresses:
             if address.family == socket.AddressFamily.AF_INET:
                 ip_addresses_by_interface[interface_name].append(address.address)
 
-    store.dispatch(
-        IpUpdateInterfacesAction(
-            interfaces=[
-                IpNetworkInterface(name=interface_name, ip_addresses=ip_addresses)
-                for interface_name, ip_addresses in ip_addresses_by_interface.items()
-            ],
-        ),
-    )
+    new_interfaces = [
+        IpNetworkInterface(name=interface_name, ip_addresses=ip_addresses)
+        for interface_name, ip_addresses in ip_addresses_by_interface.items()
+    ]
+
+    # Skip dispatch if interfaces haven't changed
+    if _last_interfaces is not None and _last_interfaces == new_interfaces:
+        return
+
+    _last_interfaces = new_interfaces
+    store.dispatch(IpUpdateInterfacesAction(interfaces=new_interfaces))
 
 
 async def monitor_interfaces(end_event: asyncio.Event) -> None:

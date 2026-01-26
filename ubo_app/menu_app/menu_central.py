@@ -71,11 +71,15 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     def __init__(self: MenuAppCentral, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)
+        self._last_page_index: int | None = None  # Track to avoid redundant dispatches
 
         self.menu_widget.bind(page_index=self.handle_page_index_change)
-        self.menu_widget.bind(current_menu=self.handle_page_index_change)
+        self.menu_widget.bind(pages=self.handle_pages_change)
         self.menu_widget.bind(title=self.handle_title_change)
         self.menu_widget.bind(stack=self.handle_stack_change)
+
+        # Ensure initial visibility state is dispatched
+        self.handle_page_index_change()
 
         # Initialize ViewRenderer for dumb UI mode
         if USE_DUMB_UI:
@@ -160,13 +164,9 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         return root
 
-    def handle_page_index_change(
-        self: MenuAppCentral,
-        *_: object,
-    ) -> None:
+    def _dispatch_enclosure_visibility(self: MenuAppCentral) -> None:
+        """Dispatch enclosure visibility based on current page index and pages."""
         page_index = self.menu_widget.page_index
-
-        # Dispatch enclosure visibility based on page index
         store.dispatch(
             SetAreEnclosuresVisibleAction(
                 is_header_visible=page_index == 0,
@@ -174,8 +174,33 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             ),
         )
 
+    def handle_page_index_change(
+        self: MenuAppCentral,
+        *_: object,
+    ) -> None:
+        page_index = self.menu_widget.page_index
+
+        # Skip if page index hasn't actually changed (avoid redundant dispatches)
+        if self._last_page_index == page_index:
+            return
+        self._last_page_index = page_index
+
+        # Dispatch enclosure visibility based on page index
+        self._dispatch_enclosure_visibility()
+
         # Sync page index to Redux state (triggers ViewChangedEvent)
         store.dispatch(StackSetPageIndexAction(page_index=page_index))
+
+    def handle_pages_change(
+        self: MenuAppCentral,
+        *_: object,
+    ) -> None:
+        """Handle pages count changes - update footer visibility.
+
+        When the total pages count changes, footer visibility may need to update.
+        The footer should only show on the last page.
+        """
+        self._dispatch_enclosure_visibility()
 
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
         self.root.title = title
