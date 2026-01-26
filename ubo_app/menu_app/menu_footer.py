@@ -14,6 +14,7 @@ from kivy.uix.widget import Widget
 from redux import AutorunOptions
 from ubo_gui.app import UboApp
 
+from ubo_app.constants import USE_DUMB_UI
 from ubo_app.store.main import store
 
 if TYPE_CHECKING:
@@ -50,10 +51,12 @@ class MenuAppFooter(UboApp):
             or setattr(layout, 'width', temperature.width + dp(12)),
         )
 
-        store.autorun(
-            lambda state: state.sensors.temperature.value,
-            options=AutorunOptions(keep_ref=False),
-        )(self.set_temperature_value)
+        # In dumb UI mode, ViewRenderer handles temperature updates
+        if not USE_DUMB_UI:
+            store.autorun(
+                lambda state: state.sensors.temperature.value,
+                options=AutorunOptions(keep_ref=False),
+            )(self.set_temperature_value)
 
         icon = Label(
             text='',
@@ -94,10 +97,12 @@ class MenuAppFooter(UboApp):
             ),
         )
 
-        store.autorun(
-            lambda state: state.sensors.light.value,
-            options=AutorunOptions(keep_ref=False),
-        )(self.set_light_value)
+        # In dumb UI mode, ViewRenderer handles light updates
+        if not USE_DUMB_UI:
+            store.autorun(
+                lambda state: state.sensors.light.value,
+                options=AutorunOptions(keep_ref=False),
+            )(self.set_light_value)
 
         return self.light
 
@@ -127,7 +132,9 @@ class MenuAppFooter(UboApp):
                 60 - now_.second - now_.microsecond / 1_000_000 + 0.05,
             )
 
-        update()
+        # In dumb UI mode, ViewRenderer handles clock updates from state.system.clock
+        if not USE_DUMB_UI:
+            update()
 
         return clock
 
@@ -207,14 +214,17 @@ class MenuAppFooter(UboApp):
         self.footer_layout = BoxLayout()
         self.footer_layout.add_widget(self.home_footer_layout)
 
-        store.autorun(
-            lambda state: state.status_icons.icons,
-            options=AutorunOptions(keep_ref=False),
-        )(self.render_icons)
-
+        # Footer visibility is always needed (controls scroll-based show/hide)
         store.autorun(
             lambda state: state.main.is_footer_visible,
             options=AutorunOptions(keep_ref=False),
         )(self.handle_is_footer_visible_change)
+
+        # In dumb UI mode, ViewRenderer handles icon updates
+        if not USE_DUMB_UI:
+            store.autorun(
+                lambda state: state.status_icons.icons,
+                options=AutorunOptions(keep_ref=False),
+            )(self.render_icons)
 
         return self.footer_layout

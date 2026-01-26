@@ -81,7 +81,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         if USE_DUMB_UI:
             from ubo_app.menu_app.view_renderer import ViewRenderer
 
-            self.view_renderer = ViewRenderer(self.menu_widget)
+            self.view_renderer = ViewRenderer(self.menu_widget, self)
 
         if DEBUG_MENU:
             menu_representation = 'Menu:\n' + repr(self.menu_widget)

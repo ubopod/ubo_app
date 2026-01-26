@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import psutil
 
+from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.system import SystemMetricsUpdateAction
 from ubo_app.utils.async_ import create_task
@@ -19,7 +20,16 @@ def read_metrics() -> None:
     """Read system metrics and dispatch update action."""
     cpu_percent = psutil.cpu_percent(interval=None)
     ram_percent = psutil.virtual_memory().percent
-    clock = datetime.now(tz=UTC).strftime('%H:%M')
+    # Use local timezone for clock display
+    local_tz = datetime.now(tz=UTC).astimezone().tzinfo
+    clock = datetime.now(tz=local_tz).strftime('%H:%M')
+
+    logger.info(
+        '[SystemMetrics] Dispatching: cpu=%.1f, ram=%.1f, clock=%s',
+        cpu_percent,
+        ram_percent,
+        clock,
+    )
 
     store.dispatch(
         SystemMetricsUpdateAction(
@@ -39,9 +49,11 @@ async def _monitor_metrics(end_event: asyncio.Event) -> None:
 
 def init_service() -> Subscriptions:
     """Initialize the system-metrics service."""
+    logger.info('[SystemMetrics] Service initializing...')
     read_metrics()
 
     end_event = asyncio.Event()
     create_task(_monitor_metrics(end_event))
 
+    logger.info('[SystemMetrics] Service started')
     return [end_event.set]
