@@ -52,6 +52,7 @@ from redux.basic_types import (
 
 from ubo_app.constants import STORE_GRACE_PERIOD
 from ubo_app.logger import logger
+from ubo_app.store.core.dynamic_menus_reducer import reducer as dynamic_menus_reducer
 from ubo_app.store.input.reducer import reducer as input_reducer
 from ubo_app.store.scheduler import Scheduler
 from ubo_app.store.settings.reducer import reducer as settings_reducer
@@ -73,7 +74,12 @@ if TYPE_CHECKING:
     from store.services.file_system import FileSystemAction
     from store.settings.types import SettingsAction
 
-    from ubo_app.store.core.types import MainAction, MainEvent, MainState
+    from ubo_app.store.core.types import (
+        DynamicMenusState,
+        MainAction,
+        MainEvent,
+        MainState,
+    )
     from ubo_app.store.input.types import (
         InputAction,
         InputResolveEvent,
@@ -113,6 +119,7 @@ if TYPE_CHECKING:
         SpeechSynthesisState,
     )
     from ubo_app.store.services.ssh import SSHAction, SSHState
+    from ubo_app.store.services.system import SystemAction, SystemState
     from ubo_app.store.services.users import UsersAction, UsersEvent, UsersState
     from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
     from ubo_app.store.services.web_ui import WebUIState
@@ -149,6 +156,7 @@ UboAction: TypeAlias = Union[
     'RgbRingAction',
     'RPiConnectAction',
     'SensorsAction',
+    'SystemAction',
     'SpeechRecognitionAction',
     'SpeechSynthesisAction',
     'SSHAction',
@@ -183,6 +191,7 @@ class RootState(BaseCombineReducerState):
     settings: SettingsState
     status_icons: StatusIconsState
     update_manager: UpdateManagerState
+    dynamic_menus: DynamicMenusState
 
     assistant: AssistantState
     audio: AudioState
@@ -198,6 +207,7 @@ class RootState(BaseCombineReducerState):
     rpi_connect: RPiConnectState
     sensors: SensorsState
     speech_recognition: SpeechRecognitionState
+    system: SystemState
     speech_synthesis: SpeechSynthesisState
     ssh: SSHState
     users: UsersState
@@ -213,6 +223,7 @@ root_reducer, root_reducer_id = combine_reducers(
     settings=settings_reducer,
     status_icons=status_icons_reducer,
     update_manager=update_manager_reducer,
+    dynamic_menus=dynamic_menus_reducer,
     input=input_reducer,
 )
 

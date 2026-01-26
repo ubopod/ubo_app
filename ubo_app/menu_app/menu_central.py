@@ -12,7 +12,7 @@ from ubo_gui.menu.stack_item import StackApplicationItem, StackItem, StackMenuIt
 from ubo_gui.page import PageWidget
 from ubo_gui.utils import mainthread_if_needed
 
-from ubo_app.constants import DEBUG_MENU
+from ubo_app.constants import DEBUG_MENU, USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.menu_app.home_page import HomePage
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
@@ -32,6 +32,7 @@ from ubo_app.store.core.types import (
     StackPopToRootAction,
     StackPushApplicationAction,
     StackPushMenuAction,
+    StackPushNotificationAction,
     StackSetPageIndexAction,
 )
 from ubo_app.store.core.types import (
@@ -75,6 +76,12 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.menu_widget.bind(current_menu=self.handle_page_index_change)
         self.menu_widget.bind(title=self.handle_title_change)
         self.menu_widget.bind(stack=self.handle_stack_change)
+
+        # Initialize ViewRenderer for dumb UI mode
+        if USE_DUMB_UI:
+            from ubo_app.menu_app.view_renderer import ViewRenderer
+
+            self.view_renderer = ViewRenderer(self.menu_widget)
 
         if DEBUG_MENU:
             menu_representation = 'Menu:\n' + repr(self.menu_widget)
@@ -157,13 +164,18 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self: MenuAppCentral,
         *_: object,
     ) -> None:
+        page_index = self.menu_widget.page_index
+
+        # Dispatch enclosure visibility based on page index
         store.dispatch(
             SetAreEnclosuresVisibleAction(
-                is_header_visible=self.menu_widget.page_index == 0,
-                is_footer_visible=self.menu_widget.page_index
-                >= self.menu_widget.pages - 1,
+                is_header_visible=page_index == 0,
+                is_footer_visible=page_index >= self.menu_widget.pages - 1,
             ),
         )
+
+        # Sync page index to Redux state (triggers ViewChangedEvent)
+        store.dispatch(StackSetPageIndexAction(page_index=page_index))
 
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
         self.root.title = title
@@ -226,8 +238,38 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 menu_key = self._get_menu_key_for_item(gui_stack, i, gui_item)
                 store.dispatch(StackPushMenuAction(menu_key=menu_key))
             elif isinstance(gui_item, StackApplicationItem):
-                app_id = getattr(gui_item.application, 'id', gui_item.application.name)
-                store.dispatch(StackPushApplicationAction(application_id=app_id))
+                # Try to get a meaningful application ID
+                app = gui_item.application
+                # Check if it's a notification widget first
+                if hasattr(app, 'notification_id') and app.notification_id:
+                    # This is a notification - push as notification
+                    store.dispatch(
+                        StackPushNotificationAction(
+                            notification_id=app.notification_id,
+                        ),
+                    )
+                else:
+                    # Regular application - use class name as identifier
+                    app_id = app.__class__.__name__
+                    # Capture any useful properties for logging
+                    init_kwargs: dict[str, str] = {}
+                    # For NotificationInfo, capture the text content
+                    if hasattr(app, 'text'):
+                        text_val = getattr(app, 'text', None)
+                        if DEBUG_MENU:
+                            logger.debug(
+                                '[STACK SYNC] App %s has text attr: %r',
+                                app_id,
+                                text_val[:100] if text_val else None,
+                            )
+                        if text_val:
+                            init_kwargs['text'] = str(text_val)
+                    store.dispatch(
+                        StackPushApplicationAction(
+                            application_id=app_id,
+                            initialization_kwargs=init_kwargs,  # type: ignore[arg-type]
+                        ),
+                    )
 
     def _get_menu_key_for_item(
         self: MenuAppCentral,

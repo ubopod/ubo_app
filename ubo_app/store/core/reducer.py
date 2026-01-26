@@ -225,9 +225,14 @@ def compute_view_from_stack(
 
     # Handle different stack item types
     if isinstance(top_item, ApplicationStackItem):
+        # Convert initialization_kwargs to extra_data for logging
+        extra_data: dict[str, str] = {}
+        for k, v in top_item.initialization_kwargs.items():
+            extra_data[k] = str(v)
         return ApplicationViewData(
             application_id=top_item.application_id,
             show_status_bar=False,
+            extra_data=extra_data,
         )
 
     if isinstance(top_item, NotificationStackItem):

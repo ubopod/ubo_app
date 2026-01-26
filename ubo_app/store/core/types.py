@@ -202,6 +202,7 @@ class ApplicationViewData(Immutable):
     type: str = 'application'  # Literal discriminator
     show_status_bar: bool = False
     application_id: str = ''
+    extra_data: dict[str, str] = field(default_factory=dict)  # e.g., {'text': '...'}
 
 
 class NotificationViewData(Immutable):
@@ -218,6 +219,41 @@ class NotificationViewData(Immutable):
 
 # Union type for all view data types
 ViewData = HomeViewData | MenuViewData | ApplicationViewData | NotificationViewData
+
+
+# =============================================================================
+# Dynamic Menu Types for Decoupled UI Architecture
+# =============================================================================
+# These types allow services to provide menu content via Redux actions,
+# rather than returning ubo-gui types directly from autoruns.
+# This enables serialization and multi-client support.
+
+
+class DynamicMenuData(Immutable):
+    """Serializable representation of a dynamic menu's content.
+
+    Services dispatch UpdateDynamicMenuAction to provide menu content.
+    The reducer stores this in DynamicMenusState.
+    View computation uses this when rendering menus.
+    """
+
+    menu_id: str  # Unique menu identifier (e.g., 'wifi:connections')
+    title: str = ''  # Menu title
+    heading: str | None = None  # Optional heading (for HeadedMenu style)
+    sub_heading: str | None = None  # Optional sub-heading
+    items: tuple[MenuItemData | None, ...] = ()  # Menu items (None = empty slot)
+    placeholder: str = ''  # Text to show when items is empty
+
+
+class DynamicMenusState(Immutable):
+    """State slice containing all dynamic menus.
+
+    This is the Redux state that holds computed menu content from services.
+    When a service's state changes, its autorun dispatches UpdateDynamicMenuAction
+    to update the relevant menu here.
+    """
+
+    menus: dict[str, DynamicMenuData] = field(default_factory=dict)
 
 
 SETTINGS_ICONS = {
@@ -381,6 +417,60 @@ class StackSetPageIndexAction(StackAction):
     page_index: int
 
 
+# =============================================================================
+# Dynamic Menu Actions (Services update menu content via Redux)
+# =============================================================================
+
+
+class DynamicMenuAction(MainAction):
+    """Base class for dynamic menu actions."""
+
+
+class UpdateDynamicMenuAction(DynamicMenuAction):
+    """Update or create a dynamic menu's content.
+
+    Services dispatch this to provide menu items computed from their state.
+    This replaces the pattern of returning HeadlessMenu from autoruns.
+
+    Example::
+
+        @store.autorun(lambda state: state.wifi.connections)
+        def update_wifi_menu(connections):
+            items = tuple(
+                MenuItemData(
+                    key=c.ssid,
+                    label=c.ssid,
+                    icon='...',
+                    action_id=f'wifi:open:{c.ssid}',
+                )
+                for c in (connections or [])
+            )
+            store.dispatch(UpdateDynamicMenuAction(
+                menu_id='wifi:connections',
+                title='Wi-Fi',
+                items=items,
+                placeholder='No connections found',
+            ))
+
+    """
+
+    menu_id: str  # Unique menu identifier
+    title: str = ''
+    heading: str | None = None
+    sub_heading: str | None = None
+    items: tuple[MenuItemData | None, ...] = ()
+    placeholder: str = ''
+
+
+class ClearDynamicMenuAction(DynamicMenuAction):
+    """Remove a dynamic menu from the state.
+
+    Used when a menu is no longer needed (e.g., service stopped).
+    """
+
+    menu_id: str
+
+
 class OpenApplicationAction(MainAction):
     application_id: str
     initialization_args: tuple[BasicType, ...] = ()
@@ -454,6 +544,15 @@ class ViewChangedEvent(MainEvent):
 
     view: ViewData
     status_bar: StatusBarData | None = None
+
+
+class DynamicMenuChangedEvent(MainEvent):
+    """Emitted when a dynamic menu's content changes.
+
+    This triggers view recomputation if the changed menu is currently visible.
+    """
+
+    menu_id: str
 
 
 class OpenApplicationEvent(MainEvent):
