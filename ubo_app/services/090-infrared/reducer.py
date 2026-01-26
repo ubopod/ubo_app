@@ -17,6 +17,7 @@ from ubo_app.store.services.assistant import (
 )
 from ubo_app.store.services.infrared import (
     InfraredAction,
+    InfraredDeviceRegistrationCompleteEvent,
     InfraredHandleReceivedCodeAction,
     InfraredRegisterDeviceAction,
     InfraredSendCodeAction,
@@ -77,7 +78,7 @@ def reducer(
 ) -> ReducerResult[
     InfraredState,
     InfraredAction | KeypadKeyPressAction | KeypadKeyReleaseAction | RgbRingBlinkAction | RgbRingBlankAction,
-    InfraredSendCodeEvent,
+    InfraredSendCodeEvent | InfraredDeviceRegistrationCompleteEvent,
 ]:
     """Reducer for infrared actions."""
     if state is None:
@@ -161,6 +162,13 @@ def reducer(
                         'repetition_count': new_count,
                     },
                 )
+                logger.info(
+                    'Device registration: Emitting InfraredDeviceRegistrationCompleteEvent',
+                    extra={
+                        'protocol': action.protocol,
+                        'scancode': action.scancode,
+                    },
+                )
                 return CompleteReducerResult(
                     state=replace(
                         state,
@@ -169,6 +177,12 @@ def reducer(
                     ),
                     actions=[
                         RgbRingBlankAction(),  # Stop blinking
+                    ],
+                    events=[
+                        InfraredDeviceRegistrationCompleteEvent(
+                            protocol=action.protocol,
+                            scancode=action.scancode,
+                        ),
                     ],
                 )
             

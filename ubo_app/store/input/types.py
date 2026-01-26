@@ -23,6 +23,7 @@ class InputMethod(StrEnum):
     CAMERA = auto()
     WEB_DASHBOARD = auto()
     PATH_SELECTOR = auto()
+    SPEECH = auto()
 
 
 class InputResult(Immutable):
@@ -98,12 +99,20 @@ class PathInputDescription(InputDescription):
     selector_config: PathSelectorConfig
 
 
+class SpeechInputDescription(InputDescription):
+    """Description of a speech input field."""
+
+    input_method: InputMethod = InputMethod.SPEECH
+
+    instructions: ReadableInformation | None = None
+
+
 class InputAction(BaseAction):
     """Base class for input actions."""
 
 
 AvailableInputDescription: TypeAlias = (
-    WebUIInputDescription | QRCodeInputDescription | PathInputDescription
+    WebUIInputDescription | QRCodeInputDescription | PathInputDescription | SpeechInputDescription
 )
 
 

@@ -41,12 +41,14 @@ METHOD_NAMES = {
     InputMethod.CAMERA: 'camera',
     InputMethod.WEB_DASHBOARD: 'web dashboard',
     InputMethod.PATH_SELECTOR: 'path selector',
+    InputMethod.SPEECH: 'speech',
 }
 
 METHOD_ICONS = {
     InputMethod.CAMERA: '󰄀',
     InputMethod.WEB_DASHBOARD: '󱋆',
     InputMethod.PATH_SELECTOR: '󰈤',
+    InputMethod.SPEECH: '󰍭',
 }
 
 

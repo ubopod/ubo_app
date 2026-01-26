@@ -68,6 +68,13 @@ class InfraredSendCodeEvent(InfraredEvent):
     scancode: str
 
 
+class InfraredDeviceRegistrationCompleteEvent(InfraredEvent):
+    """Event when a device signal has been registered 5 times."""
+
+    protocol: str
+    scancode: str
+
+
 class InfraredState(Immutable):
     """State of the infrared service."""
 

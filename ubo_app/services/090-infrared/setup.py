@@ -3,23 +3,33 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    SpeechInputDescription,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
+    InfraredDeviceRegistrationCompleteEvent,
     InfraredHandleReceivedCodeAction,
     InfraredRegisterDeviceAction,
     InfraredSendCodeEvent,
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
 )
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
@@ -91,6 +101,60 @@ async def _register_device(action: InfraredRegisterDeviceAction) -> None:
     """Handle register device action."""
     logger.info('Register Device button pressed')
     # TODO: Implement device registration logic
+
+
+async def _handle_device_registration_complete(
+    event: InfraredDeviceRegistrationCompleteEvent,
+) -> None:
+    """Handle device registration complete event - show UI buttons for input method selection."""
+    try:
+        logger.info(
+            'Device registration complete handler reached',
+            extra={
+                'protocol': event.protocol,
+                'scancode': event.scancode,
+                'event_type': type(event).__name__,
+            },
+        )
+    except Exception as e:
+        logger.exception(
+            'Error in device registration complete handler',
+            extra={'error': str(e), 'event_type': type(event).__name__},
+        )
+        raise
+    async def act() -> None:
+        with contextlib.suppress(asyncio.CancelledError):
+            device_name, _ = await ubo_input(
+                prompt='Device Registered Successfully',
+                descriptions=[
+                    WebUIInputDescription(
+                        fields=[
+                            InputFieldDescription(
+                                name='device_name',
+                                label='Device Name',
+                                type=InputFieldType.TEXT,
+                                description=f'Enter a name for the device (Protocol: {event.protocol}, Code: {event.scancode})',
+                                required=True,
+                            ),
+                        ],
+                    ),
+                    SpeechInputDescription(
+                        instructions=ReadableInformation(
+                            text=f'Say the name for the device (Protocol: {event.protocol}, Code: {event.scancode})',
+                        ),
+                    ),
+                ],
+            )
+            logger.info(
+                'Device registration: Device name received',
+                extra={
+                    'device_name': device_name,
+                    'protocol': event.protocol,
+                    'scancode': event.scancode,
+                },
+            )
+
+    create_task(act())
 
 
 def init_service() -> Subscriptions:
@@ -173,7 +237,17 @@ def init_service() -> Subscriptions:
         ),
     )
 
+    logger.info('Subscribing to InfraredDeviceRegistrationCompleteEvent')
+    subscription = store.subscribe_event(
+        InfraredDeviceRegistrationCompleteEvent,
+        _handle_device_registration_complete,
+    )
+    logger.info(
+        'Subscription created for InfraredDeviceRegistrationCompleteEvent',
+        extra={'subscription': str(subscription)},
+    )
     return [
         store.subscribe_event(InfraredSendCodeEvent, _send_code),
         store.subscribe_action(InfraredRegisterDeviceAction, _register_device),
+        subscription,
     ]
