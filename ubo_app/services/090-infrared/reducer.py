@@ -177,6 +177,7 @@ def reducer(
                     ),
                     actions=[
                         RgbRingBlankAction(),  # Stop blinking
+                        InfraredSetShouldReceiveAction(should_receive=False),  # Turn off IR receiving
                     ],
                     events=[
                         InfraredDeviceRegistrationCompleteEvent(
