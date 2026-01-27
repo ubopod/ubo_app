@@ -10,20 +10,20 @@ ZHA CLI is a command-line interface tool for managing Zigbee coordinators and de
 
 ### Setup
 ```bash
-pip install -e .
+uv sync              # Install dependencies
 ```
 
 ### Running
 ```bash
-zha-cli           # Run the CLI
-zha-cli -v        # Run with verbose logging
+uv run zha-cli       # Run the CLI
+uv run zha-cli -v    # Run with verbose logging
 ```
 
 ### Linting
 ```bash
-ruff check .      # Lint
-ruff check . --fix  # Auto-fix lint issues
-ruff format .     # Format code
+uv run ruff check .       # Lint
+uv run ruff check . --fix # Auto-fix lint issues
+uv run ruff format .      # Format code
 ```
 
 ## Architecture

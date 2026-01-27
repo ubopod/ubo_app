@@ -11,30 +11,25 @@ A command-line interface for managing Zigbee coordinators and devices using the 
 
 ## Installation
 
-```bash
-pip install zha-cli
-```
-
-Or install from source:
+Requires [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
+# Clone the repository
 git clone https://github.com/your-username/zha-cli.git
 cd zha-cli
-pip install -e .
+
+# Install dependencies and create virtual environment
+uv sync
+
+# Run the CLI
+uv run zha-cli
 ```
 
 ## Usage
 
-Run the CLI:
-
 ```bash
-zha-cli
-```
-
-Or with verbose logging:
-
-```bash
-zha-cli -v
+uv run zha-cli        # Run the CLI
+uv run zha-cli -v     # Run with verbose logging
 ```
 
 ### Main Menu Options
@@ -59,6 +54,7 @@ zha-cli -v
 ## Requirements
 
 - Python 3.12+
+- [uv](https://docs.astral.sh/uv/) package manager
 - A supported Zigbee coordinator connected via USB/serial
 
 ## Dependencies
