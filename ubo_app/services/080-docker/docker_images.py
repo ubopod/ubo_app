@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import json
 import os
+import secrets as py_secrets
+import string
+from dataclasses import field
 import secrets as py_secrets
 import string
 from dataclasses import field
@@ -12,14 +16,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp
+import aiohttp
 from immutable import Immutable
 
 from ubo_app.constants import (
+    CONFIG_PATH,
     CONFIG_PATH,
     DEBUG_DOCKER,
     GRPC_ENVOY_LISTEN_PORT,
     GRPC_LISTEN_PORT,
 )
+from ubo_app.logger import logger
+from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
+from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.utils import IS_RPI, secrets
 from ubo_app.logger import logger
 from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
 from ubo_app.store.services.speech_synthesis import ReadableInformation
@@ -31,6 +41,7 @@ if TYPE_CHECKING:
 
 ENVOY_TEMPLATE_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml.tmpl'
 ENVOY_CONFIG_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml'
+COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 
 
@@ -147,6 +158,100 @@ On first visit, create an admin account to start uploading your photos and video
     else:
         return True
 
+async def prepare_n8n() -> bool:
+    """Prepare n8n for Docker Composition."""
+    try:
+        composition_id = 'n8n'
+        composition_path = COMPOSITIONS_PATH / composition_id
+        logger.info(
+            'Preparing n8n composition',
+            extra={'composition_path': str(composition_path)},
+        )
+        composition_path.mkdir(exist_ok=True, parents=True)
+
+        # Check if already set up
+        if (composition_path / 'docker-compose.yml').exists() and (
+            composition_path / '.env'
+        ).exists():
+            return True
+
+        # Download docker-compose.yml from n8n-hosting repo
+        async with aiohttp.ClientSession() as session:
+            base_url = 'https://raw.githubusercontent.com/n8n-io/n8n-hosting/main/docker-compose/withPostgres'
+            async with session.get(
+                f'{base_url}/docker-compose.yml',
+            ) as response:
+                response.raise_for_status()
+                compose_content = await response.text()
+                (composition_path / 'docker-compose.yml').write_text(compose_content)
+
+            # Download init-data.sh
+            async with session.get(
+                f'{base_url}/init-data.sh',
+            ) as response:
+                response.raise_for_status()
+                init_script = await response.text()
+                init_path = composition_path / 'init-data.sh'
+                init_path.write_text(init_script)
+                init_path.chmod(0o755)
+
+        # Generate credentials
+        creds = {
+            'N8N_DB_PASSWORD': ''.join(
+                py_secrets.choice(string.ascii_letters + string.digits)
+                for _ in range(32)
+            ),
+            'N8N_DB_USER': 'user_'
+            + ''.join(
+                py_secrets.choice(string.ascii_lowercase + string.digits)
+                for _ in range(16)
+            ),
+            'N8N_DB_NON_ROOT_PASSWORD': ''.join(
+                py_secrets.choice(string.ascii_letters + string.digits)
+                for _ in range(32)
+            ),
+            'N8N_DB_NON_ROOT_USER': 'n8n_'
+            + ''.join(
+                py_secrets.choice(string.ascii_lowercase + string.digits)
+                for _ in range(16)
+            ),
+        }
+
+        # Save credentials
+        for key, value in creds.items():
+            secrets.write_secret(key=key, value=value)
+
+        # Write .env file
+        env_content = (
+            f"POSTGRES_USER={creds['N8N_DB_USER']}\n"
+            f"POSTGRES_PASSWORD={creds['N8N_DB_PASSWORD']}\n"
+            f"POSTGRES_DB=n8n\n"
+            f"\n"
+            f"POSTGRES_NON_ROOT_USER={creds['N8N_DB_NON_ROOT_USER']}\n"
+            f"POSTGRES_NON_ROOT_PASSWORD={creds['N8N_DB_NON_ROOT_PASSWORD']}\n"
+        )
+        (composition_path / '.env').write_text(env_content)
+
+        # Create metadata.json
+        metadata = {
+            'label': 'n8n',
+            'icon': '󱂚',
+            'instructions': """n8n is installed and running!
+
+Access the workflow editor at:
+http://{{hostname}}:5678
+
+On first visit, create an account to start building automations.""",
+            'compose_id': 'n8n',
+        }
+        (composition_path / 'metadata.json').write_text(json.dumps(metadata))
+
+    except Exception:
+        logger.exception('Failed to prepare n8n')
+        return False
+    else:
+        return True
+
 
 class ContainerEntry(Immutable):
     """Container entry."""
@@ -182,6 +287,12 @@ class ContainerEntry(Immutable):
         | None
     ) = None
     prepare: Callable[[], Coroutine[Any, Any, bool] | bool] | None = None
+    is_composition: bool = False
+
+    @property
+    def full_path(self) -> str:
+        """Get full image path including registry if specified."""
+        return f'{self.registry}/{self.path}'
     is_composition: bool = False
 
     @property
@@ -249,6 +360,7 @@ IMAGES = {
             dependencies=['ollama'],
             ports={'8080/tcp': 8080},
             hosts={'host.docker.internal': 'host-gateway'},
+            hosts={'host.docker.internal': 'host-gateway'},
         ),
         ContainerEntry(
             id='ngrok',
@@ -312,6 +424,16 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
             prepare=prepare_immich,
             is_composition=True,
             ports={'2283/tcp': 2283},
+        ),
+        ContainerEntry(
+            id='n8n',
+            label='n8n',
+            icon='󱂚',
+            path='n8nio/n8n:latest',
+            registry='docker.n8n.io',
+            prepare=prepare_n8n,
+            is_composition=True,
+            ports={'5678/tcp': 5678},
         ),
         *(
             [
