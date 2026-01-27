@@ -336,6 +336,12 @@ def init_service() -> Subscriptions:
                 icon='+',
                 store_action=InfraredRegisterDeviceAction(),
             ),
+            UboDispatchItem(
+                key='replay_devices',
+                label='Replay Devices',
+                icon='󰻅',
+                store_action=InfraredSetIsRegisteringDeviceAction(is_registering=False),
+            ),
         ]
 
     store.dispatch(
