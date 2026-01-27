@@ -223,7 +223,7 @@ async def _handle_device_registration_complete(
     # Collect device name
     async def collect_device_name() -> None:
         try:
-            device_name, _ = await ubo_input(
+            value, result = await ubo_input(
                 prompt='Device Registered Successfully',
                 descriptions=[
                     WebUIInputDescription(
@@ -244,6 +244,16 @@ async def _handle_device_registration_complete(
                     ),
                 ],
             )
+            # For WebUI forms with fields, get the value from result.data
+            # For speech input, use the value field directly
+            if result and result.data:
+                device_name = result.data.get('device_name', '').strip()
+            else:
+                device_name = (value or '').strip()
+            
+            if not device_name:
+                logger.warning('Device registration: Device name is empty')
+                return
             logger.info(
                 'Device registration: Device name received',
                 extra={
