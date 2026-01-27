@@ -101,8 +101,8 @@ async def _send_code(action: InfraredSendCodeEvent) -> None:
     await ir_commands_queue.put(action)
     async with ir_ctl_lock:
         action = await ir_commands_queue.get()
-        logger.debug(
-            'Sending infrared code.',
+        logger.info(
+            'Sending infrared code via ir-ctl',
             extra={'protocol': action.protocol, 'scancode': action.scancode},
         )
 
@@ -118,6 +118,20 @@ async def _send_code(action: InfraredSendCodeEvent) -> None:
             process.kill()
             msg = 'Infrared: Failed to send code, process killed due to timeout.'
             raise RuntimeError(msg)
+        if process.returncode != 0:
+            logger.warning(
+                'ir-ctl returned non-zero exit code',
+                extra={
+                    'protocol': action.protocol,
+                    'scancode': action.scancode,
+                    'returncode': process.returncode,
+                },
+            )
+        else:
+            logger.info(
+                'Infrared code sent successfully',
+                extra={'protocol': action.protocol, 'scancode': action.scancode},
+            )
         await asyncio.sleep(0.25)
 
 

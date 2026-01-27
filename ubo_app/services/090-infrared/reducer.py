@@ -93,8 +93,22 @@ def reducer(
 
     match action:
         case InfraredSendCodeAction():
+            logger.info(
+                'Sending infrared code',
+                extra={
+                    'protocol': action.protocol,
+                    'scancode': action.scancode,
+                },
+            )
             return CompleteReducerResult(
                 state=state,
+                actions=[
+                    RgbRingBlinkAction(
+                        color=(0, 255, 0),  # Green feedback
+                        repetitions=1,
+                        wait=200,
+                    ),
+                ],
                 events=[
                     InfraredSendCodeEvent(
                         protocol=action.protocol,
