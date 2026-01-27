@@ -27,6 +27,7 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
+    InfraredAddDeviceAction,
     InfraredDeviceRegistrationCompleteEvent,
     InfraredDeviceRegistrationStartedEvent,
     InfraredHandleReceivedCodeAction,
@@ -45,6 +46,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS, UboPageWidget
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
+import json
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -265,6 +267,22 @@ async def _handle_device_registration_complete(
                     'scancode': event.scancode,
                 },
             )
+            # Add the device to the store
+            store.dispatch(
+                InfraredAddDeviceAction(
+                    name=device_name,
+                    protocol=event.protocol,
+                    scancode=event.scancode,
+                ),
+            )
+            logger.info(
+                'Device registration: Device added to store',
+                extra={
+                    'device_name': device_name,
+                    'protocol': event.protocol,
+                    'scancode': event.scancode,
+                },
+            )
         except asyncio.CancelledError:
             logger.info('Device registration: Input collection cancelled')
         except Exception as e:
@@ -298,6 +316,19 @@ def init_service() -> Subscriptions:
     register_persistent_store(
         'infrared_state:should_receive_keypad_actions',
         lambda state: state.infrared.should_receive_keypad_actions,
+    )
+    register_persistent_store(
+        'infrared_state:registered_devices',
+        lambda state: json.dumps(
+            [
+                {
+                    'name': device.name,
+                    'protocol': device.protocol,
+                    'scancode': device.scancode,
+                }
+                for device in state.infrared.registered_devices
+            ]
+        ),
     )
 
     @store.autorun(

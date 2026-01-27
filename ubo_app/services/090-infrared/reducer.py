@@ -17,10 +17,13 @@ from ubo_app.store.services.assistant import (
 )
 from ubo_app.store.services.infrared import (
     InfraredAction,
+    InfraredAddDeviceAction,
+    InfraredDevice,
     InfraredDeviceRegistrationCompleteEvent,
     InfraredDeviceRegistrationStartedEvent,
     InfraredHandleReceivedCodeAction,
     InfraredRegisterDeviceAction,
+    InfraredRemoveDeviceAction,
     InfraredSendCodeAction,
     InfraredSendCodeEvent,
     InfraredSetIsRegisteringDeviceAction,
@@ -134,6 +137,56 @@ def reducer(
             return replace(
                 state,
                 is_registering_device=action.is_registering,
+            )
+
+        case InfraredAddDeviceAction():
+            # Check if device already exists
+            device_key = (action.protocol, action.scancode)
+            existing_device = next(
+                (
+                    device
+                    for device in state.registered_devices
+                    if (device.protocol, device.scancode) == device_key
+                ),
+                None,
+            )
+            if existing_device:
+                # Update existing device name
+                new_devices = [
+                    InfraredDevice(
+                        name=action.name,
+                        protocol=action.protocol,
+                        scancode=action.scancode,
+                    )
+                    if (device.protocol, device.scancode) == device_key
+                    else device
+                    for device in state.registered_devices
+                ]
+            else:
+                # Add new device
+                new_devices = [
+                    *state.registered_devices,
+                    InfraredDevice(
+                        name=action.name,
+                        protocol=action.protocol,
+                        scancode=action.scancode,
+                    ),
+                ]
+            return replace(
+                state,
+                registered_devices=new_devices,
+            )
+
+        case InfraredRemoveDeviceAction():
+            device_key = (action.protocol, action.scancode)
+            new_devices = [
+                device
+                for device in state.registered_devices
+                if (device.protocol, device.scancode) != device_key
+            ]
+            return replace(
+                state,
+                registered_devices=new_devices,
             )
 
         case InfraredHandleReceivedCodeAction() if state.is_registering_device:
