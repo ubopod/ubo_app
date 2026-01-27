@@ -28,10 +28,13 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
     InfraredAddDeviceAction,
+    InfraredDevice,
     InfraredDeviceRegistrationCompleteEvent,
     InfraredDeviceRegistrationStartedEvent,
     InfraredHandleReceivedCodeAction,
     InfraredRegisterDeviceAction,
+    InfraredRemoveDeviceAction,
+    InfraredSendCodeAction,
     InfraredSendCodeEvent,
     InfraredSetIsRegisteringDeviceAction,
     InfraredSetShouldPropagateAction,
@@ -332,6 +335,30 @@ def init_service() -> Subscriptions:
     )
 
     @store.autorun(
+        lambda state: state.infrared.registered_devices,
+    )
+    def replay_devices_menu(devices: list[InfraredDevice]) -> HeadlessMenu:
+        """Create a menu with all registered devices for replaying."""
+        items: list[Item] = []
+        for device in devices:
+            items.append(
+                UboDispatchItem(
+                    key=f'replay_{device.protocol}_{device.scancode}',
+                    label=device.name,
+                    icon='󰻅',
+                    store_action=InfraredSendCodeAction(
+                        protocol=device.protocol,
+                        scancode=device.scancode,
+                    ),
+                ),
+            )
+        return HeadlessMenu(
+            title='󰻅Replay Devices',
+            items=items,
+            placeholder='No devices registered',
+        )
+
+    @store.autorun(
         lambda state: (
             state.infrared.should_propagate_keypad_actions,
             state.infrared.should_receive_keypad_actions,
@@ -370,11 +397,11 @@ def init_service() -> Subscriptions:
                 icon='+',
                 store_action=InfraredRegisterDeviceAction(),
             ),
-            UboDispatchItem(
+            SubMenuItem(
                 key='replay_devices',
                 label='Replay Devices',
                 icon='󰻅',
-                store_action=InfraredSetIsRegisteringDeviceAction(is_registering=False),
+                sub_menu=replay_devices_menu,
             ),
         ]
 
