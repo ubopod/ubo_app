@@ -137,10 +137,6 @@ def reducer(
             )
 
         case InfraredHandleReceivedCodeAction() if state.is_registering_device:
-            # Block/ignore signal 0x7fffffff during registration
-            if action.scancode == '0x7fffffff':
-                return state
-            
             ir_code = (action.protocol, action.scancode)
             # Get current count for this signal, or 0 if it's new
             current_count = state.registration_signal_counts.get(ir_code, 0)

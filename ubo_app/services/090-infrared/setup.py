@@ -136,6 +136,9 @@ async def _wait_for_ir_code() -> None:
                     if response == 'nocode':
                         break
                     protocol, scancode = response.split(':')
+                    # Skip logging and processing for blocked signal 0x7fffffff
+                    if scancode == '0x7fffffff':
+                        continue
                     logger.info(
                         'Received IR code from system manager',
                         extra={'protocol': protocol, 'scancode': scancode},
