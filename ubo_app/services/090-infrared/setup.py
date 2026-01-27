@@ -11,6 +11,7 @@ from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.input.types import (
+    InputCancelAction,
     InputFieldDescription,
     InputFieldType,
     SpeechInputDescription,
@@ -73,34 +74,153 @@ async def _send_code(action: InfraredSendCodeEvent) -> None:
 async def _wait_for_ir_code() -> None:
     """Wait for IR codes from the system manager and dispatch them to the store."""
     while _should_receive_keypad_actions():
+        generator = None
         try:
-            async for response in await send_command(
+            generator = await send_command(
                 'infrared',
                 'receive',
                 has_output_stream=True,
-            ):
-                if response == 'nocode':
-                    break
-                protocol, scancode = response.split(':')
-                logger.info(
-                    'Received IR code from system manager',
-                    extra={'protocol': protocol, 'scancode': scancode},
-                )
-                store.dispatch(
-                    InfraredHandleReceivedCodeAction(
-                        protocol=protocol,
-                        scancode=scancode,
-                    ),
-                )
+            )
+            if generator is None:
+                break
+            try:
+                async for response in generator:
+                    if not _should_receive_keypad_actions():
+                        # Break out if receiving was disabled
+                        break
+                    if response == 'nocode':
+                        break
+                    protocol, scancode = response.split(':')
+                    logger.info(
+                        'Received IR code from system manager',
+                        extra={'protocol': protocol, 'scancode': scancode},
+                    )
+                    store.dispatch(
+                        InfraredHandleReceivedCodeAction(
+                            protocol=protocol,
+                            scancode=scancode,
+                        ),
+                    )
+            except asyncio.CancelledError:
+                # Properly close the generator when cancelled
+                if generator is not None:
+                    try:
+                        await generator.aclose()
+                    except (RuntimeError, asyncio.CancelledError):
+                        # Generator might already be closing or cancelled, ignore
+                        pass
+                raise
+            finally:
+                # Always close the generator when exiting the loop normally
+                # (either due to 'nocode' response or should_receive becoming False)
+                if generator is not None:
+                    try:
+                        await generator.aclose()
+                    except (RuntimeError, asyncio.CancelledError):
+                        # Generator might already be closing or cancelled, ignore
+                        pass
+        except asyncio.CancelledError:
+            # Re-raise cancellation to allow proper cleanup
+            raise
         except Exception:
             logger.exception('Failed to send infrared receive command')
-            raise
+            # Don't re-raise, allow the loop to continue or exit naturally
 
 
 async def _register_device(action: InfraredRegisterDeviceAction) -> None:
     """Handle register device action."""
     logger.info('Register Device button pressed')
-    # TODO: Implement device registration logic
+    
+    async def show_loading_page() -> None:
+        """Show loading page with instructions and monitor registration progress."""
+        loading_input_id: str | None = None
+        monitor_task: asyncio.Task | None = None
+        
+        try:
+            # Create loading page description with instructions
+            loading_description = WebUIInputDescription(
+                prompt='Registering Infrared Device',
+                fields=[
+                    InputFieldDescription(
+                        name='instructions',
+                        label='',
+                        type=InputFieldType.LONG,
+                        description=(
+                            '📡 Point your infrared remote at the device\n\n'
+                            '🔄 Send the same signal 5 times\n\n'
+                            '💚 The RGB ring will blink green while waiting\n\n'
+                            '✅ This page will close automatically when registration is complete'
+                        ),
+                        required=False,
+                        default_value='Waiting for infrared signals...\n\nPlease send the same signal from your remote 5 times to register the device.',
+                    ),
+                ],
+            )
+            
+            loading_input_id = loading_description.id
+            
+            # Monitor registration state in a separate task
+            async def monitor_registration() -> None:
+                """Monitor registration state and cancel loading page when complete."""
+                # Wait a bit for the reducer to process the registration action
+                await asyncio.sleep(0.1)
+                
+                # Wait until registration actually starts
+                registration_started = False
+                while not registration_started:
+                    await asyncio.sleep(0.1)
+                    current_state = store.get_state()
+                    if current_state and hasattr(current_state, 'infrared'):
+                        if current_state.infrared.is_registering_device:
+                            registration_started = True
+                            logger.info('Device registration started - monitoring for completion')
+                            break
+                
+                # Now monitor for completion
+                while True:
+                    await asyncio.sleep(0.5)  # Check every 500ms
+                    current_state = store.get_state()
+                    if current_state and hasattr(current_state, 'infrared'):
+                        is_registering = current_state.infrared.is_registering_device
+                        if not is_registering and loading_input_id is not None:
+                            # Registration completed, cancel the loading page
+                            logger.info(
+                                'Device registration complete - closing loading page',
+                                extra={'input_id': loading_input_id},
+                            )
+                            store.dispatch(InputCancelAction(id=loading_input_id))
+                            break
+            
+            # Start monitoring task
+            monitor_task = create_task(monitor_registration())
+            
+            # Show the loading page (will be cancelled when registration completes)
+            try:
+                await ubo_input(
+                    prompt='Registering Infrared Device',
+                    descriptions=[loading_description],
+                )
+            except asyncio.CancelledError:
+                logger.info('Loading page cancelled (registration complete or user cancelled)')
+            finally:
+                # Clean up monitoring task
+                if monitor_task and not monitor_task.done():
+                    monitor_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await monitor_task
+            
+        except Exception as e:
+            logger.exception(
+                'Error showing loading page for device registration',
+                extra={'error': str(e)},
+            )
+            # Clean up monitoring task on error
+            if monitor_task and not monitor_task.done():
+                monitor_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await monitor_task
+    
+    create_task(show_loading_page())
 
 
 async def _handle_device_registration_complete(
@@ -123,7 +243,14 @@ async def _handle_device_registration_complete(
         )
         raise
     async def act() -> None:
-        with contextlib.suppress(asyncio.CancelledError):
+        try:
+            logger.info(
+                'Device registration: Starting input collection',
+                extra={
+                    'protocol': event.protocol,
+                    'scancode': event.scancode,
+                },
+            )
             device_name, _ = await ubo_input(
                 prompt='Device Registered Successfully',
                 descriptions=[
@@ -151,6 +278,23 @@ async def _handle_device_registration_complete(
                     'device_name': device_name,
                     'protocol': event.protocol,
                     'scancode': event.scancode,
+                },
+            )
+        except asyncio.CancelledError:
+            logger.info(
+                'Device registration: Input collection cancelled',
+                extra={
+                    'protocol': event.protocol,
+                    'scancode': event.scancode,
+                },
+            )
+        except Exception as e:
+            logger.exception(
+                'Device registration: Error collecting device name',
+                extra={
+                    'protocol': event.protocol,
+                    'scancode': event.scancode,
+                    'error': str(e),
                 },
             )
 

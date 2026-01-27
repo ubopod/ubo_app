@@ -184,9 +184,27 @@ async def ubo_input(
             loop.call_soon_threadsafe(future.cancel)
 
     def handle_input_provide_event(event: InputProvideEvent) -> None:
+        from ubo_app.logger import logger
+        
+        logger.debug(
+            'InputProvideEvent received',
+            extra={
+                'event_id': event.id,
+                'expected_id': selected_input_description.id,
+                'value': event.value,
+                'matches': event.id == selected_input_description.id,
+            },
+        )
         if event.id == selected_input_description.id:
             from kivy.utils import get_color_from_hex
 
+            logger.info(
+                'InputProvideEvent ID matches - setting future result',
+                extra={
+                    'event_id': event.id,
+                    'value': event.value,
+                },
+            )
             loop.call_soon_threadsafe(
                 future.set_result,
                 (event.value, event.result),
@@ -203,6 +221,14 @@ async def ubo_input(
                     repetitions=1,
                     wait=200,
                 ),
+            )
+        else:
+            logger.debug(
+                'InputProvideEvent ID mismatch - ignoring',
+                extra={
+                    'event_id': event.id,
+                    'expected_id': selected_input_description.id,
+                },
             )
 
     store.subscribe_event(
