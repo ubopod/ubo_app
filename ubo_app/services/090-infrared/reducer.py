@@ -18,6 +18,7 @@ from ubo_app.store.services.assistant import (
 from ubo_app.store.services.infrared import (
     InfraredAction,
     InfraredDeviceRegistrationCompleteEvent,
+    InfraredDeviceRegistrationStartedEvent,
     InfraredHandleReceivedCodeAction,
     InfraredRegisterDeviceAction,
     InfraredSendCodeAction,
@@ -78,7 +79,7 @@ def reducer(
 ) -> ReducerResult[
     InfraredState,
     InfraredAction | KeypadKeyPressAction | KeypadKeyReleaseAction | RgbRingBlinkAction | RgbRingBlankAction,
-    InfraredSendCodeEvent | InfraredDeviceRegistrationCompleteEvent,
+    InfraredSendCodeEvent | InfraredDeviceRegistrationStartedEvent | InfraredDeviceRegistrationCompleteEvent,
 ]:
     """Reducer for infrared actions."""
     if state is None:
@@ -126,6 +127,7 @@ def reducer(
                     registration_signal_counts={},
                 ),
                 actions=actions,
+                events=[InfraredDeviceRegistrationStartedEvent()],
             )
 
         case InfraredSetIsRegisteringDeviceAction():

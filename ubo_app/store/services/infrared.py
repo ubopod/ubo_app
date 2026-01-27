@@ -68,6 +68,10 @@ class InfraredSendCodeEvent(InfraredEvent):
     scancode: str
 
 
+class InfraredDeviceRegistrationStartedEvent(InfraredEvent):
+    """Event when device registration is started."""
+
+
 class InfraredDeviceRegistrationCompleteEvent(InfraredEvent):
     """Event when a device signal has been registered 5 times."""
 

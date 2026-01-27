@@ -1,0 +1,57 @@
+#:kivy 2.3.0
+
+<InfraredRegistrationPage>:
+  AnchorLayout:
+    padding: 0, root.padding_top, 0, root.padding_bottom
+
+    BoxLayout:
+      anchor: 'center', 'center'
+      orientation: 'vertical'
+      padding: dp(30)
+      spacing: dp(20)
+
+      Label:
+        text: '📡 Registering Device'
+        text_size: self.width, None
+        font_size: dp(24)
+        halign: 'center'
+        valign: 'middle'
+        height: self.texture_size[1]
+        size_hint: 1, None
+
+      Label:
+        text: 'Point your infrared remote at the device'
+        text_size: self.width, None
+        font_size: dp(18)
+        halign: 'center'
+        valign: 'middle'
+        height: self.texture_size[1]
+        size_hint: 1, None
+
+      Label:
+        text: 'Send the same signal 5 times'
+        text_size: self.width, None
+        font_size: dp(18)
+        halign: 'center'
+        valign: 'middle'
+        height: self.texture_size[1]
+        size_hint: 1, None
+
+      Label:
+        text: '💚 The RGB ring will blink green'
+        text_size: self.width, None
+        font_size: dp(18)
+        halign: 'center'
+        valign: 'middle'
+        height: self.texture_size[1]
+        size_hint: 1, None
+
+      Label:
+        text: 'Press BACK or HOME to cancel'
+        text_size: self.width, None
+        font_size: dp(16)
+        halign: 'center'
+        valign: 'middle'
+        height: self.texture_size[1]
+        size_hint: 1, None
+        color: 0.7, 0.7, 0.7, 1
