@@ -10,7 +10,7 @@ from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
 if TYPE_CHECKING:
-    from zha.cli.coordinator_probe import DetectedCoordinator
+    from zha_cli.coordinator_probe import DetectedCoordinator
 
 console = Console()
 

@@ -9,7 +9,7 @@ from zha.application.gateway import Gateway
 from zha.application.helpers import CoordinatorConfiguration, ZHAConfiguration, ZHAData
 
 if TYPE_CHECKING:
-    from zha.cli.coordinator_probe import DetectedCoordinator
+    from zha_cli.coordinator_probe import DetectedCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 

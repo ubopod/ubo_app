@@ -4,97 +4,67 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ZHA (Zigbee Home Automation) is a hardware-independent Zigbee gateway implementation library for Home Assistant. It wraps the `zigpy` library and provides device management, entity platforms, and cluster handlers for Zigbee devices.
+ZHA CLI is a command-line interface tool for managing Zigbee coordinators and devices. It uses the [ZHA](https://github.com/zigpy/zha) library for Zigbee communication.
 
 ## Development Commands
 
 ### Setup
 ```bash
-./script/setup  # Creates venv, installs deps, configures pre-commit hooks
-source venv/bin/activate
+pip install -e .
 ```
 
-### Testing
+### Running
 ```bash
-pytest                              # Run all tests
-pytest tests/test_light.py          # Run single test file
-pytest tests/test_light.py::test_name -v  # Run single test
-pytest -x                           # Stop on first failure
-pytest --cov=zha                    # Run with coverage
+zha-cli           # Run the CLI
+zha-cli -v        # Run with verbose logging
 ```
 
-### Linting and Type Checking
+### Linting
 ```bash
-ruff check .                        # Lint
-ruff check . --fix                  # Auto-fix lint issues
-ruff format .                       # Format code
-mypy zha                            # Type check
-pre-commit run --all-files          # Run all pre-commit hooks
-```
-
-### Regenerating Test Diagnostics
-When modifying entities, regenerate device diagnostic JSON files:
-```bash
-python -m tools.regenerate_diagnostics
+ruff check .      # Lint
+ruff check . --fix  # Auto-fix lint issues
+ruff format .     # Format code
 ```
 
 ## Architecture
 
-### Core Layer Hierarchy
+### File Structure
 
 ```
-Gateway (zha/application/gateway.py)
-  └── Device (zha/zigbee/device.py) - wraps zigpy.device.Device
-        └── Endpoint (zha/zigbee/endpoint.py) - wraps zigpy.Endpoint
-              └── ClusterHandler (zha/zigbee/cluster_handlers/) - wraps zigpy.zcl.Cluster
-                    └── PlatformEntity (zha/application/platforms/)
+zha_cli/
+├── __init__.py           # Module exports
+├── main.py               # Entry point and main menu loop
+├── coordinator_probe.py  # Serial port enumeration and radio probing
+├── network_manager.py    # Gateway lifecycle management
+├── device_pairing.py     # Pairing mode and device events
+├── device_control.py     # Entity control (on/off)
+└── ui.py                 # Terminal UI helpers using rich
 ```
 
 ### Key Components
 
-**Gateway** (`zha/application/gateway.py`): Central orchestrator managing Zigbee network, devices, and groups. Emits events for device lifecycle (JOINED, INTERVIEW_COMPLETE, CONFIGURED, INITIALIZED).
+**coordinator_probe.py**: Detects Zigbee coordinators by probing serial ports with each RadioType's controller.
 
-**Device/Endpoint** (`zha/zigbee/`): ZHA wrappers around zigpy objects providing ZHA-specific logic, state tracking, and event emission.
+**network_manager.py**: Manages the ZHA Gateway lifecycle - starts/stops the Zigbee network.
 
-**ClusterHandlers** (`zha/zigbee/cluster_handlers/`): Handle specific Zigbee clusters (general, hvac, lighting, security, etc.). Each handler manages reporting configuration and attribute updates.
+**device_pairing.py**: Handles permit join for pairing new devices, subscribes to device events.
 
-**Platform Entities** (`zha/application/platforms/`): Expose Zigbee functionality as typed entities (light, sensor, climate, switch, cover, fan, lock, etc.). Entities claim cluster handlers during discovery.
+**device_control.py**: Controls device entities (turn on/off for switches and lights).
 
-**Discovery** (`zha/application/discovery.py`): Maps devices/clusters to platform entities using registries. Supports device quirks via zha-quirks.
+**ui.py**: Rich-based terminal UI with tables and prompts.
 
-**Groups** (`zha/zigbee/group.py`): Zigbee group management with GroupEntity support for light, switch, and fan platforms.
+**main.py**: Main CLI class with interactive menu.
 
-### Key Patterns
+### Dependencies on ZHA
 
-- **Wrapper Pattern**: ZHA classes wrap zigpy objects to add ZHA-specific behavior
-- **Registry Pattern**: Cluster-to-handler and device-to-platform mappings in `registries.py`
-- **Dataclass Pattern**: Immutable frozen dataclasses for entity info (`BaseEntityInfo`)
-- **Async Context**: Full async/await with custom `ZHAJob` scheduling system
-
-## Testing Patterns
-
-Tests use fixtures from `tests/conftest.py` and helpers from `tests/common.py`:
-
-```python
-async def test_something(zha_gateway):
-    # Create mock device
-    zigpy_device = create_mock_zigpy_device(
-        zha_gateway,
-        {1: {SIG_EP_INPUT: [ClusterIds], SIG_EP_OUTPUT: [], ...}},
-        ieee="00:11:22:33:44:55:66:77"
-    )
-    # Join device to network
-    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
-    # Get entity for testing
-    entity = get_entity(zha_device, platform=Platform.LIGHT)
-```
-
-Device diagnostic JSON files in `tests/data/devices/` can be loaded with `zigpy_device_from_json()`.
+This CLI depends on the `zha` library from PyPI. Key imports:
+- `zha.application.gateway.Gateway` - Network management
+- `zha.application.helpers` - Configuration dataclasses
+- `zha.application.const.RadioType` - Coordinator types
+- `zha.application.platforms` - Entity platform base classes
 
 ## Code Style
 
 - Python 3.12+ required
-- Ruff for linting and formatting (single quotes preferred)
-- MyPy for type checking (strict mode with some disabled checks)
-- All relative imports banned - use absolute imports
-- Docstrings required for modules and classes
+- Ruff for linting and formatting
+- Use absolute imports (`from zha_cli.xxx import`)

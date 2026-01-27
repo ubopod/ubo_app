@@ -10,11 +10,11 @@ import signal
 import sys
 from typing import Any
 
-from zha.cli import ui
-from zha.cli.coordinator_probe import DetectedCoordinator, discover_coordinators
-from zha.cli.device_control import DeviceController
-from zha.cli.device_pairing import DevicePairingManager
-from zha.cli.network_manager import NetworkManager
+from zha_cli import ui
+from zha_cli.coordinator_probe import DetectedCoordinator, discover_coordinators
+from zha_cli.device_control import DeviceController
+from zha_cli.device_pairing import DevicePairingManager
+from zha_cli.network_manager import NetworkManager
 
 _LOGGER = logging.getLogger(__name__)
 
