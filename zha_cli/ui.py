@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
@@ -13,6 +14,16 @@ if TYPE_CHECKING:
     from zha_cli.coordinator_probe import DetectedCoordinator
 
 console = Console()
+
+
+def spinner(message: str) -> Progress:
+    """Return a spinner context manager for loading screens."""
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[cyan]{task.description}"),
+        console=console,
+        transient=True,
+    )
 
 
 def print_header(title: str) -> None:

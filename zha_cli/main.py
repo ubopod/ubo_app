@@ -38,7 +38,9 @@ class ZHACli:
             loop.add_signal_handler(sig, self._signal_handler)
 
         ui.print_header("ZHA CLI - Zigbee Home Automation")
-        ui.print_info("Use this tool to manage your Zigbee network")
+
+        # Run coordinator detection on entry
+        await self._coordinator_entry_flow()
 
         try:
             while self._running:
@@ -47,6 +49,69 @@ class ZHACli:
             pass
         finally:
             await self._cleanup()
+
+    async def _coordinator_entry_flow(self) -> None:
+        """Handle coordinator detection and selection on entry."""
+        while self._running and not self._selected_coordinator:
+            await self._detect_coordinators_with_spinner()
+
+            if not self._detected_coordinators:
+                options = ["Retry detection", "Exit"]
+                choice = ui.prompt_menu("No Coordinators Found", options)
+                if choice == 0 or choice == 2:
+                    self._running = False
+                    return
+                # choice == 1 means retry, loop continues
+            else:
+                await self._select_coordinator_menu()
+
+    async def _detect_coordinators_with_spinner(self) -> None:
+        """Detect coordinators with a loading spinner."""
+        with ui.spinner("Detecting coordinators...") as progress:
+            progress.add_task("Scanning serial ports for Zigbee coordinators...")
+            try:
+                self._detected_coordinators = await discover_coordinators()
+            except Exception as exc:
+                ui.print_error(f"Error detecting coordinators: {exc}")
+                self._detected_coordinators = []
+
+    async def _select_coordinator_menu(self) -> None:
+        """Display coordinator selection menu."""
+        ui.print_coordinators_table(self._detected_coordinators)
+
+        if len(self._detected_coordinators) == 1:
+            options = [
+                f"Select {self._detected_coordinators[0].port}",
+                "Retry detection",
+                "Exit",
+            ]
+            choice = ui.prompt_menu("Coordinator Found", options)
+            if choice == 0 or choice == 3:
+                self._running = False
+            elif choice == 1:
+                self._selected_coordinator = self._detected_coordinators[0]
+                ui.print_success(f"Selected: {self._selected_coordinator.port}")
+            # choice == 2 means retry, will loop back
+        else:
+            # Multiple coordinators found
+            options = [f"Select coordinator ({len(self._detected_coordinators)} found)"]
+            options.append("Retry detection")
+            options.append("Exit")
+            choice = ui.prompt_menu("Coordinators Found", options)
+
+            if choice == 0 or choice == 3:
+                self._running = False
+            elif choice == 1:
+                coord_choice = ui.prompt_int(
+                    "Select coordinator number",
+                    default=1,
+                )
+                if 1 <= coord_choice <= len(self._detected_coordinators):
+                    self._selected_coordinator = self._detected_coordinators[
+                        coord_choice - 1
+                    ]
+                    ui.print_success(f"Selected: {self._selected_coordinator.port}")
+            # choice == 2 means retry
 
     def _signal_handler(self) -> None:
         """Handle shutdown signals."""
@@ -60,73 +125,40 @@ class ZHACli:
 
     async def _main_menu(self) -> None:
         """Display and handle the main menu."""
+        coordinator = self._selected_coordinator
+        coord_info = f" ({coordinator.port})" if coordinator else ""
+
         options = [
-            "Probe for coordinators",
-            "Start network",
+            f"Start network{coord_info}",
             "Pair device",
             "List devices",
             "Control device",
+            "Change coordinator",
             "Exit",
         ]
 
-        # Adjust options based on state
-        if not self._detected_coordinators:
-            options[1] = "Start network (probe first)"
-        elif self._selected_coordinator:
-            options[1] = f"Start network ({self._selected_coordinator.port})"
-
         if not self._network_manager.is_running:
-            options[2] = "Pair device (start network first)"
-            options[3] = "List devices (start network first)"
-            options[4] = "Control device (start network first)"
+            options[1] = "Pair device (start network first)"
+            options[2] = "List devices (start network first)"
+            options[3] = "Control device (start network first)"
 
         choice = ui.prompt_menu("Main Menu", options)
 
         if choice == 0:
             self._running = False
         elif choice == 1:
-            await self._probe_coordinators()
-        elif choice == 2:
             await self._start_network()
-        elif choice == 3:
+        elif choice == 2:
             await self._pair_device()
-        elif choice == 4:
+        elif choice == 3:
             await self._list_devices()
-        elif choice == 5:
+        elif choice == 4:
             await self._control_device()
+        elif choice == 5:
+            self._selected_coordinator = None
+            await self._coordinator_entry_flow()
         elif choice == 6:
             self._running = False
-
-    async def _probe_coordinators(self) -> None:
-        """Probe for available coordinators."""
-        ui.print_header("Probing for Coordinators")
-        ui.print_info("Scanning serial ports...")
-
-        try:
-            self._detected_coordinators = await discover_coordinators()
-        except Exception as exc:
-            ui.print_error(f"Error probing coordinators: {exc}")
-            return
-
-        if not self._detected_coordinators:
-            ui.print_warning("No coordinators found")
-            ui.print_info("Make sure your Zigbee coordinator is connected")
-            return
-
-        ui.print_success(f"Found {len(self._detected_coordinators)} coordinator(s)")
-        ui.print_coordinators_table(self._detected_coordinators)
-
-        if len(self._detected_coordinators) == 1:
-            self._selected_coordinator = self._detected_coordinators[0]
-            ui.print_info(f"Auto-selected: {self._selected_coordinator.port}")
-        else:
-            choice = ui.prompt_int(
-                "Select coordinator number",
-                default=1,
-            )
-            if 1 <= choice <= len(self._detected_coordinators):
-                self._selected_coordinator = self._detected_coordinators[choice - 1]
-                ui.print_info(f"Selected: {self._selected_coordinator.port}")
 
     async def _start_network(self) -> None:
         """Start the Zigbee network."""
@@ -136,21 +168,6 @@ class ZHACli:
                 await self._network_manager.shutdown()
             else:
                 return
-
-        if not self._selected_coordinator:
-            if not self._detected_coordinators:
-                ui.print_warning("No coordinators detected. Probing now...")
-                await self._probe_coordinators()
-                if not self._selected_coordinator:
-                    return
-            else:
-                ui.print_coordinators_table(self._detected_coordinators)
-                choice = ui.prompt_int("Select coordinator number", default=1)
-                if 1 <= choice <= len(self._detected_coordinators):
-                    self._selected_coordinator = self._detected_coordinators[choice - 1]
-                else:
-                    ui.print_error("Invalid selection")
-                    return
 
         coordinator = self._selected_coordinator
         if coordinator is None:

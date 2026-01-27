@@ -47,3 +47,8 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["zha_cli"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.14",
+]
