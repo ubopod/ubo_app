@@ -120,6 +120,7 @@ class InfraredState(Immutable):
     )
     is_registering_device: bool = False
     registration_signal_counts: dict[tuple[str, str], int] = field(default_factory=dict)
+    original_should_receive_keypad_actions: bool | None = None
     registered_devices: list[InfraredDevice] = field(
         default_factory=lambda: read_from_persistent_store(
             'infrared_state:registered_devices',
