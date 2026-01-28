@@ -15,6 +15,7 @@ from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     CloseApplicationAction,
+    MenuChooseByIndexAction,
     MenuChooseByLabelAction,
     MenuGoBackAction,
     MenuGoBackEvent,
@@ -415,8 +416,11 @@ async def _handle_device_registration_complete(
                 },
             )
             # Navigate to Replay Devices so the user sees the new device
+            # Go back from Manage Keys to Infrared main menu
+            await asyncio.sleep(0.5)
             store.dispatch(MenuGoBackAction())
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.5)  # Longer delay to ensure menu has fully updated
+            # Navigate to Replay Devices (label matches exactly: 'Replay Devices')
             store.dispatch(MenuChooseByLabelAction(label='Replay Devices'))
         except asyncio.CancelledError:
             logger.info('Device registration: Input collection cancelled')
