@@ -33,13 +33,19 @@ from redux import CombineReducerRegisterAction
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
+from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID, USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
+    MenuItemData,
     RegisterRegularAppAction,
     RegisterSettingAppAction,
     SettingsCategory,
+    UpdateDynamicMenuAction,
 )
+
+# Dynamic menu IDs for dumb UI architecture
+DOCKER_SETUP_MENU_ID = 'docker:setup'
+DOCKER_REGISTRIES_MENU_ID = 'docker:registries'
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -198,6 +204,82 @@ async def check_docker() -> None:
         store.dispatch(DockerSetStatusAction(status=DockerStatus.NOT_RUNNING))
     else:
         store.dispatch(DockerSetStatusAction(status=DockerStatus.NOT_INSTALLED))
+
+
+# Menu data for each Docker status (dumb UI architecture)
+_DOCKER_STATUS_MENU_DATA: dict[DockerStatus, dict[str, object]] = {
+    DockerStatus.UNKNOWN: {
+        'title': 'Setup Docker',
+        'items': (),
+        'placeholder': 'Checking Docker service status...',
+    },
+    DockerStatus.NOT_INSTALLED: {
+        'title': 'Setup Docker',
+        'items': (
+            MenuItemData(
+                key='docker:install',
+                label='Install Docker',
+                icon='󰶮',
+                action_id='docker:install',
+            ),
+        ),
+        'placeholder': '',
+    },
+    DockerStatus.INSTALLING: {
+        'title': 'Setup Docker',
+        'items': (),
+        'placeholder': 'Docker is being installed...',
+    },
+    DockerStatus.NOT_RUNNING: {
+        'title': 'Setup Docker',
+        'items': (
+            MenuItemData(
+                key='docker:start',
+                label='Start Docker',
+                icon='󰐊',
+                action_id='docker:start',
+            ),
+        ),
+        'placeholder': '',
+    },
+    DockerStatus.RUNNING: {
+        'title': 'Setup Docker',
+        'items': (
+            MenuItemData(
+                key='docker:stop',
+                label='Stop Docker',
+                icon='󰓛',
+                action_id='docker:stop',
+            ),
+        ),
+        'placeholder': '',
+    },
+    DockerStatus.ERROR: {
+        'title': 'Setup Docker',
+        'items': (),
+        'placeholder': 'Docker Error - check logs',
+    },
+}
+
+
+@store.autorun(lambda state: state.docker.service.status)
+def update_docker_setup_dynamic_menu(status: DockerStatus) -> None:
+    """Update the dynamic menu for Docker setup (dumb UI architecture)."""
+    if not USE_DUMB_UI:
+        return
+
+    menu_data = _DOCKER_STATUS_MENU_DATA.get(status, _DOCKER_STATUS_MENU_DATA[DockerStatus.UNKNOWN])
+
+    logger.debug('[Docker Service] Updating setup dynamic menu: status=%s', status)
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=DOCKER_SETUP_MENU_ID,
+            title=str(menu_data['title']),
+            items=menu_data['items'],  # type: ignore[arg-type]
+            placeholder=str(menu_data['placeholder']),
+        ),
+    )
 
 
 @store.autorun(lambda state: state.docker.service.status)

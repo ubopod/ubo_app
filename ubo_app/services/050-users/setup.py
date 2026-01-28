@@ -15,11 +15,17 @@ from ubo_gui.menu.types import (
 )
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
+from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
+    MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    UpdateDynamicMenuAction,
 )
+
+# Dynamic menu ID for dumb UI architecture
+USERS_MENU_ID = 'users:main'
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
@@ -185,6 +191,52 @@ later.""",
                 ),
                 color=SUCCESS_COLOR,
             ),
+        ),
+    )
+
+
+@store.autorun(lambda state: state.users)
+def update_users_dynamic_menu(state: UsersState) -> None:
+    """Update the dynamic menu for Users (dumb UI architecture)."""
+    if not USE_DUMB_UI:
+        return
+
+    items: list[MenuItemData] = []
+
+    if state.users is not None:
+        # Add user action
+        items.append(
+            MenuItemData(
+                key='users:add',
+                label='Add',
+                icon='󰀔',
+                action_id='users:add',
+                background_color=WARNING_COLOR,
+            ),
+        )
+
+        # List existing users (clicking opens user submenu)
+        for user in state.users:
+            items.append(
+                MenuItemData(
+                    key=f'users:user:{user.id}',
+                    label=user.id,
+                    icon='󰀄',
+                    action_id=f'users:open-user:{user.id}',
+                ),
+            )
+
+    logger.debug(
+        '[Users Service] Updating dynamic menu: %d users',
+        len(state.users) if state.users else 0,
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=USERS_MENU_ID,
+            title='Users',
+            items=tuple(items),
+            placeholder='Loading...' if state.users is None else '',
         ),
     )
 

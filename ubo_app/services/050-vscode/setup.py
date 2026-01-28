@@ -14,8 +14,18 @@ from login_page import LoginPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.constants import USE_DUMB_UI
+from ubo_app.logger import logger
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
+
+# Dynamic menu ID for dumb UI architecture
+VSCODE_MENU_ID = 'vscode:main'
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -211,6 +221,82 @@ def generate_actions(state: VSCodeState) -> list[ActionItem | ApplicationItem]:
             ),
         )
     return actions
+
+
+def _generate_dynamic_menu_items(state: VSCodeState) -> list[MenuItemData]:
+    """Generate MenuItemData for the dynamic menu (dumb UI architecture)."""
+    items: list[MenuItemData] = []
+
+    if state.is_pending or state.is_downloading:
+        return items  # No actions during pending/downloading
+
+    if state.is_binary_installed:
+        # Show URL if running
+        if state.is_logged_in and state.status and state.status.is_running:
+            items.append(
+                MenuItemData(
+                    key='vscode:show-url',
+                    label='Show URL',
+                    icon='󰐲',
+                    action_id=f'vscode:show-url:{state.status.name}',
+                ),
+            )
+
+        # Login/Logout actions
+        if state.is_logged_in:
+            items.append(
+                MenuItemData(
+                    key='vscode:logout',
+                    label='Logout',
+                    icon='󰍃',
+                    action_id='vscode:logout',
+                ),
+            )
+        elif state.is_logged_in is False:
+            items.append(
+                MenuItemData(
+                    key='vscode:login',
+                    label='Login',
+                    icon='󰍂',
+                    action_id='vscode:login',
+                ),
+            )
+
+    # Download/Redownload action
+    items.append(
+        MenuItemData(
+            key='vscode:download',
+            label='Redownload Code' if state.is_binary_installed else 'Download Code CLI',
+            icon='󰇚',
+            action_id='vscode:download',
+        ),
+    )
+
+    return items
+
+
+@store.autorun(lambda state: state.vscode)
+def update_vscode_dynamic_menu(state: VSCodeState) -> None:
+    """Update the dynamic menu for VSCode (dumb UI architecture)."""
+    if not USE_DUMB_UI:
+        return
+
+    items = _generate_dynamic_menu_items(state)
+
+    logger.debug(
+        '[VSCode Service] Updating dynamic menu: is_binary_installed=%s, is_logged_in=%s',
+        state.is_binary_installed,
+        state.is_logged_in,
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=VSCODE_MENU_ID,
+            title='VSCode',
+            items=tuple(items),
+            placeholder='',
+        ),
+    )
 
 
 @store.autorun(lambda state: state.vscode)

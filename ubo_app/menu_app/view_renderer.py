@@ -3,6 +3,9 @@
 This module provides the ViewRenderer class that subscribes to ViewChangedEvent
 and renders the UI based on the view data received. This is the core of the
 dumb UI architecture where the UI is a pure renderer with no internal state.
+
+It also provides `compute_view_from_root_state` which uses dynamic menus when
+available, falling back to the legacy menu traversal when not.
 """
 from __future__ import annotations
 
@@ -16,11 +19,14 @@ from kivy.clock import mainthread
 from ubo_app.constants import DEBUG_MENU, USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
+    ApplicationStackItem,
     ApplicationViewData,
     DynamicMenuChangedEvent,
     HomeViewData,
     MenuItemData,
+    MenuStackItem,
     MenuViewData,
+    NotificationStackItem,
     NotificationViewData,
     ProgressNotificationData,
     StatusBarData,
@@ -30,10 +36,13 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from kivy.uix.widget import Widget
     from ubo_gui.menu.menu_widget import MenuWidget
 
     from ubo_app.menu_app.menu_central import MenuAppCentral
-    from ubo_app.store.core.types import ViewData
+    from ubo_app.store.core.types import DynamicMenusState, MainState, ViewData
     from ubo_app.store.main import RootState
 
 
@@ -101,6 +110,227 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
         light_level=light_level,
         icons=icons,
     )
+
+
+# =============================================================================
+# Dynamic Menu Integration - View Computation from RootState
+# =============================================================================
+
+
+def _find_dynamic_menu_by_title(
+    title: str,
+    dynamic_menus_state: DynamicMenusState,
+) -> str | None:
+    """Find a dynamic menu ID by matching the menu title.
+
+    This is used when path-based mapping fails, as some menus are
+    returned by action callbacks and don't appear in the navigation path.
+
+    Args:
+        title: The menu title to search for.
+        dynamic_menus_state: The dynamic menus state.
+
+    Returns:
+        The menu_id if found, None otherwise.
+
+    """
+    # Normalize title for comparison (some titles have icon prefixes)
+    # e.g., '󰡉Users' -> 'Users'
+    clean_title = title.lstrip('󰀁󰀂󰀃󰀄󰀅󰀆󰀇󰀈󰀉󰀊󰀋󰀌󰀍󰀎󰀏󰀐󰀑󰀒󰀓󰀔󰀕󰀖󰀗󰀘󰀙󰀚󰀛󰀜󰀝󰀞󰀟󰡉󱛃󰖩󰨞').strip()
+
+    for menu_id, menu_data in dynamic_menus_state.menus.items():
+        menu_title = menu_data.title.lstrip(
+            '󰀁󰀂󰀃󰀄󰀅󰀆󰀇󰀈󰀉󰀊󰀋󰀌󰀍󰀎󰀏󰀐󰀑󰀒󰀓󰀔󰀕󰀖󰀗󰀘󰀙󰀚󰀛󰀜󰀝󰀞󰀟󰡉󱛃󰖩󰨞',
+        ).strip()
+        if clean_title == menu_title:
+            return menu_id
+
+    return None
+
+
+def _get_dynamic_menu_id_for_stack(
+    main_state: MainState,
+) -> str | None:
+    """Determine which dynamic menu ID corresponds to the current stack position.
+
+    This maps the navigation path to a dynamic menu ID. Services register their
+    menus with IDs like 'wifi:connections', 'ssh:main', etc.
+
+    Returns None if no matching dynamic menu ID can be determined.
+    """
+    path = list(main_state.path)
+    if not path:
+        return None
+
+    # Direct path-to-menu mappings for known paths
+    path_mappings: dict[tuple[str, ...], str] = {
+        ('notifications',): 'notifications:list',
+    }
+
+    # Check exact path matches first
+    path_tuple = tuple(path)
+    if path_tuple in path_mappings:
+        return path_mappings[path_tuple]
+
+    # Settings -> Category -> Service mappings
+    if (
+        len(path) >= 4  # noqa: PLR2004
+        and path[:2] == ['main', 'settings']
+    ):
+        service_key = path[3]  # e.g., 'wifi:', 'ssh:', 'users:'
+        # Extract service name from key
+        if ':' in service_key:
+            service_name = service_key.split(':')[0]
+            # Try common service suffixes
+            return f'{service_name}:main'
+
+    return None
+
+
+def _find_dynamic_menu_for_position(
+    main_state: MainState,
+    dynamic_menus_state: DynamicMenusState | None,
+    stack: tuple,
+) -> tuple[str, str] | None:
+    """Find a dynamic menu matching the current navigation position.
+
+    Tries path-based mapping first, then falls back to title-based matching.
+
+    Args:
+        main_state: The main state containing navigation path.
+        dynamic_menus_state: The dynamic menus state.
+        stack: The navigation stack.
+
+    Returns:
+        Tuple of (menu_id, title) if found, None otherwise.
+
+    """
+    if not dynamic_menus_state:
+        return None
+
+    # Try path-based mapping first
+    menu_id = _get_dynamic_menu_id_for_stack(main_state)
+    if menu_id:
+        dynamic_menu = dynamic_menus_state.menus.get(menu_id)
+        if dynamic_menu:
+            return (menu_id, dynamic_menu.title)
+
+    # Fall back to title-based matching
+    if not dynamic_menus_state.menus:
+        return None
+
+    # Import here to avoid circular dependency
+    from ubo_app.store.core.reducer import get_current_menu_from_stack
+
+    current_menu = get_current_menu_from_stack(main_state.menu, stack)
+    if current_menu is None:
+        return None
+
+    title_val = current_menu.title
+    current_title = str(title_val() if callable(title_val) else (title_val or ''))
+    if not current_title:
+        return None
+
+    found_menu_id = _find_dynamic_menu_by_title(current_title, dynamic_menus_state)
+    if found_menu_id:
+        dynamic_menu = dynamic_menus_state.menus.get(found_menu_id)
+        if dynamic_menu:
+            if DEBUG_MENU:
+                logger.debug(
+                    '[ViewRenderer] Matched dynamic menu by title: %s -> %s',
+                    current_title,
+                    found_menu_id,
+                )
+            return (found_menu_id, dynamic_menu.title)
+
+    return None
+
+
+def compute_view_from_root_state(state: RootState) -> ViewData:
+    """Compute ViewData from the full RootState, using dynamic menus when available.
+
+    This is the dumb UI architecture's view computation function. It checks if
+    there's a dynamic menu for the current navigation position, and if so, uses
+    its items directly instead of traversing the legacy menu tree.
+
+    Args:
+        state: The full Redux RootState.
+
+    Returns:
+        ViewData describing what the UI should render.
+
+    """
+    main_state = state.main
+    dynamic_menus_state = state.dynamic_menus
+    stack = main_state.stack
+
+    if not stack:
+        return HomeViewData()
+
+    top_item = stack[-1]
+
+    # Handle application views
+    if isinstance(top_item, ApplicationStackItem):
+        extra_data: dict[str, str] = {}
+        for k, v in top_item.initialization_kwargs.items():
+            extra_data[k] = str(v)
+        return ApplicationViewData(
+            application_id=top_item.application_id,
+            show_status_bar=False,
+            extra_data=extra_data,
+        )
+
+    # Handle notification views
+    if isinstance(top_item, NotificationStackItem):
+        return NotificationViewData(
+            notification_id=top_item.notification_id,
+            show_status_bar=False,
+        )
+
+    # Must be MenuStackItem
+    if not isinstance(top_item, MenuStackItem):
+        return HomeViewData()
+
+    # Check if we're at home (depth 1)
+    depth = len([i for i in stack if isinstance(i, MenuStackItem)])
+    if depth <= 1:
+        # Home view doesn't use dynamic menus, it has fixed items
+        return HomeViewData(
+            show_status_bar=True,
+            menu_items=(),
+            cpu_percent=0.0,
+            ram_percent=0.0,
+            volume_level=0.0,
+        )
+
+    # Try to find a dynamic menu for the current position
+    dynamic_match = _find_dynamic_menu_for_position(
+        main_state,
+        dynamic_menus_state,
+        stack,
+    )
+
+    if dynamic_match is not None:
+        menu_id, title = dynamic_match
+        dynamic_menu = dynamic_menus_state.menus.get(menu_id)
+        if dynamic_menu:
+            items = dynamic_menu.items
+            page_index = top_item.page_index
+            page_size = 3
+            total_pages = max(1, (len(items) + page_size - 1) // page_size)
+
+            return MenuViewData(
+                show_status_bar=page_index == 0,
+                title=title,
+                items=items,
+                page_index=page_index,
+                total_pages=total_pages,
+            )
+
+    # Fall back to legacy view computation from main reducer
+    from ubo_app.store.core.reducer import compute_view_from_stack
+
+    return compute_view_from_stack(main_state)
 
 
 def _view_to_dict(view: ViewData) -> dict:
@@ -348,41 +578,90 @@ class ViewRenderer:
             self._render_status_bar(status_bar)
 
     def _on_dynamic_menu_changed(self, event: DynamicMenuChangedEvent) -> None:
-        """Handle DynamicMenuChangedEvent for logging and future rendering.
+        """Handle DynamicMenuChangedEvent by recomputing view if menu is visible.
 
-        This logs dynamic menu updates to verify the pilot service migration
-        is working correctly.
+        When a dynamic menu changes, we check if it's the currently visible menu.
+        If so, we recompute the view using the new dynamic menu data.
         """
+        state = store._state  # noqa: SLF001
+        if state is None:
+            return
+
+        if DEBUG_MENU and hasattr(state, 'dynamic_menus'):
+            menu_data = state.dynamic_menus.menus.get(event.menu_id)
+            if menu_data:
+                item_labels = [
+                    item.label if item else '<empty>' for item in menu_data.items
+                ]
+                logger.info(
+                    '[ViewRenderer] Dynamic menu updated: id=%s, title=%s, '
+                    'items=%s',
+                    event.menu_id,
+                    menu_data.title,
+                    item_labels,
+                )
+            else:
+                logger.info(
+                    '[ViewRenderer] Dynamic menu cleared: id=%s',
+                    event.menu_id,
+                )
+
+        # Check if this menu is currently visible
+        current_menu_id = _get_dynamic_menu_id_for_stack(state.main)
+        if current_menu_id != event.menu_id:
+            # Menu changed but it's not currently visible, no need to rerender
+            return
+
+        # Recompute view using dynamic menu data
+        new_view = compute_view_from_root_state(state)
+
+        # Skip if view hasn't actually changed
+        if self._last_view == new_view:
+            return
+
         if DEBUG_MENU:
-            state = store._state  # noqa: SLF001
-            if state is not None and hasattr(state, 'dynamic_menus'):
-                menu_data = state.dynamic_menus.menus.get(event.menu_id)
-                if menu_data:
-                    item_labels = [
-                        item.label if item else '<empty>' for item in menu_data.items
-                    ]
-                    logger.info(
-                        '[ViewRenderer] Dynamic menu updated: id=%s, title=%s, '
-                        'items=%s',
-                        event.menu_id,
-                        menu_data.title,
-                        item_labels,
-                    )
-                else:
-                    logger.info(
-                        '[ViewRenderer] Dynamic menu cleared: id=%s',
-                        event.menu_id,
-                    )
+            logger.info(
+                '[ViewRenderer] Recomputing view due to dynamic menu change: %s',
+                event.menu_id,
+            )
+
+        # Render the new view directly (don't dispatch event to avoid loops)
+        self._on_view_changed_internal(new_view)
 
     @mainthread
     def _on_view_changed(self, event: ViewChangedEvent) -> None:
         """Handle ViewChangedEvent by rendering the appropriate view.
 
+        In dumb UI mode, we recompute the view from RootState to use dynamic
+        menus when available, rather than using the event's view which comes
+        from the legacy menu traversal.
+
         Args:
             event: The ViewChangedEvent containing the new view data.
 
         """
-        view = event.view
+        if USE_DUMB_UI:
+            # In dumb UI mode, recompute view using dynamic menus
+            state = store._state  # noqa: SLF001
+            if state is not None:
+                view = compute_view_from_root_state(state)
+                self._on_view_changed_internal(view)
+                return
+
+        # Fall back to event view if not in dumb UI mode or state unavailable
+        self._on_view_changed_internal(event.view)
+
+    @mainthread
+    def _on_view_changed_internal(self, view: ViewData) -> None:
+        """Render a view without requiring an event.
+
+        This is called both from ViewChangedEvent handling and from
+        dynamic menu change handling.
+
+        Args:
+            view: The ViewData to render.
+
+        """
         self._view_changed_count += 1
 
         # Skip if view hasn't actually changed (de-duplication)
@@ -642,9 +921,13 @@ class ViewRenderer:
         color: tuple[int, int, int, int],
     ) -> None:
         """Update a sign widget (recording or replaying indicator)."""
+        from kivy.uix.widget import Widget
+
+        if not isinstance(sign, Widget):
+            return
         if should_show:
             if sign not in self.app.header_content.children:
-                sign.color = color
+                sign.color = color  # type: ignore[attr-defined]
                 self.app.header_content.add_widget(sign)
                 if hasattr(self.app, 'sign_animation'):
                     self.app.sign_animation.start(sign)
@@ -661,6 +944,7 @@ class ViewRenderer:
             return
 
         from kivy.metrics import dp
+        from kivy.uix.widget import Widget
         from ubo_gui.progress_ring import ProgressRingWidget
 
         seen_ids: set[str] = set()
@@ -670,7 +954,8 @@ class ViewRenderer:
             widget = self._get_or_create_progress_widget(pn, dp)
             if isinstance(widget, ProgressRingWidget) and pn.progress is not None:
                 widget.progress = pn.progress
-            widget.color = pn.color
+            if isinstance(widget, Widget):
+                widget.color = pn.color  # type: ignore[attr-defined]
 
         # Remove old notifications
         for id_ in set(self.app.notification_widgets) - seen_ids:
@@ -685,8 +970,8 @@ class ViewRenderer:
     def _get_or_create_progress_widget(
         self,
         pn: ProgressNotificationData,
-        dp: object,
-    ) -> object:
+        dp_func: Callable[[float], float],
+    ) -> Widget:
         """Get existing or create new progress widget for a notification."""
         from ubo_gui.progress_ring import ProgressRingWidget
         from ubo_gui.spinner import SpinnerWidget
@@ -697,12 +982,12 @@ class ViewRenderer:
                 self.app.notification_widgets[pn.id][1],
                 SpinnerWidget,
             ):
-                widget = SpinnerWidget(
-                    font_size=dp(16),
+                widget: Widget = SpinnerWidget(
+                    font_size=dp_func(16),
                     size_hint=(None, None),
                     pos_hint={'center_y': 0.5},
-                    height=dp(16),
-                    width=dp(16),
+                    height=dp_func(16),
+                    width=dp_func(16),
                 )
                 self.app.notification_widgets[pn.id] = (None, widget)
             return self.app.notification_widgets[pn.id][1]
@@ -714,8 +999,8 @@ class ViewRenderer:
         ):
             widget = ProgressRingWidget(
                 background_color=(0.3, 0.3, 0.3, 1),
-                height=dp(16),
-                band_width=dp(7),
+                height=dp_func(16),
+                band_width=dp_func(7),
                 size_hint=(None, None),
                 pos_hint={'center_y': 0.5},
             )

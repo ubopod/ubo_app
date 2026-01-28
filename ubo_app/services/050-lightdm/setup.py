@@ -10,8 +10,18 @@ from ubo_gui.constants import WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, Menu
 
 from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, STOPPED_COLOR
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.constants import USE_DUMB_UI
+from ubo_app.logger import logger
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
+
+# Dynamic menu ID for dumb UI architecture
+LIGHTDM_MENU_ID = 'lightdm:main'
 from ubo_app.store.services.lightdm import (
     LightDMClearEnabledStateAction,
     LightDMUpdateStateAction,
@@ -114,6 +124,81 @@ def disable_lightdm_service() -> None:
         await check_lightdm()
 
     create_task(act())
+
+
+@store.autorun(lambda state: state.lightdm)
+def update_lightdm_dynamic_menu(state: LightDMState) -> None:
+    """Update the dynamic menu for LightDM (dumb UI architecture)."""
+    if not USE_DUMB_UI:
+        return
+
+    items: list[MenuItemData] = []
+    placeholder = ''
+
+    if state.is_installing:
+        placeholder = 'Installing Desktop...'
+    elif not state.is_installed:
+        items.append(
+            MenuItemData(
+                key='lightdm:install',
+                label='Install Desktop',
+                icon='󰶮',
+                action_id='lightdm:install',
+            ),
+        )
+    else:
+        # Start/Stop item
+        items.append(
+            MenuItemData(
+                key='lightdm:toggle',
+                label='Stop' if state.is_active else 'Start',
+                icon='󰓛' if state.is_active else '󰐊',
+                action_id='lightdm:stop' if state.is_active else 'lightdm:start',
+            ),
+        )
+
+        # Enable/Disable item
+        if state.is_enabled is None:
+            items.append(
+                MenuItemData(
+                    key='lightdm:enabled-status',
+                    label='...',
+                    icon='',
+                ),
+            )
+        elif state.is_enabled:
+            items.append(
+                MenuItemData(
+                    key='lightdm:disable',
+                    label='Disable',
+                    icon='󰯄',
+                    action_id='lightdm:disable',
+                ),
+            )
+        else:
+            items.append(
+                MenuItemData(
+                    key='lightdm:enable',
+                    label='Enable',
+                    icon='󰯅',
+                    action_id='lightdm:enable',
+                ),
+            )
+
+    logger.debug(
+        '[LightDM Service] Updating dynamic menu: is_installed=%s, is_active=%s',
+        state.is_installed,
+        state.is_active,
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=LIGHTDM_MENU_ID,
+            title='Desktop',
+            items=tuple(items),
+            placeholder=placeholder,
+        ),
+    )
 
 
 @store.autorun(lambda state: state.lightdm)

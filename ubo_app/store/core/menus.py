@@ -10,11 +10,15 @@ from typing import TYPE_CHECKING
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
+from ubo_app.constants import USE_DUMB_UI
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     SETTINGS_ICONS,
+    MenuItemData,
     PowerOffAction,
     RebootAction,
     SettingsCategory,
+    UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -29,6 +33,9 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_gui.menu.types import Item
+
+# Dynamic menu IDs for dumb UI architecture
+NOTIFICATIONS_MENU_ID = 'notifications:list'
 
 
 APPS_MENU = HeadlessMenu(
@@ -85,6 +92,50 @@ MAIN_MENU = HeadlessMenu(
 )
 def _notifications_title(unread_count: int) -> str:
     return f'Notifications ({unread_count})'
+
+
+@store.autorun(
+    lambda state: state.notifications.notifications,
+    options=AutorunOptions(default_value=None),
+)
+def update_notifications_dynamic_menu(
+    notifications: Sequence[Notification] | None,
+) -> None:
+    """Update the dynamic menu for notifications (dumb UI architecture)."""
+    if not USE_DUMB_UI:
+        return
+
+    if notifications is None:
+        items: tuple[MenuItemData | None, ...] = ()
+    else:
+        now = datetime.now(tz=UTC)
+        items = tuple(
+            MenuItemData(
+                key=str(notification.id),
+                label=notification.title,
+                icon=notification.icon,
+                color='black',
+                background_color=notification.color,
+                action_id=f'notification:display:{notification.id}',
+            )
+            for notification in notifications
+            if notification.expiration_timestamp is None
+            or notification.expiration_timestamp > now
+        )
+
+    logger.debug(
+        '[Notifications] Updating dynamic menu: %d notifications',
+        len(items),
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=NOTIFICATIONS_MENU_ID,
+            title='Notifications',
+            items=items,
+            placeholder='No notifications',
+        ),
+    )
 
 
 @store.autorun(

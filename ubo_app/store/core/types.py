@@ -134,7 +134,7 @@ class StatusIconData(Immutable):
     """Status bar icon data for rendering."""
 
     symbol: str
-    color: tuple[float, float, float, float]  # RGBA tuple
+    color: str  # Color string (e.g., 'white', '#ff0000')
 
 
 class ProgressNotificationData(Immutable):
@@ -142,7 +142,7 @@ class ProgressNotificationData(Immutable):
 
     id: str
     progress: float | None  # None = indeterminate (spinner), 0-1 = progress ring
-    color: tuple[float, float, float, float]
+    color: str  # Color string
 
 
 class StatusBarData(Immutable):

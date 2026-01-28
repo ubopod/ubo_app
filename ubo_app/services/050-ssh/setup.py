@@ -10,7 +10,14 @@ from ubo_gui.constants import WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
 from ubo_app.colors import RUNNING_COLOR, STOPPED_COLOR
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.constants import USE_DUMB_UI
+from ubo_app.logger import logger
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.ssh import SSHClearEnabledStateAction, SSHUpdateStateAction
 from ubo_app.utils.async_ import create_task
@@ -21,6 +28,9 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_app.store.services.ssh import SSHState
+
+# Dynamic menu IDs for dumb UI architecture
+SSH_MENU_ID = 'ssh:main'
 
 
 def start_ssh_service() -> None:
@@ -55,6 +65,66 @@ def disable_ssh_service() -> None:
         await check_is_ssh_enabled()
 
     create_task(act())
+
+
+@store.autorun(lambda state: state.ssh)
+def update_ssh_dynamic_menu(state: SSHState) -> None:
+    """Update the dynamic menu for SSH (dumb UI architecture)."""
+    if not USE_DUMB_UI:
+        return
+
+    # Build items based on current state
+    items: list[MenuItemData] = [
+        MenuItemData(
+            key='ssh:toggle',
+            label='Stop' if state.is_active else 'Start',
+            icon='󰓛' if state.is_active else '󰐊',
+            action_id='ssh:stop' if state.is_active else 'ssh:start',
+        ),
+    ]
+
+    # Add enable/disable item based on enabled state
+    if state.is_enabled is None:
+        items.append(
+            MenuItemData(
+                key='ssh:enabled-status',
+                label='...',
+                icon='',
+            ),
+        )
+    elif state.is_enabled:
+        items.append(
+            MenuItemData(
+                key='ssh:disable',
+                label='Disable',
+                icon='󰯄',  # Note: color markup not supported in MenuItemData.icon yet
+                action_id='ssh:disable',
+            ),
+        )
+    else:
+        items.append(
+            MenuItemData(
+                key='ssh:enable',
+                label='Enable',
+                icon='󰯅',
+                action_id='ssh:enable',
+            ),
+        )
+
+    logger.debug(
+        '[SSH Service] Updating dynamic menu: is_active=%s, is_enabled=%s',
+        state.is_active,
+        state.is_enabled,
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=SSH_MENU_ID,
+            title='SSH',
+            items=tuple(items),
+            placeholder='',
+        ),
+    )
 
 
 @store.autorun(lambda state: state.ssh)

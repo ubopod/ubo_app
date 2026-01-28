@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from constants import get_signal_icon
+from constants import WIFI_CONNECTIONS_MENU_ID, get_signal_icon
 from debouncer import DebounceOptions, debounce
 from kivy.clock import mainthread
 from kivy.properties import StringProperty
@@ -22,7 +22,13 @@ from wifi_manager import (
     get_wifi_device,
 )
 
-from ubo_app.store.core.types import CloseApplicationAction
+from ubo_app.constants import USE_DUMB_UI
+from ubo_app.logger import logger
+from ubo_app.store.core.types import (
+    CloseApplicationAction,
+    MenuItemData,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.wifi import (
     ConnectionState,
@@ -131,6 +137,63 @@ register_application(
     application=CreateWirelessConnectionPage,
     application_id='wifi:create-connection-page',
 )
+
+
+# Icon mapping for connection states
+_CONNECTION_STATE_ICONS = {
+    ConnectionState.CONNECTED: '󱚽',
+    ConnectionState.DISCONNECTED: '󱛅',
+    ConnectionState.CONNECTING: '󱛇',
+    ConnectionState.UNKNOWN: '󱚵',
+}
+
+
+def _get_connection_icon(connection: WiFiConnection) -> str:
+    """Get the appropriate icon for a WiFi connection based on its state."""
+    if connection.state == ConnectionState.DISCONNECTED:
+        return get_signal_icon(connection.signal_strength)
+    return _CONNECTION_STATE_ICONS[connection.state]
+
+
+@store.autorun(lambda state: state.wifi.connections)
+def update_wifi_dynamic_menu(
+    connections: Sequence[WiFiConnection] | None,
+) -> None:
+    """Update the dynamic menu for WiFi connections (dumb UI architecture).
+
+    This autorun dispatches UpdateDynamicMenuAction with serializable MenuItemData.
+    """
+    if not USE_DUMB_UI:
+        return
+
+    if connections is None:
+        items: tuple[MenuItemData | None, ...] = ()
+        placeholder = 'Loading...'
+    else:
+        items = tuple(
+            MenuItemData(
+                key=f'connection:{connection.ssid}',
+                label=connection.ssid,
+                icon=_get_connection_icon(connection),
+                action_id=f'wifi:open-connection:{connection.ssid}',
+            )
+            for connection in connections
+        )
+        placeholder = 'No Wi-Fi connections found' if not connections else ''
+
+    logger.debug(
+        '[WiFi Service] Updating dynamic menu: %d connections',
+        len(connections) if connections else 0,
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=WIFI_CONNECTIONS_MENU_ID,
+            title='Wi-Fi',
+            items=items,
+            placeholder=placeholder,
+        ),
+    )
 
 
 @store.autorun(lambda state: state.wifi.connections)

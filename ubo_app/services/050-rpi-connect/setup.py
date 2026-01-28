@@ -17,7 +17,14 @@ from kivy.lang.builder import Builder
 from sign_in_page import SignInPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.constants import USE_DUMB_UI
+from ubo_app.logger import logger
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
 from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
@@ -28,6 +35,9 @@ if TYPE_CHECKING:
         RPiConnectState,
         RPiConnectStatus,
     )
+
+# Dynamic menu ID for dumb UI architecture
+RPI_CONNECT_MENU_ID = 'rpi-connect:main'
 
 
 class _RPiConnectQRCodePage(UboPageWidget): ...
@@ -77,6 +87,87 @@ def login_actions(*, is_signed_in: bool | None) -> list[ActionItem | Application
             ),
         )
     return actions
+
+
+@store.autorun(lambda state: state.rpi_connect)
+def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
+    """Update the dynamic menu for RPi Connect (dumb UI architecture)."""
+    if not USE_DUMB_UI:
+        return
+
+    items: list[MenuItemData] = []
+
+    if not state.is_downloading:
+        if state.is_installed:
+            # Show URL if sessions are active
+            if state.status and (
+                state.status.screen_sharing_sessions is not None
+                or state.status.remote_shell_sessions is not None
+            ):
+                items.append(
+                    MenuItemData(
+                        key='rpi-connect:show-url',
+                        label='Show URL',
+                        icon='󰐲',
+                        action_id='rpi-connect:show-url',
+                    ),
+                )
+
+            # Sign in/out actions
+            if state.is_signed_in:
+                items.append(
+                    MenuItemData(
+                        key='rpi-connect:sign-out',
+                        label='Sign out',
+                        icon='󰍃',
+                        action_id='rpi-connect:sign-out',
+                    ),
+                )
+            elif state.is_signed_in is False:
+                items.append(
+                    MenuItemData(
+                        key='rpi-connect:sign-in',
+                        label='Sign in',
+                        icon='󰍂',
+                        action_id='rpi-connect:sign-in',
+                    ),
+                )
+
+            # Start/Stop action
+            items.append(
+                MenuItemData(
+                    key='rpi-connect:toggle',
+                    label='Stop' if state.is_active else 'Start',
+                    icon='󰓛' if state.is_active else '󰐊',
+                    action_id='rpi-connect:stop' if state.is_active else 'rpi-connect:start',
+                ),
+            )
+
+        # Install/Uninstall action
+        if state.is_installed is not None:
+            items.append(
+                MenuItemData(
+                    key='rpi-connect:install-toggle',
+                    label='Uninstall RPi-Connect' if state.is_installed else 'Install RPi-Connect',
+                    icon='󰇚',
+                    action_id='rpi-connect:uninstall' if state.is_installed else 'rpi-connect:install',
+                ),
+            )
+
+    logger.debug(
+        '[RPi Connect] Updating dynamic menu: is_installed=%s, is_active=%s',
+        state.is_installed,
+        state.is_active,
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=RPI_CONNECT_MENU_ID,
+            title='RPi Connect',
+            items=tuple(items),
+            placeholder='',
+        ),
+    )
 
 
 @store.autorun(lambda state: state.rpi_connect)
