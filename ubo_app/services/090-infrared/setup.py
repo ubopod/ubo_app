@@ -307,7 +307,7 @@ async def _handle_device_registration_complete(
     async def collect_device_name() -> None:
         try:
             value, result = await ubo_input(
-                prompt='Device Registered Successfully',
+                prompt='Please enter device name on the Web UI',
                 descriptions=[
                     WebUIInputDescription(
                         fields=[
