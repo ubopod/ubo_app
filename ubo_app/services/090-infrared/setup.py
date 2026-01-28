@@ -470,20 +470,51 @@ def init_service() -> Subscriptions:
             state.infrared.should_receive_keypad_actions,
         ),
     )
-    def menu_items(data: tuple[bool, bool]) -> list[Item]:
+    def infrared_settings_menu(data: tuple[bool, bool]) -> HeadlessMenu:
         should_propagate_keypad_actions, should_receive_keypad_actions = data
+        return HeadlessMenu(
+            title='Settings',
+            items=[
+                UboDispatchItem(
+                    key='receive_keys',
+                    label='Receive Keys',
+                    store_action=InfraredSetShouldReceiveAction(
+                        should_receive=not should_receive_keypad_actions,
+                    ),
+                    **(
+                        SELECTED_ITEM_PARAMETERS
+                        if should_receive_keypad_actions
+                        else UNSELECTED_ITEM_PARAMETERS
+                    ),
+                ),
+                UboDispatchItem(
+                    key='propagate_keys',
+                    label='Propagate Keys',
+                    store_action=InfraredSetShouldPropagateAction(
+                        should_propagate=not should_propagate_keypad_actions,
+                    ),
+                    **(
+                        SELECTED_ITEM_PARAMETERS
+                        if should_propagate_keypad_actions
+                        else UNSELECTED_ITEM_PARAMETERS
+                    ),
+                ),
+            ],
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.infrared.should_propagate_keypad_actions,
+            state.infrared.should_receive_keypad_actions,
+        ),
+    )
+    def menu_items(data: tuple[bool, bool]) -> list[Item]:
         return [
-            UboDispatchItem(
-                key='receive_keys',
-                label='Receive Keys',
-                store_action=InfraredSetShouldReceiveAction(
-                    should_receive=not should_receive_keypad_actions,
-                ),
-                **(
-                    SELECTED_ITEM_PARAMETERS
-                    if should_receive_keypad_actions
-                    else UNSELECTED_ITEM_PARAMETERS
-                ),
+            SubMenuItem(
+                key='replay_devices',
+                label='Replay Devices',
+                icon='󰑔',
+                sub_menu=replay_devices_menu,
             ),
             SubMenuItem(
                 key='manage_keys',
@@ -492,22 +523,10 @@ def init_service() -> Subscriptions:
                 sub_menu=manage_keys_menu(),
             ),
             SubMenuItem(
-                key='replay_devices',
-                label='Replay Devices',
-                icon='󰑔',
-                sub_menu=replay_devices_menu,
-            ),
-            UboDispatchItem(
-                key='propagate_keys',
-                label='Propagate Keys',
-                store_action=InfraredSetShouldPropagateAction(
-                    should_propagate=not should_propagate_keypad_actions,
-                ),
-                **(
-                    SELECTED_ITEM_PARAMETERS
-                    if should_propagate_keypad_actions
-                    else UNSELECTED_ITEM_PARAMETERS
-                ),
+                key='settings',
+                label='Settings',
+                icon='',
+                sub_menu=infrared_settings_menu,
             ),
         ]
 
