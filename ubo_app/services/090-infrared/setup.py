@@ -46,11 +46,17 @@ from ubo_app.store.services.infrared import (
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.ubo_actions import (
+    UboApplicationItem,
     UboDispatchItem,
     register_application,
 )
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS, UboPageWidget
+from ubo_app.utils.gui import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+    UboPageWidget,
+    UboPromptWidget,
+)
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 import json
@@ -138,6 +144,54 @@ Builder.load_file(
     .parent.joinpath('registration_page.kv')
     .resolve()
     .as_posix(),
+)
+
+
+class RemoveDeviceConfirmPage(UboPromptWidget):
+    """Confirmation page for removing an infrared device."""
+
+    device_name: str = StringProperty('')
+    protocol: str = StringProperty('')
+    scancode: str = StringProperty('')
+
+    def first_option_callback(self) -> None:
+        """Yes: remove the device and close the page."""
+        store.dispatch(
+            InfraredRemoveDeviceAction(
+                protocol=self.protocol,
+                scancode=self.scancode,
+            ),
+        )
+        store.dispatch(
+            CloseApplicationAction(application_instance_id=self.id),
+        )
+
+    def second_option_callback(self) -> None:
+        """Cancel: close the page without removing."""
+        store.dispatch(
+            CloseApplicationAction(application_instance_id=self.id),
+        )
+
+    def __init__(self, **kwargs: object) -> None:
+        device_name = kwargs.pop('device_name', '')
+        protocol = kwargs.pop('protocol', '')
+        scancode = kwargs.pop('scancode', '')
+        super().__init__(**kwargs)
+        self.device_name = device_name
+        self.protocol = protocol
+        self.scancode = scancode
+        self.prompt = f'Remove "{device_name}"?'
+        self.first_option_label = 'Yes'
+        self.first_option_icon = '󰆴'
+        self.first_option_is_short = False
+        self.second_option_label = 'Cancel'
+        self.second_option_icon = '󰜺'
+        self.second_option_is_short = False
+
+
+register_application(
+    application_id='infrared:remove-device-confirm',
+    application=RemoveDeviceConfirmPage,
 )
 
 
@@ -404,14 +458,16 @@ def init_service() -> Subscriptions:
         items: list[Item] = []
         for device in devices:
             items.append(
-                UboDispatchItem(
+                UboApplicationItem(
                     key=f'remove_{device.protocol}_{device.scancode}',
                     label=device.name,
                     icon='-',
-                    store_action=InfraredRemoveDeviceAction(
-                        protocol=device.protocol,
-                        scancode=device.scancode,
-                    ),
+                    application_id='infrared:remove-device-confirm',
+                    initialization_kwargs={
+                        'device_name': device.name,
+                        'protocol': device.protocol,
+                        'scancode': device.scancode,
+                    },
                 ),
             )
         return HeadlessMenu(
