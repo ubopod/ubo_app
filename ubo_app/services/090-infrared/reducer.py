@@ -150,7 +150,7 @@ def reducer(
             )
 
         case InfraredSetIsRegisteringDeviceAction():
-            # If disabling registration, restore original receive keys state
+            # If disabling registration, restore original receive keys state and clear counts
             restore_action = []
             if not action.is_registering and state.is_registering_device:
                 original_state = state.original_should_receive_keypad_actions
@@ -162,6 +162,7 @@ def reducer(
                 state=replace(
                     state,
                     is_registering_device=action.is_registering,
+                    registration_signal_counts={} if not action.is_registering else state.registration_signal_counts,
                     original_should_receive_keypad_actions=(
                         None if not action.is_registering else state.original_should_receive_keypad_actions
                     ),
@@ -288,47 +289,21 @@ def reducer(
 
         case KeypadKeyReleaseAction(key=Key.BACK) if state.is_registering_device:
             logger.info('Device registration: Cancelled by BACK key')
-            # Restore original receive keys state
-            original_state = state.original_should_receive_keypad_actions
-            restore_action = (
-                [InfraredSetShouldReceiveAction(should_receive=original_state)]
-                if original_state is not None
-                else []
-            )
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    is_registering_device=False,
-                    registration_signal_counts={},
-                    original_should_receive_keypad_actions=None,
-                ),
+                state=state,
                 actions=[
                     RgbRingBlankAction(),  # Stop blinking
-                    *restore_action,  # Restore original receive keys state
-                    InfraredSetIsRegisteringDeviceAction(is_registering=False),
+                    InfraredSetIsRegisteringDeviceAction(is_registering=False),  # This will restore original state
                 ],
             )
 
         case KeypadKeyReleaseAction(key=Key.HOME) if state.is_registering_device:
             logger.info('Device registration: Cancelled by HOME key')
-            # Restore original receive keys state
-            original_state = state.original_should_receive_keypad_actions
-            restore_action = (
-                [InfraredSetShouldReceiveAction(should_receive=original_state)]
-                if original_state is not None
-                else []
-            )
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    is_registering_device=False,
-                    registration_signal_counts={},
-                    original_should_receive_keypad_actions=None,
-                ),
+                state=state,
                 actions=[
                     RgbRingBlankAction(),  # Stop blinking
-                    *restore_action,  # Restore original receive keys state
-                    InfraredSetIsRegisteringDeviceAction(is_registering=False),
+                    InfraredSetIsRegisteringDeviceAction(is_registering=False),  # This will restore original state
                 ],
             )
 
