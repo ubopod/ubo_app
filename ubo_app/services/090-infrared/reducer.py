@@ -262,6 +262,36 @@ def reducer(
                 registration_signal_counts=new_counts,
             )
 
+        case KeypadKeyReleaseAction(key=Key.BACK) if state.is_registering_device:
+            logger.info('Device registration: Cancelled by BACK key')
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    is_registering_device=False,
+                    registration_signal_counts={},
+                ),
+                actions=[
+                    RgbRingBlankAction(),  # Stop blinking
+                    InfraredSetShouldReceiveAction(should_receive=False),  # Turn off IR receiving
+                    InfraredSetIsRegisteringDeviceAction(is_registering=False),
+                ],
+            )
+
+        case KeypadKeyReleaseAction(key=Key.HOME) if state.is_registering_device:
+            logger.info('Device registration: Cancelled by HOME key')
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    is_registering_device=False,
+                    registration_signal_counts={},
+                ),
+                actions=[
+                    RgbRingBlankAction(),  # Stop blinking
+                    InfraredSetShouldReceiveAction(should_receive=False),  # Turn off IR receiving
+                    InfraredSetIsRegisteringDeviceAction(is_registering=False),
+                ],
+            )
+
         case KeypadKeyPressAction() | KeypadKeyReleaseAction() if (
             state.should_propagate_keypad_actions
         ):

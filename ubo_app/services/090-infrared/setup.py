@@ -196,7 +196,7 @@ async def _wait_for_ir_code() -> None:
 
 async def _register_device(_event: InfraredDeviceRegistrationStartedEvent) -> None:
     """Handle register device event - open registration page."""
-    logger.info('Register Device - opening registration page')
+    logger.info('Manage Keys - opening registration page')
     
     # Open the registration page
     store.dispatch(
@@ -382,18 +382,6 @@ def init_service() -> Subscriptions:
         should_propagate_keypad_actions, should_receive_keypad_actions = data
         return [
             UboDispatchItem(
-                key='propagate_keys',
-                label='Propagate Keys',
-                store_action=InfraredSetShouldPropagateAction(
-                    should_propagate=not should_propagate_keypad_actions,
-                ),
-                **(
-                    SELECTED_ITEM_PARAMETERS
-                    if should_propagate_keypad_actions
-                    else UNSELECTED_ITEM_PARAMETERS
-                ),
-            ),
-            UboDispatchItem(
                 key='receive_keys',
                 label='Receive Keys',
                 store_action=InfraredSetShouldReceiveAction(
@@ -407,7 +395,7 @@ def init_service() -> Subscriptions:
             ),
             UboDispatchItem(
                 key='register_device',
-                label='Register Device',
+                label='Manage Keys',
                 icon='+',
                 store_action=InfraredRegisterDeviceAction(),
             ),
@@ -416,6 +404,18 @@ def init_service() -> Subscriptions:
                 label='Replay Devices',
                 icon='󰻅',
                 sub_menu=replay_devices_menu,
+            ),
+            UboDispatchItem(
+                key='propagate_keys',
+                label='Propagate Keys',
+                store_action=InfraredSetShouldPropagateAction(
+                    should_propagate=not should_propagate_keypad_actions,
+                ),
+                **(
+                    SELECTED_ITEM_PARAMETERS
+                    if should_propagate_keypad_actions
+                    else UNSELECTED_ITEM_PARAMETERS
+                ),
             ),
         ]
 
@@ -449,11 +449,16 @@ def init_service() -> Subscriptions:
     def handle_back_or_home(_event: MenuGoBackEvent | MenuGoHomeEvent) -> None:
         """Handle back/home events to cancel registration if in progress."""
         current_state = store.get_state()
-        if (
+        # Check if registration is in progress or if the registration page is open
+        is_registering = (
             current_state
             and hasattr(current_state, 'infrared')
             and current_state.infrared.is_registering_device
-        ):
+        )
+        global _registration_page_id
+        page_is_open = _registration_page_id is not None
+        
+        if is_registering or page_is_open:
             create_task(_cancel_registration())
     
     logger.info('Subscribing to MenuGoBackEvent and MenuGoHomeEvent for registration cancellation')
