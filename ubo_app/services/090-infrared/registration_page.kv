@@ -1,4 +1,5 @@
 #:kivy 2.3.0
+#:import SpinnerWidget ubo_gui.spinner.SpinnerWidget
 
 <InfraredRegistrationPage>:
   AnchorLayout:
@@ -19,8 +20,26 @@
         height: self.texture_size[1]
         size_hint: 1, None
 
+      BoxLayout:
+        orientation: 'horizontal'
+        size_hint: 1, None
+        height: dp(50)
+        spacing: dp(10)
+
+        Widget:
+          size_hint: 1, None
+
+        SpinnerWidget:
+          size_hint: None, None
+          width: dp(40)
+          height: dp(40)
+          pos_hint: {'center_y': 0.5}
+
+        Widget:
+          size_hint: 1, None
+
       Label:
-        text: 'Point your infrared remote at the device'
+        text: 'Point your infrared remote at the device and send the same signal 5 times'
         text_size: self.width, None
         font_size: dp(18)
         halign: 'center'
@@ -29,13 +48,14 @@
         size_hint: 1, None
 
       Label:
-        text: 'Send the same signal 5 times to register device'
+        text: root.countdown_text
         text_size: self.width, None
-        font_size: dp(18)
+        font_size: dp(16)
         halign: 'center'
         valign: 'middle'
         height: self.texture_size[1]
         size_hint: 1, None
+        color: 0.7, 0.7, 0.7, 1
 
       Label:
         text: 'Press BACK or HOME to cancel'
