@@ -68,6 +68,27 @@ ir_commands_queue = asyncio.Queue()
 _registration_page_id: str | None = None
 
 
+def manage_keys_menu() -> HeadlessMenu:
+    """Menu for managing keys with Add and Remove options."""
+    return HeadlessMenu(
+        title='🔑 Manage Keys',
+        items=[
+            UboDispatchItem(
+                key='add_keys',
+                label='Add Keys',
+                icon='+',
+                store_action=InfraredRegisterDeviceAction(),
+            ),
+            UboDispatchItem(
+                key='remove_keys',
+                label='Remove Keys',
+                icon='-',
+                store_action=InfraredSetIsRegisteringDeviceAction(is_registering=False),  # Placeholder
+            ),
+        ],
+    )
+
+
 class InfraredRegistrationPage(UboPageWidget):
     """Page showing instructions for infrared device registration."""
 
@@ -393,11 +414,11 @@ def init_service() -> Subscriptions:
                     else UNSELECTED_ITEM_PARAMETERS
                 ),
             ),
-            UboDispatchItem(
-                key='register_device',
+            SubMenuItem(
+                key='manage_keys',
                 label='Manage Keys',
-                icon='+',
-                store_action=InfraredRegisterDeviceAction(),
+                icon='🔑',
+                sub_menu=manage_keys_menu(),
             ),
             SubMenuItem(
                 key='replay_devices',
