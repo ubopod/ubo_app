@@ -72,25 +72,6 @@ ir_commands_queue = asyncio.Queue()
 _registration_page_id: str | None = None
 
 
-def manage_keys_menu() -> HeadlessMenu:
-    """Menu for managing keys with Add and Remove options."""
-    return HeadlessMenu(
-        title='🔑 Manage Keys',
-        items=[
-            UboDispatchItem(
-                key='add_keys',
-                label='Add Keys',
-                icon='+',
-                store_action=InfraredRegisterDeviceAction(),
-            ),
-            UboDispatchItem(
-                key='remove_keys',
-                label='Remove Keys',
-                icon='-',
-                store_action=InfraredSetIsRegisteringDeviceAction(is_registering=False),  # Placeholder
-            ),
-        ],
-    )
 
 
 class InfraredRegistrationPage(UboPageWidget):
@@ -418,6 +399,50 @@ def init_service() -> Subscriptions:
     @store.autorun(
         lambda state: state.infrared.registered_devices,
     )
+    def remove_devices_menu(devices: list[InfraredDevice]) -> HeadlessMenu:
+        """Create a menu with all registered devices for removal."""
+        items: list[Item] = []
+        for device in devices:
+            items.append(
+                UboDispatchItem(
+                    key=f'remove_{device.protocol}_{device.scancode}',
+                    label=device.name,
+                    icon='-',
+                    store_action=InfraredRemoveDeviceAction(
+                        protocol=device.protocol,
+                        scancode=device.scancode,
+                    ),
+                ),
+            )
+        return HeadlessMenu(
+            title='- Remove Devices',
+            items=items,
+            placeholder='No devices registered',
+        )
+
+    def manage_keys_menu() -> HeadlessMenu:
+        """Menu for managing keys with Add and Remove options."""
+        return HeadlessMenu(
+            title='󰻅 Manage Keys',
+            items=[
+                UboDispatchItem(
+                    key='add_keys',
+                    label='Add Keys',
+                    icon='+',
+                    store_action=InfraredRegisterDeviceAction(),
+                ),
+                SubMenuItem(
+                    key='remove_keys',
+                    label='Remove Keys',
+                    icon='-',
+                    sub_menu=remove_devices_menu,
+                ),
+            ],
+        )
+
+    @store.autorun(
+        lambda state: state.infrared.registered_devices,
+    )
     def replay_devices_menu(devices: list[InfraredDevice]) -> HeadlessMenu:
         """Create a menu with all registered devices for replaying."""
         items: list[Item] = []
@@ -434,7 +459,7 @@ def init_service() -> Subscriptions:
                 ),
             )
         return HeadlessMenu(
-            title='󰻅Replay Devices',
+            title='󰑔Replay Devices',
             items=items,
             placeholder='No devices registered',
         )
@@ -463,13 +488,13 @@ def init_service() -> Subscriptions:
             SubMenuItem(
                 key='manage_keys',
                 label='Manage Keys',
-                icon='🔑',
+                icon='󰻅',
                 sub_menu=manage_keys_menu(),
             ),
             SubMenuItem(
                 key='replay_devices',
                 label='Replay Devices',
-                icon='󰻅',
+                icon='󰑔',
                 sub_menu=replay_devices_menu,
             ),
             UboDispatchItem(
