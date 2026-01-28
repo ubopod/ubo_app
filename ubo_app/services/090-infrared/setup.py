@@ -7,7 +7,9 @@ import contextlib
 import pathlib
 from typing import TYPE_CHECKING
 
+from kivy.clock import Clock
 from kivy.lang.builder import Builder
+from kivy.properties import NumericProperty, StringProperty
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.logger import logger
@@ -92,6 +94,10 @@ def manage_keys_menu() -> HeadlessMenu:
 class InfraredRegistrationPage(UboPageWidget):
     """Page showing instructions for infrared device registration."""
 
+    countdown: NumericProperty = NumericProperty(60)  # 60 second countdown
+    countdown_text: StringProperty = StringProperty('Time remaining: 60s')
+    _countdown_event: Clock.event | None = None
+
     def __init__(self, **kwargs: object) -> None:
         """Initialize the registration page."""
         super().__init__(**kwargs)
@@ -101,6 +107,40 @@ class InfraredRegistrationPage(UboPageWidget):
             'Infrared registration page opened',
             extra={'page_id': self.id},
         )
+        # Start countdown timer
+        self._start_countdown()
+        # Bind countdown to update text
+        self.bind(countdown=self._update_countdown_text)
+
+    def _start_countdown(self) -> None:
+        """Start the 60 second countdown timer."""
+        self.countdown = 60
+        self._update_countdown_text()
+        self._countdown_event = Clock.schedule_interval(self._update_countdown, 1.0)
+
+    def _update_countdown_text(self, *args: object) -> None:
+        """Update the countdown text."""
+        self.countdown_text = f'Time remaining: {int(self.countdown)}s'
+
+    def _update_countdown(self, _dt: float) -> None:
+        """Update the countdown timer."""
+        self.countdown -= 1
+        if self.countdown <= 0:
+            self._timeout()
+
+    def _timeout(self) -> None:
+        """Handle timeout - cancel registration and close page."""
+        logger.info('Registration timeout - cancelling registration')
+        if self._countdown_event:
+            self._countdown_event.cancel()
+            self._countdown_event = None
+        create_task(_cancel_registration())
+
+    def on_leave(self) -> None:
+        """Clean up when leaving the page."""
+        if self._countdown_event:
+            self._countdown_event.cancel()
+            self._countdown_event = None
 
 
 # Register the page as an application
