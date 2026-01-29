@@ -1,0 +1,43 @@
+[project]
+name = "ubo-tui"
+dynamic = ["version"]
+description = "Text User Interface client for Ubo App"
+license = "Apache-2.0"
+authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["ubo", "tui", "terminal", "grpc"]
+dependencies = [
+    "textual>=0.52.0",
+    "grpclib>=0.4.7",
+    "betterproto>=2.0.0b7",
+    "ubo-app-raw-bindings",
+]
+
+[project.scripts]
+ubo-tui = "ubo_tui.__main__:main"
+
+[tool.uv]
+dev-dependencies = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0"]
+
+[tool.uv.sources]
+ubo-app-raw-bindings = { path = "../rpc", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "code"
+path = "../rpc/parent_version.py"
+expression = "get_version()"
+
+[tool.ruff]
+lint.select = ["ALL"]
+lint.ignore = ["D", "ANN", "T201", "PLR0913", "FBT"]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "PLC0415"]
+"ubo_tui/*" = ["S110", "PLC0415", "RUF012"]
