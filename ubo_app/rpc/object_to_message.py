@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Protocol, TypeAlias, TypeVar, cast, overload
 
 import betterproto
 import betterproto.casing
@@ -41,8 +41,24 @@ def get_enum(object_: Enum) -> type[betterproto.Enum]:
 
 
 T = TypeVar('T', bound=betterproto.Message)
+DictWrapperT = TypeVar('DictWrapperT', bound='DictWrapperMessage')
 
 GRPCSerializable: TypeAlias = 'Enum | Immutable | datetime | None'
+
+
+class DictWrapperMessage(Protocol):
+    """Protocol for betterproto messages that wrap a dict with an 'items' field."""
+
+    def __init__(self, *, items: dict[str, str]) -> None:
+        """Initialize with items dict."""
+
+
+def _build_dict_wrapper_message(
+    wrapper_cls: type[DictWrapperT],
+    items: dict[str, str],
+) -> DictWrapperT:
+    """Build a dict wrapper message with proper typing."""
+    return wrapper_cls(items=items)
 
 
 def _try_wrap_oneof(
@@ -139,9 +155,11 @@ def build_message(  # noqa: C901, PLR0912
             field_names = expected_type._betterproto.sorted_field_names
             if field_names == ('items',):
                 # It's a dict wrapper like StdioMcpConfigEnvDict
-                return expected_type(items=object_)
+                # Cast to DictWrapperMessage protocol for proper typing
+                wrapper_cls = cast('type[DictWrapperMessage]', expected_type)
+                return cast('T', _build_dict_wrapper_message(wrapper_cls, object_))
         # Otherwise return as-is (for map fields)
-        return object_
+        return cast('ReturnType', object_)
 
     keys = object_.__dataclass_fields__.keys()
 
