@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -103,7 +103,7 @@ class NotificationStackItem(Immutable):
 
 
 # Type alias for any stack item
-StackItemType = MenuStackItem | ApplicationStackItem | NotificationStackItem
+StackItemType: TypeAlias = MenuStackItem | ApplicationStackItem | NotificationStackItem
 
 
 # =============================================================================
@@ -218,7 +218,9 @@ class NotificationViewData(Immutable):
 
 
 # Union type for all view data types
-ViewData = HomeViewData | MenuViewData | ApplicationViewData | NotificationViewData
+ViewData: TypeAlias = (
+    HomeViewData | MenuViewData | ApplicationViewData | NotificationViewData
+)
 
 
 # =============================================================================
