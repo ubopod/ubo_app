@@ -27,7 +27,7 @@ from docker_composition import (
 from docker_container import remove_container, run_container, stop_container
 from docker_image import fetch_image, remove_image
 from docker_images import IMAGES, ContainerEntry
-from menus import docker_item_menu
+from menus import docker_item_menu, setup_docker_image_dynamic_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
@@ -657,6 +657,8 @@ def _register_composition_entry(image_id: str) -> None:
             key=image_id,
         ),
     )
+    # Set up dynamic menu updates for TUI (dumb UI architecture)
+    setup_docker_image_dynamic_menu(image_id)
 
 
 def _register_container_entry(image_id: str) -> None:
@@ -671,6 +673,8 @@ def _register_container_entry(image_id: str) -> None:
             key=image_id,
         ),
     )
+    # Set up dynamic menu updates for TUI (dumb UI architecture)
+    setup_docker_image_dynamic_menu(image_id)
 
 
 def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:

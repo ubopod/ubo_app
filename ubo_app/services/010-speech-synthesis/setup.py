@@ -12,12 +12,18 @@ from piper.voice import AudioChunk, PiperVoice
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
+from ubo_app.constants import USE_DUMB_UI
 from ubo_app.constants.assistant import (
     PICOVOICE_ACCESS_KEY_SECRET_ID,
     PIPER_MODEL_PATH,
 )
 from ubo_app.engines.piper import PiperEngine
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -268,6 +274,42 @@ def create_engine_selector(engine: SpeechSynthesisEngineName) -> Callable[[], No
     return _engine_selector
 
 
+def _download_model_callback() -> None:
+    _speech_synthesis_menu()
+    _context.load_piper()
+
+
+def _is_piper_downloaded() -> bool:
+    if not PIPER_MODEL_PATH.exists() or not PIPER_MODEL_JSON_PATH.exists():
+        return False
+
+    with PIPER_MODEL_JSON_PATH.open('r') as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError:
+            return False
+        else:
+            if data['dataset'] != 'kristin':
+                return False
+
+    # check checksum
+    with PIPER_MODEL_PATH.open('rb') as f:
+        sha256_hash = hashlib.sha256()
+
+        for chunk in iter(lambda: f.read(4096), b''):
+            sha256_hash.update(chunk)
+
+        if sha256_hash.hexdigest() != PIPER_MODEL_HASH:
+            return False
+
+    return True
+
+
+SPEECH_SYNTHESIS_MENU_ID = 'speech-synthesis:main'
+PICOVOICE_SETTINGS_MENU_ID = 'speech-synthesis:picovoice'
+
+
+
 @store.autorun(
     lambda state: (
         state.speech_synthesis.selected_engine,
@@ -323,6 +365,93 @@ def _speech_synthesis_menu(
                 ),
             ),
         ],
+    )
+
+
+@store.autorun(
+    lambda state: state.speech_synthesis.selected_engine,
+    options=AutorunOptions(memoization=False),
+)
+def update_speech_synthesis_dynamic_menu(
+    _selected_engine: SpeechSynthesisEngineName,
+) -> None:
+    """Update the dynamic menu for speech synthesis (dumb UI)."""
+    if not USE_DUMB_UI:
+        return
+
+    items: list[MenuItemData] = []
+
+    # Add download option if Piper not downloaded
+    if not _is_piper_downloaded():
+        items.append(
+            MenuItemData(
+                key='download',
+                label='Download Piper Model',
+                icon='󰇚',
+                action_id='speech-synthesis:download_piper',
+            ),
+        )
+
+    # Add engine selection submenu item
+    items.append(
+        MenuItemData(
+            key='select_engine',
+            label='Select Engine',
+            icon='󰔊',
+            action_id='speech-synthesis:select_engine',
+        ),
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=SPEECH_SYNTHESIS_MENU_ID,
+            title='󰔊Speech Synthesis',
+            items=tuple(items),
+            placeholder='',
+        ),
+    )
+
+
+@store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
+def update_picovoice_dynamic_menu(
+    is_access_key_set: bool | None,  # noqa: FBT001
+) -> None:
+    """Update the dynamic menu for Picovoice settings (dumb UI)."""
+    if not USE_DUMB_UI:
+        return
+
+    if is_access_key_set:
+        items = (
+            MenuItemData(
+                key='clear_key',
+                label='Clear Access Key',
+                icon='󰌊',
+                action_id='speech-synthesis:clear_access_key',
+            ),
+        )
+    else:
+        items = (
+            MenuItemData(
+                key='set_key',
+                label='Set Access Key',
+                icon='󰐲',
+                action_id='speech-synthesis:set_access_key',
+            ),
+        )
+
+    # Get covered secret for sub_heading
+    covered_secret = secrets.read_covered_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
+    sub_heading = f'Set the access key\nCurrent value: {covered_secret}'
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=PICOVOICE_SETTINGS_MENU_ID,
+            title='Picovoice Settings',
+            heading='Picovoice',
+            sub_heading=sub_heading,
+            items=items,
+            placeholder='',
+        ),
     )
 
 

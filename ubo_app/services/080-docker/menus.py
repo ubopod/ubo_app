@@ -18,6 +18,9 @@ from ubo_gui.menu.types import (
 )
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.constants import USE_DUMB_UI
+from ubo_app.logger import logger
+from ubo_app.store.core.types import MenuItemData, UpdateDynamicMenuAction
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
@@ -45,6 +48,11 @@ if TYPE_CHECKING:
     from ubo_gui.page import PageWidget
 
     from ubo_app.store.services.ip import IpNetworkInterface
+
+
+def get_docker_image_menu_id(image_id: str) -> str:
+    """Get the dynamic menu ID for a Docker image."""
+    return f'docker:image:{image_id}'
 
 
 def _show_delete_confirmation(image_id: str) -> None:
@@ -232,6 +240,122 @@ def image_menu(  # noqa: C901
         items=items,
         placeholder='',
     )
+
+
+def _convert_item_to_menu_item_data(
+    item: Item,
+    index: int,
+    image_id: str,
+) -> MenuItemData:
+    """Convert a ubo_gui Item to MenuItemData for dynamic menus."""
+    # Get key
+    key_val = getattr(item, 'key', None)
+    key = key_val if isinstance(key_val, str) else f'item_{index}'
+
+    # Get label
+    label_val = getattr(item, 'label', '')
+    label = label_val() if callable(label_val) else (label_val or '')
+
+    # Get icon
+    icon_val = getattr(item, 'icon', '')
+    icon = icon_val() if callable(icon_val) else (icon_val or '')
+
+    # Get background_color
+    bg_color_val = getattr(item, 'background_color', None)
+    bg_color: str | None = bg_color_val if isinstance(bg_color_val, str) else None
+
+    # Determine action_id based on item type
+    action_id: str | None = None
+
+    # Check for store_action (UboDispatchItem)
+    store_action = getattr(item, 'store_action', None)
+    if store_action is not None:
+        action_type = type(store_action).__name__
+        action_id = f'docker:{image_id}:{action_type}'
+    elif key_val:
+        action_id = f'docker:{image_id}:select:{key}'
+
+    return MenuItemData(
+        key=key,
+        label=str(label),
+        icon=str(icon),
+        action_id=action_id,
+        background_color=bg_color,
+    )
+
+
+def setup_docker_image_dynamic_menu(image_id: str) -> None:
+    """Set up dynamic menu updates for a Docker image.
+
+    This creates an autorun that watches the image state and dispatches
+    UpdateDynamicMenuAction when it changes. This ensures TUI gets
+    up-to-date menu state without coupling core to Docker service.
+    """
+    if not USE_DUMB_UI:
+        return
+
+    menu_id = get_docker_image_menu_id(image_id)
+
+    @store.autorun(
+        lambda state: getattr(state.docker, image_id, None),
+        lambda state: (
+            getattr(state.docker, image_id, None),
+            state.ip.interfaces if hasattr(state, 'ip') else None,
+        ),
+        options=AutorunOptions(default_value=None),
+    )
+    def update_dynamic_menu(image: ImageState | None) -> None:
+        """Update the dynamic menu when image state changes."""
+        if image is None:
+            return
+
+        # Get the menu from image_menu (same logic as GUI uses)
+        menu = image_menu(image)
+
+        # Resolve callable fields (HeadedMenu fields can be callables)
+        items_raw = menu.items
+        items_list = items_raw() if callable(items_raw) else items_raw
+
+        title_raw = menu.title
+        title = title_raw() if callable(title_raw) else (title_raw or '')
+
+        heading_raw = menu.heading
+        heading = heading_raw() if callable(heading_raw) else heading_raw
+
+        sub_heading_raw = menu.sub_heading
+        sub_heading = (
+            sub_heading_raw() if callable(sub_heading_raw) else sub_heading_raw
+        )
+
+        placeholder_raw = menu.placeholder
+        placeholder = (
+            placeholder_raw() if callable(placeholder_raw) else placeholder_raw
+        )
+
+        # Convert menu items to MenuItemData
+        menu_items = tuple(
+            _convert_item_to_menu_item_data(item, i, image_id)
+            for i, item in enumerate(items_list)
+            if item is not None
+        )
+
+        logger.debug(
+            '[Docker] Updating dynamic menu for %s: status=%s, items=%d',
+            image_id,
+            image.status,
+            len(menu_items),
+        )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=menu_id,
+                title=str(title),
+                heading=str(heading) if heading else None,
+                sub_heading=str(sub_heading) if sub_heading else None,
+                items=menu_items,
+                placeholder=str(placeholder) if placeholder else '',
+            ),
+        )
 
 
 def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:

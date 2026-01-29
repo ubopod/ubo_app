@@ -8,9 +8,15 @@ from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import HeadedMenu, SubMenuItem
 
+from ubo_app.constants import USE_DUMB_UI
 from ubo_app.display import display
 from ubo_app.logger import logger
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.display import (
     DisplayBlankAction,
@@ -128,6 +134,9 @@ def handle_unblank_event(_: DisplayUnblankEvent) -> None:
     _unblank_event.set()
 
 
+DISPLAY_TIMEOUT_MENU_ID = 'display:timeout'
+
+
 @store.autorun(lambda state: state.display.selected_blank_timeout)
 def timeout_options(selected_timeout: DisplayBlankTimeout) -> Sequence[Item]:
     """Generate menu items for timeout selection."""
@@ -144,6 +153,37 @@ def timeout_options(selected_timeout: DisplayBlankTimeout) -> Sequence[Item]:
         )
         for timeout in DisplayBlankTimeout
     ]
+
+
+@store.autorun(lambda state: state.display.selected_blank_timeout)
+def update_display_dynamic_menu(selected_timeout: DisplayBlankTimeout) -> None:
+    """Update the dynamic menu for display timeout settings (dumb UI)."""
+    if not USE_DUMB_UI:
+        return
+
+    # Convert timeout options to MenuItemData
+    menu_items = tuple(
+        MenuItemData(
+            key=timeout.value,
+            label=timeout.get_label(),
+            icon=SELECTED_ITEM_PARAMETERS['icon']
+            if selected_timeout == timeout
+            else UNSELECTED_ITEM_PARAMETERS['icon'],
+            action_id=f'display:set_timeout:{timeout.value}',
+        )
+        for timeout in DisplayBlankTimeout
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=DISPLAY_TIMEOUT_MENU_ID,
+            title='Display Settings',
+            heading='Screen Timeout',
+            sub_heading='Select screen blank timeout',
+            items=menu_items,
+            placeholder='',
+        ),
+    )
 
 
 def init_service() -> None:
