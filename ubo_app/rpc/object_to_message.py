@@ -45,6 +45,35 @@ T = TypeVar('T', bound=betterproto.Message)
 GRPCSerializable: TypeAlias = 'Enum | Immutable | datetime | None'
 
 
+def _try_wrap_oneof(
+    object_: Immutable,
+    message_class: type[betterproto.Message],
+    expected_type: type[T],
+) -> T | None:
+    """Try to wrap object in a oneof wrapper if expected_type is a oneof wrapper.
+
+    Returns the wrapped message if successful, None otherwise.
+    """
+    if not hasattr(expected_type, '_betterproto'):
+        return None
+
+    oneof_groups = expected_type._betterproto.oneof_group_by_field
+    cls_by_field = expected_type._betterproto.cls_by_field
+
+    # If all fields share the same oneof group, it's a oneof wrapper
+    if not oneof_groups or len(set(oneof_groups.values())) != 1:
+        return None
+
+    # Find which field corresponds to message_class
+    for field_name, field_cls in cls_by_field.items():
+        if field_cls == message_class:
+            # Build the inner message and wrap it
+            inner_message = build_message(object_)
+            return expected_type(**{field_name: inner_message})
+
+    return None
+
+
 @overload
 def build_message(
     object_: GRPCSerializable,
@@ -54,7 +83,7 @@ def build_message(
 def build_message(
     object_: GRPCSerializable,
 ) -> ReturnType: ...
-def build_message(  # noqa: C901
+def build_message(  # noqa: C901, PLR0912
     object_: GRPCSerializable,
     expected_type: type[T] | None = None,
 ) -> ReturnType | T:
@@ -104,12 +133,26 @@ def build_message(  # noqa: C901
             ]
         return [build_message(item) for item in object_]
 
+    if isinstance(object_, dict):
+        # Handle dict types - check if expected_type is a wrapper with 'items' field
+        if expected_type and hasattr(expected_type, '_betterproto'):
+            field_names = expected_type._betterproto.sorted_field_names
+            if field_names == ('items',):
+                # It's a dict wrapper like StdioMcpConfigEnvDict
+                return expected_type(items=object_)
+        # Otherwise return as-is (for map fields)
+        return object_
+
     keys = object_.__dataclass_fields__.keys()
 
     message_class = get_class(object_)
-    if expected_type and (
-        message_class is None or not issubclass(message_class, expected_type)
-    ):
+
+    # Handle oneof wrapper types: if expected_type is a oneof wrapper and
+    # message_class is one of the oneof variants, wrap it appropriately
+    if expected_type and message_class and not issubclass(message_class, expected_type):
+        wrapped = _try_wrap_oneof(object_, message_class, expected_type)
+        if wrapped is not None:
+            return wrapped
         msg = f'Expected {expected_type}, got {message_class}'
         raise ValueError(msg)
 

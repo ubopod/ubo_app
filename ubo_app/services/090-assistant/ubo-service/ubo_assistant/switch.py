@@ -108,61 +108,84 @@ class UboSwitchService(AIService, Generic[T]):
         # Only LLM services need to react to MCP server state changes
         if isinstance(self, LLMService):
             logger.info('Service is LLMService, subscribing to MCP state changes')
+            self._setup_mcp_autorun()
 
-            @self.client.autorun([
-                'state.assistant.enabled_mcp_servers_with_metadata_json',
-            ])
-            def handle_mcp_servers_change(data: list) -> None:
-                """Handle MCP servers state changes from Redux store."""
-                try:
-                    import json
+    def _setup_mcp_autorun(self) -> None:
+        """Set up autorun subscription for MCP server state changes."""
+        @self.client.autorun([
+            'state.assistant.enabled_mcp_servers_with_metadata',
+        ])
+        def handle_mcp_servers_change(data: list) -> None:
+            """Handle MCP servers state changes from Redux store."""
+            self._process_mcp_servers_data(data)
 
-                    # Parse JSON string (wrapped in StringValue protobuf object)
-                    # StringValue.value -> str
-                    enabled_with_metadata_json = data[0].value
+    def _process_mcp_servers_data(self, data: list) -> None:
+        """Process MCP servers data from autorun callback."""
+        try:
+            # Data is a list containing a betterproto message (wrapper)
+            # Already unpacked by _unpack_from_any in UboRPCClient
+            enabled_with_metadata_wrapper = data[0]
 
-                    # Deserialize JSON to Python objects
-                    # (list of enabled servers with metadata)
-                    enabled_with_metadata = json.loads(enabled_with_metadata_json)
+            # Access the nested items structure
+            items_wrapper = getattr(
+                enabled_with_metadata_wrapper, 'items', None,
+            )
+            if items_wrapper is None:
+                enabled_with_metadata = []
+            else:
+                enabled_with_metadata = getattr(items_wrapper, 'items', [])
+            if not isinstance(enabled_with_metadata, list):
+                enabled_with_metadata = []
 
-                    # Convert list to dict for internal use (O(1) lookups)
-                    mcp_servers_dict = {}
-                    enabled_servers_set = set()
-                    for server_dict in enabled_with_metadata:
-                        server_id = server_dict['server_id']
-                        mcp_servers_dict[server_id] = MCPServerMetadata(
-                            server_id=server_id,
-                            name=server_dict['name'],
-                            type=server_dict['type'],
-                            config=server_dict['config'],
-                        )
-                        enabled_servers_set.add(server_id)
+            # Convert list to dict for internal use (O(1) lookups)
+            mcp_servers_dict = {}
+            enabled_servers_set = set()
+            for server_metadata in enabled_with_metadata:
+                server_id = server_metadata.server_id
+                # Get the actual config from the oneof wrapper
+                config_wrapper = server_metadata.config
+                stdio_cfg = getattr(config_wrapper, 'stdio_mcp_config', None)
+                sse_cfg = getattr(config_wrapper, 'sse_mcp_config', None)
+                if stdio_cfg:
+                    config = stdio_cfg
+                elif sse_cfg:
+                    config = sse_cfg
+                else:
+                    config = config_wrapper  # fallback
+                # Convert to local MCPServerMetadata for compatibility
+                mcp_servers_dict[server_id] = MCPServerMetadata(
+                    server_id=server_id,
+                    name=server_metadata.name,
+                    type=server_metadata.type.name.lower(),
+                    config=config,
+                )
+                enabled_servers_set.add(server_id)
 
-                    logger.info(
-                        'MCP servers state changed via autorun',
-                        extra={
-                            'servers_count': len(mcp_servers_dict),
-                            'enabled_count': len(enabled_servers_set),
-                            'server_ids': list(mcp_servers_dict.keys()),
-                        },
-                    )
+            logger.info(
+                'MCP servers state changed via autorun',
+                extra={
+                    'servers_count': len(mcp_servers_dict),
+                    'enabled_count': len(enabled_servers_set),
+                    'server_ids': list(mcp_servers_dict.keys()),
+                },
+            )
 
-                    # Update internal state
-                    self._mcp_servers_data = mcp_servers_dict
-                    self._enabled_mcp_servers = enabled_servers_set
+            # Update internal state
+            self._mcp_servers_data = mcp_servers_dict
+            self._enabled_mcp_servers = enabled_servers_set
 
-                    # Schedule async tool update with current service ID
-                    if self._current_service_id:
-                        self.create_task(
-                            self._update_llm_tools(
-                                service_id=self._current_service_id,
-                                ),
-                        )
+            # Schedule async tool update with current service ID
+            if self._current_service_id:
+                self.create_task(
+                    self._update_llm_tools(
+                        service_id=self._current_service_id,
+                    ),
+                )
 
-                except Exception:
-                    logger.exception('Error handling MCP servers state change')
-                    self._mcp_servers_data = {}
-                    self._enabled_mcp_servers = set()
+        except Exception:
+            logger.exception('Error handling MCP servers state change')
+            self._mcp_servers_data = {}
+            self._enabled_mcp_servers = set()
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process frame with the selected service."""
