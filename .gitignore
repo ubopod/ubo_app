@@ -98,3 +98,7 @@ ubo_app/_version.py
 /screenshots
 /snapshots
 /recordings
+
+# Claude Code
+.claude/
+CLAUDE.md
