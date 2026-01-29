@@ -11,11 +11,11 @@ from mcp.client.stdio import StdioServerParameters
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.mcp_service import MCPClient
+from ubo_bindings.ubo.v1 import SseMcpConfig, StdioMcpConfig
 
 if TYPE_CHECKING:
     from pipecat.adapters.schemas.direct_function import DirectFunction
     from pipecat.services.llm_service import LLMService
-    from ubo_bindings.ubo.v1 import SseMcpConfig, StdioMcpConfig
 
 
 @dataclass
@@ -86,9 +86,10 @@ async def create_mcp_client_from_metadata(
 
     """
     try:
-        if server.type == 'stdio':
+        config = server.config
+
+        if isinstance(config, StdioMcpConfig):
             # STDIO configuration - config is betterproto StdioMcpConfig object
-            config = server.config
 
             # Extract args from nested wrapper (StdioMcpConfigArgs.items)
             args_wrapper = getattr(config, 'args', None)
@@ -112,10 +113,8 @@ async def create_mcp_client_from_metadata(
                 ),
             )
 
-        if server.type == 'sse':
+        if isinstance(config, SseMcpConfig):
             # SSE configuration - config is betterproto SseMcpConfig object
-            config = server.config
-
             return MCPClient(
                 server_params=SseServerParameters(
                     url=config.url,
