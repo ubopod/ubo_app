@@ -23,9 +23,6 @@ from ubo_app.store.core.types import (
     SettingsCategory,
     UpdateDynamicMenuAction,
 )
-
-# Dynamic menu ID for dumb UI architecture
-USERS_MENU_ID = 'users:main'
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Importance,
@@ -51,6 +48,9 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus
 from ubo_app.utils.dbus_interfaces import AccountsInterface, UserInterface
 from ubo_app.utils.server import send_command
+
+# Dynamic menu ID for dumb UI architecture
+USERS_MENU_ID = 'users:main'
 
 if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
@@ -216,15 +216,15 @@ def update_users_dynamic_menu(state: UsersState) -> None:
         )
 
         # List existing users (clicking opens user submenu)
-        for user in state.users:
-            items.append(
-                MenuItemData(
-                    key=f'users:user:{user.id}',
-                    label=user.id,
-                    icon='󰀄',
-                    action_id=f'users:open-user:{user.id}',
-                ),
+        items.extend(
+            MenuItemData(
+                key=f'users:user:{user.id}',
+                label=user.id,
+                icon='󰀄',
+                action_id=f'users:open-user:{user.id}',
             )
+            for user in state.users
+        )
 
     logger.debug(
         '[Users Service] Updating dynamic menu: %d users',

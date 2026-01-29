@@ -19,9 +19,6 @@ from ubo_app.store.core.types import (
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
-
-# Dynamic menu ID for dumb UI architecture
-LIGHTDM_MENU_ID = 'lightdm:main'
 from ubo_app.store.services.lightdm import (
     LightDMClearEnabledStateAction,
     LightDMUpdateStateAction,
@@ -36,6 +33,9 @@ from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import is_unit_enabled, monitor_unit
 from ubo_app.utils.server import send_command
+
+# Dynamic menu ID for dumb UI architecture
+LIGHTDM_MENU_ID = 'lightdm:main'
 
 if TYPE_CHECKING:
     from collections.abc import Callable

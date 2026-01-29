@@ -134,23 +134,30 @@ def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
                 )
 
             # Start/Stop action
+            action_id = 'rpi-connect:stop' if state.is_active else 'rpi-connect:start'
             items.append(
                 MenuItemData(
                     key='rpi-connect:toggle',
                     label='Stop' if state.is_active else 'Start',
                     icon='󰓛' if state.is_active else '󰐊',
-                    action_id='rpi-connect:stop' if state.is_active else 'rpi-connect:start',
+                    action_id=action_id,
                 ),
             )
 
         # Install/Uninstall action
         if state.is_installed is not None:
+            install_label = (
+                'Uninstall RPi-Connect' if state.is_installed else 'Install RPi-Connect'
+            )
+            install_action = (
+                'rpi-connect:uninstall' if state.is_installed else 'rpi-connect:install'
+            )
             items.append(
                 MenuItemData(
                     key='rpi-connect:install-toggle',
-                    label='Uninstall RPi-Connect' if state.is_installed else 'Install RPi-Connect',
+                    label=install_label,
                     icon='󰇚',
-                    action_id='rpi-connect:uninstall' if state.is_installed else 'rpi-connect:install',
+                    action_id=install_action,
                 ),
             )
 

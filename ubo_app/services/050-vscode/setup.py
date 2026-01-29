@@ -23,9 +23,6 @@ from ubo_app.store.core.types import (
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
-
-# Dynamic menu ID for dumb UI architecture
-VSCODE_MENU_ID = 'vscode:main'
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -43,6 +40,9 @@ from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import UboPageWidget
 from ubo_app.utils.log_process import log_async_process
+
+# Dynamic menu ID for dumb UI architecture
+VSCODE_MENU_ID = 'vscode:main'
 
 
 class _VSCodeQRCodePage(UboPageWidget):
@@ -263,10 +263,13 @@ def _generate_dynamic_menu_items(state: VSCodeState) -> list[MenuItemData]:
             )
 
     # Download/Redownload action
+    download_label = (
+        'Redownload Code' if state.is_binary_installed else 'Download Code CLI'
+    )
     items.append(
         MenuItemData(
             key='vscode:download',
-            label='Redownload Code' if state.is_binary_installed else 'Download Code CLI',
+            label=download_label,
             icon='󰇚',
             action_id='vscode:download',
         ),
@@ -284,7 +287,8 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
     items = _generate_dynamic_menu_items(state)
 
     logger.debug(
-        '[VSCode Service] Updating dynamic menu: is_binary_installed=%s, is_logged_in=%s',
+        '[VSCode Service] Updating dynamic menu: '
+        'is_binary_installed=%s, is_logged_in=%s',
         state.is_binary_installed,
         state.is_logged_in,
     )

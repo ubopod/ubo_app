@@ -42,10 +42,6 @@ from ubo_app.store.core.types import (
     SettingsCategory,
     UpdateDynamicMenuAction,
 )
-
-# Dynamic menu IDs for dumb UI architecture
-DOCKER_SETUP_MENU_ID = 'docker:setup'
-DOCKER_REGISTRIES_MENU_ID = 'docker:registries'
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -92,6 +88,10 @@ from ubo_app.utils.input import ubo_input
 from ubo_app.utils.monitor_unit import monitor_unit
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
+
+# Dynamic menu IDs for dumb UI architecture
+DOCKER_SETUP_MENU_ID = 'docker:setup'
+DOCKER_REGISTRIES_MENU_ID = 'docker:registries'
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -268,7 +268,8 @@ def update_docker_setup_dynamic_menu(status: DockerStatus) -> None:
     if not USE_DUMB_UI:
         return
 
-    menu_data = _DOCKER_STATUS_MENU_DATA.get(status, _DOCKER_STATUS_MENU_DATA[DockerStatus.UNKNOWN])
+    default_data = _DOCKER_STATUS_MENU_DATA[DockerStatus.UNKNOWN]
+    menu_data = _DOCKER_STATUS_MENU_DATA.get(status, default_data)
 
     logger.debug('[Docker Service] Updating setup dynamic menu: status=%s', status)
 

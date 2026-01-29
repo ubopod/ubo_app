@@ -24,13 +24,13 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.monitor_unit import is_unit_enabled, monitor_unit
 from ubo_app.utils.server import send_command
 
+# Dynamic menu IDs for dumb UI architecture
+SSH_MENU_ID = 'ssh:main'
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_app.store.services.ssh import SSHState
-
-# Dynamic menu IDs for dumb UI architecture
-SSH_MENU_ID = 'ssh:main'
 
 
 def start_ssh_service() -> None:
