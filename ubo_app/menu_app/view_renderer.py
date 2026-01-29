@@ -71,11 +71,14 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
 
     # Compute icons from status_icons state
     icons: tuple[StatusIconData, ...] = ()
-    with contextlib.suppress(AttributeError, TypeError):
+    try:
         icons = tuple(
             StatusIconData(symbol=icon.symbol, color=icon.color)
             for icon in state.status_icons.icons
         )
+    except (AttributeError, TypeError) as e:
+        if DEBUG_MENU:
+            logger.warning('[ViewRenderer] Failed to compute icons: %s', e)
 
     # Get temperature and light from sensors
     temperature: float | None = None
@@ -473,17 +476,23 @@ class ViewRenderer:
 
             Clock.schedule_once(lambda _: self._initial_render(), 1.0)
 
-    def _initial_render(self) -> None:
-        """Perform initial render of status bar after app startup."""
+    def _initial_render(self, attempt: int = 1) -> None:
+        """Perform initial render of status bar after app startup.
+
+        Retries if icons_layout is not yet available.
+        """
         state = store._state  # noqa: SLF001
-        if state is not None:
-            status_bar = compute_status_bar_data(state)
-            logger.info(
-                '[ViewRenderer] Initial StatusBar render: clock=%s, temp=%s',
-                status_bar.clock,
-                status_bar.temperature,
-            )
-            self._render_status_bar(status_bar)
+        if state is None:
+            return
+
+        status_bar = compute_status_bar_data(state)
+        self._render_status_bar(status_bar)
+
+        # If icons_layout wasn't ready, retry after a short delay
+        if not hasattr(self.app, 'icons_layout') and attempt < 5:  # noqa: PLR2004
+            from kivy.clock import Clock
+
+            Clock.schedule_once(lambda _: self._initial_render(attempt + 1), 0.5)
 
     def _setup_subscription(self) -> None:
         """Subscribe to ViewChangedEvent and state changes for dynamic updates."""
@@ -527,6 +536,12 @@ class ViewRenderer:
             ),
             options=AutorunOptions(keep_ref=False),
         )(self._on_status_bar_changed)
+
+        # Subscribe to status icons changes
+        store.autorun(
+            lambda state: state.status_icons.icons,
+            options=AutorunOptions(keep_ref=False),
+        )(self._on_status_icons_changed)
 
     @mainthread
     def _on_system_metrics_changed(
@@ -572,6 +587,14 @@ class ViewRenderer:
     @mainthread
     def _on_status_bar_changed(self, _: tuple[str, bool, bool, bool]) -> None:
         """Handle status bar state changes."""
+        state = store._state  # noqa: SLF001
+        if state is not None:
+            status_bar = compute_status_bar_data(state)
+            self._render_status_bar(status_bar)
+
+    @mainthread
+    def _on_status_icons_changed(self, _: object) -> None:
+        """Handle status icons state changes."""
         state = store._state  # noqa: SLF001
         if state is not None:
             status_bar = compute_status_bar_data(state)
@@ -827,14 +850,8 @@ class ViewRenderer:
 
         if DEBUG_MENU:
             logger.info(
-                '[ViewRenderer] Rendering StatusBar: clock=%s, temp=%s, '
-                'recording=%s, replaying=%s, audio_recording=%s, '
-                'icons=%d, progress=%d',
+                '[ViewRenderer] Rendering StatusBar: clock=%s, icons=%d, progress=%d',
                 status_bar.clock,
-                status_bar.temperature,
-                status_bar.is_recording,
-                status_bar.is_replaying,
-                status_bar.is_recording_audio,
                 len(status_bar.icons),
                 len(status_bar.progress_notifications),
             )
@@ -871,22 +888,27 @@ class ViewRenderer:
                 self.app.light.color = (1, 1, 1, v)
 
         # Update status icons
-        if hasattr(self.app, 'icons_layout'):
-            self.app.icons_layout.clear_widgets()
-            for icon_data in list(reversed(status_bar.icons))[:4]:
-                label = Label(
-                    text=icon_data.symbol,
-                    color=icon_data.color,
-                    font_size=dp(20),
-                    font_features='fill=0',
-                    size_hint=(None, 1),
-                    width=dp(22),
-                    markup=True,
-                )
-                self.app.icons_layout.add_widget(label)
-            self.app.icons_layout.add_widget(
-                Widget(size_hint=(None, 1), width=dp(2)),
+        if not hasattr(self.app, 'icons_layout'):
+            return
+        self.app.icons_layout.clear_widgets()
+        for icon_data in list(reversed(status_bar.icons))[:4]:
+            label = Label(
+                text=icon_data.symbol,
+                color=icon_data.color,
+                font_size=dp(20),
+                font_features='fill=0',
+                size_hint=(None, 1),
+                width=dp(22),
+                markup=True,
             )
+            self.app.icons_layout.add_widget(label)
+        self.app.icons_layout.add_widget(
+            Widget(size_hint=(None, 1), width=dp(2)),
+        )
+        # Ensure layout width expands to fit all icons
+        self.app.icons_layout.bind(
+            minimum_width=self.app.icons_layout.setter('width'),
+        )
 
     def _render_header(self, status_bar: StatusBarData) -> None:
         """Update header widgets (recording indicators, progress notifications)."""

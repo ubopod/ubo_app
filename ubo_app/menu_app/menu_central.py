@@ -73,6 +73,11 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)
         self._last_page_index: int | None = None  # Track to avoid redundant dispatches
 
+        self._setup_bindings()
+        self._setup_autoruns()
+
+    def _setup_bindings(self) -> None:
+        """Set up Kivy property bindings."""
         self.menu_widget.bind(page_index=self.handle_page_index_change)
         self.menu_widget.bind(pages=self.handle_pages_change)
         self.menu_widget.bind(title=self.handle_title_change)
@@ -91,6 +96,8 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             menu_representation = 'Menu:\n' + repr(self.menu_widget)
             self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 
+    def _setup_autoruns(self) -> None:
+        """Set up Redux store autoruns."""
         _self = weakref.ref(self)
 
         @store.autorun(lambda state: state.main.menu)
@@ -103,57 +110,83 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         # Phase 2.5: Validation autorun to verify Redux stack stays in sync
         if DEBUG_MENU:
+            self._setup_stack_validation_autorun(_self)
 
-            @store.autorun(lambda state: state.main.stack)
-            def _validate_stack_sync(redux_stack: object) -> None:
-                if not isinstance(redux_stack, tuple):
-                    return
-                self = _self()
-                if not self:
-                    return
-                gui_stack = self.menu_widget.stack
-                gui_len = len(gui_stack)
-                redux_len = len(redux_stack)
+    def _setup_stack_validation_autorun(
+        self,
+        _self: weakref.ref,  # type: ignore[type-arg]
+    ) -> None:
+        """Set up autorun for stack sync validation (DEBUG_MENU only)."""
 
-                # Compare lengths
-                if gui_len != redux_len:
-                    logger.warning(
-                        f'[STACK SYNC] Length mismatch! '
-                        f'GUI: {gui_len}, Redux: {redux_len}',
-                    )
-                    return
+        @store.autorun(lambda state: state.main.stack)
+        def _validate_stack_sync(redux_stack: object) -> None:
+            if not isinstance(redux_stack, tuple):
+                return
+            self_ref = _self()
+            if not self_ref:
+                return
+            self._validate_stack_items(self_ref.menu_widget.stack, redux_stack)
 
-                # Compare stack items
-                for i, (gui_item, redux_item) in enumerate(
-                    zip(gui_stack, redux_stack, strict=True),
-                ):
-                    gui_type = type(gui_item).__name__
-                    redux_type = type(redux_item).__name__
-                    if isinstance(gui_item, StackMenuItem):
-                        if not isinstance(redux_item, ReduxMenuStackItem):
-                            logger.warning(
-                                f'[STACK SYNC] Type mismatch at [{i}]: '
-                                f'GUI={gui_type}, Redux={redux_type}',
-                            )
-                        elif gui_item.page_index != redux_item.page_index:
-                            logger.warning(
-                                f'[STACK SYNC] Page index mismatch at [{i}]: '
-                                f'GUI={gui_item.page_index}, '
-                                f'Redux={redux_item.page_index}',
-                            )
-                    elif isinstance(gui_item, StackApplicationItem):
-                        from ubo_app.store.core.types import (
-                            ApplicationStackItem as ReduxAppItem,
-                        )
+    def _validate_stack_items(
+        self,
+        gui_stack: Sequence[object],
+        redux_stack: tuple[object, ...],
+    ) -> None:
+        """Validate GUI and Redux stacks are in sync."""
+        gui_len = len(gui_stack)
+        redux_len = len(redux_stack)
 
-                        if not isinstance(redux_item, ReduxAppItem):
-                            logger.warning(
-                                f'[STACK SYNC] Type mismatch at [{i}]: '
-                                f'GUI={gui_type}, Redux={redux_type}',
-                            )
+        # Compare lengths
+        if gui_len != redux_len:
+            logger.warning(
+                '[STACK SYNC] Length mismatch! GUI: %d, Redux: %d',
+                gui_len,
+                redux_len,
+            )
+            return
 
-                logger.debug(
-                    f'[STACK SYNC] ✓ Stacks in sync: {redux_len} items',
+        # Compare stack items
+        for i, (gui_item, redux_item) in enumerate(
+            zip(gui_stack, redux_stack, strict=True),
+        ):
+            self._validate_single_stack_item(i, gui_item, redux_item)
+
+        logger.debug('[STACK SYNC] Stacks in sync: %d items', redux_len)
+
+    def _validate_single_stack_item(
+        self,
+        index: int,
+        gui_item: object,
+        redux_item: object,
+    ) -> None:
+        """Validate a single stack item pair."""
+        gui_type = type(gui_item).__name__
+        redux_type = type(redux_item).__name__
+
+        if isinstance(gui_item, StackMenuItem):
+            if not isinstance(redux_item, ReduxMenuStackItem):
+                logger.warning(
+                    '[STACK SYNC] Type mismatch at [%d]: GUI=%s, Redux=%s',
+                    index,
+                    gui_type,
+                    redux_type,
+                )
+            elif gui_item.page_index != redux_item.page_index:
+                logger.warning(
+                    '[STACK SYNC] Page index mismatch at [%d]: GUI=%d, Redux=%d',
+                    index,
+                    gui_item.page_index,
+                    redux_item.page_index,
+                )
+        elif isinstance(gui_item, StackApplicationItem):
+            from ubo_app.store.core.types import ApplicationStackItem as ReduxAppItem
+
+            if not isinstance(redux_item, ReduxAppItem):
+                logger.warning(
+                    '[STACK SYNC] Type mismatch at [%d]: GUI=%s, Redux=%s',
+                    index,
+                    gui_type,
+                    redux_type,
                 )
 
     def build(self) -> Widget | None:
