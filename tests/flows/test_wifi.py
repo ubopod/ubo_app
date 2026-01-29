@@ -131,6 +131,7 @@ async def test_setup_flow(
 
     # Select "QR code" to scan a QR code for credentials
     store.dispatch(MenuChooseByIconAction(icon='󰄀'))
+    await stability(initial_wait=3, wait=3)
 
     # Success notification should be shown
     window_snapshot.take()
