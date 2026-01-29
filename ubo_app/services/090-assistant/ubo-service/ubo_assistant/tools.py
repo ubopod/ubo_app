@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -16,6 +15,7 @@ from pipecat.services.mcp_service import MCPClient
 if TYPE_CHECKING:
     from pipecat.adapters.schemas.direct_function import DirectFunction
     from pipecat.services.llm_service import LLMService
+    from ubo_bindings.ubo.v1 import SseMcpConfig, StdioMcpConfig
 
 
 @dataclass
@@ -31,8 +31,8 @@ class MCPServerMetadata:
 
     server_id: str  # Format: {name}_{uuid}
     name: str  # User-friendly name
-    type: str  # 'stdio' or 'sse'
-    config: str  # JSON string for stdio, URL string for sse
+    type: str  # 'stdio' or 'sse' (enum value)
+    config: StdioMcpConfig | SseMcpConfig  # betterproto config from ubo_bindings
 
 
 def create_ubo_standard_tools() -> ToolsSchema:
@@ -79,7 +79,7 @@ async def create_mcp_client_from_metadata(
     """Create MCP client from server metadata.
 
     Args:
-        server: MCP server metadata
+        server: MCP server metadata with betterproto config object
 
     Returns:
         MCPClient instance or None if creation fails
@@ -87,58 +87,38 @@ async def create_mcp_client_from_metadata(
     """
     try:
         if server.type == 'stdio':
-            # STDIO configuration - config is JSON string, parse it
-            if not isinstance(server.config, str):
-                logger.error(
-                    'Invalid stdio config type',
-                    extra={'server_id': server.server_id, 'type': type(server.config)},
-                )
-                return None
+            # STDIO configuration - config is betterproto StdioMcpConfig object
+            config = server.config
 
-            try:
-                config_dict = json.loads(server.config)
-            except json.JSONDecodeError:
-                logger.exception(
-                    'Failed to parse stdio config JSON',
-                    extra={'server_id': server.server_id},
-                )
-                return None
+            # Extract args from nested wrapper (StdioMcpConfigArgs.items)
+            args_wrapper = getattr(config, 'args', None)
+            if args_wrapper and hasattr(args_wrapper, 'items'):
+                args = list(args_wrapper.items)
+            else:
+                args = []
 
-            # Extract the first (and only) server config
-            mcp_servers = config_dict.get('mcpServers', {})
-            if not mcp_servers:
-                logger.error(
-                    'No mcpServers found in config',
-                    extra={'server_id': server.server_id},
-                )
-                return None
-
-            server_config = next(iter(mcp_servers.values()))
-
-            # Use env vars as-is (user provides them in JSON)
-            env = server_config.get('env', {})
-            resolved_env = dict(env)
+            # Extract env from nested wrapper (StdioMcpConfigEnvDict.items)
+            env_wrapper = getattr(config, 'env', None)
+            if env_wrapper and hasattr(env_wrapper, 'items'):
+                env = dict(env_wrapper.items)
+            else:
+                env = {}
 
             return MCPClient(
                 server_params=StdioServerParameters(
-                    command=server_config['command'],
-                    args=server_config.get('args', []),
-                    env=resolved_env,
+                    command=config.command,
+                    args=args,
+                    env=env,
                 ),
             )
 
         if server.type == 'sse':
-            # SSE configuration
-            if not isinstance(server.config, str):
-                logger.error(
-                    'Invalid SSE config type',
-                    extra={'server_id': server.server_id, 'type': type(server.config)},
-                )
-                return None
+            # SSE configuration - config is betterproto SseMcpConfig object
+            config = server.config
 
             return MCPClient(
                 server_params=SseServerParameters(
-                    url=server.config,
+                    url=config.url,
                 ),
             )
 

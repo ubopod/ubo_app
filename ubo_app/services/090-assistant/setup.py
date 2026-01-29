@@ -128,6 +128,8 @@ def input_mcp_server() -> None:
 
         from ubo_app.store.services.assistant import (
             AssistantAddMcpServerAction,
+            SseMcpConfig,
+            StdioMcpConfig,
         )
 
         with contextlib.suppress(asyncio.CancelledError):
@@ -176,7 +178,7 @@ def input_mcp_server() -> None:
 
             server_type = McpServerType(server_type_str)
 
-            # Validate configuration
+            # Validate and create typed configuration
             if server_type == McpServerType.STDIO:
                 is_valid, error_msg, parsed_config = validate_stdio_config(config_str)
                 if not is_valid or not parsed_config:
@@ -185,24 +187,30 @@ def input_mcp_server() -> None:
                         extra={'error': error_msg},
                     )
                     return
-                # Convert dict to JSON string for gRPC compatibility
-                config: str = json.dumps(parsed_config)
+                # Extract server config and create typed object
+                mcp_servers_dict = parsed_config.get('mcpServers', {})
+                server_config = next(iter(mcp_servers_dict.values()))
+                typed_config: StdioMcpConfig | SseMcpConfig = StdioMcpConfig(
+                    command=server_config['command'],
+                    args=server_config.get('args', []),
+                    env=server_config.get('env', {}),
+                )
             else:  # SSE
                 is_valid, error_msg = validate_sse_url(config_str)
                 if not is_valid:
                     logger.error('Invalid SSE URL', extra={'error': error_msg})
                     return
-                config = config_str
+                typed_config = SseMcpConfig(url=config_str)
 
             # Save to filesystem
-            server_id = save_mcp_server(name, server_type, config)
+            server_id = save_mcp_server(name, server_type, typed_config)
 
             # Dispatch action to update state
             store.dispatch(
                 AssistantAddMcpServerAction(
                     name=name,
                     type=server_type,
-                    config=config,
+                    config=typed_config,
                 ),
             )
 

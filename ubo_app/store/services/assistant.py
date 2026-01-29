@@ -80,13 +80,37 @@ class McpServerType(StrEnum):
     SSE = 'sse'
 
 
+class StdioMcpConfig(Immutable):
+    """Configuration for stdio MCP servers."""
+
+    command: str
+    args: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
+
+
+class SseMcpConfig(Immutable):
+    """Configuration for SSE MCP servers."""
+
+    url: str
+
+
 class McpServerMetadata(Immutable):
     """Metadata for an MCP server."""
 
     server_id: str  # Format: {name}_{uuid}
     name: str  # User-friendly name
     type: McpServerType  # Server type enum
-    config: str  # JSON string for stdio, URL string for sse
+    config: StdioMcpConfig | SseMcpConfig  # Typed config - protobuf oneof
+
+
+class EnabledMcpServersWithMetadata(Immutable):
+    """Wrapper for list of enabled MCP servers with metadata.
+
+    This wrapper is needed because gRPC selectors don't support
+    container types (lists) directly.
+    """
+
+    items: list[McpServerMetadata] = field(default_factory=list)
 
 
 class AssistantAction(BaseAction):
@@ -199,7 +223,7 @@ class AssistantAddMcpServerAction(AssistantAction):
 
     name: str
     type: McpServerType
-    config: str  # JSON string for stdio, URL string for sse
+    config: StdioMcpConfig | SseMcpConfig  # Typed config - protobuf oneof
 
 
 class AssistantToggleMcpServerAction(AssistantAction):
@@ -244,7 +268,7 @@ class AssistantAddMcpServerEvent(AssistantEvent):
 
     name: str
     type: McpServerType
-    config: str  # JSON string for stdio, URL string for sse
+    config: StdioMcpConfig | SseMcpConfig  # Typed config - protobuf oneof
 
 
 class AssistantDeleteMcpServerEvent(AssistantEvent):
@@ -317,7 +341,9 @@ class AssistantState(Immutable):
             else list(value),
         ),
     )
-    # JSON string for gRPC autorun - enabled servers with full metadata
-    enabled_mcp_servers_with_metadata_json: str = '[]'
+    # Enabled servers with full metadata for gRPC autorun (wrapped for gRPC)
+    enabled_mcp_servers_with_metadata: EnabledMcpServersWithMetadata = field(
+        default_factory=EnabledMcpServersWithMetadata,
+    )
     # Setup status for all provider engines - source of truth for UI
     provider_setup_status: dict[str, bool] = field(default_factory=dict)

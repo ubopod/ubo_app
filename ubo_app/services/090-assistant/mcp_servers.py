@@ -9,7 +9,12 @@ import uuid
 from typing import TYPE_CHECKING
 
 from ubo_app.constants.assistant import ASSISTANT_MCP_SERVERS_PATH
-from ubo_app.store.services.assistant import McpServerMetadata, McpServerType
+from ubo_app.store.services.assistant import (
+    McpServerMetadata,
+    McpServerType,
+    SseMcpConfig,
+    StdioMcpConfig,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -48,18 +53,45 @@ def load_mcp_servers() -> dict[str, McpServerMetadata]:
                 data = json.load(f)
 
             server_type = McpServerType(data['type'])
-            config = data['config']
+            raw_config = data['config']
 
             # Extract server name from directory name (format: {name}_{uuid})
             server_id = server_dir.name
             name_parts = server_id.rsplit('_', 1)
             name = name_parts[0] if len(name_parts) == 2 else server_id  # noqa: PLR2004
 
+            # Parse config into typed object
+            if server_type == McpServerType.STDIO:
+                # Parse STDIO config from JSON dict or string
+                if isinstance(raw_config, str):
+                    config_dict = json.loads(raw_config)
+                else:
+                    config_dict = raw_config
+                # Extract first server from mcpServers
+                mcp_servers_dict = config_dict.get('mcpServers', {})
+                if mcp_servers_dict:
+                    server_config = next(iter(mcp_servers_dict.values()))
+                    typed_config: StdioMcpConfig | SseMcpConfig = StdioMcpConfig(
+                        command=server_config['command'],
+                        args=server_config.get('args', []),
+                        env=server_config.get('env', {}),
+                    )
+                else:
+                    # Legacy format: config is the server config directly
+                    typed_config = StdioMcpConfig(
+                        command=config_dict['command'],
+                        args=config_dict.get('args', []),
+                        env=config_dict.get('env', {}),
+                    )
+            else:
+                # SSE config - URL string
+                typed_config = SseMcpConfig(url=raw_config)
+
             servers[server_id] = McpServerMetadata(
                 server_id=server_id,
                 name=name,
                 type=server_type,
-                config=config,
+                config=typed_config,
             )
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
@@ -74,14 +106,14 @@ def load_mcp_servers() -> dict[str, McpServerMetadata]:
 def save_mcp_server(
     name: str,
     server_type: McpServerType,
-    config: str,
+    config: StdioMcpConfig | SseMcpConfig,
 ) -> str:
     """Save MCP server configuration to filesystem.
 
     Args:
         name: User-friendly server name
         server_type: Type of MCP server (stdio or sse)
-        config: Server configuration (JSON string for stdio, URL string for sse)
+        config: Server configuration (typed config object)
 
     Returns:
         server_id: The generated server ID
@@ -94,10 +126,26 @@ def save_mcp_server(
     server_dir = ASSISTANT_MCP_SERVERS_PATH / server_id
     server_dir.mkdir(parents=True, exist_ok=True)
 
+    # Serialize typed config for filesystem storage
+    if isinstance(config, StdioMcpConfig):
+        # Store in mcpServers format for compatibility
+        config_data: dict | str = {
+            'mcpServers': {
+                name: {
+                    'command': config.command,
+                    'args': config.args,
+                    'env': config.env,
+                },
+            },
+        }
+    else:
+        # SseMcpConfig - store URL directly
+        config_data = config.url
+
     config_file = server_dir / 'config.json'
     data = {
         'type': server_type.value,
-        'config': config,
+        'config': config_data,
         'enabled': True,  # Default to enabled
     }
 

@@ -227,25 +227,21 @@ def reducer(
             elif action.server_id in enabled_servers:
                     enabled_servers.remove(action.server_id)
 
-            # Serialize enabled servers with metadata for gRPC autorun
-            import json
+            # Build enabled servers with metadata for gRPC autorun
+            from ubo_app.store.services.assistant import EnabledMcpServersWithMetadata
 
-            enabled_with_metadata = [
-                {
-                    'server_id': state.mcp_servers[sid].server_id,
-                    'name': state.mcp_servers[sid].name,
-                    'type': state.mcp_servers[sid].type.value,  # Convert enum to string
-                    'config': state.mcp_servers[sid].config,
-                }
-                for sid in enabled_servers
-                if sid in state.mcp_servers
-            ]
-            enabled_mcp_servers_with_metadata_json = json.dumps(enabled_with_metadata)
+            enabled_with_metadata = EnabledMcpServersWithMetadata(
+                items=[
+                    state.mcp_servers[sid]
+                    for sid in enabled_servers
+                    if sid in state.mcp_servers
+                ],
+            )
 
             return replace(
                 state,
                 enabled_mcp_servers=enabled_servers,
-                enabled_mcp_servers_with_metadata_json=enabled_mcp_servers_with_metadata_json,
+                enabled_mcp_servers_with_metadata=enabled_with_metadata,
             )
 
         case AssistantDeleteMcpServerAction():
@@ -257,20 +253,16 @@ def reducer(
             mcp_servers = {
                 k: v for k, v in state.mcp_servers.items() if k != action.server_id
             }
-            # Serialize enabled servers with metadata for gRPC autorun
-            import json
+            # Build enabled servers with metadata for gRPC autorun
+            from ubo_app.store.services.assistant import EnabledMcpServersWithMetadata
 
-            enabled_with_metadata = [
-                {
-                    'server_id': mcp_servers[sid].server_id,
-                    'name': mcp_servers[sid].name,
-                    'type': mcp_servers[sid].type.value,  # Convert enum to string
-                    'config': mcp_servers[sid].config,
-                }
-                for sid in enabled_servers
-                if sid in mcp_servers
-            ]
-            enabled_mcp_servers_with_metadata_json = json.dumps(enabled_with_metadata)
+            enabled_with_metadata = EnabledMcpServersWithMetadata(
+                items=[
+                    mcp_servers[sid]
+                    for sid in enabled_servers
+                    if sid in mcp_servers
+                ],
+            )
 
             logger.info(
                 'AssistantDeleteMCPServerAction processed',
@@ -285,7 +277,7 @@ def reducer(
                     state,
                     enabled_mcp_servers=enabled_servers,
                     mcp_servers=mcp_servers,
-                    enabled_mcp_servers_with_metadata_json=enabled_mcp_servers_with_metadata_json,
+                    enabled_mcp_servers_with_metadata=enabled_with_metadata,
                 ),
                 events=[AssistantDeleteMcpServerEvent(server_id=action.server_id)],
             )
@@ -296,8 +288,11 @@ def reducer(
 
             from ubo_app.constants.assistant import ASSISTANT_MCP_SERVERS_PATH
             from ubo_app.store.services.assistant import (
+                EnabledMcpServersWithMetadata,
                 McpServerMetadata,
                 McpServerType,
+                SseMcpConfig,
+                StdioMcpConfig,
             )
 
             loaded_servers: dict[str, McpServerMetadata] = {}
@@ -333,17 +328,43 @@ def reducer(
                             else server_id
                         )
 
-                        # Ensure config is always a string
-                        # (JSON for dicts, plain string for URLs)
-                        config = data['config']
-                        if isinstance(config, dict):
-                            config = json.dumps(config)
+                        server_type = McpServerType(data['type'])
+                        raw_config = data['config']
+
+                        # Parse config into typed object
+                        if server_type == McpServerType.STDIO:
+                            # Parse STDIO config from JSON dict or string
+                            if isinstance(raw_config, str):
+                                config_dict = json.loads(raw_config)
+                            else:
+                                config_dict = raw_config
+                            # Extract first server from mcpServers
+                            mcp_servers_dict = config_dict.get('mcpServers', {})
+                            if mcp_servers_dict:
+                                server_config = next(iter(mcp_servers_dict.values()))
+                                typed_config: StdioMcpConfig | SseMcpConfig = (
+                                    StdioMcpConfig(
+                                        command=server_config['command'],
+                                        args=server_config.get('args', []),
+                                        env=server_config.get('env', {}),
+                                    )
+                                )
+                            else:
+                                # Legacy format: config is the server config directly
+                                typed_config = StdioMcpConfig(
+                                    command=config_dict['command'],
+                                    args=config_dict.get('args', []),
+                                    env=config_dict.get('env', {}),
+                                )
+                        else:
+                            # SSE config - URL string
+                            typed_config = SseMcpConfig(url=raw_config)
 
                         loaded_servers[server_id] = McpServerMetadata(
                             server_id=server_id,
                             name=name,
-                            type=McpServerType(data['type']),  # Convert string to enum
-                            config=config,
+                            type=server_type,
+                            config=typed_config,
                         )
 
                         # Track enabled state from config file
@@ -365,18 +386,14 @@ def reducer(
                         )
                         continue
 
-            # Serialize enabled servers with metadata for gRPC autorun
-            enabled_with_metadata = [
-                {
-                    'server_id': loaded_servers[sid].server_id,
-                    'name': loaded_servers[sid].name,
-                    'type': loaded_servers[sid].type.value,  # Convert enum to string
-                    'config': loaded_servers[sid].config,
-                }
-                for sid in enabled_servers
-                if sid in loaded_servers
-            ]
-            enabled_mcp_servers_with_metadata_json = json.dumps(enabled_with_metadata)
+            # Build enabled servers with metadata for gRPC autorun
+            enabled_with_metadata = EnabledMcpServersWithMetadata(
+                items=[
+                    loaded_servers[sid]
+                    for sid in enabled_servers
+                    if sid in loaded_servers
+                ],
+            )
 
             logger.debug(
                 'Finished syncing MCP servers',
@@ -390,7 +407,7 @@ def reducer(
                 state,
                 mcp_servers=loaded_servers,
                 enabled_mcp_servers=enabled_servers,
-                enabled_mcp_servers_with_metadata_json=enabled_mcp_servers_with_metadata_json,
+                enabled_mcp_servers_with_metadata=enabled_with_metadata,
             )
 
         case _:

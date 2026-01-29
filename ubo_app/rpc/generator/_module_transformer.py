@@ -206,7 +206,7 @@ class _ProtoGenerator(ast.NodeVisitor):
                 if value.value.id in ('Sequence', 'list'):
                     return _ListType(type=self.get_field_type(value=value.slice))
 
-                if value.value.id == 'set':
+                if value.value.id in ('set', 'frozenset'):
                     return _SetType(type=self.get_field_type(value=value.slice))
 
                 if value.value.id == 'tuple' and isinstance(value.slice, ast.Tuple):
