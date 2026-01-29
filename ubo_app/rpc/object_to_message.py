@@ -90,6 +90,44 @@ def _try_wrap_oneof(
     return None
 
 
+def _try_wrap_single_field(
+    object_: Immutable | None,
+    message_class: type[betterproto.Message] | None,
+    expected_type: type[T],
+) -> T | None:
+    """Try to wrap object in a single-field wrapper message.
+
+    This handles the proto pattern for tuple[T | None, ...] where each item
+    is wrapped in an ItemsItem message with a single optional field.
+
+    Returns the wrapped message if successful, None otherwise.
+    """
+    if not hasattr(expected_type, '_betterproto'):
+        return None
+
+    # Check if expected_type has exactly one non-meta field
+    field_names = [
+        f for f in expected_type._betterproto.sorted_field_names
+        if not f.startswith('meta_field_')
+    ]
+
+    if len(field_names) != 1:
+        return None
+
+    field_name = field_names[0]
+    cls_by_field = expected_type._betterproto.cls_by_field
+
+    # Check if the single field can hold message_class
+    if field_name in cls_by_field:
+        field_cls = cls_by_field[field_name]
+        if message_class is None or field_cls == message_class:
+            # Build the inner message (or None) and wrap it
+            inner_message = None if object_ is None else build_message(object_)
+            return expected_type(**{field_name: inner_message})
+
+    return None
+
+
 @overload
 def build_message(
     object_: GRPCSerializable,
@@ -115,9 +153,10 @@ def build_message(  # noqa: C901, PLR0912
             raise ValueError(msg)
         if expected_type is None:
             return object_.value
+        # If expected_type is a primitive (e.g., str), return the enum's value
+        # This handles StrEnum -> string proto field case
         if not issubclass(expected_type, betterproto.Enum):
-            msg = f'Expected a betterproto.Enum, got {expected_type}'
-            raise ValueError(msg)
+            return object_.value
         return getattr(
             expected_type,
             cast('str', 'UNSPECIFIED' if object_ is None else object_.name),
@@ -165,14 +204,28 @@ def build_message(  # noqa: C901, PLR0912
 
     message_class = get_class(object_)
 
-    # Handle oneof wrapper types: if expected_type is a oneof wrapper and
-    # message_class is one of the oneof variants, wrap it appropriately
-    if expected_type and message_class and not issubclass(message_class, expected_type):
-        wrapped = _try_wrap_oneof(object_, message_class, expected_type)
+    # Handle wrapper types: if expected_type is a wrapper and message_class
+    # is the wrapped type, wrap it appropriately
+    is_subclass = (
+        message_class is not None
+        and expected_type is not None
+        and issubclass(message_class, expected_type)
+    )
+    if expected_type and not is_subclass:
+        # Try oneof wrapper first
+        if message_class:
+            wrapped = _try_wrap_oneof(object_, message_class, expected_type)
+            if wrapped is not None:
+                return wrapped
+
+        # Try single-field wrapper (for tuple[T | None, ...] pattern)
+        wrapped = _try_wrap_single_field(object_, message_class, expected_type)
         if wrapped is not None:
             return wrapped
-        msg = f'Expected {expected_type}, got {message_class}'
-        raise ValueError(msg)
+
+        if message_class:
+            msg = f'Expected {expected_type}, got {message_class}'
+            raise ValueError(msg)
 
     fields = {
         betterproto.casing.snake_case(key): build_message(
