@@ -67,6 +67,7 @@ from ubo_app.store.core.types import (
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
+    UpdateCurrentViewAction,
     ViewChangedEvent,
     ViewData,
 )
@@ -82,6 +83,41 @@ def find_sub_menu_item(items: Sequence[Item], key: str) -> SubMenuItem:
         msg = f'{key.capitalize()} menu item is not a `SubMenuItem`'
         raise TypeError(msg)
     return item
+
+
+def find_menu_for_item(items: Sequence[Item], key: str) -> Menu | None:
+    """Find the menu for an item by key.
+
+    Handles both SubMenuItem (with sub_menu) and ActionItem (with action that
+    returns a menu or a callable that returns a menu). Returns None if no menu
+    can be found.
+    """
+    from ubo_gui.menu.types import ActionItem
+
+    item = next((item for item in items if item.key == key), None)
+    if item is None:
+        return None
+
+    # Handle SubMenuItem - has sub_menu attribute
+    if isinstance(item, SubMenuItem):
+        sub_menu = item.sub_menu
+        return sub_menu() if callable(sub_menu) else sub_menu
+
+    # Handle ActionItem - action may return a menu or callable that returns menu
+    if isinstance(item, ActionItem) and item.action:
+        try:
+            result = item.action()
+            # If result is callable (e.g., autorun wrapper), call it to get menu
+            if callable(result):
+                result = result()
+            # Check if result is a Menu (HeadedMenu, HeadlessMenu, etc.)
+            if hasattr(result, 'items') and hasattr(result, 'title'):
+                return result
+        except Exception:  # noqa: BLE001, S110
+            # Action failed or didn't return a menu - silently ignore
+            pass
+
+    return None
 
 
 # =============================================================================
@@ -120,12 +156,9 @@ def get_current_menu_from_stack(
         if current_menu is None:
             return None
         items = menu_items(current_menu)
-        try:
-            sub_item = find_sub_menu_item(items, item.menu_key)
-            sub_menu = sub_item.sub_menu
-            current_menu = sub_menu() if callable(sub_menu) else sub_menu
-        except (TypeError, StopIteration):
-            # Menu key not found or not a submenu
+        # Use find_menu_for_item which handles both SubMenuItem and ActionItem
+        current_menu = find_menu_for_item(items, item.menu_key)
+        if current_menu is None:
             return None
     return current_menu
 
@@ -470,9 +503,7 @@ def reducer(
 
         case StackPopItemAction():
             # Find and remove the specific item from stack
-            new_stack = tuple(
-                item for item in state.stack if item.id != action.item_id
-            )
+            new_stack = tuple(item for item in state.stack if item.id != action.item_id)
             if new_stack == state.stack:
                 return state  # Item not found, no change
             new_path = derive_path_from_stack(new_stack)
@@ -904,6 +935,16 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
                     ),
                 ),
                 events=events,
+            )
+
+        case UpdateCurrentViewAction():
+            # Update current_view with a computed view (used by dynamic menu system)
+            # This allows ViewRenderer to push computed views that include dynamic menus
+            if state.current_view == action.view:
+                return state  # No change
+            return CompleteReducerResult(
+                state=replace(state, current_view=action.view),
+                events=[ViewChangedEvent(view=action.view)],
             )
 
         case _:

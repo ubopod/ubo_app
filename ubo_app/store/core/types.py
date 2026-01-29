@@ -486,6 +486,12 @@ class CloseApplicationAction(MainAction):
     application_instance_id: str
 
 
+class UpdateCurrentViewAction(MainAction):
+    """Update current_view with a computed view (used by dynamic menu system)."""
+
+    view: ViewData
+
+
 class MainEvent(BaseEvent): ...
 
 

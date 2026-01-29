@@ -53,6 +53,7 @@ from redux.basic_types import (
 from ubo_app.constants import STORE_GRACE_PERIOD
 from ubo_app.logger import logger
 from ubo_app.store.core.dynamic_menus_reducer import reducer as dynamic_menus_reducer
+from ubo_app.store.core.view_computation import setup_dynamic_view_autorun
 from ubo_app.store.input.reducer import reducer as input_reducer
 from ubo_app.store.scheduler import Scheduler
 from ubo_app.store.settings.reducer import reducer as settings_reducer
@@ -655,6 +656,9 @@ store.dispatch(
         reducer=main_reducer,
     ),
 )
+
+# Set up dynamic view computation for dumb UI architecture
+setup_dynamic_view_autorun()
 
 store._subscribe(  # noqa: SLF001
     lambda state: logger.verbose('State updated', extra={'state': state}),
