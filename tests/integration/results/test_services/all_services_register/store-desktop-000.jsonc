@@ -4,7 +4,10 @@
   "assistant": {
     "_type": "AssistantState",
     "enabled_mcp_servers": [],
-    "enabled_mcp_servers_with_metadata_json": "[]",
+    "enabled_mcp_servers_with_metadata": {
+      "_type": "EnabledMcpServersWithMetadata",
+      "items": []
+    },
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": false,
