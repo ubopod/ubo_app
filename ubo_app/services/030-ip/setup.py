@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING
 import psutil
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
@@ -28,7 +28,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from ubo_app.utils.types import Subscriptions
 
@@ -48,6 +48,35 @@ def _get_interface_icon(name: str) -> str:
     return '󰛳'
 
 
+def _register_ip_action_handlers(interfaces: Sequence[IpNetworkInterface]) -> None:
+    """Register action handlers for IP interface menus."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+        unregister_action,
+    )
+
+    # Unregister all existing ip:open-interface: handlers
+    for action_id in get_registered_actions():
+        if action_id.startswith('ip:open-interface:'):
+            unregister_action(action_id)
+
+    if not interfaces:
+        return
+
+    # Register handlers for each interface
+    for interface in interfaces:
+        name = interface.name
+
+        def _make_handler(interface_name: str) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(StackPushMenuAction(menu_key=interface_name))
+
+            return _handler
+
+        register_action(f'ip:open-interface:{name}', _make_handler(name))
+
+
 @store.autorun(lambda state: state.ip.interfaces)
 def update_ip_dynamic_menu(interfaces: Sequence[IpNetworkInterface]) -> None:
     """Update the dynamic menu for IP addresses (dumb UI architecture).
@@ -55,8 +84,8 @@ def update_ip_dynamic_menu(interfaces: Sequence[IpNetworkInterface]) -> None:
     This autorun dispatches UpdateDynamicMenuAction with serializable MenuItemData.
     The dynamic menus state is then used by ViewRenderer for rendering.
     """
-    if not USE_DUMB_UI:
-        return
+    # Register action handlers for interface navigation
+    _register_ip_action_handlers(interfaces)
 
     items: tuple[MenuItemData | None, ...] = ()
     if interfaces:

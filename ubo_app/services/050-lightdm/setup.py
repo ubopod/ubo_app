@@ -10,7 +10,6 @@ from ubo_gui.constants import WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, Menu
 
 from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, STOPPED_COLOR
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -126,11 +125,29 @@ def disable_lightdm_service() -> None:
     create_task(act())
 
 
+def _register_lightdm_action_handlers() -> None:
+    """Register action handlers for LightDM menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+
+    # Only register once
+    if 'lightdm:install' in get_registered_actions():
+        return
+
+    register_action('lightdm:install', install_lightdm)
+    register_action('lightdm:start', start_lightdm_service)
+    register_action('lightdm:stop', stop_lightdm_service)
+    register_action('lightdm:enable', enable_lightdm_service)
+    register_action('lightdm:disable', disable_lightdm_service)
+
+
 @store.autorun(lambda state: state.lightdm)
 def update_lightdm_dynamic_menu(state: LightDMState) -> None:
     """Update the dynamic menu for LightDM (dumb UI architecture)."""
-    if not USE_DUMB_UI:
-        return
+    # Register action handlers on first call
+    _register_lightdm_action_handlers()
 
     items: list[MenuItemData] = []
     placeholder = ''

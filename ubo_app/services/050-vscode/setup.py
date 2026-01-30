@@ -6,6 +6,9 @@ import pathlib
 import subprocess
 from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 from commands import check_status, restart, uninstall_service
 from constants_ import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
 from kivy.lang.builder import Builder
@@ -14,7 +17,6 @@ from login_page import LoginPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -278,11 +280,64 @@ def _generate_dynamic_menu_items(state: VSCodeState) -> list[MenuItemData]:
     return items
 
 
+def _register_vscode_action_handlers() -> None:
+    """Register action handlers for VSCode menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+    from ubo_app.store.core.types import OpenApplicationAction
+
+    # Only register once
+    if 'vscode:download' in get_registered_actions():
+        return
+
+    register_action('vscode:download', download_code)
+    register_action('vscode:logout', logout)
+
+    def _open_login() -> None:
+        store.dispatch(
+            OpenApplicationAction(application_id='vscode:login-page'),
+        )
+
+    register_action('vscode:login', _open_login)
+
+
 @store.autorun(lambda state: state.vscode)
 def update_vscode_dynamic_menu(state: VSCodeState) -> None:
     """Update the dynamic menu for VSCode (dumb UI architecture)."""
-    if not USE_DUMB_UI:
-        return
+    _register_vscode_action_handlers()
+
+    # Register show-url action dynamically based on current status
+    if state.status and state.status.is_running and state.status.name:
+        from ubo_app.store.core.action_registry import (
+            get_registered_actions,
+            register_action,
+            unregister_action,
+        )
+        from ubo_app.store.core.types import OpenApplicationAction
+
+        action_id = f'vscode:show-url:{state.status.name}'
+        if action_id not in get_registered_actions():
+            # Unregister old show-url actions
+            for old_action_id in get_registered_actions():
+                if old_action_id.startswith('vscode:show-url:'):
+                    unregister_action(old_action_id)
+
+            def _make_show_url_handler(name: str) -> Callable[[], None]:
+                def _handler() -> None:
+                    store.dispatch(
+                        OpenApplicationAction(
+                            application_id='vscode:qrcode-page',
+                            initialization_kwargs={
+                                'url': f'{CODE_TUNNEL_URL_PREFIX}{name}',
+                            },
+                        ),
+                    )
+
+                return _handler
+
+            register_action(action_id, _make_show_url_handler(state.status.name))
 
     items = _generate_dynamic_menu_items(state)
 

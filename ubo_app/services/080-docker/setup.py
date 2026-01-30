@@ -33,7 +33,7 @@ from redux import CombineReducerRegisterAction
 from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID, USE_DUMB_UI
+from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -262,11 +262,35 @@ _DOCKER_STATUS_MENU_DATA: dict[DockerStatus, dict[str, object]] = {
 }
 
 
+def _register_docker_action_handlers() -> None:
+    """Register action handlers for Docker setup menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+
+    # Only register once
+    if 'docker:install' in get_registered_actions():
+        return
+
+    def _install_docker() -> None:
+        store.dispatch(DockerInstallAction())
+
+    def _start_docker() -> None:
+        store.dispatch(DockerStartAction())
+
+    def _stop_docker() -> None:
+        store.dispatch(DockerStopAction())
+
+    register_action('docker:install', _install_docker)
+    register_action('docker:start', _start_docker)
+    register_action('docker:stop', _stop_docker)
+
+
 @store.autorun(lambda state: state.docker.service.status)
 def update_docker_setup_dynamic_menu(status: DockerStatus) -> None:
     """Update the dynamic menu for Docker setup (dumb UI architecture)."""
-    if not USE_DUMB_UI:
-        return
+    _register_docker_action_handlers()
 
     default_data = _DOCKER_STATUS_MENU_DATA[DockerStatus.UNKNOWN]
     menu_data = _DOCKER_STATUS_MENU_DATA.get(status, default_data)

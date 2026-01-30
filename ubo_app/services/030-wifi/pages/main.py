@@ -22,11 +22,11 @@ from wifi_manager import (
     get_wifi_device,
 )
 
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     CloseApplicationAction,
     MenuItemData,
+    OpenApplicationAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
@@ -155,6 +155,42 @@ def _get_connection_icon(connection: WiFiConnection) -> str:
     return _CONNECTION_STATE_ICONS[connection.state]
 
 
+def _register_wifi_action_handlers(
+    connections: Sequence[WiFiConnection] | None,
+) -> None:
+    """Register action handlers for WiFi connections."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+        unregister_action,
+    )
+
+    # Unregister all existing wifi:open-connection: handlers
+    for action_id in get_registered_actions():
+        if action_id.startswith('wifi:open-connection:'):
+            unregister_action(action_id)
+
+    if connections is None:
+        return
+
+    # Register handlers for each connection
+    for connection in connections:
+        ssid = connection.ssid
+
+        def _make_handler(ssid_val: str) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(
+                    OpenApplicationAction(
+                        application_id='wifi:connection-page',
+                        initialization_kwargs={'ssid': ssid_val},
+                    ),
+                )
+
+            return _handler
+
+        register_action(f'wifi:open-connection:{ssid}', _make_handler(ssid))
+
+
 @store.autorun(lambda state: state.wifi.connections)
 def update_wifi_dynamic_menu(
     connections: Sequence[WiFiConnection] | None,
@@ -163,8 +199,8 @@ def update_wifi_dynamic_menu(
 
     This autorun dispatches UpdateDynamicMenuAction with serializable MenuItemData.
     """
-    if not USE_DUMB_UI:
-        return
+    # Register action handlers for opening connection pages
+    _register_wifi_action_handlers(connections)
 
     if connections is None:
         items: tuple[MenuItemData | None, ...] = ()

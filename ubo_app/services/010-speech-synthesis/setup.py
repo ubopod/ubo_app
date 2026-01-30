@@ -12,7 +12,6 @@ from piper.voice import AudioChunk, PiperVoice
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
 
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.constants.assistant import (
     PICOVOICE_ACCESS_KEY_SECRET_ID,
     PIPER_MODEL_PATH,
@@ -368,6 +367,27 @@ def _speech_synthesis_menu(
     )
 
 
+def _download_piper_wrapper() -> None:
+    """Download Piper model and reload context after completion."""
+    download_piper_model(callback=_context.load_piper)
+
+
+def _register_speech_synthesis_action_handlers() -> None:
+    """Register action handlers for speech synthesis menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+
+    # Only register once
+    if 'speech-synthesis:download_piper' in get_registered_actions():
+        return
+
+    register_action('speech-synthesis:download_piper', _download_piper_wrapper)
+    register_action('speech-synthesis:set_access_key', input_access_key)
+    register_action('speech-synthesis:clear_access_key', clear_access_key)
+
+
 @store.autorun(
     lambda state: state.speech_synthesis.selected_engine,
     options=AutorunOptions(memoization=False),
@@ -376,8 +396,7 @@ def update_speech_synthesis_dynamic_menu(
     _selected_engine: SpeechSynthesisEngineName,
 ) -> None:
     """Update the dynamic menu for speech synthesis (dumb UI)."""
-    if not USE_DUMB_UI:
-        return
+    _register_speech_synthesis_action_handlers()
 
     items: list[MenuItemData] = []
 
@@ -417,9 +436,6 @@ def update_picovoice_dynamic_menu(
     is_access_key_set: bool | None,  # noqa: FBT001
 ) -> None:
     """Update the dynamic menu for Picovoice settings (dumb UI)."""
-    if not USE_DUMB_UI:
-        return
-
     if is_access_key_set:
         items = (
             MenuItemData(

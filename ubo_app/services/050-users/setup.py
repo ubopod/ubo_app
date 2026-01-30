@@ -15,7 +15,6 @@ from ubo_gui.menu.types import (
 )
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -195,11 +194,29 @@ later.""",
     )
 
 
+def _register_users_action_handlers() -> None:
+    """Register action handlers for Users menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+
+    # Only register once
+    if 'users:add' in get_registered_actions():
+        return
+
+    def _add_user() -> None:
+        store.dispatch(UsersCreateUserAction())
+
+    register_action('users:add', _add_user)
+
+    # User-specific actions are registered dynamically based on state
+
+
 @store.autorun(lambda state: state.users)
 def update_users_dynamic_menu(state: UsersState) -> None:
     """Update the dynamic menu for Users (dumb UI architecture)."""
-    if not USE_DUMB_UI:
-        return
+    _register_users_action_handlers()
 
     items: list[MenuItemData] = []
 

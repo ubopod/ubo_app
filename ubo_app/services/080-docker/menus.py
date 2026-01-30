@@ -18,7 +18,6 @@ from ubo_gui.menu.types import (
 )
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import MenuItemData, UpdateDynamicMenuAction
 from ubo_app.store.main import store
@@ -291,9 +290,6 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
     UpdateDynamicMenuAction when it changes. This ensures TUI gets
     up-to-date menu state without coupling core to Docker service.
     """
-    if not USE_DUMB_UI:
-        return
-
     menu_id = get_docker_image_menu_id(image_id)
 
     @store.autorun(

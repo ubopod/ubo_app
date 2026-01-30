@@ -17,7 +17,6 @@ from kivy.lang.builder import Builder
 from sign_in_page import SignInPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -89,11 +88,45 @@ def login_actions(*, is_signed_in: bool | None) -> list[ActionItem | Application
     return actions
 
 
+def _register_rpi_connect_action_handlers() -> None:
+    """Register action handlers for RPi Connect menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+    from ubo_app.store.core.types import OpenApplicationAction
+
+    # Only register once
+    if 'rpi-connect:start' in get_registered_actions():
+        return
+
+    def _start_service() -> None:
+        start_service()  # type: ignore[call-arg] (@store.with_state decorator provides is_lightdm_active)
+
+    register_action('rpi-connect:start', _start_service)
+    register_action('rpi-connect:stop', stop_service)
+    register_action('rpi-connect:sign-out', sign_out)
+    register_action('rpi-connect:install', install_rpi_connect)
+    register_action('rpi-connect:uninstall', uninstall_rpi_connect)
+
+    def _open_signin() -> None:
+        store.dispatch(
+            OpenApplicationAction(application_id='rpi-connect:signin-page'),
+        )
+
+    def _open_qrcode() -> None:
+        store.dispatch(
+            OpenApplicationAction(application_id='rpi-connect:qrcode-page'),
+        )
+
+    register_action('rpi-connect:sign-in', _open_signin)
+    register_action('rpi-connect:show-url', _open_qrcode)
+
+
 @store.autorun(lambda state: state.rpi_connect)
 def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
     """Update the dynamic menu for RPi Connect (dumb UI architecture)."""
-    if not USE_DUMB_UI:
-        return
+    _register_rpi_connect_action_handlers()
 
     items: list[MenuItemData] = []
 

@@ -10,7 +10,6 @@ from ubo_gui.constants import WARNING_COLOR
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
 from ubo_app.colors import RUNNING_COLOR, STOPPED_COLOR
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -67,11 +66,28 @@ def disable_ssh_service() -> None:
     create_task(act())
 
 
+def _register_ssh_action_handlers() -> None:
+    """Register action handlers for SSH menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+
+    # Only register once
+    if 'ssh:start' in get_registered_actions():
+        return
+
+    register_action('ssh:start', start_ssh_service)
+    register_action('ssh:stop', stop_ssh_service)
+    register_action('ssh:enable', enable_ssh_service)
+    register_action('ssh:disable', disable_ssh_service)
+
+
 @store.autorun(lambda state: state.ssh)
 def update_ssh_dynamic_menu(state: SSHState) -> None:
     """Update the dynamic menu for SSH (dumb UI architecture)."""
-    if not USE_DUMB_UI:
-        return
+    # Register action handlers on first call
+    _register_ssh_action_handlers()
 
     # Build items based on current state
     items: list[MenuItemData] = [

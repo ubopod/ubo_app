@@ -6,9 +6,11 @@ import asyncio
 import datetime
 from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 from ubo_gui.menu.types import HeadedMenu, SubMenuItem
 
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.display import display
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -155,11 +157,34 @@ def timeout_options(selected_timeout: DisplayBlankTimeout) -> Sequence[Item]:
     ]
 
 
+def _register_display_action_handlers() -> None:
+    """Register action handlers for display timeout settings."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+
+    # Only register once
+    if 'display:set_timeout:OFF' in get_registered_actions():
+        return
+
+    for timeout in DisplayBlankTimeout:
+        def _make_timeout_handler(t: DisplayBlankTimeout) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(DisplaySetBlankTimeoutAction(timeout=t))
+
+            return _handler
+
+        register_action(
+            f'display:set_timeout:{timeout.value}',
+            _make_timeout_handler(timeout),
+        )
+
+
 @store.autorun(lambda state: state.display.selected_blank_timeout)
 def update_display_dynamic_menu(selected_timeout: DisplayBlankTimeout) -> None:
     """Update the dynamic menu for display timeout settings (dumb UI)."""
-    if not USE_DUMB_UI:
-        return
+    _register_display_action_handlers()
 
     # Convert timeout options to MenuItemData
     menu_items = tuple(
