@@ -501,6 +501,7 @@ class UpdateCurrentViewAction(MainAction):
     """Update current_view with a computed view (used by dynamic menu system)."""
 
     view: ViewData
+    status_bar: StatusBarData | None = None
 
 
 class MainEvent(BaseEvent): ...

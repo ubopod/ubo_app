@@ -275,14 +275,15 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
 
 def setup_dynamic_view_autorun() -> None:
-    """Set up an autorun to update current_view when dynamic menus change.
+    """Set up an autorun to update current_view and status_bar when state changes.
 
     This should be called after the store is initialized. It watches for
-    changes to dynamic_menus and the navigation stack, and dispatches
-    UpdateCurrentViewAction with the properly computed view.
+    changes to dynamic_menus, navigation stack, and status bar data, then
+    dispatches UpdateCurrentViewAction with the computed view and status bar.
     """
     from redux import AutorunOptions
 
+    from ubo_app.menu_app.view_renderer import compute_status_bar_data
     from ubo_app.store.core.types import UpdateCurrentViewAction
     from ubo_app.store.main import store
 
@@ -306,19 +307,39 @@ def setup_dynamic_view_autorun() -> None:
                 and getattr(state.main.current_view, 'type', None) == 'home'
             )
             else None,
+            # Watch status bar dependencies (clock, temperature, icons, recording state)
+            state.system.clock if hasattr(state, 'system') else '',
+            state.sensors.temperature.value
+            if hasattr(state, 'sensors') and state.sensors.temperature
+            else None,
+            tuple(state.status_icons.icons)
+            if hasattr(state, 'status_icons')
+            else (),
+            state.main.is_recording,
+            state.main.is_replaying,
+            state.audio.is_recording if hasattr(state, 'audio') else False,
         ),
         options=AutorunOptions(default_value=None),
     )
     def update_current_view_on_dynamic_change(
         _: tuple | None,
     ) -> None:
-        """Update current_view when stack, dynamic menus, or system metrics change."""
+        """Update current_view when stack, dynamic menus, or status bar data change."""
         state = store._state  # noqa: SLF001
         if state is None:
             return
 
         computed_view = compute_view_from_root_state(state)
+        computed_status_bar = compute_status_bar_data(state)
 
-        # Only dispatch if view actually changed
-        if state.main.current_view != computed_view:
-            store.dispatch(UpdateCurrentViewAction(view=computed_view))
+        # Only dispatch if view or status bar actually changed
+        if (
+            state.main.current_view != computed_view
+            or state.main.status_bar != computed_status_bar
+        ):
+            store.dispatch(
+                UpdateCurrentViewAction(
+                    view=computed_view,
+                    status_bar=computed_status_bar,
+                ),
+            )

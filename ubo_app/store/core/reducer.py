@@ -941,11 +941,22 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
         case UpdateCurrentViewAction():
             # Update current_view with a computed view (used by dynamic menu system)
             # This allows ViewRenderer to push computed views that include dynamic menus
-            if state.current_view == action.view:
+            view_unchanged = state.current_view == action.view
+            status_unchanged = state.status_bar == action.status_bar
+            if view_unchanged and status_unchanged:
                 return state  # No change
             return CompleteReducerResult(
-                state=replace(state, current_view=action.view),
-                events=[ViewChangedEvent(view=action.view)],
+                state=replace(
+                    state,
+                    current_view=action.view,
+                    status_bar=action.status_bar,
+                ),
+                events=[
+                    ViewChangedEvent(
+                        view=action.view,
+                        status_bar=action.status_bar,
+                    ),
+                ],
             )
 
         case ExecuteMenuActionAction():
