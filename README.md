@@ -334,6 +334,20 @@ To pass it command line options add a double-dash before the options:
 docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv -v uvo-app-dev-uv-local:/root/.local/share/uv -v ubo-app-dev-uv-venv:/ubo-app/.venv ubo-app-test -- -svv --make-screenshots --override-store-snapshots --override-window-snapshots
 ```
 
+**Useful pytest options for snapshot testing:**
+
+- `--make-screenshots` - Generate PNG screenshot files alongside hash files. When a test fails due to snapshot mismatch, this creates `.mismatch.png` files showing the actual rendered output for debugging.
+- `--override-window-snapshots` - Update window snapshot hash files to match current output (use after verifying the visual changes are correct).
+- `--override-store-snapshots` - Update store snapshot files to match current state.
+
+For example, to debug a failing snapshot test:
+
+```bash
+docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test -- --make-screenshots tests/integration/
+```
+
+Then check the generated `.mismatch.png` files in `tests/integration/results/` to see what changed.
+
 You can also run the tests in your local environment by running:
 
 ```bash
