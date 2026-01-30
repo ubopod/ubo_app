@@ -18,16 +18,33 @@ ASCII_MAX = 127
 
 # Status bar icon fallbacks for terminals without nerd fonts
 STATUS_ICON_FALLBACK: dict[str, str] = {
-    "󰤨": "W",  # WiFi connected
-    "󰤭": "w",  # WiFi disconnected
-    "󰤯": "w",  # WiFi weak
-    "󰤟": "W",  # WiFi medium
-    "󰤢": "W",  # WiFi strong
-    "󰈀": "E",  # Ethernet
+    # WiFi signal strength icons
+    "󰤯": "w",  # WiFi weak (0-20%)
+    "󰤟": "W",  # WiFi low (20-40%)
+    "󰤢": "W",  # WiFi medium (40-60%)
+    "󰤥": "W",  # WiFi good (60-80%)
+    "󰤨": "W",  # WiFi strong (80-100%)
+    "󰖪": "x",  # WiFi disconnected
+    "󰤭": "x",  # WiFi disconnected (alternate)
+    # Internet/Globe icons
+    "󰖟": "@",  # Globe/Internet connected
+    "󰪎": "!",  # Globe/Internet disconnected
+    # Ethernet icons
+    "󱊪": "E",  # Ethernet connected
+    "󰌙": "e",  # Ethernet disconnected
+    "󰈀": "E",  # Ethernet (alternate)
+    # Microphone icons
+    "󰍭": "m",  # Microphone muted
+    "󰍬": "M",  # Microphone unmuted
+    # Battery icons
     "󰂄": "B",  # Battery charging
     "󰁹": "B",  # Battery full
     "󰂃": "b",  # Battery low
     "󱊡": "b",  # Battery empty
+    # Notification/Warning icons
+    "󰋼": "!",  # Info/notification
+    "": "!",  # Warning
+    "󰍜": "=",  # Menu
 }
 
 

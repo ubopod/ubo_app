@@ -31,12 +31,8 @@ class UboTUI(App):
     TITLE = "Ubo TUI"
     CSS = """
     Screen {
+        layout: vertical;
         background: #0f0f1a;
-    }
-
-    #main-container {
-        width: 100%;
-        height: 100%;
     }
 
     #view-container {
@@ -71,9 +67,9 @@ class UboTUI(App):
         self._subscription_task: Any = None
 
     def compose(self) -> ComposeResult:
-        """Create application layout."""
+        """Create application layout with header, view, and footer."""
         yield HeaderBar(id="header")
-        with Container(id="main-container"), Container(id="view-container"):
+        with Container(id="view-container"):
             # Start with loading view - will be replaced when server state arrives
             yield LoadingView(id="view")
         yield FooterBar(id="footer")
