@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 from kivy.clock import mainthread
 
-from ubo_app.constants import DEBUG_MENU, USE_DUMB_UI
+from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     ApplicationStackItem,
@@ -449,7 +449,6 @@ class ViewRenderer:
     """Renders the UI based on ViewData from Redux state.
 
     This class subscribes to ViewChangedEvent and updates the UI accordingly.
-    It is enabled only when USE_DUMB_UI is set to True.
     """
 
     def __init__(self, menu_widget: MenuWidget, app: MenuAppCentral) -> None:
@@ -467,14 +466,13 @@ class ViewRenderer:
         self._last_view: ViewData | None = None
         self._view_changed_count: int = 0
 
-        if USE_DUMB_UI:
-            self._setup_subscription()
-            logger.info('[ViewRenderer] Dumb UI mode enabled')
+        self._setup_subscription()
+        logger.info('[ViewRenderer] Initialized')
 
-            # Initial render after a short delay to let the app initialize
-            from kivy.clock import Clock
+        # Initial render after a short delay to let the app initialize
+        from kivy.clock import Clock
 
-            Clock.schedule_once(lambda _: self._initial_render(), 1.0)
+        Clock.schedule_once(lambda _: self._initial_render(), 1.0)
 
     def _initial_render(self, attempt: int = 1) -> None:
         """Perform initial render of status bar after app startup.
@@ -663,15 +661,14 @@ class ViewRenderer:
             event: The ViewChangedEvent containing the new view data.
 
         """
-        if USE_DUMB_UI:
-            # In dumb UI mode, recompute view using dynamic menus
-            state = store._state  # noqa: SLF001
-            if state is not None:
-                view = compute_view_from_root_state(state)
-                self._on_view_changed_internal(view)
-                return
+        # Recompute view using dynamic menus
+        state = store._state  # noqa: SLF001
+        if state is not None:
+            view = compute_view_from_root_state(state)
+            self._on_view_changed_internal(view)
+            return
 
-        # Fall back to event view if not in dumb UI mode or state unavailable
+        # Fall back to event view if state unavailable
         self._on_view_changed_internal(event.view)
 
     @mainthread
@@ -868,21 +865,26 @@ class ViewRenderer:
         from kivy.uix.label import Label
         from kivy.uix.widget import Widget
 
-        # Update clock
-        if hasattr(self.app, 'clock_widget') and hasattr(self.app.clock_widget, 'text'):
+        # Update clock (only if state has a value, otherwise let the widget self-update)
+        if (
+            hasattr(self.app, 'clock_widget')
+            and hasattr(self.app.clock_widget, 'text')
+            and status_bar.clock
+        ):
             self.app.clock_widget.text = status_bar.clock
 
         # Update temperature
         if hasattr(self.app, 'temperature'):
             if status_bar.temperature is None:
-                self.app.temperature.text = '-'
+                self.app.temperature.text = ''
             else:
                 self.app.temperature.text = f'{status_bar.temperature:0.1f}󰔄'
 
         # Update light level (opacity based on lux)
         if hasattr(self.app, 'light'):
             if status_bar.light_level is None:
-                self.app.light.color = (0.5, 0, 0, 1)
+                # No sensor data - show full white
+                self.app.light.color = (1, 1, 1, 1)
             else:
                 v = min(status_bar.light_level, 140) / 140
                 self.app.light.color = (1, 1, 1, v)

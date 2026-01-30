@@ -5,15 +5,12 @@ import pathlib
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from kivy.clock import Clock, mainthread
+from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu.constants import PAGE_SIZE
 from ubo_gui.menu.menu_widget import MenuPageWidget
 from ubo_gui.volume import VolumeWidget
-
-from ubo_app.constants import USE_DUMB_UI
-from ubo_app.store.main import store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -42,11 +39,7 @@ class HomePage(MenuPageWidget):
         self.volume_widget = VolumeWidget()
         self.ids.right_column.add_widget(self.volume_widget)
 
-        # In dumb UI mode, ViewRenderer handles volume updates
-        if not USE_DUMB_UI:
-            store.autorun(lambda state: state.audio.playback_volume)(
-                self._sync_output_volume,
-            )
+        # ViewRenderer handles volume updates from state.audio
 
     @mainthread
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
@@ -65,9 +58,7 @@ class HomePage(MenuPageWidget):
         def set_value(_: float) -> None:
             gauge.value = psutil.cpu_percent(percpu=False)
 
-        # In dumb UI mode, ViewRenderer handles CPU updates from state.system
-        if not USE_DUMB_UI:
-            Clock.schedule_interval(set_value, 1)
+        # ViewRenderer handles CPU updates from state.system
 
         return gauge
 
@@ -84,9 +75,7 @@ class HomePage(MenuPageWidget):
         def set_value(_: float) -> None:
             gauge.value = psutil.virtual_memory().percent
 
-        # In dumb UI mode, ViewRenderer handles RAM updates from state.system
-        if not USE_DUMB_UI:
-            Clock.schedule_interval(set_value, 1)
+        # ViewRenderer handles RAM updates from state.system
 
         return gauge
 

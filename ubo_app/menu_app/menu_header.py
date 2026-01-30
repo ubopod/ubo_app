@@ -16,7 +16,6 @@ from ubo_gui.app import UboApp
 from ubo_gui.progress_ring import ProgressRingWidget
 from ubo_gui.spinner import SpinnerWidget
 
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.store.main import store
 
 if TYPE_CHECKING:
@@ -200,30 +199,6 @@ class MenuAppHeader(UboApp):
             options=AutorunOptions(keep_ref=False),
         )(self.handle_is_header_visible_change)
 
-        # In dumb UI mode, ViewRenderer handles these updates
-        if not USE_DUMB_UI:
-            store.autorun(
-                lambda state: [
-                    notification
-                    for notification in state.notifications.notifications
-                    if notification.progress is not None
-                ],
-                options=AutorunOptions(keep_ref=False),
-            )(self.set_notification_widgets)
-
-            store.autorun(
-                lambda state: state.main.is_recording,
-                options=AutorunOptions(keep_ref=False),
-            )(self.handle_is_recording_actions_change)
-
-            store.autorun(
-                lambda state: state.main.is_replaying,
-                options=AutorunOptions(keep_ref=False),
-            )(self.handle_is_replaying_change)
-
-            store.autorun(
-                lambda state: state.audio.is_recording,
-                options=AutorunOptions(keep_ref=False),
-            )(self.handle_is_recording_audio_change)
+        # ViewRenderer handles notification progress, recording, and replaying updates
 
         return self.header_layout

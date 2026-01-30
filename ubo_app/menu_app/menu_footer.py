@@ -14,7 +14,6 @@ from kivy.uix.widget import Widget
 from redux import AutorunOptions
 from ubo_gui.app import UboApp
 
-from ubo_app.constants import USE_DUMB_UI
 from ubo_app.store.main import store
 
 if TYPE_CHECKING:
@@ -27,7 +26,7 @@ class MenuAppFooter(UboApp):
     @mainthread
     def set_temperature_value(self: MenuAppFooter, value: float | None = None) -> None:
         if value is None:
-            self.temperature.text = '-'
+            self.temperature.text = ''
         else:
             self.temperature.text = f'{value:0.1f}󰔄'
 
@@ -51,12 +50,7 @@ class MenuAppFooter(UboApp):
             or setattr(layout, 'width', temperature.width + dp(12)),
         )
 
-        # In dumb UI mode, ViewRenderer handles temperature updates
-        if not USE_DUMB_UI:
-            store.autorun(
-                lambda state: state.sensors.temperature.value,
-                options=AutorunOptions(keep_ref=False),
-            )(self.set_temperature_value)
+        # ViewRenderer handles temperature updates from state.sensors
 
         icon = Label(
             text='',
@@ -74,7 +68,8 @@ class MenuAppFooter(UboApp):
     @mainthread
     def set_light_value(self: MenuAppFooter, value: float | None = None) -> None:
         if value is None:
-            self.light.color = (0.5, 0, 0, 1)
+            # No sensor data - show dim white (same as 0 lux)
+            self.light.color = (1, 1, 1, 1)
         else:
             v = min(value, 140) / 140
             self.light.color = (1, 1, 1, v)
@@ -97,18 +92,25 @@ class MenuAppFooter(UboApp):
             ),
         )
 
-        # In dumb UI mode, ViewRenderer handles light updates
-        if not USE_DUMB_UI:
-            store.autorun(
-                lambda state: state.sensors.light.value,
-                options=AutorunOptions(keep_ref=False),
-            )(self.set_light_value)
+        # ViewRenderer handles light updates from state.sensors
 
         return self.light
 
     @cached_property
     def clock_widget(self: MenuAppFooter) -> Label:
-        clock = Label(font_size=dp(20), size_hint=(None, 1), valign='middle')
+        local_timzone = datetime.datetime.now(datetime.UTC).astimezone().tzinfo
+
+        def now() -> datetime.datetime:
+            return datetime.datetime.now(local_timzone)
+
+        # Set initial text immediately when creating the Label
+        initial_time = now().strftime('%H:%M')
+        clock = Label(
+            text=initial_time,
+            font_size=dp(20),
+            size_hint=(None, 1),
+            valign='middle',
+        )
         clock.bind(
             texture_size=lambda clock, texture_size: setattr(
                 clock,
@@ -116,10 +118,6 @@ class MenuAppFooter(UboApp):
                 texture_size[0],
             ),
         )
-        local_timzone = datetime.datetime.now(datetime.UTC).astimezone().tzinfo
-
-        def now() -> datetime.datetime:
-            return datetime.datetime.now(local_timzone)
 
         def set_value(_: int | None = None) -> None:
             clock.text = now().strftime('%H:%M')
@@ -132,9 +130,8 @@ class MenuAppFooter(UboApp):
                 60 - now_.second - now_.microsecond / 1_000_000 + 0.05,
             )
 
-        # In dumb UI mode, ViewRenderer handles clock updates from state.system.clock
-        if not USE_DUMB_UI:
-            update()
+        # Schedule first update to start the cycle
+        Clock.schedule_once(update, 0)
 
         return clock
 
@@ -220,11 +217,6 @@ class MenuAppFooter(UboApp):
             options=AutorunOptions(keep_ref=False),
         )(self.handle_is_footer_visible_change)
 
-        # In dumb UI mode, ViewRenderer handles icon updates
-        if not USE_DUMB_UI:
-            store.autorun(
-                lambda state: state.status_icons.icons,
-                options=AutorunOptions(keep_ref=False),
-            )(self.render_icons)
+        # ViewRenderer handles icon updates from state.status_icons
 
         return self.footer_layout

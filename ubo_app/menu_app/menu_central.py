@@ -12,7 +12,7 @@ from ubo_gui.menu.stack_item import StackApplicationItem, StackItem, StackMenuIt
 from ubo_gui.page import PageWidget
 from ubo_gui.utils import mainthread_if_needed
 
-from ubo_app.constants import DEBUG_MENU, USE_DUMB_UI
+from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
 from ubo_app.menu_app.home_page import HomePage
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
@@ -86,11 +86,10 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         # Ensure initial visibility state is dispatched
         self.handle_page_index_change()
 
-        # Initialize ViewRenderer for dumb UI mode
-        if USE_DUMB_UI:
-            from ubo_app.menu_app.view_renderer import ViewRenderer
+        # Initialize ViewRenderer for dumb UI architecture
+        from ubo_app.menu_app.view_renderer import ViewRenderer
 
-            self.view_renderer = ViewRenderer(self.menu_widget, self)
+        self.view_renderer = ViewRenderer(self.menu_widget, self)
 
         if DEBUG_MENU:
             menu_representation = 'Menu:\n' + repr(self.menu_widget)
