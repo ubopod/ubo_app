@@ -40,7 +40,12 @@ def _get_dynamic_menu_id_for_stack(
 
     # Direct path-to-menu mappings for known paths
     path_mappings: dict[tuple[str, ...], str] = {
+        # Core menus
+        ('main',): 'main:menu',
+        ('main', 'apps'): 'apps:list',
+        ('main', 'settings'): 'settings:categories',
         ('notifications',): 'notifications:list',
+        ('power',): 'power:options',
     }
 
     # Check exact path matches first
@@ -274,12 +279,8 @@ def setup_dynamic_view_autorun() -> None:
     """
     from redux import AutorunOptions
 
-    from ubo_app.constants import USE_DUMB_UI
     from ubo_app.store.core.types import UpdateCurrentViewAction
     from ubo_app.store.main import store
-
-    if not USE_DUMB_UI:
-        return
 
     @store.autorun(
         lambda state: (

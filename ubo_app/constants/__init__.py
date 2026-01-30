@@ -23,7 +23,6 @@ DEBUG_DOCKER = str_to_bool(os.environ.get('UBO_DEBUG_DOCKER', 'False'))
 DEBUG_TEST_UUID = str_to_bool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False'))
 DEBUG_MENU = str_to_bool(os.environ.get('UBO_DEBUG_MENU', 'False'))
 DEBUG_SCHEDULER = str_to_bool(os.environ.get('UBO_DEBUG_SCHEDULER', 'False'))
-USE_DUMB_UI = str_to_bool(os.environ.get('UBO_USE_DUMB_UI', 'False'))
 LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'INFO')
 GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'INFO')
 SERVICES_PATH = (
