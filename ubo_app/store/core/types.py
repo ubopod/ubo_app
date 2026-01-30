@@ -473,6 +473,17 @@ class ClearDynamicMenuAction(DynamicMenuAction):
     menu_id: str
 
 
+class ExecuteMenuActionAction(MainAction):
+    """Execute a menu action by its action_id.
+
+    This action triggers the execution of a registered action handler.
+    Services register handlers via action_registry.register_action().
+    The UI dispatches this when a menu item with an action_id is selected.
+    """
+
+    action_id: str
+
+
 class OpenApplicationAction(MainAction):
     application_id: str
     initialization_args: tuple[BasicType, ...] = ()

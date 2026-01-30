@@ -20,6 +20,7 @@ from ubo_app.store.core.types import (
     CloseApplicationAction,
     CloseApplicationEvent,
     DeregisterRegularAppAction,
+    ExecuteMenuActionAction,
     HomeViewData,
     InitEvent,
     MainAction,
@@ -946,6 +947,14 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
                 state=replace(state, current_view=action.view),
                 events=[ViewChangedEvent(view=action.view)],
             )
+
+        case ExecuteMenuActionAction():
+            # Execute a menu action by its action_id
+            # This is handled synchronously - the handler may dispatch other actions
+            from ubo_app.store.core.action_registry import execute_action
+
+            execute_action(action.action_id)
+            return state
 
         case _:
             return state
