@@ -232,12 +232,16 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
     depth = len([i for i in stack if isinstance(i, MenuStackItem)])
     if depth <= 1:
         # Home view doesn't use dynamic menus, it has fixed items
+        # Read actual values from state
+        cpu_percent = state.system.cpu_percent if hasattr(state, 'system') else 0.0
+        ram_percent = state.system.ram_percent if hasattr(state, 'system') else 0.0
+        volume_level = state.audio.playback_volume if hasattr(state, 'audio') else 0.0
         return HomeViewData(
             show_status_bar=True,
             menu_items=(),
-            cpu_percent=0.0,
-            ram_percent=0.0,
-            volume_level=0.0,
+            cpu_percent=cpu_percent,
+            ram_percent=ram_percent,
+            volume_level=volume_level,
         )
 
     # Try to find a dynamic menu for the current position
@@ -290,13 +294,25 @@ def setup_dynamic_view_autorun() -> None:
             tuple(
                 (k, m.items) for k, m in state.dynamic_menus.menus.items()
             ),
+            # Only watch system metrics when on home view to avoid unnecessary updates
+            # Stack changes will trigger autorun anyway when navigating to/from home
+            (
+                state.system.cpu_percent if hasattr(state, 'system') else 0.0,
+                state.system.ram_percent if hasattr(state, 'system') else 0.0,
+                state.audio.playback_volume if hasattr(state, 'audio') else 0.0,
+            )
+            if (
+                state.main.current_view is not None
+                and getattr(state.main.current_view, 'type', None) == 'home'
+            )
+            else None,
         ),
         options=AutorunOptions(default_value=None),
     )
     def update_current_view_on_dynamic_change(
         _: tuple | None,
     ) -> None:
-        """Update current_view when stack or dynamic menus change."""
+        """Update current_view when stack, dynamic menus, or system metrics change."""
         state = store._state  # noqa: SLF001
         if state is None:
             return
