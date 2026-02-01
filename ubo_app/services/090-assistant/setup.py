@@ -543,6 +543,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
 
         items: list[Item] = [
             ActionItem(
+                key='add_server',
                 label='Add Server',
                 icon='󰌉',
                 action=input_mcp_server,
@@ -553,6 +554,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             is_enabled = server_id in enabled_servers
             items.append(
                 SubMenuItem(
+                    key=server_id,
                     label=server.name,
                     sub_menu=mcp_server_menu(server_id),
                     icon='󰄬' if is_enabled else '󰖭',
