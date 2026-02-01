@@ -29,6 +29,7 @@ from ubo_app.store.core.view_helpers import (
     find_dynamic_menu_for_position,
     get_dynamic_menu_id_for_stack,
 )
+from ubo_app.store.core.view_registry import get_registered_dependencies
 
 if TYPE_CHECKING:
     from ubo_app.store.core.types import ViewData
@@ -157,35 +158,17 @@ def setup_dynamic_view_autorun() -> None:
 
     @store.autorun(
         lambda state: (
+            # Core state (always needed)
             state.main.stack,
             tuple(state.dynamic_menus.menus.keys()),
             # Also watch for menu content changes
             tuple(
                 (k, m.items) for k, m in state.dynamic_menus.menus.items()
             ),
-            # Only watch system metrics when on home view to avoid unnecessary updates
-            # Stack changes will trigger autorun anyway when navigating to/from home
-            (
-                state.system.cpu_percent if hasattr(state, 'system') else 0.0,
-                state.system.ram_percent if hasattr(state, 'system') else 0.0,
-                state.audio.playback_volume if hasattr(state, 'audio') else 0.0,
-            )
-            if (
-                state.main.current_view is not None
-                and getattr(state.main.current_view, 'type', None) == 'home'
-            )
-            else None,
-            # Watch status bar dependencies (clock, temperature, icons, recording state)
-            state.system.clock if hasattr(state, 'system') else '',
-            state.sensors.temperature.value
-            if hasattr(state, 'sensors') and state.sensors.temperature
-            else None,
-            tuple(state.status_icons.icons)
-            if hasattr(state, 'status_icons')
-            else (),
             state.main.is_recording,
             state.main.is_replaying,
-            state.audio.is_recording if hasattr(state, 'audio') else False,
+            # Dynamic dependencies from registry (services register their own)
+            get_registered_dependencies(state),
         ),
         options=AutorunOptions(default_value=None),
     )
