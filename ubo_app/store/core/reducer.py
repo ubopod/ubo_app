@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from redux import (
     CompleteReducerResult,
@@ -10,11 +10,11 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
-from ubo_gui.menu.types import Menu, menu_items
+from ubo_gui.menu.types import menu_items
 
 from ubo_app.store.core.constants import PAGE_SIZE
 from ubo_app.store.core.menu_adapter import (
-    find_menu_for_item,
+    get_current_menu_from_stack,
     item_to_menu_item_data,
 )
 from ubo_app.store.core.menu_registration import (
@@ -91,46 +91,6 @@ from ubo_app.store.core.types import (
     ViewData,
 )
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
-
-if TYPE_CHECKING:
-
-
-    from ubo_app.store.core.types import StackItemType
-
-
-# =============================================================================
-# Menu Traversal Helper Functions
-# =============================================================================
-
-
-def get_current_menu_from_stack(
-    root_menu: Menu | None,
-    stack: tuple[StackItemType, ...],
-) -> Menu | None:
-    """Traverse menu tree based on stack to get current menu.
-
-    This follows the stack path to find the menu currently at the top.
-    Only works when the top of stack is a MenuStackItem.
-    """
-    if not root_menu or not stack:
-        return None
-
-    # Only consider MenuStackItems for menu traversal
-    menu_path = [item for item in stack if isinstance(item, MenuStackItem)]
-    if not menu_path:
-        return None
-
-    current_menu: Menu | None = root_menu
-    for item in menu_path[1:]:  # Skip root
-        if current_menu is None:
-            return None
-        items = menu_items(current_menu)
-        # Use find_menu_for_item which handles both SubMenuItem and ActionItem
-        current_menu = find_menu_for_item(items, item.menu_key)
-        if current_menu is None:
-            return None
-    return current_menu
-
 
 # =============================================================================
 # View Computation for Dumb UI Architecture

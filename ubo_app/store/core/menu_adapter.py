@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
     from ubo_gui.menu.types import Item, Menu
 
+    from ubo_app.store.core.types import StackItemType
+
 
 def find_sub_menu_item(items: Sequence[Item], key: str) -> SubMenuItem:
     """Find a SubMenuItem in the items by key.
@@ -176,3 +178,42 @@ def menu_to_menu_data(menu: Menu | None) -> tuple[MenuItemData | None, ...]:
         return ()
     items = menu_items(menu)
     return tuple(item_to_menu_item_data(item, i) for i, item in enumerate(items))
+
+
+def get_current_menu_from_stack(
+    root_menu: Menu | None,
+    stack: tuple[StackItemType, ...],
+) -> Menu | None:
+    """Traverse menu tree based on stack to get current menu.
+
+    This follows the stack path to find the menu currently at the top.
+    Only works when the top of stack is a MenuStackItem.
+
+    Args:
+        root_menu: The root menu to start traversal from.
+        stack: The navigation stack.
+
+    Returns:
+        The current menu, or None if not found.
+
+    """
+    from ubo_app.store.core.types import MenuStackItem
+
+    if not root_menu or not stack:
+        return None
+
+    # Only consider MenuStackItems for menu traversal
+    menu_path = [item for item in stack if isinstance(item, MenuStackItem)]
+    if not menu_path:
+        return None
+
+    current_menu: Menu | None = root_menu
+    for item in menu_path[1:]:  # Skip root
+        if current_menu is None:
+            return None
+        items = menu_items(current_menu)
+        # Use find_menu_for_item which handles both SubMenuItem and ActionItem
+        current_menu = find_menu_for_item(items, item.menu_key)
+        if current_menu is None:
+            return None
+    return current_menu

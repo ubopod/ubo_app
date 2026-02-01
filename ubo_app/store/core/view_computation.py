@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ubo_gui.menu.types import menu_items
+
 from ubo_app.store.core.constants import PAGE_SIZE
+from ubo_app.store.core.menu_adapter import (
+    get_current_menu_from_stack,
+    item_to_menu_item_data,
+)
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
@@ -84,14 +90,24 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
     # Check if we're at home (depth 1)
     depth = len([i for i in stack if isinstance(i, MenuStackItem)])
     if depth <= 1:
-        # Home view doesn't use dynamic menus, it has fixed items
-        # Read actual values from state
+        # Home view - get menu items from the root menu
         cpu_percent = state.system.cpu_percent if hasattr(state, 'system') else 0.0
         ram_percent = state.system.ram_percent if hasattr(state, 'system') else 0.0
         volume_level = state.audio.playback_volume if hasattr(state, 'audio') else 0.0
+
+        # Get menu items from the current menu
+        home_items: tuple[object, ...] = ()
+        current_menu = get_current_menu_from_stack(main_state.menu, stack)
+        if current_menu is not None:
+            items = menu_items(current_menu)
+            menu_item_data = tuple(
+                item_to_menu_item_data(item, i) for i, item in enumerate(items)
+            )
+            home_items = tuple(item for item in menu_item_data if item is not None)
+
         return HomeViewData(
             show_status_bar=True,
-            menu_items=(),
+            menu_items=home_items,  # type: ignore[arg-type]
             cpu_percent=cpu_percent,
             ram_percent=ram_percent,
             volume_level=volume_level,
