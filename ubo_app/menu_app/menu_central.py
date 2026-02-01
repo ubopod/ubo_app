@@ -9,7 +9,6 @@ from debouncer import DebounceOptions, debounce
 from ubo_gui.app import UboApp
 from ubo_gui.menu.menu_widget import MenuPageWidget, MenuWidget
 from ubo_gui.menu.stack_item import StackApplicationItem, StackItem, StackMenuItem
-from ubo_gui.page import PageWidget
 from ubo_gui.utils import mainthread_if_needed
 
 from ubo_app.constants import DEBUG_MENU
@@ -47,7 +46,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from kivy.uix.widget import Widget
-    from ubo_gui.menu.types import Item, Menu
+    from ubo_gui.menu.types import Menu
 
 
 class MenuWidgetWithHomePage(MenuWidget):
@@ -334,17 +333,23 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         index: int,
         gui_item: StackMenuItem,
     ) -> str:
-        """Get the menu key for a stack item from parent's selection."""
+        """Get the menu key for a stack item from parent's selection.
+
+        The parent's selection contains the key of the item that was selected
+        to navigate to this menu. This key is what we need for Redux stack
+        traversal to work correctly with find_menu_for_item.
+        """
         if index > 0:
             parent = gui_stack[index - 1]
-            if (
-                isinstance(parent, StackMenuItem)
-                and parent.selection
-                and parent.selection.item is gui_item
-            ):
+            # The parent's selection.key is the key of the item selected to
+            # get to the current menu (e.g., "ports" for a Docker Ports menu)
+            if isinstance(parent, StackMenuItem) and parent.selection:
                 return parent.selection.key
+            # Fallback to menu title if no selection (shouldn't normally happen)
             menu_title = gui_item.menu.title
-            return menu_title() if callable(menu_title) else (menu_title or '')
+            if callable(menu_title):
+                return str(menu_title())
+            return str(menu_title) if menu_title else ''
         return ''
 
     def _handle_stack_pop(
@@ -450,17 +455,12 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.menu_widget.go_back()
 
     def select_by_icon(self: MenuAppCentral, event: MenuChooseByIconEvent) -> None:
-        current_page = self.menu_widget.current_screen
-        if current_page is None:
-            msg = 'No current page'
-            raise ValueError(msg)
-        if not isinstance(current_page, PageWidget):
-            msg = 'Current page is not a StackMenuItem'
+        # Use current_menu_items to get ALL items, not just visible page items
+        # This allows selection regardless of pagination state
+        items = self.menu_widget.current_menu_items
+        if items is None:
+            msg = 'No items in current menu'
             raise TypeError(msg)
-        if current_page.items is None:
-            msg = 'No items in current page'
-            raise TypeError(msg)
-        items: Sequence[Item | None] = current_page.items
         filtered_items = [item for item in items if item and item.icon == event.icon]
         if not filtered_items:
             msg = f'No item with icon "{event.icon}"'
@@ -477,19 +477,12 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self: MenuAppCentral,
         event: MenuChooseByLabelEvent,
     ) -> None:
-        from ubo_gui.page import PageWidget
-
-        current_page = self.menu_widget.current_screen
-        if current_page is None:
-            msg = 'No current page'
-            raise ValueError(msg)
-        if not isinstance(current_page, PageWidget):
-            msg = 'Current page is not a StackMenuItem'
+        # Use current_menu_items to get ALL items, not just visible page items
+        # This allows selection regardless of pagination state
+        items = self.menu_widget.current_menu_items
+        if items is None:
+            msg = 'No items in current menu'
             raise TypeError(msg)
-        if current_page.items is None:
-            msg = 'No items in current page'
-            raise TypeError(msg)
-        items: Sequence[Item | None] = current_page.items
         filtered_items = [item for item in items if item and item.label == event.label]
         if not filtered_items:
             msg = f'No item with label "{event.label}"'
