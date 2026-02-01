@@ -47,11 +47,14 @@ class MenuViewData(Immutable):
     """Data for rendering a menu view.
 
     Standard menu with title, items, and pagination.
+    For HeadedMenu, includes heading and sub_heading.
     """
 
     type: str = 'menu'  # Literal discriminator
     show_status_bar: bool = True  # Based on page_index == 0
     title: str = ''
+    heading: str | None = None  # Optional heading (for HeadedMenu)
+    sub_heading: str | None = None  # Optional sub-heading (for HeadedMenu)
     items: tuple[MenuItemData | None, ...] = ()  # Items for current page
     page_index: int = 0
     total_pages: int = 1

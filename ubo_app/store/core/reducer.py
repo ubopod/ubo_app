@@ -153,9 +153,21 @@ def compute_view_from_stack(
         item_to_menu_item_data(item, i) for i, item in enumerate(items)
     )
 
-    # Determine title
+    # Determine title, heading, and sub_heading
     title_value = current_menu.title
     title = title_value() if callable(title_value) else (title_value or '')
+
+    # Extract heading and sub_heading for HeadedMenu
+    heading: str | None = None
+    sub_heading: str | None = None
+    heading_val = getattr(current_menu, 'heading', None)
+    if heading_val is not None:
+        heading = str(heading_val() if callable(heading_val) else heading_val)
+    sub_heading_val = getattr(current_menu, 'sub_heading', None)
+    if sub_heading_val is not None:
+        sub_heading = str(
+            sub_heading_val() if callable(sub_heading_val) else sub_heading_val,
+        )
 
     # Calculate total pages
     total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
@@ -181,6 +193,8 @@ def compute_view_from_stack(
     return MenuViewData(
         show_status_bar=page_index == 0,  # Show status bar only on first page
         title=cast('str', title),
+        heading=heading,
+        sub_heading=sub_heading,
         items=menu_item_data,
         page_index=page_index,
         total_pages=total_pages,
