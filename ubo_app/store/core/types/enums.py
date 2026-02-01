@@ -24,13 +24,5 @@ class MenuScrollDirection(StrEnum):
     DOWN = 'down'
 
 
-# Settings category icons mapping
-SETTINGS_ICONS: dict[SettingsCategory, str] = {
-    SettingsCategory.NETWORK: '󰛳',
-    SettingsCategory.REMOTE: '󰑔',
-    SettingsCategory.SYSTEM: '󰒔',
-    SettingsCategory.HARDWARE: '',
-    SettingsCategory.ASSISTANT: '󰚩',
-    SettingsCategory.DOCKER: '󰡨',
-    SettingsCategory.ACCESSIBILITY: '󰙋',
-}
+# Note: Settings category icons are registered dynamically by the
+# application via register_category_icon() in view_registry.py.

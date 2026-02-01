@@ -55,7 +55,6 @@ from ubo_app.store.core.types.dynamic_menus import (
 
 # Enums
 from ubo_app.store.core.types.enums import (
-    SETTINGS_ICONS,
     MenuScrollDirection,
     SettingsCategory,
 )
@@ -115,7 +114,6 @@ from ubo_app.store.core.types.view_data import (
 )
 
 __all__ = [
-    'SETTINGS_ICONS',
     # Stack items
     'ApplicationStackItem',
     # View data

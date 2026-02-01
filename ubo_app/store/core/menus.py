@@ -12,13 +12,16 @@ from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
-    SETTINGS_ICONS,
     MenuItemData,
     PowerOffAction,
     RebootAction,
     SettingsCategory,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
+)
+from ubo_app.store.core.view_registry import (
+    get_category_icon,
+    register_category_icon,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -45,8 +48,15 @@ SETTINGS_MENU_ID = 'settings:categories'
 POWER_MENU_ID = 'power:options'
 
 
+def _apps_menu_title() -> str:
+    """Get the apps menu title from the registry."""
+    from ubo_app.store.core.view_registry import get_apps_menu_title
+
+    return get_apps_menu_title()
+
+
 APPS_MENU = HeadlessMenu(
-    title='󰀻Docker Apps',
+    title=_apps_menu_title,
     items=[],
     placeholder='No apps',
 )
@@ -57,9 +67,9 @@ SETTINGS_MENU = HeadlessMenu(
         SubMenuItem(
             key=category,
             label=category,
-            icon=SETTINGS_ICONS[category],
+            icon=get_category_icon(category),
             sub_menu=HeadlessMenu(
-                title=SETTINGS_ICONS[category] + category,
+                title=get_category_icon(category) + category,
                 items=SYSTEM_MENU if category is SettingsCategory.SYSTEM else [],
                 placeholder='No settings in this category',
             ),
@@ -292,7 +302,7 @@ def update_settings_categories_dynamic_menu() -> None:
         MenuItemData(
             key=category.value,
             label=category.value,
-            icon=SETTINGS_ICONS[category],
+            icon=get_category_icon(category),
             action_id=f'menu:navigate:settings:{category.value}',
         )
         for category in SettingsCategory
@@ -310,12 +320,14 @@ def update_settings_categories_dynamic_menu() -> None:
 
 def update_apps_dynamic_menu() -> None:
     """Update the dynamic menu for Apps (placeholder - filled by services)."""
+    from ubo_app.store.core.view_registry import get_apps_menu_title
+
     # Apps menu items are added dynamically by services via RegisterRegularAppAction
     # This just sets up the initial empty state
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=APPS_MENU_ID,
-            title='󰀻Docker Apps',
+            title=get_apps_menu_title(),
             items=(),
             placeholder='No apps',
         ),
@@ -405,11 +417,60 @@ def _register_core_action_handlers() -> None:
     _register_about_action_handler()
 
 
+def _register_core_path_matchers() -> None:
+    """Register path matchers for core menu navigation.
+
+    This maps navigation paths to dynamic menu IDs for the core UI.
+    """
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    # Core menu path mappings
+    core_path_mappings: dict[tuple[str, ...], str] = {
+        ('main',): MAIN_MENU_ID,
+        ('main', 'apps'): APPS_MENU_ID,
+        ('main', 'settings'): SETTINGS_MENU_ID,
+        ('notifications',): NOTIFICATIONS_MENU_ID,
+        ('power',): POWER_MENU_ID,
+    }
+
+    def _core_path_matcher(path: tuple[str, ...]) -> str | None:
+        return core_path_mappings.get(path)
+
+    # Register with high priority so core paths are matched first
+    register_path_menu_matcher('core:menus', _core_path_matcher, priority=100)
+
+
+def _register_category_icons() -> None:
+    """Register icons for settings categories.
+
+    This allows the UI to display icons for each settings category.
+    """
+    # Settings category icons mapping
+    category_icons: dict[str, str] = {
+        SettingsCategory.NETWORK: '󰛳',
+        SettingsCategory.REMOTE: '󰑔',
+        SettingsCategory.SYSTEM: '󰒔',
+        SettingsCategory.HARDWARE: '',
+        SettingsCategory.ASSISTANT: '󰚩',
+        SettingsCategory.DOCKER: '󰡨',
+        SettingsCategory.ACCESSIBILITY: '󰙋',
+    }
+
+    for category, icon in category_icons.items():
+        register_category_icon(category, icon)
+
+
 def setup_core_dynamic_menus() -> None:
     """Set up dynamic menus and action handlers for core UI.
 
     This should be called once after the store is initialized.
     """
+    # Register category icons
+    _register_category_icons()
+
+    # Register core path matchers
+    _register_core_path_matchers()
+
     # Register action handlers
     _register_core_action_handlers()
 
