@@ -8,11 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ubo_app.store.core.constants import (
-    NERD_FONT_ICON_CHARS,
-    PATH_TO_MENU_ID_MAPPINGS,
-    SETTINGS_MENU_MAPPINGS,
-)
+from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
+from ubo_app.store.core.view_registry import get_menu_id_for_path
 
 if TYPE_CHECKING:
     from ubo_app.store.core.types import DynamicMenusState, MainState
@@ -51,57 +48,21 @@ def get_dynamic_menu_id_for_stack(main_state: MainState) -> str | None:
     """Determine which dynamic menu ID corresponds to the current stack position.
 
     This maps the navigation path to a dynamic menu ID. Services register their
-    menus with IDs like 'docker:image:envoy', 'wifi:connections', etc.
+    path matchers via register_path_menu_matcher() in view_registry.py.
 
     Args:
         main_state: The main state containing navigation path.
 
     Returns:
-        Dynamic menu ID if a mapping exists, None otherwise.
+        Dynamic menu ID if a registered matcher matches, None otherwise.
 
     """
-    path = list(main_state.path)
+    path = tuple(main_state.path)
     if not path:
         return None
 
-    # Check exact path matches first
-    path_tuple = tuple(path)
-    if path_tuple in PATH_TO_MENU_ID_MAPPINGS:
-        return PATH_TO_MENU_ID_MAPPINGS[path_tuple]
-
-    # Docker app menus: path is EXACTLY ['main', 'apps', 'docker_image_id:']
-    # Only match when we're at the Docker app level, not in submenus like 'ports'
-    if len(path) == 3 and path[:2] == ['main', 'apps']:  # noqa: PLR2004
-        app_key = path[2]
-        # Check if this is a Docker image (key ends with ':' from service prefix)
-        if ':' in app_key:
-            # Extract the image_id from the key (e.g., 'envoy' from '080-docker:envoy')
-            image_id = app_key.split(':')[-1]
-            if image_id:
-                return f'docker:image:{image_id}'
-
-    # Settings -> Category -> Service mappings
-    # Only match at exactly depth 4, not in submenus
-    if len(path) == 4 and path[:2] == ['main', 'settings']:  # noqa: PLR2004
-        service_key = path[3]  # e.g., '000-display:', '010-speech-synthesis:engines'
-
-        if ':' in service_key:
-            parts = service_key.split(':')
-            service_prefix = parts[0]
-            key_suffix = parts[1] if len(parts) > 1 else ''
-
-            # Check for specific mapping first
-            mapping_key = (service_prefix, key_suffix)
-            if mapping_key in SETTINGS_MENU_MAPPINGS:
-                return SETTINGS_MENU_MAPPINGS[mapping_key]
-
-            # Fall back to generic service:main pattern
-            # Extract short service name (strip numeric prefix like '030-')
-            short_name = service_prefix.lstrip('0123456789-')
-            if short_name:
-                return f'{short_name}:main'
-
-    return None
+    # Use registered path matchers (services register their own)
+    return get_menu_id_for_path(path)
 
 
 def find_dynamic_menu_by_title(
