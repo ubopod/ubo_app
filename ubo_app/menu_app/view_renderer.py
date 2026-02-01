@@ -18,6 +18,7 @@ from kivy.clock import mainthread
 
 from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
+from ubo_app.store.core.constants import PAGE_SIZE
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
@@ -33,6 +34,12 @@ from ubo_app.store.core.types import (
     StatusIconData,
     ViewChangedEvent,
 )
+from ubo_app.store.core.view_helpers import (
+    find_dynamic_menu_for_position as _find_dynamic_menu_for_position,
+)
+from ubo_app.store.core.view_helpers import (
+    get_dynamic_menu_id_for_stack as _get_dynamic_menu_id_for_stack,
+)
 from ubo_app.store.main import store
 
 if TYPE_CHECKING:
@@ -42,7 +49,7 @@ if TYPE_CHECKING:
     from ubo_gui.menu.menu_widget import MenuWidget
 
     from ubo_app.menu_app.menu_central import MenuAppCentral
-    from ubo_app.store.core.types import DynamicMenusState, MainState, ViewData
+    from ubo_app.store.core.types import ViewData
     from ubo_app.store.main import RootState
 
 
@@ -120,135 +127,6 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
 # =============================================================================
 
 
-def _find_dynamic_menu_by_title(
-    title: str,
-    dynamic_menus_state: DynamicMenusState,
-) -> str | None:
-    """Find a dynamic menu ID by matching the menu title.
-
-    This is used when path-based mapping fails, as some menus are
-    returned by action callbacks and don't appear in the navigation path.
-
-    Args:
-        title: The menu title to search for.
-        dynamic_menus_state: The dynamic menus state.
-
-    Returns:
-        The menu_id if found, None otherwise.
-
-    """
-    # Normalize title for comparison (some titles have icon prefixes)
-    # e.g., '󰡉Users' -> 'Users'
-    clean_title = title.lstrip('󰀁󰀂󰀃󰀄󰀅󰀆󰀇󰀈󰀉󰀊󰀋󰀌󰀍󰀎󰀏󰀐󰀑󰀒󰀓󰀔󰀕󰀖󰀗󰀘󰀙󰀚󰀛󰀜󰀝󰀞󰀟󰡉󱛃󰖩󰨞').strip()
-
-    for menu_id, menu_data in dynamic_menus_state.menus.items():
-        menu_title = menu_data.title.lstrip(
-            '󰀁󰀂󰀃󰀄󰀅󰀆󰀇󰀈󰀉󰀊󰀋󰀌󰀍󰀎󰀏󰀐󰀑󰀒󰀓󰀔󰀕󰀖󰀗󰀘󰀙󰀚󰀛󰀜󰀝󰀞󰀟󰡉󱛃󰖩󰨞',
-        ).strip()
-        if clean_title == menu_title:
-            return menu_id
-
-    return None
-
-
-def _get_dynamic_menu_id_for_stack(
-    main_state: MainState,
-) -> str | None:
-    """Determine which dynamic menu ID corresponds to the current stack position.
-
-    This maps the navigation path to a dynamic menu ID. Services register their
-    menus with IDs like 'wifi:connections', 'ssh:main', etc.
-
-    Returns None if no matching dynamic menu ID can be determined.
-    """
-    path = list(main_state.path)
-    if not path:
-        return None
-
-    # Direct path-to-menu mappings for known paths
-    path_mappings: dict[tuple[str, ...], str] = {
-        ('notifications',): 'notifications:list',
-    }
-
-    # Check exact path matches first
-    path_tuple = tuple(path)
-    if path_tuple in path_mappings:
-        return path_mappings[path_tuple]
-
-    # Settings -> Category -> Service mappings
-    if (
-        len(path) >= 4  # noqa: PLR2004
-        and path[:2] == ['main', 'settings']
-    ):
-        service_key = path[3]  # e.g., 'wifi:', 'ssh:', 'users:'
-        # Extract service name from key
-        if ':' in service_key:
-            service_name = service_key.split(':')[0]
-            # Try common service suffixes
-            return f'{service_name}:main'
-
-    return None
-
-
-def _find_dynamic_menu_for_position(
-    main_state: MainState,
-    dynamic_menus_state: DynamicMenusState | None,
-    stack: tuple,
-) -> tuple[str, str] | None:
-    """Find a dynamic menu matching the current navigation position.
-
-    Tries path-based mapping first, then falls back to title-based matching.
-
-    Args:
-        main_state: The main state containing navigation path.
-        dynamic_menus_state: The dynamic menus state.
-        stack: The navigation stack.
-
-    Returns:
-        Tuple of (menu_id, title) if found, None otherwise.
-
-    """
-    if not dynamic_menus_state:
-        return None
-
-    # Try path-based mapping first
-    menu_id = _get_dynamic_menu_id_for_stack(main_state)
-    if menu_id:
-        dynamic_menu = dynamic_menus_state.menus.get(menu_id)
-        if dynamic_menu:
-            return (menu_id, dynamic_menu.title)
-
-    # Fall back to title-based matching
-    if not dynamic_menus_state.menus:
-        return None
-
-    # Import here to avoid circular dependency
-    from ubo_app.store.core.reducer import get_current_menu_from_stack
-
-    current_menu = get_current_menu_from_stack(main_state.menu, stack)
-    if current_menu is None:
-        return None
-
-    title_val = current_menu.title
-    current_title = str(title_val() if callable(title_val) else (title_val or ''))
-    if not current_title:
-        return None
-
-    found_menu_id = _find_dynamic_menu_by_title(current_title, dynamic_menus_state)
-    if found_menu_id:
-        dynamic_menu = dynamic_menus_state.menus.get(found_menu_id)
-        if dynamic_menu:
-            if DEBUG_MENU:
-                logger.debug(
-                    '[ViewRenderer] Matched dynamic menu by title: %s -> %s',
-                    current_title,
-                    found_menu_id,
-                )
-            return (found_menu_id, dynamic_menu.title)
-
-    return None
-
-
 def compute_view_from_root_state(state: RootState) -> ViewData:
     """Compute ViewData from the full RootState, using dynamic menus when available.
 
@@ -319,8 +197,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         if dynamic_menu:
             items = dynamic_menu.items
             page_index = top_item.page_index
-            page_size = 3
-            total_pages = max(1, (len(items) + page_size - 1) // page_size)
+            total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
 
             return MenuViewData(
                 show_status_bar=page_index == 0,
@@ -773,10 +650,9 @@ class ViewRenderer:
         inversion would require MenuWidget changes.
         """
         if DEBUG_MENU:
-            # Show items for current page (PAGE_SIZE = 3)
-            page_size = 3
-            start = view.page_index * page_size
-            end = start + page_size
+            # Show items for current page
+            start = view.page_index * PAGE_SIZE
+            end = start + PAGE_SIZE
             page_items = view.items[start:end] if view.items else ()
             item_labels = [
                 item.label if item else '<empty>' for item in page_items
