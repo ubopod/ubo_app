@@ -334,29 +334,47 @@ class UboTUI(App):
         logger.info("action_volume_down")
         self.client.change_volume(-0.05)
 
+    def _handle_notification_select(self, idx: int) -> bool:
+        """Handle item selection in notification views.
+
+        Returns True if handled, False otherwise.
+        """
+        try:
+            view = self.query_one("#view", NotificationView)
+            label = view.get_item_label(idx)
+            action_id = view.get_item_action_id(idx)
+            logger.info(
+                "action_select notification: label=%r index=%d action_id=%s",
+                label,
+                idx,
+                action_id,
+            )
+            if action_id:
+                # Handle extra_info action locally - display the text
+                if action_id.startswith("notification:extra_info:"):
+                    extra_info = view.get_extra_information()
+                    if extra_info:
+                        self.notify(extra_info, title="Info", timeout=10)
+                        logger.info("Displayed extra information: %s", extra_info)
+                    else:
+                        self.notify("No additional information", timeout=3)
+                else:
+                    # Dispatch other actions to server
+                    self.client.execute_action(action_id)
+        except Exception:
+            logger.exception("action_select notification: exception")
+            return False
+        else:
+            return True
+
     def action_select(self) -> None:
         """Select current item."""
         idx = self._selected_index
         logger.info("action_select (index=%d, view=%s)", idx, self._current_view)
 
-        if self._current_view == "notification":
-            # For notification views, use the item's action_id
-            try:
-                view = self.query_one("#view", NotificationView)
-                label = view.get_item_label(idx)
-                action_id = view.get_item_action_id(idx)
-                logger.info(
-                    "action_select notification: label=%r index=%d action_id=%s",
-                    label,
-                    idx,
-                    action_id,
-                )
-                if action_id:
-                    self.client.execute_action(action_id)
-            except Exception:
-                logger.exception("action_select notification: exception")
-            else:
-                return
+        is_notification = self._current_view == "notification"
+        if is_notification and self._handle_notification_select(idx):
+            return
 
         if self._current_view in ("menu", "home"):
             # Select by label (works with any index, not just 0-2)

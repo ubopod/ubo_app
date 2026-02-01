@@ -68,6 +68,7 @@ class NotificationView(BaseView):
         self._icon: str = ""
         self._title: str = "Notification"
         self._content: str = ""
+        self._extra_information: str = ""
         self._items: list = []
         self._item_labels: list[str] = []
         self._item_action_ids: list[str] = []
@@ -77,6 +78,7 @@ class NotificationView(BaseView):
             self._icon = getattr(view_data, "icon", "") or ""
             self._title = getattr(view_data, "title", "Notification") or "Notification"
             self._content = getattr(view_data, "content", "") or ""
+            self._extra_information = getattr(view_data, "extra_information", "") or ""
 
             # Debug logging to understand what we receive
             logger.info(
@@ -130,6 +132,10 @@ class NotificationView(BaseView):
         if 0 <= index < len(self._item_action_ids):
             return self._item_action_ids[index]
         return None
+
+    def get_extra_information(self) -> str:
+        """Return the extra information text for this notification."""
+        return self._extra_information
 
     def compose(self) -> ComposeResult:
         """Create notification display."""
