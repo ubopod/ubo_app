@@ -83,6 +83,7 @@ class NotificationViewData(Immutable):
     icon: str = ''
     color: str = '#ffffff'
     items: tuple[MenuItemData | None, ...] = ()  # Action items (camera, web UI, etc.)
+    extra_information: str = ''  # Additional info shown when "i" button is pressed
 
 
 # Union type for all view data types

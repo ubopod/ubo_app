@@ -107,6 +107,11 @@ def get_notification_view_data(
                     ),
                 )
 
+        # Extract extra information text if available
+        extra_info_text = ''
+        if notification.extra_information:
+            extra_info_text = notification.extra_information.text
+
         return NotificationViewData(
             notification_id=notification_id,
             title=notification.title,
@@ -114,6 +119,7 @@ def get_notification_view_data(
             icon=notification.icon,
             color=notification.color,
             items=tuple(items),
+            extra_information=extra_info_text,
             show_status_bar=False,
         )
 
