@@ -29,7 +29,10 @@ from ubo_app.store.core.view_helpers import (
     find_dynamic_menu_for_position,
     get_dynamic_menu_id_for_stack,
 )
-from ubo_app.store.core.view_registry import get_registered_dependencies
+from ubo_app.store.core.view_registry import (
+    get_home_view_data,
+    get_registered_dependencies,
+)
 
 if TYPE_CHECKING:
     from ubo_app.store.core.types import ViewData
@@ -92,9 +95,11 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
     depth = len([i for i in stack if isinstance(i, MenuStackItem)])
     if depth <= 1:
         # Home view - get menu items from the root menu
-        cpu_percent = state.system.cpu_percent if hasattr(state, 'system') else 0.0
-        ram_percent = state.system.ram_percent if hasattr(state, 'system') else 0.0
-        volume_level = state.audio.playback_volume if hasattr(state, 'audio') else 0.0
+        # Use registry to get home view data from services
+        home_data = get_home_view_data(state)
+        cpu_percent = home_data.get('cpu_percent', 0.0)
+        ram_percent = home_data.get('ram_percent', 0.0)
+        volume_level = home_data.get('volume_level', 0.0)
 
         # Get menu items from the current menu
         home_items: tuple[object, ...] = ()
