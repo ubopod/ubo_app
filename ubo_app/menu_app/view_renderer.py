@@ -34,6 +34,7 @@ from ubo_app.store.core.types import (
     StatusIconData,
     ViewChangedEvent,
 )
+from ubo_app.store.core.view_computation import get_notification_view_data
 from ubo_app.store.core.view_helpers import (
     find_dynamic_menu_for_position as _find_dynamic_menu_for_position,
 )
@@ -163,10 +164,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
     # Handle notification views
     if isinstance(top_item, NotificationStackItem):
-        return NotificationViewData(
-            notification_id=top_item.notification_id,
-            show_status_bar=False,
-        )
+        return get_notification_view_data(state, top_item.notification_id)
 
     # Must be MenuStackItem
     if not isinstance(top_item, MenuStackItem):
