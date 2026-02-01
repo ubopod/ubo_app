@@ -80,8 +80,23 @@ class MenuView(BaseView):
     .menu-title {
         text-align: center;
         text-style: bold;
-        margin-bottom: 1;
+        margin-bottom: 0;
         height: 3;
+    }
+
+    .menu-heading {
+        text-align: center;
+        text-style: bold;
+        color: #aaaaff;
+        margin-bottom: 0;
+        height: auto;
+    }
+
+    .menu-sub-heading {
+        text-align: center;
+        color: #888888;
+        margin-bottom: 1;
+        height: auto;
     }
 
     .menu-items {
@@ -110,12 +125,16 @@ class MenuView(BaseView):
     def __init__(self, view_data: Any, **kwargs: Any) -> None:
         super().__init__(view_data, **kwargs)
         self._title: str = ""
+        self._heading: str | None = None
+        self._sub_heading: str | None = None
         self._items: list = []
         self._item_labels: list[str] = []
         self._selected_index: int = 0
 
         if view_data:
             self._title = getattr(view_data, "title", "") or ""
+            self._heading = getattr(view_data, "heading", None) or None
+            self._sub_heading = getattr(view_data, "sub_heading", None) or None
 
             # Extract items from protobuf structure
             items_container = getattr(view_data, "items", None)
@@ -148,11 +167,21 @@ class MenuView(BaseView):
     def compose(self) -> ComposeResult:
         """Create child widgets."""
         logger.info(
-            "MenuView.compose: title=%s, items=%d",
+            "MenuView.compose: title=%s, heading=%s, sub_heading=%s, items=%d",
             self._title,
+            self._heading,
+            self._sub_heading,
             len(self._items),
         )
         yield Label(self._title, classes="menu-title")
+
+        # Display heading and sub_heading for HeadedMenu
+        if self._heading:
+            yield Label(self._heading, classes="menu-heading")
+        if self._sub_heading:
+            # Strip any color markup (e.g., [color=...]...[/color]) for TUI
+            sub_heading_text = self._strip_color_markup(self._sub_heading)
+            yield Label(sub_heading_text, classes="menu-sub-heading")
 
         with ScrollableContainer(classes="menu-items", id="menu-scroll"):
             for i, raw_item in enumerate(self._items):
@@ -185,6 +214,20 @@ class MenuView(BaseView):
                     classes = "menu-item empty"
 
                 yield Label(label_text, classes=classes, id=f"menu-item-{i}")
+
+    def _strip_color_markup(self, text: str) -> str:
+        """Strip Kivy-style color markup tags from text.
+
+        Handles [color=...]...[/color] and similar BBCode-style tags.
+        """
+        import re
+
+        # Remove [color=...]...[/color] tags but keep the content
+        result = re.sub(r'\[color=[^\]]*\]', '', text)
+        result = re.sub(r'\[/color\]', '', result)
+        # Remove other common BBCode-style tags
+        result = re.sub(r'\[/?[a-z]+\]', '', result)
+        return result.strip()
 
     def update_selection(self, index: int) -> None:
         """Update visual selection and scroll to keep it visible."""
