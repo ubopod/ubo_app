@@ -2,10 +2,54 @@
 {
   "_type": "RootState",
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
+  "dynamic_menus": {
+    "_type": "DynamicMenusState",
+    "menus": {}
+  },
   "input": null,
   "main": {
     "_type": "MainState",
     "apps_items_priorities": {},
+    "current_view": {
+      "_type": "HomeViewData",
+      "cpu_percent": 0.0,
+      "menu_items": [
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:main",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "󰍜",
+          "is_short": true,
+          "key": "main",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:notifications",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "",
+          "is_short": true,
+          "key": "notifications",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:power",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "󰐥",
+          "is_short": true,
+          "key": "power",
+          "label": ""
+        }
+      ],
+      "ram_percent": 0.0,
+      "show_status_bar": true,
+      "type": "home",
+      "volume_level": 0.0
+    },
     "depth": 1,
     "is_footer_visible": true,
     "is_header_visible": true,
@@ -488,7 +532,16 @@
     },
     "path": [],
     "recorded_sequence": [],
-    "settings_items_priorities": {}
+    "settings_items_priorities": {},
+    "stack": [
+      {
+        "_type": "MenuStackItem",
+        "id": "f728b4fa42485e3a0a5d2f346baa9455",
+        "menu_key": "",
+        "page_index": 0
+      }
+    ],
+    "status_bar": null
   },
   "settings": {
     "_type": "SettingsState",

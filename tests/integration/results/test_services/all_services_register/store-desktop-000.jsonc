@@ -66,7 +66,7 @@
   },
   "docker": {
     "_type": "DockerState",
-    "combine_reducers_id": "f728b4fa42485e3a0a5d2f346baa9455",
+    "combine_reducers_id": "eb1167b367a9c3787c65c1e582e2e662",
     "envoy_grpc": {
       "_type": "ImageState",
       "container_ip": null,
@@ -163,6 +163,499 @@
       "usernames": {}
     }
   },
+  "dynamic_menus": {
+    "_type": "DynamicMenusState",
+    "menus": {
+      "display:timeout": {
+        "_type": "DynamicMenuData",
+        "heading": "Screen Timeout",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:one_minute",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "one_minute",
+            "label": "1 minute"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:five_minutes",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "five_minutes",
+            "label": "5 minutes"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:ten_minutes",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "ten_minutes",
+            "label": "10 minutes"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:thirty_minutes",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "thirty_minutes",
+            "label": "30 minutes"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:one_hour",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "one_hour",
+            "label": "1 hour"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:off",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "off",
+            "label": "Off"
+          }
+        ],
+        "menu_id": "display:timeout",
+        "placeholder": "",
+        "sub_heading": "Select screen blank timeout",
+        "title": "Display Settings"
+      },
+      "docker:image:envoy_grpc": {
+        "_type": "DynamicMenuData",
+        "heading": "Envoy for gRPC",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:envoy_grpc:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:envoy_grpc",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Envoy for gRPC"
+      },
+      "docker:image:home_assistant": {
+        "_type": "DynamicMenuData",
+        "heading": "Home Assistant",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:home_assistant:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:home_assistant",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Home Assistant"
+      },
+      "docker:image:home_bridge": {
+        "_type": "DynamicMenuData",
+        "heading": "Home Bridge",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:home_bridge:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:home_bridge",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Home Bridge"
+      },
+      "docker:image:immich": {
+        "_type": "DynamicMenuData",
+        "heading": "Immich",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:immich:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Pull Images"
+          }
+        ],
+        "menu_id": "docker:image:immich",
+        "placeholder": "",
+        "sub_heading": "Need to fetch images",
+        "title": "Docker - Immich"
+      },
+      "docker:image:ngrok": {
+        "_type": "DynamicMenuData",
+        "heading": "Ngrok",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:ngrok:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:ngrok",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Ngrok"
+      },
+      "docker:image:ollama": {
+        "_type": "DynamicMenuData",
+        "heading": "Ollama",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:ollama:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:ollama",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Ollama"
+      },
+      "docker:image:open_webui": {
+        "_type": "DynamicMenuData",
+        "heading": "Open WebUI",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open_webui:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:open_webui",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Open WebUI"
+      },
+      "docker:image:pi_hole": {
+        "_type": "DynamicMenuData",
+        "heading": "Pi-hole",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:pi_hole:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:pi_hole",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Pi-hole"
+      },
+      "docker:image:portainer": {
+        "_type": "DynamicMenuData",
+        "heading": "Portainer",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:portainer:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:portainer",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Portainer"
+      },
+      "docker:setup": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:stop",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰓛",
+            "is_short": false,
+            "key": "docker:stop",
+            "label": "Stop Docker"
+          }
+        ],
+        "menu_id": "docker:setup",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Setup Docker"
+      },
+      "ip:addresses": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "ip:open-interface:eth0",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰈀",
+            "is_short": false,
+            "key": "interface:eth0",
+            "label": "eth0"
+          }
+        ],
+        "menu_id": "ip:addresses",
+        "placeholder": "No IP addresses",
+        "sub_heading": null,
+        "title": "󰩟IP Addresses"
+      },
+      "lightdm:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "lightdm:stop",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰓛",
+            "is_short": false,
+            "key": "lightdm:toggle",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "lightdm:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰯄",
+            "is_short": false,
+            "key": "lightdm:disable",
+            "label": "Disable"
+          }
+        ],
+        "menu_id": "lightdm:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Desktop"
+      },
+      "notifications:list": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [],
+        "menu_id": "notifications:list",
+        "placeholder": "No notifications",
+        "sub_heading": null,
+        "title": "Notifications"
+      },
+      "rpi-connect:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [],
+        "menu_id": "rpi-connect:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "RPi Connect"
+      },
+      "speech-synthesis:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-synthesis:download_piper",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "download",
+            "label": "Download Piper Model"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-synthesis:select_engine",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰔊",
+            "is_short": false,
+            "key": "select_engine",
+            "label": "Select Engine"
+          }
+        ],
+        "menu_id": "speech-synthesis:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "󰔊Speech Synthesis"
+      },
+      "speech-synthesis:picovoice": {
+        "_type": "DynamicMenuData",
+        "heading": "Picovoice",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-synthesis:set_access_key",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰐲",
+            "is_short": false,
+            "key": "set_key",
+            "label": "Set Access Key"
+          }
+        ],
+        "menu_id": "speech-synthesis:picovoice",
+        "placeholder": "",
+        "sub_heading": "Set the access key\nCurrent value: Fake",
+        "title": "Picovoice Settings"
+      },
+      "ssh:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "ssh:stop",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰓛",
+            "is_short": false,
+            "key": "ssh:toggle",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "ssh:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰯄",
+            "is_short": false,
+            "key": "ssh:disable",
+            "label": "Disable"
+          }
+        ],
+        "menu_id": "ssh:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "SSH"
+      },
+      "users:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "users:add",
+            "background_color": "#FFC107",
+            "color": "#ffffff",
+            "icon": "󰀔",
+            "is_short": false,
+            "key": "users:add",
+            "label": "Add"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "users:open-user:Fake",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰀄",
+            "is_short": false,
+            "key": "users:user:Fake",
+            "label": "<function:>"
+          }
+        ],
+        "menu_id": "users:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Users"
+      },
+      "vscode:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "vscode:download",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "vscode:download",
+            "label": "Download Code CLI"
+          }
+        ],
+        "menu_id": "vscode:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "VSCode"
+      },
+      "wifi:connections": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "wifi:open-connection:Fake",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󱚵",
+            "is_short": false,
+            "key": "connection:Fake",
+            "label": "<function:>"
+          }
+        ],
+        "menu_id": "wifi:connections",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Wi-Fi"
+      }
+    }
+  },
   "file_system": {
     "_type": "FileSystemState",
     "current_input": null,
@@ -202,6 +695,15 @@
   "main": {
     "_type": "MainState",
     "apps_items_priorities": {},
+    "current_view": {
+      "_type": "HomeViewData",
+      "cpu_percent": 0.0,
+      "menu_items": [],
+      "ram_percent": 0.0,
+      "show_status_bar": true,
+      "type": "home",
+      "volume_level": 0.0
+    },
     "depth": 1,
     "is_footer_visible": true,
     "is_header_visible": true,
@@ -7734,7 +8236,16 @@
       "users:": 1,
       "vscode:": null,
       "wifi:": 2
-    }
+    },
+    "stack": [
+      {
+        "_type": "MenuStackItem",
+        "id": "f728b4fa42485e3a0a5d2f346baa9455",
+        "menu_key": "",
+        "page_index": 0
+      }
+    ],
+    "status_bar": null
   },
   "notifications": {
     "_type": "NotificationsState",
