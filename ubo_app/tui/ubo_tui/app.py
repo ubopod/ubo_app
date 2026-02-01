@@ -65,6 +65,7 @@ class UboTUI(App):
         self._item_count: int = 0
         self._is_home: bool = False  # Will be set when actual view arrives
         self._subscription_task: Any = None
+        self._notification_id: str | None = None  # Track current notification
 
     def compose(self) -> ComposeResult:
         """Create application layout with header, view, and footer."""
@@ -191,9 +192,30 @@ class UboTUI(App):
             class_name == "NotificationViewData"
             or getattr(view_data, "type", "") == "notification"
         ):
+            # Check if notification has meaningful content
+            # Skip empty notifications (race condition where notification is cleared
+            # from state but stack still has NotificationStackItem)
+            title = getattr(actual_view, "title", "") or ""
+            items_container = getattr(actual_view, "items", None)
+            has_items = bool(
+                items_container and getattr(items_container, "items", None),
+            )
+
+            if not title and not has_items:
+                notification_id = getattr(actual_view, "notification_id", None)
+                logger.info(
+                    "Skipping empty notification view: id=%s (no title, no items)",
+                    notification_id,
+                )
+                return  # Skip this empty notification
+
             view_type = "notification"
             self._is_home = False
-            logger.info("Detected NOTIFICATION view")
+            self._notification_id = getattr(actual_view, "notification_id", None)
+            logger.info(
+                "Detected NOTIFICATION view: id=%s",
+                self._notification_id,
+            )
         else:
             logger.warning(
                 "Could not determine view type from view_data: class=%s, type=%s",
@@ -258,13 +280,13 @@ class UboTUI(App):
             self._current_view = view_type
             self._selected_index = 0
 
-            # Track item count for menu and home views
-            if (view_type == "menu" and isinstance(new_view, MenuView)) or (
-                view_type == "home" and isinstance(new_view, HomeView)
-            ):
-                self._item_count = new_view.item_count
-            else:
-                self._item_count = 0
+            # Track item count for menu, home, and notification views
+            is_menu = view_type == "menu" and isinstance(new_view, MenuView)
+            is_home = view_type == "home" and isinstance(new_view, HomeView)
+            is_notif = view_type == "notification"
+            is_notif = is_notif and isinstance(new_view, NotificationView)
+            has_items = is_menu or is_home or is_notif
+            self._item_count = new_view.item_count if has_items else 0
         except Exception as e:
             logger.exception("View update failed")
             self.notify(f"View update failed: {e}", severity="error")
@@ -284,7 +306,8 @@ class UboTUI(App):
         """Move selection up."""
         idx, count = self._selected_index, self._item_count
         logger.info("action_move_up (index=%d, count=%d)", idx, count)
-        if self._current_view in ("menu", "home") and self._selected_index > 0:
+        navigable_views = ("menu", "home", "notification")
+        if self._current_view in navigable_views and self._selected_index > 0:
             self._selected_index -= 1
             self._update_view_selection()
 
@@ -292,8 +315,12 @@ class UboTUI(App):
         """Move selection down."""
         idx, count = self._selected_index, self._item_count
         logger.info("action_move_down (index=%d, count=%d)", idx, count)
-        can_move = self._current_view in ("menu", "home")
-        if can_move and self._selected_index < self._item_count - 1:
+        navigable_views = ("menu", "home", "notification")
+        can_move = (
+            self._current_view in navigable_views
+            and self._selected_index < self._item_count - 1
+        )
+        if can_move:
             self._selected_index += 1
             self._update_view_selection()
 
@@ -310,7 +337,27 @@ class UboTUI(App):
     def action_select(self) -> None:
         """Select current item."""
         idx = self._selected_index
-        logger.info("action_select (index=%d)", idx)
+        logger.info("action_select (index=%d, view=%s)", idx, self._current_view)
+
+        if self._current_view == "notification":
+            # For notification views, use the item's action_id
+            try:
+                view = self.query_one("#view", NotificationView)
+                label = view.get_item_label(idx)
+                action_id = view.get_item_action_id(idx)
+                logger.info(
+                    "action_select notification: label=%r index=%d action_id=%s",
+                    label,
+                    idx,
+                    action_id,
+                )
+                if action_id:
+                    self.client.execute_action(action_id)
+            except Exception:
+                logger.exception("action_select notification: exception")
+            else:
+                return
+
         if self._current_view in ("menu", "home"):
             # Select by label (works with any index, not just 0-2)
             try:
@@ -338,6 +385,9 @@ class UboTUI(App):
                 view.update_selection(self._selected_index)
             elif self._current_view == "home":
                 view = self.query_one("#view", HomeView)
+                view.update_selection(self._selected_index)
+            elif self._current_view == "notification":
+                view = self.query_one("#view", NotificationView)
                 view.update_selection(self._selected_index)
         except Exception:  # noqa: BLE001
             pass
