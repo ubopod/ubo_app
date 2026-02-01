@@ -29,7 +29,7 @@ SETTINGS_ICONS: dict[SettingsCategory, str] = {
     SettingsCategory.NETWORK: '󰛳',
     SettingsCategory.REMOTE: '󰑔',
     SettingsCategory.SYSTEM: '󰒔',
-    SettingsCategory.HARDWARE: '',
+    SettingsCategory.HARDWARE: '',
     SettingsCategory.ASSISTANT: '󰚩',
     SettingsCategory.DOCKER: '󰡨',
     SettingsCategory.ACCESSIBILITY: '󰙋',
