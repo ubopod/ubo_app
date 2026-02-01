@@ -67,6 +67,14 @@ if __name__ == '__main__':
     ubo_app.utils.persistent_store.read_from_persistent_store = lambda *_, **__: ''
 
     import ubo_app.store.core.types
+    import ubo_app.store.core.types.actions
+    import ubo_app.store.core.types.dynamic_menus
+    import ubo_app.store.core.types.enums
+    import ubo_app.store.core.types.events
+    import ubo_app.store.core.types.stack_items
+    import ubo_app.store.core.types.state
+    import ubo_app.store.core.types.status_bar
+    import ubo_app.store.core.types.view_data
     import ubo_app.store.input.types
     import ubo_app.store.settings.types
     import ubo_app.store.status_icons.types
@@ -81,6 +89,15 @@ if __name__ == '__main__':
 
     generators.append(parse(ubo_gui.menu.types, actions, events))
     generators.append(parse(ubo_app.store.core.types, actions, events))
+    # Parse all core types submodules for complete proto generation
+    generators.append(parse(ubo_app.store.core.types.enums, actions, events))
+    generators.append(parse(ubo_app.store.core.types.stack_items, actions, events))
+    generators.append(parse(ubo_app.store.core.types.dynamic_menus, actions, events))
+    generators.append(parse(ubo_app.store.core.types.status_bar, actions, events))
+    generators.append(parse(ubo_app.store.core.types.view_data, actions, events))
+    generators.append(parse(ubo_app.store.core.types.state, actions, events))
+    generators.append(parse(ubo_app.store.core.types.actions, actions, events))
+    generators.append(parse(ubo_app.store.core.types.events, actions, events))
     generators.append(
         parse(ubo_app.store.ubo_actions, actions, events),
     )
