@@ -83,6 +83,18 @@ class TUIClient:
             )
             self._client.dispatch(action=action)
 
+    def select_by_label(self, label: str) -> None:
+        """Select menu item by label."""
+        from ubo_bindings.ubo.v1 import Action, MenuChooseByLabelAction
+
+        logger.info("select_by_label: dispatching label=%r", label)
+        if self._client:
+            action = Action(
+                menu_choose_by_label_action=MenuChooseByLabelAction(label=label),
+            )
+            self._client.dispatch(action=action)
+            logger.info("select_by_label: dispatch completed")
+
     def scroll(self, direction: str) -> None:
         """Scroll menu up or down."""
         from ubo_bindings.ubo.v1 import Action, MenuScrollAction, MenuScrollDirection

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from textual.containers import Vertical
+from textual.containers import ScrollableContainer
 from textual.widgets import Label
 
 from ubo_tui.views.base import BaseView
@@ -69,7 +69,7 @@ def convert_icon(icon: str, *, use_ascii_fallback: bool = False) -> str:
 
 
 class MenuView(BaseView):
-    """Standard menu view with title, items, and pagination."""
+    """Standard menu view with title, items, and scrollable list."""
 
     DEFAULT_CSS = """
     MenuView {
@@ -85,7 +85,8 @@ class MenuView(BaseView):
     }
 
     .menu-items {
-        height: auto;
+        height: 1fr;
+        overflow-y: auto;
     }
 
     .menu-item {
@@ -104,23 +105,14 @@ class MenuView(BaseView):
         border: dashed #333333;
         color: #666666;
     }
-
-    .pagination {
-        text-align: center;
-        margin-top: 1;
-        height: 1;
-    }
     """
-
-    # Number of items to display per page
-    PAGE_SIZE = 3
 
     def __init__(self, view_data: Any, **kwargs: Any) -> None:
         super().__init__(view_data, **kwargs)
         self._title: str = ""
         self._items: list = []
-        self._page_index: int = 0
-        self._total_pages: int = 1
+        self._item_labels: list[str] = []
+        self._selected_index: int = 0
 
         if view_data:
             self._title = getattr(view_data, "title", "") or ""
@@ -129,15 +121,29 @@ class MenuView(BaseView):
             items_container = getattr(view_data, "items", None)
             if items_container:
                 self._items = list(getattr(items_container, "items", []))
+                # Pre-extract labels for selection by label
+                for raw_item in self._items:
+                    item = raw_item
+                    if hasattr(item, "items") and item.items is not None:
+                        item = item.items
+                    label = getattr(item, "label", "") or ""
+                    self._item_labels.append(label)
+                logger.info(
+                    "MenuView.__init__: stored %d labels: %r",
+                    len(self._item_labels),
+                    self._item_labels,
+                )
 
-            # Compute total pages from actual item count (ceiling division)
-            item_count = len(self._items)
-            pages = (item_count + self.PAGE_SIZE - 1) // self.PAGE_SIZE
-            self._total_pages = max(1, pages)
+    @property
+    def item_count(self) -> int:
+        """Return the number of menu items."""
+        return len(self._items)
 
-            # Get page_index from server and cap to valid range
-            raw_page_index = getattr(view_data, "page_index", 0) or 0
-            self._page_index = max(0, min(raw_page_index, self._total_pages - 1))
+    def get_item_label(self, index: int) -> str | None:
+        """Return the label for an item at the given index."""
+        if 0 <= index < len(self._item_labels):
+            return self._item_labels[index]
+        return None
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -148,16 +154,13 @@ class MenuView(BaseView):
         )
         yield Label(self._title, classes="menu-title")
 
-        with Vertical(classes="menu-items"):
-            # Server sends all items; paginate locally based on page_index
-            start = self._page_index * self.PAGE_SIZE
-            for i in range(self.PAGE_SIZE):
-                item_index = start + i
-                if item_index < len(self._items) and self._items[item_index]:
-                    item = self._items[item_index]
+        with ScrollableContainer(classes="menu-items", id="menu-scroll"):
+            for i, raw_item in enumerate(self._items):
+                if raw_item:
+                    item = raw_item
                     logger.info(
                         "  Raw item %d: type=%s, attrs=%s",
-                        item_index,
+                        i,
                         type(item).__name__,
                         dir(item)[:10],
                     )
@@ -170,7 +173,7 @@ class MenuView(BaseView):
                     icon = convert_icon(raw_icon)
                     logger.info(
                         "  Item %d: raw_icon=%r, icon=%r, label=%r",
-                        item_index,
+                        i,
                         raw_icon,
                         icon,
                         label,
@@ -183,19 +186,15 @@ class MenuView(BaseView):
 
                 yield Label(label_text, classes=classes, id=f"menu-item-{i}")
 
-        if self._total_pages > 1:
-            yield Label(
-                f"Page {self._page_index + 1}/{self._total_pages}",
-                classes="pagination",
-            )
-
     def update_selection(self, index: int) -> None:
-        """Update visual selection."""
-        for i in range(self.PAGE_SIZE):
+        """Update visual selection and scroll to keep it visible."""
+        self._selected_index = index
+        for i in range(len(self._items)):
             try:
                 item = self.query_one(f"#menu-item-{i}", Label)
                 if i == index:
                     item.add_class("selected")
+                    item.scroll_visible()
                 else:
                     item.remove_class("selected")
             except Exception:  # noqa: BLE001

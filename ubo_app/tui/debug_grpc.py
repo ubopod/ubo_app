@@ -75,7 +75,7 @@ async def test_connection(host: str, port: int) -> None:
         [
             "state.main.current_view",
             "state.main.status_bar",
-        ]
+        ],
     )
     def _handler(results: list) -> None:
         on_state_change(results)

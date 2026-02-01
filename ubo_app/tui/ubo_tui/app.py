@@ -45,13 +45,12 @@ class UboTUI(App):
         ("q", "quit", "Quit"),
         ("escape", "go_back", "Back"),
         ("backspace", "go_back", "Back"),
-        ("up", "scroll_up", "Up"),
-        ("down", "scroll_down", "Down"),
+        ("up", "move_up", "Up"),
+        ("down", "move_down", "Down"),
         ("enter", "select", "Select"),
         ("h", "go_home", "Home"),
-        ("1", "select_1", "Item 1"),
-        ("2", "select_2", "Item 2"),
-        ("3", "select_3", "Item 3"),
+        ("plus", "volume_up", "Vol+"),
+        ("minus", "volume_down", "Vol-"),
     ]
 
     def __init__(
@@ -63,6 +62,7 @@ class UboTUI(App):
         self.client = TUIClient(host, port)
         self._current_view: str = "loading"
         self._selected_index: int = 0
+        self._item_count: int = 0
         self._is_home: bool = False  # Will be set when actual view arrives
         self._subscription_task: Any = None
 
@@ -214,8 +214,24 @@ class UboTUI(App):
             pass
 
     async def _update_view(self, view_type: str, view_data: Any) -> None:
-        """Replace current view with new one."""
-        logger.info("_update_view called: type=%s", view_type)
+        """Update or replace the current view."""
+        cur = self._current_view
+        logger.info("_update_view: type=%s (current=%s)", view_type, cur)
+
+        # If same view type, update in place to preserve selection
+        if view_type == self._current_view:
+            try:
+                if view_type == "home":
+                    view = self.query_one("#view", HomeView)
+                    view.update_data(view_data)
+                    logger.info("Updated HomeView data in place")
+                    return
+                # Menu views with same title can also be updated in place
+                # But for now, only optimize home view (most frequent updates)
+            except Exception:  # noqa: BLE001
+                logger.info("Could not update in place, will replace view")
+
+        # Replace view with new one
         try:
             container = self.query_one("#view-container", Container)
             logger.info("Found view-container")
@@ -241,6 +257,14 @@ class UboTUI(App):
 
             self._current_view = view_type
             self._selected_index = 0
+
+            # Track item count for menu and home views
+            if (view_type == "menu" and isinstance(new_view, MenuView)) or (
+                view_type == "home" and isinstance(new_view, HomeView)
+            ):
+                self._item_count = new_view.item_count
+            else:
+                self._item_count = 0
         except Exception as e:
             logger.exception("View update failed")
             self.notify(f"View update failed: {e}", severity="error")
@@ -256,41 +280,64 @@ class UboTUI(App):
         logger.info("action_go_home")
         self.client.go_home()
 
-    def action_scroll_up(self) -> None:
-        """Scroll up or decrease volume on home."""
-        logger.info("action_scroll_up (is_home=%s)", self._is_home)
-        if self._is_home:
-            self.client.change_volume(-0.05)  # -5%
-        else:
-            self.client.scroll("up")
+    def action_move_up(self) -> None:
+        """Move selection up."""
+        idx, count = self._selected_index, self._item_count
+        logger.info("action_move_up (index=%d, count=%d)", idx, count)
+        if self._current_view in ("menu", "home") and self._selected_index > 0:
+            self._selected_index -= 1
+            self._update_view_selection()
 
-    def action_scroll_down(self) -> None:
-        """Scroll down or increase volume on home."""
-        logger.info("action_scroll_down (is_home=%s)", self._is_home)
-        if self._is_home:
-            self.client.change_volume(0.05)  # +5%
-        else:
-            self.client.scroll("down")
+    def action_move_down(self) -> None:
+        """Move selection down."""
+        idx, count = self._selected_index, self._item_count
+        logger.info("action_move_down (index=%d, count=%d)", idx, count)
+        can_move = self._current_view in ("menu", "home")
+        if can_move and self._selected_index < self._item_count - 1:
+            self._selected_index += 1
+            self._update_view_selection()
+
+    def action_volume_up(self) -> None:
+        """Increase volume."""
+        logger.info("action_volume_up")
+        self.client.change_volume(0.05)
+
+    def action_volume_down(self) -> None:
+        """Decrease volume."""
+        logger.info("action_volume_down")
+        self.client.change_volume(-0.05)
 
     def action_select(self) -> None:
         """Select current item."""
-        logger.info("action_select (index=%d)", self._selected_index)
-        self.client.select_item(self._selected_index)
+        idx = self._selected_index
+        logger.info("action_select (index=%d)", idx)
+        if self._current_view in ("menu", "home"):
+            # Select by label (works with any index, not just 0-2)
+            try:
+                if self._current_view == "menu":
+                    view = self.query_one("#view", MenuView)
+                else:
+                    view = self.query_one("#view", HomeView)
+                label = view.get_item_label(idx)
+                logger.info("action_select: label=%r for index=%d", label, idx)
+                if label:
+                    logger.info("action_select: select_by_label(%r)", label)
+                    self.client.select_by_label(label)
+                    return
+            except Exception:
+                logger.exception("action_select: exception getting label")
+        # Fallback to index-based selection
+        logger.info("action_select: fallback select_item(%d)", idx)
+        self.client.select_item(idx)
 
-    def action_select_1(self) -> None:
-        """Select first item."""
-        logger.info("action_select_1")
-        self._selected_index = 0
-        self.client.select_item(0)
-
-    def action_select_2(self) -> None:
-        """Select second item."""
-        logger.info("action_select_2")
-        self._selected_index = 1
-        self.client.select_item(1)
-
-    def action_select_3(self) -> None:
-        """Select third item."""
-        logger.info("action_select_3")
-        self._selected_index = 2
-        self.client.select_item(2)
+    def _update_view_selection(self) -> None:
+        """Update the visual selection in the current view."""
+        try:
+            if self._current_view == "menu":
+                view = self.query_one("#view", MenuView)
+                view.update_selection(self._selected_index)
+            elif self._current_view == "home":
+                view = self.query_one("#view", HomeView)
+                view.update_selection(self._selected_index)
+        except Exception:  # noqa: BLE001
+            pass
