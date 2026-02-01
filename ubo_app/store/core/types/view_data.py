@@ -82,6 +82,7 @@ class NotificationViewData(Immutable):
     content: str = ''
     icon: str = ''
     color: str = '#ffffff'
+    items: tuple[MenuItemData | None, ...] = ()  # Action items (camera, web UI, etc.)
 
 
 # Union type for all view data types

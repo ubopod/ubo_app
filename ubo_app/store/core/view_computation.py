@@ -38,12 +38,90 @@ if TYPE_CHECKING:
     from ubo_app.store.core.types import ViewData
     from ubo_app.store.main import RootState
 
-# Re-export PAGE_SIZE for backward compatibility
-__all__ = ['PAGE_SIZE', 'compute_view_from_root_state', 'setup_dynamic_view_autorun']
+__all__ = [
+    'PAGE_SIZE',
+    'compute_view_from_root_state',
+    'get_notification_view_data',
+    'setup_dynamic_view_autorun',
+]
+
+# Re-export PAGE_SIZE for backward compatibility (main __all__ is above)
 
 # Re-export for backward compatibility
 _get_dynamic_menu_id_for_stack = get_dynamic_menu_id_for_stack
 _find_dynamic_menu_for_position = find_dynamic_menu_for_position
+
+
+def get_notification_view_data(
+    state: RootState,
+    notification_id: str,
+) -> NotificationViewData:
+    """Build NotificationViewData with full notification details from state.
+
+    Args:
+        state: The full Redux RootState.
+        notification_id: The ID of the notification to look up.
+
+    Returns:
+        NotificationViewData with title, content, icon, color, and items populated.
+
+    """
+    from ubo_app.store.core.types import MenuItemData
+
+    notification = next(
+        (n for n in state.notifications.notifications if n.id == notification_id),
+        None,
+    )
+
+    if notification:
+        # Convert notification actions to MenuItemData
+        items: list[MenuItemData | None] = []
+
+        # Add extra_information button if available (shown as info icon on left)
+        if notification.extra_information:
+            items.append(
+                MenuItemData(
+                    key='extra_info',
+                    label='',
+                    icon='󰋼',  # info icon
+                    color='#2196F3',
+                    is_short=True,
+                    action_id=f'notification:extra_info:{notification_id}',
+                ),
+            )
+
+        # Convert each notification action to MenuItemData
+        for i, action in enumerate(notification.actions):
+            item_data = item_to_menu_item_data(action, i)
+            if item_data is not None:
+                # Override action_id to use notification-specific format
+                items.append(
+                    MenuItemData(
+                        key=item_data.key,
+                        label=item_data.label,
+                        icon=item_data.icon,
+                        color=item_data.color,
+                        is_short=item_data.is_short,
+                        background_color=item_data.background_color,
+                        action_id=f'notification:action:{notification_id}:{i}',
+                    ),
+                )
+
+        return NotificationViewData(
+            notification_id=notification_id,
+            title=notification.title,
+            content=notification.content,
+            icon=notification.icon,
+            color=notification.color,
+            items=tuple(items),
+            show_status_bar=False,
+        )
+
+    # Fallback if notification not found (edge case)
+    return NotificationViewData(
+        notification_id=notification_id,
+        show_status_bar=False,
+    )
 
 
 def compute_view_from_root_state(state: RootState) -> ViewData:
@@ -82,10 +160,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
     # Handle notification views
     if isinstance(top_item, NotificationStackItem):
-        return NotificationViewData(
-            notification_id=top_item.notification_id,
-            show_status_bar=False,
-        )
+        return get_notification_view_data(state, top_item.notification_id)
 
     # Must be MenuStackItem
     if not isinstance(top_item, MenuStackItem):
@@ -172,6 +247,11 @@ def setup_dynamic_view_autorun() -> None:
             ),
             state.main.is_recording,
             state.main.is_replaying,
+            # Watch for notification content changes (for progress updates, etc.)
+            tuple(
+                (n.id, n.title, n.content, n.icon, n.color, n.progress)
+                for n in state.notifications.notifications
+            ),
             # Dynamic dependencies from registry (services register their own)
             get_registered_dependencies(state),
         ),
