@@ -69,8 +69,9 @@ def get_dynamic_menu_id_for_stack(main_state: MainState) -> str | None:
     if path_tuple in PATH_TO_MENU_ID_MAPPINGS:
         return PATH_TO_MENU_ID_MAPPINGS[path_tuple]
 
-    # Docker app menus: path is ['main', 'apps', 'docker_image_id:']
-    if len(path) >= 3 and path[:2] == ['main', 'apps']:  # noqa: PLR2004
+    # Docker app menus: path is EXACTLY ['main', 'apps', 'docker_image_id:']
+    # Only match when we're at the Docker app level, not in submenus like 'ports'
+    if len(path) == 3 and path[:2] == ['main', 'apps']:  # noqa: PLR2004
         app_key = path[2]
         # Check if this is a Docker image (key ends with ':' from service prefix)
         if ':' in app_key:
@@ -80,7 +81,8 @@ def get_dynamic_menu_id_for_stack(main_state: MainState) -> str | None:
                 return f'docker:image:{image_id}'
 
     # Settings -> Category -> Service mappings
-    if len(path) >= 4 and path[:2] == ['main', 'settings']:  # noqa: PLR2004
+    # Only match at exactly depth 4, not in submenus
+    if len(path) == 4 and path[:2] == ['main', 'settings']:  # noqa: PLR2004
         service_key = path[3]  # e.g., '000-display:', '010-speech-synthesis:engines'
 
         if ':' in service_key:
@@ -162,8 +164,8 @@ def find_dynamic_menu_for_position(
     if not dynamic_menus_state.menus:
         return None
 
-    # Import here to avoid circular dependency - using reducer for menu traversal
-    from ubo_app.store.core.reducer import get_current_menu_from_stack
+    # Import here to avoid circular dependency
+    from ubo_app.store.core.menu_adapter import get_current_menu_from_stack
 
     current_menu = get_current_menu_from_stack(main_state.menu, stack)
     if current_menu is None:
