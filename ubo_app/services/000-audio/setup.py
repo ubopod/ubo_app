@@ -12,6 +12,7 @@ from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.store.core.view_registry import (
+    register_home_view_data_provider,
     register_home_view_dependency,
     register_status_bar_dependency,
 )
@@ -119,6 +120,12 @@ def init_service() -> Subscriptions:
         lambda s: s.audio.is_recording,
     )
 
+    # Register home view data provider for decoupled view computation
+    unregister_volume_data = register_home_view_data_provider(
+        'audio:volume',
+        lambda s: ('volume_level', s.audio.playback_volume),
+    )
+
     store.dispatch(
         StatusIconsRegisterAction(
             icon='󰍭',
@@ -205,4 +212,5 @@ def init_service() -> Subscriptions:
         store.subscribe_event(AudioPlayAudioSequenceEvent, play_audio),
         unregister_volume,
         unregister_recording,
+        unregister_volume_data,
     ]

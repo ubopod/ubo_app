@@ -23,6 +23,7 @@ from ubo_app.store.core.types import (
     SettingsCategory,
     UpdateDynamicMenuAction,
 )
+from ubo_app.store.core.view_registry import register_path_menu_matcher
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -473,6 +474,22 @@ def update_picovoice_dynamic_menu(
 
 def init_service() -> Subscriptions:
     """Initialize speech synthesis service."""
+    # Register path matchers for speech synthesis settings navigation
+    def _speech_synthesis_path_matcher(path: tuple[str, ...]) -> str | None:
+        # Match: ('main', 'settings', <category>, '010-speech-synthesis:engines')
+        if len(path) == 4:  # noqa: PLR2004
+            service_key = path[3]
+            if service_key == '010-speech-synthesis:engines':
+                return SPEECH_SYNTHESIS_MENU_ID
+            if service_key == '010-speech-synthesis:settings':
+                return PICOVOICE_SETTINGS_MENU_ID
+        return None
+
+    unregister_path_matcher = register_path_menu_matcher(
+        'speech-synthesis:settings',
+        _speech_synthesis_path_matcher,
+    )
+
     access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
     if access_key:
         to_thread(_context.set_access_key, None, access_key)
@@ -523,4 +540,5 @@ def init_service() -> Subscriptions:
             lambda event: to_thread(synthesize_and_play, None, event),
         ),
         _context.cleanup,
+        unregister_path_matcher,
     ]

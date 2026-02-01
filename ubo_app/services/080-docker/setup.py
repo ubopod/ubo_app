@@ -42,6 +42,10 @@ from ubo_app.store.core.types import (
     SettingsCategory,
     UpdateDynamicMenuAction,
 )
+from ubo_app.store.core.view_registry import (
+    register_apps_menu_title,
+    register_path_menu_matcher,
+)
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -92,6 +96,35 @@ from ubo_app.utils.server import send_command
 # Dynamic menu IDs for dumb UI architecture
 DOCKER_SETUP_MENU_ID = 'docker:setup'
 DOCKER_REGISTRIES_MENU_ID = 'docker:registries'
+
+
+def _docker_path_matcher(path: tuple[str, ...]) -> str | None:
+    """Match Docker navigation paths to dynamic menu IDs.
+
+    Args:
+        path: The navigation path tuple.
+
+    Returns:
+        The dynamic menu ID if this is a Docker path, None otherwise.
+
+    """
+    # Match Docker app paths: (..., 'apps', '080-docker:<image_id>')
+    if len(path) >= 2:  # noqa: PLR2004
+        app_key = path[-1]
+        if ':' in app_key:
+            prefix, image_id = app_key.split(':', 1)
+            if prefix == '080-docker' and image_id:
+                return f'docker:image:{image_id}'
+
+    # Match Docker settings paths
+    if len(path) == 4:  # noqa: PLR2004
+        service_key = path[3]
+        if service_key == '080-docker:service':
+            return DOCKER_SETUP_MENU_ID
+        if service_key == '080-docker:registries':
+            return DOCKER_REGISTRIES_MENU_ID
+
+    return None
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -761,6 +794,15 @@ def _load_images() -> None:
 
 async def init_service() -> Subscriptions:
     """Initialize the service."""
+    # Register apps menu title
+    unregister_title = register_apps_menu_title('󰀻Docker Apps')
+
+    # Register path matcher for Docker navigation (apps and settings)
+    unregister_path_matcher = register_path_menu_matcher(
+        'docker:paths',
+        _docker_path_matcher,
+    )
+
     register_persistent_store(
         'docker_usernames',
         lambda state: state.docker.service.usernames,
@@ -850,4 +892,8 @@ async def init_service() -> Subscriptions:
         ),
     )
 
-    return subscriptions
+    return [
+        *subscriptions,
+        unregister_title,
+        unregister_path_matcher,
+    ]

@@ -19,6 +19,7 @@ from ubo_app.store.core.types import (
     SettingsCategory,
     UpdateDynamicMenuAction,
 )
+from ubo_app.store.core.view_registry import register_path_menu_matcher
 from ubo_app.store.main import store
 from ubo_app.store.services.display import (
     DisplayBlankAction,
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_gui.menu.types import Item
+
+    from ubo_app.utils.types import Subscriptions
 
 splash_screen = None
 
@@ -211,9 +214,24 @@ def update_display_dynamic_menu(selected_timeout: DisplayBlankTimeout) -> None:
     )
 
 
-def init_service() -> None:
+def init_service() -> Subscriptions:
     """Initialize the display service."""
     from ubo_app.utils.async_ import create_task
+
+    # Register path matcher for display settings navigation
+    def _display_path_matcher(path: tuple[str, ...]) -> str | None:
+        # Match: ('main', 'settings', <category>, '000-display:')
+        if (
+            len(path) == 4  # noqa: PLR2004
+            and path[3] == '000-display:'
+        ):
+            return DISPLAY_TIMEOUT_MENU_ID
+        return None
+
+    unregister_settings = register_path_menu_matcher(
+        'display:settings',
+        _display_path_matcher,
+    )
 
     # Register persistent store
     register_persistent_store(
@@ -253,4 +271,6 @@ def init_service() -> None:
         logger.info('Screen blanking monitor task started')
     else:
         logger.info('Screen blanking disabled during tests')
+
+    return [unregister_settings]
 

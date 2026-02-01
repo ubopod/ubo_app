@@ -9,6 +9,7 @@ import psutil
 
 from ubo_app.logger import logger
 from ubo_app.store.core.view_registry import (
+    register_home_view_data_provider,
     register_home_view_dependency,
     register_status_bar_dependency,
 )
@@ -69,10 +70,27 @@ def init_service() -> Subscriptions:
         lambda s: s.system.clock,
     )
 
+    # Register home view data providers for decoupled view computation
+    unregister_cpu_data = register_home_view_data_provider(
+        'system:cpu',
+        lambda s: ('cpu_percent', s.system.cpu_percent),
+    )
+    unregister_ram_data = register_home_view_data_provider(
+        'system:ram',
+        lambda s: ('ram_percent', s.system.ram_percent),
+    )
+
     read_metrics()
 
     end_event = asyncio.Event()
     create_task(_monitor_metrics(end_event))
 
     logger.info('[SystemMetrics] Service started')
-    return [end_event.set, unregister_cpu, unregister_ram, unregister_clock]
+    return [
+        end_event.set,
+        unregister_cpu,
+        unregister_ram,
+        unregister_clock,
+        unregister_cpu_data,
+        unregister_ram_data,
+    ]
