@@ -54,6 +54,7 @@ from ubo_app.constants import STORE_GRACE_PERIOD
 from ubo_app.logger import logger
 from ubo_app.store.core.dynamic_menus_reducer import reducer as dynamic_menus_reducer
 from ubo_app.store.core.view_computation import setup_dynamic_view_autorun
+from ubo_app.store.core.view_registry import register_status_bar_dependency
 from ubo_app.store.input.reducer import reducer as input_reducer
 from ubo_app.store.scheduler import Scheduler
 from ubo_app.store.settings.reducer import reducer as settings_reducer
@@ -655,6 +656,12 @@ store.dispatch(
         key='main',
         reducer=main_reducer,
     ),
+)
+
+# Register status icons as a view dependency for status bar updates
+register_status_bar_dependency(
+    'status_icons',
+    lambda s: tuple(s.status_icons.icons) if hasattr(s, 'status_icons') else (),
 )
 
 # Set up dynamic view computation for dumb UI architecture

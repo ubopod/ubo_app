@@ -13,6 +13,7 @@ import board
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 
 from ubo_app.logger import logger
+from ubo_app.store.core.view_registry import register_status_bar_dependency
 from ubo_app.store.main import store
 from ubo_app.store.services.sensors import Sensor, SensorsReportReadingAction
 from ubo_app.utils.async_ import create_task
@@ -69,6 +70,12 @@ async def _monitor_sensors(end_event: asyncio.Event) -> None:
 
 def init_service() -> Subscriptions:
     """Initialize the service."""
+    # Register view dependency for status bar temperature display
+    unregister_temp = register_status_bar_dependency(
+        'sensors:temp',
+        lambda s: s.sensors.temperature.value if s.sensors.temperature else None,
+    )
+
     eeprom_data = get_eeprom_data()
 
     global temperature_sensor, light_sensor  # noqa: PLW0603
@@ -110,4 +117,4 @@ def init_service() -> Subscriptions:
     end_event = asyncio.Event()
     create_task(_monitor_sensors(end_event))
 
-    return [end_event.set]
+    return [end_event.set, unregister_temp]

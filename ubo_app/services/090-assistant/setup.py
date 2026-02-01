@@ -35,6 +35,7 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
 )
+from ubo_app.store.core.view_registry import register_menu_content_dependency
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -658,6 +659,36 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
 async def init_service() -> None:
     """Initialize the assistant service."""
     _register_persistent_stores()
+
+    # Register view dependencies for menu content updates
+    register_menu_content_dependency(
+        'assistant:stt',
+        lambda s: s.assistant.selected_stt,
+    )
+    register_menu_content_dependency(
+        'assistant:llm',
+        lambda s: s.assistant.selected_llm,
+    )
+    register_menu_content_dependency(
+        'assistant:tts',
+        lambda s: s.assistant.selected_tts,
+    )
+    register_menu_content_dependency(
+        'assistant:image_gen',
+        lambda s: s.assistant.selected_image_generator,
+    )
+    register_menu_content_dependency(
+        'assistant:mcp_enabled',
+        lambda s: tuple(s.assistant.enabled_mcp_servers),
+    )
+    register_menu_content_dependency(
+        'assistant:mcp_servers',
+        lambda s: tuple(s.assistant.mcp_servers.keys()),
+    )
+    register_menu_content_dependency(
+        'assistant:provider_status',
+        lambda s: tuple(s.assistant.provider_setup_status.items()),
+    )
 
     (
         providers,

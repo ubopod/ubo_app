@@ -11,6 +11,10 @@ from audio_manager import AudioManager
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
+from ubo_app.store.core.view_registry import (
+    register_home_view_dependency,
+    register_status_bar_dependency,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioInstallDriverEvent,
@@ -105,6 +109,16 @@ async def _install_driver() -> None:
 def init_service() -> Subscriptions:
     audio_manager = AudioManager()
 
+    # Register view dependencies for home view and status bar
+    unregister_volume = register_home_view_dependency(
+        'audio:volume',
+        lambda s: s.audio.playback_volume,
+    )
+    unregister_recording = register_status_bar_dependency(
+        'audio:recording',
+        lambda s: s.audio.is_recording,
+    )
+
     store.dispatch(
         StatusIconsRegisterAction(
             icon='󰍭',
@@ -189,4 +203,6 @@ def init_service() -> Subscriptions:
         store.subscribe_event(AudioPlayChimeEvent, play_chime),
         store.subscribe_event(AudioPlayAudioSampleEvent, play_audio),
         store.subscribe_event(AudioPlayAudioSequenceEvent, play_audio),
+        unregister_volume,
+        unregister_recording,
     ]
