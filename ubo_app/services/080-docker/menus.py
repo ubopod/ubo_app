@@ -80,7 +80,6 @@ def image_menu(  # noqa: C901
     image: ImageState,
 ) -> HeadedMenu:
     """Get the menu for the docker image."""
-    interfaces = []
     ip_addresses = [
         ip for interface in interfaces or [] for ip in interface.ip_addresses
     ]
@@ -186,7 +185,7 @@ def image_menu(  # noqa: C901
                                 icon='󰙜',
                                 action=open_qrcode(port.split(':')[-1]),
                             )
-                            if port.startswith('0.0.0.0')  # noqa: S104
+                            if port.startswith('0.0.0.0') and ip_addresses  # noqa: S104
                             else Item(label=port, icon='󰙜')
                             for port in image.ports
                         ],
