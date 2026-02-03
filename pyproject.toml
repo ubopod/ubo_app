@@ -330,6 +330,8 @@ root = "ubo_app/services/090-web-ui"
 extraPaths = ["."]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["ubo_app/tui"]
 markers = ["persistent_store: run test with provided persistent store"]
 asyncio_mode = "auto"
 filterwarnings = [
