@@ -29,7 +29,7 @@ def read_metrics() -> None:
     local_tz = datetime.now(tz=UTC).astimezone().tzinfo
     clock = datetime.now(tz=local_tz).strftime('%H:%M')
 
-    logger.info(
+    logger.verbose(
         '[SystemMetrics] Dispatching: cpu=%.1f, ram=%.1f, clock=%s',
         cpu_percent,
         ram_percent,

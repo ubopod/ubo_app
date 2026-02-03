@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import menu_items
 
+from ubo_app.logger import logger
 from ubo_app.store.core.constants import PAGE_SIZE
 from ubo_app.store.core.menu_adapter import (
     get_current_menu_from_stack,
@@ -258,7 +259,7 @@ def setup_dynamic_view_autorun() -> None:
                 (n.id, n.title, n.content, n.icon, n.color, n.progress)
                 for n in state.notifications.notifications
             ),
-            # Dynamic dependencies from registry (services register their own)
+            # Dynamic dependencies from registry (menu content only)
             get_registered_dependencies(state),
         ),
         options=AutorunOptions(default_value=None),
@@ -271,14 +272,25 @@ def setup_dynamic_view_autorun() -> None:
         if state is None:
             return
 
+        logger.debug(
+            'view_computation: autorun triggered, path=%s',
+            list(state.main.path),
+        )
+
         computed_view = compute_view_from_root_state(state)
         computed_status_bar = compute_status_bar_data(state)
 
+        view_changed = state.main.current_view != computed_view
+        status_bar_changed = state.main.status_bar != computed_status_bar
+
         # Only dispatch if view or status bar actually changed
-        if (
-            state.main.current_view != computed_view
-            or state.main.status_bar != computed_status_bar
-        ):
+        if view_changed or status_bar_changed:
+            logger.debug(
+                'view_computation: dispatching update '
+                '(view_changed=%s, status_bar_changed=%s)',
+                view_changed,
+                status_bar_changed,
+            )
             store.dispatch(
                 UpdateCurrentViewAction(
                     view=computed_view,

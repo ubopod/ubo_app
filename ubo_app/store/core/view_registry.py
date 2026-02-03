@@ -146,31 +146,28 @@ def register_menu_content_dependency(
 
 
 def get_registered_dependencies(state: RootState) -> tuple[Any, ...]:
-    """Get all registered dependency values for the autorun selector.
+    """Get registered dependency values for view computation.
 
     This function is called by the view computation autorun to build a tuple
-    of all registered dependency values. When any value changes, the autorun
-    will re-run and recompute the view.
+    of dependency values that affect which view to show. When any value changes,
+    the autorun will re-run and recompute the view.
+
+    Note: The following are intentionally excluded:
+    - status_bar_selectors: contain frequently-changing values (clock) that
+      only affect status bar rendering, not view computation
+    - home_view_selectors: contain CPU/RAM metrics that change every second
+      but only affect home page gauge rendering, not view selection
 
     Args:
         state: The current RootState.
 
     Returns:
-        Tuple of all registered dependency values.
+        Tuple of all registered view dependency values.
 
     """
     registry = _get_registry()
     results: list[Any] = []
-    for selector in registry.status_bar_selectors.values():
-        try:
-            results.append(selector(state))
-        except (AttributeError, KeyError):
-            results.append(None)
-    for selector in registry.home_view_selectors.values():
-        try:
-            results.append(selector(state))
-        except (AttributeError, KeyError):
-            results.append(None)
+    # Only menu_content_selectors affect view computation
     for selector in registry.menu_content_selectors.values():
         try:
             results.append(selector(state))
