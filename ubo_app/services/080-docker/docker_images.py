@@ -4,11 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import json
 import os
-import secrets as py_secrets
-import string
-from dataclasses import field
 import secrets as py_secrets
 import string
 from dataclasses import field
@@ -16,20 +12,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp
-import aiohttp
 from immutable import Immutable
 
 from ubo_app.constants import (
-    CONFIG_PATH,
     CONFIG_PATH,
     DEBUG_DOCKER,
     GRPC_ENVOY_LISTEN_PORT,
     GRPC_LISTEN_PORT,
 )
-from ubo_app.logger import logger
-from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
-from ubo_app.store.services.speech_synthesis import ReadableInformation
-from ubo_app.utils import IS_RPI, secrets
 from ubo_app.logger import logger
 from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
 from ubo_app.store.services.speech_synthesis import ReadableInformation
@@ -41,7 +31,6 @@ if TYPE_CHECKING:
 
 ENVOY_TEMPLATE_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml.tmpl'
 ENVOY_CONFIG_PATH = Path(__file__).parent / 'assets' / 'envoy.yaml'
-COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 
 
@@ -229,6 +218,8 @@ async def prepare_n8n() -> bool:
             f"\n"
             f"POSTGRES_NON_ROOT_USER={creds['N8N_DB_NON_ROOT_USER']}\n"
             f"POSTGRES_NON_ROOT_PASSWORD={creds['N8N_DB_NON_ROOT_PASSWORD']}\n"
+            f"\n"
+            f"N8N_SECURE_COOKIE=false\n"
         )
         (composition_path / '.env').write_text(env_content)
 
@@ -287,12 +278,6 @@ class ContainerEntry(Immutable):
         | None
     ) = None
     prepare: Callable[[], Coroutine[Any, Any, bool] | bool] | None = None
-    is_composition: bool = False
-
-    @property
-    def full_path(self) -> str:
-        """Get full image path including registry if specified."""
-        return f'{self.registry}/{self.path}'
     is_composition: bool = False
 
     @property
@@ -359,7 +344,6 @@ IMAGES = {
             registry='ghcr.io',
             dependencies=['ollama'],
             ports={'8080/tcp': 8080},
-            hosts={'host.docker.internal': 'host-gateway'},
             hosts={'host.docker.internal': 'host-gateway'},
         ),
         ContainerEntry(
@@ -435,6 +419,37 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
             is_composition=True,
             ports={'5678/tcp': 5678},
         ),
+        ContainerEntry(
+            id='twingate',
+            label='Twingate',
+            icon='󰒄',
+            network_mode='host',
+            path='twingate/connector:latest',
+            registry='docker.io',
+            environment_vairables={
+                'TWINGATE_NETWORK': lambda: ubo_input(
+                    resolver=lambda code, _: code,
+                    prompt='Enter your Twingate network name (e.g. mynetwork)',
+                    descriptions=[
+                        WebUIInputDescription(),
+                    ],
+                ),
+                'TWINGATE_ACCESS_TOKEN': lambda: ubo_input(
+                    resolver=lambda code, _: code,
+                    prompt='Enter the Twingate Access Token',
+                    descriptions=[
+                        WebUIInputDescription(),
+                    ],
+                ),
+                'TWINGATE_REFRESH_TOKEN': lambda: ubo_input(
+                    resolver=lambda code, _: code,
+                    prompt='Enter the Twingate Refresh Token',
+                    descriptions=[
+                        WebUIInputDescription(),
+                    ],
+                ),
+            },
+        ),
         *(
             [
                 ContainerEntry(
@@ -472,3 +487,5 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
         ),
     ]
 }
+
+PREDEFINED_IMAGE_IDS = frozenset(IMAGES.keys())

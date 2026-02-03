@@ -13,7 +13,7 @@ from calculate_progress import (
     ServiceTrackers,
     calculate_composition_progress,
 )
-from docker_images import IMAGES
+from docker_images import IMAGES, PREDEFINED_IMAGE_IDS
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import CONFIG_PATH
@@ -149,8 +149,20 @@ async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
             extra={'composition_id': id},
         )
 
-    # Remove from IMAGES dictionary and unregister from Redux
-    if id in IMAGES:
+    # For predefined compositions (immich, n8n, etc.), keep them in the menu
+    # as re-installable. Only fully remove dynamically-loaded compositions.
+    if id in PREDEFINED_IMAGE_IDS:
+        store.dispatch(
+            DockerImageSetStatusAction(
+                image=id,
+                status=DockerItemStatus.NOT_AVAILABLE,
+            ),
+        )
+        logger.info(
+            'Reset predefined composition to NOT_AVAILABLE',
+            extra={'composition_id': id},
+        )
+    elif id in IMAGES:
         del IMAGES[id]
         logger.info('Removed composition from IMAGES', extra={'composition_id': id})
 
