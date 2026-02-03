@@ -24,5 +24,5 @@ class MenuScrollDirection(StrEnum):
     DOWN = 'down'
 
 
-# Note: Settings category icons are registered dynamically by the
-# application via register_category_icon() in view_registry.py.
+# Note: Settings category icons are defined in constants.py as
+# SETTINGS_CATEGORY_ICONS and registered via register_category_icon().

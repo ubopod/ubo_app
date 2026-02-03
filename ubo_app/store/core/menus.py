@@ -11,6 +11,7 @@ from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.logger import logger
+from ubo_app.store.core.constants import SETTINGS_CATEGORY_ICONS
 from ubo_app.store.core.types import (
     MenuItemData,
     PowerOffAction,
@@ -19,10 +20,7 @@ from ubo_app.store.core.types import (
     StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
-from ubo_app.store.core.view_registry import (
-    get_category_icon,
-    register_category_icon,
-)
+from ubo_app.store.core.view_registry import register_category_icon
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
@@ -67,9 +65,9 @@ SETTINGS_MENU = HeadlessMenu(
         SubMenuItem(
             key=category,
             label=category,
-            icon=get_category_icon(category),
+            icon=SETTINGS_CATEGORY_ICONS.get(category, ''),
             sub_menu=HeadlessMenu(
-                title=get_category_icon(category) + category,
+                title=SETTINGS_CATEGORY_ICONS.get(category, '') + category,
                 items=SYSTEM_MENU if category is SettingsCategory.SYSTEM else [],
                 placeholder='No settings in this category',
             ),
@@ -302,7 +300,7 @@ def update_settings_categories_dynamic_menu() -> None:
         MenuItemData(
             key=category.value,
             label=category.value,
-            icon=get_category_icon(category),
+            icon=SETTINGS_CATEGORY_ICONS.get(category, ''),
             action_id=f'menu:navigate:settings:{category.value}',
         )
         for category in SettingsCategory
@@ -444,19 +442,10 @@ def _register_category_icons() -> None:
     """Register icons for settings categories.
 
     This allows the UI to display icons for each settings category.
+    Uses SETTINGS_CATEGORY_ICONS defined at module level for consistency with
+    the static SETTINGS_MENU.
     """
-    # Settings category icons mapping
-    category_icons: dict[str, str] = {
-        SettingsCategory.NETWORK: '󰛳',
-        SettingsCategory.REMOTE: '󰑔',
-        SettingsCategory.SYSTEM: '󰒔',
-        SettingsCategory.HARDWARE: '',
-        SettingsCategory.ASSISTANT: '󰚩',
-        SettingsCategory.DOCKER: '󰡨',
-        SettingsCategory.ACCESSIBILITY: '󰙋',
-    }
-
-    for category, icon in category_icons.items():
+    for category, icon in SETTINGS_CATEGORY_ICONS.items():
         register_category_icon(category, icon)
 
 
