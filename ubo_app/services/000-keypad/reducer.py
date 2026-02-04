@@ -21,9 +21,9 @@ from ubo_app.store.core.types import (
     MenuGoHomeEvent,
     MenuScrollDirection,
     MenuScrollEvent,
+    MenuStackItem,
     ReplayRecordedSequenceAction,
     ScreenshotEvent,
-    SetMenuPathAction,
     SnapshotEvent,
     ToggleRecordingAction,
 )
@@ -54,9 +54,18 @@ from ubo_app.store.services.keypad import (
 from ubo_app.store.services.notifications import Notification, NotificationsAddAction
 
 if TYPE_CHECKING:
+    from ubo_app.store.core.types import StackItemType
     from ubo_app.store.services.audio import AudioAction
 
-Action = KeypadAction | SetMenuPathAction | InitAction
+Action = KeypadAction | InitAction
+
+
+def _compute_depth_from_stack(stack: tuple[StackItemType, ...]) -> int:
+    """Compute menu depth from the navigation stack.
+
+    Depth is the count of MenuStackItems in the stack.
+    """
+    return len([item for item in stack if isinstance(item, MenuStackItem)])
 
 
 def reducer(
@@ -83,9 +92,17 @@ def reducer(
 
         raise InitializationActionError(action)
 
+    # Query current depth from the main state stack
+    from ubo_app.store.main import store
+
+    @store.with_state(lambda s: s.main.stack)
+    def get_current_depth(stack: tuple[StackItemType, ...]) -> int:
+        return _compute_depth_from_stack(stack)
+
+    depth = get_current_depth()
+
     # Check if this key press should wake up a blanked screen
     if isinstance(action, KeypadKeyPressAction) and not state.is_consumed:
-        from ubo_app.store.main import store
 
         @store.with_state(
             lambda s: s.display.is_blanked if hasattr(s, 'display') else False,
@@ -102,7 +119,7 @@ def reducer(
 
     match action:
         case KeypadKeyPressAction(key=Key.UP) if (
-            state.depth == 1 and action.pressed_keys == {action.key}
+            depth == 1 and action.pressed_keys == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -115,7 +132,7 @@ def reducer(
                 ],
             )
         case KeypadKeyPressAction(key=Key.DOWN) if (
-            state.depth == 1 and action.pressed_keys == {action.key}
+            depth == 1 and action.pressed_keys == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -128,7 +145,7 @@ def reducer(
                 ],
             )
         case KeypadKeyPressAction(key=Key.HOME) if (
-            state.depth == 1 and action.pressed_keys == {action.key}
+            depth == 1 and action.pressed_keys == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -138,7 +155,7 @@ def reducer(
                 ],
             )
         case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.HOME) if (
-            state.depth == 1
+            depth == 1
         ):
             return CompleteReducerResult(
                 state=state,
@@ -281,7 +298,7 @@ def reducer(
                 Key.HOME,
             }
             and action.held_keys == {Key.HOME}
-            and state.depth > 1
+            and depth > 1
         ):
             return CompleteReducerResult(
                 state=state(is_consumed=True),
@@ -308,9 +325,6 @@ def reducer(
                 actions=[AssistantStopListeningAction()],
                 events=[MenuGoHomeEvent()],
             )
-
-        case SetMenuPathAction():
-            return state(depth=action.depth)
 
         case _:
             return state

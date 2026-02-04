@@ -39,5 +39,4 @@ class KeypadKeyReleaseAction(KeypadAction): ...
 
 
 class KeypadState(Immutable):
-    depth: int = 0
     is_consumed: bool = False
