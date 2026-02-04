@@ -8,9 +8,12 @@ This enables multi-client support (Apple Watch, Web UI, MCU).
 from __future__ import annotations
 
 from dataclasses import field
-from typing import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 from immutable import Immutable
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 class MenuItemData(Immutable):
@@ -69,7 +72,7 @@ class ApplicationViewData(Immutable):
     type: str = 'application'  # Literal discriminator
     show_status_bar: bool = False
     application_id: str = ''
-    extra_data: dict[str, str] = field(default_factory=dict)  # e.g., {'text': '...'}
+    extra_data: Mapping[str, str] = field(default_factory=dict)  # e.g., {'text': '...'}
 
 
 class NotificationViewData(Immutable):
