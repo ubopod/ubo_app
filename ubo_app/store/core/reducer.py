@@ -74,7 +74,6 @@ from ubo_app.store.core.types import (
     ReplayRecordedSequenceEvent,
     ReportReplayingDoneAction,
     SetAreEnclosuresVisibleAction,
-    SetMenuPathAction,
     StackChangedEvent,
     StackPageIndexChangedEvent,
     StackPopAction,
@@ -424,9 +423,6 @@ def reducer(
             if events:
                 return CompleteReducerResult(state=new_state, events=events)
             return new_state
-
-        case SetMenuPathAction():
-            return replace(state, path=action.path, depth=action.depth)
 
         case SetAreEnclosuresVisibleAction():
             return replace(

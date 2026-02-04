@@ -79,13 +79,6 @@ class RebootAction(PowerAction):
     """Action to reboot the device."""
 
 
-class SetMenuPathAction(MainAction):
-    """Action to set the menu navigation path."""
-
-    path: list[str]
-    depth: int
-
-
 class SetAreEnclosuresVisibleAction(MainAction):
     """Action to set header/footer visibility."""
 
