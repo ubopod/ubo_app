@@ -243,3 +243,5 @@ def remove_image(event: DockerImageRemoveEvent) -> None:
         raise
     finally:
         docker_client.close()
+        for key in IMAGES[id].secret_keys:
+            secrets.clear_secret(key)

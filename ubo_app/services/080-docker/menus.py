@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from docker_composition import check_composition
 from docker_container import check_container
-from docker_images import IMAGES
+from docker_images import IMAGES, configure_twingate, is_twingate_configured
 from docker_qrcode_page import DockerQRCodePage
 from redux import AutorunOptions
 from ubo_gui.menu.types import (
@@ -18,6 +18,7 @@ from ubo_gui.menu.types import (
 )
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.constants import SECRETS_PATH
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
@@ -45,6 +46,16 @@ if TYPE_CHECKING:
     from ubo_gui.page import PageWidget
 
     from ubo_app.store.services.ip import IpNetworkInterface
+
+
+def _secrets_modification_time() -> float:
+    """Return the modification time of the secrets file."""
+    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
+
+
+def _open_twingate_configure() -> None:
+    """Open the Twingate configuration dialog."""
+    create_task(configure_twingate())
 
 
 def _show_delete_confirmation(image_id: str) -> None:
@@ -103,43 +114,59 @@ def image_menu(  # noqa: C901
     elif image.status == DockerItemStatus.FETCHING:
         pass
     elif image.status == DockerItemStatus.AVAILABLE:
-        items.extend(
-            [
-                UboDispatchItem(
-                    label='Start',
-                    icon='󰐊',
-                    store_action=DockerImageRunAction(image=image.id),
-                ),
+        items.append(
+            UboDispatchItem(
+                label='Start',
+                icon='󰐊',
+                store_action=DockerImageRunAction(image=image.id),
+            ),
+        )
+        if image.id == 'twingate' and is_twingate_configured():
+            items.append(
                 ActionItem(
-                    label='Delete Application' if is_composition else 'Remove Image',
-                    icon='󰆴',
-                    background_color=DANGER_COLOR,
-                    action=lambda img_id=image.id: _show_delete_confirmation(img_id),
-                ) if is_composition else UboDispatchItem(
-                    label='Remove Image',
-                    icon='󰆴',
-                    store_action=DockerImageRemoveAction(image=image.id),
-                    background_color=DANGER_COLOR,
+                    label='Reconfigure',
+                    icon='󰒓',
+                    action=_open_twingate_configure,
                 ),
-            ],
+            )
+        items.append(
+            ActionItem(
+                label='Delete Application' if is_composition else 'Remove Image',
+                icon='󰆴',
+                background_color=DANGER_COLOR,
+                action=lambda img_id=image.id: _show_delete_confirmation(img_id),
+            ) if is_composition else UboDispatchItem(
+                label='Remove Image',
+                icon='󰆴',
+                store_action=DockerImageRemoveAction(image=image.id),
+                background_color=DANGER_COLOR,
+            ),
         )
     elif image.status == DockerItemStatus.CREATED:
-        items.extend(
-            [
-                UboDispatchItem(
-                    label='Start',
-                    icon='󰐊',
-                    store_action=DockerImageRunAction(image=image.id),
+        items.append(
+            UboDispatchItem(
+                label='Start',
+                icon='󰐊',
+                store_action=DockerImageRunAction(image=image.id),
+            ),
+        )
+        if image.id == 'twingate' and is_twingate_configured():
+            items.append(
+                ActionItem(
+                    label='Reconfigure',
+                    icon='󰒓',
+                    action=_open_twingate_configure,
                 ),
-                UboDispatchItem(
-                    label='Release Resources' if is_composition else 'Remove Container',
-                    icon='󰆴',
-                    store_action=DockerImageReleaseAction(image=image.id)
-                    if is_composition
-                    else DockerImageRemoveContainerAction(image=image.id),
-                    background_color=DANGER_COLOR if not is_composition else None,
-                ),
-            ],
+            )
+        items.append(
+            UboDispatchItem(
+                label='Release Resources' if is_composition else 'Remove Container',
+                icon='󰆴',
+                store_action=DockerImageReleaseAction(image=image.id)
+                if is_composition
+                else DockerImageRemoveContainerAction(image=image.id),
+                background_color=DANGER_COLOR if not is_composition else None,
+            ),
         )
     elif image.status == DockerItemStatus.RUNNING:
         items.append(
@@ -236,6 +263,8 @@ def image_menu(  # noqa: C901
 
 def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
     """Get the menu items for the Docker service."""
+    has_secrets = image_id in IMAGES and bool(IMAGES[image_id].secret_keys)
+
     # Don't check status during ongoing operations (FETCHING, PROCESSING)
     # The operation itself manages the status
     def menu_with_check(image: ImageState) -> HeadedMenu:
@@ -253,6 +282,7 @@ def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
         lambda state: (
             getattr(state.docker, image_id),
             state.ip.interfaces if hasattr(state, 'ip') else None,
+            _secrets_modification_time() if has_secrets else None,
         ),
-        options=AutorunOptions(default_value=None),
+        options=AutorunOptions(default_value=None, memoization=not has_secrets),
     )(menu_with_check)

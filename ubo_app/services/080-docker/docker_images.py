@@ -21,7 +21,12 @@ from ubo_app.constants import (
     GRPC_LISTEN_PORT,
 )
 from ubo_app.logger import logger
-from ubo_app.store.input.types import QRCodeInputDescription, WebUIInputDescription
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    QRCodeInputDescription,
+    WebUIInputDescription,
+)
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils import IS_RPI, secrets
 from ubo_app.utils.input import ubo_input
@@ -244,6 +249,72 @@ On first visit, create an account to start building automations.""",
         return True
 
 
+TWINGATE_SECRET_KEYS = (
+    'TWINGATE_NETWORK',
+    'TWINGATE_ACCESS_TOKEN',
+    'TWINGATE_REFRESH_TOKEN',
+)
+
+
+def is_twingate_configured() -> bool:
+    """Check if all Twingate credentials are stored."""
+    return all(secrets.read_secret(key) for key in TWINGATE_SECRET_KEYS)
+
+
+async def configure_twingate() -> bool:
+    """Prompt for Twingate credentials and store them in secrets."""
+    try:
+        fields = []
+        for key, label, hint in (
+            ('TWINGATE_NETWORK', 'Network Name', 'e.g. mynetwork'),
+            ('TWINGATE_ACCESS_TOKEN', 'Access Token', None),
+            ('TWINGATE_REFRESH_TOKEN', 'Refresh Token', None),
+        ):
+            current = secrets.read_secret(key)
+            if current:
+                description = f'Current: {secrets.read_covered_secret(key)}'
+            else:
+                description = hint
+
+            fields.append(
+                InputFieldDescription(
+                    name=key,
+                    label=label,
+                    type=InputFieldType.PASSWORD
+                    if 'TOKEN' in key
+                    else InputFieldType.TEXT,
+                    description=description,
+                    required=current is None,
+                ),
+            )
+
+        _, result = await ubo_input(
+            prompt='Configure Twingate',
+            descriptions=[WebUIInputDescription(fields=fields)],
+        )
+
+        if not result:
+            return False
+
+        for key in TWINGATE_SECRET_KEYS:
+            value = (result.data.get(key, '') or '').strip()
+            if value:
+                secrets.write_secret(key=key, value=value)
+            elif not secrets.read_secret(key):
+                return False
+    except asyncio.CancelledError:
+        return False
+    else:
+        return True
+
+
+async def prepare_twingate() -> bool:
+    """Prepare Twingate by ensuring credentials are configured."""
+    if is_twingate_configured():
+        return True
+    return await configure_twingate()
+
+
 class ContainerEntry(Immutable):
     """Container entry."""
 
@@ -279,6 +350,7 @@ class ContainerEntry(Immutable):
     ) = None
     prepare: Callable[[], Coroutine[Any, Any, bool] | bool] | None = None
     is_composition: bool = False
+    secret_keys: tuple[str, ...] = ()
 
     @property
     def full_path(self) -> str:
@@ -408,6 +480,10 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
             prepare=prepare_immich,
             is_composition=True,
             ports={'2283/tcp': 2283},
+            secret_keys=(
+                'IMMICH_DB_PASSWORD',
+                'IMMICH_DB_USERNAME',
+            ),
         ),
         ContainerEntry(
             id='n8n',
@@ -418,6 +494,12 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
             prepare=prepare_n8n,
             is_composition=True,
             ports={'5678/tcp': 5678},
+            secret_keys=(
+                'N8N_DB_PASSWORD',
+                'N8N_DB_USER',
+                'N8N_DB_NON_ROOT_PASSWORD',
+                'N8N_DB_NON_ROOT_USER',
+            ),
         ),
         ContainerEntry(
             id='twingate',
@@ -426,27 +508,17 @@ Refer to {ngrok|EH N G EH R AA K} documentation for further information""",
             network_mode='host',
             path='twingate/connector:latest',
             registry='docker.io',
+            prepare=prepare_twingate,
+            secret_keys=TWINGATE_SECRET_KEYS,
             environment_vairables={
-                'TWINGATE_NETWORK': lambda: ubo_input(
-                    resolver=lambda code, _: code,
-                    prompt='Enter your Twingate network name (e.g. mynetwork)',
-                    descriptions=[
-                        WebUIInputDescription(),
-                    ],
+                'TWINGATE_NETWORK': lambda: (
+                    secrets.read_secret('TWINGATE_NETWORK') or ''
                 ),
-                'TWINGATE_ACCESS_TOKEN': lambda: ubo_input(
-                    resolver=lambda code, _: code,
-                    prompt='Enter the Twingate Access Token',
-                    descriptions=[
-                        WebUIInputDescription(),
-                    ],
+                'TWINGATE_ACCESS_TOKEN': lambda: (
+                    secrets.read_secret('TWINGATE_ACCESS_TOKEN') or ''
                 ),
-                'TWINGATE_REFRESH_TOKEN': lambda: ubo_input(
-                    resolver=lambda code, _: code,
-                    prompt='Enter the Twingate Refresh Token',
-                    descriptions=[
-                        WebUIInputDescription(),
-                    ],
+                'TWINGATE_REFRESH_TOKEN': lambda: (
+                    secrets.read_secret('TWINGATE_REFRESH_TOKEN') or ''
                 ),
             },
         ),
