@@ -24,9 +24,9 @@ from ubo_app.store.core.types import (
     MenuGoHomeEvent,
     MenuScrollDirection,
     MenuScrollEvent,
+    MenuStackItem,
     OpenApplicationEvent,
     SetAreEnclosuresVisibleAction,
-    SetMenuPathAction,
     StackPopAction,
     StackPopToRootAction,
     StackPushApplicationAction,
@@ -34,17 +34,12 @@ from ubo_app.store.core.types import (
     StackPushNotificationAction,
     StackSetPageIndexAction,
 )
-from ubo_app.store.core.types import (
-    MenuStackItem as ReduxMenuStackItem,
-)
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
 from ubo_app.store.ubo_actions import get_registered_application
 from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Menu
 
@@ -116,87 +111,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 return
             self.menu_widget.set_root_menu(menu)
 
-        # Phase 2.5: Validation autorun to verify Redux stack stays in sync
-        if DEBUG_MENU:
-            self._setup_stack_validation_autorun(_self)
-
-    def _setup_stack_validation_autorun(
-        self,
-        _self: weakref.ref,  # type: ignore[type-arg]
-    ) -> None:
-        """Set up autorun for stack sync validation (DEBUG_MENU only)."""
-
-        @store.autorun(lambda state: state.main.stack)
-        def _validate_stack_sync(stack_state: object) -> None:
-            if not isinstance(stack_state, tuple):
-                return
-            self_ref = _self()
-            if not self_ref:
-                return
-            self._validate_stack_items(self_ref.menu_widget.stack, stack_state)
-
-    def _validate_stack_items(
-        self,
-        gui_stack: Sequence[object],
-        stack_state: tuple[object, ...],
-    ) -> None:
-        """Validate GUI and Stack state are in sync."""
-        gui_len = len(gui_stack)
-        store_stack_len = len(stack_state)
-
-        # Compare lengths
-        if gui_len != store_stack_len:
-            logger.warning(
-                '[STACK SYNC] Length mismatch! GUI: %d, Redux: %d',
-                gui_len,
-                store_stack_len,
-            )
-            return
-
-        # Compare stack items
-        for i, (gui_item, redux_item) in enumerate(
-            zip(gui_stack, stack_state, strict=True),
-        ):
-            self._validate_single_stack_item(i, gui_item, redux_item)
-
-        logger.debug('[STACK SYNC] Stacks in sync: %d items', store_stack_len)
-
-    def _validate_single_stack_item(
-        self,
-        index: int,
-        gui_item: object,
-        redux_item: object,
-    ) -> None:
-        """Validate a single stack item pair."""
-        gui_type = type(gui_item).__name__
-        redux_type = type(redux_item).__name__
-
-        if isinstance(gui_item, StackMenuItem):
-            if not isinstance(redux_item, ReduxMenuStackItem):
-                logger.warning(
-                    '[STACK SYNC] Type mismatch at [%d]: GUI=%s, Redux=%s',
-                    index,
-                    gui_type,
-                    redux_type,
-                )
-            elif gui_item.page_index != redux_item.page_index:
-                logger.warning(
-                    '[STACK SYNC] Page index mismatch at [%d]: GUI=%d, Redux=%d',
-                    index,
-                    gui_item.page_index,
-                    redux_item.page_index,
-                )
-        elif isinstance(gui_item, StackApplicationItem):
-            from ubo_app.store.core.types import ApplicationStackItem as ReduxAppItem
-
-            if not isinstance(redux_item, ReduxAppItem):
-                logger.warning(
-                    '[STACK SYNC] Type mismatch at [%d]: GUI=%s, Redux=%s',
-                    index,
-                    gui_type,
-                    redux_type,
-                )
-
     def build(self) -> Widget | None:
         root = super().build()
         if root:
@@ -251,20 +165,11 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         _: MenuWidget,
         gui_stack: list[StackItem],
     ) -> None:
-        # Legacy: Dispatch path for backward compatibility
-        store.dispatch(
-            SetMenuPathAction(
-                path=[
-                    stack_item.selection.key
-                    for stack_item in gui_stack
-                    if isinstance(stack_item, StackMenuItem) and stack_item.selection
-                ],
-                depth=len(gui_stack),
-            ),
-        )
+        """Sync Redux stack state with GUI stack changes.
 
-        # Phase 2.5: Sync Redux stack with GUI stack
-        # This validates our Redux stack actions produce correct state
+        This ensures Redux state tracks the GUI navigation state.
+        When GUI navigates (push/pop), we dispatch corresponding Redux actions.
+        """
         self._sync_stack_state_with_gui(gui_stack)
 
     def _sync_stack_state_with_gui(
@@ -273,9 +178,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     ) -> None:
         """Sync the Redux stack state with the GUI stack.
 
-        This is an intermediate validation step (Phase 2.5) that ensures
-        the Redux stack matches the GUI stack. After full migration,
-        this will be inverted (GUI will follow Redux state).
+        Dispatches Redux actions to keep the stack in sync with GUI navigation.
         """
         stack_state = _get_stack_state()
         gui_len = len(gui_stack)
@@ -300,38 +203,15 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 menu_key = self._get_menu_key_for_item(gui_stack, i, gui_item)
                 store.dispatch(StackPushMenuAction(menu_key=menu_key))
             elif isinstance(gui_item, StackApplicationItem):
-                # Try to get a meaningful application ID
                 app = gui_item.application
-                # Check if it's a notification widget first
+                # Check if it's a notification widget
                 if hasattr(app, 'notification_id') and app.notification_id:
-                    # This is a notification - push as notification
                     store.dispatch(
-                        StackPushNotificationAction(
-                            notification_id=app.notification_id,
-                        ),
+                        StackPushNotificationAction(notification_id=app.notification_id),
                     )
                 else:
-                    # Regular application - use class name as identifier
                     app_id = app.__class__.__name__
-                    # Capture any useful properties for logging
-                    init_kwargs: dict[str, str] = {}
-                    # For NotificationInfo, capture the text content
-                    if hasattr(app, 'text'):
-                        text_val = getattr(app, 'text', None)
-                        if DEBUG_MENU:
-                            logger.debug(
-                                '[STACK SYNC] App %s has text attr: %r',
-                                app_id,
-                                text_val[:100] if text_val else None,
-                            )
-                        if text_val:
-                            init_kwargs['text'] = str(text_val)
-                    store.dispatch(
-                        StackPushApplicationAction(
-                            application_id=app_id,
-                            initialization_kwargs=init_kwargs,  # type: ignore[arg-type]
-                        ),
-                    )
+                    store.dispatch(StackPushApplicationAction(application_id=app_id))
 
     def _get_menu_key_for_item(
         self: MenuAppCentral,
@@ -339,19 +219,11 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         index: int,
         gui_item: StackMenuItem,
     ) -> str:
-        """Get the menu key for a stack item from parent's selection.
-
-        The parent's selection contains the key of the item that was selected
-        to navigate to this menu. This key is what we need for Redux stack
-        traversal to work correctly with find_menu_for_item.
-        """
+        """Get the menu key for a stack item from parent's selection."""
         if index > 0:
             parent = gui_stack[index - 1]
-            # The parent's selection.key is the key of the item selected to
-            # get to the current menu (e.g., "ports" for a Docker Ports menu)
             if isinstance(parent, StackMenuItem) and parent.selection:
                 return parent.selection.key
-            # Fallback to menu title if no selection (shouldn't normally happen)
             menu_title = gui_item.menu.title
             if callable(menu_title):
                 return str(menu_title())
@@ -372,12 +244,12 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     def _handle_page_index_sync(
         self: MenuAppCentral,
         gui_top: StackItem,
-        redux_top: ReduxMenuStackItem | object,  # Could be any StackItemType
+        redux_top: MenuStackItem | object,
     ) -> None:
         """Sync page index if top items are menus with different indices."""
         if (
             isinstance(gui_top, StackMenuItem)
-            and isinstance(redux_top, ReduxMenuStackItem)
+            and isinstance(redux_top, MenuStackItem)
             and gui_top.page_index != redux_top.page_index
         ):
             store.dispatch(StackSetPageIndexAction(page_index=gui_top.page_index))
