@@ -5,12 +5,14 @@ import pathlib
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from kivy.clock import mainthread
+from kivy.clock import Clock, mainthread
 from kivy.lang.builder import Builder
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu.constants import PAGE_SIZE
 from ubo_gui.menu.menu_widget import MenuPageWidget
 from ubo_gui.volume import VolumeWidget
+
+from ubo_app.store.main import store
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -39,7 +41,9 @@ class HomePage(MenuPageWidget):
         self.volume_widget = VolumeWidget()
         self.ids.right_column.add_widget(self.volume_widget)
 
-        # ViewRenderer handles volume updates from state.audio
+        store.autorun(lambda state: state.audio.playback_volume)(
+            self._sync_output_volume,
+        )
 
     @mainthread
     def _sync_output_volume(self: HomePage, selector_result: float) -> None:
@@ -58,7 +62,7 @@ class HomePage(MenuPageWidget):
         def set_value(_: float) -> None:
             gauge.value = psutil.cpu_percent(percpu=False)
 
-        # ViewRenderer handles CPU updates from state.system
+        Clock.schedule_interval(set_value, 1)
 
         return gauge
 
@@ -75,7 +79,7 @@ class HomePage(MenuPageWidget):
         def set_value(_: float) -> None:
             gauge.value = psutil.virtual_memory().percent
 
-        # ViewRenderer handles RAM updates from state.system
+        Clock.schedule_interval(set_value, 1)
 
         return gauge
 
