@@ -184,7 +184,9 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         volume_level = home_data.get('volume_level', 0.0)
 
         # Get menu items from the current menu
-        home_items: tuple[object, ...] = ()
+        from ubo_app.store.core.types import MenuItemData
+
+        home_items: tuple[MenuItemData, ...] = ()
         current_menu = get_current_menu_from_stack(main_state.menu, stack)
         if current_menu is not None:
             items = menu_items(current_menu)
@@ -195,7 +197,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
         return HomeViewData(
             show_status_bar=True,
-            menu_items=home_items,  # type: ignore[arg-type]
+            menu_items=home_items,
             cpu_percent=cpu_percent,
             ram_percent=ram_percent,
             volume_level=volume_level,
@@ -247,8 +249,8 @@ def setup_dynamic_view_autorun() -> None:
     def _compute_and_dispatch_view(state: RootState) -> None:
         """Compute view and status bar, then dispatch if changed."""
         logger.debug(
-            'view_computation: autorun triggered, path=%s',
-            list(state.main.path),
+            'view_computation: autorun triggered, stack_len=%d',
+            len(state.main.stack),
         )
 
         computed_view = compute_view_from_root_state(state)

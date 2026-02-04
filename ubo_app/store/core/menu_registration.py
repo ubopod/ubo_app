@@ -284,8 +284,10 @@ def deregister_regular_app(
 
     events: list[MenuGoBackEvent] = []
 
-    if state.path[:3] == ['main', 'apps', key]:
-        events = [MenuGoBackEvent()] * (len(state.path) - 2)
+    # Use reactive path from state (computed by reducer)
+    path = state.path
+    if path[:3] == ('main', 'apps', key):
+        events = [MenuGoBackEvent()] * (len(path) - 2)
 
     new_state = replace(
         state,
@@ -387,19 +389,21 @@ def update_service_status(
 
     events: list[MenuGoBackEvent] = []
 
+    # Use reactive path from state (computed by reducer)
+    path = state.path
     # Exit open menus of the deregistered app
     if (
-        state.path[:2] == ['main', 'apps']
-        and len(state.path) > 2  # noqa: PLR2004
-        and state.path[2].startswith(f'{action.service_id}:')
+        path[:2] == ('main', 'apps')
+        and len(path) > 2  # noqa: PLR2004
+        and path[2].startswith(f'{action.service_id}:')
     ):
-        events = [MenuGoBackEvent()] * (len(state.path) - 2)
+        events = [MenuGoBackEvent()] * (len(path) - 2)
     if (
-        state.path[:2] == ['main', 'settings']
-        and len(state.path) > 3  # noqa: PLR2004
-        and state.path[3].startswith(f'{action.service_id}:')
+        path[:2] == ('main', 'settings')
+        and len(path) > 3  # noqa: PLR2004
+        and path[3].startswith(f'{action.service_id}:')
     ):
-        events = [MenuGoBackEvent()] * (len(state.path) - 3)
+        events = [MenuGoBackEvent()] * (len(path) - 3)
 
     new_state = replace(
         state,

@@ -54,6 +54,8 @@ from ubo_app.utils.server import send_command
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from ubo_app.store.main import RootState
+
 CURRENT_VERSION = importlib.metadata.version(PACKAGE_NAME)
 if IS_RPI:
     try:
@@ -116,10 +118,16 @@ async def check_version(beta_versions: bool) -> None:  # noqa: FBT001
             else:
                 latest_version = data['info']['version']
 
+            def _get_flash_notification(state: RootState | None) -> bool:
+                """Check if we should flash the notification (not on about page)."""
+                if state is None:
+                    return True
+                # Use reactive path from state (computed by reducer)
+                return state.main.path[:2] != ('main', 'about')
+
             store.dispatch(
                 with_state=lambda state: UpdateManagerSetVersionsAction(
-                    flash_notification=state is None
-                    or state.main.path[:2] != ['main', 'about'],
+                    flash_notification=_get_flash_notification(state),
                     current_version=CURRENT_VERSION,
                     base_image_variant=BASE_IMAGE_VARIANT,
                     latest_version=latest_version,

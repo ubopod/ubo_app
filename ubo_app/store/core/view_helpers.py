@@ -57,7 +57,8 @@ def get_dynamic_menu_id_for_stack(main_state: MainState) -> str | None:
         Dynamic menu ID if a registered matcher matches, None otherwise.
 
     """
-    path = tuple(main_state.path)
+    # Use reactive path from state (computed by reducer)
+    path = main_state.path
     if not path:
         return None
 
