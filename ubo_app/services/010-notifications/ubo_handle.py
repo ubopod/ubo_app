@@ -1,35 +1,32 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_handle import ReducerRegistrar, register
+
+    from ubo_app.store.services.notifications import Notification
 
 # Track registered action IDs to clean up on notification close
 _registered_actions: dict[str, list[str]] = {}
+_actions_lock = threading.Lock()
 
 
-def _create_extra_info_handler(notification_id: str) -> None:
+def _create_extra_info_handler(notification: Notification) -> None:
     """Register handler for showing notification extra info."""
     from ubo_app.logger import logger
     from ubo_app.store.core.action_registry import register_action
     from ubo_app.store.main import store
     from ubo_app.store.services.speech_synthesis import SpeechSynthesisReadTextAction
 
-    # Get the notification from store
-    state = store._state  # noqa: SLF001
-    if state is None:
+    if notification.extra_information is None:
         return
 
-    notification = next(
-        (n for n in state.notifications.notifications if n.id == notification_id),
-        None,
-    )
-    if notification is None or notification.extra_information is None:
-        return
-
-    action_id = f'notification:extra_info:{notification_id}'
+    action_id = f'notification:extra_info:{notification.id}'
     info = notification.extra_information
 
     def show_extra_info() -> None:
@@ -38,12 +35,13 @@ def _create_extra_info_handler(notification_id: str) -> None:
 
     try:
         register_action(action_id, show_extra_info)
-        _registered_actions.setdefault(notification_id, []).append(action_id)
+        with _actions_lock:
+            _registered_actions.setdefault(notification.id, []).append(action_id)
     except ValueError:
         pass  # Already registered
 
 
-def _create_action_handler(notification_id: str, action_index: int) -> None:  # noqa: C901
+def _create_action_handler(notification: Notification, action_index: int) -> None:
     """Register handler for a notification action."""
     from ubo_app.logger import logger
     from ubo_app.store.core.action_registry import register_action
@@ -51,18 +49,11 @@ def _create_action_handler(notification_id: str, action_index: int) -> None:  # 
     from ubo_app.store.main import store
     from ubo_app.store.services.notifications import NotificationsClearAction
 
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return
-
-    notification = next(
-        (n for n in state.notifications.notifications if n.id == notification_id),
-        None,
-    )
-    if notification is None or action_index >= len(notification.actions):
+    if action_index >= len(notification.actions):
         return
 
     action = notification.actions[action_index]
+    notification_id = notification.id
     action_id = f'notification:action:{notification_id}:{action_index}'
 
     def execute_action() -> None:
@@ -82,20 +73,24 @@ def _create_action_handler(notification_id: str, action_index: int) -> None:  # 
             store.dispatch(StackPopAction())
 
         if dismiss:
-            # Re-fetch notification for clearing
-            current_state = store._state  # noqa: SLF001
-            if current_state:
+            # Re-fetch notification for clearing using with_state
+            @store.with_state(lambda state: state.notifications.notifications)
+            def clear_notification(
+                notifications: Sequence[Notification],
+            ) -> None:
                 notif = next(
-                    (n for n in current_state.notifications.notifications
-                     if n.id == notification_id),
+                    (n for n in notifications if n.id == notification_id),
                     None,
                 )
                 if notif:
                     store.dispatch(NotificationsClearAction(notification=notif))
 
+            clear_notification()
+
     try:
         register_action(action_id, execute_action)
-        _registered_actions.setdefault(notification_id, []).append(action_id)
+        with _actions_lock:
+            _registered_actions.setdefault(notification_id, []).append(action_id)
     except ValueError:
         pass  # Already registered
 
@@ -113,20 +108,22 @@ def _register_notification_action_handlers() -> None:
     def on_display(event: NotificationsDisplayEvent) -> None:
         notification = event.notification
         if notification.extra_information:
-            _create_extra_info_handler(notification.id)
+            _create_extra_info_handler(notification)
 
         for i in range(len(notification.actions)):
-            _create_action_handler(notification.id, i)
+            _create_action_handler(notification, i)
 
-        if notification.id in _registered_actions:
-            logger.debug(
-                'Registered %d handlers for notification %s',
-                len(_registered_actions[notification.id]),
-                notification.id,
-            )
+        with _actions_lock:
+            if notification.id in _registered_actions:
+                logger.debug(
+                    'Registered %d handlers for notification %s',
+                    len(_registered_actions[notification.id]),
+                    notification.id,
+                )
 
     def on_clear(event: NotificationsClearEvent) -> None:
-        action_ids = _registered_actions.pop(event.notification.id, [])
+        with _actions_lock:
+            action_ids = _registered_actions.pop(event.notification.id, [])
         for action_id in action_ids:
             unregister_action(action_id)
         if action_ids:

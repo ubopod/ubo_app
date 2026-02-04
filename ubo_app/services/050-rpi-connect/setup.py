@@ -101,7 +101,7 @@ def _register_rpi_connect_action_handlers() -> None:
         return
 
     def _start_service() -> None:
-        start_service()  # type: ignore[call-arg] (@store.with_state decorator provides is_lightdm_active)
+        start_service()
 
     register_action('rpi-connect:start', _start_service)
     register_action('rpi-connect:stop', stop_service)

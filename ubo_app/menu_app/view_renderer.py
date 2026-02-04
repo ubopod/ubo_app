@@ -44,7 +44,7 @@ from ubo_app.store.core.view_helpers import (
 from ubo_app.store.main import store
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from kivy.uix.widget import Widget
     from ubo_gui.menu.menu_widget import MenuWidget
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from ubo_app.menu_app.menu_central import MenuAppCentral
     from ubo_app.store.core.types import ViewData
     from ubo_app.store.main import RootState
+    from ubo_app.store.services.notifications import Notification
 
 
 def compute_status_bar_data(state: RootState) -> StatusBarData:
@@ -264,14 +265,13 @@ def _view_to_dict(view: ViewData) -> dict:
     return result
 
 
-def _get_notification_info(notification_id: str) -> dict | None:
+@store.with_state(lambda state: state.notifications.notifications)
+def _get_notification_info(
+    notifications: Sequence[Notification],
+    notification_id: str,
+) -> dict | None:
     """Look up notification details from the notifications state."""
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return None
-
     try:
-        notifications = state.notifications.notifications
         for notification in notifications:
             if notification.id == notification_id:
                 result = {
@@ -320,6 +320,76 @@ def _menu_item_to_dict(item: MenuItemData) -> dict:
     }
 
 
+# =============================================================================
+# Helper functions using @store.with_state for ViewRenderer methods
+# =============================================================================
+
+
+@store.with_state(lambda state: state)
+def _compute_status_bar_from_state(state: RootState) -> StatusBarData:
+    """Compute status bar data from current state."""
+    return compute_status_bar_data(state)
+
+
+@store.with_state(lambda state: state)
+def _compute_view_and_status_bar(
+    state: RootState,
+) -> tuple[ViewData, StatusBarData]:
+    """Compute both view and status bar from current state."""
+    return compute_view_from_root_state(state), compute_status_bar_data(state)
+
+
+@store.with_state(lambda state: state)
+def _get_dynamic_menu_state(
+    state: RootState,
+    event: DynamicMenuChangedEvent,
+) -> tuple[RootState, ViewData, str | None] | None:
+    """Get state info for dynamic menu change handling."""
+    if DEBUG_MENU and hasattr(state, 'dynamic_menus'):
+        menu_data = state.dynamic_menus.menus.get(event.menu_id)
+        if menu_data:
+            item_labels = [
+                item.label if item else '<empty>' for item in menu_data.items
+            ]
+            logger.info(
+                '[ViewRenderer] Dynamic menu updated: id=%s, title=%s, '
+                'items=%s',
+                event.menu_id,
+                menu_data.title,
+                item_labels,
+            )
+        else:
+            logger.info(
+                '[ViewRenderer] Dynamic menu cleared: id=%s',
+                event.menu_id,
+            )
+
+    # Check if this menu is currently visible
+    current_menu_id = _get_dynamic_menu_id_for_stack(state.main)
+    if current_menu_id != event.menu_id:
+        # Menu changed but it's not currently visible, no need to rerender
+        return None
+
+    # Recompute view using dynamic menu data
+    new_view = compute_view_from_root_state(state)
+    return state, new_view, current_menu_id
+
+
+@store.with_state(lambda state: state)
+def _get_home_view_state(state: RootState) -> tuple[float, float, float]:
+    """Get system metrics for home view rendering."""
+    cpu = 0.0
+    ram = 0.0
+    vol = 0.0
+    with contextlib.suppress(AttributeError, TypeError):
+        cpu = state.system.cpu_percent
+    with contextlib.suppress(AttributeError, TypeError):
+        ram = state.system.ram_percent
+    with contextlib.suppress(AttributeError, TypeError):
+        vol = state.audio.playback_volume * 100
+    return cpu, ram, vol
+
+
 class ViewRenderer:
     """Renders the UI based on ViewData from Redux state.
 
@@ -354,11 +424,7 @@ class ViewRenderer:
 
         Retries if icons_layout is not yet available.
         """
-        state = store._state  # noqa: SLF001
-        if state is None:
-            return
-
-        status_bar = compute_status_bar_data(state)
+        status_bar = _compute_status_bar_from_state()
         self._render_status_bar(status_bar)
 
         # If icons_layout wasn't ready, retry after a short delay
@@ -460,18 +526,14 @@ class ViewRenderer:
     @mainthread
     def _on_status_bar_changed(self, _: tuple[str, bool, bool, bool]) -> None:
         """Handle status bar state changes."""
-        state = store._state  # noqa: SLF001
-        if state is not None:
-            status_bar = compute_status_bar_data(state)
-            self._render_status_bar(status_bar)
+        status_bar = _compute_status_bar_from_state()
+        self._render_status_bar(status_bar)
 
     @mainthread
     def _on_status_icons_changed(self, _: object) -> None:
         """Handle status icons state changes."""
-        state = store._state  # noqa: SLF001
-        if state is not None:
-            status_bar = compute_status_bar_data(state)
-            self._render_status_bar(status_bar)
+        status_bar = _compute_status_bar_from_state()
+        self._render_status_bar(status_bar)
 
     def _on_dynamic_menu_changed(self, event: DynamicMenuChangedEvent) -> None:
         """Handle DynamicMenuChangedEvent by recomputing view if menu is visible.
@@ -479,37 +541,11 @@ class ViewRenderer:
         When a dynamic menu changes, we check if it's the currently visible menu.
         If so, we recompute the view using the new dynamic menu data.
         """
-        state = store._state  # noqa: SLF001
-        if state is None:
+        result = _get_dynamic_menu_state(event)
+        if result is None:
             return
 
-        if DEBUG_MENU and hasattr(state, 'dynamic_menus'):
-            menu_data = state.dynamic_menus.menus.get(event.menu_id)
-            if menu_data:
-                item_labels = [
-                    item.label if item else '<empty>' for item in menu_data.items
-                ]
-                logger.info(
-                    '[ViewRenderer] Dynamic menu updated: id=%s, title=%s, '
-                    'items=%s',
-                    event.menu_id,
-                    menu_data.title,
-                    item_labels,
-                )
-            else:
-                logger.info(
-                    '[ViewRenderer] Dynamic menu cleared: id=%s',
-                    event.menu_id,
-                )
-
-        # Check if this menu is currently visible
-        current_menu_id = _get_dynamic_menu_id_for_stack(state.main)
-        if current_menu_id != event.menu_id:
-            # Menu changed but it's not currently visible, no need to rerender
-            return
-
-        # Recompute view using dynamic menu data
-        new_view = compute_view_from_root_state(state)
+        _state, new_view, _menu_id = result
 
         # Skip if view hasn't actually changed
         if self._last_view == new_view:
@@ -525,7 +561,7 @@ class ViewRenderer:
         self._on_view_changed_internal(new_view)
 
     @mainthread
-    def _on_view_changed(self, event: ViewChangedEvent) -> None:
+    def _on_view_changed(self, _event: ViewChangedEvent) -> None:
         """Handle ViewChangedEvent by rendering the appropriate view.
 
         In dumb UI mode, we recompute the view from RootState to use dynamic
@@ -537,14 +573,9 @@ class ViewRenderer:
 
         """
         # Recompute view using dynamic menus
-        state = store._state  # noqa: SLF001
-        if state is not None:
-            view = compute_view_from_root_state(state)
-            self._on_view_changed_internal(view)
-            return
-
-        # Fall back to event view if state unavailable
-        self._on_view_changed_internal(event.view)
+        result = _compute_view_and_status_bar()
+        view, _ = result
+        self._on_view_changed_internal(view)
 
     @mainthread
     def _on_view_changed_internal(self, view: ViewData) -> None:
@@ -581,10 +612,8 @@ class ViewRenderer:
         self._render_view(view)
 
         # Compute and render status bar from full state
-        state = store._state  # noqa: SLF001
-        if state is not None:
-            status_bar = compute_status_bar_data(state)
-            self._render_status_bar(status_bar)
+        status_bar = _compute_status_bar_from_state()
+        self._render_status_bar(status_bar)
 
     def _render_view(self, view: ViewData) -> None:
         """Dispatch to the appropriate render method based on view type."""
@@ -601,10 +630,8 @@ class ViewRenderer:
         """Render the home view with CPU/RAM gauges and volume."""
         _ = view  # view.cpu_percent etc. not populated yet, read from state
 
-        # Read values from full state
-        state = store._state  # noqa: SLF001
-        if state is None:
-            return
+        # Read values from full state using helper
+        cpu, ram, vol = _get_home_view_state()
 
         # Get home page widget
         home_page = getattr(self.menu_widget, 'home_page', None)
@@ -614,30 +641,24 @@ class ViewRenderer:
         # Update CPU gauge
         cpu_gauge = getattr(home_page, 'cpu_gauge', None)
         if cpu_gauge is not None:
-            with contextlib.suppress(AttributeError, TypeError):
-                cpu_gauge.value = state.system.cpu_percent
+            cpu_gauge.value = cpu
 
         # Update RAM gauge
         ram_gauge = getattr(home_page, 'ram_gauge', None)
         if ram_gauge is not None:
-            with contextlib.suppress(AttributeError, TypeError):
-                ram_gauge.value = state.system.ram_percent
+            ram_gauge.value = ram
 
         # Update volume widget
         volume_widget = getattr(home_page, 'volume_widget', None)
         if volume_widget is not None:
-            with contextlib.suppress(AttributeError, TypeError):
-                volume_widget.value = state.audio.playback_volume * 100
+            volume_widget.value = vol
 
         if DEBUG_MENU:
-            cpu = getattr(state, 'system', None)
-            ram = getattr(state, 'system', None)
-            vol = getattr(state, 'audio', None)
             logger.info(
                 '[ViewRenderer] Home view: cpu=%.1f, ram=%.1f, vol=%.1f',
-                cpu.cpu_percent if cpu else 0,
-                ram.ram_percent if ram else 0,
-                (vol.playback_volume if vol else 0) * 100,
+                cpu,
+                ram,
+                vol,
             )
 
     def _render_menu_view(self, view: MenuViewData) -> None:

@@ -243,35 +243,9 @@ def setup_dynamic_view_autorun() -> None:
     from ubo_app.store.core.types import UpdateCurrentViewAction
     from ubo_app.store.main import store
 
-    @store.autorun(
-        lambda state: (
-            # Core state (always needed)
-            state.main.stack,
-            tuple(state.dynamic_menus.menus.keys()),
-            # Also watch for menu content changes
-            tuple(
-                (k, m.items) for k, m in state.dynamic_menus.menus.items()
-            ),
-            state.main.is_recording,
-            state.main.is_replaying,
-            # Watch for notification content changes (for progress updates, etc.)
-            tuple(
-                (n.id, n.title, n.content, n.icon, n.color, n.progress)
-                for n in state.notifications.notifications
-            ),
-            # Dynamic dependencies from registry (menu content only)
-            get_registered_dependencies(state),
-        ),
-        options=AutorunOptions(default_value=None),
-    )
-    def update_current_view_on_dynamic_change(
-        _: tuple | None,
-    ) -> None:
-        """Update current_view when stack, dynamic menus, or status bar data change."""
-        state = store._state  # noqa: SLF001
-        if state is None:
-            return
-
+    @store.with_state(lambda state: state)
+    def _compute_and_dispatch_view(state: RootState) -> None:
+        """Compute view and status bar, then dispatch if changed."""
         logger.debug(
             'view_computation: autorun triggered, path=%s',
             list(state.main.path),
@@ -297,3 +271,30 @@ def setup_dynamic_view_autorun() -> None:
                     status_bar=computed_status_bar,
                 ),
             )
+
+    @store.autorun(
+        lambda state: (
+            # Core state (always needed)
+            state.main.stack,
+            tuple(state.dynamic_menus.menus.keys()),
+            # Also watch for menu content changes
+            tuple(
+                (k, m.items) for k, m in state.dynamic_menus.menus.items()
+            ),
+            state.main.is_recording,
+            state.main.is_replaying,
+            # Watch for notification content changes (for progress updates, etc.)
+            tuple(
+                (n.id, n.title, n.content, n.icon, n.color, n.progress)
+                for n in state.notifications.notifications
+            ),
+            # Dynamic dependencies from registry (menu content only)
+            get_registered_dependencies(state),
+        ),
+        options=AutorunOptions(default_value=None),
+    )
+    def update_current_view_on_dynamic_change(
+        _: tuple | None,
+    ) -> None:
+        """Update current_view when stack, dynamic menus, or status bar data change."""
+        _compute_and_dispatch_view()
