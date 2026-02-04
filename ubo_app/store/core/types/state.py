@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING
 from immutable import Immutable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from redux import BaseAction
     from ubo_gui.menu.types import Menu
 
@@ -22,11 +20,10 @@ class MainState(Immutable):
     """Main Redux state for the UI navigation and view."""
 
     menu: Menu | None = None
-    # New: Full navigation stack as source of truth
+    # Full navigation stack as source of truth
     stack: tuple[StackItemType, ...] = ()
-    # Legacy: These are derived from stack for backward compatibility
-    path: Sequence[str] = field(default_factory=list)
-    depth: int = 0
+    # Derived from stack by reducer - menu keys representing navigation path
+    path: tuple[str, ...] = ()
     is_header_visible: bool = True
     is_footer_visible: bool = True
     apps_items_priorities: dict[str, int] = field(default_factory=dict)

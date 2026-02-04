@@ -21,13 +21,16 @@ if TYPE_CHECKING:
     from ubo_app.store.ubo_actions import BasicType
 
 
-def derive_path_from_stack(stack: tuple[StackItemType, ...]) -> list[str]:
+def derive_path_from_stack(stack: tuple[StackItemType, ...]) -> tuple[str, ...]:
     """Derive the menu path from the stack.
 
-    Returns a list of menu keys representing the navigation path.
+    Returns a tuple of menu keys representing the navigation path.
     Only MenuStackItems contribute to the path (apps and notifications don't).
+    The first item (root) is excluded from the path.
     """
-    return [item.menu_key for item in stack if isinstance(item, MenuStackItem)][1:]
+    return tuple(
+        item.menu_key for item in stack if isinstance(item, MenuStackItem)
+    )[1:]
 
 
 def create_root_stack_item() -> tuple[MenuStackItem]:
@@ -59,12 +62,7 @@ def push_menu(state: MainState, menu_key: str) -> MainState:
     )
     new_stack = (*state.stack, new_item)
     new_path = derive_path_from_stack(new_stack)
-    return replace(
-        state,
-        stack=new_stack,
-        path=new_path,
-        depth=len(new_stack),
-    )
+    return replace(state, stack=new_stack, path=new_path)
 
 
 def push_application(
@@ -97,11 +95,8 @@ def push_application(
         initialization_kwargs=initialization_kwargs,
     )
     new_stack = (*state.stack, new_item)
-    return replace(
-        state,
-        stack=new_stack,
-        depth=len(new_stack),
-    )
+    # Path unchanged - applications don't contribute to path
+    return replace(state, stack=new_stack)
 
 
 def push_notification(state: MainState, notification_id: str) -> MainState:
@@ -120,11 +115,8 @@ def push_notification(state: MainState, notification_id: str) -> MainState:
         notification_id=notification_id,
     )
     new_stack = (*state.stack, new_item)
-    return replace(
-        state,
-        stack=new_stack,
-        depth=len(new_stack),
-    )
+    # Path unchanged - notifications don't contribute to path
+    return replace(state, stack=new_stack)
 
 
 def pop_stack(state: MainState, count: int = 1) -> MainState | None:
@@ -144,12 +136,7 @@ def pop_stack(state: MainState, count: int = 1) -> MainState | None:
     pop_count = min(count, len(state.stack) - 1)
     new_stack = state.stack[:-pop_count] if pop_count > 0 else state.stack
     new_path = derive_path_from_stack(new_stack)
-    return replace(
-        state,
-        stack=new_stack,
-        path=new_path,
-        depth=len(new_stack),
-    )
+    return replace(state, stack=new_stack, path=new_path)
 
 
 def pop_to_root(state: MainState) -> MainState | None:
@@ -165,12 +152,8 @@ def pop_to_root(state: MainState) -> MainState | None:
     if len(state.stack) <= 1:
         return None  # Already at root
     new_stack = state.stack[:1]
-    return replace(
-        state,
-        stack=new_stack,
-        path=[],
-        depth=1,
-    )
+    # Path is empty at root (root menu has empty key, excluded from path)
+    return replace(state, stack=new_stack, path=())
 
 
 def pop_item(state: MainState, item_id: str) -> MainState | None:
@@ -188,12 +171,7 @@ def pop_item(state: MainState, item_id: str) -> MainState | None:
     if new_stack == state.stack:
         return None  # Item not found, no change
     new_path = derive_path_from_stack(new_stack)
-    return replace(
-        state,
-        stack=new_stack,
-        path=new_path,
-        depth=len(new_stack),
-    )
+    return replace(state, stack=new_stack, path=new_path)
 
 
 def set_page_index(state: MainState, page_index: int) -> MainState | None:
