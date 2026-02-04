@@ -35,7 +35,7 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.utils import IS_RPI
+from ubo_app.utils import IS_RPI, secrets
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.log_process import log_async_process
 from ubo_app.utils.server import send_command
@@ -148,6 +148,11 @@ async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
             'Failed to remove composition directory',
             extra={'composition_id': id},
         )
+
+    # Clear stored secrets for this composition
+    if id in IMAGES:
+        for key in IMAGES[id].secret_keys:
+            secrets.clear_secret(key)
 
     # For predefined compositions (immich, n8n, etc.), keep them in the menu
     # as re-installable. Only fully remove dynamically-loaded compositions.

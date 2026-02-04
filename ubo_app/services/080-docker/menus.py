@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING
 
 from docker_composition import check_composition
 from docker_container import check_container
-from docker_images import IMAGES
+from docker_images import IMAGES, configure_twingate, is_twingate_configured
 from redux import AutorunOptions
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.constants import SECRETS_PATH
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -42,6 +43,16 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_app.store.services.ip import IpNetworkInterface
+
+
+def _secrets_modification_time() -> float:
+    """Return the modification time of the secrets file."""
+    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
+
+
+def _open_twingate_configure() -> None:
+    """Open the Twingate configuration dialog."""
+    create_task(configure_twingate())
 
 
 def get_docker_image_menu_id(image_id: str) -> str:
@@ -130,6 +141,19 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             ),
         )
 
+        if image.id == 'twingate' and is_twingate_configured():
+            reconfigure_id = f'docker:reconfigure:{image.id}'
+            _image_action_ids[menu_id].append(reconfigure_id)
+            register_action(reconfigure_id, _open_twingate_configure)
+            items.append(
+                MenuItemData(
+                    key='reconfigure',
+                    label='Reconfigure',
+                    icon='󰒓',
+                    action_id=reconfigure_id,
+                ),
+            )
+
         if is_composition:
             delete_id = f'docker:delete:{image.id}'
             _image_action_ids[menu_id].append(delete_id)
@@ -179,6 +203,19 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
                 action_id=start_id,
             ),
         )
+
+        if image.id == 'twingate' and is_twingate_configured():
+            reconfigure_id = f'docker:reconfigure:{image.id}'
+            _image_action_ids[menu_id].append(reconfigure_id)
+            register_action(reconfigure_id, _open_twingate_configure)
+            items.append(
+                MenuItemData(
+                    key='reconfigure',
+                    label='Reconfigure',
+                    icon='󰒓',
+                    action_id=reconfigure_id,
+                ),
+            )
 
         release_id = f'docker:release:{image.id}'
         _image_action_ids[menu_id].append(release_id)
@@ -366,13 +403,16 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
 
 def setup_docker_image_dynamic_menu(image_id: str) -> None:
     """Set up dynamic menu updates for a Docker image."""
+    has_secrets = image_id in IMAGES and bool(IMAGES[image_id].secret_keys)
+
     @store.autorun(
         lambda state: getattr(state.docker, image_id, None),
         lambda state: (
             getattr(state.docker, image_id, None),
             state.ip.interfaces if hasattr(state, 'ip') else None,
+            _secrets_modification_time() if has_secrets else None,
         ),
-        options=AutorunOptions(default_value=None),
+        options=AutorunOptions(default_value=None, memoization=not has_secrets),
     )
     def update_dynamic_menu(image: ImageState | None) -> None:
         """Update the dynamic menu when image state changes."""
