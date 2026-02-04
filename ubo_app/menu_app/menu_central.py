@@ -48,6 +48,16 @@ if TYPE_CHECKING:
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Menu
 
+    from ubo_app.store.core.types import StackItemType
+
+
+@store.with_state(lambda state: state.main.stack)
+def _get_stack_state(
+    stack_state: tuple[StackItemType, ...],
+) -> tuple[StackItemType, ...]:
+    """Get the current Redux stack."""
+    return stack_state
+
 
 class MenuWidgetWithHomePage(MenuWidget):
     @cached_property
@@ -117,39 +127,39 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         """Set up autorun for stack sync validation (DEBUG_MENU only)."""
 
         @store.autorun(lambda state: state.main.stack)
-        def _validate_stack_sync(redux_stack: object) -> None:
-            if not isinstance(redux_stack, tuple):
+        def _validate_stack_sync(stack_state: object) -> None:
+            if not isinstance(stack_state, tuple):
                 return
             self_ref = _self()
             if not self_ref:
                 return
-            self._validate_stack_items(self_ref.menu_widget.stack, redux_stack)
+            self._validate_stack_items(self_ref.menu_widget.stack, stack_state)
 
     def _validate_stack_items(
         self,
         gui_stack: Sequence[object],
-        redux_stack: tuple[object, ...],
+        stack_state: tuple[object, ...],
     ) -> None:
-        """Validate GUI and Redux stacks are in sync."""
+        """Validate GUI and Stack state are in sync."""
         gui_len = len(gui_stack)
-        redux_len = len(redux_stack)
+        store_stack_len = len(stack_state)
 
         # Compare lengths
-        if gui_len != redux_len:
+        if gui_len != store_stack_len:
             logger.warning(
                 '[STACK SYNC] Length mismatch! GUI: %d, Redux: %d',
                 gui_len,
-                redux_len,
+                store_stack_len,
             )
             return
 
         # Compare stack items
         for i, (gui_item, redux_item) in enumerate(
-            zip(gui_stack, redux_stack, strict=True),
+            zip(gui_stack, stack_state, strict=True),
         ):
             self._validate_single_stack_item(i, gui_item, redux_item)
 
-        logger.debug('[STACK SYNC] Stacks in sync: %d items', redux_len)
+        logger.debug('[STACK SYNC] Stacks in sync: %d items', store_stack_len)
 
     def _validate_single_stack_item(
         self,
@@ -255,9 +265,9 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
 
         # Phase 2.5: Sync Redux stack with GUI stack
         # This validates our Redux stack actions produce correct state
-        self._sync_redux_stack_with_gui(gui_stack)
+        self._sync_stack_state_with_gui(gui_stack)
 
-    def _sync_redux_stack_with_gui(
+    def _sync_stack_state_with_gui(
         self: MenuAppCentral,
         gui_stack: list[StackItem],
     ) -> None:
@@ -267,20 +277,16 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         the Redux stack matches the GUI stack. After full migration,
         this will be inverted (GUI will follow Redux state).
         """
-        state = store._state  # noqa: SLF001
-        if state is None:
-            return
-
-        redux_stack = state.main.stack
+        stack_state = _get_stack_state()
         gui_len = len(gui_stack)
-        redux_len = len(redux_stack)
+        redux_len = len(stack_state)
 
         if gui_len > redux_len:
             self._handle_stack_push(gui_stack, redux_len)
         elif gui_len < redux_len:
             self._handle_stack_pop(gui_len, redux_len)
         elif gui_len > 0:
-            self._handle_page_index_sync(gui_stack[-1], redux_stack[-1])
+            self._handle_page_index_sync(gui_stack[-1], stack_state[-1])
 
     def _handle_stack_push(
         self: MenuAppCentral,
