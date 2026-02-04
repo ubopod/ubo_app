@@ -560,23 +560,23 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "ssh:stop",
+            "action_id": "ssh:start",
             "background_color": null,
             "color": "#ffffff",
-            "icon": "󰓛",
+            "icon": "󰐊",
             "is_short": false,
             "key": "ssh:toggle",
-            "label": "Stop"
+            "label": "Start"
           },
           {
             "_type": "MenuItemData",
-            "action_id": "ssh:disable",
+            "action_id": "ssh:enable",
             "background_color": null,
             "color": "#ffffff",
-            "icon": "󰯄",
+            "icon": "󰯅",
             "is_short": false,
-            "key": "ssh:disable",
-            "label": "Disable"
+            "key": "ssh:enable",
+            "label": "Enable"
           }
         ],
         "menu_id": "ssh:main",
@@ -682,7 +682,6 @@
   },
   "keypad": {
     "_type": "KeypadState",
-    "depth": 1,
     "is_consumed": false
   },
   "lightdm": {
@@ -698,13 +697,43 @@
     "current_view": {
       "_type": "HomeViewData",
       "cpu_percent": 0.0,
-      "menu_items": [],
+      "menu_items": [
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:main",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "󰍜",
+          "is_short": true,
+          "key": "main",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:notifications",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "",
+          "is_short": true,
+          "key": "notifications",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:power",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "󰐥",
+          "is_short": true,
+          "key": "power",
+          "label": ""
+        }
+      ],
       "ram_percent": 0.0,
       "show_status_bar": true,
       "type": "home",
-      "volume_level": 0.0
+      "volume_level": 0.15
     },
-    "depth": 1,
     "is_footer_visible": true,
     "is_header_visible": true,
     "is_recording": false,
@@ -932,7 +961,7 @@
                     }
                   ],
                   "placeholder": "No apps",
-                  "title": "󰀻Docker Apps"
+                  "title": "<function:_apps_menu_title>"
                 }
               },
               {
@@ -6814,7 +6843,7 @@
                         1,
                         1
                       ],
-                      "icon": "",
+                      "icon": "",
                       "is_short": false,
                       "key": "Hardware",
                       "label": "Hardware",
@@ -7083,7 +7112,7 @@
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "Hardware"
+                        "title": "Hardware"
                       }
                     },
                     {
@@ -7463,7 +7492,7 @@
                                   ],
                                   "icon": "󰌉",
                                   "is_short": false,
-                                  "key": null,
+                                  "key": "add_server",
                                   "label": "Add Server",
                                   "opacity": null,
                                   "progress": null
@@ -8245,7 +8274,39 @@
         "page_index": 0
       }
     ],
-    "status_bar": null
+    "status_bar": {
+      "_type": "StatusBarData",
+      "clock": "",
+      "icons": [
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "󰍭"
+        },
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "󰈅"
+        },
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "󰈅"
+        },
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "[color=#FF3F51]󰪎[/color]"
+        }
+      ],
+      "is_recording": false,
+      "is_recording_audio": false,
+      "is_replaying": false,
+      "light_level": 0.0,
+      "progress_notifications": [],
+      "temperature": 0.0,
+      "title": ""
+    }
   },
   "notifications": {
     "_type": "NotificationsState",
