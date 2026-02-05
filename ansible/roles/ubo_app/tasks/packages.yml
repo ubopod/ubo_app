@@ -1,0 +1,51 @@
+---
+# Install APT packages
+# Based on install.sh lines 115-160
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Fix broken packages
+  ansible.builtin.apt:
+    state: fixed
+
+- name: Install common APT packages
+  ansible.builtin.apt:
+    name: "{{ ubo_apt_packages_common }}"
+    state: present
+    install_recommends: false
+
+- name: Install RPi-specific packages
+  ansible.builtin.apt:
+    name: "{{ ubo_apt_packages_rpi }}"
+    state: present
+    install_recommends: false
+  when: is_raspberry_pi
+
+- name: Install non-RPi packages
+  ansible.builtin.apt:
+    name: "{{ ubo_apt_packages_non_rpi }}"
+    state: present
+    install_recommends: false
+  when: not is_raspberry_pi
+
+- name: Clean apt cache
+  ansible.builtin.apt:
+    autoclean: true
+    autoremove: true
+
+- name: Stop and disable dnsmasq
+  ansible.builtin.systemd:
+    name: dnsmasq
+    state: stopped
+    enabled: false
+  ignore_errors: true
+
+- name: Stop and disable dhcpcd
+  ansible.builtin.systemd:
+    name: dhcpcd
+    state: stopped
+    enabled: false
+  ignore_errors: true

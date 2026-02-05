@@ -1,0 +1,173 @@
+---
+# Install WM8960 audio driver
+# Based on install_wm8960.sh
+# Note: This is only run on Raspberry Pi
+
+- name: Get kernel version
+  ansible.builtin.command: uname -r
+  register: kernel_version
+  changed_when: false
+
+- name: Install kernel headers for current kernel
+  ansible.builtin.apt:
+    name: "linux-headers-{{ kernel_version.stdout }}"
+    state: present
+    install_recommends: false
+
+- name: Install WM8960 prerequisites
+  ansible.builtin.apt:
+    name: "{{ ubo_apt_packages_wm8960 }}"
+    state: present
+    install_recommends: false
+
+- name: Clean apt cache
+  ansible.builtin.apt:
+    autoclean: true
+    autoremove: true
+
+- name: Remove existing WM8960 driver directory
+  ansible.builtin.file:
+    path: /tmp/wm8960-driver
+    state: absent
+
+- name: Clone WM8960 driver repository
+  ansible.builtin.git:
+    repo: https://github.com/ubopod/WM8960-Audio-HAT
+    dest: /tmp/wm8960-driver
+    version: HEAD
+    depth: 1
+
+- name: Get installed kernel versions
+  ansible.builtin.find:
+    paths: /lib/modules
+    file_type: directory
+  register: kernel_versions
+
+- name: Install WM8960 DKMS module
+  ansible.builtin.shell: |
+    set -e
+    cd /tmp/wm8960-driver
+
+    ver="1.0"
+    marker="0.0.0"
+    mod="wm8960-soundcard"
+
+    # Clean up existing installation
+    if [[ -d /var/lib/dkms/$mod/$ver/$marker ]]; then
+      rmdir /var/lib/dkms/$mod/$ver/$marker 2>/dev/null || true
+    fi
+
+    if [[ -e /usr/src/$mod-$ver || -e /var/lib/dkms/$mod/$ver ]]; then
+      dkms remove --force -m $mod -v $ver --all 2>/dev/null || true
+      rm -rf /usr/src/$mod-$ver
+    fi
+
+    # Install source
+    mkdir -p /usr/src/$mod-$ver
+    cp -a ./* /usr/src/$mod-$ver/
+    dkms add -m $mod -v $ver
+
+    # Build for each kernel >= 6.12
+    for kernel_path in /lib/modules/*/; do
+      kernel=$(basename "$kernel_path")
+      # Skip if kernel < 6.12
+      if [ "$(printf '%s\n' "$kernel" "6.12" | sort -V | head -n1)" = "$kernel" ]; then
+        continue
+      fi
+      if [ -d "/lib/modules/$kernel/build" ]; then
+        dkms build "$kernel" -k "$kernel" --kernelsourcedir "/lib/modules/$kernel/build" -m $mod -v $ver || true
+        dkms install --force "$kernel" -k "$kernel" -m $mod -v $ver || true
+      fi
+    done
+
+    mkdir -p /var/lib/dkms/$mod/$ver/$marker
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Copy dtbo overlay
+  ansible.builtin.copy:
+    src: /tmp/wm8960-driver/wm8960-soundcard.dtbo
+    dest: /boot/overlays/wm8960-soundcard.dtbo
+    remote_src: true
+    mode: '0644'
+
+- name: Ensure kernel modules are loaded
+  ansible.builtin.lineinfile:
+    path: /etc/modules
+    line: "{{ item }}"
+    state: present
+    create: true
+    mode: '0644'
+  loop: "{{ ubo_wm8960_kernel_modules }}"
+
+- name: Blacklist snd_bcm2835
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/raspi-blacklist.conf
+    line: "blacklist snd_bcm2835"
+    state: present
+    create: true
+    mode: '0644'
+
+- name: Enable I2S in boot config
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/config.txt
+    regexp: '^#?dtparam=i2s='
+    line: "dtparam=i2s=on"
+    state: present
+
+- name: Enable I2C ARM in boot config
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/config.txt
+    regexp: '^#?dtparam=i2c_arm='
+    line: "dtparam=i2c_arm=on"
+    state: present
+
+- name: Add WM8960 boot config entries
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/config.txt
+    line: "{{ item }}"
+    state: present
+  loop: "{{ ubo_wm8960_boot_config_entries }}"
+
+- name: Create WM8960 config directory
+  ansible.builtin.file:
+    path: /etc/wm8960-soundcard
+    state: directory
+    mode: '0755'
+
+- name: Copy WM8960 config files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/wm8960-soundcard/
+    remote_src: true
+    mode: '0644'
+  with_fileglob:
+    - /tmp/wm8960-driver/*.conf
+    - /tmp/wm8960-driver/*.state
+
+- name: Copy WM8960 binary
+  ansible.builtin.copy:
+    src: /tmp/wm8960-driver/wm8960-soundcard
+    dest: /usr/bin/wm8960-soundcard
+    remote_src: true
+    mode: '0755'
+
+- name: Copy WM8960 service file
+  ansible.builtin.copy:
+    src: /tmp/wm8960-driver/wm8960-soundcard.service
+    dest: /lib/systemd/system/wm8960-soundcard.service
+    remote_src: true
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable WM8960 service
+  ansible.builtin.systemd:
+    name: wm8960-soundcard
+    enabled: true
+    daemon_reload: true
+
+- name: Clean up WM8960 driver directory
+  ansible.builtin.file:
+    path: /tmp/wm8960-driver
+    state: absent

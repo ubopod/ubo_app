@@ -1,0 +1,55 @@
+---
+# Preflight checks - validate system requirements
+# Based on install.sh lines 8-16, 61-63
+
+- name: Check if running on Debian-based system
+  ansible.builtin.stat:
+    path: /etc/debian_version
+  register: debian_check
+
+- name: Fail if not Debian-based
+  ansible.builtin.fail:
+    msg: "This playbook only supports Debian-based systems."
+  when: not debian_check.stat.exists
+
+- name: Check Python version
+  ansible.builtin.command:
+    cmd: python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+  register: python_version
+  changed_when: false
+
+- name: Parse Python version
+  ansible.builtin.set_fact:
+    python_major: "{{ python_version.stdout.split('.')[0] | int }}"
+    python_minor: "{{ python_version.stdout.split('.')[1] | int }}"
+
+- name: Fail if Python version is below 3.13
+  ansible.builtin.fail:
+    msg: "Python 3.13 or higher is required. Found: {{ python_version.stdout }}"
+  when: python_major | int < 3 or (python_major | int == 3 and python_minor | int < 13)
+
+- name: Check if running on Raspberry Pi
+  ansible.builtin.stat:
+    path: /etc/rpi-issue
+  register: rpi_check
+
+- name: Set Raspberry Pi fact
+  ansible.builtin.set_fact:
+    is_raspberry_pi: "{{ rpi_check.stat.exists }}"
+
+- name: Display system info
+  ansible.builtin.debug:
+    msg: |
+      System Information:
+      - Debian-based: Yes
+      - Python version: {{ python_version.stdout }}
+      - Raspberry Pi: {{ is_raspberry_pi }}
+      - Target user: {{ ubo_username }}
+      - Installation path: {{ ubo_installation_path }}
+      - Install Docker: {{ ubo_install_docker }}
+      - Install WM8960: {{ ubo_install_wm8960 and is_raspberry_pi }}
+
+- name: Disable WM8960 on non-Raspberry Pi
+  ansible.builtin.set_fact:
+    ubo_install_wm8960: false
+  when: not is_raspberry_pi

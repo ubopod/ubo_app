@@ -1,0 +1,40 @@
+---
+# Full deployment playbook for ubo-app
+# Performs complete first-time installation on bare Raspberry Pi OS
+#
+# Usage:
+#   ansible-playbook playbooks/deploy.yml
+#   ansible-playbook playbooks/deploy.yml --limit ubo-pod-1
+#   ansible-playbook playbooks/deploy.yml -e ubo_install_docker=false
+#   ansible-playbook playbooks/deploy.yml -e ubo_wheels_path=/path/to/wheels
+
+- name: Deploy ubo-app to target devices
+  hosts: ubo_pods
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Display deployment parameters
+      ansible.builtin.debug:
+        msg: |
+          Deploying ubo-app to {{ inventory_hostname }}
+          - Target user: {{ ubo_username }}
+          - Installation path: {{ ubo_installation_path }}
+          - Install Docker: {{ ubo_install_docker }}
+          - Install WM8960: {{ ubo_install_wm8960 }}
+          - Wheels path: {{ ubo_wheels_path | default('(none - will install from PyPI)') }}
+
+  roles:
+    - role: ubo_app
+
+  post_tasks:
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: |
+          Deployment complete on {{ inventory_hostname }}!
+
+          Verification commands:
+          - Check ubo-system: systemctl status ubo-system
+          - Check ubo-app: sudo -u {{ ubo_username }} XDG_RUNTIME_DIR=/run/user/$(id -u {{ ubo_username }}) systemctl --user status ubo-app
+          - Check user: id {{ ubo_username }}
+          - Check virtualenv: ls -la {{ ubo_installation_path }}/env

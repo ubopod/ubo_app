@@ -1,0 +1,23 @@
+---
+# Default variables for ubo_app role
+# These can be overridden in inventory or playbook vars
+
+# User and installation settings
+ubo_username: ubo
+ubo_installation_path: /opt/ubo
+
+# Feature flags
+ubo_install_docker: true
+ubo_install_wm8960: true  # Auto-disabled on non-RPi
+
+# Target version - if not set, will use wheel version from local build
+ubo_target_version: ""
+
+# Whether running in packer (image build mode)
+ubo_in_packer: false
+
+# Path to pre-built wheels on control machine
+ubo_wheels_path: ""
+
+# Remote temporary directory for wheels
+ubo_remote_wheels_path: /tmp/ubo_wheels

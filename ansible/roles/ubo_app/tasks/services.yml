@@ -1,0 +1,116 @@
+---
+# Setup systemd services
+# Based on bootstrap.py create_service_files()
+
+- name: Get ubo user UID
+  ansible.builtin.command:
+    cmd: id -u {{ ubo_username }}
+  register: ubo_user_uid
+  changed_when: false
+
+- name: Get ubo user GID
+  ansible.builtin.command:
+    cmd: id -g {{ ubo_username }}
+  register: ubo_user_gid
+  changed_when: false
+
+- name: Create user systemd directory
+  ansible.builtin.file:
+    path: /home/{{ ubo_username }}/.config/systemd/user
+    state: directory
+    owner: "{{ ubo_username }}"
+    group: "{{ ubo_username }}"
+    mode: '0755'
+
+- name: Ensure parent directories have correct ownership
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ubo_username }}"
+    group: "{{ ubo_username }}"
+  loop:
+    - /home/{{ ubo_username }}/.config
+    - /home/{{ ubo_username }}/.config/systemd
+    - /home/{{ ubo_username }}/.config/systemd/user
+
+- name: Deploy ubo-app user service
+  ansible.builtin.template:
+    src: ubo-app.service.j2
+    dest: /home/{{ ubo_username }}/.config/systemd/user/ubo-app.service
+    owner: "{{ ubo_username }}"
+    group: "{{ ubo_username }}"
+    mode: '0644'
+  notify:
+    - reload user systemd
+    - restart ubo-app
+
+- name: Deploy ubo-system system service
+  ansible.builtin.template:
+    src: ubo-system.service.j2
+    dest: /etc/systemd/system/ubo-system.service
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart ubo-system
+
+- name: Deploy ubo-hotspot system service
+  ansible.builtin.template:
+    src: ubo-hotspot.service.j2
+    dest: /etc/systemd/system/ubo-hotspot.service
+    mode: '0644'
+  notify:
+    - reload systemd
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Wait for user services to be available
+  ansible.builtin.pause:
+    seconds: 2
+
+- name: Reload user systemd daemon
+  ansible.builtin.command:
+    cmd: >
+      sudo XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}
+      -u {{ ubo_username }} systemctl --user daemon-reload
+  changed_when: true
+  retries: 5
+  delay: 1
+  register: user_daemon_reload
+  until: user_daemon_reload.rc == 0
+
+- name: Enable ubo-app user service
+  ansible.builtin.command:
+    cmd: >
+      sudo XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}
+      -u {{ ubo_username }} systemctl --user enable ubo-app
+  changed_when: true
+
+- name: Enable ubo-system service
+  ansible.builtin.systemd:
+    name: ubo-system
+    enabled: true
+
+- name: Disable ubo-hotspot service (default)
+  ansible.builtin.systemd:
+    name: ubo-hotspot
+    enabled: false
+
+- name: Start ubo-system service
+  ansible.builtin.systemd:
+    name: ubo-system
+    state: started
+  ignore_errors: true
+
+- name: Wait before starting user service
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Start ubo-app user service
+  ansible.builtin.command:
+    cmd: >
+      sudo XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}
+      -u {{ ubo_username }} systemctl --user restart ubo-app
+  changed_when: true
+  ignore_errors: true

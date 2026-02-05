@@ -1,0 +1,28 @@
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Reload user systemd daemon
+  ansible.builtin.command:
+    cmd: >
+      sudo XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}
+      -u {{ ubo_username }} systemctl --user daemon-reload
+  listen: reload user systemd
+  changed_when: true
+
+- name: Restart ubo-system service
+  ansible.builtin.systemd:
+    name: ubo-system
+    state: restarted
+  listen: restart ubo-system
+
+- name: Restart ubo-app service
+  ansible.builtin.command:
+    cmd: >
+      sudo XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}
+      -u {{ ubo_username }} systemctl --user restart ubo-app
+  listen: restart ubo-app
+  changed_when: true
+  ignore_errors: true

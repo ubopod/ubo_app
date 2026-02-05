@@ -1,0 +1,12 @@
+[Unit]
+Description=Ubo Hotspot Service
+
+[Service]
+Type=simple
+User=root
+ExecStartPre={{ ubo_installation_path }}/env/bin/ubo-hotspot-config configure
+ExecStart={{ ubo_installation_path }}/env/bin/ubo-redirect-server
+ExecStopPost={{ ubo_installation_path }}/env/bin/ubo-hotspot-config restore
+WorkingDirectory={{ ubo_installation_path }}
+KillMode=control-group
+Restart=always

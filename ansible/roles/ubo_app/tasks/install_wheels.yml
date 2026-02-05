@@ -1,0 +1,116 @@
+---
+# Install ubo-app from wheels
+# Based on install.sh lines 185-209
+
+- name: Create remote wheels directory
+  ansible.builtin.file:
+    path: "{{ ubo_remote_wheels_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Find local wheel files
+  ansible.builtin.find:
+    paths: "{{ ubo_wheels_path }}"
+    patterns: "*.whl"
+  delegate_to: localhost
+  become: false
+  register: local_wheels
+  when: ubo_wheels_path | length > 0
+
+- name: Copy wheel files to remote
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ubo_remote_wheels_path }}/"
+    mode: '0644'
+  loop: "{{ local_wheels.files | default([]) }}"
+  when: ubo_wheels_path | length > 0
+
+- name: Find remote wheel files
+  ansible.builtin.find:
+    paths: "{{ ubo_remote_wheels_path }}"
+    patterns: "*.whl"
+  register: remote_wheels
+
+- name: Display wheels to install
+  ansible.builtin.debug:
+    msg: "Will install wheels: {{ remote_wheels.files | map(attribute='path') | list }}"
+  when: remote_wheels.files | length > 0
+
+- name: Get ubo-app wheel path
+  ansible.builtin.set_fact:
+    ubo_app_wheel: "{{ remote_wheels.files | selectattr('path', 'search', 'ubo_app-') | map(attribute='path') | first }}"
+  when: remote_wheels.files | length > 0
+
+- name: Install ubo-app wheel with dependencies
+  ansible.builtin.shell: |
+    set -e
+    echo "Installing wheel: {{ ubo_app_wheel }}"
+    {{ ubo_version_env_path }}/bin/pip install \
+      --pre \
+      --find-links={{ ubo_remote_wheels_path }} \
+      --force-reinstall \
+      --progress-bar off \
+      "{{ ubo_app_wheel }}" 2>&1
+    echo "Installation complete"
+  args:
+    executable: /bin/bash
+  async: 1800  # 30 minute timeout
+  poll: 30     # Check every 30 seconds
+  register: pip_install_result
+  when: remote_wheels.files | length > 0
+  changed_when: true
+  notify:
+    - restart ubo-system
+    - restart ubo-app
+
+- name: Show pip install output
+  ansible.builtin.debug:
+    var: pip_install_result.stdout_lines
+  when: pip_install_result is defined and pip_install_result.stdout_lines is defined
+
+- name: Install ubo-app from PyPI if no wheels provided
+  ansible.builtin.shell: |
+    set -e
+    echo "Installing ubo-app from PyPI..."
+    {{ ubo_version_env_path }}/bin/pip install \
+      --force-reinstall \
+      --progress-bar off \
+      "ubo-app{% if ubo_target_version %}=={{ ubo_target_version }}{% endif %}" 2>&1
+    echo "Installation complete"
+  args:
+    executable: /bin/bash
+  register: pip_pypi_result
+  when: remote_wheels.files | length == 0
+  changed_when: true
+  notify:
+    - restart ubo-system
+    - restart ubo-app
+
+- name: Remove existing env symlink
+  ansible.builtin.file:
+    path: "{{ ubo_installation_path }}/env"
+    state: absent
+
+- name: Create env symlink to version directory
+  ansible.builtin.file:
+    src: "{{ ubo_version_env_path }}"
+    dest: "{{ ubo_installation_path }}/env"
+    state: link
+    owner: "{{ ubo_username }}"
+    group: "{{ ubo_username }}"
+
+- name: Set installation directory ownership
+  ansible.builtin.shell: |
+    chown -R {{ ubo_username }}:{{ ubo_username }} "{{ ubo_version_env_path }}"
+    chown {{ ubo_username }}:{{ ubo_username }} "{{ ubo_installation_path }}"
+    chown -h {{ ubo_username }}:{{ ubo_username }} "{{ ubo_installation_path }}/env"
+    chmod -R 700 "{{ ubo_version_env_path }}"
+    chmod 700 "{{ ubo_installation_path }}"
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Clean up remote wheels directory
+  ansible.builtin.file:
+    path: "{{ ubo_remote_wheels_path }}"
+    state: absent

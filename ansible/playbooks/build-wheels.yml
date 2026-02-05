@@ -1,0 +1,67 @@
+---
+# Local wheel building playbook
+# Builds ubo-app and rpc bindings wheels locally
+#
+# Usage:
+#   ansible-playbook playbooks/build-wheels.yml
+
+- name: Build ubo-app wheels locally
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  vars:
+    repo_path: "{{ playbook_dir | dirname | dirname }}"
+    dist_path: "{{ repo_path }}/dist"
+    offline_mode: false
+
+  tasks:
+    - name: Ensure dist directory exists
+      ansible.builtin.file:
+        path: "{{ dist_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Clean old wheel files
+      ansible.builtin.find:
+        paths: "{{ dist_path }}"
+        patterns: "*.whl"
+      register: old_wheels
+
+    - name: Remove old wheels
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_wheels.files }}"
+
+    - name: Build ubo-app wheel
+      ansible.builtin.command:
+        cmd: "uv {% if offline_mode %}--offline {% endif %}build"
+        chdir: "{{ repo_path }}"
+      register: ubo_app_build
+      changed_when: true
+
+    - name: Build rpc bindings wheel
+      ansible.builtin.command:
+        cmd: "uv {% if offline_mode %}--offline {% endif %}build --directory ubo_app/rpc"
+        chdir: "{{ repo_path }}"
+      register: rpc_build
+      changed_when: true
+
+    - name: Find built wheels
+      ansible.builtin.find:
+        paths: "{{ dist_path }}"
+        patterns: "*.whl"
+      register: built_wheels
+
+    - name: Display built wheels
+      ansible.builtin.debug:
+        msg: |
+          Built wheels:
+          {% for wheel in built_wheels.files %}
+          - {{ wheel.path | basename }}
+          {% endfor %}
+
+          Use with deploy playbook:
+          ansible-playbook playbooks/deploy.yml -e ubo_wheels_path={{ dist_path }}

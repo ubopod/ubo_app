@@ -1,0 +1,19 @@
+[Unit]
+Description=Ubo System Service
+Before=hardware-test.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+User=root
+Environment=INSTALLATION_PATH={{ ubo_installation_path }}
+Environment=USERNAME={{ ubo_username }}
+ExecStart={{ ubo_installation_path }}/env/bin/ubo-system
+WorkingDirectory={{ ubo_installation_path }}
+KillMode=control-group
+Restart=always
+RestartPreventExitStatus=255
+RuntimeDirectory=ubo
+RuntimeDirectoryMode=0755

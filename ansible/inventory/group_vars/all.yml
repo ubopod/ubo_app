@@ -1,0 +1,111 @@
+---
+# User and installation settings
+ubo_username: ubo
+ubo_installation_path: /opt/ubo
+
+# Feature flags
+ubo_install_docker: true
+ubo_install_wm8960: true  # Auto-disabled on non-RPi
+
+# APT packages - common (from install.sh lines 118-143)
+ubo_apt_packages_common:
+  - accountsservice
+  - dhcpcd
+  - dnsmasq
+  - git
+  - hostapd
+  - i2c-tools
+  - ir-keytable
+  - libasound2-dev
+  - libcap-dev
+  - libegl1
+  - libgl1
+  - libmtdev1
+  - libzbar0
+  - pipewire
+  - portaudio19-dev
+  - python3-alsaaudio
+  - python3-apt
+  - python3-dev
+  - python3-gpiozero
+  - python3-libcamera
+  - python3-pip
+  - python3-pyaudio
+  - python3-virtualenv
+  - wireplumber
+
+# APT packages - RPi only (from install.sh lines 144-148)
+ubo_apt_packages_rpi:
+  - python3-picamera2
+  - python3-lgpio      # GPIO library for Pi 5 (used directly in display.py)
+  - python3-rpi-lgpio  # RPi.GPIO compatibility layer for older Pis
+
+# APT packages - non-RPi only (from install.sh lines 149-152)
+ubo_apt_packages_non_rpi:
+  - gcc
+
+# APT packages for Docker installation (from install_docker.sh)
+ubo_apt_packages_docker:
+  - ca-certificates
+  - curl
+  - gnupg
+
+# APT packages for WM8960 driver (from install_wm8960.sh)
+# Note: kernel headers installed dynamically in wm8960.yml
+ubo_apt_packages_wm8960:
+  - dkms
+  - git
+  - i2c-tools
+  - libasound2-plugins
+
+# User groups
+ubo_user_groups_common:
+  - adm
+  - audio
+  - video
+  - i2c
+  - kmem
+  - render
+
+ubo_user_groups_rpi:
+  - gpio
+  - spi
+
+# Boot config overlays (from bootstrap.py configure_device())
+ubo_boot_config_entries:
+  - "dtoverlay=gpio-fan,gpiopin=22,temp=60000"
+  - "dtoverlay=spi0-0cs"
+  - "gpio=17=op,dl"
+  - "dtoverlay=gpio-ir-tx,gpio_pin=23"
+  - "dtoverlay=gpio-ir,gpio_pin=24"
+  - "dtparam=pciex1"
+  - "dtparam=pciex1_gen=3"
+
+# WM8960-specific boot config entries
+ubo_wm8960_boot_config_entries:
+  - "dtoverlay=i2s-mmap"
+  - "dtparam=i2s=on"
+  - "dtoverlay=wm8960-soundcard"
+
+# Kernel modules for WM8960
+ubo_wm8960_kernel_modules:
+  - i2c-dev
+  - snd-soc-wm8960
+  - snd-soc-wm8960-soundcard
+
+# Local paths (on control machine)
+local_repo_path: "{{ playbook_dir | dirname | dirname }}"
+local_dist_path: "{{ local_repo_path }}/dist"
+local_wheels_path: "{{ local_dist_path }}"
+
+# Services configuration
+ubo_services:
+  - name: ubo-system
+    scope: system
+    enabled: true
+  - name: ubo-hotspot
+    scope: system
+    enabled: false
+  - name: ubo-app
+    scope: user
+    enabled: true

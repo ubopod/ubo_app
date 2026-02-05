@@ -1,0 +1,55 @@
+---
+# Main task file for ubo_app role
+# Executes all installation steps in order
+
+- name: Include preflight checks
+  ansible.builtin.include_tasks: preflight.yml
+  tags:
+    - preflight
+
+- name: Include package installation
+  ansible.builtin.include_tasks: packages.yml
+  tags:
+    - packages
+
+- name: Include user setup
+  ansible.builtin.include_tasks: user.yml
+  tags:
+    - user
+
+- name: Include virtualenv setup
+  ansible.builtin.include_tasks: virtualenv.yml
+  tags:
+    - virtualenv
+
+- name: Include wheel installation
+  ansible.builtin.include_tasks: install_wheels.yml
+  tags:
+    - wheels
+    - install
+
+- name: Include Docker installation
+  ansible.builtin.include_tasks: docker.yml
+  when: ubo_install_docker | bool
+  tags:
+    - docker
+
+- name: Include WM8960 audio driver installation
+  ansible.builtin.include_tasks: wm8960.yml
+  when:
+    - ubo_install_wm8960 | bool
+    - is_raspberry_pi | default(false)
+  tags:
+    - wm8960
+    - audio
+
+- name: Include device bootstrap configuration
+  ansible.builtin.include_tasks: bootstrap.yml
+  tags:
+    - bootstrap
+    - config
+
+- name: Include systemd services setup
+  ansible.builtin.include_tasks: services.yml
+  tags:
+    - services

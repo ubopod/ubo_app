@@ -1,0 +1,74 @@
+---
+# Device configuration and bootstrap
+# Based on bootstrap.py
+
+- name: Enable user lingering
+  ansible.builtin.command:
+    cmd: loginctl enable-linger {{ ubo_username }}
+  when: not ubo_in_packer
+  changed_when: true
+
+- name: Create linger directory for packer mode
+  ansible.builtin.file:
+    path: /var/lib/systemd/linger
+    state: directory
+    mode: '0755'
+  when: ubo_in_packer
+
+- name: Create linger file for packer mode
+  ansible.builtin.file:
+    path: /var/lib/systemd/linger/{{ ubo_username }}
+    state: touch
+    mode: '0644'
+  when: ubo_in_packer
+
+- name: Read current boot config
+  ansible.builtin.slurp:
+    src: /boot/firmware/config.txt
+  register: boot_config_content
+  ignore_errors: true
+
+- name: Add boot config entries
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/config.txt
+    line: "{{ item }}"
+    state: present
+  loop: "{{ ubo_boot_config_entries }}"
+  when: is_raspberry_pi
+
+- name: Remove SSH banner from config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config.d/rename_user.conf
+    regexp: '^Banner '
+    state: absent
+  ignore_errors: true
+
+- name: Enable I2C interface
+  ansible.builtin.command:
+    cmd: raspi-config nonint do_i2c 0
+  when: is_raspberry_pi
+  changed_when: true
+
+- name: Enable SPI interface
+  ansible.builtin.command:
+    cmd: raspi-config nonint do_spi 0
+  when: is_raspberry_pi
+  changed_when: true
+
+- name: Create polkit rules directory
+  ansible.builtin.file:
+    path: /etc/polkit-1/rules.d
+    state: directory
+    mode: '0755'
+
+- name: Deploy polkit rules
+  ansible.builtin.template:
+    src: polkit-50-ubo.rules.j2
+    dest: /etc/polkit-1/rules.d/50-ubo.rules
+    mode: '0644'
+
+- name: Disable lightdm service
+  ansible.builtin.systemd:
+    name: lightdm
+    enabled: false
+  ignore_errors: true

@@ -1,0 +1,77 @@
+---
+# Quick update playbook - wheels only
+# For existing installations, skips system setup and only updates the application
+#
+# Usage:
+#   ansible-playbook playbooks/update.yml
+#   ansible-playbook playbooks/update.yml --limit ubo-pod-1
+#   ansible-playbook playbooks/update.yml -e ubo_wheels_path=/path/to/wheels
+
+- name: Quick update ubo-app on target devices
+  hosts: ubo_pods
+  become: true
+  gather_facts: true
+
+  vars:
+    ubo_force_reinstall: true
+
+  pre_tasks:
+    - name: Check if ubo user exists
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ ubo_username }}"
+      register: ubo_user_check
+
+    - name: Fail if ubo user doesn't exist
+      ansible.builtin.fail:
+        msg: "User {{ ubo_username }} does not exist. Run full deploy.yml first."
+      when: ubo_user_check is failed
+
+    - name: Check if installation exists
+      ansible.builtin.stat:
+        path: "{{ ubo_installation_path }}/env"
+      register: install_check
+
+    - name: Fail if installation doesn't exist
+      ansible.builtin.fail:
+        msg: "Installation not found at {{ ubo_installation_path }}. Run full deploy.yml first."
+      when: not install_check.stat.exists
+
+    - name: Get ubo user UID
+      ansible.builtin.command:
+        cmd: id -u {{ ubo_username }}
+      register: ubo_user_uid
+      changed_when: false
+
+    - name: Display update parameters
+      ansible.builtin.debug:
+        msg: |
+          Updating ubo-app on {{ inventory_hostname }}
+          - Wheels path: {{ ubo_wheels_path | default('(none - will install from PyPI)') }}
+
+  tasks:
+    - name: Include wheel installation
+      ansible.builtin.include_role:
+        name: ubo_app
+        tasks_from: install_wheels.yml
+
+    - name: Restart ubo-system service
+      ansible.builtin.systemd:
+        name: ubo-system
+        state: restarted
+      ignore_errors: true
+
+    - name: Restart ubo-app user service
+      ansible.builtin.command:
+        cmd: >
+          sudo XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}
+          -u {{ ubo_username }} systemctl --user restart ubo-app
+      changed_when: true
+      ignore_errors: true
+
+  post_tasks:
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: |
+          Update complete on {{ inventory_hostname }}!
+          Services have been restarted.

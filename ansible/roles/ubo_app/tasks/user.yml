@@ -1,0 +1,57 @@
+---
+# Create ubo user and configure groups
+# Based on install.sh lines 162-181
+
+- name: Check if ubo user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ ubo_username }}"
+  register: ubo_user_check
+  ignore_errors: true
+
+- name: Create ubo user
+  ansible.builtin.user:
+    name: "{{ ubo_username }}"
+    shell: /bin/bash
+    create_home: true
+    system: false
+    state: present
+  when: ubo_user_check is failed
+
+- name: Add user to common groups
+  ansible.builtin.user:
+    name: "{{ ubo_username }}"
+    groups: "{{ ubo_user_groups_common }}"
+    append: true
+
+- name: Add user to RPi-specific groups
+  ansible.builtin.user:
+    name: "{{ ubo_username }}"
+    groups: "{{ ubo_user_groups_rpi }}"
+    append: true
+  when: is_raspberry_pi
+
+- name: Get ubo user UID
+  ansible.builtin.command:
+    cmd: id -u {{ ubo_username }}
+  register: ubo_user_uid
+  changed_when: false
+
+- name: Check if XDG_RUNTIME_DIR is set in .bashrc
+  ansible.builtin.lineinfile:
+    path: /home/{{ ubo_username }}/.bashrc
+    line: "export XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}"
+    state: present
+  check_mode: true
+  register: xdg_check
+
+- name: Set XDG_RUNTIME_DIR in .bashrc
+  ansible.builtin.lineinfile:
+    path: /home/{{ ubo_username }}/.bashrc
+    line: "export XDG_RUNTIME_DIR=/run/user/{{ ubo_user_uid.stdout }}"
+    state: present
+    create: true
+    owner: "{{ ubo_username }}"
+    group: "{{ ubo_username }}"
+    mode: '0644'
+  when: xdg_check.changed

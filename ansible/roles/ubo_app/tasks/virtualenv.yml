@@ -1,0 +1,36 @@
+---
+# Create Python virtual environment
+# Based on install.sh lines 108-113
+
+- name: Determine version environment path
+  ansible.builtin.set_fact:
+    ubo_version_env_path: "{{ ubo_installation_path }}/{{ ubo_target_version | default('latest') }}"
+
+- name: Create installation directory
+  ansible.builtin.file:
+    path: "{{ ubo_installation_path }}"
+    state: directory
+    owner: "{{ ubo_username }}"
+    group: "{{ ubo_username }}"
+    mode: '0700'
+
+- name: Remove existing virtualenv if present
+  ansible.builtin.file:
+    path: "{{ ubo_version_env_path }}"
+    state: absent
+  when: ubo_force_reinstall | default(true)
+
+- name: Create virtual environment with system site packages
+  ansible.builtin.command:
+    cmd: virtualenv --system-site-packages {{ ubo_version_env_path }}
+    creates: "{{ ubo_version_env_path }}/bin/activate"
+  become: true
+  become_user: root
+
+- name: Set virtualenv ownership
+  ansible.builtin.file:
+    path: "{{ ubo_version_env_path }}"
+    state: directory
+    owner: "{{ ubo_username }}"
+    group: "{{ ubo_username }}"
+    recurse: true

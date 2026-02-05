@@ -1,0 +1,16 @@
+[Unit]
+Description=Ubo App Service
+Wants=dbus.service pipewire-pulse.service
+
+[Install]
+WantedBy=default.target
+
+[Service]
+Type=simple
+ExecStart={{ ubo_installation_path }}/env/bin/ubo
+WorkingDirectory={{ ubo_installation_path }}
+Restart=always
+RestartPreventExitStatus=255
+TimeoutStopSec=60s
+KillMode=mixed
+KillSignal=SIGTERM

@@ -1,0 +1,85 @@
+---
+# Install Docker CE
+# Based on install_docker.sh
+
+- name: Install Docker prerequisites
+  ansible.builtin.apt:
+    name: "{{ ubo_apt_packages_docker }}"
+    state: present
+    install_recommends: false
+
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Remove existing Docker GPG key
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/docker.gpg
+    state: absent
+
+- name: Download Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /tmp/docker.gpg
+    mode: '0644'
+
+- name: Dearmor Docker GPG key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /etc/apt/keyrings/docker.gpg /tmp/docker.gpg
+    creates: /etc/apt/keyrings/docker.gpg
+
+- name: Set Docker GPG key permissions
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/docker.gpg
+    mode: '0644'
+
+- name: Get system architecture
+  ansible.builtin.command:
+    cmd: dpkg --print-architecture
+  register: dpkg_arch
+  changed_when: false
+
+- name: Get Debian codename
+  ansible.builtin.shell:
+    cmd: . /etc/os-release && echo "$VERSION_CODENAME"
+  register: debian_codename
+  changed_when: false
+
+- name: Add Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ dpkg_arch.stdout }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ debian_codename.stdout }} stable"
+    filename: docker
+    state: present
+
+- name: Update apt cache after adding Docker repo
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Docker packages
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    install_recommends: false
+
+- name: Clean apt cache
+  ansible.builtin.apt:
+    autoclean: true
+    autoremove: true
+
+- name: Add ubo user to docker group
+  ansible.builtin.user:
+    name: "{{ ubo_username }}"
+    groups: docker
+    append: true
+
+- name: Clean up temp GPG key
+  ansible.builtin.file:
+    path: /tmp/docker.gpg
+    state: absent
