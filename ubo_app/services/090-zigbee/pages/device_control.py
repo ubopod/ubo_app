@@ -1,0 +1,265 @@
+# ruff: noqa: D100, D101, D102, D107
+"""Device control page for the Zigbee service.
+
+Shows device details and controls for a specific device.
+"""
+
+from __future__ import annotations
+
+import pathlib
+from typing import TYPE_CHECKING
+
+# Import sensor_view to ensure register_application is called
+from . import sensor_view as _sensor_view_module  # noqa: F401
+
+from constants import (
+    ICON_DELETE,
+    ICON_LIGHT,
+    ICON_RENAME,
+    ICON_SENSOR,
+    ICON_SWITCH,
+)
+from kivy.lang.builder import Builder
+from kivy.properties import BooleanProperty, StringProperty
+from ubo_gui.menu.types import ActionItem, HeadlessMenu
+from ubo_gui.prompt import PromptWidget
+
+from ubo_app.colors import DANGER_COLOR
+from ubo_app.store.core.types import CloseApplicationAction
+from ubo_app.store.main import store
+from ubo_app.store.services.zigbee import (
+    ZigbeeRefreshDevicesEvent,
+    ZigbeeToggleEntityAction,
+)
+from ubo_app.store.ubo_actions import UboApplicationItem, register_application
+from ubo_app.utils.async_ import create_task
+from ubo_app.utils.gui import UboPageWidget, UboPromptWidget
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+class _RemoveDeviceConfirmPage(UboPromptWidget):
+    """Confirmation page for device removal."""
+
+    def __init__(self, device_ieee: str, device_name: str, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self.device_ieee = device_ieee
+        self.title = 'Remove Device?'
+        self.prompt = f'Remove "{device_name}" from the network?'
+        self.icon = ICON_DELETE
+        self.first_option_label = 'Remove'
+        self.first_option_icon = ICON_DELETE
+        self.first_option_is_short = False
+        self.first_option_background_color = DANGER_COLOR
+        self.second_option_label = 'Cancel'
+        self.second_option_icon = '󰜺'
+        self.second_option_is_short = False
+
+    def first_option_callback(self) -> None:
+        """Confirm removal."""
+        from setup import get_network_manager
+
+        async def _remove() -> None:
+            manager = get_network_manager()
+            await manager.remove_device(self.device_ieee)
+            # Refresh device list
+            from setup import _refresh_devices
+
+            await _refresh_devices(ZigbeeRefreshDevicesEvent())
+
+        create_task(_remove())
+        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
+
+    def second_option_callback(self) -> None:
+        """Cancel removal."""
+        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
+
+
+register_application(
+    application=_RemoveDeviceConfirmPage,
+    application_id='zigbee:remove-device-confirm',
+)
+
+
+class DeviceControlPage(UboPageWidget):
+    """Page for controlling a specific device."""
+
+    device_ieee: str = StringProperty('')
+    device_name: str = StringProperty('')
+    device_model: str = StringProperty('')
+    device_manufacturer: str = StringProperty('')
+    is_available: bool = BooleanProperty(True)
+
+    def __init__(self, device_ieee: str, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self.device_ieee = device_ieee
+        self._load_device_info()
+
+    def _load_device_info(self) -> None:
+        """Load device information from the network manager."""
+        from setup import get_network_manager
+
+        manager = get_network_manager()
+        device_info = manager.get_device_by_ieee(self.device_ieee)
+
+        if device_info:
+            self.device_name = device_info['name']
+            self.device_model = device_info['model'] or 'Unknown'
+            self.device_manufacturer = device_info['manufacturer'] or 'Unknown'
+            self.is_available = device_info['available']
+
+
+register_application(
+    application=DeviceControlPage,
+    application_id='zigbee:device-control',
+)
+
+
+def _get_entity_icon(platform: str) -> str:
+    """Get icon based on entity platform."""
+    if platform == 'light':
+        return ICON_LIGHT
+    if platform == 'switch':
+        return ICON_SWITCH
+    return ICON_SENSOR
+
+
+def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
+    """Get the device control menu for a specific device."""
+    from setup import get_network_manager
+    from zigbee import DeviceController
+
+    def _menu() -> HeadlessMenu:
+        manager = get_network_manager()
+        device_info = manager.get_device_by_ieee(device_ieee)
+
+        if not device_info:
+            return HeadlessMenu(
+                title='Device Not Found',
+                items=[],
+                placeholder='Device not available',
+            )
+
+        device = device_info['device']
+        device_name = device_info['name']
+
+        items: list[ActionItem | UboApplicationItem] = []
+
+        # Add controllable entities (switches, lights)
+        controllable = DeviceController.get_controllable_entities(device)
+        for entity in controllable:
+            display_name = DeviceController.get_display_name(entity)
+            state = DeviceController.format_entity_state(entity)
+            platform = entity.PLATFORM.value if hasattr(entity.PLATFORM, 'value') else str(entity.PLATFORM)
+
+            items.append(
+                ActionItem(
+                    key=entity.unique_id,
+                    label=f'{display_name}: {state}',
+                    icon=_get_entity_icon(platform),
+                    action=lambda uid=entity.unique_id: store.dispatch(
+                        ZigbeeToggleEntityAction(
+                            device_ieee=device_ieee,
+                            entity_unique_id=uid,
+                        )
+                    ),
+                )
+            )
+
+        # Add sensor view option if there are monitorable entities
+        monitorable = DeviceController.get_monitorable_entities(device)
+        if monitorable:
+            items.append(
+                UboApplicationItem(
+                    key='sensors',
+                    label=f'View sensors ({len(monitorable)})',
+                    icon=ICON_SENSOR,
+                    application_id='zigbee:sensor-view',
+                    initialization_kwargs={'device_ieee': device_ieee},
+                )
+            )
+
+        # Device management options
+        items.append(
+            ActionItem(
+                key='rename',
+                label='Rename device',
+                icon=ICON_RENAME,
+                action=lambda: _rename_device(device_ieee, device_name),
+            )
+        )
+
+        items.append(
+            UboApplicationItem(
+                key='remove',
+                label='Remove device',
+                icon=ICON_DELETE,
+                application_id='zigbee:remove-device-confirm',
+                initialization_kwargs={
+                    'device_ieee': device_ieee,
+                    'device_name': device_name,
+                },
+            )
+        )
+
+        return HeadlessMenu(
+            title=device_name,
+            items=items,
+        )
+
+    return _menu
+
+
+def _rename_device(device_ieee: str, current_name: str) -> None:
+    """Open rename device dialog."""
+    from ubo_app.store.input.types import (
+        InputDescription,
+        InputFieldDescription,
+        InputFieldType,
+        WebUIInputDescription,
+    )
+    from ubo_app.utils.input import ubo_input
+
+    async def _do_rename() -> None:
+        from setup import get_network_manager, _refresh_devices
+
+        descriptions: list[InputDescription] = [
+            WebUIInputDescription(
+                fields=[
+                    InputFieldDescription(
+                        name='name',
+                        label='Device Name',
+                        type=InputFieldType.TEXT,
+                        description='Enter a name for this device',
+                        default_value=current_name,
+                        required=True,
+                    ),
+                ],
+            ),
+        ]
+
+        try:
+            _, result = await ubo_input(
+                prompt='Rename Device',
+                descriptions=descriptions,
+            )
+
+            if result and 'name' in result.data:
+                name = result.data['name']
+                manager = get_network_manager()
+                manager.set_device_name(device_ieee, name)
+                # Refresh device list
+                await _refresh_devices(ZigbeeRefreshDevicesEvent())
+        except Exception:
+            pass  # User cancelled
+
+    create_task(_do_rename())
+
+
+Builder.load_file(
+    pathlib.Path(__file__)
+    .parent.joinpath('device_control.kv')
+    .resolve()
+    .as_posix(),
+)

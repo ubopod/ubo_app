@@ -6,7 +6,7 @@ license = "Apache-2.0"
 authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 readme = "README.md"
-requires-python = ">=3.11, <3.12"
+requires-python = ">=3.12"
 keywords = ['ubo', 'ubo-pod', 'raspberry pi', 'rpi', 'home assistance']
 dependencies = [
   "aiofiles==24.1.0",
@@ -63,9 +63,15 @@ dependencies = [
   # gRPC
   "betterproto[compiler]==2.0.0b7",
   "pillow>=11.3.0",
+  "numpy>=2.4.2",
+  # Zigbee
+  "zha>=0.0.49",
 ]
 
 [tool.uv]
+override-dependencies = [
+  "numpy>=2.4.2",
+]
 dev-dependencies = [
   "grpcio-tools>=1.66.1",
   "hatch-vcs>=0.5.0",
@@ -326,6 +332,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/090-web-ui"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-zigbee"
 extraPaths = ["."]
 
 [tool.pytest.ini_options]

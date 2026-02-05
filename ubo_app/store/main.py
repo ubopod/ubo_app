@@ -117,6 +117,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
     from ubo_app.store.services.web_ui import WebUIState
     from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
+    from ubo_app.store.services.zigbee import ZigbeeAction, ZigbeeEvent, ZigbeeState
     from ubo_app.store.settings.types import SettingsState
     from ubo_app.store.status_icons.types import StatusIconsAction, StatusIconsState
     from ubo_app.store.update_manager.types import (
@@ -155,6 +156,7 @@ UboAction: TypeAlias = Union[
     'UsersAction',
     'VSCodeAction',
     'WiFiAction',
+    'ZigbeeAction',
 ]
 UboEvent: TypeAlias = Union[
     # Core Events
@@ -171,6 +173,7 @@ UboEvent: TypeAlias = Union[
     'SpeechRecognitionEvent',
     'UsersEvent',
     'WiFiEvent',
+    'ZigbeeEvent',
 ]
 
 if threading.current_thread() is not threading.main_thread():
@@ -204,6 +207,7 @@ class RootState(BaseCombineReducerState):
     vscode: VSCodeState
     web_ui: WebUIState
     wifi: WiFiState
+    zigbee: ZigbeeState
 
 
 root_reducer, root_reducer_id = combine_reducers(

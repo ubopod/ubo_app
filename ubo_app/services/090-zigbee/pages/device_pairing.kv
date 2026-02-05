@@ -1,0 +1,61 @@
+#:kivy 2.3.0
+
+<DevicePairingPage>:
+  AnchorLayout:
+    padding: 0, root.padding_top, 0, root.padding_bottom
+
+    BoxLayout:
+      anchor: 'center', 'center'
+      orientation: 'vertical'
+      padding: dp(30)
+      spacing: dp(15)
+
+      Label:
+        text: '󰐕'
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(64)
+        halign: 'center'
+        color: (0.2, 0.8, 0.2, 1) if root.is_pairing else (0.5, 0.5, 0.5, 1)
+
+      Label:
+        text: 'Pairing Mode'
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(24)
+        halign: 'center'
+        bold: True
+
+      Label:
+        text: root.status_text
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(16)
+        halign: 'center'
+        text_size: self.width, None
+
+      Widget:
+        size_hint: 1, None
+        height: dp(20)
+
+      Label:
+        text: str(root.remaining_seconds) + 's'
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(48)
+        halign: 'center'
+        bold: True
+        color: (0.2, 0.8, 0.2, 1) if root.remaining_seconds > 10 else (0.8, 0.5, 0.2, 1)
+        opacity: 1 if root.is_pairing else 0.3
+
+      Widget:
+        size_hint: 1, 1
+
+      Button:
+        text: 'Stop Pairing'
+        size_hint: 0.8, None
+        height: dp(50)
+        pos_hint: {'center_x': 0.5}
+        on_release: root.stop_pairing()
+        opacity: 1 if root.is_pairing else 0
+        disabled: not root.is_pairing

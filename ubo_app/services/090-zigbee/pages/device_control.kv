@@ -1,0 +1,47 @@
+#:kivy 2.3.0
+
+<DeviceControlPage>:
+  AnchorLayout:
+    padding: 0, root.padding_top, 0, root.padding_bottom
+
+    BoxLayout:
+      anchor: 'center', 'top'
+      orientation: 'vertical'
+      padding: dp(20)
+      spacing: dp(8)
+
+      Label:
+        text: root.device_name
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(24)
+        halign: 'center'
+        bold: True
+
+      Label:
+        text: root.device_model
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(16)
+        halign: 'center'
+        color: 0.7, 0.7, 0.7, 1
+
+      Label:
+        text: root.device_manufacturer
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(14)
+        halign: 'center'
+        color: 0.5, 0.5, 0.5, 1
+
+      Widget:
+        size_hint: 1, None
+        height: dp(10)
+
+      Label:
+        text: '󰔡 Available' if root.is_available else '󰔤 Unavailable'
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(18)
+        halign: 'center'
+        color: (0.2, 0.8, 0.2, 1) if root.is_available else (0.8, 0.2, 0.2, 1)

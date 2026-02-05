@@ -1,0 +1,57 @@
+#:kivy 2.3.0
+
+<SensorViewPage>:
+  AnchorLayout:
+    padding: 0, root.padding_top, 0, root.padding_bottom
+
+    BoxLayout:
+      orientation: 'vertical'
+      padding: dp(15)
+      spacing: dp(10)
+
+      Label:
+        text: root.device_name
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(20)
+        halign: 'center'
+        bold: True
+
+      Label:
+        text: '󱖠 Sensors'
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(16)
+        halign: 'center'
+        color: 0.7, 0.7, 0.7, 1
+
+      Widget:
+        size_hint: 1, None
+        height: dp(10)
+
+      ScrollView:
+        size_hint: 1, 1
+        do_scroll_x: False
+
+        BoxLayout:
+          orientation: 'vertical'
+          size_hint_y: None
+          height: self.minimum_height
+          spacing: dp(8)
+          padding: dp(10)
+
+          # Sensor readings will be dynamically added here
+          Label:
+            text: 'No sensors' if not root.sensor_readings else ''
+            size_hint: 1, None
+            height: self.texture_size[1] if self.text else 0
+            font_size: dp(14)
+            halign: 'center'
+            color: 0.5, 0.5, 0.5, 1
+
+      Button:
+        text: '󰑓 Refresh'
+        size_hint: 0.6, None
+        height: dp(40)
+        pos_hint: {'center_x': 0.5}
+        on_release: root.refresh_sensors()
