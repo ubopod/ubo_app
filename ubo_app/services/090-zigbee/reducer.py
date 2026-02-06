@@ -76,7 +76,7 @@ def reducer(
         # Coordinator detection
         case ZigbeeDetectCoordinatorsAction():
             return CompleteReducerResult(
-                state=replace(state, is_detecting=True),
+                state=replace(state, is_detecting=True, coordinators=None),
                 events=[ZigbeeDetectCoordinatorsEvent()],
             )
 
@@ -92,6 +92,15 @@ def reducer(
 
         # Connection management
         case ZigbeeConnectAction():
+            # Skip if already connecting or already connected to this coordinator
+            if state.connection_state == ZigbeeConnectionState.CONNECTING:
+                return state
+            if (
+                state.connection_state == ZigbeeConnectionState.CONNECTED
+                and state.current_coordinator
+                and state.current_coordinator.port == action.coordinator.port
+            ):
+                return state
             return CompleteReducerResult(
                 state=replace(
                     state,

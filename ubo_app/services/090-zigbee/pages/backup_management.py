@@ -224,7 +224,7 @@ def backup_menu(backups: Sequence[ZigbeeBackup] | None) -> HeadlessMenu:
     placeholder = 'No backups found' if backups is not None else 'Loading...'
 
     return HeadlessMenu(
-        title='Network Backups',
+        title='Backups',
         items=items,
         placeholder=placeholder,
     )

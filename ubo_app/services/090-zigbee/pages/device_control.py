@@ -24,7 +24,7 @@ from kivy.properties import BooleanProperty, StringProperty
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
 from ubo_gui.prompt import PromptWidget
 
-from ubo_app.colors import DANGER_COLOR
+from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR
 from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.zigbee import (
@@ -125,6 +125,27 @@ def _get_entity_icon(platform: str) -> str:
     return ICON_SENSOR
 
 
+def _is_entity_on(entity: object) -> bool:
+    """Determine if a controllable entity is on.
+
+    Handles Switch ('state' key) and Light ('on' key) entities,
+    with robust conversion for bool, int, and string values.
+    """
+    state = entity.state
+    if 'state' in state:
+        val = state['state']
+    else:
+        val = state.get('on', False)
+
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (int, float)):
+        return val != 0
+    if isinstance(val, str):
+        return val.lower() in ('on', 'true', '1')
+    return bool(val)
+
+
 def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
     """Get the device control menu for a specific device."""
     from setup import get_network_manager
@@ -150,14 +171,18 @@ def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
         controllable = DeviceController.get_controllable_entities(device)
         for entity in controllable:
             display_name = DeviceController.get_display_name(entity)
-            state = DeviceController.format_entity_state(entity)
             platform = entity.PLATFORM.value if hasattr(entity.PLATFORM, 'value') else str(entity.PLATFORM)
+            is_on = _is_entity_on(entity)
+
+            action_label = 'Turn Off' if is_on else 'Turn On'
+            bg_color = SUCCESS_COLOR if is_on else DANGER_COLOR
 
             items.append(
                 ActionItem(
                     key=entity.unique_id,
-                    label=f'{display_name}: {state}',
+                    label=f'{display_name}: {action_label}',
                     icon=_get_entity_icon(platform),
+                    background_color=bg_color,
                     action=lambda uid=entity.unique_id: store.dispatch(
                         ZigbeeToggleEntityAction(
                             device_ieee=device_ieee,
@@ -170,13 +195,14 @@ def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
         # Add sensor view option if there are monitorable entities
         monitorable = DeviceController.get_monitorable_entities(device)
         if monitorable:
+            from . import sensor_view
+
             items.append(
-                UboApplicationItem(
+                ActionItem(
                     key='sensors',
-                    label=f'View sensors ({len(monitorable)})',
+                    label=f'Sensors ({len(monitorable)})',
                     icon=ICON_SENSOR,
-                    application_id='zigbee:sensor-view',
-                    initialization_kwargs={'device_ieee': device_ieee},
+                    action=lambda ieee=device_ieee: sensor_view.get_sensor_menu(ieee),
                 )
             )
 

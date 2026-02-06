@@ -11,7 +11,7 @@ ZIGBEE_STATE_ICON_PRIORITY = -10
 ZIGBEE_MENU_PRIORITY = 1
 
 # Icons for coordinator and device states
-ICON_ZIGBEE = '󰛁'  # Zigbee/mesh network icon
+ICON_ZIGBEE = '󰵁'  # Zigbee icon
 ICON_COORDINATOR_CONNECTED = '󰛁'  # Connected coordinator
 ICON_COORDINATOR_SAVED = '󰛀'  # Has saved network but not connected
 ICON_COORDINATOR_NEW = '󱘖'  # New/unknown coordinator

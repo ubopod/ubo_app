@@ -12,12 +12,16 @@ from typing import TYPE_CHECKING
 from constants import ICON_REFRESH, ICON_SENSOR
 from kivy.lang.builder import Builder
 from kivy.properties import ListProperty, StringProperty
+from ubo_gui.constants import SECONDARY_COLOR_LIGHT
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
 
 from ubo_app.store.main import store
 from ubo_app.store.ubo_actions import register_application
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import UboPageWidget
+
+# Grey color for read-only sensor items
+SENSOR_ITEM_COLOR = SECONDARY_COLOR_LIGHT
 
 if TYPE_CHECKING:
     pass
@@ -112,6 +116,7 @@ def get_sensor_menu(device_ieee: str) -> HeadlessMenu:
                 key=entity.unique_id,
                 label=f'{name}: {state}',
                 icon=ICON_SENSOR,
+                background_color=SENSOR_ITEM_COLOR,  # Grey box to indicate read-only
                 action=lambda: None,  # Read-only
             )
         )

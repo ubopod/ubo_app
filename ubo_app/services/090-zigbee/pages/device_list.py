@@ -19,9 +19,9 @@ from constants import (
     ICON_PAIRING,
     ICON_RENAME,
     ICON_RESET,
+    ICON_ZIGBEE,
 )
-from ubo_gui.menu.types import ActionItem, HeadlessMenu
-from ubo_gui.prompt import PromptWidget
+from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.store.core.types import CloseApplicationAction
@@ -33,6 +33,7 @@ from ubo_app.store.services.zigbee import (
     ZigbeeDisconnectAction,
     ZigbeeResetNetworkAction,
     ZigbeeStartPairingAction,
+    ZigbeeStopPairingAction,
 )
 from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.gui import UboPromptWidget
@@ -80,96 +81,117 @@ def _get_device_icon(device: ZigbeeDevice) -> str:
     return ICON_DEVICE_AVAILABLE if device.available else ICON_DEVICE_UNAVAILABLE
 
 
-@store.autorun(lambda state: state.zigbee.devices)
-def device_list_menu(devices: Sequence[ZigbeeDevice] | None) -> HeadlessMenu:
-    """Generate the device list menu."""
-    items: list[ActionItem | UboApplicationItem] = []
-
-    if devices:
-        for device in devices:
-            display_name = device.custom_name or device.name
-            items.append(
-                UboApplicationItem(
-                    key=device.ieee,
-                    label=display_name,
-                    icon=_get_device_icon(device),
-                    application_id='zigbee:device-control',
-                    initialization_kwargs={'device_ieee': device.ieee},
-                )
-            )
-
-    placeholder = 'No devices paired' if devices is not None else 'Loading...'
-
+def _pairing_duration_menu() -> HeadlessMenu:
+    """Sub-menu for selecting pairing duration."""
     return HeadlessMenu(
-        title='Paired Devices',
-        items=items,
-        placeholder=placeholder,
+        title='Pair Device',
+        items=[
+            ActionItem(
+                key='pair-30',
+                label='30 seconds',
+                icon=ICON_PAIRING,
+                action=lambda: store.dispatch(ZigbeeStartPairingAction(duration=30)),
+            ),
+            ActionItem(
+                key='pair-60',
+                label='60 seconds',
+                icon=ICON_PAIRING,
+                action=lambda: store.dispatch(ZigbeeStartPairingAction(duration=60)),
+            ),
+        ],
     )
 
 
-def connected_menu(
-    current_coordinator: ZigbeeCoordinator | None = None,
-) -> HeadlessMenu:
+def build_connected_menu(
+    current_coordinator: ZigbeeCoordinator | None,
+    devices: Sequence[ZigbeeDevice] | None,
+    is_pairing: bool,
+    pairing_remaining: int,
+) -> HeadlessMenu | HeadedMenu:
     """Generate the main menu when connected to a coordinator."""
-    coordinator = current_coordinator
-    title = 'Zigbee'
-    if coordinator:
-        title = coordinator.name or coordinator.description
+    if current_coordinator:
+        title = current_coordinator.name or current_coordinator.description
+    else:
+        title = f'{ICON_ZIGBEE} Zigbee'
 
-    items: list[ActionItem | UboApplicationItem] = [
-        # Device list
+    # Show pairing screen when actively pairing
+    if is_pairing:
+        return HeadedMenu(
+            title=title,
+            heading=f'Pairing... ({pairing_remaining}s)',
+            sub_heading='Waiting for device...',
+            items=[
+                ActionItem(
+                    key='stop-pairing',
+                    label='Stop Pairing',
+                    icon='󰜺',
+                    action=lambda: store.dispatch(ZigbeeStopPairingAction()),
+                ),
+            ],
+            placeholder='',
+        )
+
+    items: list[ActionItem | UboApplicationItem] = []
+
+    # List paired devices directly - each opens a device control menu
+    if devices:
+        from . import device_control
+
+        for device in devices:
+            display_name = device.custom_name or device.name
+            items.append(
+                ActionItem(
+                    key=device.ieee,
+                    label=display_name,
+                    icon=_get_device_icon(device),
+                    action=device_control.get_device_control_menu(device.ieee),
+                )
+            )
+
+    # Pair device (opens duration sub-menu)
+    items.append(
         ActionItem(
-            key='devices',
-            label='Devices',
-            icon=ICON_DEVICE_AVAILABLE,
-            action=lambda: device_list_menu,
-        ),
-        # Pairing options
-        ActionItem(
-            key='pair-30',
-            label='Pair device (30s)',
+            key='pair',
+            label='Pair Device',
             icon=ICON_PAIRING,
-            action=lambda: store.dispatch(ZigbeeStartPairingAction(duration=30)),
-        ),
-        ActionItem(
-            key='pair-60',
-            label='Pair device (60s)',
-            icon=ICON_PAIRING,
-            action=lambda: store.dispatch(ZigbeeStartPairingAction(duration=60)),
-        ),
-        # Coordinator management
+            action=_pairing_duration_menu,
+        )
+    )
+
+    # Coordinator management
+    items.append(
         ActionItem(
             key='rename-coordinator',
             label='Rename coordinator',
             icon=ICON_RENAME,
             action=_rename_coordinator,
-        ),
-        # Backup
+        )
+    )
+
+    # Backup
+    items.append(
         ActionItem(
             key='update-backup',
             label='Update backup',
             icon=ICON_BACKUP,
             action=lambda: store.dispatch(ZigbeeCreateBackupAction()),
-        ),
-        # Network reset (with confirmation)
+        )
+    )
+
+    # Network reset (with confirmation)
+    items.append(
         UboApplicationItem(
             key='reset-network',
             label='Reset network',
             icon=ICON_RESET,
             application_id='zigbee:reset-network-confirm',
-        ),
-        # Disconnect
-        ActionItem(
-            key='disconnect',
-            label='Disconnect',
-            icon='󰖪',
-            action=lambda: store.dispatch(ZigbeeDisconnectAction()),
-        ),
-    ]
+        )
+    )
 
     return HeadlessMenu(
         title=title,
         items=items,
+        placeholder='No devices paired',
     )
 
 

@@ -15,8 +15,11 @@ from ubo_app.logger import logger
 if TYPE_CHECKING:
     from serial.tools.list_ports_common import ListPortInfo
 
-# Common baudrates to try when probing
+# Common baudrates to try when probing (115200 is most common, try it first)
 PROBE_BAUDRATES = [115200, 57600, 38400]
+
+# Probe timeout in seconds (reduced for faster detection)
+PROBE_TIMEOUT = 2.0
 
 
 @dataclass
@@ -29,9 +32,46 @@ class DetectedCoordinator:
     baudrate: int
 
 
+def _is_likely_zigbee_port(port_info: ListPortInfo) -> bool:
+    """Check if a port is likely to be a Zigbee coordinator."""
+    device = port_info.device.lower()
+    description = (port_info.description or '').lower()
+
+    # Skip Bluetooth ports
+    if 'bluetooth' in device or 'bluetooth' in description:
+        return False
+
+    # Skip debug/console ports
+    if 'debug' in device or 'console' in device:
+        return False
+
+    # Look for USB serial devices (common Zigbee coordinator patterns)
+    usb_patterns = ['usbserial', 'usbmodem', 'ttyusb', 'ttyacm', 'com']
+    if any(pattern in device for pattern in usb_patterns):
+        return True
+
+    # Check for known Zigbee coordinator descriptions
+    zigbee_patterns = ['skyconnect', 'conbee', 'zigbee', 'coordinator', 'sonoff', 'cc2531']
+    if any(pattern in description for pattern in zigbee_patterns):
+        return True
+
+    # Default: probe USB devices
+    return 'usb' in device or port_info.vid is not None
+
+
 def _get_serial_ports() -> list[ListPortInfo]:
-    """Get available serial ports."""
-    return list(serial.tools.list_ports.comports())
+    """Get available serial ports that are likely Zigbee coordinators."""
+    all_ports = list(serial.tools.list_ports.comports())
+    filtered = [p for p in all_ports if _is_likely_zigbee_port(p)]
+
+    if len(filtered) < len(all_ports):
+        logger.debug(
+            'Filtered ports: %d -> %d (skipped non-USB/Bluetooth)',
+            len(all_ports),
+            len(filtered),
+        )
+
+    return filtered
 
 
 async def _probe_port_with_radio(
@@ -51,7 +91,7 @@ async def _probe_port_with_radio(
     try:
         result = await asyncio.wait_for(
             controller_cls.probe(device_config),
-            timeout=5.0,
+            timeout=PROBE_TIMEOUT,
         )
         return bool(result)
     except TimeoutError:
@@ -112,21 +152,37 @@ async def discover_coordinators() -> list[DetectedCoordinator]:
 
     Enumerates serial ports and tries each RadioType's controller probe() method.
     Returns a list of successfully detected coordinators.
+
+    Includes retry logic to handle transient failures during device initialization.
     """
-    ports = _get_serial_ports()
+    # Brief delay to ensure serial ports are ready after system boot
+    await asyncio.sleep(0.5)
 
-    if not ports:
-        logger.info('No serial ports found')
-        return []
+    for attempt in range(3):  # Up to 3 attempts
+        ports = _get_serial_ports()
 
-    logger.info('Found %d serial port(s) to probe', len(ports))
+        if not ports:
+            logger.info('No serial ports found (attempt %d/3)', attempt + 1)
+            if attempt < 2:
+                await asyncio.sleep(1.0)
+                continue
+            return []
 
-    coordinators: list[DetectedCoordinator] = []
+        logger.info('Found %d serial port(s) to probe (attempt %d/3)', len(ports), attempt + 1)
 
-    # Probe ports sequentially to avoid resource conflicts
-    for port_info in ports:
-        result = await probe_port(port_info)
-        if result:
-            coordinators.append(result)
+        coordinators: list[DetectedCoordinator] = []
 
-    return coordinators
+        # Probe ports sequentially to avoid resource conflicts
+        for port_info in ports:
+            result = await probe_port(port_info)
+            if result:
+                coordinators.append(result)
+
+        if coordinators:
+            return coordinators
+
+        if attempt < 2:
+            logger.info('No coordinators found, retrying in 1s...')
+            await asyncio.sleep(1.0)
+
+    return []

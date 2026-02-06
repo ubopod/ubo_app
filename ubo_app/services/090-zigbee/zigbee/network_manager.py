@@ -224,7 +224,10 @@ class NetworkManager:
             return
 
         logger.info('Shutting down network')
-        await self._gateway.shutdown()
+        try:
+            await self._gateway.shutdown()
+        except Exception:
+            logger.warning('Error during network shutdown, forcing cleanup', exc_info=True)
         self._gateway = None
         self._coordinator = None
         logger.info('Network shut down successfully')

@@ -19,80 +19,21 @@ from constants import (
 )
 from ubo_gui.menu.types import (
     ActionItem,
+    HeadedMenu,
     HeadlessMenu,
-    SubMenuItem,
 )
 
-from ubo_app.logger import logger
-from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.zigbee import (
     ZigbeeConnectAction,
     ZigbeeConnectionState,
     ZigbeeCoordinator,
     ZigbeeDetectCoordinatorsAction,
+    ZigbeeDevice,
 )
-from ubo_app.store.ubo_actions import UboApplicationItem, register_application
-from ubo_app.utils.gui import UboPromptWidget
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-
-
-class _CoordinatorPage(UboPromptWidget):
-    """Page for coordinator connection actions."""
-
-    def __init__(
-        self,
-        coordinator: ZigbeeCoordinator,
-        **kwargs: object,
-    ) -> None:
-        super().__init__(**kwargs)
-        self.coordinator = coordinator
-
-        logger.info(
-            'CoordinatorPage opened',
-            extra={
-                'port': coordinator.port,
-                'description': coordinator.description,
-                'radio_type': coordinator.radio_type,
-            },
-        )
-
-        name = self.coordinator.name or self.coordinator.description
-        self.title = name
-        self.prompt = f'{self.coordinator.radio_type}\n{self.coordinator.port}'
-
-        if self.coordinator.has_network:
-            self.icon = ICON_COORDINATOR_SAVED
-            self.first_option_label = 'Connect'
-            self.first_option_icon = '󰖩'
-        else:
-            self.icon = ICON_COORDINATOR_NEW
-            self.first_option_label = 'Setup'
-            self.first_option_icon = '󰐕'
-
-        self.first_option_is_short = False
-        self.second_option_label = 'Cancel'
-        self.second_option_icon = '󰜺'
-        self.second_option_is_short = False
-
-    def first_option_callback(self) -> None:
-        """Connect to this coordinator."""
-        store.dispatch(
-            ZigbeeConnectAction(coordinator=self.coordinator),
-            CloseApplicationAction(application_instance_id=self.id),
-        )
-
-    def second_option_callback(self) -> None:
-        """Cancel and go back."""
-        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
-
-
-register_application(
-    application=_CoordinatorPage,
-    application_id='zigbee:coordinator-page',
-)
 
 
 def _get_coordinator_icon(
@@ -119,6 +60,60 @@ def _get_coordinator_icon(
 
 @store.autorun(
     lambda state: (
+        state.zigbee.connection_state,
+        state.zigbee.current_coordinator,
+        state.zigbee.devices,
+        state.zigbee.is_pairing,
+        state.zigbee.pairing_remaining_seconds,
+    )
+)
+def connection_menu(
+    data: tuple[
+        ZigbeeConnectionState,
+        ZigbeeCoordinator | None,
+        Sequence[ZigbeeDevice] | None,
+        bool,
+        int,
+    ],
+) -> HeadedMenu | HeadlessMenu:
+    """Coordinator setup sub-menu (level 3): connecting/connected state."""
+    connection_state, current_coordinator, devices, is_pairing, pairing_rem = data
+
+    if connection_state == ZigbeeConnectionState.CONNECTED and current_coordinator:
+        from . import device_list
+
+        return device_list.build_connected_menu(
+            current_coordinator, devices, is_pairing, pairing_rem,
+        )
+
+    if connection_state == ZigbeeConnectionState.CONNECTING:
+        return HeadedMenu(
+            title=f'{ICON_ZIGBEE} Zigbee',
+            heading='Connecting...',
+            sub_heading='Setting up Zigbee network',
+            items=[],
+            placeholder='',
+        )
+
+    # Error or disconnected
+    return HeadedMenu(
+        title=f'{ICON_ZIGBEE} Zigbee',
+        heading='Connection Failed',
+        sub_heading='Could not connect to coordinator',
+        items=[],
+    )
+
+
+def _select_coordinator(
+    coord: ZigbeeCoordinator,
+) -> Callable[[], HeadedMenu | HeadlessMenu]:
+    """Select a coordinator - connect and push to setup sub-menu."""
+    store.dispatch(ZigbeeConnectAction(coordinator=coord))
+    return connection_menu
+
+
+@store.autorun(
+    lambda state: (
         state.zigbee.coordinators,
         state.zigbee.is_detecting,
         state.zigbee.connection_state,
@@ -132,29 +127,34 @@ def coordinator_menu(
         ZigbeeConnectionState,
         ZigbeeCoordinator | None,
     ],
-) -> HeadlessMenu:
-    """Generate the coordinator selection menu."""
+) -> HeadedMenu | HeadlessMenu:
+    """Coordinator selection menu (level 2)."""
     coordinators, is_detecting, connection_state, current_coordinator = data
 
-    # If connected, show the connected menu instead
-    if connection_state == ZigbeeConnectionState.CONNECTED and current_coordinator:
-        from . import device_list
+    # Show prominent loading screen while detecting
+    if is_detecting or coordinators is None:
+        return HeadedMenu(
+            title=f'{ICON_ZIGBEE} Zigbee',
+            heading='Scanning...',
+            sub_heading='Detecting Zigbee coordinators',
+            items=[],
+            placeholder='',
+        )
 
-        return device_list.connected_menu(current_coordinator)
-
-    items: list[ActionItem | UboApplicationItem] = []
+    items: list[ActionItem] = []
 
     # Add coordinator items
     if coordinators:
         for coord in coordinators:
             name = coord.name or coord.description
             items.append(
-                UboApplicationItem(
+                ActionItem(
                     key=coord.port,
                     label=name,
-                    icon=_get_coordinator_icon(coord, connection_state, current_coordinator),
-                    application_id='zigbee:coordinator-page',
-                    initialization_kwargs={'coordinator': coord},
+                    icon=_get_coordinator_icon(
+                        coord, connection_state, current_coordinator,
+                    ),
+                    action=lambda c=coord: _select_coordinator(c),
                 )
             )
 
@@ -177,12 +177,10 @@ def coordinator_menu(
         )
     )
 
-    placeholder = 'Detecting...' if is_detecting else 'No coordinators found'
-    if coordinators is None:
-        placeholder = 'Loading...'
+    placeholder = 'No coordinators found'
 
     return HeadlessMenu(
-        title='Zigbee Coordinators',
+        title='Coordinators',
         items=items,
         placeholder=placeholder,
     )
@@ -195,24 +193,17 @@ def _open_backup_menu() -> Callable[[], HeadlessMenu]:
     return backup_management.backup_menu
 
 
-def _start_detection() -> Callable[[], HeadlessMenu]:
+def _start_detection() -> Callable[[], HeadedMenu | HeadlessMenu]:
     """Start coordinator detection and return the menu."""
+
+    # Start fresh detection
     store.dispatch(ZigbeeDetectCoordinatorsAction())
     return coordinator_menu
 
 
-# Main entry point menu item
-ZigbeeMainMenu = SubMenuItem(
+# Main entry point menu item - directly shows coordinator menu and triggers detection
+ZigbeeMainMenu = ActionItem(
     label='Zigbee',
     icon=ICON_ZIGBEE,
-    sub_menu=HeadlessMenu(
-        title='Zigbee',
-        items=[
-            ActionItem(
-                label='Coordinators',
-                icon=ICON_ZIGBEE,
-                action=_start_detection,
-            ),
-        ],
-    ),
+    action=_start_detection,
 )

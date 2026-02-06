@@ -142,16 +142,6 @@ async def _connect_coordinator(event: ZigbeeConnectEvent) -> None:
                 state=ZigbeeConnectionState.CONNECTED,
                 coordinator=event.coordinator,
             ),
-            NotificationsAddAction(
-                notification=Notification(
-                    title='Connected',
-                    content=f'Connected to {event.coordinator.name or event.coordinator.description}',
-                    display_type=NotificationDisplayType.FLASH,
-                    color=SUCCESS_COLOR,
-                    icon='󰛁',
-                    # chime=Chime.DONE,
-                )
-            ),
         )
     except Exception:
         logger.exception('Failed to connect to coordinator')
@@ -356,6 +346,8 @@ async def _toggle_entity(event: ZigbeeToggleEntityEvent) -> None:
             try:
                 await DeviceController.toggle(entity)
                 logger.info('Toggled entity: %s', event.entity_unique_id)
+                # Refresh device list so UI reflects new state
+                await _refresh_devices(ZigbeeRefreshDevicesEvent())
             except Exception:
                 logger.exception('Failed to toggle entity')
             break
