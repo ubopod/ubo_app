@@ -141,8 +141,10 @@ lint = ['lint:self', 'lint:rpc', 'lint:assistant']
 "typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
 typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant"]
 test = "pytest"
+"test:unit" = "pytest tests/store tests/navigation --ignore=tests/store/test_subscribe_event.py -v"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
+"docker:test:unit" = "sh -c 'docker run --rm -v \"$(pwd)\":/ubo-app ubo-app-test -- tests/store tests/navigation -v'"
 build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install --include=dev && npm run compile && npm run build'"
 
 
