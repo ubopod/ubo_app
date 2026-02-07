@@ -302,6 +302,22 @@ uv run poe device:deploy:restart # gracefully restart the app with systemctl
 uv run poe device:deploy:kill    # kill the process, which will be restarted by systemd if the service is not stopped
 ```
 
+#### Running unit tests
+
+Pure unit tests for store logic, navigation, and view computation can be run locally without Docker, Kivy, or Raspberry Pi hardware:
+
+```bash
+uv run poe test:unit
+```
+
+This runs all tests in `tests/store/` and `tests/navigation/` (~285 tests, takes ~3 seconds).
+
+To run them inside Docker:
+
+```bash
+uv run poe docker:test:unit
+```
+
 #### Running tests on desktop
 
 Easiest way to run tests is to use the provided `Dockerfile`s. To run the tests in a container, you first need to create the development images by running:
