@@ -31,13 +31,15 @@ from ubo_app.store.services.infrared import (
     InfraredSetShouldReceiveAction,
     InfraredState,
 )
-from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingBlinkAction
 from ubo_app.store.services.keypad import (
     Key,
     KeypadAction,
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
 )
+from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingBlinkAction
+
+REGISTRATION_REPEAT_COUNT = 5
 
 KeyActionType = type[KeypadKeyPressAction] | type[KeypadKeyReleaseAction]
 
@@ -80,8 +82,14 @@ def reducer(
     action: InfraredAction | KeypadAction,
 ) -> ReducerResult[
     InfraredState,
-    InfraredAction | KeypadKeyPressAction | KeypadKeyReleaseAction | RgbRingBlinkAction | RgbRingBlankAction,
-    InfraredSendCodeEvent | InfraredDeviceRegistrationStartedEvent | InfraredDeviceRegistrationCompleteEvent,
+    InfraredAction
+    | KeypadKeyPressAction
+    | KeypadKeyReleaseAction
+    | RgbRingBlinkAction
+    | RgbRingBlankAction,
+    InfraredSendCodeEvent
+    | InfraredDeviceRegistrationStartedEvent
+    | InfraredDeviceRegistrationCompleteEvent,
 ]:
     """Reducer for infrared actions."""
     if state is None:
@@ -153,15 +161,23 @@ def reducer(
                 original_state = state.original_should_receive_keypad_actions
                 if original_state is not None:
                     restore_action = [
-                        InfraredSetShouldReceiveAction(should_receive=original_state)
+                        InfraredSetShouldReceiveAction(
+                            should_receive=original_state,
+                        ),
                     ]
             return CompleteReducerResult(
                 state=replace(
                     state,
                     is_registering_device=action.is_registering,
-                    registration_signal_counts={} if not action.is_registering else state.registration_signal_counts,
+                    registration_signal_counts=(
+                        {}
+                        if not action.is_registering
+                        else state.registration_signal_counts
+                    ),
                     original_should_receive_keypad_actions=(
-                        None if not action.is_registering else state.original_should_receive_keypad_actions
+                        None
+                        if not action.is_registering
+                        else state.original_should_receive_keypad_actions
                     ),
                 ),
                 actions=restore_action,
@@ -230,9 +246,9 @@ def reducer(
                 },
             )
 
-            if new_count >= 5:
+            if new_count >= REGISTRATION_REPEAT_COUNT:
                 logger.info(
-                    'Device registration: Signal repeated 5 times - registration complete',
+                    'Device registration complete',
                     extra={
                         'protocol': action.protocol,
                         'scancode': action.scancode,

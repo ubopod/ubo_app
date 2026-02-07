@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING, Literal, overload
 
 from ubo_app.constants import SERVER_SOCKET_PATH
@@ -25,7 +26,7 @@ async def send_command(
     *command: str,
     has_output_stream: Literal[True],
 ) -> AsyncIterator[str]: ...
-async def send_command(
+async def send_command(  # noqa: C901
     *command_: str,
     has_output: bool = False,
     has_output_stream: bool = False,
@@ -71,24 +72,19 @@ async def send_command(
                                 },
                             )
                         except asyncio.CancelledError:
-                            # Close connection on cancellation
                             if not writer.is_closing():
                                 writer.close()
-                            try:
+                            with contextlib.suppress(
+                                OSError,
+                                RuntimeError,
+                            ):
                                 await writer.wait_closed()
-                            except (OSError, RuntimeError):
-                                # Ignore errors during cleanup
-                                pass
                             raise
                 finally:
-                    # Ensure writer is closed even if generator exits normally
                     if not writer.is_closing():
                         writer.close()
-                    try:
+                    with contextlib.suppress(OSError, RuntimeError):
                         await writer.wait_closed()
-                    except (OSError, RuntimeError):
-                        # Ignore errors during cleanup
-                        pass
 
             return generator()
 
