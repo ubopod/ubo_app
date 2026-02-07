@@ -56,8 +56,8 @@ async def _send_code(action: InfraredSendCodeEvent) -> None:
     await ir_commands_queue.put(action)
     async with ir_ctl_lock:
         action = await ir_commands_queue.get()
-        logger.debug(
-            'Sending infrared code.',
+        logger.info(
+            'Sending infrared code via ir-ctl',
             extra={'protocol': action.protocol, 'scancode': action.scancode},
         )
 
@@ -73,34 +73,71 @@ async def _send_code(action: InfraredSendCodeEvent) -> None:
             process.kill()
             msg = 'Infrared: Failed to send code, process killed due to timeout.'
             raise RuntimeError(msg)
+        if process.returncode != 0:
+            logger.warning(
+                'ir-ctl returned non-zero exit code',
+                extra={
+                    'protocol': action.protocol,
+                    'scancode': action.scancode,
+                    'returncode': process.returncode,
+                },
+            )
+        else:
+            logger.info(
+                'Infrared code sent successfully',
+                extra={'protocol': action.protocol, 'scancode': action.scancode},
+            )
         await asyncio.sleep(0.25)
 
 
 async def _wait_for_ir_code() -> None:
     """Wait for IR codes from the system manager and dispatch them to the store."""
     while _should_receive_keypad_actions():
+        generator = None
         try:
-            async for response in await send_command(
+            generator = await send_command(
                 'infrared',
                 'receive',
                 has_output_stream=True,
-            ):
-                if response == 'nocode':
-                    break
-                protocol, scancode = response.split(':')
-                logger.info(
-                    'Received IR code from system manager',
-                    extra={'protocol': protocol, 'scancode': scancode},
-                )
-                store.dispatch(
-                    InfraredHandleReceivedCodeAction(
-                        protocol=protocol,
-                        scancode=scancode,
-                    ),
-                )
+            )
+            if generator is None:
+                break
+            try:
+                async for response in generator:
+                    if not _should_receive_keypad_actions():
+                        break
+                    if response == 'nocode':
+                        break
+                    protocol, scancode = response.split(':')
+                    if _is_ir_noise(protocol, scancode):
+                        continue
+                    logger.info(
+                        'Received IR code from system manager',
+                        extra={'protocol': protocol, 'scancode': scancode},
+                    )
+                    store.dispatch(
+                        InfraredHandleReceivedCodeAction(
+                            protocol=protocol,
+                            scancode=scancode,
+                        ),
+                    )
+            except asyncio.CancelledError:
+                if generator is not None:
+                    try:
+                        await generator.aclose()
+                    except (RuntimeError, asyncio.CancelledError):
+                        pass
+                raise
+            finally:
+                if generator is not None:
+                    try:
+                        await generator.aclose()
+                    except (RuntimeError, asyncio.CancelledError):
+                        pass
+        except asyncio.CancelledError:
+            raise
         except Exception:
             logger.exception('Failed to send infrared receive command')
-            raise
 
 
 def init_service() -> Subscriptions:
