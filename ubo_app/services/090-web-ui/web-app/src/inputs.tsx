@@ -51,9 +51,18 @@ export function Inputs({
 
     if (input?.fields) {
       for (const field of input.fields.itemsList) {
+        const value = formData.get(field.name) as string;
+
+        // Check required fields
+        if (field.required && (!value || value.trim() === "")) {
+          alert(`"${field.label}" is required!`);
+          event.preventDefault();
+          return;
+        }
+
+        // Check pattern validation
         if (field.pattern) {
           if (field.type !== InputFieldType.INPUT_FIELD_TYPE_FILE) {
-            const value = formData.get(field.name) as string;
             if (value && !new RegExp(`^${field.pattern}$`).test(value)) {
               alert(
                 `The value for "${field.label}" does not match the required pattern!`,
@@ -66,54 +75,104 @@ export function Inputs({
       }
     }
 
-    if (!store || !isGrpcConnected) {
+    if (!store) {
+      alert("Store not available. Please refresh the page.");
+      return;
+    }
+    if (!isGrpcConnected) {
+      alert("gRPC not connected. Please wait for connection.");
       return;
     }
     event.preventDefault();
-    const value = (formData.get("value") || "") as string;
-    const action = (
-      (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement
-    )?.value;
-
-    if (action === "provide") {
-      const inputResult = new InputResult();
-      inputResult.setMethod(InputMethod.INPUT_METHOD_WEB_DASHBOARD);
-
-      const dataMap = inputResult.getDataMap();
-      const fileMap = inputResult.getFilesMap();
-      for (const [name, value] of formData.entries()) {
-        if (!["id", "value", "action"].includes(name)) {
-          if (value instanceof File) {
-            fileMap.set(name, await value.arrayBuffer());
-          } else {
-            dataMap.set(name, value as string);
-          }
+    // Extract value: if fields are defined, use the first field's value;
+    // otherwise use the "value" field
+    let value = "";
+    if (input?.fields && input.fields.itemsList.length > 0) {
+      const firstField = input.fields.itemsList[0];
+      // Try FormData first
+      value = (formData.get(firstField.name) as string) || "";
+      // Fallback: get value directly from the input element if FormData didn't capture it
+      if (!value || value.trim() === "") {
+        const inputElement = form.querySelector(
+          `[name="${firstField.name}"]`,
+        ) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        if (inputElement) {
+          value = inputElement.value || "";
         }
       }
+    } else {
+      value = (formData.get("value") as string) || "";
+      // Fallback: get value directly from the input element
+      if (!value || value.trim() === "") {
+        const inputElement = form.querySelector(
+          '[name="value"]',
+        ) as HTMLInputElement | null;
+        if (inputElement) {
+          value = inputElement.value || "";
+        }
+      }
+    }
+    // Get action from formData (submit button value) or fallback to submitter
+    const action =
+      (formData.get("action") as string) ||
+      ((event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement)
+        ?.value ||
+      "";
 
-      const inputProvideAction = new InputProvideAction();
-      inputProvideAction.setId(id);
-      inputProvideAction.setValue(value);
-      inputProvideAction.setResult(inputResult);
+    if (!action) {
+      alert("Error: Could not determine form action. Please try again.");
+      return;
+    }
 
-      const action = new Action();
-      action.setInputProvideAction(inputProvideAction);
+    if (action === "provide") {
+      try {
+        const inputResult = new InputResult();
+        inputResult.setMethod(InputMethod.INPUT_METHOD_WEB_DASHBOARD);
 
-      const dispatchActionRequest = new DispatchActionRequest();
-      dispatchActionRequest.setAction(action);
+        const dataMap = inputResult.getDataMap();
+        const fileMap = inputResult.getFilesMap();
+        for (const [name, value] of formData.entries()) {
+          if (!["id", "value", "action"].includes(name)) {
+            if (value instanceof File) {
+              fileMap.set(name, await value.arrayBuffer());
+            } else {
+              dataMap.set(name, value as string);
+            }
+          }
+        }
 
-      await store.dispatchAction(dispatchActionRequest);
+        const inputProvideAction = new InputProvideAction();
+        inputProvideAction.setId(id);
+        inputProvideAction.setValue(value);
+        inputProvideAction.setResult(inputResult);
+
+        const action = new Action();
+        action.setInputProvideAction(inputProvideAction);
+
+        const dispatchActionRequest = new DispatchActionRequest();
+        dispatchActionRequest.setAction(action);
+
+        await store.dispatchAction(dispatchActionRequest);
+      } catch (error) {
+        console.error("Error dispatching InputProvideAction:", error);
+        alert(`Error submitting form: ${error instanceof Error ? error.message : String(error)}`);
+      }
     } else if (action === "cancel") {
-      const inputCancelAction = new InputCancelAction();
-      inputCancelAction.setId(id);
+      try {
+        const inputCancelAction = new InputCancelAction();
+        inputCancelAction.setId(id);
 
-      const action = new Action();
-      action.setInputCancelAction(inputCancelAction);
+        const action = new Action();
+        action.setInputCancelAction(inputCancelAction);
 
-      const dispatchActionRequest = new DispatchActionRequest();
-      dispatchActionRequest.setAction(action);
+        const dispatchActionRequest = new DispatchActionRequest();
+        dispatchActionRequest.setAction(action);
 
-      await store.dispatchAction(dispatchActionRequest);
+        await store.dispatchAction(dispatchActionRequest);
+      } catch (error) {
+        console.error("Error dispatching InputCancelAction:", error);
+        alert(`Error cancelling form: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 
