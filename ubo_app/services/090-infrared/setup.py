@@ -3,22 +3,59 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import pathlib
 from typing import TYPE_CHECKING
 
+from kivy.clock import Clock
+from kivy.lang.builder import Builder
+from kivy.properties import NumericProperty, StringProperty
 from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.logger import logger
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import (
+    CloseApplicationAction,
+    MenuChooseByLabelAction,
+    MenuGoBackAction,
+    MenuGoBackEvent,
+    MenuGoHomeEvent,
+    OpenApplicationAction,
+    RegisterSettingAppAction,
+    SettingsCategory,
+)
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
+    InfraredAddDeviceAction,
+    InfraredDevice,
+    InfraredDeviceRegistrationCompleteEvent,
+    InfraredDeviceRegistrationStartedEvent,
     InfraredHandleReceivedCodeAction,
+    InfraredRegisterDeviceAction,
+    InfraredRemoveDeviceAction,
+    InfraredSendCodeAction,
     InfraredSendCodeEvent,
+    InfraredSetIsRegisteringDeviceAction,
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
 )
-from ubo_app.store.ubo_actions import UboDispatchItem
+from ubo_app.store.ubo_actions import (
+    UboApplicationItem,
+    UboDispatchItem,
+    register_application,
+)
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.gui import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+    UboPageWidget,
+    UboPromptWidget,
+)
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
@@ -50,6 +87,115 @@ def _is_ir_noise(protocol: str, scancode: str) -> bool:
 
 ir_ctl_lock = asyncio.Lock()
 ir_commands_queue = asyncio.Queue()
+
+_registration_page_id: str | None = None
+
+
+class InfraredRegistrationPage(UboPageWidget):
+    """Page showing instructions for infrared device registration."""
+
+    countdown: NumericProperty = NumericProperty(60)
+    countdown_text: StringProperty = StringProperty('Time remaining: 60s')
+    _countdown_event: Clock.event | None = None
+
+    def __init__(self, **kwargs: object) -> None:
+        """Initialize the registration page."""
+        super().__init__(**kwargs)
+        global _registration_page_id
+        _registration_page_id = self.id
+        self._start_countdown()
+        self.bind(countdown=self._update_countdown_text)
+
+    def _start_countdown(self) -> None:
+        """Start the 60 second countdown timer."""
+        self.countdown = 60
+        self._update_countdown_text()
+        self._countdown_event = Clock.schedule_interval(self._update_countdown, 1.0)
+
+    def _update_countdown_text(self, *args: object) -> None:
+        """Update the countdown text."""
+        self.countdown_text = f'Time remaining: {int(self.countdown)}s'
+
+    def _update_countdown(self, _dt: float) -> None:
+        """Update the countdown timer."""
+        self.countdown -= 1
+        if self.countdown <= 0:
+            self._timeout()
+
+    def _timeout(self) -> None:
+        """Handle timeout - cancel registration and close page."""
+        logger.info('Registration timeout - cancelling registration')
+        if self._countdown_event:
+            self._countdown_event.cancel()
+            self._countdown_event = None
+        create_task(_cancel_registration())
+
+    def on_leave(self) -> None:
+        """Clean up when leaving the page."""
+        if self._countdown_event:
+            self._countdown_event.cancel()
+            self._countdown_event = None
+
+
+register_application(
+    application_id='infrared:registration',
+    application=InfraredRegistrationPage,
+)
+
+Builder.load_file(
+    pathlib.Path(__file__)
+    .parent.joinpath('registration_page.kv')
+    .resolve()
+    .as_posix(),
+)
+
+
+class RemoveDeviceConfirmPage(UboPromptWidget):
+    """Confirmation page for removing an infrared device."""
+
+    device_name: str = StringProperty('')
+    protocol: str = StringProperty('')
+    scancode: str = StringProperty('')
+
+    def first_option_callback(self) -> None:
+        """Yes: remove the device and close the page."""
+        store.dispatch(
+            InfraredRemoveDeviceAction(
+                protocol=self.protocol,
+                scancode=self.scancode,
+            ),
+        )
+        store.dispatch(
+            CloseApplicationAction(application_instance_id=self.id),
+        )
+
+    def second_option_callback(self) -> None:
+        """Cancel: close the page without removing."""
+        store.dispatch(
+            CloseApplicationAction(application_instance_id=self.id),
+        )
+
+    def __init__(self, **kwargs: object) -> None:
+        device_name = kwargs.pop('device_name', '')
+        protocol = kwargs.pop('protocol', '')
+        scancode = kwargs.pop('scancode', '')
+        super().__init__(**kwargs)
+        self.device_name = device_name
+        self.protocol = protocol
+        self.scancode = scancode
+        self.prompt = f'Remove "{device_name}"?'
+        self.first_option_label = 'Yes'
+        self.first_option_icon = '󰆴'
+        self.first_option_is_short = False
+        self.second_option_label = 'Cancel'
+        self.second_option_icon = '󰜺'
+        self.second_option_is_short = False
+
+
+register_application(
+    application_id='infrared:remove-device-confirm',
+    application=RemoveDeviceConfirmPage,
+)
 
 
 async def _send_code(action: InfraredSendCodeEvent) -> None:
@@ -140,6 +286,105 @@ async def _wait_for_ir_code() -> None:
             logger.exception('Failed to send infrared receive command')
 
 
+async def _register_device(_event: InfraredDeviceRegistrationStartedEvent) -> None:
+    """Handle register device event - open registration page."""
+    logger.info('Manage Keys - opening registration page')
+    store.dispatch(
+        OpenApplicationAction(
+            application_id='infrared:registration',
+        ),
+    )
+
+
+async def _cancel_registration() -> None:
+    """Cancel device registration."""
+    logger.info('Cancelling device registration')
+    store.dispatch(InfraredSetIsRegisteringDeviceAction(is_registering=False))
+
+    global _registration_page_id
+    if _registration_page_id is not None:
+        store.dispatch(
+            CloseApplicationAction(application_instance_id=_registration_page_id),
+        )
+        _registration_page_id = None
+
+
+async def _handle_device_registration_complete(
+    event: InfraredDeviceRegistrationCompleteEvent,
+) -> None:
+    """Handle device registration complete event - close page and collect device name."""
+    logger.info(
+        'Device registration complete',
+        extra={
+            'protocol': event.protocol,
+            'scancode': event.scancode,
+        },
+    )
+
+    global _registration_page_id
+    if _registration_page_id is not None:
+        store.dispatch(
+            CloseApplicationAction(application_instance_id=_registration_page_id),
+        )
+        _registration_page_id = None
+
+    async def collect_device_name() -> None:
+        try:
+            value, result = await ubo_input(
+                prompt='Please enter device name on the Web UI',
+                descriptions=[
+                    WebUIInputDescription(
+                        fields=[
+                            InputFieldDescription(
+                                name='device_name',
+                                label='Device Name',
+                                type=InputFieldType.TEXT,
+                                description=f'Enter a name for the device (Protocol: {event.protocol}, Code: {event.scancode})',
+                                required=True,
+                            ),
+                        ],
+                    ),
+                ],
+            )
+            if result and result.data:
+                device_name = result.data.get('device_name', '').strip()
+            else:
+                device_name = (value or '').strip()
+
+            if not device_name:
+                logger.warning('Device registration: Device name is empty')
+                return
+            logger.info(
+                'Device registration: Device name received',
+                extra={
+                    'device_name': device_name,
+                    'protocol': event.protocol,
+                    'scancode': event.scancode,
+                },
+            )
+            store.dispatch(
+                InfraredAddDeviceAction(
+                    name=device_name,
+                    protocol=event.protocol,
+                    scancode=event.scancode,
+                ),
+            )
+            # Navigate to Replay Devices so the user sees the new device
+            await asyncio.sleep(0.5)
+            store.dispatch(MenuGoBackAction())
+            await asyncio.sleep(0.5)
+            store.dispatch(MenuChooseByLabelAction(label='Replay Devices'))
+        except asyncio.CancelledError:
+            logger.info('Device registration: Input collection cancelled')
+        except Exception as e:
+            logger.exception(
+                'Device registration: Error collecting device name',
+                extra={'error': str(e)},
+            )
+
+    create_task(collect_device_name())
+
+
 def init_service() -> Subscriptions:
     """Initialize the infrared service."""
     ir_code_task: asyncio.Handle | None = None
@@ -163,6 +408,127 @@ def init_service() -> Subscriptions:
         'infrared_state:should_receive_keypad_actions',
         lambda state: state.infrared.should_receive_keypad_actions,
     )
+    register_persistent_store(
+        'infrared_state:registered_devices',
+        lambda state: json.dumps(
+            [
+                {
+                    'name': device.name,
+                    'protocol': device.protocol,
+                    'scancode': device.scancode,
+                }
+                for device in state.infrared.registered_devices
+            ]
+        ),
+    )
+
+    @store.autorun(
+        lambda state: state.infrared.registered_devices,
+    )
+    def remove_devices_menu(devices: list[InfraredDevice]) -> HeadlessMenu:
+        """Create a menu with all registered devices for removal."""
+        items: list[Item] = []
+        for device in devices:
+            items.append(
+                UboApplicationItem(
+                    key=f'remove_{device.protocol}_{device.scancode}',
+                    label=device.name,
+                    icon='-',
+                    application_id='infrared:remove-device-confirm',
+                    initialization_kwargs={
+                        'device_name': device.name,
+                        'protocol': device.protocol,
+                        'scancode': device.scancode,
+                    },
+                ),
+            )
+        return HeadlessMenu(
+            title='- Remove Devices',
+            items=items,
+            placeholder='No devices registered',
+        )
+
+    def manage_keys_menu() -> HeadlessMenu:
+        """Menu for managing keys with Add and Remove options."""
+        return HeadlessMenu(
+            title='󰻅 Manage Keys',
+            items=[
+                UboDispatchItem(
+                    key='add_keys',
+                    label='Add Keys',
+                    icon='+',
+                    store_action=InfraredRegisterDeviceAction(),
+                ),
+                SubMenuItem(
+                    key='remove_keys',
+                    label='Remove Keys',
+                    icon='-',
+                    sub_menu=remove_devices_menu,
+                ),
+            ],
+        )
+
+    @store.autorun(
+        lambda state: state.infrared.registered_devices,
+    )
+    def replay_devices_menu(devices: list[InfraredDevice]) -> HeadlessMenu:
+        """Create a menu with all registered devices for replaying."""
+        items: list[Item] = []
+        for device in devices:
+            items.append(
+                UboDispatchItem(
+                    key=f'replay_{device.protocol}_{device.scancode}',
+                    label=device.name,
+                    icon='󰻅',
+                    store_action=InfraredSendCodeAction(
+                        protocol=device.protocol,
+                        scancode=device.scancode,
+                    ),
+                ),
+            )
+        return HeadlessMenu(
+            title='󰑔Replay Devices',
+            items=items,
+            placeholder='No devices registered',
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.infrared.should_propagate_keypad_actions,
+            state.infrared.should_receive_keypad_actions,
+        ),
+    )
+    def infrared_settings_menu(data: tuple[bool, bool]) -> HeadlessMenu:
+        should_propagate_keypad_actions, should_receive_keypad_actions = data
+        return HeadlessMenu(
+            title='Settings',
+            items=[
+                UboDispatchItem(
+                    key='receive_keys',
+                    label='Receive Keys',
+                    store_action=InfraredSetShouldReceiveAction(
+                        should_receive=not should_receive_keypad_actions,
+                    ),
+                    **(
+                        SELECTED_ITEM_PARAMETERS
+                        if should_receive_keypad_actions
+                        else UNSELECTED_ITEM_PARAMETERS
+                    ),
+                ),
+                UboDispatchItem(
+                    key='propagate_keys',
+                    label='Propagate Keys',
+                    store_action=InfraredSetShouldPropagateAction(
+                        should_propagate=not should_propagate_keypad_actions,
+                    ),
+                    **(
+                        SELECTED_ITEM_PARAMETERS
+                        if should_propagate_keypad_actions
+                        else UNSELECTED_ITEM_PARAMETERS
+                    ),
+                ),
+            ],
+        )
 
     @store.autorun(
         lambda state: (
@@ -171,31 +537,24 @@ def init_service() -> Subscriptions:
         ),
     )
     def menu_items(data: tuple[bool, bool]) -> list[Item]:
-        should_propagate_keypad_actions, should_receive_keypad_actions = data
         return [
-            UboDispatchItem(
-                key='propagate_keys',
-                label='Propagate Keys',
-                store_action=InfraredSetShouldPropagateAction(
-                    should_propagate=not should_propagate_keypad_actions,
-                ),
-                **(
-                    SELECTED_ITEM_PARAMETERS
-                    if should_propagate_keypad_actions
-                    else UNSELECTED_ITEM_PARAMETERS
-                ),
+            SubMenuItem(
+                key='replay_devices',
+                label='Replay Devices',
+                icon='󰑔',
+                sub_menu=replay_devices_menu,
             ),
-            UboDispatchItem(
-                key='receive_keys',
-                label='Receive Keys',
-                store_action=InfraredSetShouldReceiveAction(
-                    should_receive=not should_receive_keypad_actions,
-                ),
-                **(
-                    SELECTED_ITEM_PARAMETERS
-                    if should_receive_keypad_actions
-                    else UNSELECTED_ITEM_PARAMETERS
-                ),
+            SubMenuItem(
+                key='manage_keys',
+                label='Manage Keys',
+                icon='󰻅',
+                sub_menu=manage_keys_menu(),
+            ),
+            SubMenuItem(
+                key='settings',
+                label='Settings',
+                icon='',
+                sub_menu=infrared_settings_menu,
             ),
         ]
 
@@ -214,6 +573,37 @@ def init_service() -> Subscriptions:
         ),
     )
 
+    registration_started_subscription = store.subscribe_event(
+        InfraredDeviceRegistrationStartedEvent,
+        _register_device,
+    )
+
+    registration_complete_subscription = store.subscribe_event(
+        InfraredDeviceRegistrationCompleteEvent,
+        _handle_device_registration_complete,
+    )
+
+    def handle_back_or_home(_event: MenuGoBackEvent | MenuGoHomeEvent) -> None:
+        """Handle back/home events to cancel registration if in progress."""
+        current_state = store.get_state()
+        is_registering = (
+            current_state
+            and hasattr(current_state, 'infrared')
+            and current_state.infrared.is_registering_device
+        )
+        global _registration_page_id
+        page_is_open = _registration_page_id is not None
+
+        if is_registering or page_is_open:
+            create_task(_cancel_registration())
+
+    back_subscription = store.subscribe_event(MenuGoBackEvent, handle_back_or_home)
+    home_subscription = store.subscribe_event(MenuGoHomeEvent, handle_back_or_home)
+
     return [
         store.subscribe_event(InfraredSendCodeEvent, _send_code),
+        registration_started_subscription,
+        registration_complete_subscription,
+        back_subscription,
+        home_subscription,
     ]
