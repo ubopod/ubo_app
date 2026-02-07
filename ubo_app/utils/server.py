@@ -55,17 +55,40 @@ async def send_command(
         if has_output_stream:
 
             async def generator() -> AsyncIterator[str]:
-                while datagram := (await reader.readuntil(b'\0'))[:-1]:
-                    yield datagram.decode('utf-8')
-                    logger.debug(
-                        'Server response:',
-                        extra={
-                            'command': command,
-                            'response': datagram.decode('utf-8'),
-                        },
-                    )
-
-                writer.close()
+                try:
+                    while True:
+                        try:
+                            datagram = await reader.readuntil(b'\0')
+                            datagram = datagram[:-1]  # Remove null terminator
+                            if not datagram:
+                                break
+                            yield datagram.decode('utf-8')
+                            logger.debug(
+                                'Server response:',
+                                extra={
+                                    'command': command,
+                                    'response': datagram.decode('utf-8'),
+                                },
+                            )
+                        except asyncio.CancelledError:
+                            # Close connection on cancellation
+                            if not writer.is_closing():
+                                writer.close()
+                            try:
+                                await writer.wait_closed()
+                            except (OSError, RuntimeError):
+                                # Ignore errors during cleanup
+                                pass
+                            raise
+                finally:
+                    # Ensure writer is closed even if generator exits normally
+                    if not writer.is_closing():
+                        writer.close()
+                    try:
+                        await writer.wait_closed()
+                    except (OSError, RuntimeError):
+                        # Ignore errors during cleanup
+                        pass
 
             return generator()
 
