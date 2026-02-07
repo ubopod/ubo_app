@@ -31,6 +31,23 @@ def _should_receive_keypad_actions(value: bool) -> bool:  # noqa: FBT001
     return value
 
 
+def _is_ir_noise(protocol: str, scancode: str) -> bool:
+    """Filter imon protocol noise: scancodes with fewer than 6 zero bits.
+
+    Noise patterns like 0x7fffffff, 0x7ff7ffff, 0x7fbfffff have very few
+    zero bits; real imon scancodes typically have more.
+    """
+    if protocol.lower() != 'imon':
+        return False
+    try:
+        value = int(scancode, 0) & 0xFFFFFFFF
+        ones = bin(value).count('1')
+        zero_bits = 32 - ones
+        return zero_bits < 6
+    except (ValueError, TypeError):
+        return False
+
+
 ir_ctl_lock = asyncio.Lock()
 ir_commands_queue = asyncio.Queue()
 
