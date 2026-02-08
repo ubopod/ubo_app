@@ -29,6 +29,10 @@ from ubo_app.store.services.camera import (
     CameraDetectedEvent,
     CameraDetectEvent,
     CameraEvent,
+    CameraInstallDriverAction,
+    CameraInstallDriverEvent,
+    CameraRestoreDefaultAction,
+    CameraRestoreDefaultEvent,
     CameraReportBarcodeAction,
     CameraSetAvailableCamerasAction,
     CameraSetIndexAction,
@@ -36,6 +40,7 @@ from ubo_app.store.services.camera import (
     CameraStartViewfinderEvent,
     CameraState,
     CameraStopViewfinderEvent,
+    CameraType,
 )
 from ubo_app.store.services.keypad import KeypadKeyPressAction
 from ubo_app.store.services.notifications import (
@@ -150,6 +155,24 @@ def reducer(
                 queue=[
                     description for description in state.queue if description.id != id
                 ],
+            )
+
+        case CameraInstallDriverAction(make=make, model=model, variant=variant):
+            return CompleteReducerResult(
+                state=state(camera_type=CameraType(variant)),
+                events=[
+                    CameraInstallDriverEvent(
+                        make=make,
+                        model=model,
+                        variant=variant,
+                    ),
+                ],
+            )
+
+        case CameraRestoreDefaultAction():
+            return CompleteReducerResult(
+                state=state(camera_type=CameraType.DEFAULT),
+                events=[CameraRestoreDefaultEvent()],
             )
 
         case CameraStartViewfinderAction(pattern=pattern):
