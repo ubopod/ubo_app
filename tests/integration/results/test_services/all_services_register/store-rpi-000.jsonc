@@ -51,6 +51,7 @@
     "available_cameras": [
       0
     ],
+    "camera_type": "default",
     "queue": [],
     "selected_camera_index": 0
   },
@@ -6346,7 +6347,7 @@
                                     1,
                                     1
                                   ],
-                                  "icon": null,
+                                  "icon": "",
                                   "is_short": false,
                                   "key": null,
                                   "label": "Re/Install Audio",
@@ -6354,6 +6355,72 @@
                                   "progress": null,
                                   "store_action": {
                                     "_type": "AudioInstallDriverAction"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰽎",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Arducam IMX519 AF",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "CameraInstallDriverAction",
+                                    "make": "arducam",
+                                    "model": "imx519",
+                                    "variant": "autofocus"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰋱",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Arducam IMX519 FF",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "CameraInstallDriverAction",
+                                    "make": "arducam",
+                                    "model": "imx519",
+                                    "variant": "fixed-focus"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄀",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Default Camera",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "CameraRestoreDefaultAction"
                                   }
                                 }
                               ],
