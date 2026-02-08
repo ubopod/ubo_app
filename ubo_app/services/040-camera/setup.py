@@ -26,9 +26,9 @@ from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraDetectEvent,
     CameraInstallDriverEvent,
-    CameraRestoreDefaultEvent,
     CameraReportBarcodeAction,
     CameraReportImageEvent,
+    CameraRestoreDefaultEvent,
     CameraSetAvailableCamerasAction,
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,

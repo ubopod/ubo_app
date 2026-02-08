@@ -1,9 +1,8 @@
 # ruff: noqa: D100, D101
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
