@@ -43,7 +43,7 @@ def camera_handler(command: str, *args: str) -> str | None:
                 Path(__file__).parent.parent
                 / 'scripts/restore_default_camera.sh'
             ).read_bytes()
-            process = subprocess.run(  # noqa: S603
+            process = subprocess.run(
                 ['/bin/bash', '-s'],
                 input=script,
                 check=True,

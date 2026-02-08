@@ -11,13 +11,13 @@ from ubo_app.store.services.camera import (
     CameraRestoreDefaultAction,
 )
 from ubo_app.store.settings.services import service_items
-from ubo_app.utils import IS_RPI
 from ubo_app.store.settings.types import (
     SettingsToggleBetaVersionsAction,
     SettingsTogglePdbSignalAction,
     SettingsToggleVisualDebugAction,
 )
 from ubo_app.store.ubo_actions import UboDispatchItem
+from ubo_app.utils import IS_RPI
 from ubo_app.utils.eeprom import get_eeprom_data
 
 
