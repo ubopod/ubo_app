@@ -267,7 +267,7 @@
                                     1,
                                     1
                                   ],
-                                  "icon": null,
+                                  "icon": "",
                                   "is_short": false,
                                   "key": null,
                                   "label": "Re/Install Audio",
