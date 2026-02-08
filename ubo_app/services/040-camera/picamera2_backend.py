@@ -46,6 +46,14 @@ class PiCamera2Backend:
             self._picamera2.configure(preview_config)
             try:
                 self._picamera2.set_controls({'AwbEnable': True})
+                from ubo_app.utils.persistent_store import read_from_persistent_store
+
+                camera_type = read_from_persistent_store(
+                    'camera_type',
+                    default='default',
+                )
+                if camera_type == 'autofocus':
+                    self._picamera2.set_controls({'AfMode': 2, 'AfTrigger': 0})
             except Exception:
                 logger.exception('Failed to set camera controls.')
         except IndexError:

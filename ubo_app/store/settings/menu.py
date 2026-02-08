@@ -6,7 +6,12 @@ from ubo_gui.menu.types import HeadlessMenu, SubMenuItem
 
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioInstallDriverAction
+from ubo_app.store.services.camera import (
+    CameraInstallDriverAction,
+    CameraRestoreDefaultAction,
+)
 from ubo_app.store.settings.services import service_items
+from ubo_app.utils import IS_RPI
 from ubo_app.store.settings.types import (
     SettingsToggleBetaVersionsAction,
     SettingsTogglePdbSignalAction,
@@ -38,7 +43,39 @@ if eeprom_data['speakers'] is not None and eeprom_data['speakers']['model'] == '
     THIRD_PARTY_ITEMS.append(
         UboDispatchItem(
             label='Re/Install Audio',
+            icon='',
             store_action=AudioInstallDriverAction(),
+        ),
+    )
+
+if IS_RPI:
+    THIRD_PARTY_ITEMS.append(
+        UboDispatchItem(
+            label='Arducam IMX519 AF',
+            icon='󰽎',
+            store_action=CameraInstallDriverAction(
+                make='arducam',
+                model='imx519',
+                variant='autofocus',
+            ),
+        ),
+    )
+    THIRD_PARTY_ITEMS.append(
+        UboDispatchItem(
+            label='Arducam IMX519 FF',
+            icon='󰋱',
+            store_action=CameraInstallDriverAction(
+                make='arducam',
+                model='imx519',
+                variant='fixed-focus',
+            ),
+        ),
+    )
+    THIRD_PARTY_ITEMS.append(
+        UboDispatchItem(
+            label='Default Camera',
+            icon='󰄀',
+            store_action=CameraRestoreDefaultAction(),
         ),
     )
 
