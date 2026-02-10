@@ -5,6 +5,7 @@ from functools import cache
 from pathlib import Path
 from typing import TypedDict
 
+from ubo_app.constants import FORCE_HARDWARE
 from ubo_app.logger import logger
 from ubo_app.utils import IS_RPI
 
@@ -167,10 +168,95 @@ EMPTY_EEPROM_DATA: EepromData = {
     'test_result': None,
 }
 
+FULL_HARDWARE_EEPROM_DATA: EepromData = {
+    'serial_number': 'FORCE_HARDWARE',
+    'eeprom': {
+        'model': '24c32',
+        'bus_address': '0x50',
+        'test_result': True,
+    },
+    'speakers': {
+        'model': 'wm8960',
+        'bus_address': '0x1a',
+        'test_result': True,
+        'test_report': {'left': True, 'right': True},
+    },
+    'microphones': {
+        'model': 'wm8960',
+        'bus_address': '0xa1',
+        'test_result': True,
+        'test_report': {'left': True, 'right': True},
+    },
+    'temperature': {
+        'model': 'pct2075',
+        'bus_address': '0x48',
+        'test_result': True,
+        'test_report': {'degrees': 26.375},
+    },
+    'ambient': {
+        'model': 'VEML7700',
+        'bus_address': '0x10',
+        'test_result': True,
+        'test_report': {
+            'works': True,
+            'baseline': 2653.2,
+            'reading': 5886.4,
+            'delta': 3233.2,
+        },
+    },
+    'keypad': {
+        'model': 'aw9523',
+        'bus_address': '0x58',
+        'test_result': True,
+        'test_report': {
+            'L1': True,
+            'L2': True,
+            'L3': True,
+            'UP': True,
+            'DOWN': True,
+            'BACK': True,
+            'HOME': True,
+            'MIC': True,
+        },
+    },
+    'i2c_bus': {
+        'num_devices': 3,
+        'scanned_addressed': ['0x10', '0x48', '0x58'],
+        'status': 'functional_bus',
+    },
+    'lcd': {
+        'model': 'st7789',
+        'bus_address': '',
+        'test_result': True,
+        'test_report': {
+            'qrcode': True,
+            'green': True,
+            'red': True,
+            'blue': True,
+        },
+    },
+    'led': {
+        'model': 'neopixel',
+        'bus_address': '',
+        'test_result': True,
+        'test_report': {'green': True, 'red': True, 'blue': True},
+    },
+    'infrared': {
+        'model': 'tsop75238',
+        'bus_address': '',
+        'test_result': True,
+    },
+    'version': 'V2',
+    'timedate': None,
+    'test_result': True,
+}
+
 
 @cache
 def get_eeprom_data() -> EepromData:
     """Read the EEPROM data."""
+    if FORCE_HARDWARE:
+        return FULL_HARDWARE_EEPROM_DATA
     if not IS_RPI:
         return EMPTY_EEPROM_DATA
     try:
@@ -192,4 +278,4 @@ def get_eeprom_data() -> EepromData:
 def read_serial_number() -> str | None:
     """Read the serial number from the EEPROM."""
     data = get_eeprom_data()
-    return data['serial_number']
+    return data.get('serial_number')

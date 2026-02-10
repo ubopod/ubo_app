@@ -39,7 +39,10 @@ def _beta_versions_icon(beta_versions: bool) -> str:  # noqa: FBT001
 THIRD_PARTY_ITEMS = []
 
 eeprom_data = get_eeprom_data()
-if eeprom_data['speakers'] is not None and eeprom_data['speakers']['model'] == 'wm8960':
+if (
+    (speakers := eeprom_data.get('speakers')) is not None
+    and speakers.get('model') == 'wm8960'
+):
     THIRD_PARTY_ITEMS.append(
         UboDispatchItem(
             label='Re/Install Audio',
