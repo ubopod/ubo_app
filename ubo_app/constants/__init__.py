@@ -13,6 +13,8 @@ PACKAGE_NAME = __package__.rpartition('.')[0]
 USERNAME = os.environ.get('UBO_USERNAME', 'ubo')
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
 
+FORCE_HARDWARE = str_to_bool(os.environ.get('UBO_FORCE_HARDWARE', 'False'))
+
 DEBUG_VISUAL = str_to_bool(os.environ.get('UBO_DEBUG_VISUAL', 'False'))
 DEBUG_BETA_VERSIONS = str_to_bool(os.environ.get('UBO_DEBUG_BETA_VERSIONS', 'False'))
 DEBUG_PDB_SIGNAL = str_to_bool(os.environ.get('UBO_DEBUG_PDB_SIGNAL', 'False'))
