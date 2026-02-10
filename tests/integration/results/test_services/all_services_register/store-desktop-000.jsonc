@@ -104,6 +104,16 @@
       "ports": [],
       "status": "not_available"
     },
+    "n8n": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "n8n",
+      "instructions": "n8n is installed and running!\n\nAccess the workflow editor at:\nhttp://{{hostname}}:5678\n\nOn first visit, create an account to start building automations.",
+      "label": "n8n",
+      "ports": [],
+      "status": "not_available"
+    },
     "ngrok": {
       "_type": "ImageState",
       "container_ip": null,
@@ -158,6 +168,16 @@
       "_type": "DockerServiceState",
       "status": "running",
       "usernames": {}
+    },
+    "twingate": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "twingate",
+      "instructions": null,
+      "label": "Twingate",
+      "ports": [],
+      "status": "not_available"
     }
   },
   "file_system": {
@@ -333,6 +353,23 @@
                         1,
                         1
                       ],
+                      "icon": "󱂚",
+                      "is_short": false,
+                      "key": "docker:n8n",
+                      "label": "n8n",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
                       "icon": "󰛶",
                       "is_short": false,
                       "key": "docker:ngrok",
@@ -405,6 +442,23 @@
                       "is_short": false,
                       "key": "docker:portainer",
                       "label": "Portainer",
+                      "opacity": null,
+                      "progress": null
+                    },
+                    {
+                      "_type": "ActionItem",
+                      "action": "<functools.partial:<function:docker_item_menu>>",
+                      "background_color": "#68B7FF",
+                      "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                      ],
+                      "icon": "󰒄",
+                      "is_short": false,
+                      "key": "docker:twingate",
+                      "label": "Twingate",
                       "opacity": null,
                       "progress": null
                     },
