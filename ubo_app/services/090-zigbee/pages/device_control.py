@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D101, D102, D107
+# ruff: noqa: D107
 """Device control page for the Zigbee service.
 
 Shows device details and controls for a specific device.
@@ -9,9 +9,6 @@ from __future__ import annotations
 import pathlib
 from typing import TYPE_CHECKING
 
-# Import sensor_view to ensure register_application is called
-from . import sensor_view as _sensor_view_module  # noqa: F401
-
 from constants import (
     ICON_DELETE,
     ICON_LIGHT,
@@ -21,13 +18,16 @@ from constants import (
 )
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty, StringProperty
+from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
-from ubo_gui.prompt import PromptWidget
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR
+from ubo_app.logger import logger
 from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.zigbee import (
+    ZigbeeEntity,
+    ZigbeeEntityPlatform,
     ZigbeeRefreshDevicesEvent,
     ZigbeeToggleEntityAction,
 )
@@ -35,8 +35,13 @@ from ubo_app.store.ubo_actions import UboApplicationItem, register_application
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.gui import UboPageWidget, UboPromptWidget
 
+# Import sensor_view to ensure register_application is called
+from . import sensor_view as _sensor_view_module  # noqa: F401
+
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
+
+    from ubo_app.store.main import RootState
 
 
 class _RemoveDeviceConfirmPage(UboPromptWidget):
@@ -89,7 +94,7 @@ class DeviceControlPage(UboPageWidget):
     device_name: str = StringProperty('')
     device_model: str = StringProperty('')
     device_manufacturer: str = StringProperty('')
-    is_available: bool = BooleanProperty(True)
+    is_available: bool = BooleanProperty(True)  # noqa: FBT003
 
     def __init__(self, device_ieee: str, **kwargs: object) -> None:
         super().__init__(**kwargs)
@@ -116,84 +121,74 @@ register_application(
 )
 
 
-def _get_entity_icon(platform: str) -> str:
+def _get_entity_icon(platform: ZigbeeEntityPlatform) -> str:
     """Get icon based on entity platform."""
-    if platform == 'light':
+    if platform == ZigbeeEntityPlatform.LIGHT:
         return ICON_LIGHT
-    if platform == 'switch':
+    if platform == ZigbeeEntityPlatform.SWITCH:
         return ICON_SWITCH
     return ICON_SENSOR
 
 
-def _is_entity_on(entity: object) -> bool:
-    """Determine if a controllable entity is on.
-
-    Handles Switch ('state' key) and Light ('on' key) entities,
-    with robust conversion for bool, int, and string values.
-    """
-    state = entity.state
-    if 'state' in state:
-        val = state['state']
-    else:
-        val = state.get('on', False)
-
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, (int, float)):
-        return val != 0
-    if isinstance(val, str):
-        return val.lower() in ('on', 'true', '1')
-    return bool(val)
+def _get_device_data(
+    state: RootState,
+    device_ieee: str,
+) -> tuple[str, Sequence[ZigbeeEntity], Sequence[ZigbeeEntity]] | None:
+    """Extract device data from state for autorun selector."""
+    devices = state.zigbee.devices
+    if not devices:
+        return None
+    for device in devices:
+        if device.ieee == device_ieee:
+            controllable = tuple(e for e in device.entities if e.is_controllable)
+            monitorable = tuple(e for e in device.entities if not e.is_controllable)
+            device_name = device.custom_name or device.name
+            return (device_name, controllable, monitorable)
+    return None
 
 
 def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
     """Get the device control menu for a specific device."""
-    from setup import get_network_manager
-    from zigbee import DeviceController
 
-    def _menu() -> HeadlessMenu:
-        manager = get_network_manager()
-        device_info = manager.get_device_by_ieee(device_ieee)
-
-        if not device_info:
+    @store.autorun(
+        lambda state: _get_device_data(state, device_ieee),
+        options=AutorunOptions(default_value=None),
+    )
+    def _menu(
+        data: tuple[str, Sequence[ZigbeeEntity], Sequence[ZigbeeEntity]] | None,
+    ) -> HeadlessMenu:
+        if data is None:
             return HeadlessMenu(
                 title='Device Not Found',
                 items=[],
                 placeholder='Device not available',
             )
 
-        device = device_info['device']
-        device_name = device_info['name']
+        device_name, controllable, monitorable = data
 
         items: list[ActionItem | UboApplicationItem] = []
 
         # Add controllable entities (switches, lights)
-        controllable = DeviceController.get_controllable_entities(device)
         for entity in controllable:
-            display_name = DeviceController.get_display_name(entity)
-            platform = entity.PLATFORM.value if hasattr(entity.PLATFORM, 'value') else str(entity.PLATFORM)
-            is_on = _is_entity_on(entity)
-
-            action_label = 'Turn Off' if is_on else 'Turn On'
-            bg_color = SUCCESS_COLOR if is_on else DANGER_COLOR
+            action_label = 'Turn Off' if entity.is_on else 'Turn On'
+            bg_color = DANGER_COLOR if entity.is_on else SUCCESS_COLOR
 
             items.append(
                 ActionItem(
                     key=entity.unique_id,
-                    label=f'{display_name}: {action_label}',
-                    icon=_get_entity_icon(platform),
+                    label=f'{entity.display_name}: {action_label}',
+                    icon=_get_entity_icon(entity.platform),
                     background_color=bg_color,
                     action=lambda uid=entity.unique_id: store.dispatch(
                         ZigbeeToggleEntityAction(
                             device_ieee=device_ieee,
                             entity_unique_id=uid,
-                        )
+                        ),
                     ),
-                )
+                ),
             )
 
         # Add sensor view option if there are monitorable entities
-        monitorable = DeviceController.get_monitorable_entities(device)
         if monitorable:
             from . import sensor_view
 
@@ -203,7 +198,7 @@ def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
                     label=f'Sensors ({len(monitorable)})',
                     icon=ICON_SENSOR,
                     action=lambda ieee=device_ieee: sensor_view.get_sensor_menu(ieee),
-                )
+                ),
             )
 
         # Device management options
@@ -213,7 +208,7 @@ def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
                 label='Rename device',
                 icon=ICON_RENAME,
                 action=lambda: _rename_device(device_ieee, device_name),
-            )
+            ),
         )
 
         items.append(
@@ -226,7 +221,7 @@ def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
                     'device_ieee': device_ieee,
                     'device_name': device_name,
                 },
-            )
+            ),
         )
 
         return HeadlessMenu(
@@ -240,7 +235,6 @@ def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
 def _rename_device(device_ieee: str, current_name: str) -> None:
     """Open rename device dialog."""
     from ubo_app.store.input.types import (
-        InputDescription,
         InputFieldDescription,
         InputFieldType,
         WebUIInputDescription,
@@ -248,9 +242,9 @@ def _rename_device(device_ieee: str, current_name: str) -> None:
     from ubo_app.utils.input import ubo_input
 
     async def _do_rename() -> None:
-        from setup import get_network_manager, _refresh_devices
+        from setup import _refresh_devices, get_network_manager
 
-        descriptions: list[InputDescription] = [
+        descriptions: list[WebUIInputDescription] = [
             WebUIInputDescription(
                 fields=[
                     InputFieldDescription(
@@ -277,8 +271,8 @@ def _rename_device(device_ieee: str, current_name: str) -> None:
                 manager.set_device_name(device_ieee, name)
                 # Refresh device list
                 await _refresh_devices(ZigbeeRefreshDevicesEvent())
-        except Exception:
-            pass  # User cancelled
+        except Exception:  # noqa: BLE001
+            logger.debug('Device rename cancelled or failed')
 
     create_task(_do_rename())
 

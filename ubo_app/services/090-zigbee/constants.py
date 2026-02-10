@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Constants for the Zigbee service."""
 
 from __future__ import annotations

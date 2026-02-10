@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Network management for the Zigbee service."""
 
 from __future__ import annotations
@@ -124,12 +123,14 @@ class NetworkManager:
             self._device_names_cache = {}
             return self._device_names_cache
         try:
-            self._device_names_cache = json.loads(names_path.read_text())
-            return self._device_names_cache
+            loaded: dict[str, str] = json.loads(names_path.read_text())
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning('Failed to load device names: %s', exc)
             self._device_names_cache = {}
             return self._device_names_cache
+        else:
+            self._device_names_cache = loaded
+            return loaded
 
     def _save_device_names(self, names: dict[str, str]) -> None:
         """Save device names to the current coordinator's names file."""
@@ -226,8 +227,11 @@ class NetworkManager:
         logger.info('Shutting down network')
         try:
             await self._gateway.shutdown()
-        except Exception:
-            logger.warning('Error during network shutdown, forcing cleanup', exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                'Error during network shutdown, forcing cleanup',
+                exc_info=True,
+            )
         self._gateway = None
         self._coordinator = None
         logger.info('Network shut down successfully')
@@ -252,7 +256,7 @@ class NetworkManager:
         if self._gateway is not None:
             try:
                 await self._gateway.application_controller.reset_network_info()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.warning('Failed to reset coordinator hardware', exc_info=True)
 
         # Shut down and delete database
@@ -341,7 +345,7 @@ class NetworkManager:
                     'custom_name': custom_name,
                     'available': device.available,
                     'device': device,
-                }
+                },
             )
 
         return devices
@@ -413,11 +417,11 @@ class NetworkManager:
             if str(ieee) in names:
                 del names[str(ieee)]
                 self._save_device_names(names)
-
-            return True
         except Exception:
             logger.exception('Failed to remove device %s', ieee)
             return False
+        else:
+            return True
 
     def get_backups(self) -> list[dict]:
         """Get all backups for the current network.
@@ -443,7 +447,7 @@ class NetworkManager:
                     else 'Unknown',
                     'device_count': device_count,
                     'is_complete': backup.is_complete(),
-                }
+                },
             )
         return result
 

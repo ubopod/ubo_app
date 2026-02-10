@@ -1,9 +1,7 @@
-# ruff: noqa: D100, D101
 """Zigbee service state types, actions, and events."""
 
 from __future__ import annotations
 
-from dataclasses import field
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -13,7 +11,17 @@ from redux import BaseAction, BaseEvent
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from zha.application.const import RadioType
+
+class ZigbeeEntityPlatform(StrEnum):
+    """Platform types for Zigbee entities."""
+
+    SWITCH = 'switch'
+    LIGHT = 'light'
+    BINARY_SENSOR = 'binary_sensor'
+    SENSOR = 'sensor'
+    DEVICE_TRACKER = 'device_tracker'
+    EVENT = 'event'
+    OTHER = 'other'
 
 
 class ZigbeeConnectionState(StrEnum):
@@ -36,6 +44,18 @@ class ZigbeeCoordinator(Immutable):
     has_network: bool = False
 
 
+class ZigbeeEntity(Immutable):
+    """Represents a controllable or monitorable entity."""
+
+    unique_id: str
+    platform: ZigbeeEntityPlatform
+    display_name: str
+    device_ieee: str
+    state_display: str
+    is_on: bool | None = None
+    is_controllable: bool = False
+
+
 class ZigbeeDevice(Immutable):
     """Represents a paired Zigbee device."""
 
@@ -46,16 +66,7 @@ class ZigbeeDevice(Immutable):
     name: str
     custom_name: str | None
     available: bool
-
-
-class ZigbeeEntity(Immutable):
-    """Represents a controllable or monitorable entity."""
-
-    unique_id: str
-    platform: str
-    display_name: str
-    state: str
-    is_controllable: bool
+    entities: Sequence[ZigbeeEntity] = ()
 
 
 class ZigbeeBackup(Immutable):
@@ -107,6 +118,10 @@ class ZigbeeSetConnectionStateAction(ZigbeeAction):
     coordinator: ZigbeeCoordinator | None = None
 
 
+class ZigbeeRefreshDevicesAction(ZigbeeAction):
+    """Trigger a device list refresh."""
+
+
 class ZigbeeUpdateDevicesAction(ZigbeeAction):
     """Update the device list."""
 
@@ -128,6 +143,15 @@ class ZigbeeSetPairingStateAction(ZigbeeAction):
 
     is_pairing: bool
     remaining_seconds: int = 0
+
+
+class ZigbeeUpdateEntityStateAction(ZigbeeAction):
+    """Update entity state from ZHA STATE_CHANGED event."""
+
+    device_ieee: str
+    entity_unique_id: str
+    state_display: str
+    is_on: bool | None = None
 
 
 class ZigbeeToggleEntityAction(ZigbeeAction):

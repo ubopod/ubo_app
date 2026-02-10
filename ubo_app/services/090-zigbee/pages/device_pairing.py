@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D101, D102, D107
+# ruff: noqa: D107
 """Device pairing page for the Zigbee service.
 
 Shows pairing countdown and status during device pairing mode.
@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import pathlib
 
-from constants import ICON_PAIRING
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 
@@ -23,7 +22,7 @@ class DevicePairingPage(UboPageWidget):
     """Page shown during device pairing mode."""
 
     remaining_seconds: int = NumericProperty(60)
-    is_pairing: bool = BooleanProperty(True)
+    is_pairing: bool = BooleanProperty(True)  # noqa: FBT003
     status_text: str = StringProperty('Waiting for device...')
     last_joined_device: str = StringProperty('')
 
@@ -39,7 +38,7 @@ class DevicePairingPage(UboPageWidget):
             lambda state: (
                 state.zigbee.is_pairing,
                 state.zigbee.pairing_remaining_seconds,
-            )
+            ),
         )
         def update_pairing_state(
             data: tuple[bool, int],

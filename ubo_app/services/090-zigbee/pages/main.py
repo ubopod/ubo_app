@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Main coordinator selection page for the Zigbee service.
 
 This is the entry point when navigating to Zigbee in settings.
@@ -29,7 +28,6 @@ from ubo_app.store.services.zigbee import (
     ZigbeeConnectionState,
     ZigbeeCoordinator,
     ZigbeeDetectCoordinatorsAction,
-    ZigbeeDevice,
 )
 
 if TYPE_CHECKING:
@@ -62,28 +60,36 @@ def _get_coordinator_icon(
     lambda state: (
         state.zigbee.connection_state,
         state.zigbee.current_coordinator,
-        state.zigbee.devices,
+        tuple(
+            (d.ieee, d.name, d.custom_name, d.available)
+            for d in (state.zigbee.devices or ())
+        ),
         state.zigbee.is_pairing,
         state.zigbee.pairing_remaining_seconds,
-    )
+    ),
 )
 def connection_menu(
     data: tuple[
         ZigbeeConnectionState,
         ZigbeeCoordinator | None,
-        Sequence[ZigbeeDevice] | None,
+        tuple[tuple[str, str, str | None, bool], ...],
         bool,
         int,
     ],
 ) -> HeadedMenu | HeadlessMenu:
     """Coordinator setup sub-menu (level 3): connecting/connected state."""
-    connection_state, current_coordinator, devices, is_pairing, pairing_rem = data
+    connection_state, current_coordinator, device_summaries, is_pairing, pairing_rem = (
+        data
+    )
 
     if connection_state == ZigbeeConnectionState.CONNECTED and current_coordinator:
         from . import device_list
 
         return device_list.build_connected_menu(
-            current_coordinator, devices, is_pairing, pairing_rem,
+            current_coordinator,
+            device_summaries,
+            is_pairing=is_pairing,
+            pairing_remaining=pairing_rem,
         )
 
     if connection_state == ZigbeeConnectionState.CONNECTING:
@@ -118,7 +124,7 @@ def _select_coordinator(
         state.zigbee.is_detecting,
         state.zigbee.connection_state,
         state.zigbee.current_coordinator,
-    )
+    ),
 )
 def coordinator_menu(
     data: tuple[
@@ -155,7 +161,7 @@ def coordinator_menu(
                         coord, connection_state, current_coordinator,
                     ),
                     action=lambda c=coord: _select_coordinator(c),
-                )
+                ),
             )
 
     # Add action items
@@ -165,7 +171,7 @@ def coordinator_menu(
             label='Retry Detection',
             icon=ICON_REFRESH,
             action=lambda: store.dispatch(ZigbeeDetectCoordinatorsAction()),
-        )
+        ),
     )
 
     items.append(
@@ -174,7 +180,7 @@ def coordinator_menu(
             label='Manage Backups',
             icon=ICON_BACKUP,
             action=_open_backup_menu,
-        )
+        ),
     )
 
     placeholder = 'No coordinators found'
@@ -195,6 +201,11 @@ def _open_backup_menu() -> Callable[[], HeadlessMenu]:
 
 def _start_detection() -> Callable[[], HeadedMenu | HeadlessMenu]:
     """Start coordinator detection and return the menu."""
+    from setup import get_network_manager
+
+    # If already connected, go directly to the device menu
+    if get_network_manager().is_running:
+        return connection_menu
 
     # Start fresh detection
     store.dispatch(ZigbeeDetectCoordinatorsAction())

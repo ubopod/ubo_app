@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D101, D102, D107
+# ruff: noqa: D107
 """Sensor view page for the Zigbee service.
 
 Shows live sensor readings for a device.
@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from constants import ICON_REFRESH, ICON_SENSOR
 from kivy.lang.builder import Builder
 from kivy.properties import ListProperty, StringProperty
+from redux import AutorunOptions
 from ubo_gui.constants import SECONDARY_COLOR_LIGHT
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
 
@@ -24,7 +25,10 @@ from ubo_app.utils.gui import UboPageWidget
 SENSOR_ITEM_COLOR = SECONDARY_COLOR_LIGHT
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Callable, Sequence
+
+    from ubo_app.store.main import RootState
+    from ubo_app.store.services.zigbee import ZigbeeEntity
 
 
 class SensorViewPage(UboPageWidget):
@@ -87,54 +91,59 @@ register_application(
 )
 
 
-def get_sensor_menu(device_ieee: str) -> HeadlessMenu:
+def _get_sensor_entities(
+    state: RootState,
+    device_ieee: str,
+) -> Sequence[ZigbeeEntity] | None:
+    """Extract sensor entities from state for autorun selector."""
+    devices = state.zigbee.devices
+    if not devices:
+        return None
+    for device in devices:
+        if device.ieee == device_ieee:
+            return tuple(e for e in device.entities if not e.is_controllable)
+    return None
+
+
+def get_sensor_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
     """Get a menu-based sensor view for a device."""
-    from setup import get_network_manager
-    from zigbee import DeviceController
 
-    manager = get_network_manager()
-    device_info = manager.get_device_by_ieee(device_ieee)
+    @store.autorun(
+        lambda state: _get_sensor_entities(state, device_ieee),
+        options=AutorunOptions(default_value=None),
+    )
+    def _menu(entities: Sequence[ZigbeeEntity] | None) -> HeadlessMenu:
+        items: list[ActionItem] = []
 
-    if not device_info:
-        return HeadlessMenu(
-            title='Sensors',
-            items=[],
-            placeholder='Device not found',
-        )
+        if entities:
+            items.extend(
+                ActionItem(
+                    key=entity.unique_id,
+                    label=f'{entity.display_name}: {entity.state_display}',
+                    icon=ICON_SENSOR,
+                    background_color=SENSOR_ITEM_COLOR,
+                    action=lambda: None,  # Read-only
+                )
+                for entity in entities
+            )
 
-    device = device_info['device']
-    device_name = device_info['name']
-    entities = DeviceController.get_monitorable_entities(device)
-
-    items: list[ActionItem] = []
-
-    for entity in entities:
-        name = DeviceController.get_display_name(entity)
-        state = DeviceController.format_entity_state(entity)
+        # Add refresh option
         items.append(
             ActionItem(
-                key=entity.unique_id,
-                label=f'{name}: {state}',
-                icon=ICON_SENSOR,
-                background_color=SENSOR_ITEM_COLOR,  # Grey box to indicate read-only
-                action=lambda: None,  # Read-only
-            )
+                key='refresh',
+                label='Refresh readings',
+                icon=ICON_REFRESH,
+                action=lambda: _refresh_sensors(device_ieee),
+            ),
         )
 
-    # Add refresh option
-    items.append(
-        ActionItem(
-            key='refresh',
-            label='Refresh readings',
-            icon=ICON_REFRESH,
-            action=lambda: _refresh_sensors(device_ieee),
+        return HeadlessMenu(
+            title='Sensors',
+            items=items,
+            placeholder='No sensors' if entities is not None else 'Loading...',
         )
-    )
 
-    return HeadlessMenu(
-        title=f'{device_name} Sensors',
-        items=items,
-    )
+    return _menu
 
 
 def _refresh_sensors(device_ieee: str) -> None:

@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Backup management page for the Zigbee service.
 
 Shows network backups and allows restore/delete operations.
@@ -10,7 +9,6 @@ from typing import TYPE_CHECKING
 
 from constants import ICON_BACKUP, ICON_DELETE, ICON_REFRESH
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
-from ubo_gui.prompt import PromptWidget
 
 from ubo_app.colors import DANGER_COLOR, WARNING_COLOR
 from ubo_app.store.core.types import CloseApplicationAction
@@ -19,7 +17,7 @@ from ubo_app.store.services.zigbee import (
     ZigbeeBackup,
     ZigbeeCreateBackupAction,
     ZigbeeDeleteBackupAction,
-    ZigbeeRefreshDevicesEvent,
+    ZigbeeRefreshDevicesAction,
     ZigbeeRestoreBackupAction,
 )
 from ubo_app.store.ubo_actions import UboApplicationItem, register_application
@@ -118,6 +116,7 @@ class _BackupOptionsPage(UboPromptWidget):
         backup_index: int,
         backup_time: str,
         device_count: int,
+        *,
         is_complete: bool,
         **kwargs: object,
     ) -> None:
@@ -198,7 +197,7 @@ def backup_menu(backups: Sequence[ZigbeeBackup] | None) -> HeadlessMenu:
                         'device_count': backup.device_count,
                         'is_complete': backup.is_complete,
                     },
-                )
+                ),
             )
 
     # Add create backup option
@@ -208,7 +207,7 @@ def backup_menu(backups: Sequence[ZigbeeBackup] | None) -> HeadlessMenu:
             label='Create new backup',
             icon=ICON_BACKUP,
             action=lambda: store.dispatch(ZigbeeCreateBackupAction()),
-        )
+        ),
     )
 
     # Add refresh option
@@ -217,8 +216,8 @@ def backup_menu(backups: Sequence[ZigbeeBackup] | None) -> HeadlessMenu:
             key='refresh',
             label='Refresh list',
             icon=ICON_REFRESH,
-            action=lambda: store.dispatch(ZigbeeRefreshDevicesEvent()),
-        )
+            action=lambda: store.dispatch(ZigbeeRefreshDevicesAction()),
+        ),
     )
 
     placeholder = 'No backups found' if backups is not None else 'Loading...'

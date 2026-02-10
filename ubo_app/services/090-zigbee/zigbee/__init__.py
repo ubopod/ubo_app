@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D104
 """Zigbee coordination and device management modules.
 
 This package contains modules ported from zha-cli for Zigbee network management.

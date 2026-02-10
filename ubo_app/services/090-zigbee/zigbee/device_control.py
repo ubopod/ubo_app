@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Device control for the Zigbee service."""
 
 from __future__ import annotations
@@ -7,11 +6,11 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 from zha.application import Platform
-from zha.application.platforms import PlatformEntity
 
 from ubo_app.logger import logger
 
 if TYPE_CHECKING:
+    from zha.application.platforms import PlatformEntity
     from zha.zigbee.device import Device
 
 # Unit display mapping for common sensor units
@@ -144,7 +143,7 @@ class DeviceController:
         return entities
 
     @staticmethod
-    def format_entity_state(entity: PlatformEntity) -> str:
+    def format_entity_state(entity: PlatformEntity) -> str:  # noqa: C901
         """Format entity state for display.
 
         Args:
@@ -206,7 +205,7 @@ class DeviceController:
         return str(state)
 
     @staticmethod
-    async def refresh_entity(entity: PlatformEntity, timeout: float = 5.0) -> bool:
+    async def refresh_entity(entity: PlatformEntity, timeout: float = 5.0) -> bool:  # noqa: ASYNC109
         """Refresh entity state from device via ZCL Read Attributes.
 
         Args:
@@ -230,15 +229,14 @@ class DeviceController:
                     ),
                     timeout=timeout,
                 )
-                return True
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.debug(
                     'Timeout reading %s from %s (battery device?)',
                     attribute_name,
                     entity.unique_id,
                 )
                 return False
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 logger.debug(
                     'Failed to read %s from %s: %s',
                     attribute_name,
@@ -246,12 +244,14 @@ class DeviceController:
                     ex,
                 )
                 return False
+            else:
+                return True
 
         # Fallback for entities without _attribute_name
         if hasattr(entity, 'async_update'):
             try:
                 await asyncio.wait_for(entity.async_update(), timeout=timeout)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
         return True
 
@@ -303,7 +303,7 @@ class DeviceController:
             raise ValueError(msg)
 
         logger.info('Turning on entity: %s', entity.unique_id)
-        await entity.async_turn_on()
+        await entity.async_turn_on()  # type: ignore[attr-defined]
         logger.info('Entity turned on: %s', entity.unique_id)
 
     @staticmethod
@@ -319,7 +319,7 @@ class DeviceController:
             raise ValueError(msg)
 
         logger.info('Turning off entity: %s', entity.unique_id)
-        await entity.async_turn_off()
+        await entity.async_turn_off()  # type: ignore[attr-defined]
         logger.info('Entity turned off: %s', entity.unique_id)
 
     @staticmethod

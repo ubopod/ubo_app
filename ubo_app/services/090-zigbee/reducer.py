@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D103
+# ruff: noqa: D103
 """Reducer for the Zigbee service."""
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from ubo_app.store.services.zigbee import (
     ZigbeeAction,
     ZigbeeConnectAction,
     ZigbeeConnectEvent,
+    ZigbeeConnectionState,
     ZigbeeCreateBackupAction,
     ZigbeeCreateBackupEvent,
     ZigbeeDeleteBackupAction,
@@ -27,19 +28,19 @@ from ubo_app.store.services.zigbee import (
     ZigbeeDisconnectAction,
     ZigbeeDisconnectEvent,
     ZigbeeEvent,
+    ZigbeePairingStartedEvent,
+    ZigbeePairingStoppedEvent,
+    ZigbeeRefreshDevicesAction,
     ZigbeeRefreshDevicesEvent,
     ZigbeeRemoveDeviceAction,
     ZigbeeResetNetworkAction,
     ZigbeeResetNetworkEvent,
     ZigbeeRestoreBackupAction,
     ZigbeeRestoreBackupEvent,
-    ZigbeeConnectionState,
     ZigbeeSetConnectionStateAction,
     ZigbeeSetDetectingAction,
     ZigbeeSetPairingStateAction,
     ZigbeeStartPairingAction,
-    ZigbeePairingStartedEvent,
-    ZigbeePairingStoppedEvent,
     ZigbeeState,
     ZigbeeStopPairingAction,
     ZigbeeToggleEntityAction,
@@ -47,11 +48,12 @@ from ubo_app.store.services.zigbee import (
     ZigbeeUpdateBackupsAction,
     ZigbeeUpdateCoordinatorsAction,
     ZigbeeUpdateDevicesAction,
+    ZigbeeUpdateEntityStateAction,
 )
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 
 
-def _get_status_icon(state: ZigbeeConnectionState, is_pairing: bool) -> str:
+def _get_status_icon(state: ZigbeeConnectionState, *, is_pairing: bool) -> str:
     """Get the appropriate status icon based on connection state."""
     if is_pairing:
         return '󰐕'  # Pairing mode
@@ -134,10 +136,12 @@ def reducer(
             if action.state == ZigbeeConnectionState.CONNECTED:
                 actions.append(
                     StatusIconsRegisterAction(
-                        icon=_get_status_icon(action.state, state.is_pairing),
+                        icon=_get_status_icon(
+                            action.state, is_pairing=state.is_pairing,
+                        ),
                         priority=ZIGBEE_STATE_ICON_PRIORITY,
                         id=ZIGBEE_STATE_ICON_ID,
-                    )
+                    ),
                 )
                 # Request device refresh on connection
                 events.append(ZigbeeRefreshDevicesEvent())
@@ -149,8 +153,34 @@ def reducer(
             )
 
         # Device management
+        case ZigbeeRefreshDevicesAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[ZigbeeRefreshDevicesEvent()],
+            )
+
         case ZigbeeUpdateDevicesAction():
             return replace(state, devices=action.devices)
+
+        case ZigbeeUpdateEntityStateAction():
+            if not state.devices:
+                return state
+            new_devices = list(state.devices)
+            for i, device in enumerate(new_devices):
+                if device.ieee != action.device_ieee:
+                    continue
+                new_entities = list(device.entities)
+                for j, entity in enumerate(new_entities):
+                    if entity.unique_id == action.entity_unique_id:
+                        new_entities[j] = replace(
+                            entity,
+                            state_display=action.state_display,
+                            is_on=action.is_on,
+                        )
+                        break
+                new_devices[i] = replace(device, entities=tuple(new_entities))
+                break
+            return replace(state, devices=tuple(new_devices))
 
         # Pairing
         case ZigbeeStartPairingAction():
@@ -166,7 +196,7 @@ def reducer(
                         icon=_get_status_icon(state.connection_state, is_pairing=True),
                         priority=ZIGBEE_STATE_ICON_PRIORITY,
                         id=ZIGBEE_STATE_ICON_ID,
-                    )
+                    ),
                 ],
             )
 
@@ -183,7 +213,7 @@ def reducer(
                         icon=_get_status_icon(state.connection_state, is_pairing=False),
                         priority=ZIGBEE_STATE_ICON_PRIORITY,
                         id=ZIGBEE_STATE_ICON_ID,
-                    )
+                    ),
                 ],
             )
 
@@ -196,13 +226,34 @@ def reducer(
 
         # Entity control
         case ZigbeeToggleEntityAction():
+            new_state = state
+            if state.devices:
+                new_devices = list(state.devices)
+                for i, device in enumerate(new_devices):
+                    if device.ieee != action.device_ieee:
+                        continue
+                    new_entities = list(device.entities)
+                    for j, entity in enumerate(new_entities):
+                        if (
+                            entity.unique_id == action.entity_unique_id
+                            and entity.is_on is not None
+                        ):
+                            new_entities[j] = replace(
+                                entity, is_on=not entity.is_on,
+                            )
+                            break
+                    new_devices[i] = replace(
+                        device, entities=tuple(new_entities),
+                    )
+                    break
+                new_state = replace(state, devices=tuple(new_devices))
             return CompleteReducerResult(
-                state=state,
+                state=new_state,
                 events=[
                     ZigbeeToggleEntityEvent(
                         device_ieee=action.device_ieee,
                         entity_unique_id=action.entity_unique_id,
-                    )
+                    ),
                 ],
             )
 

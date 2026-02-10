@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D103
+# ruff: noqa: PLW0602, PLW0603
 """Setup and initialization for the Zigbee service."""
 
 from __future__ import annotations
@@ -10,7 +10,6 @@ from constants import ZIGBEE_MENU_PRIORITY
 from pages import main as main_page
 from zha.application.const import RadioType
 from zigbee import (
-    DEFAULT_PAIRING_DURATION,
     DeviceController,
     DevicePairingManager,
     NetworkManager,
@@ -22,7 +21,6 @@ from ubo_app.logger import logger
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
-    # Chime,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
@@ -36,9 +34,9 @@ from ubo_app.store.services.zigbee import (
     ZigbeeDeleteBackupEvent,
     ZigbeeDetectCoordinatorsEvent,
     ZigbeeDevice,
-    ZigbeeDeviceInitializedEvent,
-    ZigbeeDeviceJoinedEvent,
     ZigbeeDisconnectEvent,
+    ZigbeeEntity,
+    ZigbeeEntityPlatform,
     ZigbeePairingStartedEvent,
     ZigbeePairingStoppedEvent,
     ZigbeeRefreshDevicesEvent,
@@ -51,17 +49,102 @@ from ubo_app.store.services.zigbee import (
     ZigbeeUpdateBackupsAction,
     ZigbeeUpdateCoordinatorsAction,
     ZigbeeUpdateDevicesAction,
+    ZigbeeUpdateEntityStateAction,
 )
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from zha.application import Platform
+    from zha.application.platforms import PlatformEntity
+
     from ubo_app.utils.types import Subscriptions
 
 # Global network manager instance
 _network_manager: NetworkManager | None = None
 _pairing_manager: DevicePairingManager | None = None
-_pairing_task: asyncio.Task | None = None
-_unsubscribe_pairing: callable | None = None
+_pairing_task: asyncio.Handle | None = None
+_unsubscribe_pairing: Callable[[], None] | None = None
+_entity_unsubs: dict[str, Callable[[], None]] = {}
+
+# Platform mapping from ZHA Platform enum to store ZigbeeEntityPlatform
+_PLATFORM_MAP: dict[str, ZigbeeEntityPlatform] = {
+    'switch': ZigbeeEntityPlatform.SWITCH,
+    'light': ZigbeeEntityPlatform.LIGHT,
+    'binary_sensor': ZigbeeEntityPlatform.BINARY_SENSOR,
+    'sensor': ZigbeeEntityPlatform.SENSOR,
+    'device_tracker': ZigbeeEntityPlatform.DEVICE_TRACKER,
+    'event': ZigbeeEntityPlatform.EVENT,
+}
+
+
+def _map_platform(platform: Platform) -> ZigbeeEntityPlatform:
+    """Map a ZHA Platform enum value to ZigbeeEntityPlatform."""
+    return _PLATFORM_MAP.get(platform.value, ZigbeeEntityPlatform.OTHER)
+
+
+def _unsubscribe_all_entities() -> None:
+    """Unsubscribe from all entity STATE_CHANGED events."""
+    global _entity_unsubs
+    for unsub in _entity_unsubs.values():
+        unsub()
+    _entity_unsubs.clear()
+
+
+def _subscribe_entity_events() -> None:
+    """Subscribe to STATE_CHANGED events for all entities on all devices."""
+    from zha.const import STATE_CHANGED
+    from zigbee.device_control import CONTROLLABLE_PLATFORMS
+
+    _unsubscribe_all_entities()
+
+    manager = get_network_manager()
+    if not manager.is_running or manager.gateway is None:
+        return
+
+    for device in manager.gateway.devices.values():
+        if device.is_coordinator:
+            continue
+        device_ieee = str(device.ieee)
+        for (_platform, _uid), entity in device.platform_entities.items():
+
+            def _make_callback(
+                ent: PlatformEntity,
+                ieee: str,
+                plat: Platform,
+            ) -> Callable[[object], None]:
+                def _on_state_changed(_event: object) -> None:
+                    state_display = DeviceController.format_entity_state(ent)
+                    is_on = None
+                    if plat in CONTROLLABLE_PLATFORMS:
+                        state = ent.state
+                        is_on = (
+                            state.get('state')
+                            if 'state' in state
+                            else state.get('on', False)
+                        )
+                    logger.debug(
+                        'Entity state changed: ieee=%s uid=%s is_on=%s display=%s',
+                        ieee,
+                        ent.unique_id,
+                        is_on,
+                        state_display,
+                    )
+                    store.dispatch(
+                        ZigbeeUpdateEntityStateAction(
+                            device_ieee=ieee,
+                            entity_unique_id=ent.unique_id,
+                            state_display=state_display,
+                            is_on=is_on,
+                        ),
+                    )
+
+                return _on_state_changed
+
+            callback = _make_callback(entity, device_ieee, _platform)
+            unsub = entity.on_event(STATE_CHANGED, callback)
+            _entity_unsubs[entity.unique_id] = unsub
 
 
 def get_network_manager() -> NetworkManager:
@@ -97,7 +180,11 @@ async def _detect_coordinators(_: ZigbeeDetectCoordinatorsEvent) -> None:
             extra={
                 'coordinator_ports': [c.port for c in coordinators],
                 'coordinator_details': [
-                    {'port': c.port, 'description': c.description, 'radio_type': c.radio_type}
+                    {
+                        'port': c.port,
+                        'description': c.description,
+                        'radio_type': c.radio_type,
+                    }
                     for c in coordinators
                 ],
             },
@@ -114,7 +201,7 @@ async def _detect_coordinators(_: ZigbeeDetectCoordinatorsEvent) -> None:
                     display_type=NotificationDisplayType.FLASH,
                     color=DANGER_COLOR,
                     icon='󰈅',
-                )
+                ),
             ),
         )
 
@@ -154,7 +241,7 @@ async def _connect_coordinator(event: ZigbeeConnectEvent) -> None:
                     display_type=NotificationDisplayType.FLASH,
                     color=DANGER_COLOR,
                     icon='󰈅',
-                )
+                ),
             ),
         )
 
@@ -164,6 +251,9 @@ async def _disconnect_coordinator(_: ZigbeeDisconnectEvent) -> None:
     logger.info('Disconnecting from coordinator')
     manager = get_network_manager()
     global _pairing_manager, _unsubscribe_pairing
+
+    # Clean up entity subscriptions
+    _unsubscribe_all_entities()
 
     # Clean up pairing
     if _unsubscribe_pairing:
@@ -180,25 +270,58 @@ async def _disconnect_coordinator(_: ZigbeeDisconnectEvent) -> None:
 
 async def _refresh_devices(_: ZigbeeRefreshDevicesEvent) -> None:
     """Refresh the device list from the gateway."""
+    from zigbee.device_control import CONTROLLABLE_PLATFORMS
+
     manager = get_network_manager()
     if not manager.is_running:
         return
 
     try:
         raw_devices = manager.get_devices()
-        devices = [
-            ZigbeeDevice(
-                ieee=str(dev['ieee']),
-                nwk=dev['nwk'],
-                manufacturer=dev['manufacturer'],
-                model=dev['model'],
-                name=dev['name'],
-                custom_name=dev['custom_name'],
-                available=dev['available'],
+        devices = []
+        for dev in raw_devices:
+            # Build entities from platform_entities
+            entities: list[ZigbeeEntity] = []
+            zha_device = dev.get('device')
+            if zha_device and hasattr(zha_device, 'platform_entities'):
+                for (platform, _uid), entity in zha_device.platform_entities.items():
+                    is_controllable = platform in CONTROLLABLE_PLATFORMS
+                    is_on = None
+                    if is_controllable:
+                        state = entity.state
+                        is_on = (
+                            state.get('state')
+                            if 'state' in state
+                            else state.get('on', False)
+                        )
+                    entities.append(
+                        ZigbeeEntity(
+                            unique_id=entity.unique_id,
+                            platform=_map_platform(platform),
+                            display_name=DeviceController.get_display_name(entity),
+                            device_ieee=str(dev['ieee']),
+                            state_display=DeviceController.format_entity_state(entity),
+                            is_on=is_on,
+                            is_controllable=is_controllable,
+                        ),
+                    )
+
+            devices.append(
+                ZigbeeDevice(
+                    ieee=str(dev['ieee']),
+                    nwk=dev['nwk'],
+                    manufacturer=dev['manufacturer'],
+                    model=dev['model'],
+                    name=dev['name'],
+                    custom_name=dev['custom_name'],
+                    available=dev['available'],
+                    entities=tuple(entities),
+                ),
             )
-            for dev in raw_devices
-        ]
         store.dispatch(ZigbeeUpdateDevicesAction(devices=devices))
+
+        # Subscribe to entity state changes
+        _subscribe_entity_events()
 
         # Also refresh backups
         raw_backups = manager.get_backups()
@@ -239,18 +362,17 @@ async def _start_pairing(event: ZigbeePairingStartedEvent) -> None:
                         display_type=NotificationDisplayType.FLASH,
                         color=WARNING_COLOR,
                         icon='󰐕',
-                    )
-                )
+                    ),
+                ),
             )
-            # Emit event for UI updates - event is DeviceJoinedEvent with ieee/nwk attrs
+            # Log the device join event details
             ieee = getattr(event, 'ieee', None)
             nwk = getattr(event, 'nwk', None)
             if ieee is not None and nwk is not None:
-                store.dispatch(
-                    ZigbeeDeviceJoinedEvent(
-                        ieee=str(ieee),
-                        nwk=nwk,
-                    )
+                logger.info(
+                    'Device joined: ieee=%s nwk=%s',
+                    ieee,
+                    nwk,
                 )
 
         def on_device_initialized(event: object) -> None:
@@ -258,22 +380,19 @@ async def _start_pairing(event: ZigbeePairingStartedEvent) -> None:
             # Event is a DeviceFullInitEvent object with device_info attribute
             device_info = getattr(event, 'device_info', None)
             if device_info:
+                device_name = (
+                    getattr(device_info, 'name', None)
+                    or device_info.model
+                )
                 store.dispatch(
-                    ZigbeeDeviceInitializedEvent(
-                        ieee=str(device_info.ieee),
-                        manufacturer=device_info.manufacturer,
-                        model=device_info.model,
-                        name=getattr(device_info, 'name', None) or device_info.model,
-                    ),
                     NotificationsAddAction(
                         notification=Notification(
                             title='Device Added',
-                            content=f'{getattr(device_info, "name", None) or device_info.model} is ready',
+                            content=f'{device_name} is ready',
                             display_type=NotificationDisplayType.FLASH,
                             color=SUCCESS_COLOR,
                             icon='󰔡',
-                            # chime=Chime.ADD,
-                        )
+                        ),
                     ),
                 )
             # Refresh device list
@@ -294,7 +413,7 @@ async def _start_pairing(event: ZigbeePairingStartedEvent) -> None:
                     ZigbeeSetPairingStateAction(
                         is_pairing=True,
                         remaining_seconds=remaining,
-                    )
+                    ),
                 )
                 await asyncio.sleep(1)
                 remaining -= 1
@@ -346,8 +465,6 @@ async def _toggle_entity(event: ZigbeeToggleEntityEvent) -> None:
             try:
                 await DeviceController.toggle(entity)
                 logger.info('Toggled entity: %s', event.entity_unique_id)
-                # Refresh device list so UI reflects new state
-                await _refresh_devices(ZigbeeRefreshDevicesEvent())
             except Exception:
                 logger.exception('Failed to toggle entity')
             break
@@ -368,7 +485,7 @@ async def _reset_network(_: ZigbeeResetNetworkEvent) -> None:
                     display_type=NotificationDisplayType.FLASH,
                     color=WARNING_COLOR,
                     icon='󰜺',
-                )
+                ),
             ),
         )
     except Exception:
@@ -381,8 +498,8 @@ async def _reset_network(_: ZigbeeResetNetworkEvent) -> None:
                     display_type=NotificationDisplayType.FLASH,
                     color=DANGER_COLOR,
                     icon='󰈅',
-                )
-            )
+                ),
+            ),
         )
 
 
@@ -403,9 +520,8 @@ async def _create_backup(_: ZigbeeCreateBackupEvent) -> None:
                         display_type=NotificationDisplayType.FLASH,
                         color=SUCCESS_COLOR,
                         icon='󰁯',
-                        # chime=Chime.DONE,
-                    )
-                )
+                    ),
+                ),
             )
             # Refresh backups list
             create_task(_refresh_devices(ZigbeeRefreshDevicesEvent()))
@@ -429,9 +545,8 @@ async def _restore_backup(event: ZigbeeRestoreBackupEvent) -> None:
                     display_type=NotificationDisplayType.FLASH,
                     color=SUCCESS_COLOR,
                     icon='󰁯',
-                    # chime=Chime.DONE,
-                )
-            )
+                ),
+            ),
         )
         # Refresh devices after restore
         create_task(_refresh_devices(ZigbeeRefreshDevicesEvent()))
@@ -445,8 +560,8 @@ async def _restore_backup(event: ZigbeeRestoreBackupEvent) -> None:
                     display_type=NotificationDisplayType.FLASH,
                     color=DANGER_COLOR,
                     icon='󰈅',
-                )
-            )
+                ),
+            ),
         )
 
 
@@ -466,8 +581,8 @@ async def _delete_backup(event: ZigbeeDeleteBackupEvent) -> None:
                     display_type=NotificationDisplayType.FLASH,
                     color=WARNING_COLOR,
                     icon='󰆴',
-                )
-            )
+                ),
+            ),
         )
         # Refresh backups list
         create_task(_refresh_devices(ZigbeeRefreshDevicesEvent()))
@@ -483,7 +598,7 @@ def init_service() -> Subscriptions:
             priority=ZIGBEE_MENU_PRIORITY,
             category=SettingsCategory.NETWORK,
             menu_item=main_page.ZigbeeMainMenu,
-        )
+        ),
     )
 
     # Subscribe to events

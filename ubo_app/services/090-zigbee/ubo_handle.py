@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D103
+# ruff: noqa: D103
 """Service registration for the Zigbee service."""
 
 from __future__ import annotations

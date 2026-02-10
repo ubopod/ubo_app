@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 """Coordinator detection and probing."""
 
 from __future__ import annotations
@@ -20,6 +19,10 @@ PROBE_BAUDRATES = [115200, 57600, 38400]
 
 # Probe timeout in seconds (reduced for faster detection)
 PROBE_TIMEOUT = 2.0
+
+# Maximum number of detection attempts before giving up
+MAX_DETECTION_ATTEMPTS = 3
+LAST_ATTEMPT_INDEX = MAX_DETECTION_ATTEMPTS - 1
 
 
 @dataclass
@@ -51,7 +54,9 @@ def _is_likely_zigbee_port(port_info: ListPortInfo) -> bool:
         return True
 
     # Check for known Zigbee coordinator descriptions
-    zigbee_patterns = ['skyconnect', 'conbee', 'zigbee', 'coordinator', 'sonoff', 'cc2531']
+    zigbee_patterns = [
+        'skyconnect', 'conbee', 'zigbee', 'coordinator', 'sonoff', 'cc2531',
+    ]
     if any(pattern in description for pattern in zigbee_patterns):
         return True
 
@@ -102,7 +107,7 @@ async def _probe_port_with_radio(
             baudrate,
         )
         return False
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.debug(
             'Error probing %s with %s at %d: %s',
             port,
@@ -158,17 +163,26 @@ async def discover_coordinators() -> list[DetectedCoordinator]:
     # Brief delay to ensure serial ports are ready after system boot
     await asyncio.sleep(0.5)
 
-    for attempt in range(3):  # Up to 3 attempts
+    for attempt in range(MAX_DETECTION_ATTEMPTS):
         ports = _get_serial_ports()
 
         if not ports:
-            logger.info('No serial ports found (attempt %d/3)', attempt + 1)
-            if attempt < 2:
+            logger.info(
+                'No serial ports found (attempt %d/%d)',
+                attempt + 1,
+                MAX_DETECTION_ATTEMPTS,
+            )
+            if attempt < LAST_ATTEMPT_INDEX:
                 await asyncio.sleep(1.0)
                 continue
             return []
 
-        logger.info('Found %d serial port(s) to probe (attempt %d/3)', len(ports), attempt + 1)
+        logger.info(
+            'Found %d serial port(s) to probe (attempt %d/%d)',
+            len(ports),
+            attempt + 1,
+            MAX_DETECTION_ATTEMPTS,
+        )
 
         coordinators: list[DetectedCoordinator] = []
 
@@ -181,7 +195,7 @@ async def discover_coordinators() -> list[DetectedCoordinator]:
         if coordinators:
             return coordinators
 
-        if attempt < 2:
+        if attempt < LAST_ATTEMPT_INDEX:
             logger.info('No coordinators found, retrying in 1s...')
             await asyncio.sleep(1.0)
 
