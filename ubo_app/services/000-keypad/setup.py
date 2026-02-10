@@ -314,7 +314,7 @@ def init_service() -> None:
         logger.debug('Not a Raspberry Pi.')
         return
     eeprom_data = get_eeprom_data()
-    if eeprom_data['keypad'] and eeprom_data['keypad']['model'] == 'aw9523':
+    if (keypad := eeprom_data.get('keypad')) and keypad.get('model') == 'aw9523':
         logger.debug('Physical keypad found.')
         Keypad()
     else:

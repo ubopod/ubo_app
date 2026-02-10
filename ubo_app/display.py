@@ -41,8 +41,8 @@ class Display:
             eeprom_data = get_eeprom_data()
 
             if (
-                eeprom_data['lcd'] is not None
-                and eeprom_data['lcd']['model'] == 'st7789'
+                (lcd := eeprom_data.get('lcd')) is not None
+                and lcd.get('model') == 'st7789'
             ):
                 logger.debug('LCD display found.')
                 import board
