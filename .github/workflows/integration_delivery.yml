@@ -8,6 +8,7 @@ on:
     tags:
       - "v*"
   pull_request:
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: "3.11.9"
@@ -43,6 +44,7 @@ jobs:
 
   type-check:
     name: Type Check
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubo-pod-pi5
     steps:
       - name: Checkout
@@ -77,6 +79,7 @@ jobs:
 
   lint:
     name: Lint
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -99,6 +102,7 @@ jobs:
 
   test:
     name: Test
+    if: github.event_name != 'workflow_dispatch'
     strategy:
       matrix:
         runner: ["ubo-pod-pi4", "ubo-pod-pi5", "ubuntu-latest"]
@@ -382,6 +386,16 @@ jobs:
       - build
       - bindings
       - services
+    if: |-
+      !cancelled() &&
+      needs.version.result == 'success' &&
+      needs.build.result == 'success' &&
+      needs.bindings.result == 'success' &&
+      needs.services.result == 'success' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (needs.type-check.result == 'success' && needs.lint.result == 'success' && needs.test.result == 'success')
+      )
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false

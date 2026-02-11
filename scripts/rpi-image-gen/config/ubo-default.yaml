@@ -1,5 +1,5 @@
 device:
-  layer: rpi-generic64
+  layer: ubo-device
   user1: ubo
   hostname: ubo
 

@@ -1,0 +1,22 @@
+# METABEGIN
+# X-Env-Layer-Name: ubo-device
+# X-Env-Layer-Category: device
+# X-Env-Layer-Desc: Universal UBO device layer for all 64-bit Raspberry Pi boards.
+#  Installs both v8 and 2712 kernels so the firmware auto-selects the optimal
+#  kernel at boot (Pi 3/4 use kernel8.img, Pi 5 uses kernel_2712.img).
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: device-base,rpi-boot-firmware,rpi-linux-v8,rpi-linux-2712
+# X-Env-Layer-Provides: device
+#
+# X-Env-VarPrefix: device
+#
+# X-Env-Var-class: pi4
+# X-Env-Var-class-Valid: string
+# X-Env-Var-storage_type: sd
+# X-Env-Var-storage_type-Valid: sd,nvme
+# X-Env-Var-assetdir: ${DIRECTORY}
+# METAEND
+---
+mmdebstrap:
+  packages:
+    - firmware-brcm80211
