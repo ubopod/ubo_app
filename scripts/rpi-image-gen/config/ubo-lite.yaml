@@ -1,0 +1,17 @@
+device:
+  layer: rpi-generic64
+  user1: ubo
+  hostname: ubo
+
+image:
+  layer: image-rpios
+  boot_part_size: 200%
+  root_part_size: 500%
+  name: ubo-app-lite
+  compression: none
+
+layer:
+  base: ubo-base
+
+ubo:
+  staging_dir: ${@SRCROOT}/staging

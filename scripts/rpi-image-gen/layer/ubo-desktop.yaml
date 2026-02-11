@@ -1,0 +1,17 @@
+# METABEGIN
+# X-Env-Layer-Name: ubo-desktop
+# X-Env-Layer-Category: suite
+# X-Env-Layer-Desc: Desktop additions for UBO App images. Adds display manager,
+#  X server, and configures autologin for the ubo user.
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: ubo-base
+# METAEND
+---
+mmdebstrap:
+  packages:
+    - lightdm
+    - xserver-xorg
+
+  customize-hooks:
+    - sed -i '/^#\?autologin-user=/c\autologin-user=ubo' "$1/etc/lightdm/lightdm.conf" || true
+    - rm -f "$1/etc/xdg/autostart/piwiz.desktop"
