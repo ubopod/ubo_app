@@ -39,6 +39,7 @@ from ubo_app.store.services.zigbee import (
     ZigbeeRestoreBackupEvent,
     ZigbeeSetConnectionStateAction,
     ZigbeeSetDetectingAction,
+    ZigbeeSetJoiningDeviceAction,
     ZigbeeSetPairingStateAction,
     ZigbeeStartPairingAction,
     ZigbeeState,
@@ -77,8 +78,19 @@ def reducer(
     match action:
         # Coordinator detection
         case ZigbeeDetectCoordinatorsAction():
+            # When connected, keep the current coordinator list visible
+            # instead of clearing to None (which shows "Scanning..." screen)
             return CompleteReducerResult(
-                state=replace(state, is_detecting=True, coordinators=None),
+                state=replace(
+                    state,
+                    is_detecting=True,
+                    coordinators=(
+                        state.coordinators
+                        if state.connection_state
+                        == ZigbeeConnectionState.CONNECTED
+                        else None
+                    ),
+                ),
                 events=[ZigbeeDetectCoordinatorsEvent()],
             )
 
@@ -86,9 +98,21 @@ def reducer(
             return replace(state, is_detecting=action.is_detecting)
 
         case ZigbeeUpdateCoordinatorsAction():
+            coordinators = list(action.coordinators)
+            # Preserve the connected coordinator in results even if
+            # detection couldn't find it (port is busy with active connection)
+            if (
+                state.connection_state == ZigbeeConnectionState.CONNECTED
+                and state.current_coordinator
+                and not any(
+                    c.port == state.current_coordinator.port
+                    for c in coordinators
+                )
+            ):
+                coordinators.insert(0, state.current_coordinator)
             return replace(
                 state,
-                coordinators=action.coordinators,
+                coordinators=coordinators,
                 is_detecting=False,
             )
 
@@ -146,6 +170,17 @@ def reducer(
                 # Request device refresh on connection
                 events.append(ZigbeeRefreshDevicesEvent())
 
+            # Clear devices/backups on disconnection (e.g. connection loss)
+            if action.state == ZigbeeConnectionState.DISCONNECTED:
+                new_state = replace(
+                    new_state,
+                    current_coordinator=None,
+                    devices=None,
+                    backups=None,
+                    is_pairing=False,
+                    pairing_remaining_seconds=0,
+                )
+
             return CompleteReducerResult(
                 state=new_state,
                 actions=actions,
@@ -189,6 +224,7 @@ def reducer(
                     state,
                     is_pairing=True,
                     pairing_remaining_seconds=action.duration,
+                    joining_device_name=None,
                 ),
                 events=[ZigbeePairingStartedEvent(duration=action.duration)],
                 actions=[
@@ -201,6 +237,9 @@ def reducer(
             )
 
         case ZigbeeStopPairingAction():
+            # Guard: no-op if already stopped (prevents repeated event cycles)
+            if not state.is_pairing:
+                return state
             return CompleteReducerResult(
                 state=replace(
                     state,
@@ -223,6 +262,9 @@ def reducer(
                 is_pairing=action.is_pairing,
                 pairing_remaining_seconds=action.remaining_seconds,
             )
+
+        case ZigbeeSetJoiningDeviceAction():
+            return replace(state, joining_device_name=action.device_name)
 
         # Entity control
         case ZigbeeToggleEntityAction():
@@ -259,7 +301,7 @@ def reducer(
 
         # Device operations
         case ZigbeeRemoveDeviceAction():
-            # Just dispatch event, actual removal handled by event handler
+            # Actual removal handled by event handler; state refreshed after
             return state
 
         # Network reset

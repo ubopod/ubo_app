@@ -145,6 +145,12 @@ class ZigbeeSetPairingStateAction(ZigbeeAction):
     remaining_seconds: int = 0
 
 
+class ZigbeeSetJoiningDeviceAction(ZigbeeAction):
+    """Set the name of a device currently joining/initializing."""
+
+    device_name: str | None = None
+
+
 class ZigbeeUpdateEntityStateAction(ZigbeeAction):
     """Update entity state from ZHA STATE_CHANGED event."""
 
@@ -299,3 +305,4 @@ class ZigbeeState(Immutable):
     is_detecting: bool = False
     is_pairing: bool = False
     pairing_remaining_seconds: int = 0
+    joining_device_name: str | None = None

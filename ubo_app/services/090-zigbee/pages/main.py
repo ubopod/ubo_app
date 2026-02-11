@@ -67,6 +67,7 @@ def _get_coordinator_icon(
         ),
         state.zigbee.is_pairing,
         state.zigbee.pairing_remaining_seconds,
+        state.zigbee.joining_device_name,
     ),
 )
 def connection_menu(
@@ -76,12 +77,18 @@ def connection_menu(
         tuple[tuple[str, str, str | None, bool], ...],
         bool,
         int,
+        str | None,
     ],
 ) -> HeadedMenu | HeadlessMenu:
     """Coordinator setup sub-menu (level 3): connecting/connected state."""
-    connection_state, current_coordinator, device_summaries, is_pairing, pairing_rem = (
-        data
-    )
+    (
+        connection_state,
+        current_coordinator,
+        device_summaries,
+        is_pairing,
+        pairing_rem,
+        joining_device_name,
+    ) = data
 
     if connection_state == ZigbeeConnectionState.CONNECTED and current_coordinator:
         from . import device_list
@@ -91,23 +98,24 @@ def connection_menu(
             device_summaries,
             is_pairing=is_pairing,
             pairing_remaining=pairing_rem,
+            joining_device_name=joining_device_name,
         )
 
-    if connection_state == ZigbeeConnectionState.CONNECTING:
+    if connection_state == ZigbeeConnectionState.ERROR:
         return HeadedMenu(
             title=f'{ICON_ZIGBEE} Zigbee',
-            heading='Connecting...',
-            sub_heading='Setting up Zigbee network',
+            heading='Connection Failed',
+            sub_heading='Could not connect to coordinator',
             items=[],
-            placeholder=ICON_LOADING,
         )
 
-    # Error or disconnected
+    # CONNECTING or DISCONNECTED (transitional state before CONNECTING takes effect)
     return HeadedMenu(
         title=f'{ICON_ZIGBEE} Zigbee',
-        heading='Connection Failed',
-        sub_heading='Could not connect to coordinator',
+        heading='Connecting...',
+        sub_heading='Setting up Zigbee network',
         items=[],
+        placeholder=ICON_LOADING,
     )
 
 

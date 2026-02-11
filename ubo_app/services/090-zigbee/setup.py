@@ -44,7 +44,9 @@ from ubo_app.store.services.zigbee import (
     ZigbeeRestoreBackupEvent,
     ZigbeeSetConnectionStateAction,
     ZigbeeSetDetectingAction,
+    ZigbeeSetJoiningDeviceAction,
     ZigbeeSetPairingStateAction,
+    ZigbeeStopPairingAction,
     ZigbeeToggleEntityEvent,
     ZigbeeUpdateBackupsAction,
     ZigbeeUpdateCoordinatorsAction,
@@ -66,7 +68,9 @@ _network_manager: NetworkManager | None = None
 _pairing_manager: DevicePairingManager | None = None
 _pairing_task: asyncio.Handle | None = None
 _unsubscribe_pairing: Callable[[], None] | None = None
+_pairing_active: bool = False
 _entity_unsubs: dict[str, Callable[[], None]] = {}
+_connection_lost_unsub: Callable[[], None] | None = None
 
 # Platform mapping from ZHA Platform enum to store ZigbeeEntityPlatform
 _PLATFORM_MAP: dict[str, ZigbeeEntityPlatform] = {
@@ -206,9 +210,34 @@ async def _detect_coordinators(_: ZigbeeDetectCoordinatorsEvent) -> None:
         )
 
 
+def _on_connection_lost(_event: object) -> None:
+    """Handle unexpected connection loss from the radio."""
+    global _connection_lost_unsub
+
+    logger.warning('Zigbee radio connection lost')
+
+    _unsubscribe_all_entities()
+    _connection_lost_unsub = None
+
+    store.dispatch(
+        ZigbeeSetConnectionStateAction(state=ZigbeeConnectionState.DISCONNECTED),
+        NotificationsAddAction(
+            notification=Notification(
+                title='Connection Lost',
+                content='Zigbee coordinator disconnected unexpectedly',
+                display_type=NotificationDisplayType.FLASH,
+                color=DANGER_COLOR,
+                icon='󰈅',
+            ),
+        ),
+    )
+
+
 async def _connect_coordinator(event: ZigbeeConnectEvent) -> None:
     """Handle coordinator connection request."""
     from zigbee.coordinator_probe import DetectedCoordinator as DetectedCoord
+
+    global _connection_lost_unsub
 
     logger.info('Connecting to coordinator: %s', event.coordinator.port)
     manager = get_network_manager()
@@ -223,6 +252,12 @@ async def _connect_coordinator(event: ZigbeeConnectEvent) -> None:
         )
 
         await manager.start_network(detected)
+
+        # Subscribe to connection loss events from the gateway
+        if manager.gateway is not None:
+            _connection_lost_unsub = manager.gateway.on_event(
+                'connection_lost', _on_connection_lost,
+            )
 
         store.dispatch(
             ZigbeeSetConnectionStateAction(
@@ -250,10 +285,15 @@ async def _disconnect_coordinator(_: ZigbeeDisconnectEvent) -> None:
     """Handle coordinator disconnection request."""
     logger.info('Disconnecting from coordinator')
     manager = get_network_manager()
-    global _pairing_manager, _unsubscribe_pairing
+    global _pairing_manager, _unsubscribe_pairing, _connection_lost_unsub
 
     # Clean up entity subscriptions
     _unsubscribe_all_entities()
+
+    # Clean up connection loss listener
+    if _connection_lost_unsub:
+        _connection_lost_unsub()
+        _connection_lost_unsub = None
 
     # Clean up pairing
     if _unsubscribe_pairing:
@@ -339,9 +379,76 @@ async def _refresh_devices(_: ZigbeeRefreshDevicesEvent) -> None:
         logger.exception('Failed to refresh devices')
 
 
+def _cleanup_pairing_state() -> None:
+    """Clean up leftover pairing state from a previous session."""
+    global _unsubscribe_pairing, _pairing_task, _pairing_active
+
+    _pairing_active = False
+    if _unsubscribe_pairing:
+        logger.debug('Cleaning up previous pairing event subscriptions')
+        _unsubscribe_pairing()
+        _unsubscribe_pairing = None
+    if _pairing_task:
+        _pairing_task.cancel()
+        _pairing_task = None
+
+
+def _on_device_joined(event: object) -> None:
+    """Handle a device joining during pairing."""
+    logger.info('Device joined: %s', event)
+    store.dispatch(
+        ZigbeeSetJoiningDeviceAction(device_name='New device'),
+        NotificationsAddAction(
+            notification=Notification(
+                title='Device Joining',
+                content='A new device is connecting...',
+                display_type=NotificationDisplayType.FLASH,
+                color=WARNING_COLOR,
+                icon='󰐕',
+            ),
+        ),
+    )
+    ieee = getattr(event, 'ieee', None)
+    nwk = getattr(event, 'nwk', None)
+    if ieee is not None and nwk is not None:
+        logger.info('Device joined: ieee=%s nwk=%s', ieee, nwk)
+
+
+def _on_device_initialized(event: object) -> None:
+    """Handle a device completing initialization during pairing."""
+    logger.info('Device initialized: %s', event)
+    device_info = getattr(event, 'device_info', None)
+    device_name = None
+    if device_info:
+        device_name = getattr(device_info, 'name', None) or device_info.model
+        store.dispatch(
+            ZigbeeSetJoiningDeviceAction(device_name=device_name),
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Device Added',
+                    content=f'{device_name} is ready',
+                    display_type=NotificationDisplayType.FLASH,
+                    color=SUCCESS_COLOR,
+                    icon='󰔡',
+                ),
+            ),
+        )
+
+    async def _finish_pairing() -> None:
+        logger.info('Finishing pairing: refreshing devices then stopping')
+        try:
+            await _refresh_devices(ZigbeeRefreshDevicesEvent())
+        except Exception:
+            logger.exception('Error refreshing devices after pairing')
+        logger.info('Dispatching ZigbeeStopPairingAction')
+        store.dispatch(ZigbeeStopPairingAction())
+
+    create_task(_finish_pairing())
+
+
 async def _start_pairing(event: ZigbeePairingStartedEvent) -> None:
     """Enable pairing mode on the coordinator."""
-    global _pairing_manager, _unsubscribe_pairing, _pairing_task
+    global _pairing_manager, _unsubscribe_pairing, _pairing_task, _pairing_active
 
     manager = get_network_manager()
     if not manager.is_running or manager.gateway is None:
@@ -349,66 +456,25 @@ async def _start_pairing(event: ZigbeePairingStartedEvent) -> None:
         store.dispatch(ZigbeeSetPairingStateAction(is_pairing=False))
         return
 
+    _cleanup_pairing_state()
+
     try:
         _pairing_manager = DevicePairingManager(manager.gateway)
-
-        def on_device_joined(event: object) -> None:
-            logger.info('Device joined: %s', event)
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        title='Device Joining',
-                        content='A new device is connecting...',
-                        display_type=NotificationDisplayType.FLASH,
-                        color=WARNING_COLOR,
-                        icon='󰐕',
-                    ),
-                ),
-            )
-            # Log the device join event details
-            ieee = getattr(event, 'ieee', None)
-            nwk = getattr(event, 'nwk', None)
-            if ieee is not None and nwk is not None:
-                logger.info(
-                    'Device joined: ieee=%s nwk=%s',
-                    ieee,
-                    nwk,
-                )
-
-        def on_device_initialized(event: object) -> None:
-            logger.info('Device initialized: %s', event)
-            # Event is a DeviceFullInitEvent object with device_info attribute
-            device_info = getattr(event, 'device_info', None)
-            if device_info:
-                device_name = (
-                    getattr(device_info, 'name', None)
-                    or device_info.model
-                )
-                store.dispatch(
-                    NotificationsAddAction(
-                        notification=Notification(
-                            title='Device Added',
-                            content=f'{device_name} is ready',
-                            display_type=NotificationDisplayType.FLASH,
-                            color=SUCCESS_COLOR,
-                            icon='󰔡',
-                        ),
-                    ),
-                )
-            # Refresh device list
-            create_task(_refresh_devices(ZigbeeRefreshDevicesEvent()))
-
         _unsubscribe_pairing = _pairing_manager.subscribe_to_events(
-            on_joined=on_device_joined,
-            on_initialized=on_device_initialized,
+            on_joined=_on_device_joined,
+            on_initialized=_on_device_initialized,
         )
 
+        logger.info('Enabling pairing for %d seconds', event.duration)
         await _pairing_manager.enable_pairing(event.duration)
+        _pairing_active = True
 
-        # Start countdown timer
+        # Start countdown timer — checks _pairing_active flag each tick
+        # because create_task returns asyncio.Handle whose cancel() does NOT
+        # stop the running coroutine.
         async def countdown() -> None:
             remaining = event.duration
-            while remaining > 0:
+            while remaining > 0 and _pairing_active:
                 store.dispatch(
                     ZigbeeSetPairingStateAction(
                         is_pairing=True,
@@ -417,21 +483,32 @@ async def _start_pairing(event: ZigbeePairingStartedEvent) -> None:
                 )
                 await asyncio.sleep(1)
                 remaining -= 1
-            # Pairing ended
-            store.dispatch(ZigbeeSetPairingStateAction(is_pairing=False))
+            if _pairing_active:
+                logger.info('Pairing countdown expired, stopping pairing')
+                store.dispatch(
+                    ZigbeeStopPairingAction(),
+                    ZigbeeSetJoiningDeviceAction(device_name=None),
+                )
 
         _pairing_task = create_task(countdown())
 
     except Exception:
         logger.exception('Failed to start pairing')
+        _pairing_active = False
         store.dispatch(ZigbeeSetPairingStateAction(is_pairing=False))
 
 
 async def _stop_pairing(_: ZigbeePairingStoppedEvent) -> None:
     """Disable pairing mode."""
-    global _pairing_manager, _unsubscribe_pairing, _pairing_task
+    global _pairing_manager, _unsubscribe_pairing, _pairing_task, _pairing_active
+
+    logger.info('Stopping pairing: cleaning up resources')
+
+    # Signal countdown coroutine to exit (Handle.cancel doesn't stop coroutines)
+    _pairing_active = False
 
     if _pairing_task:
+        logger.debug('Cancelling pairing countdown task')
         _pairing_task.cancel()
         _pairing_task = None
 
@@ -440,10 +517,14 @@ async def _stop_pairing(_: ZigbeePairingStoppedEvent) -> None:
             await _pairing_manager.disable_pairing()
         except Exception:
             logger.exception('Error disabling pairing')
+        _pairing_manager = None
 
     if _unsubscribe_pairing:
+        logger.debug('Unsubscribing from pairing events')
         _unsubscribe_pairing()
         _unsubscribe_pairing = None
+
+    logger.info('Pairing stopped and cleaned up')
 
 
 async def _toggle_entity(event: ZigbeeToggleEntityEvent) -> None:

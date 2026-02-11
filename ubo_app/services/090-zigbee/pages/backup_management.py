@@ -40,26 +40,27 @@ class _RestoreBackupConfirmPage(UboPromptWidget):
         super().__init__(**kwargs)
         self.backup_index = backup_index
         self.title = 'Restore Backup?'
-        self.prompt = f'Restore backup from {backup_time}?\n({device_count} devices)'
+        self.prompt = (
+            f'Restore backup from {backup_time}?\n'
+            f'({device_count} devices)\n'
+            'Press back to cancel'
+        )
         self.icon = ICON_BACKUP
-        self.first_option_label = 'Restore'
-        self.first_option_icon = ICON_BACKUP
-        self.first_option_is_short = False
-        self.first_option_background_color = WARNING_COLOR
-        self.second_option_label = 'Cancel'
-        self.second_option_icon = '󰜺'
+        self.first_option_label = ''
+        self.second_option_label = 'Restore'
+        self.second_option_icon = ICON_BACKUP
         self.second_option_is_short = False
+        self.second_option_background_color = WARNING_COLOR
 
     def first_option_callback(self) -> None:
+        """Not used — first option is hidden."""
+
+    def second_option_callback(self) -> None:
         """Confirm restore."""
         store.dispatch(
             ZigbeeRestoreBackupAction(backup_index=self.backup_index),
             CloseApplicationAction(application_instance_id=self.id),
         )
-
-    def second_option_callback(self) -> None:
-        """Cancel restore."""
-        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
 
 
 register_application(
@@ -80,26 +81,26 @@ class _DeleteBackupConfirmPage(UboPromptWidget):
         super().__init__(**kwargs)
         self.backup_index = backup_index
         self.title = 'Delete Backup?'
-        self.prompt = f'Permanently delete backup from {backup_time}?'
+        self.prompt = (
+            f'Permanently delete backup from {backup_time}?\n'
+            'Press back to cancel'
+        )
         self.icon = ICON_DELETE
-        self.first_option_label = 'Delete'
-        self.first_option_icon = ICON_DELETE
-        self.first_option_is_short = False
-        self.first_option_background_color = DANGER_COLOR
-        self.second_option_label = 'Cancel'
-        self.second_option_icon = '󰜺'
+        self.first_option_label = ''
+        self.second_option_label = 'Delete'
+        self.second_option_icon = ICON_DELETE
         self.second_option_is_short = False
+        self.second_option_background_color = DANGER_COLOR
 
     def first_option_callback(self) -> None:
+        """Not used — first option is hidden."""
+
+    def second_option_callback(self) -> None:
         """Confirm deletion."""
         store.dispatch(
             ZigbeeDeleteBackupAction(backup_index=self.backup_index),
             CloseApplicationAction(application_instance_id=self.id),
         )
-
-    def second_option_callback(self) -> None:
-        """Cancel deletion."""
-        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
 
 
 register_application(

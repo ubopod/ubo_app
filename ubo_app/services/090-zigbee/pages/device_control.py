@@ -25,7 +25,7 @@ from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR
 from ubo_app.logger import logger
-from ubo_app.store.core.types import CloseApplicationAction
+from ubo_app.store.core.types import CloseApplicationAction, MenuGoBackAction
 from ubo_app.store.main import store
 from ubo_app.store.services.zigbee import (
     ZigbeeEntity,
@@ -53,17 +53,20 @@ class _RemoveDeviceConfirmPage(UboPromptWidget):
         super().__init__(**kwargs)
         self.device_ieee = device_ieee
         self.title = 'Remove Device?'
-        self.prompt = f'Remove "{device_name}" from the network?'
-        self.icon = ICON_DELETE
-        self.first_option_label = 'Remove'
-        self.first_option_icon = ICON_DELETE
-        self.first_option_is_short = False
-        self.first_option_background_color = DANGER_COLOR
-        self.second_option_label = 'Cancel'
-        self.second_option_icon = '󰜺'
+        self.prompt = (
+            f'Remove "{device_name}" from the network?\nPress back to cancel'
+        )
+        self.icon = ''
+        self.first_option_label = ''
+        self.second_option_label = 'Remove'
+        self.second_option_icon = ICON_DELETE
         self.second_option_is_short = False
+        self.second_option_background_color = DANGER_COLOR
 
     def first_option_callback(self) -> None:
+        """Not used — first option is hidden."""
+
+    def second_option_callback(self) -> None:
         """Confirm removal."""
         from setup import get_network_manager
 
@@ -76,11 +79,11 @@ class _RemoveDeviceConfirmPage(UboPromptWidget):
             await _refresh_devices(ZigbeeRefreshDevicesEvent())
 
         create_task(_remove())
-        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
-
-    def second_option_callback(self) -> None:
-        """Cancel removal."""
-        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
+        # Close confirm page and go back past the removed device's control menu
+        store.dispatch(
+            CloseApplicationAction(application_instance_id=self.id),
+            MenuGoBackAction(),
+        )
 
 
 register_application(
@@ -222,6 +225,7 @@ def get_device_control_menu(
                 key='remove',
                 label='Remove device',
                 icon=ICON_DELETE,
+                background_color=DANGER_COLOR,
                 application_id='zigbee:remove-device-confirm',
                 initialization_kwargs={
                     'device_ieee': device_ieee,
