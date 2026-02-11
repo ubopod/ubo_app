@@ -9,12 +9,12 @@ from __future__ import annotations
 import pathlib
 from typing import TYPE_CHECKING
 
-from constants import ICON_REFRESH, ICON_SENSOR
+from constants import ICON_LOADING, ICON_REFRESH, ICON_SENSOR, ICON_ZIGBEE
 from kivy.lang.builder import Builder
 from kivy.properties import ListProperty, StringProperty
 from redux import AutorunOptions
 from ubo_gui.constants import SECONDARY_COLOR_LIGHT
-from ubo_gui.menu.types import ActionItem, HeadlessMenu
+from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu
 
 from ubo_app.store.main import store
 from ubo_app.store.ubo_actions import register_application
@@ -105,14 +105,23 @@ def _get_sensor_entities(
     return None
 
 
-def get_sensor_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
+def get_sensor_menu(device_ieee: str) -> Callable[[], HeadedMenu | HeadlessMenu]:
     """Get a menu-based sensor view for a device."""
 
     @store.autorun(
         lambda state: _get_sensor_entities(state, device_ieee),
         options=AutorunOptions(default_value=None),
     )
-    def _menu(entities: Sequence[ZigbeeEntity] | None) -> HeadlessMenu:
+    def _menu(entities: Sequence[ZigbeeEntity] | None) -> HeadedMenu | HeadlessMenu:
+        if entities is None:
+            return HeadedMenu(
+                title=f'{ICON_ZIGBEE} Sensors',
+                heading='Loading...',
+                sub_heading='Fetching sensor data',
+                items=[],
+                placeholder=ICON_LOADING,
+            )
+
         items: list[ActionItem] = []
 
         if entities:
@@ -140,7 +149,7 @@ def get_sensor_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
         return HeadlessMenu(
             title='Sensors',
             items=items,
-            placeholder='No sensors' if entities is not None else 'Loading...',
+            placeholder='No sensors',
         )
 
     return _menu

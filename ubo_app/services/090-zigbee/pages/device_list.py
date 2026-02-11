@@ -11,6 +11,7 @@ from constants import (
     ICON_BACKUP,
     ICON_DEVICE_AVAILABLE,
     ICON_DEVICE_UNAVAILABLE,
+    ICON_LOADING,
     ICON_PAIRING,
     ICON_RENAME,
     ICON_RESET,
@@ -123,7 +124,7 @@ def build_connected_menu(
                     action=lambda: store.dispatch(ZigbeeStopPairingAction()),
                 ),
             ],
-            placeholder='',
+            placeholder=ICON_LOADING,
         )
 
     items: list[ActionItem | UboApplicationItem] = []

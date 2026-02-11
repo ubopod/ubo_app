@@ -2,6 +2,7 @@
 
 ## Upcoming
 
+- feat(zigbee): add spinning loading indicators to all zigbee loading screens (coordinator detection, network connection, pairing, device loading, sensor loading, backup loading) using `SpinnerWidget` with `placeholder='\uf110'`. **Note:** The `SpinnerWidget` uses `U+F110` (NerdFont spinner glyph) as its magic trigger character — setting `placeholder='\uf110'` in a `HeadedMenu` renders a visible, greyed-out, centered, spinning loading icon below the heading text. This character renders invisibly in most editors/terminals, so always use the `'\uf110'` escape sequence rather than copying the literal character.
 - feat(audio): add audio sample recorder and player, it can be used to quickly test audio input/output devices
 - fix(system): make sure dnsmasq is stopped and disabled when not needed
 - refactor(web-ui): request a redraw when connected (previously we were rendering a notification to force a redraw)

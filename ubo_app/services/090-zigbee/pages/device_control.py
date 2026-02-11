@@ -12,14 +12,16 @@ from typing import TYPE_CHECKING
 from constants import (
     ICON_DELETE,
     ICON_LIGHT,
+    ICON_LOADING,
     ICON_RENAME,
     ICON_SENSOR,
     ICON_SWITCH,
+    ICON_ZIGBEE,
 )
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty, StringProperty
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadlessMenu
+from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR
 from ubo_app.logger import logger
@@ -147,7 +149,9 @@ def _get_device_data(
     return None
 
 
-def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
+def get_device_control_menu(
+    device_ieee: str,
+) -> Callable[[], HeadedMenu | HeadlessMenu]:
     """Get the device control menu for a specific device."""
 
     @store.autorun(
@@ -156,12 +160,14 @@ def get_device_control_menu(device_ieee: str) -> Callable[[], HeadlessMenu]:
     )
     def _menu(
         data: tuple[str, Sequence[ZigbeeEntity], Sequence[ZigbeeEntity]] | None,
-    ) -> HeadlessMenu:
+    ) -> HeadedMenu | HeadlessMenu:
         if data is None:
-            return HeadlessMenu(
-                title='Device Not Found',
+            return HeadedMenu(
+                title=f'{ICON_ZIGBEE} Device',
+                heading='Loading...',
+                sub_heading='Fetching device data',
                 items=[],
-                placeholder='Device not available',
+                placeholder=ICON_LOADING,
             )
 
         device_name, controllable, monitorable = data

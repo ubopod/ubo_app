@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from constants import ICON_BACKUP, ICON_DELETE, ICON_REFRESH
-from ubo_gui.menu.types import ActionItem, HeadlessMenu
+from constants import ICON_BACKUP, ICON_DELETE, ICON_LOADING, ICON_REFRESH, ICON_ZIGBEE
+from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu
 
 from ubo_app.colors import DANGER_COLOR, WARNING_COLOR
 from ubo_app.store.core.types import CloseApplicationAction
@@ -177,8 +177,17 @@ register_application(
 
 
 @store.autorun(lambda state: state.zigbee.backups)
-def backup_menu(backups: Sequence[ZigbeeBackup] | None) -> HeadlessMenu:
+def backup_menu(backups: Sequence[ZigbeeBackup] | None) -> HeadedMenu | HeadlessMenu:
     """Generate the backup management menu."""
+    if backups is None:
+        return HeadedMenu(
+            title=f'{ICON_ZIGBEE} Backups',
+            heading='Loading...',
+            sub_heading='Fetching backup list',
+            items=[],
+            placeholder=ICON_LOADING,
+        )
+
     items: list[ActionItem | UboApplicationItem] = []
 
     if backups:
@@ -220,10 +229,8 @@ def backup_menu(backups: Sequence[ZigbeeBackup] | None) -> HeadlessMenu:
         ),
     )
 
-    placeholder = 'No backups found' if backups is not None else 'Loading...'
-
     return HeadlessMenu(
         title='Backups',
         items=items,
-        placeholder=placeholder,
+        placeholder='No backups found',
     )

@@ -26,3 +26,4 @@ ICON_REFRESH = '󰑓'  # Refresh/retry
 ICON_DELETE = '󰆴'  # Delete
 ICON_RENAME = '󰏫'  # Rename
 ICON_RESET = '󰜺'  # Reset network
+ICON_LOADING = '\uf110'  # SpinnerWidget spinner icon

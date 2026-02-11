@@ -13,6 +13,7 @@ from constants import (
     ICON_COORDINATOR_CONNECTED,
     ICON_COORDINATOR_NEW,
     ICON_COORDINATOR_SAVED,
+    ICON_LOADING,
     ICON_REFRESH,
     ICON_ZIGBEE,
 )
@@ -98,7 +99,7 @@ def connection_menu(
             heading='Connecting...',
             sub_heading='Setting up Zigbee network',
             items=[],
-            placeholder='',
+            placeholder=ICON_LOADING,
         )
 
     # Error or disconnected
@@ -144,7 +145,7 @@ def coordinator_menu(
             heading='Scanning...',
             sub_heading='Detecting Zigbee coordinators',
             items=[],
-            placeholder='',
+            placeholder=ICON_LOADING,
         )
 
     items: list[ActionItem] = []
@@ -192,7 +193,7 @@ def coordinator_menu(
     )
 
 
-def _open_backup_menu() -> Callable[[], HeadlessMenu]:
+def _open_backup_menu() -> Callable[[], HeadedMenu | HeadlessMenu]:
     """Open the backup management menu."""
     from . import backup_management
 
