@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import functools
 import grp
 import os
 import pwd
@@ -237,25 +236,9 @@ def configure_device() -> None:  # noqa: C901
         )
 
 
-def _prepare(
-    service_installation_path: Path,
-) -> None:
-    try:
-        os.setgid(USER_GID)
-        os.setuid(USER_UID)
-
-        venv.create(
-            service_installation_path.as_posix(),
-            system_site_packages=True,
-            with_pip=True,
-        )
-
-    except Exception as e:
-        print(f'preexec_fn error: {e}', flush=True)  # noqa: T201
-        import traceback
-
-        print(traceback.format_exc(), flush=True)  # noqa: T201
-        raise
+def _drop_privileges() -> None:
+    os.setgid(USER_GID)
+    os.setuid(USER_UID)
 
 
 def setup_ubo_services() -> None:
@@ -273,13 +256,25 @@ def setup_ubo_services() -> None:
             service_installation_path.mkdir()
             os.chown(service_installation_path, USER_UID, USER_GID)
 
+            # Create the venv in the main process (as root) then fix ownership.
+            # Previously this was done inside preexec_fn which can fail in
+            # chroot environments where the ubo user's environment is incomplete.
+            venv.create(
+                service_installation_path.as_posix(),
+                system_site_packages=True,
+                with_pip=True,
+            )
+            for root, dirs, files in os.walk(service_installation_path):
+                for d in dirs:
+                    os.chown(Path(root) / d, USER_UID, USER_GID)
+                for f in files:
+                    os.chown(Path(root) / f, USER_UID, USER_GID)
+            os.chown(service_installation_path, USER_UID, USER_GID)
+
             subprocess.run(  # noqa: S602
                 f'source {service_installation_path / "bin" / "activate"} && '
                 f'{setup_script_path.absolute()}',
-                preexec_fn=functools.partial(
-                    _prepare,
-                    service_installation_path,
-                ),
+                preexec_fn=_drop_privileges,
                 cwd=service_installation_path,
                 executable='/bin/bash',
                 shell=True,
