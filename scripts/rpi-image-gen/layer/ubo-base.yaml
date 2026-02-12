@@ -36,6 +36,7 @@ mmdebstrap:
     - libmtdev1
     - libzbar0
     - pipewire
+    - polkitd
     - portaudio19-dev
     - python3-alsaaudio
     - python3-apt
@@ -46,6 +47,7 @@ mmdebstrap:
     - python3-pip
     - python3-pyaudio
     - python3-virtualenv
+    - raspi-config
     - wireplumber
 
   customize-hooks:
