@@ -46,6 +46,7 @@ mmdebstrap:
     - python3-picamera2
     - python3-pip
     - python3-pyaudio
+    - python3-venv
     - python3-virtualenv
     - raspi-config
     - wireplumber
