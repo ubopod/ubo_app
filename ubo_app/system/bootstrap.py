@@ -47,7 +47,7 @@ def create_user_service_directory() -> None:
         path = path.parent
 
 
-def create_service_files() -> None:
+def create_service_files(*, in_packer: bool = False) -> None:  # noqa: C901
     """Create the service files."""
     create_user_service_directory()
     for service in SERVICES:
@@ -94,7 +94,18 @@ def create_service_files() -> None:
             if service['scope'] == 'user':
                 os.chown(service_file_path, USER_UID, USER_GID)
 
-        if service['scope'] == 'user':
+        if in_packer and service['scope'] == 'user':
+            # In chroot there is no user dbus session, so we create the
+            # enable symlink manually instead of calling systemctl --user.
+            wants_dir = Path(
+                f'/home/{USERNAME}/.config/systemd/user/default.target.wants',
+            )
+            wants_dir.mkdir(parents=True, exist_ok=True)
+            os.chown(wants_dir, USER_UID, USER_GID)
+            link = wants_dir / f'{service["name"]}.service'
+            link.symlink_to(service_file_path)
+            os.lchown(link, USER_UID, USER_GID)
+        elif service['scope'] == 'user':
             subprocess.run(  # noqa: S603
                 [
                     '/usr/bin/env',
@@ -294,8 +305,9 @@ def bootstrap(*, in_packer: bool = False) -> None:
         )
 
     configure_device()
-    daemon_reload()
-    create_service_files()
+    if not in_packer:
+        daemon_reload()
+    create_service_files(in_packer=in_packer)
 
     setup_ubo_services()
 
