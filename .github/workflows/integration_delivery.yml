@@ -435,6 +435,8 @@ jobs:
 
       - name: Install rpi-image-gen Dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y debian-archive-keyring
           sudo /tmp/rpi-image-gen/install_deps.sh
 
       - name: Prepare Staging Directory
