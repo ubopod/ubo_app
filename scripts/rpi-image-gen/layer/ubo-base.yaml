@@ -24,6 +24,7 @@ mmdebstrap:
     - accountsservice
     - dhcpcd
     - dnsmasq
+    - gcc
     - git
     - hostapd
     - i2c-tools
