@@ -153,10 +153,10 @@ fi
 apt-get -y clean
 apt-get -y autoremove
 
-systemctl stop dnsmasq
+systemctl stop dnsmasq || true
 systemctl disable dnsmasq
 
-systemctl stop dhcpcd
+systemctl stop dhcpcd || true
 systemctl disable dhcpcd
 
 if id -u "$USERNAME" >/dev/null 2>&1; then
