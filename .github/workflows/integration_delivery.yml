@@ -458,6 +458,18 @@ jobs:
           IMAGE_PATH=$(find . /tmp/rpi-image-gen -name 'ubo-app-*.img' -path '*/work/*' -type f 2>/dev/null | head -1)
           echo "image_path=$IMAGE_PATH" >>"$GITHUB_OUTPUT"
 
+      - name: Free Disk Space
+        env:
+          IMAGE_PATH: ${{ steps.build.outputs.image_path }}
+        run: |
+          # Move the image out, remove the bulky work directory, then move it back
+          sudo mv "$IMAGE_PATH" /tmp/built-image.img
+          sudo rm -rf work/
+          sudo rm -rf scripts/rpi-image-gen/staging/
+          sudo mkdir -p "$(dirname "$IMAGE_PATH")"
+          sudo mv /tmp/built-image.img "$IMAGE_PATH"
+          df -h .
+
       - name: Fill Free Space with Zeros
         env:
           IMAGE_PATH: ${{ steps.build.outputs.image_path }}
