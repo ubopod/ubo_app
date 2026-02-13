@@ -74,7 +74,7 @@ true"
 fi
 
 if [ "$kill" == "True" ] || [ "$restart" == "True" ]; then
-  run_on_pod "$(if [ "$kill" == "True" ]; then echo "killall -9 ubo &&"; fi)
+  run_on_pod "$(if [ "$kill" == "True" ]; then echo "(killall -9 ubo || true) &&"; fi)
 $(if [ "$restart" == "True" ]; then echo "systemctl --user restart ubo-app.service &&"; fi)
 true"
 fi
