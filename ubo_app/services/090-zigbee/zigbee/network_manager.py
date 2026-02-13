@@ -34,6 +34,7 @@ class NetworkManager:
         self._data_dir = data_dir or DEFAULT_DATA_DIR
         self._data_dir.mkdir(parents=True, exist_ok=True)
         self._device_names_cache: dict[str, str] | None = None
+        self._device_locations_cache: dict[str, str] | None = None
 
     @property
     def gateway(self) -> Gateway | None:
@@ -108,6 +109,11 @@ class NetworkManager:
         db_path = self.get_database_path(coordinator)
         return db_path.with_suffix('.names.json')
 
+    def _get_locations_path(self, coordinator: DetectedCoordinator) -> Path:
+        """Get the device locations file path for a coordinator."""
+        db_path = self.get_database_path(coordinator)
+        return db_path.with_suffix('.locations.json')
+
     def _load_device_names(self) -> dict[str, str]:
         """Load device names from cache or disk.
 
@@ -149,6 +155,48 @@ class NetworkManager:
         self._device_names_cache = names  # Update cache
         self._save_device_names(names)
         logger.info('Set device name for %s: %s', ieee, name)
+
+    def _load_device_locations(self) -> dict[str, str]:
+        """Load device locations from cache or disk.
+
+        Uses in-memory cache to avoid repeated disk I/O.
+        """
+        if self._device_locations_cache is not None:
+            return self._device_locations_cache
+
+        if self._coordinator is None:
+            return {}
+        locations_path = self._get_locations_path(self._coordinator)
+        if not locations_path.exists():
+            self._device_locations_cache = {}
+            return self._device_locations_cache
+        try:
+            loaded: dict[str, str] = json.loads(locations_path.read_text())
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning('Failed to load device locations: %s', exc)
+            self._device_locations_cache = {}
+            return self._device_locations_cache
+        else:
+            self._device_locations_cache = loaded
+            return loaded
+
+    def _save_device_locations(self, locations: dict[str, str]) -> None:
+        """Save device locations to the current coordinator's locations file."""
+        if self._coordinator is None:
+            return
+        locations_path = self._get_locations_path(self._coordinator)
+        try:
+            locations_path.write_text(json.dumps(locations, indent=2))
+        except OSError as exc:
+            logger.warning('Failed to save device locations: %s', exc)
+
+    def set_device_location(self, ieee: str, location: str) -> None:
+        """Set a custom location for a device."""
+        locations = self._load_device_locations()
+        locations[str(ieee)] = location
+        self._device_locations_cache = locations  # Update cache
+        self._save_device_locations(locations)
+        logger.info('Set device location for %s: %s', ieee, location)
 
     def has_existing_network(self, coordinator: DetectedCoordinator) -> bool:
         """Check if a coordinator has an existing network database.
@@ -202,8 +250,11 @@ class NetworkManager:
         )
 
         # Pass database path through zigpy_config
+        # Disable network validation — after a reset the radio has new settings
+        # that don't match the old backup in the database, which is expected.
         zigpy_config = {
             'database_path': str(db_path),
+            'validate_network_settings': False,
         }
 
         zha_data = ZHAData(config=zha_config, zigpy_config=zigpy_config)
@@ -214,6 +265,7 @@ class NetworkManager:
 
         self._coordinator = coordinator
         self._device_names_cache = None  # Invalidate cache on coordinator change
+        self._device_locations_cache = None
 
         logger.info('Network started successfully')
         return self._gateway
@@ -297,6 +349,19 @@ class NetworkManager:
             except OSError as exc:
                 logger.warning('Failed to delete device names %s: %s', names_path, exc)
 
+        # Delete the device locations file
+        locations_path = db_path.with_suffix('.locations.json')
+        if locations_path.exists():
+            logger.info('Deleting device locations: %s', locations_path)
+            try:
+                locations_path.unlink()
+            except OSError as exc:
+                logger.warning(
+                    'Failed to delete device locations %s: %s',
+                    locations_path,
+                    exc,
+                )
+
     def delete_all_networks(self) -> int:
         """Delete all saved network databases.
 
@@ -326,6 +391,7 @@ class NetworkManager:
             return []
 
         custom_names = self._load_device_names()
+        custom_locations = self._load_device_locations()
         devices = []
         for device in self._gateway.devices.values():
             # Skip the coordinator
@@ -343,6 +409,7 @@ class NetworkManager:
                     'model': device.model,
                     'name': custom_name or device.name,
                     'custom_name': custom_name,
+                    'location': custom_locations.get(ieee_str),
                     'available': device.available,
                     'device': device,
                 },
@@ -364,6 +431,7 @@ class NetworkManager:
             return None
 
         custom_names = self._load_device_names()
+        custom_locations = self._load_device_locations()
 
         # Convert string IEEE to the format used by the gateway
         for device in self._gateway.devices.values():
@@ -377,6 +445,7 @@ class NetworkManager:
                     'model': device.model,
                     'name': custom_name or device.name,
                     'custom_name': custom_name,
+                    'location': custom_locations.get(ieee_str),
                     'available': device.available,
                     'device': device,
                 }
@@ -417,6 +486,12 @@ class NetworkManager:
             if str(ieee) in names:
                 del names[str(ieee)]
                 self._save_device_names(names)
+
+            # Remove custom location if exists
+            locations = self._load_device_locations()
+            if str(ieee) in locations:
+                del locations[str(ieee)]
+                self._save_device_locations(locations)
         except Exception:
             logger.exception('Failed to remove device %s', ieee)
             return False

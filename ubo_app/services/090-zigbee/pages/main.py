@@ -17,6 +17,7 @@ from constants import (
     ICON_REFRESH,
     ICON_ZIGBEE,
 )
+from redux import AutorunOptions
 from ubo_gui.menu.types import (
     ActionItem,
     HeadedMenu,
@@ -59,16 +60,22 @@ def _get_coordinator_icon(
 
 @store.autorun(
     lambda state: (
-        state.zigbee.connection_state,
-        state.zigbee.current_coordinator,
-        tuple(
-            (d.ieee, d.name, d.custom_name, d.available)
-            for d in (state.zigbee.devices or ())
-        ),
-        state.zigbee.is_pairing,
-        state.zigbee.pairing_remaining_seconds,
-        state.zigbee.joining_device_name,
+        None
+        if state.zigbee.connection_state == ZigbeeConnectionState.DISCONNECTED
+        else (
+            state.zigbee.connection_state,
+            state.zigbee.current_coordinator,
+            tuple(
+                (d.ieee, d.name, d.custom_name, d.available)
+                for d in (state.zigbee.devices or ())
+            ),
+            state.zigbee.is_pairing,
+            state.zigbee.pairing_remaining_seconds,
+            state.zigbee.joining_device_name,
+            state.zigbee.joining_device_ieee,
+        )
     ),
+    options=AutorunOptions(default_value=None),
 )
 def connection_menu(
     data: tuple[
@@ -77,6 +84,7 @@ def connection_menu(
         tuple[tuple[str, str, str | None, bool], ...],
         bool,
         int,
+        str | None,
         str | None,
     ],
 ) -> HeadedMenu | HeadlessMenu:
@@ -88,6 +96,7 @@ def connection_menu(
         is_pairing,
         pairing_rem,
         joining_device_name,
+        joining_device_ieee,
     ) = data
 
     if connection_state == ZigbeeConnectionState.CONNECTED and current_coordinator:
@@ -99,6 +108,7 @@ def connection_menu(
             is_pairing=is_pairing,
             pairing_remaining=pairing_rem,
             joining_device_name=joining_device_name,
+            joining_device_ieee=joining_device_ieee,
         )
 
     if connection_state == ZigbeeConnectionState.ERROR:
@@ -109,14 +119,19 @@ def connection_menu(
             items=[],
         )
 
-    # CONNECTING or DISCONNECTED (transitional state before CONNECTING takes effect)
-    return HeadedMenu(
-        title=f'{ICON_ZIGBEE} Zigbee',
-        heading='Connecting...',
-        sub_heading='Setting up Zigbee network',
-        items=[],
-        placeholder=ICON_LOADING,
-    )
+    if connection_state == ZigbeeConnectionState.CONNECTING:
+        return HeadedMenu(
+            title=f'{ICON_ZIGBEE} Zigbee',
+            heading='Connecting...',
+            sub_heading='Setting up Zigbee network',
+            items=[],
+            placeholder=ICON_LOADING,
+        )
+
+    # DISCONNECTED is unreachable — the autorun selector returns None for
+    # that state, so autorun.call() skips invocation entirely.
+    msg = f'Unexpected connection state: {connection_state}'
+    raise ValueError(msg)
 
 
 def _select_coordinator(
@@ -152,6 +167,16 @@ def coordinator_menu(
             title=f'{ICON_ZIGBEE} Zigbee',
             heading='Scanning...',
             sub_heading='Detecting Zigbee coordinators',
+            items=[],
+            placeholder=ICON_LOADING,
+        )
+
+    # Prevent placeholder flash during transition to connection_menu
+    if connection_state == ZigbeeConnectionState.CONNECTING:
+        return HeadedMenu(
+            title=f'{ICON_ZIGBEE} Zigbee',
+            heading='Connecting...',
+            sub_heading='Setting up Zigbee network',
             items=[],
             placeholder=ICON_LOADING,
         )

@@ -225,6 +225,7 @@ def reducer(
                     is_pairing=True,
                     pairing_remaining_seconds=action.duration,
                     joining_device_name=None,
+                    joining_device_ieee=None,
                 ),
                 events=[ZigbeePairingStartedEvent(duration=action.duration)],
                 actions=[
@@ -264,7 +265,15 @@ def reducer(
             )
 
         case ZigbeeSetJoiningDeviceAction():
-            return replace(state, joining_device_name=action.device_name)
+            return replace(
+                state,
+                joining_device_name=action.device_name,
+                joining_device_ieee=(
+                    action.device_ieee or state.joining_device_ieee
+                    if action.device_name is not None
+                    else None
+                ),
+            )
 
         # Entity control
         case ZigbeeToggleEntityAction():

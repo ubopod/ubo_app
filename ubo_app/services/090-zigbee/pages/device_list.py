@@ -22,11 +22,12 @@ from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR
 from ubo_app.logger import logger
-from ubo_app.store.core.types import CloseApplicationAction, MenuGoBackAction
+from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.zigbee import (
     ZigbeeCoordinator,
     ZigbeeCreateBackupAction,
+    ZigbeeRefreshDevicesEvent,
     ZigbeeResetNetworkAction,
     ZigbeeSetJoiningDeviceAction,
     ZigbeeStartPairingAction,
@@ -49,7 +50,7 @@ class _ResetNetworkConfirmPage(UboPromptWidget):
             'This will remove ALL paired devices and reset the network.\n'
             'Press back to cancel'
         )
-        self.icon = ICON_RESET
+        self.icon = ''
         self.first_option_label = ''
         self.second_option_label = 'Reset'
         self.second_option_icon = ICON_RESET
@@ -78,34 +79,6 @@ def _get_device_icon(*, available: bool) -> str:
     return ICON_DEVICE_AVAILABLE if available else ICON_DEVICE_UNAVAILABLE
 
 
-def _pairing_duration_menu() -> HeadlessMenu:
-    """Sub-menu for selecting pairing duration."""
-
-    def _start_pairing(duration: int) -> None:
-        store.dispatch(
-            ZigbeeStartPairingAction(duration=duration),
-            MenuGoBackAction(),
-        )
-
-    return HeadlessMenu(
-        title='Pair Device',
-        items=[
-            ActionItem(
-                key='pair-30',
-                label='30 seconds',
-                icon=ICON_PAIRING,
-                action=lambda: _start_pairing(30),
-            ),
-            ActionItem(
-                key='pair-60',
-                label='60 seconds',
-                icon=ICON_PAIRING,
-                action=lambda: _start_pairing(60),
-            ),
-        ],
-    )
-
-
 def build_connected_menu(
     current_coordinator: ZigbeeCoordinator | None,
     device_summaries: tuple[tuple[str, str, str | None, bool], ...],
@@ -113,6 +86,7 @@ def build_connected_menu(
     is_pairing: bool,
     pairing_remaining: int,
     joining_device_name: str | None = None,
+    joining_device_ieee: str | None = None,
 ) -> HeadlessMenu | HeadedMenu:
     """Generate the main menu when connected to a coordinator.
 
@@ -124,36 +98,51 @@ def build_connected_menu(
     else:
         title = f'{ICON_ZIGBEE} Zigbee'
 
-    # Device successfully paired — show success with Done button
+    # Device successfully paired — show success with setup/done buttons
     if joining_device_name and not is_pairing:
+        items: list[ActionItem] = []
+        if joining_device_ieee:
+            items.append(
+                ActionItem(
+                    key='setup-device',
+                    label='Set up device',
+                    icon=ICON_RENAME,
+                    action=functools.partial(
+                        _setup_new_device,
+                        joining_device_ieee,
+                        joining_device_name,
+                    ),
+                ),
+            )
+        items.append(
+            ActionItem(
+                key='done',
+                label='Done',
+                icon=ICON_SUCCESS,
+                background_color=SUCCESS_COLOR,
+                action=lambda: store.dispatch(
+                    ZigbeeSetJoiningDeviceAction(device_name=None),
+                ),
+            ),
+        )
         return HeadedMenu(
             title=title,
             heading=f'{joining_device_name} Added',
             sub_heading='Device is ready',
-            items=[
-                ActionItem(
-                    key='done',
-                    label='Done',
-                    icon=ICON_SUCCESS,
-                    background_color=SUCCESS_COLOR,
-                    action=lambda: store.dispatch(
-                        ZigbeeSetJoiningDeviceAction(device_name=None),
-                    ),
-                ),
-            ],
+            items=items,
         )
 
     # Device detected/initializing during active pairing
     if joining_device_name:
         return HeadedMenu(
             title=title,
-            heading=f'Setting up {joining_device_name}...',
-            sub_heading='Initializing device',
+            heading='Device found',
+            sub_heading=f'Setting up {joining_device_name}...',
             items=[],
             placeholder=ICON_LOADING,
         )
 
-    # Pairing countdown with cancel option
+    # Pairing countdown with cancel button
     if is_pairing:
         return HeadedMenu(
             title=title,
@@ -170,6 +159,7 @@ def build_connected_menu(
                     ),
                 ),
             ],
+            placeholder=ICON_LOADING,
         )
 
     items: list[ActionItem | UboApplicationItem] = []
@@ -191,13 +181,15 @@ def build_connected_menu(
                 ),
             )
 
-    # Pair device (opens duration sub-menu)
+    # Pair device (60s)
     items.append(
         ActionItem(
             key='pair',
             label='Pair Device',
             icon=ICON_PAIRING,
-            action=_pairing_duration_menu,
+            action=lambda: store.dispatch(
+                ZigbeeStartPairingAction(duration=60),
+            ),
         ),
     )
 
@@ -237,6 +229,63 @@ def build_connected_menu(
         items=items,
         placeholder='No devices paired',
     )
+
+
+def _setup_new_device(device_ieee: str, default_name: str) -> None:
+    """Open web UI to name and locate a newly paired device."""
+    from ubo_app.store.input.types import (
+        InputFieldDescription,
+        InputFieldType,
+        WebUIInputDescription,
+    )
+    from ubo_app.utils.async_ import create_task
+    from ubo_app.utils.input import ubo_input
+
+    async def _do_setup() -> None:
+        from setup import _refresh_devices, get_network_manager
+
+        descriptions: list[WebUIInputDescription] = [
+            WebUIInputDescription(
+                fields=[
+                    InputFieldDescription(
+                        name='name',
+                        label='Name',
+                        type=InputFieldType.TEXT,
+                        description='e.g., Switch',
+                        default_value=default_name,
+                        required=True,
+                    ),
+                    InputFieldDescription(
+                        name='location',
+                        label='Location',
+                        type=InputFieldType.TEXT,
+                        description='e.g., Living Room',
+                        required=False,
+                    ),
+                ],
+            ),
+        ]
+
+        try:
+            _, result = await ubo_input(
+                prompt='Set Up Device',
+                descriptions=descriptions,
+            )
+
+            if result:
+                manager = get_network_manager()
+                if 'name' in result.data and result.data['name']:
+                    manager.set_device_name(device_ieee, result.data['name'])
+                if 'location' in result.data and result.data['location']:
+                    manager.set_device_location(device_ieee, result.data['location'])
+                await _refresh_devices(ZigbeeRefreshDevicesEvent())
+        except Exception:  # noqa: BLE001
+            logger.debug('Device setup cancelled or failed')
+
+        # Clear joining state to return to device list
+        store.dispatch(ZigbeeSetJoiningDeviceAction(device_name=None))
+
+    create_task(_do_setup())
 
 
 def _rename_coordinator() -> None:

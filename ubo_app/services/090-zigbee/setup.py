@@ -18,7 +18,11 @@ from zigbee import (
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.types import (
+    MenuGoBackAction,
+    RegisterSettingAppAction,
+    SettingsCategory,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
@@ -32,6 +36,7 @@ from ubo_app.store.services.zigbee import (
     ZigbeeCoordinator,
     ZigbeeCreateBackupEvent,
     ZigbeeDeleteBackupEvent,
+    ZigbeeDetectCoordinatorsAction,
     ZigbeeDetectCoordinatorsEvent,
     ZigbeeDevice,
     ZigbeeDisconnectEvent,
@@ -212,20 +217,40 @@ async def _detect_coordinators(_: ZigbeeDetectCoordinatorsEvent) -> None:
 
 def _on_connection_lost(_event: object) -> None:
     """Handle unexpected connection loss from the radio."""
-    global _connection_lost_unsub
+    global _connection_lost_unsub, _pairing_manager
 
     logger.warning('Zigbee radio connection lost')
 
     _unsubscribe_all_entities()
     _connection_lost_unsub = None
 
+    # Clean up pairing state
+    _cleanup_pairing_state()
+    _pairing_manager = None
+
+    # Shut down gateway asynchronously (catches exceptions, always cleans up)
+    async def _shutdown_gateway() -> None:
+        try:
+            await get_network_manager().shutdown()
+        except Exception:
+            logger.exception('Error during post-disconnect shutdown')
+
+    create_task(_shutdown_gateway())
+
+    # The connection_menu autorun uses AutorunOptions(default_value=None) and
+    # returns None for DISCONNECTED, so it never fires — no race with
+    # MenuGoBackAction's _pop(). Safe to dispatch directly from any thread.
     store.dispatch(
-        ZigbeeSetConnectionStateAction(state=ZigbeeConnectionState.DISCONNECTED),
+        ZigbeeSetConnectionStateAction(
+            state=ZigbeeConnectionState.DISCONNECTED,
+        ),
+        ZigbeeDetectCoordinatorsAction(),
+        MenuGoBackAction(),
         NotificationsAddAction(
             notification=Notification(
                 title='Connection Lost',
                 content='Zigbee coordinator disconnected unexpectedly',
-                display_type=NotificationDisplayType.FLASH,
+                display_type=NotificationDisplayType.STICKY,
                 color=DANGER_COLOR,
                 icon='󰈅',
             ),
@@ -355,6 +380,7 @@ async def _refresh_devices(_: ZigbeeRefreshDevicesEvent) -> None:
                     name=dev['name'],
                     custom_name=dev['custom_name'],
                     available=dev['available'],
+                    location=dev.get('location'),
                     entities=tuple(entities),
                 ),
             )
@@ -396,43 +422,39 @@ def _cleanup_pairing_state() -> None:
 def _on_device_joined(event: object) -> None:
     """Handle a device joining during pairing."""
     logger.info('Device joined: %s', event)
-    store.dispatch(
-        ZigbeeSetJoiningDeviceAction(device_name='New device'),
-        NotificationsAddAction(
-            notification=Notification(
-                title='Device Joining',
-                content='A new device is connecting...',
-                display_type=NotificationDisplayType.FLASH,
-                color=WARNING_COLOR,
-                icon='󰐕',
-            ),
-        ),
-    )
     ieee = getattr(event, 'ieee', None)
     nwk = getattr(event, 'nwk', None)
+    device_ieee = str(ieee) if ieee is not None else None
+    store.dispatch(
+        ZigbeeSetJoiningDeviceAction(
+            device_name='New device',
+            device_ieee=device_ieee,
+        ),
+    )
     if ieee is not None and nwk is not None:
         logger.info('Device joined: ieee=%s nwk=%s', ieee, nwk)
 
 
 def _on_device_initialized(event: object) -> None:
     """Handle a device completing initialization during pairing."""
+    global _pairing_active
     logger.info('Device initialized: %s', event)
     device_info = getattr(event, 'device_info', None)
     device_name = None
     if device_info:
         device_name = getattr(device_info, 'name', None) or device_info.model
+        device_ieee = str(getattr(device_info, 'ieee', '')) or None
         store.dispatch(
-            ZigbeeSetJoiningDeviceAction(device_name=device_name),
-            NotificationsAddAction(
-                notification=Notification(
-                    title='Device Added',
-                    content=f'{device_name} is ready',
-                    display_type=NotificationDisplayType.FLASH,
-                    color=SUCCESS_COLOR,
-                    icon='󰔡',
-                ),
+            ZigbeeSetJoiningDeviceAction(
+                device_name=device_name,
+                device_ieee=device_ieee,
             ),
         )
+
+    if not _pairing_active:
+        return
+    # Prevent duplicate _finish_pairing tasks (event fires twice per device)
+    _pairing_active = False
 
     async def _finish_pairing() -> None:
         logger.info('Finishing pairing: refreshing devices then stopping')
@@ -547,7 +569,10 @@ async def _toggle_entity(event: ZigbeeToggleEntityEvent) -> None:
                 await DeviceController.toggle(entity)
                 logger.info('Toggled entity: %s', event.entity_unique_id)
             except Exception:
-                logger.exception('Failed to toggle entity')
+                if not manager.is_running:
+                    logger.debug('Toggle aborted: network no longer running')
+                else:
+                    logger.exception('Failed to toggle entity')
             break
 
 
@@ -559,6 +584,8 @@ async def _reset_network(_: ZigbeeResetNetworkEvent) -> None:
         await manager.reset()
         store.dispatch(
             ZigbeeSetConnectionStateAction(state=ZigbeeConnectionState.DISCONNECTED),
+            ZigbeeDetectCoordinatorsAction(),
+            MenuGoBackAction(),
             NotificationsAddAction(
                 notification=Notification(
                     title='Network Reset',

@@ -66,6 +66,7 @@ class ZigbeeDevice(Immutable):
     name: str
     custom_name: str | None
     available: bool
+    location: str | None = None
     entities: Sequence[ZigbeeEntity] = ()
 
 
@@ -149,6 +150,7 @@ class ZigbeeSetJoiningDeviceAction(ZigbeeAction):
     """Set the name of a device currently joining/initializing."""
 
     device_name: str | None = None
+    device_ieee: str | None = None
 
 
 class ZigbeeUpdateEntityStateAction(ZigbeeAction):
@@ -306,3 +308,4 @@ class ZigbeeState(Immutable):
     is_pairing: bool = False
     pairing_remaining_seconds: int = 0
     joining_device_name: str | None = None
+    joining_device_ieee: str | None = None
