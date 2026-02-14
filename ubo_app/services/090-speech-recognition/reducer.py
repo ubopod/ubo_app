@@ -45,6 +45,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionState,
     SpeechRecognitionStatus,
 )
+from ubo_app.store.services.zigbee import ZigbeeInteractEntityAction
 
 if TYPE_CHECKING:
     from redux import ReducerResult
@@ -211,6 +212,13 @@ def reducer(
                     SpeechRecognitionIntent(
                         phrase=['Activate Down Button', 'Scroll Down'],
                         action=MenuScrollAction(direction=MenuScrollDirection.DOWN),
+                    ),
+                    SpeechRecognitionIntent(
+                        phrase='Toggle smart switch',
+                        action=ZigbeeInteractEntityAction(
+                            device_ieee='00:12:4b:00:2a:6b:0c:db',
+                            entity_unique_id='00:12:4b:00:2a:6b:0c:db-1',
+                        ),
                     ),
                 ],
             )

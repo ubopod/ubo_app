@@ -101,8 +101,11 @@ class VoskEngine(
                             'new_phrases': phrases,
                         },
                     )
-                    recognizer.Reset()
-                    recognizer.SetGrammar(json.dumps(phrases))
+                    recognizer = KaldiRecognizer(
+                        model,
+                        SPEECH_RECOGNITION_FRAME_RATE,
+                        *([json.dumps(phrases)] if phrases else []),
+                    )
 
     @property
     def _phrases(self) -> tuple[str, ...] | None:
