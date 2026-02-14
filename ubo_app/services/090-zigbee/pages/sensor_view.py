@@ -94,14 +94,16 @@ register_application(
 def _get_sensor_entities(
     state: RootState,
     device_ieee: str,
-) -> Sequence[ZigbeeEntity] | None:
-    """Extract sensor entities from state for autorun selector."""
+) -> tuple[str, Sequence[ZigbeeEntity]] | None:
+    """Extract sensor entities and device name from state for autorun selector."""
     devices = state.zigbee.devices
     if not devices:
         return None
     for device in devices:
         if device.ieee == device_ieee:
-            return tuple(e for e in device.entities if not e.is_controllable)
+            entities = tuple(e for e in device.entities if not e.is_controllable)
+            device_name = device.custom_name or device.name
+            return (device_name, entities)
     return None
 
 
@@ -112,8 +114,10 @@ def get_sensor_menu(device_ieee: str) -> Callable[[], HeadedMenu | HeadlessMenu]
         lambda state: _get_sensor_entities(state, device_ieee),
         options=AutorunOptions(default_value=None),
     )
-    def _menu(entities: Sequence[ZigbeeEntity] | None) -> HeadedMenu | HeadlessMenu:
-        if entities is None:
+    def _menu(
+        data: tuple[str, Sequence[ZigbeeEntity]] | None,
+    ) -> HeadedMenu | HeadlessMenu:
+        if data is None:
             return HeadedMenu(
                 title=f'{ICON_ZIGBEE} Sensors',
                 heading='Loading...',
@@ -122,16 +126,24 @@ def get_sensor_menu(device_ieee: str) -> Callable[[], HeadedMenu | HeadlessMenu]
                 placeholder=ICON_LOADING,
             )
 
+        device_name, entities = data
+
         items: list[ActionItem] = []
 
         if entities:
             items.extend(
                 ActionItem(
                     key=entity.unique_id,
-                    label=f'{entity.display_name}: {entity.state_display}',
+                    label=entity.display_name,
                     icon=ICON_SENSOR,
                     background_color=SENSOR_ITEM_COLOR,
-                    action=lambda: None,  # Read-only
+                    action=lambda e=entity, dn=device_name: HeadedMenu(
+                        title=dn,
+                        heading=e.display_name,
+                        sub_heading=e.state_display,
+                        items=[],
+                        placeholder='',
+                    ),
                 )
                 for entity in entities
             )
