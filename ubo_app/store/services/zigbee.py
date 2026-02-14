@@ -169,6 +169,13 @@ class ZigbeeToggleEntityAction(ZigbeeAction):
     entity_unique_id: str
 
 
+class ZigbeeInteractEntityAction(ZigbeeAction):
+    """Smart action: toggles controllable entities, reads sensors aloud."""
+
+    device_ieee: str
+    entity_unique_id: str
+
+
 class ZigbeeRenameDeviceAction(ZigbeeAction):
     """Rename a device."""
 

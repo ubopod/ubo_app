@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from constants import ZIGBEE_STATE_ICON_ID, ZIGBEE_STATE_ICON_PRIORITY
+from constants import ICON_ZIGBEE, ZIGBEE_STATE_ICON_ID, ZIGBEE_STATE_ICON_PRIORITY
 from redux import (
     BaseAction,
     CompleteReducerResult,
@@ -14,6 +14,10 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.services.speech_synthesis import (
+    ReadableInformation,
+    SpeechSynthesisReadTextAction,
+)
 from ubo_app.store.services.zigbee import (
     ZigbeeAction,
     ZigbeeConnectAction,
@@ -27,7 +31,9 @@ from ubo_app.store.services.zigbee import (
     ZigbeeDetectCoordinatorsEvent,
     ZigbeeDisconnectAction,
     ZigbeeDisconnectEvent,
+    ZigbeeEntity,
     ZigbeeEvent,
+    ZigbeeInteractEntityAction,
     ZigbeePairingStartedEvent,
     ZigbeePairingStoppedEvent,
     ZigbeeRefreshDevicesAction,
@@ -59,11 +65,26 @@ def _get_status_icon(state: ZigbeeConnectionState, *, is_pairing: bool) -> str:
     if is_pairing:
         return '󰐕'  # Pairing mode
     return {
-        ZigbeeConnectionState.CONNECTED: '󰛁',  # Connected
+        ZigbeeConnectionState.CONNECTED: ICON_ZIGBEE,  # Connected
         ZigbeeConnectionState.CONNECTING: '󱘖',  # Connecting
         ZigbeeConnectionState.DISCONNECTED: '󰛀',  # Disconnected
         ZigbeeConnectionState.ERROR: '󰈅',  # Error
     }[state]
+
+
+def _find_entity(
+    state: ZigbeeState,
+    device_ieee: str,
+    entity_unique_id: str,
+) -> ZigbeeEntity | None:
+    if not state.devices:
+        return None
+    for device in state.devices:
+        if device.ieee == device_ieee:
+            for entity in device.entities:
+                if entity.unique_id == entity_unique_id:
+                    return entity
+    return None
 
 
 def reducer(
@@ -276,6 +297,56 @@ def reducer(
             )
 
         # Entity control
+        case ZigbeeInteractEntityAction():
+            entity = _find_entity(
+                state, action.device_ieee, action.entity_unique_id,
+            )
+            if entity is None:
+                return state
+            if entity.is_controllable:
+                # Toggle the entity (same logic as ZigbeeToggleEntityAction)
+                new_state = state
+                if state.devices:
+                    new_devices = list(state.devices)
+                    for i, device in enumerate(new_devices):
+                        if device.ieee != action.device_ieee:
+                            continue
+                        new_entities = list(device.entities)
+                        for j, ent in enumerate(new_entities):
+                            if (
+                                ent.unique_id == action.entity_unique_id
+                                and ent.is_on is not None
+                            ):
+                                new_entities[j] = replace(
+                                    ent, is_on=not ent.is_on,
+                                )
+                                break
+                        new_devices[i] = replace(
+                            device, entities=tuple(new_entities),
+                        )
+                        break
+                    new_state = replace(state, devices=tuple(new_devices))
+                return CompleteReducerResult(
+                    state=new_state,
+                    events=[
+                        ZigbeeToggleEntityEvent(
+                            device_ieee=action.device_ieee,
+                            entity_unique_id=action.entity_unique_id,
+                        ),
+                    ],
+                )
+            # Sensor entity — read value aloud
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    SpeechSynthesisReadTextAction(
+                        information=ReadableInformation(
+                            text=f'{entity.display_name} is {entity.state_display}',
+                        ),
+                    ),
+                ],
+            )
+
         case ZigbeeToggleEntityAction():
             new_state = state
             if state.devices:
