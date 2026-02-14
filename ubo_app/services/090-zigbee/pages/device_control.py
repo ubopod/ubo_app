@@ -11,11 +11,13 @@ from typing import TYPE_CHECKING
 
 from constants import (
     ICON_DELETE,
+    ICON_INFO,
     ICON_LIGHT,
     ICON_LOADING,
     ICON_RENAME,
     ICON_SENSOR,
-    ICON_SWITCH,
+    ICON_SWITCH_OFF,
+    ICON_SWITCH_ON,
     ICON_ZIGBEE,
 )
 from kivy.lang.builder import Builder
@@ -126,12 +128,16 @@ register_application(
 )
 
 
-def _get_entity_icon(platform: ZigbeeEntityPlatform) -> str:
-    """Get icon based on entity platform."""
+def _get_entity_icon(
+    platform: ZigbeeEntityPlatform,
+    *,
+    is_on: bool | None = None,
+) -> str:
+    """Get icon based on entity platform and state."""
     if platform == ZigbeeEntityPlatform.LIGHT:
         return ICON_LIGHT
     if platform == ZigbeeEntityPlatform.SWITCH:
-        return ICON_SWITCH
+        return ICON_SWITCH_ON if is_on else ICON_SWITCH_OFF
     return ICON_SENSOR
 
 
@@ -150,6 +156,27 @@ def _get_device_data(
             device_name = device.custom_name or device.name
             return (device_name, controllable, monitorable)
     return None
+
+
+def _format_technical_info(
+    device_ieee: str,
+    controllable: Sequence[ZigbeeEntity],
+    monitorable: Sequence[ZigbeeEntity],
+) -> str:
+    """Format device/entity IDs for the technical info viewer."""
+    lines = [f'IEEE: {device_ieee}']
+
+    if controllable:
+        lines.append('\nControllable:')
+        for entity in controllable:
+            lines.append(f'  {entity.platform.value}: {entity.unique_id}')
+
+    if monitorable:
+        lines.append('\nSensors:')
+        for entity in monitorable:
+            lines.append(f'  {entity.platform.value}: {entity.unique_id}')
+
+    return '\n'.join(lines)
 
 
 def get_device_control_menu(
@@ -186,7 +213,7 @@ def get_device_control_menu(
                 ActionItem(
                     key=entity.unique_id,
                     label=f'{entity.display_name}: {action_label}',
-                    icon=_get_entity_icon(entity.platform),
+                    icon=_get_entity_icon(entity.platform, is_on=entity.is_on),
                     background_color=bg_color,
                     action=lambda uid=entity.unique_id: store.dispatch(
                         ZigbeeToggleEntityAction(
@@ -209,6 +236,21 @@ def get_device_control_menu(
                     action=lambda ieee=device_ieee: sensor_view.get_sensor_menu(ieee),
                 ),
             )
+
+        # Technical info
+        items.append(
+            UboApplicationItem(
+                key='technical-info',
+                label='Technical Info',
+                icon=ICON_INFO,
+                application_id='ubo:raw-text-viewer',
+                initialization_kwargs={
+                    'text': _format_technical_info(
+                        device_ieee, controllable, monitorable,
+                    ),
+                },
+            ),
+        )
 
         # Device management options
         items.append(
