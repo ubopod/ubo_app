@@ -4,7 +4,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-deps=${deps:-"False"}
+skip_deps=${skip_deps:-"False"}
 offline=${env:-"False"}
 
 echo "Building ubo-assistant"
@@ -52,7 +52,7 @@ run_on_pod_as_root "rm /tmp/ubo_app_assistant*.whl || true"
 scp dist/$LATEST_WHEEL ubo-development-pod-$index:/tmp/
 scp ../../../../dist/$LATEST_BINDINGS_WHEEL ubo-development-pod-$index:/tmp/
 
-run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_WHEEL &&"; fi)
+run_on_pod "$(if [ "$skip_deps" != "True" ]; then echo "pip install --upgrade /tmp/$LATEST_WHEEL &&"; fi)
 pip install --no-index --upgrade --force-reinstall --no-deps /tmp/$LATEST_WHEEL
 pip install --no-index --upgrade --force-reinstall --no-deps /tmp/$LATEST_BINDINGS_WHEEL
 true"
