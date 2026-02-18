@@ -23,6 +23,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportTextEvent,
 )
+from ubo_app.utils import IS_RPI
 
 
 class VoskEngine(
@@ -101,8 +102,15 @@ class VoskEngine(
                             'new_phrases': phrases,
                         },
                     )
-                    recognizer.Reset()
-                    recognizer.SetGrammar(json.dumps(phrases))
+                    if IS_RPI:
+                        recognizer.Reset()
+                        recognizer.SetGrammar(json.dumps(phrases))
+                    else:
+                        recognizer = KaldiRecognizer(
+                            model,
+                            SPEECH_RECOGNITION_FRAME_RATE,
+                            *([json.dumps(phrases)] if phrases else []),
+                        )
 
     @property
     def _phrases(self) -> tuple[str, ...] | None:
