@@ -7489,7 +7489,7 @@
                               "items": [
                                 {
                                   "_type": "ActionItem",
-                                  "action": "<functools.partial:<function:download_piper_model>>",
+                                  "action": "<function:setup>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -7500,7 +7500,7 @@
                                   "icon": "󰇚",
                                   "is_short": false,
                                   "key": "download",
-                                  "label": "Download Piper Model",
+                                  "label": "Setup Piper",
                                   "opacity": null,
                                   "progress": null
                                 },
