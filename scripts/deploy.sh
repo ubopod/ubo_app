@@ -5,7 +5,7 @@ set -o pipefail
 set -o nounset
 shopt -s nullglob
 
-deps=${deps:-"False"}
+skip_deps=${skip_deps:-"False"}
 bootstrap=${bootstrap:-"False"}
 kill=${kill:-"False"}
 restart=${restart:-"False"}
@@ -57,7 +57,7 @@ run_on_pod_as_root "rm /tmp/ubo*.whl || true"
 scp dist/$LATEST_UBO_APP_WHEEL ubo-development-pod-$index:/tmp/
 scp dist/$LATEST_BINDINGS_WHEEL ubo-development-pod-$index:/tmp/
 
-run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_UBO_APP_WHEEL &&"; fi)
+run_on_pod "$(if [ "$skip_deps" != "True" ]; then echo "pip install --upgrade /tmp/$LATEST_UBO_APP_WHEEL &&"; fi)
 pip install --no-index --upgrade --force-reinstall --no-deps /tmp/$LATEST_UBO_APP_WHEEL &&
 pip install --no-index --upgrade --force-reinstall --no-deps /tmp/$LATEST_BINDINGS_WHEEL
 true"
@@ -74,14 +74,14 @@ true"
 fi
 
 if [ "$kill" == "True" ] || [ "$restart" == "True" ]; then
-  run_on_pod "$(if [ "$kill" == "True" ]; then echo "killall -9 ubo &&"; fi)
+  run_on_pod "$(if [ "$kill" == "True" ]; then echo "(killall -9 ubo || true) &&"; fi)
 $(if [ "$restart" == "True" ]; then echo "systemctl --user restart ubo-app.service &&"; fi)
 true"
 fi
 
 for service in ubo_app/services/*/ubo-service; do
   args=(--index="$index")
-  [[ "$deps" == "True" ]] && args+=("--deps")
+  [[ "$skip_deps" == "True" ]] && args+=("--skip_deps")
   [[ "$offline" == "True" ]] && args+=("--offline")
   uv run --directory "$service" poe deploy-to-device "${args[@]}"
 done

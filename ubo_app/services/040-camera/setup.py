@@ -2,6 +2,8 @@
 # ruff: noqa: D100, D101, D103, D107
 from __future__ import annotations
 
+import asyncio
+import math
 import time
 from pathlib import Path
 from threading import Lock
@@ -23,8 +25,10 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraDetectEvent,
+    CameraInstallDriverEvent,
     CameraReportBarcodeAction,
     CameraReportImageEvent,
+    CameraRestoreDefaultEvent,
     CameraSetAvailableCamerasAction,
     CameraStartViewfinderEvent,
     CameraStopViewfinderEvent,
@@ -36,6 +40,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.gui import UboPageWidget
 from ubo_app.utils.persistent_store import register_persistent_store
+from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
     from numpy._typing._array_like import NDArray
@@ -273,6 +278,150 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
         )
 
 
+async def _install_camera_driver(event: CameraInstallDriverEvent) -> None:
+    from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
+    from ubo_app.store.core.types import RebootAction
+    from ubo_app.store.services.notifications import (
+        Chime,
+        Notification,
+        NotificationDispatchItem,
+        NotificationDisplayType,
+        NotificationsAddAction,
+    )
+
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='camera_install_driver',
+                title='Camera Driver',
+                content=f'Installing {event.make} {event.model} driver...',
+                display_type=NotificationDisplayType.STICKY,
+                color=WARNING_COLOR,
+                icon='󰄁',
+                show_dismiss_action=False,
+                progress=math.nan,
+            ),
+        ),
+    )
+    result = await send_command(
+        'camera',
+        'install_driver',
+        event.make,
+        event.model,
+        event.variant,
+        has_output=True,
+    )
+    if result == 'installed':
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='camera_install_driver',
+                    title='Camera Driver',
+                    content=f'{event.make} {event.model} installed successfully.\n'
+                    'Reboot required for changes to take effect.',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=SUCCESS_COLOR,
+                    icon='󰄬',
+                    chime=Chime.DONE,
+                    show_dismiss_action=True,
+                    actions=[
+                        NotificationDispatchItem(
+                            icon='󰜉',
+                            store_action=RebootAction(),
+                        ),
+                    ],
+                ),
+            ),
+        )
+    else:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='camera_install_driver',
+                    title='Camera Driver',
+                    content=f'Failed to install {event.make} {event.model} driver',
+                    display_type=NotificationDisplayType.FLASH,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+
+
+async def _restore_default_camera(_: CameraRestoreDefaultEvent) -> None:
+    from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
+    from ubo_app.store.core.types import RebootAction
+    from ubo_app.store.services.notifications import (
+        Chime,
+        Notification,
+        NotificationDispatchItem,
+        NotificationDisplayType,
+        NotificationsAddAction,
+    )
+
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='camera_restore_default',
+                title='Camera',
+                content='Restoring default camera configuration...',
+                display_type=NotificationDisplayType.STICKY,
+                color=WARNING_COLOR,
+                icon='󰁯',
+                show_dismiss_action=False,
+                progress=math.nan,
+            ),
+        ),
+    )
+    # Allow the UI to fully render the progress notification before proceeding.
+    # Without this delay, the operation completes so fast that the replacement
+    # notification is dispatched before the STICKY view finishes rendering,
+    # causing the progress notification to stay visible instead of updating.
+    await asyncio.sleep(0.5)
+    result = await send_command(
+        'camera',
+        'restore_default',
+        has_output=True,
+    )
+    if result == 'restored':
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='camera_restore_default',
+                    title='Camera',
+                    content='Default camera restored successfully.\n'
+                    'Reboot required for changes to take effect.',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=SUCCESS_COLOR,
+                    icon='󰄬',
+                    chime=Chime.DONE,
+                    show_dismiss_action=True,
+                    actions=[
+                        NotificationDispatchItem(
+                            icon='󰜉',
+                            store_action=RebootAction(),
+                        ),
+                    ],
+                ),
+            ),
+        )
+    else:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='camera_restore_default',
+                    title='Camera',
+                    content='Failed to restore default camera configuration',
+                    display_type=NotificationDisplayType.FLASH,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+
+
 def start_camera_viewfinder() -> None:
     store.dispatch(
         OpenApplicationAction(application_id='camera:viewfinder'),
@@ -330,6 +479,12 @@ def init_service() -> Subscriptions:
         lambda state: state.camera.selected_camera_index,
     )
 
+    # Register persistent storage for camera type
+    register_persistent_store(
+        'camera_type',
+        lambda state: state.camera.camera_type,
+    )
+
     return [
         store.subscribe_event(
             CameraStartViewfinderEvent,
@@ -338,5 +493,13 @@ def init_service() -> Subscriptions:
         store.subscribe_event(
             CameraDetectEvent,
             handle_camera_detect,
+        ),
+        store.subscribe_event(
+            CameraInstallDriverEvent,
+            _install_camera_driver,
+        ),
+        store.subscribe_event(
+            CameraRestoreDefaultEvent,
+            _restore_default_camera,
         ),
     ]

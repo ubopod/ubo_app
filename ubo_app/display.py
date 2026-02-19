@@ -34,14 +34,15 @@ class Display:
         self.cs_pin = None
         self.dc_pin = None
         self.reset_pin = None
+        self.backlight_pin = None
         self.spi = None
         self.display = None
         if IS_RPI:
             eeprom_data = get_eeprom_data()
 
             if (
-                eeprom_data['lcd'] is not None
-                and eeprom_data['lcd']['model'] == 'st7789'
+                (lcd := eeprom_data.get('lcd')) is not None
+                and lcd.get('model') == 'st7789'
             ):
                 logger.debug('LCD display found.')
                 import board
@@ -60,6 +61,10 @@ class Display:
                     dc=self.dc_pin,
                     baudrate=DISPLAY_BAUDRATE,
                 )
+
+                self.backlight_pin = digitalio.DigitalInOut(board.D26)
+                self.backlight_pin.switch_to_output()
+                self.backlight_pin.value = True
         else:
             logger.debug('No physical display found.')
             self.display = cast('ST7789', Fake())
@@ -88,6 +93,17 @@ class Display:
                         GPIO.cleanup(board.CE0.id)
                     if board.D25.id:
                         GPIO.cleanup(board.D25.id)
+                    if board.D26.id:
+                        GPIO.cleanup(board.D26.id)
+
+    def set_backlight(self: Display, enabled: bool) -> None:  # noqa: FBT001
+        """Control backlight state."""
+        if IS_RPI and self.backlight_pin is not None:
+            self.backlight_pin.value = enabled
+            logger.debug(
+                'Backlight state changed',
+                extra={'enabled': enabled},
+            )
 
     def render_blank(self: Display, render_function: Callable | None = None) -> None:
         """Render a blank screen."""
@@ -138,6 +154,9 @@ display = Display()
 
 def render_on_display(*, regions: list[Region]) -> None:
     """Transfer data to the display via SPI controller."""
+    from ubo_app.store.main import store
+
+
     for region in regions:
         rectangle = region['rectangle']
         data = region['data'].astype(np.uint16)

@@ -15,7 +15,7 @@ dependencies = [
   "ubo-app-raw-bindings",
   "vosk==0.3.44",
   # RPi dependencies
-  "piper-tts>=1.3.0",
+  "piper-tts==1.4.1",
 ]
 
 [tool.uv]
@@ -47,7 +47,7 @@ sanity = ["typecheck", "lint"]
 
 [tool.poe.tasks.deploy-to-device]
 args = [
-  { name = "deps", type = "boolean" },
+  { name = "skip_deps", type = "boolean" },
   { name = "offline", type = "boolean" },
   { name = "index", type = "integer", default = '1' },
 ]

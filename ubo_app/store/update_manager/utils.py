@@ -369,6 +369,7 @@ def about_menu_items(data: tuple[UpdateManagerState, bool]) -> list[Item]:
                     icon='󰜉',
                     store_action=NotificationsAddAction(
                         notification=Notification(
+                            id=f'update-manager-install-{version}',
                             title=f'Install {version} now?',
                             content='Press 󰜉 button to start installation of version '
                             f'"{version}"',
@@ -413,6 +414,7 @@ version of ubo-app with the selected version?""",
                     ),
                     store_action=NotificationsAddAction(
                         notification=Notification(
+                            id=f'update-manager-activate-{item.name}',
                             title=f'Activate {item.name} now?',
                             content=f'Press 󰯍 button to activate version "{item.name}"',
                             icon='󰯍',
@@ -482,6 +484,7 @@ version of ubo-app with the selected version?""",
                         icon='󰬬',
                         store_action=NotificationsAddAction(
                             notification=Notification(
+                                id=f'update-manager-latest-{state.latest_version}',
                                 title=f'Install {state.latest_version} now?',
                                 content='Press 󰬬 button to start installation of '
                                 f'version "{state.latest_version}"',

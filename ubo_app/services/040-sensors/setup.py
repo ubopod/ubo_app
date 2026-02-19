@@ -76,12 +76,13 @@ def init_service() -> Subscriptions:
     i2c = board.I2C()
     try:
         if (
-            eeprom_data['temperature'] is not None
-            and eeprom_data['temperature']['model'].upper() == 'PCT2075'
+            (temp := eeprom_data.get('temperature')) is not None
+            and temp.get('model', '').upper() == 'PCT2075'
+            and temp.get('bus_address')
         ):
             temperature_sensor = _initialize_device(
                 adafruit_pct2075.PCT2075,
-                int(eeprom_data['temperature']['bus_address'], 16),
+                int(temp['bus_address'], 16),
                 i2c,
             )
     except Exception:
@@ -90,12 +91,13 @@ def init_service() -> Subscriptions:
 
     try:
         if (
-            eeprom_data['ambient'] is not None
-            and eeprom_data['ambient']['model'].upper() == 'VEML7700'
+            (ambient := eeprom_data.get('ambient')) is not None
+            and ambient.get('model', '').upper() == 'VEML7700'
+            and ambient.get('bus_address')
         ):
             light_sensor = _initialize_device(
                 adafruit_veml7700.VEML7700,
-                int(eeprom_data['ambient']['bus_address'], 16),
+                int(ambient['bus_address'], 16),
                 i2c,
             )
             light_sensor.light_integration_time = adafruit_veml7700.VEML7700.ALS_50MS

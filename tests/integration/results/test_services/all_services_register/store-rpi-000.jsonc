@@ -51,17 +51,21 @@
     "available_cameras": [
       0
     ],
+    "camera_type": "default",
     "queue": [],
     "selected_camera_index": 0
   },
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
   "display": {
     "_type": "DisplayState",
-    "is_paused": false
+    "is_blanked": false,
+    "is_paused": false,
+    "last_activity_time": 1672531200.0,
+    "selected_blank_timeout": "ten_minutes"
   },
   "docker": {
     "_type": "DockerState",
-    "combine_reducers_id": "eb1167b367a9c3787c65c1e582e2e662",
+    "combine_reducers_id": "f728b4fa42485e3a0a5d2f346baa9455",
     "envoy_grpc": {
       "_type": "ImageState",
       "container_ip": null,
@@ -6343,7 +6347,7 @@
                                     1,
                                     1
                                   ],
-                                  "icon": null,
+                                  "icon": "",
                                   "is_short": false,
                                   "key": null,
                                   "label": "Re/Install Audio",
@@ -6351,6 +6355,72 @@
                                   "progress": null,
                                   "store_action": {
                                     "_type": "AudioInstallDriverAction"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰽎",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Arducam IMX519 AF",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "CameraInstallDriverAction",
+                                    "make": "arducam",
+                                    "model": "imx519",
+                                    "variant": "autofocus"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰋱",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Arducam IMX519 FF",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "CameraInstallDriverAction",
+                                    "make": "arducam",
+                                    "model": "imx519",
+                                    "variant": "fixed-focus"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄀",
+                                  "is_short": false,
+                                  "key": null,
+                                  "label": "Default Camera",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "CameraRestoreDefaultAction"
                                   }
                                 }
                               ],
@@ -6381,6 +6451,157 @@
                       "sub_menu": {
                         "_type": "HeadlessMenu",
                         "items": [
+                          {
+                            "_type": "SubMenuItem",
+                            "background_color": "#68B7FF",
+                            "color": [
+                              1,
+                              1,
+                              1,
+                              1
+                            ],
+                            "icon": "󰍹",
+                            "is_short": false,
+                            "key": "display:",
+                            "label": "Display",
+                            "opacity": null,
+                            "progress": null,
+                            "sub_menu": {
+                              "_type": "HeadedMenu",
+                              "heading": "Screen Timeout",
+                              "items": [
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "one_minute",
+                                  "label": "1 minute",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "one_minute"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "five_minutes",
+                                  "label": "5 minutes",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "five_minutes"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#03F7AE",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰱒",
+                                  "is_short": false,
+                                  "key": "ten_minutes",
+                                  "label": "10 minutes",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "ten_minutes"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "thirty_minutes",
+                                  "label": "30 minutes",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "thirty_minutes"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "one_hour",
+                                  "label": "1 hour",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "one_hour"
+                                  }
+                                },
+                                {
+                                  "_type": "UboDispatchItem",
+                                  "action": "<function:action>",
+                                  "background_color": "#68B7FF",
+                                  "color": [
+                                    1,
+                                    1,
+                                    1,
+                                    1
+                                  ],
+                                  "icon": "󰄱",
+                                  "is_short": false,
+                                  "key": "off",
+                                  "label": "Off",
+                                  "opacity": null,
+                                  "progress": null,
+                                  "store_action": {
+                                    "_type": "DisplaySetBlankTimeoutAction",
+                                    "timeout": "off"
+                                  }
+                                }
+                              ],
+                              "placeholder": null,
+                              "sub_heading": "Select screen blank timeout",
+                              "title": "Display Settings"
+                            }
+                          },
                           {
                             "_type": "SubMenuItem",
                             "background_color": "#68B7FF",
@@ -7413,7 +7634,7 @@
                               "items": [
                                 {
                                   "_type": "ActionItem",
-                                  "action": "<functools.partial:<function:download_piper_model>>",
+                                  "action": "<function:setup>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -7424,7 +7645,7 @@
                                   "icon": "󰇚",
                                   "is_short": false,
                                   "key": "download",
-                                  "label": "Download Piper Model",
+                                  "label": "Setup Piper",
                                   "opacity": null,
                                   "progress": null
                                 },
@@ -7641,6 +7862,7 @@
       "assistant:stt": 50,
       "assistant:tts": 30,
       "camera:": 1,
+      "display:": 10,
       "docker:registries": 2,
       "docker:service": 1,
       "infrared:infrared": null,

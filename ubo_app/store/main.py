@@ -93,7 +93,7 @@ if TYPE_CHECKING:
         InfraredState,
     )
     from ubo_app.store.services.ip import IpAction, IpEvent, IpState
-    from ubo_app.store.services.keypad import KeypadAction
+    from ubo_app.store.services.keypad import KeypadAction, KeypadState
     from ubo_app.store.services.lightdm import LightDMAction, LightDMState
     from ubo_app.store.services.notifications import (
         NotificationsAction,
@@ -191,6 +191,7 @@ class RootState(BaseCombineReducerState):
     docker: DockerState
     infrared: InfraredState
     ip: IpState
+    keypad: KeypadState
     lightdm: LightDMState
     notifications: NotificationsState
     rgb_ring: RgbRingState
@@ -433,6 +434,54 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             unsubscribe=unsubscribe_,
             handler=in_thread_handler,
         )
+
+    # Maximum actions to process before checking for events
+    # Lower = more responsive events, higher = better action throughput
+    ACTIONS_PER_EVENT_CHECK = 50
+
+    def run(self: Self) -> None:
+        """Override to interleave action and event processing.
+
+        The base _run_actions() has an internal while loop that processes
+        ALL queued actions, preventing interleaving. This override inlines
+        the action processing logic to process N actions, then ALL pending
+        events, then repeat.
+        """
+        from redux import is_complete_reducer_result, is_state_reducer_result
+        from redux.basic_types import FinishAction, FinishEvent
+
+        with self._is_running:
+            while len(self._actions) > 0 or len(self._events) > 0:
+                # Process a batch of actions (up to ACTIONS_PER_EVENT_CHECK)
+                actions_processed = 0
+                while (
+                    len(self._actions) > 0
+                    and actions_processed < self.ACTIONS_PER_EVENT_CHECK
+                ):
+                    action = self._actions.pop(0)
+                    if action is not None:
+                        result = self.reducer(self._state, action)
+                        if is_complete_reducer_result(result):
+                            self._state = result.state
+                            if self._state is not None:
+                                self._call_listeners(self._state)
+                            self._dispatch(
+                                [*(result.actions or []), *(result.events or [])],
+                            )
+                        elif is_state_reducer_result(result):
+                            self._state = result
+                            if self._state is not None:
+                                self._call_listeners(self._state)
+
+                        if isinstance(action, FinishAction):
+                            self._dispatch([FinishEvent()])
+
+                    actions_processed += 1
+
+                # Process ALL pending events before continuing with actions
+                if len(self._events) > 0:
+                    self._run_event_handlers()
+
 
 
 CALL_EVENT_KWARGS_KEY = '__ubo_autorun_call_event'

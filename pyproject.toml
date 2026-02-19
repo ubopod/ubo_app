@@ -21,7 +21,7 @@ dependencies = [
   "netifaces==0.11.0",
   "ollama==0.5.1",
   "platformdirs",
-  "piper-tts==1.3.0",
+  "piper-tts==1.4.1",
   "psutil==7.0.0",
   "pulsectl==24.12.0",
   "pvorca==1.1.1",
@@ -29,7 +29,7 @@ dependencies = [
   "python-debouncer==0.1.5",
   "python-dotenv==1.1.0",
   "python-fake==0.2.0",
-  "python-redux==0.24.1.dev1250523103975755100",
+  "python-redux==0.25.1",
   "python-strtobool==1.0.3",
   "pyzbar==0.1.9",
   "quart==0.20.0",
@@ -66,6 +66,7 @@ dependencies = [
 ]
 
 [tool.uv]
+no-binary-package = ["python-redux"]
 dev-dependencies = [
   "grpcio-tools>=1.66.1",
   "hatch-vcs>=0.5.0",
@@ -156,11 +157,11 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 
 
 "device:deploy" = "poe deploy-to-device"
-"device:deploy:deps" = "poe deploy-to-device --deps"
+"device:deploy:skip-deps" = "poe deploy-to-device --skip_deps"
 "device:deploy:kill" = "poe deploy-to-device --kill"
 "device:deploy:restart" = "poe deploy-to-device --restart"
 "device:deploy:bootstrap" = "poe deploy-to-device --bootstrap --restart"
-"device:deploy:complete" = "poe deploy-to-device --deps --bootstrap --restart"
+"device:deploy:complete" = "poe deploy-to-device --bootstrap --restart"
 "device:deploy:env" = "poe deploy-to-device --env"
 
 "device:test" = "poe test-on-device --copy --run --results"
@@ -183,7 +184,7 @@ cmd = "scripts/test_on_device.sh"
 
 [tool.poe.tasks.deploy-to-device]
 args = [
-  { name = "deps", type = "boolean" },
+  { name = "skip_deps", type = "boolean" },
   { name = "kill", type = "boolean" },
   { name = "restart", type = "boolean" },
   { name = "bootstrap", type = "boolean" },

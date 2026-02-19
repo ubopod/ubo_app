@@ -13,6 +13,8 @@ PACKAGE_NAME = __package__.rpartition('.')[0]
 USERNAME = os.environ.get('UBO_USERNAME', 'ubo')
 INSTALLATION_PATH = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
 
+FORCE_HARDWARE = str_to_bool(os.environ.get('UBO_FORCE_HARDWARE', 'False'))
+
 DEBUG_VISUAL = str_to_bool(os.environ.get('UBO_DEBUG_VISUAL', 'False'))
 DEBUG_BETA_VERSIONS = str_to_bool(os.environ.get('UBO_DEBUG_BETA_VERSIONS', 'False'))
 DEBUG_PDB_SIGNAL = str_to_bool(os.environ.get('UBO_DEBUG_PDB_SIGNAL', 'False'))
@@ -20,6 +22,7 @@ DEBUG_TASKS = str_to_bool(os.environ.get('UBO_DEBUG_TASKS', 'False'))
 DEBUG_DOCKER = str_to_bool(os.environ.get('UBO_DEBUG_DOCKER', 'False'))
 DEBUG_TEST_UUID = str_to_bool(os.environ.get('UBO_DEBUG_TEST_UUID', 'False'))
 DEBUG_MENU = str_to_bool(os.environ.get('UBO_DEBUG_MENU', 'False'))
+DEBUG_SCHEDULER = str_to_bool(os.environ.get('UBO_DEBUG_SCHEDULER', 'False'))
 
 LOG_LEVEL = os.environ.get('UBO_LOG_LEVEL', 'INFO')
 GUI_LOG_LEVEL = os.environ.get('UBO_GUI_LOG_LEVEL', 'INFO')
@@ -120,3 +123,5 @@ TEST_INVESTIGATION_MODE = str_to_bool(
 
 SPEECH_RECOGNITION_FRAME_RATE = 16_000
 SPEECH_RECOGNITION_SAMPLE_WIDTH = 2
+
+DISPLAY_BLANK_TIMEOUT = 15.0  # seconds

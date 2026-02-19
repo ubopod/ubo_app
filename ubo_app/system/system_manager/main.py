@@ -23,6 +23,7 @@ from ubo_app.logger import (
     get_logger,
 )
 from ubo_app.system.system_manager.audio import audio_handler
+from ubo_app.system.system_manager.camera import camera_handler
 from ubo_app.system.system_manager.docker import docker_handler
 from ubo_app.system.system_manager.hotspot import hotspot_handler
 from ubo_app.system.system_manager.infrared import infrared_handler
@@ -67,6 +68,7 @@ def handle_command(command: str, connection: socket.socket) -> None:
                 'users': users_handler,
                 'package': package_handler,
                 'audio': audio_handler,
+                'camera': camera_handler,
                 'hotspot': hotspot_handler,
                 'infrared': infrared_handler,
                 'update': update_handler,
