@@ -1,0 +1,18 @@
+device:
+  layer: ubo-device
+  user1: ubo
+  hostname: ubo
+
+image:
+  layer: image-rpios
+  boot_part_size: 200%
+  root_part_size: 400%
+  name: ubo-app-default
+  compression: none
+
+layer:
+  base: ubo-base
+  desktop: ubo-desktop
+
+ubo:
+  staging_dir: ${@SRCROOT}/staging

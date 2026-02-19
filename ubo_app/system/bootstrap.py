@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import functools
 import grp
 import os
 import pwd
@@ -47,7 +46,7 @@ def create_user_service_directory() -> None:
         path = path.parent
 
 
-def create_service_files() -> None:
+def create_service_files(*, in_packer: bool = False) -> None:  # noqa: C901
     """Create the service files."""
     create_user_service_directory()
     for service in SERVICES:
@@ -94,7 +93,18 @@ def create_service_files() -> None:
             if service['scope'] == 'user':
                 os.chown(service_file_path, USER_UID, USER_GID)
 
-        if service['scope'] == 'user':
+        if in_packer and service['scope'] == 'user':
+            # In chroot there is no user dbus session, so we create the
+            # enable symlink manually instead of calling systemctl --user.
+            wants_dir = Path(
+                f'/home/{USERNAME}/.config/systemd/user/default.target.wants',
+            )
+            wants_dir.mkdir(parents=True, exist_ok=True)
+            os.chown(wants_dir, USER_UID, USER_GID)
+            link = wants_dir / f'{service["name"]}.service'
+            link.symlink_to(service_file_path)
+            os.lchown(link, USER_UID, USER_GID)
+        elif service['scope'] == 'user':
             subprocess.run(  # noqa: S603
                 [
                     '/usr/bin/env',
@@ -226,25 +236,9 @@ def configure_device() -> None:  # noqa: C901
         )
 
 
-def _prepare(
-    service_installation_path: Path,
-) -> None:
-    try:
-        os.setgid(USER_GID)
-        os.setuid(USER_UID)
-
-        venv.create(
-            service_installation_path.as_posix(),
-            system_site_packages=True,
-            with_pip=True,
-        )
-
-    except Exception as e:
-        print(f'preexec_fn error: {e}', flush=True)  # noqa: T201
-        import traceback
-
-        print(traceback.format_exc(), flush=True)  # noqa: T201
-        raise
+def _drop_privileges() -> None:
+    os.setgid(USER_GID)
+    os.setuid(USER_UID)
 
 
 def setup_ubo_services() -> None:
@@ -262,13 +256,25 @@ def setup_ubo_services() -> None:
             service_installation_path.mkdir()
             os.chown(service_installation_path, USER_UID, USER_GID)
 
+            # Create the venv in the main process (as root) then fix ownership.
+            # Previously this was done inside preexec_fn which can fail in
+            # chroot environments where the ubo user's environment is incomplete.
+            venv.create(
+                service_installation_path.as_posix(),
+                system_site_packages=True,
+                with_pip=True,
+            )
+            for root, dirs, files in os.walk(service_installation_path):
+                for d in dirs:
+                    os.chown(Path(root) / d, USER_UID, USER_GID)
+                for f in files:
+                    os.chown(Path(root) / f, USER_UID, USER_GID)
+            os.chown(service_installation_path, USER_UID, USER_GID)
+
             subprocess.run(  # noqa: S602
                 f'source {service_installation_path / "bin" / "activate"} && '
                 f'{setup_script_path.absolute()}',
-                preexec_fn=functools.partial(
-                    _prepare,
-                    service_installation_path,
-                ),
+                preexec_fn=_drop_privileges,
                 cwd=service_installation_path,
                 executable='/bin/bash',
                 shell=True,
@@ -294,8 +300,9 @@ def bootstrap(*, in_packer: bool = False) -> None:
         )
 
     configure_device()
-    daemon_reload()
-    create_service_files()
+    if not in_packer:
+        daemon_reload()
+    create_service_files(in_packer=in_packer)
 
     setup_ubo_services()
 
