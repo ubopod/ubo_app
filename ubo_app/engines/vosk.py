@@ -132,6 +132,9 @@ the screen.""",
                     SpeechRecognitionSetIsIntentsActiveAction(is_active=True),
                     AssistantUpdateProvidersAction(),
                 )
+                decide = getattr(self, 'decide_running_state', None)
+                if decide is not None:
+                    decide()
             except Exception:
                 self._handle_error()
                 raise
