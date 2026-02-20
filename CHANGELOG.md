@@ -1,5 +1,7 @@
 # Changelog
 
+## Upcoming
+
 ## Version 1.7.0
 
 - feat(audio): add audio sample recorder and player, it can be used to quickly test audio input/output devices
