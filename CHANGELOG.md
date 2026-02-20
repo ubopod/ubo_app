@@ -99,6 +99,46 @@
 - fix(docker): unified compositions added by webUI import or compose hardcoded presets
 - chore(notification): change dismiss icon and background color
 - fix(docker): remove composition directory with elevated privilege special send_command on Pi and double confirm with user.
+- fix(ip): restart ping process if it dies
+- fix(tests): increase stability wait parameters in test_root_menu_bad_state
+- fix(tests): add Docker service readiness checks in test_all_services_register
+- feat(display): add screen blanking with backlight control and inactivity timeout
+- fix(display): change render skip condition from is_paused to is_blanked and remove unnecessary array copy
+- fix(display): replace display-level blanking with Kivy overlay widget
+- fix(display): disable screen blanking monitor during tests to prevent interference with screenshots
+- fix(tests): set UBO_TEST_ENV environment variable for device tests and improve test result handling
+- fix(display): replace time.time() with timezone-aware datetime for activity tracking and update test expectations
+- refactor(display): move blank timeout constant from state to constants module
+- feat(display): add configurable screen blank timeout with settings menu
+- fix(tests): update test snapshots for display settings menu and state changes
+- fix(display): wake screen and update activity on assistant voice actions
+- fix(display): remove incorrect and redundant keypad wake handler in favor of existing reducer logic
+- chore(typecheck): use specific Kivy graphics imports and add keypad state to type hints
+- fix(ci): add GitHub API token to Packer build environment to prevent rate limiting
+- fix(tests): add unique IDs to update manager notifications
+- chore(snapshots): update docker combine_reducers_id in integration test result files
+- chore(redux): pin redux version to 0.24.0
+- fix(core): interleave action and event processing
+- fix(system-manager): add users to sudo group which are created via GUI
+- fix(speech-recognition): update UI after VOSK model is downloaded
+- refactor(display): avoid inactivity checks when display is already blank
+- feat(core): Add scheduler freeze detection and monitoring, enabled by `DEBUG_SCHEDULER`
+- chore(ignore): add Claude-related files and directories to .gitignore
+- fix(docker): prevent crash when selecting port items in app menu
+- fix(ci): increase lite image size to 6.5GB
+- feat(camera): add Arducam IMX519 driver install/uninstall and camera type persistence
+- chore(snapshots): update store snapshots for camera driver install menu items and icons changes
+- chore(uv): upgrade python-redux and piper-tts packages to the latest version
+- chore(assistant): upgrade piper-tts for ubo-assistant
+- fix(lint): addressing some lint issues
+- fix(redux): use no binary package to include redux_pytest
+- feat(eeprom): add FORCE_HARDWARE constant with full hardware eeprom data for development/testing
+- fix(deploy): tolerate missing ubo process in killall during deploy
+- fix(deploy): install pip deps by default, add --skip_deps escape hatch
+- fix(speech): recreate KaldiRecognizer on non-RPi platforms to support macOS
+- fix(speech-recognition): re-evaluate engine state after Vosk model download
+- fix(speech-synthesis): use PiperEngine pattern to fix UI not refreshing after model download
+- fix(ci/cd): upgrade codecov-action from v4 to v5
 
 ## Version 1.6.0
 
