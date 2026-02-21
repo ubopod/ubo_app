@@ -5,6 +5,9 @@ Pure unit tests for title normalization, path matching, and dynamic menu lookup.
 
 from __future__ import annotations
 
+from ubo_gui.menu.types import HeadlessMenu, SubMenuItem
+
+from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
 from ubo_app.store.core.types import (
     DynamicMenuData,
     DynamicMenusState,
@@ -39,16 +42,12 @@ class TestStripNerdFontIcons:
 
     def test_strips_leading_icons_from_charset(self) -> None:
         """Verify leading nerd font icons are stripped."""
-        from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
-
         # Use actual characters from the charset
         icon = NERD_FONT_ICON_CHARS[0]
         assert strip_nerd_font_icons(f'{icon}Main') == 'Main'
 
     def test_strips_multiple_leading_icons(self) -> None:
         """Verify multiple leading nerd font icons are stripped."""
-        from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
-
         icons = NERD_FONT_ICON_CHARS[:3]
         assert strip_nerd_font_icons(f'{icons}Main') == 'Main'
 
@@ -63,8 +62,6 @@ class TestStripNerdFontIcons:
 
     def test_strips_spaces_after_icons(self) -> None:
         """Verify spaces between icons and text are stripped."""
-        from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
-
         icon = NERD_FONT_ICON_CHARS[0]
         result = strip_nerd_font_icons(f'{icon} Main')
         assert result == 'Main'
@@ -79,8 +76,6 @@ class TestNormalizeMenuTitle:
 
     def test_icon_prefix(self) -> None:
         """Verify icon prefix is stripped from title."""
-        from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
-
         icon = NERD_FONT_ICON_CHARS[0]
         assert normalize_menu_title(f'{icon}Main') == 'Main'
 
@@ -102,8 +97,6 @@ class TestFindDynamicMenuByTitle:
 
     def test_finds_with_icon_prefix(self) -> None:
         """Verify title with icon prefix is matched correctly."""
-        from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
-
         icon = NERD_FONT_ICON_CHARS[0]
         state = DynamicMenusState(menus={
             'main:menu': DynamicMenuData(menu_id='main:menu', title=f'{icon}Main'),
@@ -218,8 +211,6 @@ class TestFindDynamicMenuForPosition:
     def test_title_based_fallback(self) -> None:
         """When path matching fails, falls back to title matching."""
         _clean_registry()
-        from ubo_gui.menu.types import HeadlessMenu, SubMenuItem
-
         test_menu = HeadlessMenu(
             title='Root',
             items=[

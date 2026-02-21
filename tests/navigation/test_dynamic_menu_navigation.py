@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from redux import InitAction
+from redux import CompleteReducerResult, InitAction
 
 from ubo_app.store.core.dynamic_menus_reducer import reducer as dynamic_menus_reducer
 from ubo_app.store.core.types import (
@@ -16,9 +16,13 @@ from ubo_app.store.core.types import (
     DynamicMenuData,
     DynamicMenusState,
     MenuItemData,
+    StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
-from ubo_app.store.core.view_helpers import find_dynamic_menu_for_position
+from ubo_app.store.core.view_helpers import (
+    find_dynamic_menu_for_position,
+    get_dynamic_menu_id_for_stack,
+)
 from ubo_app.store.core.view_registry import (
     _registry_container,
     register_path_menu_matcher,
@@ -45,8 +49,6 @@ class TestDynamicMenuRegistration:
     def test_dynamic_menu_found_by_path(self, nav: ReducerRunner) -> None:
         """Find dynamic menu when navigating to path with registered matcher."""
         _clean_registry()
-        from ubo_app.store.core.types import StackPushMenuAction
-
         unregister = register_path_menu_matcher(
             'test:wifi',
             lambda path: (
@@ -96,8 +98,6 @@ class TestDynamicMenuUpdate:
     def test_update_adds_items(self) -> None:
         """Verify updating a dynamic menu adds items to the menu state."""
         state = _init_dynamic_state()
-        from redux import CompleteReducerResult
-
         result = dynamic_menus_reducer(state, UpdateDynamicMenuAction(
             menu_id='wifi:list',
             title='Wi-Fi',
@@ -112,8 +112,6 @@ class TestDynamicMenuUpdate:
     def test_update_replaces_items(self) -> None:
         """Verify updating a dynamic menu replaces existing items."""
         state = _init_dynamic_state()
-        from redux import CompleteReducerResult
-
         result = dynamic_menus_reducer(state, UpdateDynamicMenuAction(
             menu_id='wifi:list',
             title='Wi-Fi',
@@ -140,8 +138,6 @@ class TestDynamicMenuClear:
     def test_clear_removes_menu(self) -> None:
         """Verify clearing a dynamic menu removes it from the state."""
         state = _init_dynamic_state()
-        from redux import CompleteReducerResult
-
         result = dynamic_menus_reducer(state, UpdateDynamicMenuAction(
             menu_id='wifi:list',
             title='Wi-Fi',
@@ -170,8 +166,6 @@ class TestPathMatcherPriority:
     def test_higher_priority_wins(self, nav: ReducerRunner) -> None:
         """Verify higher priority path matcher takes precedence over lower priority."""
         _clean_registry()
-        from ubo_app.store.core.types import StackPushMenuAction
-
         # Low priority matcher
         unreg1 = register_path_menu_matcher(
             'low:matcher',
@@ -186,8 +180,6 @@ class TestPathMatcherPriority:
         )
         try:
             nav.dispatch(StackPushMenuAction(menu_key='main'))
-            from ubo_app.store.core.view_helpers import get_dynamic_menu_id_for_stack
-
             result = get_dynamic_menu_id_for_stack(nav.state)
             assert result == 'high:menu'
         finally:

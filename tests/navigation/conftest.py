@@ -110,9 +110,16 @@ TEST_HOME_MENU = HeadlessMenu(
 # ============================================================================
 
 def _import_reducer() -> Callable:
-    """Import the reducer, breaking the circular import chain."""
+    """Import the reducer, breaking the circular import chain.
+
+    Installs a fake menus module temporarily so the reducer can be imported
+    without triggering Kivy initialization via store.main. ALL newly loaded
+    modules are removed from sys.modules after import so integration tests
+    get fresh imports of the real modules.
+    """
     menus_key = 'ubo_app.store.core.menus'
     already_loaded = menus_key in sys.modules
+    modules_before = set(sys.modules)
 
     if not already_loaded:
         from types import ModuleType
@@ -122,6 +129,13 @@ def _import_reducer() -> Callable:
         sys.modules[menus_key] = fake_menus
 
     from ubo_app.store.core.reducer import reducer
+
+    # Clean up: remove ALL modules loaded during this import so they
+    # don't interfere with integration tests that need real modules
+    if not already_loaded:
+        for mod in set(sys.modules) - modules_before:
+            del sys.modules[mod]
+
     return reducer
 
 

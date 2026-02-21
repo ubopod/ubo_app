@@ -85,10 +85,12 @@ def _import_reducer() -> Callable:
 
     reducer.py -> menus.py -> store.main -> reducer.py is circular.
     We pre-populate sys.modules with a fake menus module that has HOME_MENU,
-    import the reducer, then clean up.
+    import the reducer, then clean up ALL newly loaded modules so they don't
+    interfere with integration tests.
     """
     menus_key = 'ubo_app.store.core.menus'
     already_loaded = menus_key in sys.modules
+    modules_before = set(sys.modules)
 
     if not already_loaded:
         from types import ModuleType
@@ -98,6 +100,12 @@ def _import_reducer() -> Callable:
         sys.modules[menus_key] = fake_menus
 
     from ubo_app.store.core.reducer import reducer as _reducer
+
+    # Clean up: remove ALL modules loaded during this import so they
+    # don't interfere with integration tests that need real modules
+    if not already_loaded:
+        for mod in set(sys.modules) - modules_before:
+            del sys.modules[mod]
 
     return _reducer
 
