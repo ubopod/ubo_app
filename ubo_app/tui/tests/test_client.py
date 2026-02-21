@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+DEFAULT_PORT = 50051
+
 
 def test_client_init() -> None:
     """Test client initialization."""
     from ubo_tui.client import TUIClient
 
-    client = TUIClient("localhost", 50051)
+    client = TUIClient("localhost", DEFAULT_PORT)
     assert client.host == "localhost"
-    assert client.port == 50051
-    assert client._client is None
+    assert client.port == DEFAULT_PORT
+    assert client._client is None  # noqa: SLF001
 
 
 def test_client_init_default() -> None:
@@ -19,7 +21,7 @@ def test_client_init_default() -> None:
 
     client = TUIClient()
     assert client.host == "localhost"
-    assert client.port == 50051
+    assert client.port == DEFAULT_PORT
 
 
 def test_client_disconnect_without_connect() -> None:
@@ -40,7 +42,7 @@ def test_client_subscribe_raises_without_connect() -> None:
     client = TUIClient()
 
     with pytest.raises(RuntimeError, match="Client not connected"):
-        client.subscribe_view_changes(lambda v, s: None)
+        client.subscribe_view_changes(lambda _v, _s: None)
 
 
 def test_client_actions_noop_without_connect() -> None:

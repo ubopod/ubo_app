@@ -223,10 +223,10 @@ class MenuView(BaseView):
         import re
 
         # Remove [color=...]...[/color] tags but keep the content
-        result = re.sub(r'\[color=[^\]]*\]', '', text)
-        result = re.sub(r'\[/color\]', '', result)
+        result = re.sub(r"\[color=[^\]]*\]", "", text)
+        result = re.sub(r"\[/color\]", "", result)
         # Remove other common BBCode-style tags
-        result = re.sub(r'\[/?[a-z]+\]', '', result)
+        result = re.sub(r"\[/?[a-z]+\]", "", result)
         return result.strip()
 
     def update_selection(self, index: int) -> None:
