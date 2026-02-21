@@ -68,7 +68,7 @@
   },
   "docker": {
     "_type": "DockerState",
-    "combine_reducers_id": "f728b4fa42485e3a0a5d2f346baa9455",
+    "combine_reducers_id": "eb1167b367a9c3787c65c1e582e2e662",
     "envoy_grpc": {
       "_type": "ImageState",
       "container_ip": null,
@@ -165,6 +165,488 @@
       "usernames": {}
     }
   },
+  "dynamic_menus": {
+    "_type": "DynamicMenusState",
+    "menus": {
+      "display:timeout": {
+        "_type": "DynamicMenuData",
+        "heading": "Screen Timeout",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:one_minute",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "one_minute",
+            "label": "1 minute"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:five_minutes",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "five_minutes",
+            "label": "5 minutes"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:ten_minutes",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "ten_minutes",
+            "label": "10 minutes"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:thirty_minutes",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "thirty_minutes",
+            "label": "30 minutes"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:one_hour",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "one_hour",
+            "label": "1 hour"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "display:set_timeout:off",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "off",
+            "label": "Off"
+          }
+        ],
+        "menu_id": "display:timeout",
+        "placeholder": "",
+        "sub_heading": "Select screen blank timeout",
+        "title": "Display Settings"
+      },
+      "docker:image:envoy_grpc": {
+        "_type": "DynamicMenuData",
+        "heading": "Envoy for gRPC",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:envoy_grpc:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:envoy_grpc",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Envoy for gRPC"
+      },
+      "docker:image:home_assistant": {
+        "_type": "DynamicMenuData",
+        "heading": "Home Assistant",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:home_assistant:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:home_assistant",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Home Assistant"
+      },
+      "docker:image:home_bridge": {
+        "_type": "DynamicMenuData",
+        "heading": "Home Bridge",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:home_bridge:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:home_bridge",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Home Bridge"
+      },
+      "docker:image:immich": {
+        "_type": "DynamicMenuData",
+        "heading": "Immich",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:immich:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Pull Images"
+          }
+        ],
+        "menu_id": "docker:image:immich",
+        "placeholder": "",
+        "sub_heading": "Need to fetch images",
+        "title": "Docker - Immich"
+      },
+      "docker:image:ngrok": {
+        "_type": "DynamicMenuData",
+        "heading": "Ngrok",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:ngrok:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:ngrok",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Ngrok"
+      },
+      "docker:image:ollama": {
+        "_type": "DynamicMenuData",
+        "heading": "Ollama",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:ollama:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:ollama",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Ollama"
+      },
+      "docker:image:open_webui": {
+        "_type": "DynamicMenuData",
+        "heading": "Open WebUI",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open_webui:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:open_webui",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Open WebUI"
+      },
+      "docker:image:pi_hole": {
+        "_type": "DynamicMenuData",
+        "heading": "Pi-hole",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:pi_hole:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:pi_hole",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Pi-hole"
+      },
+      "docker:image:portainer": {
+        "_type": "DynamicMenuData",
+        "heading": "Portainer",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:portainer:DockerImageFetchAction",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Fetch"
+          }
+        ],
+        "menu_id": "docker:image:portainer",
+        "placeholder": "",
+        "sub_heading": "Need to fetch the image",
+        "title": "Docker - Portainer"
+      },
+      "docker:setup": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:stop",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰓛",
+            "is_short": false,
+            "key": "docker:stop",
+            "label": "Stop Docker"
+          }
+        ],
+        "menu_id": "docker:setup",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Setup Docker"
+      },
+      "ip:addresses": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "ip:open-interface:eth0",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰈀",
+            "is_short": false,
+            "key": "interface:eth0",
+            "label": "eth0"
+          }
+        ],
+        "menu_id": "ip:addresses",
+        "placeholder": "No IP addresses",
+        "sub_heading": null,
+        "title": "󰩟IP Addresses"
+      },
+      "lightdm:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "lightdm:install",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰶮",
+            "is_short": false,
+            "key": "lightdm:install",
+            "label": "Install Desktop"
+          }
+        ],
+        "menu_id": "lightdm:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Desktop"
+      },
+      "notifications:list": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [],
+        "menu_id": "notifications:list",
+        "placeholder": "No notifications",
+        "sub_heading": null,
+        "title": "Notifications"
+      },
+      "rpi-connect:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [],
+        "menu_id": "rpi-connect:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "RPi Connect"
+      },
+      "speech-synthesis:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-synthesis:download_piper",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "download",
+            "label": "Download Piper Model"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-synthesis:select_engine",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰔊",
+            "is_short": false,
+            "key": "select_engine",
+            "label": "Select Engine"
+          }
+        ],
+        "menu_id": "speech-synthesis:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "󰔊Speech Synthesis"
+      },
+      "speech-synthesis:picovoice": {
+        "_type": "DynamicMenuData",
+        "heading": "Picovoice",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-synthesis:set_access_key",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰐲",
+            "is_short": false,
+            "key": "set_key",
+            "label": "Set Access Key"
+          }
+        ],
+        "menu_id": "speech-synthesis:picovoice",
+        "placeholder": "",
+        "sub_heading": "Set the access key\nCurrent value: Fake",
+        "title": "Picovoice Settings"
+      },
+      "ssh:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "ssh:stop",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰓛",
+            "is_short": false,
+            "key": "ssh:toggle",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "ssh:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰯄",
+            "is_short": false,
+            "key": "ssh:disable",
+            "label": "Disable"
+          }
+        ],
+        "menu_id": "ssh:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "SSH"
+      },
+      "users:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "users:add",
+            "background_color": "#FFC107",
+            "color": "#ffffff",
+            "icon": "󰀔",
+            "is_short": false,
+            "key": "users:add",
+            "label": "Add"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "users:open-user:ubo",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰀄",
+            "is_short": false,
+            "key": "users:user:ubo",
+            "label": "ubo"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "users:open-user:pi",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰀄",
+            "is_short": false,
+            "key": "users:user:pi",
+            "label": "pi"
+          }
+        ],
+        "menu_id": "users:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Users"
+      },
+      "vscode:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "vscode:download",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰇚",
+            "is_short": false,
+            "key": "vscode:download",
+            "label": "Download Code CLI"
+          }
+        ],
+        "menu_id": "vscode:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "VSCode"
+      },
+      "wifi:connections": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [],
+        "menu_id": "wifi:connections",
+        "placeholder": "No Wi-Fi connections found",
+        "sub_heading": null,
+        "title": "Wi-Fi"
+      }
+    }
+  },
   "file_system": {
     "_type": "FileSystemState",
     "current_input": null,
@@ -191,7 +673,6 @@
   },
   "keypad": {
     "_type": "KeypadState",
-    "depth": 1,
     "is_consumed": false
   },
   "lightdm": {
@@ -204,7 +685,46 @@
   "main": {
     "_type": "MainState",
     "apps_items_priorities": {},
-    "depth": 1,
+    "current_view": {
+      "_type": "HomeViewData",
+      "cpu_percent": 0.0,
+      "menu_items": [
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:main",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "󰍜",
+          "is_short": true,
+          "key": "main",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:notifications",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "",
+          "is_short": true,
+          "key": "notifications",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:select:power",
+          "background_color": "#68B7FF",
+          "color": "#ffffff",
+          "icon": "󰐥",
+          "is_short": true,
+          "key": "power",
+          "label": ""
+        }
+      ],
+      "ram_percent": 0.0,
+      "show_status_bar": true,
+      "type": "home",
+      "volume_level": 0.15
+    },
     "is_footer_visible": true,
     "is_header_visible": true,
     "is_recording": false,
@@ -1222,7 +1742,7 @@
                                     1,
                                     1
                                   ],
-                                  "icon": "[color=#008000]󰪥[/color]",
+                                  "icon": "[color=#FFC107]󰪥[/color]",
                                   "is_short": false,
                                   "key": "audio",
                                   "label": "Audio",
@@ -1230,7 +1750,7 @@
                                   "progress": null,
                                   "sub_menu": {
                                     "_type": "HeadedMenu",
-                                    "heading": "[color=#008000]󰪥[/color] Audio",
+                                    "heading": "[color=#FFC107]󰪥[/color] Audio",
                                     "items": [
                                       {
                                         "_type": "UboDispatchItem",
@@ -1438,10 +1958,166 @@
                                           "service_id": "audio",
                                           "should_auto_restart": true
                                         }
+                                      },
+                                      {
+                                        "_type": "SubMenuItem",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "[color=#FF3F51][/color]",
+                                        "is_short": false,
+                                        "key": "errors",
+                                        "label": "Errors",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "sub_menu": {
+                                          "_type": "HeadedMenu",
+                                          "heading": "Errors",
+                                          "items": [
+                                            {
+                                              "_type": "UboApplicationItem",
+                                              "application": "<function:<lambda>>",
+                                              "application_id": "ubo:raw-text-viewer",
+                                              "background_color": "#68B7FF",
+                                              "color": [
+                                                1,
+                                                1,
+                                                1,
+                                                1
+                                              ],
+                                              "icon": "[color=#FF3F51][/color]",
+                                              "initialization_args": [],
+                                              "initialization_kwargs": {
+                                                "text": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n"
+                                              },
+                                              "is_short": false,
+                                              "key": "0",
+                                              "label": "2026-02-21 13:02:08",
+                                              "opacity": null,
+                                              "progress": null
+                                            },
+                                            {
+                                              "_type": "UboApplicationItem",
+                                              "application": "<function:<lambda>>",
+                                              "application_id": "ubo:raw-text-viewer",
+                                              "background_color": "#68B7FF",
+                                              "color": [
+                                                1,
+                                                1,
+                                                1,
+                                                1
+                                              ],
+                                              "icon": "[color=#FF3F51][/color]",
+                                              "initialization_args": [],
+                                              "initialization_kwargs": {
+                                                "text": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n"
+                                              },
+                                              "is_short": false,
+                                              "key": "1",
+                                              "label": "2026-02-21 13:02:09",
+                                              "opacity": null,
+                                              "progress": null
+                                            },
+                                            {
+                                              "_type": "UboApplicationItem",
+                                              "application": "<function:<lambda>>",
+                                              "application_id": "ubo:raw-text-viewer",
+                                              "background_color": "#68B7FF",
+                                              "color": [
+                                                1,
+                                                1,
+                                                1,
+                                                1
+                                              ],
+                                              "icon": "[color=#FF3F51][/color]",
+                                              "initialization_args": [],
+                                              "initialization_kwargs": {
+                                                "text": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/utils/async_.py\", line 39, in wrapper\n    await task\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 407, in stream_mic\n    read_audio_chunk = await self._initialize_input_reader()\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 352, in _initialize_input_reader\n    async for attempt in AsyncRetrying(\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 166, in __anext__\n    do = await self.iter(retry_state=self._retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 153, in iter\n    result = await action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/_utils.py\", line 99, in inner\n    return call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 420, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 187, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/concurrent/futures/_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/concurrent/futures/_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 360, in _initialize_input_reader\n    raise RuntimeError(msg)\nRuntimeError: Card index is not set\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] Card index is not set\n\n[b]future:[/b] <Task finished name='Task-10497' coro=<task_wrapper_coroutine:AudioManager.stream_mic() done, defined at /home/ubo/test-runner/ubo_app/utils/async_.py:37> exception=RuntimeError('Card index is not set')>"
+                                              },
+                                              "is_short": false,
+                                              "key": "2",
+                                              "label": "2026-02-21 13:02:12",
+                                              "opacity": null,
+                                              "progress": null
+                                            },
+                                            {
+                                              "_type": "UboApplicationItem",
+                                              "application": "<function:<lambda>>",
+                                              "application_id": "ubo:raw-text-viewer",
+                                              "background_color": "#68B7FF",
+                                              "color": [
+                                                1,
+                                                1,
+                                                1,
+                                                1
+                                              ],
+                                              "icon": "[color=#FF3F51][/color]",
+                                              "initialization_args": [],
+                                              "initialization_kwargs": {
+                                                "text": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n"
+                                              },
+                                              "is_short": false,
+                                              "key": "3",
+                                              "label": "2026-02-21 13:02:12",
+                                              "opacity": null,
+                                              "progress": null
+                                            },
+                                            {
+                                              "_type": "UboApplicationItem",
+                                              "application": "<function:<lambda>>",
+                                              "application_id": "ubo:raw-text-viewer",
+                                              "background_color": "#68B7FF",
+                                              "color": [
+                                                1,
+                                                1,
+                                                1,
+                                                1
+                                              ],
+                                              "icon": "[color=#FF3F51][/color]",
+                                              "initialization_args": [],
+                                              "initialization_kwargs": {
+                                                "text": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/utils/async_.py\", line 39, in wrapper\n    await task\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 109, in find_card_index\n    async for attempt in AsyncRetrying(\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 166, in __anext__\n    do = await self.iter(retry_state=self._retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 153, in iter\n    result = await action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/_utils.py\", line 99, in inner\n    return call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 421, in exc_check\n    raise retry_exc from fut.exception()\ntenacity.RetryError: RetryError[<Future at 0x7f007c9ed0 state=finished raised StopIteration>]\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] RetryError[<Future at 0x7f007c9ed0 state=finished raised StopIteration>]\n\n[b]future:[/b] <Task finished name='Task-10496' coro=<task_wrapper_coroutine:AudioManager.find_card_index() done, defined at /home/ubo/test-runner/ubo_app/utils/async_.py:37> exception=RetryError(<Future at 0x7f007c9ed0 state=finished raised StopIteration>)>"
+                                              },
+                                              "is_short": false,
+                                              "key": "4",
+                                              "label": "2026-02-21 13:02:13",
+                                              "opacity": null,
+                                              "progress": null
+                                            }
+                                          ],
+                                          "placeholder": null,
+                                          "sub_heading": "Errors raised in this service",
+                                          "title": "Errors"
+                                        }
+                                      },
+                                      {
+                                        "_type": "UboDispatchItem",
+                                        "action": "<function:action>",
+                                        "background_color": "#68B7FF",
+                                        "color": [
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                        ],
+                                        "icon": "",
+                                        "is_short": false,
+                                        "key": "clear_errors",
+                                        "label": "Clear errors",
+                                        "opacity": null,
+                                        "progress": null,
+                                        "store_action": {
+                                          "_type": "SettingsClearServiceErrorsAction",
+                                          "service_id": "audio"
+                                        }
                                       }
                                     ],
                                     "placeholder": null,
-                                    "sub_heading": "No errors raised in this service",
+                                    "sub_heading": "5 errors raised in this service",
                                     "title": "Audio"
                                   }
                                 },
@@ -7106,7 +7782,7 @@
                                   ],
                                   "icon": "󰌉",
                                   "is_short": false,
-                                  "key": null,
+                                  "key": "add_server",
                                   "label": "Add Server",
                                   "opacity": null,
                                   "progress": null
@@ -7879,6 +8555,47 @@
       "users:": 1,
       "vscode:": null,
       "wifi:": 2
+    },
+    "stack": [
+      {
+        "_type": "MenuStackItem",
+        "id": "f728b4fa42485e3a0a5d2f346baa9455",
+        "menu_key": "",
+        "page_index": 0
+      }
+    ],
+    "status_bar": {
+      "_type": "StatusBarData",
+      "clock": "",
+      "icons": [
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "󰍭"
+        },
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "󱊪"
+        },
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "󰖪"
+        },
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "[color=#FF3F51]󰪎[/color]"
+        }
+      ],
+      "is_recording": false,
+      "is_recording_audio": false,
+      "is_replaying": false,
+      "light_level": 0.0,
+      "progress_notifications": [],
+      "temperature": 0.0,
+      "title": ""
     }
   },
   "notifications": {
@@ -7927,7 +8644,33 @@
       },
       "audio": {
         "_type": "ServiceState",
-        "errors": [],
+        "errors": [
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n",
+            "timestamp": 1771707728.8053546
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n",
+            "timestamp": 1771707729.845407
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/utils/async_.py\", line 39, in wrapper\n    await task\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 407, in stream_mic\n    read_audio_chunk = await self._initialize_input_reader()\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 352, in _initialize_input_reader\n    async for attempt in AsyncRetrying(\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 166, in __anext__\n    do = await self.iter(retry_state=self._retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 153, in iter\n    result = await action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/_utils.py\", line 99, in inner\n    return call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 420, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 187, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/concurrent/futures/_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/concurrent/futures/_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 360, in _initialize_input_reader\n    raise RuntimeError(msg)\nRuntimeError: Card index is not set\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] Card index is not set\n\n[b]future:[/b] <Task finished name='Task-10497' coro=<task_wrapper_coroutine:AudioManager.stream_mic() done, defined at /home/ubo/test-runner/ubo_app/utils/async_.py:37> exception=RuntimeError('Card index is not set')>",
+            "timestamp": 1771707732.226395
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n",
+            "timestamp": 1771707732.2354836
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 118, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/utils/async_.py\", line 39, in wrapper\n    await task\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 109, in find_card_index\n    async for attempt in AsyncRetrying(\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 166, in __anext__\n    do = await self.iter(retry_state=self._retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 153, in iter\n    result = await action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/_utils.py\", line 99, in inner\n    return call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 421, in exc_check\n    raise retry_exc from fut.exception()\ntenacity.RetryError: RetryError[<Future at 0x7f007c9ed0 state=finished raised StopIteration>]\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] RetryError[<Future at 0x7f007c9ed0 state=finished raised StopIteration>]\n\n[b]future:[/b] <Task finished name='Task-10496' coro=<task_wrapper_coroutine:AudioManager.find_card_index() done, defined at /home/ubo/test-runner/ubo_app/utils/async_.py:37> exception=RetryError(<Future at 0x7f007c9ed0 state=finished raised StopIteration>)>",
+            "timestamp": 1771707733.004832
+          }
+        ],
         "id": "audio",
         "is_active": true,
         "is_enabled": true,

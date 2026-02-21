@@ -419,20 +419,9 @@
       "docker:setup": {
         "_type": "DynamicMenuData",
         "heading": null,
-        "items": [
-          {
-            "_type": "MenuItemData",
-            "action_id": "docker:stop",
-            "background_color": null,
-            "color": "#ffffff",
-            "icon": "󰓛",
-            "is_short": false,
-            "key": "docker:stop",
-            "label": "Stop Docker"
-          }
-        ],
+        "items": [],
         "menu_id": "docker:setup",
-        "placeholder": "",
+        "placeholder": "Checking Docker service status...",
         "sub_heading": null,
         "title": "Setup Docker"
       },
@@ -961,7 +950,7 @@
                     }
                   ],
                   "placeholder": "No apps",
-                  "title": "<function:_apps_menu_title>"
+                  "title": "󰀻Docker Apps"
                 }
               },
               {
@@ -6843,7 +6832,7 @@
                         1,
                         1
                       ],
-                      "icon": "",
+                      "icon": "",
                       "is_short": false,
                       "key": "Hardware",
                       "label": "Hardware",
@@ -7112,7 +7101,7 @@
                           }
                         ],
                         "placeholder": "No settings in this category",
-                        "title": "Hardware"
+                        "title": "Hardware"
                       }
                     },
                     {
