@@ -41,7 +41,7 @@ from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
-    from ubo_gui.menu.types import Menu
+    from ubo_gui.menu.types import Item, Menu
 
     from ubo_app.store.core.types import StackItemType
 
@@ -332,14 +332,23 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     def go_back(self: MenuAppCentral, _: MenuGoBackEvent) -> None:
         self.menu_widget.go_back()
 
-    def select_by_icon(self: MenuAppCentral, event: MenuChooseByIconEvent) -> None:
-        # Use current_menu_items to get ALL items, not just visible page items
-        # This allows selection regardless of pagination state
+    def _get_selectable_items(self: MenuAppCentral) -> list[Item]:
+        """Get items available for selection.
+
+        When an application (e.g. notification) is on top, use its items.
+        Otherwise use current_menu_items for full pagination support.
+        """
+        current_app = self.menu_widget.current_application
+        if current_app is not None:
+            return [item for item in current_app.items if item is not None]
         items = self.menu_widget.current_menu_items
         if items is None:
-            msg = 'No items in current menu'
-            raise TypeError(msg)
-        filtered_items = [item for item in items if item and item.icon == event.icon]
+            return []
+        return [item for item in items if item is not None]
+
+    def select_by_icon(self: MenuAppCentral, event: MenuChooseByIconEvent) -> None:
+        items = self._get_selectable_items()
+        filtered_items = [item for item in items if item.icon == event.icon]
         if not filtered_items:
             msg = f'No item with icon "{event.icon}"'
             raise ValueError(msg)
@@ -355,13 +364,8 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self: MenuAppCentral,
         event: MenuChooseByLabelEvent,
     ) -> None:
-        # Use current_menu_items to get ALL items, not just visible page items
-        # This allows selection regardless of pagination state
-        items = self.menu_widget.current_menu_items
-        if items is None:
-            msg = 'No items in current menu'
-            raise TypeError(msg)
-        filtered_items = [item for item in items if item and item.label == event.label]
+        items = self._get_selectable_items()
+        filtered_items = [item for item in items if item.label == event.label]
         if not filtered_items:
             msg = f'No item with label "{event.label}"'
             raise ValueError(msg)

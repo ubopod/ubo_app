@@ -376,11 +376,11 @@ def _get_dynamic_menu_state(
 
 
 @store.with_state(lambda state: state)
-def _get_home_view_state(state: RootState) -> tuple[float, float, float]:
+def _get_home_view_state(state: RootState) -> tuple[float, float, float | None]:
     """Get system metrics for home view rendering."""
     cpu = 0.0
     ram = 0.0
-    vol = 0.0
+    vol: float | None = None
     with contextlib.suppress(AttributeError, TypeError):
         cpu = state.system.cpu_percent
     with contextlib.suppress(AttributeError, TypeError):
@@ -648,17 +648,17 @@ class ViewRenderer:
         if ram_gauge is not None:
             ram_gauge.value = ram
 
-        # Update volume widget
+        # Update volume widget (only if audio state is available)
         volume_widget = getattr(home_page, 'volume_widget', None)
-        if volume_widget is not None:
+        if volume_widget is not None and vol is not None:
             volume_widget.value = vol
 
         if DEBUG_MENU:
             logger.info(
-                '[ViewRenderer] Home view: cpu=%.1f, ram=%.1f, vol=%.1f',
+                '[ViewRenderer] Home view: cpu=%.1f, ram=%.1f, vol=%s',
                 cpu,
                 ram,
-                vol,
+                f'{vol:.1f}' if vol is not None else 'N/A',
             )
 
     def _render_menu_view(self, view: MenuViewData) -> None:

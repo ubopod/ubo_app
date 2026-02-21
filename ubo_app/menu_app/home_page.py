@@ -5,7 +5,7 @@ import pathlib
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from kivy.clock import Clock, mainthread
+from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu.constants import PAGE_SIZE
@@ -38,16 +38,23 @@ class HomePage(MenuPageWidget):
         self.ids.central_column.add_widget(self.cpu_gauge)
         self.ids.central_column.add_widget(self.ram_gauge)
 
-        self.volume_widget = VolumeWidget()
+        from ubo_app.utils.persistent_store import read_from_persistent_store
+
+        initial_volume = read_from_persistent_store(
+            'audio_state:playback_volume',
+            default=0.5,
+        )
+        self.volume_widget = VolumeWidget(value=initial_volume * 100)
         self.ids.right_column.add_widget(self.volume_widget)
 
-        store.autorun(lambda state: state.audio.playback_volume)(
-            self._sync_output_volume,
-        )
+        def set_volume(_: float) -> None:
+            try:
+                vol = store._state.audio.playback_volume  # noqa: SLF001
+                self.volume_widget.value = vol * 100
+            except AttributeError:
+                pass
 
-    @mainthread
-    def _sync_output_volume(self: HomePage, selector_result: float) -> None:
-        self.volume_widget.value = selector_result * 100
+        Clock.schedule_interval(set_volume, 1)
 
     @cached_property
     def cpu_gauge(self: HomePage) -> GaugeWidget:
