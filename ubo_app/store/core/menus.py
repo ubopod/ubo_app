@@ -46,15 +46,8 @@ SETTINGS_MENU_ID = 'settings:categories'
 POWER_MENU_ID = 'power:options'
 
 
-def _apps_menu_title() -> str:
-    """Get the apps menu title from the registry."""
-    from ubo_app.store.core.view_registry import get_apps_menu_title
-
-    return get_apps_menu_title()
-
-
 APPS_MENU = HeadlessMenu(
-    title=_apps_menu_title,
+    title='󰀻Docker Apps',
     items=[],
     placeholder='No apps',
 )

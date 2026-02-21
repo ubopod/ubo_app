@@ -69,10 +69,12 @@ def get_notification_view_data(
     """
     from ubo_app.store.core.types import MenuItemData
 
-    notification = next(
-        (n for n in state.notifications.notifications if n.id == notification_id),
-        None,
-    )
+    notification = None
+    if hasattr(state, 'notifications'):
+        notification = next(
+            (n for n in state.notifications.notifications if n.id == notification_id),
+            None,
+        )
 
     if notification:
         # Convert notification actions to MenuItemData

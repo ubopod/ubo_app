@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import ActionItem, SubMenuItem, menu_items
 
-from ubo_app.store.core.types import MenuItemData
+from ubo_app.store.core.types import MenuItemData, MenuStackItem
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -197,8 +197,6 @@ def get_current_menu_from_stack(
         The current menu, or None if not found.
 
     """
-    from ubo_app.store.core.types import MenuStackItem
-
     if not root_menu or not stack:
         return None
 

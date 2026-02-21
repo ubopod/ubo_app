@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ubo_app.store.core.constants import NERD_FONT_ICON_CHARS
+from ubo_app.store.core.menu_adapter import get_current_menu_from_stack
 from ubo_app.store.core.view_registry import get_menu_id_for_path
 
 if TYPE_CHECKING:
@@ -125,9 +126,6 @@ def find_dynamic_menu_for_position(
     # Fall back to title-based matching
     if not dynamic_menus_state.menus:
         return None
-
-    # Import here to avoid circular dependency
-    from ubo_app.store.core.menu_adapter import get_current_menu_from_stack
 
     current_menu = get_current_menu_from_stack(main_state.menu, stack)
     if current_menu is None:
