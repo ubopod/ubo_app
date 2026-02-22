@@ -5,8 +5,10 @@ Tests conversion between ubo-gui types and Redux-native MenuItemData.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import pytest
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
+from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.store.core.menu_adapter import (
     find_menu_for_item,
@@ -21,6 +23,14 @@ from ubo_app.store.core.types import (
     MenuStackItem,
     NotificationStackItem,
 )
+
+def _resolve_items(menu: HeadlessMenu) -> Sequence[Item]:
+    """Resolve menu items, handling callable items."""
+    items = menu.items
+    if callable(items):
+        return items()
+    return items
+
 
 # Test menus
 LEAF_MENU = HeadlessMenu(title='Leaf', items=[], placeholder='Empty')
@@ -46,14 +56,14 @@ class TestFindSubMenuItem:
 
     def test_finds_existing_item(self) -> None:
         """Verify find_sub_menu_item locates an item by key."""
-        items = list(ROOT_MENU.items)
+        items = list(_resolve_items(ROOT_MENU))
         result = find_sub_menu_item(items, 'child')
         assert isinstance(result, SubMenuItem)
         assert result.key == 'child'
 
     def test_raises_for_missing_key(self) -> None:
         """Verify find_sub_menu_item raises for a missing key."""
-        items = list(ROOT_MENU.items)
+        items = list(_resolve_items(ROOT_MENU))
         with pytest.raises(TypeError, match='Nonexistent'):
             find_sub_menu_item(items, 'nonexistent')
 
@@ -73,14 +83,14 @@ class TestFindMenuForItem:
 
     def test_finds_submenu(self) -> None:
         """Verify find_menu_for_item returns the correct submenu."""
-        items = list(ROOT_MENU.items)
+        items = list(_resolve_items(ROOT_MENU))
         result = find_menu_for_item(items, 'child')
         assert result is not None
         assert result.title == 'Child'
 
     def test_returns_none_for_missing(self) -> None:
         """Verify find_menu_for_item returns None for missing key."""
-        items = list(ROOT_MENU.items)
+        items = list(_resolve_items(ROOT_MENU))
         result = find_menu_for_item(items, 'nonexistent')
         assert result is None
 

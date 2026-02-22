@@ -48,8 +48,11 @@ class HomePage(MenuPageWidget):
         self.ids.right_column.add_widget(self.volume_widget)
 
         def set_volume(_: float) -> None:
+            state = store._state  # noqa: SLF001
+            if state is None:
+                return
             try:
-                vol = store._state.audio.playback_volume  # noqa: SLF001
+                vol = state.audio.playback_volume
                 self.volume_widget.value = vol * 100
             except AttributeError:
                 pass

@@ -35,7 +35,7 @@ def _get_state(result: object) -> DynamicMenusState:
 
 def _get_events(result: object) -> list:
     if isinstance(result, CompleteReducerResult):
-        return list(result.events)
+        return list(result.events or ())
     return []
 
 

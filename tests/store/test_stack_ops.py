@@ -151,7 +151,9 @@ class TestPushMenu:
         """Verify pushed menu item starts at page index zero."""
         state = _make_state()
         new_state = push_menu(state, 'main')
-        assert new_state.stack[-1].page_index == 0
+        item = new_state.stack[-1]
+        assert isinstance(item, MenuStackItem)
+        assert item.page_index == 0
 
     def test_new_item_has_unique_id(self) -> None:
         """Verify each pushed menu item gets a unique id."""

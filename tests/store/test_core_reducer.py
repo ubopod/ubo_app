@@ -131,7 +131,7 @@ def _get_state(result: object) -> MainState:
 def _get_events(result: object) -> list:
     """Extract events from reducer result."""
     if isinstance(result, CompleteReducerResult):
-        return list(result.events)
+        return list(result.events or ())
     return []
 
 
