@@ -85,6 +85,7 @@ dev-dependencies = [
   "pytest-timeout>=2.3.1",
   "pytest-xdist>=3.5.0",
   "ruff>=0.12.10",
+  "textual>=0.52.0",
   "toml>=0.10.2",
 ]
 
@@ -329,6 +330,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/090-web-ui"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/tui"
 extraPaths = ["."]
 
 [tool.pytest.ini_options]
