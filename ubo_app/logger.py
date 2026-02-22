@@ -87,7 +87,7 @@ class UboLogger(logging.getLoggerClass()):
     def verbose(
         self: UboLogger,
         msg: object,
-        *args: tuple[object],
+        *args: object,
         exc_info: logging._ExcInfoType | None = None,
         stack_info: bool = False,
         stacklevel: int = 1,
