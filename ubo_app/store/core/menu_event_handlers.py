@@ -33,13 +33,17 @@ from ubo_app.store.core.types import (
     MenuStackItem,
     NotificationStackItem,
     StackPopAction,
+    StackPopItemAction,
     StackPopToRootAction,
     StackPushMenuAction,
     StackPushNotificationAction,
     StackSetPageIndexAction,
 )
 from ubo_app.store.main import store
-from ubo_app.store.services.notifications import NotificationsDisplayEvent
+from ubo_app.store.services.notifications import (
+    NotificationsClearEvent,
+    NotificationsDisplayEvent,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -441,6 +445,30 @@ def _handle_notification_display(event: NotificationsDisplayEvent) -> None:
     store.dispatch(StackPushNotificationAction(notification_id=notification_id))
 
 
+def _handle_notification_clear(event: NotificationsClearEvent) -> None:
+    """Handle notification clear by popping the matching stack item."""
+    notification_id = getattr(event.notification, 'id', None)
+    if not notification_id:
+        return
+
+    state = store._state  # noqa: SLF001
+    if state is None:
+        return
+
+    # Find the NotificationStackItem with the matching notification_id
+    for item in state.main.stack:
+        if (
+            isinstance(item, NotificationStackItem)
+            and item.notification_id == notification_id
+        ):
+            logger.info(
+                '[MenuHandler] notification_clear: popping notification %s',
+                notification_id,
+            )
+            store.dispatch(StackPopItemAction(item_id=item.id))
+            return
+
+
 def setup_menu_event_handlers() -> Subscriptions:
     """Subscribe to menu events and wire them to stack actions."""
     return [
@@ -450,6 +478,10 @@ def setup_menu_event_handlers() -> Subscriptions:
         store.subscribe_event(MenuGoBackEvent, _handle_go_back),
         store.subscribe_event(MenuGoHomeEvent, _handle_go_home),
         store.subscribe_event(MenuScrollEvent, _handle_scroll),
+        store.subscribe_event(
+            NotificationsClearEvent,
+            _handle_notification_clear,
+        ),
         store.subscribe_event(
             NotificationsDisplayEvent,
             _handle_notification_display,
