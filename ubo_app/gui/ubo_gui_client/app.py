@@ -1,0 +1,236 @@
+"""Main GUI application - uses gRPC exclusively for communication with core."""
+
+from __future__ import annotations
+
+import logging
+import math
+
+from kivy.clock import Clock, mainthread
+from kivy.graphics.context_instructions import Color
+from kivy.graphics.vertex_instructions import Rectangle
+from kivy.metrics import dp
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.label import Label
+from kivy.uix.widget import Widget
+from ubo_gui.app import UboApp
+
+from ubo_gui_client.client import GUIClient
+from ubo_gui_client.menu_central import MenuAppCentral
+from ubo_gui_client.menu_footer import MenuAppFooter
+from ubo_gui_client.menu_header import MenuAppHeader
+
+logger = logging.getLogger(__name__)
+
+
+class BlankOverlay(Widget):
+    """Full-screen black overlay widget for blanked display."""
+
+    def __init__(self: BlankOverlay, **kwargs: object) -> None:
+        """Initialize the blank overlay."""
+        super().__init__(**kwargs)
+        with self.canvas:
+            Color(0, 0, 0, 1)
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+        self.bind(size=self._update_rect, pos=self._update_rect)
+
+    def _update_rect(self: BlankOverlay, *_args: object) -> None:
+        """Update rectangle size and position."""
+        self.rect.size = self.size
+        self.rect.pos = self.pos
+
+
+class DisconnectOverlay(FloatLayout):
+    """Full-screen opaque overlay shown when the gRPC connection is lost."""
+
+    def __init__(self: DisconnectOverlay, **kwargs: object) -> None:
+        """Initialize the disconnect overlay."""
+        super().__init__(**kwargs)
+        with self.canvas.before:
+            Color(0, 0, 0, 1)
+            self._bg_rect = Rectangle(size=self.size, pos=self.pos)
+        self.bind(size=self._update_bg, pos=self._update_bg)
+
+        self._title_label = Label(
+            text='Disconnected',
+            font_size=dp(20),
+            bold=True,
+            color=(1, 0.3, 0.3, 1),
+            size_hint=(1, None),
+            height=dp(30),
+            pos_hint={'center_x': 0.5, 'center_y': 0.55},
+            halign='center',
+        )
+        self._countdown_label = Label(
+            text='',
+            font_size=dp(14),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(24),
+            pos_hint={'center_x': 0.5, 'center_y': 0.42},
+            halign='center',
+        )
+        self.add_widget(self._title_label)
+        self.add_widget(self._countdown_label)
+
+        self._countdown_event = None
+        self._remaining: float = 0
+
+    def _update_bg(self: DisconnectOverlay, *_args: object) -> None:
+        self._bg_rect.size = self.size
+        self._bg_rect.pos = self.pos
+
+    def start_countdown(
+        self: DisconnectOverlay,
+        delay: float,
+        attempt: int,
+        max_retries: int,
+    ) -> None:
+        """Start (or restart) the countdown display."""
+        self.stop_countdown()
+        self._remaining = delay
+        self._title_label.text = 'Disconnected'
+        self._update_countdown_text(attempt, max_retries)
+        self._countdown_event = Clock.schedule_interval(
+            lambda _dt: self._tick(attempt, max_retries),
+            1.0,
+        )
+
+    def _tick(
+        self: DisconnectOverlay,
+        attempt: int,
+        max_retries: int,
+    ) -> None:
+        self._remaining = max(0, self._remaining - 1)
+        self._update_countdown_text(attempt, max_retries)
+
+    def _update_countdown_text(
+        self: DisconnectOverlay,
+        attempt: int,
+        max_retries: int,
+    ) -> None:
+        secs = math.ceil(self._remaining)
+        self._countdown_label.text = (
+            f'Reconnecting in {secs}s  ({attempt}/{max_retries})'
+        )
+
+    def stop_countdown(self: DisconnectOverlay) -> None:
+        """Cancel any running countdown."""
+        if self._countdown_event is not None:
+            self._countdown_event.cancel()
+            self._countdown_event = None
+
+
+class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
+    """GUI application that communicates with core via gRPC."""
+
+    def __init__(
+        self: UboGUIApp,
+        host: str = 'localhost',
+        port: int = 50051,
+        **kwargs: object,
+    ) -> None:
+        """Initialize the application."""
+        self.grpc_client = GUIClient(host=host, port=port)
+        super().__init__(**kwargs)
+        self.is_stopped = False
+        self.blank_overlay: BlankOverlay | None = None
+        self.disconnect_overlay: DisconnectOverlay | None = None
+        self.saved_children: list[Widget] = []
+
+    @mainthread
+    def handle_blank_state(self: UboGUIApp, is_blanked: bool) -> None:  # noqa: FBT001
+        """Show or hide blank overlay based on blanked state."""
+        if is_blanked:
+            self.saved_children = list(self.root.children)
+            self.root.clear_widgets()
+            if self.blank_overlay is None:
+                self.blank_overlay = BlankOverlay(size=self.root.size)
+            self.root.add_widget(self.blank_overlay)
+        elif self.saved_children:
+            self.root.clear_widgets()
+            for child in reversed(self.saved_children):
+                self.root.add_widget(child)
+            self.saved_children = []
+
+    def rerender(self: UboGUIApp) -> None:
+        """Re-render the application."""
+        self.root.previous_frame = None
+        mainthread(self.root.process_frame)()
+
+    @mainthread
+    def show_disconnect_overlay(
+        self: UboGUIApp,
+        delay: float,
+        attempt: int,
+        max_retries: int,
+    ) -> None:
+        """Show the disconnect overlay with a countdown.
+
+        The overlay is added to the Window (not self.root) so it covers
+        the entire screen including header and footer.
+        """
+        from kivy.core.window import Window
+
+        if self.disconnect_overlay is None:
+            self.disconnect_overlay = DisconnectOverlay(
+                size=Window.size,
+            )
+            Window.bind(size=self._sync_disconnect_overlay_size)
+        if self.disconnect_overlay.parent is None:
+            Window.add_widget(self.disconnect_overlay)
+        self.disconnect_overlay.start_countdown(delay, attempt, max_retries)
+
+    @mainthread
+    def hide_disconnect_overlay(self: UboGUIApp) -> None:
+        """Hide the disconnect overlay."""
+        from kivy.core.window import Window
+
+        if self.disconnect_overlay is not None:
+            self.disconnect_overlay.stop_countdown()
+            if self.disconnect_overlay.parent is not None:
+                Window.remove_widget(self.disconnect_overlay)
+
+    def _sync_disconnect_overlay_size(
+        self: UboGUIApp,
+        _window: object,
+        size: tuple[int, int],
+    ) -> None:
+        """Keep the disconnect overlay sized to the window."""
+        if self.disconnect_overlay is not None:
+            self.disconnect_overlay.size = size
+
+    def on_start(self: UboGUIApp) -> None:
+        """Start the application and connect to gRPC."""
+        logger.info('[App] on_start: connecting to gRPC...')
+        self.grpc_client.connect()
+        logger.info(
+            '[App] Connected to gRPC server at %s:%d',
+            self.grpc_client.host,
+            self.grpc_client.port,
+        )
+        # Now that gRPC is connected, set up the view renderer
+        self.setup_view_renderer()
+        logger.info('[App] View renderer set up')
+
+        # Register GUI-client page widgets
+        from ubo_gui_client.pages import register_all_pages
+
+        register_all_pages()
+        logger.info('[App] Page widgets registered')
+
+        # Set up keyboard handling
+        from ubo_gui_client.keyboard import setup_keyboard
+
+        self._keyboard_cleanup = setup_keyboard(self.grpc_client, self.menu_widget)
+        logger.info('[App] Keyboard handling set up, app ready')
+
+    def stop(self, *largs: object) -> None:
+        """Stop the application."""
+        logger.info('[App] Stopping...')
+        super().stop(*largs)
+        self.is_stopped = True
+        if hasattr(self, '_keyboard_cleanup'):
+            for cleanup in self._keyboard_cleanup:
+                cleanup()
+        self.grpc_client.disconnect()
+        logger.info('[App] Stopped')

@@ -1,0 +1,472 @@
+# ruff: noqa: D100, D101, D102, D107
+from __future__ import annotations
+
+import logging
+from functools import cached_property
+from typing import TYPE_CHECKING
+
+from kivy.clock import mainthread
+from ubo_gui.app import UboApp
+from ubo_gui.menu.menu_widget import MenuWidget
+from ubo_gui.menu.stack_item import StackMenuItem
+from ubo_gui.menu.types import ActionItem, HeadlessMenu
+
+from ubo_gui_client.constants import DEBUG_MENU
+from ubo_gui_client.home_page import HomePage
+from ubo_gui_client.menu_notification_handler import MenuNotificationHandler
+
+if TYPE_CHECKING:
+    from kivy.uix.widget import Widget
+    from ubo_gui.menu.types import Menu
+
+    from ubo_gui_client.client import GUIClient
+
+logger = logging.getLogger(__name__)
+
+
+def _noop() -> None:
+    """No-op action for menu items; real selection goes via gRPC."""
+
+
+def _convert_proto_items_to_ubo(proto_items: list[object]) -> list[ActionItem]:
+    """Convert proto Item objects to ubo_gui ActionItem objects."""
+    result: list[ActionItem] = []
+    for item in proto_items:
+        label = getattr(item, 'label', None) or ''
+        icon = getattr(item, 'icon', None)
+        color = getattr(item, 'color', None) or (1, 1, 1, 1)
+        background_color = getattr(item, 'background_color', None)
+        is_short = getattr(item, 'is_short', None) or False
+
+        kwargs: dict = {
+            'label': label,
+            'icon': icon,
+            'is_short': is_short,
+            'action': _noop,
+        }
+        if color:
+            kwargs['color'] = color
+        if background_color:
+            kwargs['background_color'] = background_color
+
+        result.append(ActionItem(**kwargs))
+    return result
+
+
+def _convert_proto_menu_to_ubo(proto_menu: object) -> Menu | None:
+    """Convert a proto Menu to a ubo_gui Menu.
+
+    The proto Menu is a oneof (headed_menu | headless_menu).
+    We use betterproto.which_one_of to determine which field is set.
+    """
+    import betterproto
+
+    if isinstance(proto_menu, betterproto.Message):
+        _, source = betterproto.which_one_of(proto_menu, 'menu')
+    else:
+        source = None
+
+    if source is None:
+        return None
+
+    title = getattr(source, 'title', '') or ''
+    proto_items = getattr(source, 'items', []) or []
+    items = _convert_proto_items_to_ubo(proto_items)
+
+    return HeadlessMenu(title=title, items=items)
+
+
+class MenuWidgetWithHomePage(MenuWidget):
+    @cached_property
+    def home_page(self: MenuWidgetWithHomePage) -> HomePage:
+        return HomePage(
+            name='Page 1 0',
+            padding_bottom=self.padding_bottom,
+            padding_top=self.padding_top,
+        )
+
+    def _render_menu(
+        self: MenuWidgetWithHomePage,
+        menu: Menu,
+    ) -> Widget:
+
+        if self.depth <= 1:
+            self.home_page.items = self.current_menu_items
+            self.current_screen = self.home_page
+            return self.home_page
+        return super()._render_menu(menu)
+
+    def reset_to_root(self: MenuWidgetWithHomePage) -> bool:
+        """Reset the navigation stack to root (depth 1) instantly.
+
+        Unlike ``go_home()`` which uses an animated transition (0.3s),
+        this performs an instant reset using ``_no_transition`` so that
+        the caller can immediately push/open a new view without the home
+        page flashing during the animation.
+
+        Returns ``True`` if a reset was performed, ``False`` if already at root.
+        """
+        if self.depth <= 1 and self.current_application is None:
+            logger.debug(
+                '[MenuWidget] reset_to_root: already at root (depth=%d, app=None)',
+                self.depth,
+            )
+            return False
+        logger.info(
+            '[MenuWidget] reset_to_root: instant reset (depth=%d, app=%s, stack=%d)',
+            self.depth,
+            type(self.current_application).__name__
+            if self.current_application
+            else 'None',
+            len(self.stack),
+        )
+        from ubo_gui.menu.stack_item import StackApplicationItem
+
+        with self.stack_lock:
+            for item in self.stack[1:]:
+                item.clear_subscriptions()
+                if isinstance(item, StackApplicationItem):
+                    item.application.dispatch('on_close')
+            self.root.selection = None
+            # Hide old screen immediately — _switch_to is deferred by
+            # @mainthread so without this the old screen stays visible
+            # for one frame while NoTransition completes.
+            old = self.screen_manager.current_screen
+            if old is not None:
+                old.opacity = 0.0
+            self.stack = self.stack[:1]
+            self._switch_to(
+                self.current_screen,
+                transition=self._no_transition,
+            )
+        return True
+
+    def _on_screen_changed(self: MenuWidgetWithHomePage, *_args: object) -> None:
+        """Hide all ScreenManager children except the current screen.
+
+        Bound to ``screen_manager.current`` changes. Ensures the home page
+        (or any other old screen) doesn't bleed through transparent areas
+        of the new screen.
+        """
+        current = self.screen_manager.current_screen
+        for child in self.screen_manager.children:
+            child.opacity = 1.0 if child is current else 0.0
+
+    def replace_top_with_application(
+        self: MenuWidgetWithHomePage,
+        application: object,
+    ) -> None:
+        """Replace whatever is at the current depth with an application — instantly.
+
+        At any depth, this clears items above root and pushes the application
+        using ``_no_transition``, so the home page never flashes.
+        """
+        import uuid
+
+        from ubo_gui.menu.stack_item import StackApplicationItem
+        from ubo_gui.page import PageWidget
+
+        if not isinstance(application, PageWidget):
+            msg = f'Expected PageWidget, got {type(application)}'
+            raise TypeError(msg)
+
+        logger.info(
+            '[MenuWidget] replace_top_with_application: depth=%d',
+            self.depth,
+        )
+        with self.stack_lock:
+            # Clean up items above root
+            for item in self.stack[1:]:
+                item.clear_subscriptions()
+                if isinstance(item, StackApplicationItem):
+                    item.application.dispatch('on_close')
+            self.root.selection = None
+            # Hide old screen immediately — _switch_to is deferred by
+            # @mainthread so without this the old screen stays visible
+            # for one frame while NoTransition completes.
+            old = self.screen_manager.current_screen
+            if old is not None:
+                old.opacity = 0.0
+            # Set stack to root only
+            self.stack = self.stack[:1]
+            # Now push the application onto the stack
+            application.name = uuid.uuid4().hex
+            application.padding_bottom = self.padding_bottom
+            application.padding_top = self.padding_top
+            new_top = StackApplicationItem(application=application, parent=None)
+            self.stack = [*self.stack, new_top]
+            # Instant transition — no home page flash
+            self._switch_to(
+                self.current_screen,
+                transition=self._no_transition,
+            )
+
+    def replace_top_with_menu(
+        self: MenuWidgetWithHomePage,
+        menu: Menu,
+    ) -> None:
+        """Replace whatever is at the current depth with a menu — instantly.
+
+        At any depth, this clears items above root and pushes the new menu
+        using ``_no_transition``, so the home page never flashes.
+        """
+        from ubo_gui.menu.stack_item import StackApplicationItem, StackMenuItem
+
+        logger.info(
+            '[MenuWidget] replace_top_with_menu: depth=%d, title=%s',
+            self.depth,
+            menu.title,
+        )
+        with self.stack_lock:
+            # Clean up items above root
+            for item in self.stack[1:]:
+                item.clear_subscriptions()
+                if isinstance(item, StackApplicationItem):
+                    item.application.dispatch('on_close')
+            self.root.selection = None
+            # Hide old screen immediately — _switch_to is deferred by
+            # @mainthread so without this the old screen stays visible
+            # for one frame while NoTransition completes.
+            old = self.screen_manager.current_screen
+            if old is not None:
+                old.opacity = 0.0
+            # Set stack to root + new menu
+            new_top = StackMenuItem(menu=menu, page_index=0, parent=None)
+            self.stack = [self.stack[0], new_top]
+            # Instant transition — no home page flash
+            self._switch_to(
+                self.current_screen,
+                transition=self._no_transition,
+            )
+
+    def push_menu(self: MenuWidgetWithHomePage, menu: Menu) -> None:
+        """Push a menu onto the navigation stack (public wrapper)."""
+        logger.info(
+            '[MenuWidget] push_menu: title=%s (depth=%d)',
+            menu.title,
+            self.depth,
+        )
+        self._push(
+            menu,
+            transition=self._slide_transition,
+            direction='left',
+        )
+        logger.debug(
+            '[MenuWidget] push_menu: done (depth=%d)',
+            self.depth,
+        )
+
+    def replace_top_menu(
+        self: MenuWidgetWithHomePage,
+        menu: Menu,
+        *,
+        page_index: int | None = None,
+    ) -> None:
+        """Replace the top menu's content without changing the stack depth.
+
+        If ``page_index`` is given, the page index of the current stack item is
+        updated *before* the menu is replaced so that the rendered page matches
+        the scroll-bar position from the first frame.
+        """
+        if not self.stack:
+            logger.warning('[MenuWidget] replace_top_menu: empty stack, skipping')
+            return
+        logger.debug(
+            '[MenuWidget] replace_top_menu: title=%s, page=%s (depth=%d)',
+            menu.title,
+            page_index,
+            self.depth,
+        )
+        if page_index is not None and isinstance(self.top, StackMenuItem):
+            self.top.page_index = page_index
+        self._replace_menu(self.top, menu)
+
+
+def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
+    """Patch transition handlers to guard against None screen_out/screen_in.
+
+    ubo_gui's ``TransitionsMixin._handle_transition_progress`` and
+    ``_handle_transition_complete`` access ``transition.screen_out`` and
+    ``transition.screen_in`` without null checks.  When screens are removed
+    during rapid view switching (e.g. reset_to_root → push_menu), Kivy may
+    clear these references, causing ``AttributeError: 'NoneType' object has
+    no attribute 'screen_out'``.
+
+    This monkey-patches the handlers with null-safe wrappers.
+    """
+    original_progress = widget._handle_transition_progress
+    original_complete = widget._handle_transition_complete
+
+    def _safe_progress(
+        transition: object,
+        progression: float,
+    ) -> None:
+        if getattr(transition, 'screen_out', None) is None or getattr(
+            transition,
+            'screen_in',
+            None,
+        ) is None:
+            logger.warning(
+                '[MenuWidget] Transition progress with None screen (screen_out=%s, screen_in=%s)',
+                getattr(transition, 'screen_out', 'N/A'),
+                getattr(transition, 'screen_in', 'N/A'),
+            )
+            return
+        original_progress(transition, progression)
+
+    def _safe_complete(transition: object) -> None:
+        if getattr(transition, 'screen_out', None) is None or getattr(
+            transition,
+            'screen_in',
+            None,
+        ) is None:
+            logger.warning(
+                '[MenuWidget] Transition complete with None screen (screen_out=%s, screen_in=%s)',
+                getattr(transition, 'screen_out', 'N/A'),
+                getattr(transition, 'screen_in', 'N/A'),
+            )
+            # Clear the running state and process queued transitions
+            with widget._transition_progress_lock:
+                if widget.transition_queue:
+                    (
+                        (screen, next_transition, direction, duration),
+                        *widget.transition_queue,
+                    ) = widget.transition_queue
+                    widget._perform_switch(
+                        screen,
+                        transition=next_transition,
+                        **(
+                            {'duration': duration}
+                            if duration is not None
+                            else {}
+                        ),
+                        **(
+                            {'direction': direction}
+                            if direction is not None
+                            else {}
+                        ),
+                    )
+                else:
+                    widget._running_transition_end_time = None
+            return
+        original_complete(transition)
+
+    widget._handle_transition_progress = _safe_progress
+    widget._handle_transition_complete = _safe_complete
+
+
+class MenuAppCentral(MenuNotificationHandler, UboApp):
+    grpc_client: GUIClient
+
+    def __init__(self: MenuAppCentral, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)
+        self._last_page_index: int | None = None
+
+        _patch_transition_handlers(self.menu_widget)
+
+        # Ensure inactive screens are hidden whenever the current screen changes.
+        # This prevents the home page (with gauges) from bleeding through
+        # transparent areas of menu/notification screens.
+        self.menu_widget.screen_manager.bind(
+            current=self.menu_widget._on_screen_changed,
+        )
+
+        self._setup_bindings()
+
+    def _setup_bindings(self) -> None:
+        """Set up Kivy property bindings."""
+        self.menu_widget.bind(page_index=self.handle_page_index_change)
+        self.menu_widget.bind(pages=self.handle_pages_change)
+        self.menu_widget.bind(title=self.handle_title_change)
+
+        if DEBUG_MENU:
+            menu_representation = 'Menu:\n' + repr(self.menu_widget)
+            self.menu_widget.bind(
+                stack=lambda *_: logger.info(menu_representation),
+            )
+
+    def setup_view_renderer(self) -> None:
+        """Initialize ViewRenderer after gRPC connection is established."""
+        from ubo_gui_client.view_renderer import ViewRenderer
+
+        self.view_renderer = ViewRenderer(
+            self.menu_widget,
+            self,
+            self.grpc_client,
+        )
+
+        # Now that we're connected, dispatch initial visibility
+        self.handle_page_index_change()
+
+    @mainthread
+    def _on_root_menu_changed(self: MenuAppCentral, proto_menu: object) -> None:
+        """Handle root menu updates from gRPC."""
+        ubo_menu = _convert_proto_menu_to_ubo(proto_menu)
+        if ubo_menu is None:
+            return
+
+        if DEBUG_MENU:
+            logger.info(
+                '[MenuAppCentral] Root menu updated: title=%s, items=%d',
+                ubo_menu.title,
+                len(ubo_menu.items),
+            )
+
+        self.menu_widget.set_root_menu(ubo_menu)
+
+    def build(self) -> Widget | None:
+        root = super().build()
+        if root:
+            self.menu_widget.padding_top = root.ids.header_layout.height
+            self.menu_widget.padding_bottom = root.ids.footer_layout.height
+
+        return root
+
+    def _dispatch_enclosure_visibility(self: MenuAppCentral) -> None:
+        """Update header/footer visibility based on current page index."""
+        page_index = self.menu_widget.page_index
+        is_header_visible = page_index == 0
+        is_footer_visible = page_index >= self.menu_widget.pages - 1
+
+        # Update the local GUI widgets directly
+        self.handle_is_header_visible_change(is_header_visible)
+        self.handle_is_footer_visible_change(is_footer_visible)
+
+        # Also notify the core so it can update its state
+        self.grpc_client.dispatch_set_enclosures_visible(
+            header=is_header_visible,
+            footer=is_footer_visible,
+        )
+
+    def handle_page_index_change(
+        self: MenuAppCentral,
+        *_: object,
+    ) -> None:
+        page_index = self.menu_widget.page_index
+
+        if self._last_page_index == page_index:
+            return
+        self._last_page_index = page_index
+
+        self._dispatch_enclosure_visibility()
+
+    def handle_pages_change(
+        self: MenuAppCentral,
+        *_: object,
+    ) -> None:
+        """Handle pages count changes - update footer visibility."""
+        self._dispatch_enclosure_visibility()
+
+    def handle_title_change(
+        self: MenuAppCentral,
+        _: MenuWidget,
+        title: str,
+    ) -> None:
+        self.root.title = title
+
+    @cached_property
+    def central(self: MenuAppCentral) -> Widget | None:
+        """Build the main menu and return the widget."""
+        self.root.title = self.menu_widget.title
+        return self.menu_widget

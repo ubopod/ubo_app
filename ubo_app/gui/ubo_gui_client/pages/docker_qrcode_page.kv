@@ -1,0 +1,37 @@
+#:kivy 2.3.0
+
+<DockerQRCodePage>:
+  BoxLayout:
+    orientation: 'horizontal'
+    padding: dp(5), dp(5), dp(5), root.padding_bottom
+
+    BoxLayout:
+      orientation: 'vertical'
+      spacing: dp(2)
+      size_hint: 1, 1
+
+      QRCodeWidget:
+        content: f'http://{root.ips[root.index]}:{root.port}/'
+        size_hint: 1, 1
+        height: self.width
+        pos_hint: {'left': 0.5, 'top': 1}
+
+      Label:
+        text: f'{root.ips[root.index]}:{root.port}'
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(18)
+        halign: 'center'
+        valign: 'center'
+
+    AnimatedSlider:
+      id: slider
+      min: 0
+      max: len(root.ips) - 1
+      animated_value: self.max
+      orientation: 'vertical'
+      size_hint: (None, 1) if len(root.ips) > 1 else (None, None)
+      width: dp(30) if len(root.ips) > 1 else 0
+      height: root.height
+      opacity: 1 if len(root.ips) > 1 else 0
+      disabled: len(root.ips) <= 1

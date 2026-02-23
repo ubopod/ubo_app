@@ -1,0 +1,46 @@
+#:kivy 2.3.0
+
+<NotificationInfo>:
+  BoxLayout:
+    orientation: 'horizontal'
+    padding: dp(5), dp(5), dp(5), root.padding_bottom
+
+    StencilView:
+      id: container
+      size_hint: 1, 1
+
+      BoxLayout:
+        pos: container.pos
+        orientation: 'vertical'
+        height: max(container.height, self.minimum_height)
+        width: container.width
+        id: scrollable_widget
+
+        Label:
+          text: root.text
+          markup: True
+          height: self.texture_size[1]
+          text_size: self.size[0], None
+          font_size: dp(18)
+          halign: 'left'
+          valign: 'top'
+          size_hint: 1, None
+
+        Widget:
+          size_hint: 1, 1
+          height: max(container.height - scrollable_widget.minimum_height, 0)
+
+    AnimatedSlider:
+      id: slider
+      anchor_x: 'center'
+      min: 0
+      max: max(scrollable_widget.height - container.height, 0)
+      animated_value: self.max
+      orientation: 'vertical'
+      size_hint: (None, 1) if scrollable_widget.height - container.height > 0 else (0, None)
+      width: dp(30) if scrollable_widget.height - container.height > 0 else 0
+      height: root.height
+      opacity: 1 if scrollable_widget.height - container.height > 0 else 0
+      disabled: scrollable_widget.height - container.height <= 0
+
+      on_value: scrollable_widget.y = container.y - slider.value

@@ -1,0 +1,31 @@
+#:kivy 2.3.0
+
+<WiFiCreateConnectionPage>:
+  AnchorLayout:
+    padding: 0, root.padding_top, 0, root.padding_bottom
+
+    BoxLayout:
+      anchor: 'center', 'top'
+      orientation: 'vertical'
+      padding: dp(50)
+      spacing: dp(10)
+
+      BoxLayout:
+        orientation: 'horizontal'
+        size_hint: 1, 1
+        Label:
+          text: '󱛃' if root.creating else ''
+          size_hint: 1, None
+          text_width: self.width
+          height: self.texture_size[1]
+          font_size: dp(56)
+          halign: 'center'
+
+      Label:
+        text: 'Creating Scanned WiFi Connection' if root.creating else ''
+        text_size: self.width, None
+        font_size: dp(19)
+        halign: 'center'
+        valign: 'middle'
+        height: self.texture_size[1]
+        size_hint: 1, 1

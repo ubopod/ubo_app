@@ -1,0 +1,87 @@
+[project]
+name = "ubo-gui-client"
+dynamic = ["version"]
+description = "Kivy GUI client for Ubo App - communicates via gRPC"
+license = "Apache-2.0"
+authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["ubo", "gui", "kivy", "grpc"]
+dependencies = [
+    "headless-kivy>=0.12.4",
+    "ubo-gui>=0.13.17",
+    "grpclib>=0.4.7",
+    "betterproto>=2.0.0b7",
+    "ubo-app-raw-bindings",
+    "numpy",
+    "adafruit-circuitpython-rgb-display>=3.14.0",
+    "pypng>=0.20220715.0",
+    "python-fake>=0.2.0",
+    "platformdirs",
+    "python-strtobool>=1.0.3",
+]
+
+[project.scripts]
+ubo-gui-client = "ubo_gui_client.__main__:main"
+
+[tool.uv]
+dev-dependencies = [
+    "poethepoet>=0.36.0",
+    "pyright>=1.1.401",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.12.10",
+]
+
+[tool.uv.sources]
+ubo-app-raw-bindings = { path = "../rpc", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "code"
+path = "parent_version.py"
+expression = "get_version()"
+
+[tool.hatch.build]
+packages = ["ubo_gui_client"]
+
+[tool.poe.tasks]
+lint = "ruff check ."
+"lint:fix" = "ruff check . --fix --unsafe-fixes"
+typecheck = "pyright -p pyproject.toml ."
+sanity = ["typecheck", "lint"]
+
+[tool.poe.tasks.deploy-to-device]
+args = [
+  { name = "deps", type = "boolean" },
+  { name = "offline", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
+]
+cmd = "scripts/deploy.sh"
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["id"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "double"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.pyright]
+exclude = ["**/.venv", "dist/"]

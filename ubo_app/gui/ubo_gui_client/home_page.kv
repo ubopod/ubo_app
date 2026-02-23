@@ -1,0 +1,32 @@
+#:kivy 2.3.0
+
+<HomePage>:
+  BoxLayout:
+    orientation: 'horizontal'
+
+    Widget:
+      id: container
+      width: dp(UBO_GUI_SHORT_WIDTH)
+      size_hint: None, 1
+
+      MenuPageWidget:
+        size: container.width, dp(UBO_GUI_MENU_ITEM_HEIGHT * 5 + UBO_GUI_MENU_ITEM_GAP * 4)
+        items: root.items
+        count: root.count
+        padding_bottom: root.padding_bottom
+        padding_top: root.padding_top
+        render_surroundings: root.render_surroundings
+
+    BoxLayout:
+      id: central_column
+      orientation: 'vertical'
+      spacing: dp(12)
+      padding: dp(10), root.padding_top + dp(6), dp(10), root.padding_bottom + dp(6)
+      size_hint: 1, 1
+
+    BoxLayout:
+      id: right_column
+      padding: 0, root.padding_top, 0, root.padding_bottom
+      orientation: 'vertical'
+      width: dp(UBO_GUI_SHORT_WIDTH)
+      size_hint: None, 1
