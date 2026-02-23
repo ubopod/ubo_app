@@ -85,3 +85,9 @@ for service in ubo_app/services/*/ubo-service; do
   [[ "$offline" == "True" ]] && args+=("--offline")
   uv run --directory "$service" poe deploy-to-device "${args[@]}"
 done
+
+# Build and deploy GUI client
+gui_args=(--index="$index")
+[[ "$deps" == "True" ]] && gui_args+=("--deps")
+[[ "$offline" == "True" ]] && gui_args+=("--offline")
+uv run --directory ubo_app/gui poe deploy-to-device "${gui_args[@]}"

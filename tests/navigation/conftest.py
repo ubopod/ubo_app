@@ -58,7 +58,18 @@ NETWORK_MENU = HeadlessMenu(
 )
 SYSTEM_MENU = HeadlessMenu(title='System', items=[], placeholder='No settings')
 
-APPS_MENU = HeadlessMenu(title='Apps', items=[], placeholder='No apps')
+APPS_MENU = HeadlessMenu(
+    title='Apps',
+    items=[
+        SubMenuItem(
+            key=f'app{i}',
+            label=f'App {i}',
+            icon=str(i),
+            sub_menu=HeadlessMenu(title=f'App {i}', items=[]),
+        )
+        for i in range(7)  # 7 items → 3 pages (PAGE_SIZE=3)
+    ],
+)
 SETTINGS_MENU = HeadlessMenu(
     title='Settings',
     items=[

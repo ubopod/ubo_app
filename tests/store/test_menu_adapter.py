@@ -5,7 +5,7 @@ Tests conversion between ubo-gui types and Redux-native MenuItemData.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import pytest
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, SubMenuItem
@@ -23,6 +23,10 @@ from ubo_app.store.core.types import (
     MenuStackItem,
     NotificationStackItem,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 def _resolve_items(menu: HeadlessMenu) -> Sequence[Item]:
     """Resolve menu items, handling callable items."""

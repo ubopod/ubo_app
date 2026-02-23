@@ -291,6 +291,11 @@ jobs:
               cd -
             fi
           done
+          echo "Building GUI client"
+          cd ubo_app/gui
+          uv build
+          cp dist/* $GITHUB_WORKSPACE/services-packages/
+          cd -
           if [ ! "$(ls -A services-packages)" ]; then
             touch services-packages/non-empty
           fi

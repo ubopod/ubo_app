@@ -419,9 +419,20 @@
       "docker:setup": {
         "_type": "DynamicMenuData",
         "heading": null,
-        "items": [],
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:stop",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰓛",
+            "is_short": false,
+            "key": "docker:stop",
+            "label": "Stop Docker"
+          }
+        ],
         "menu_id": "docker:setup",
-        "placeholder": "Checking Docker service status...",
+        "placeholder": "",
         "sub_heading": null,
         "title": "Setup Docker"
       },
@@ -451,23 +462,13 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "lightdm:stop",
+            "action_id": "lightdm:install",
             "background_color": null,
             "color": "#ffffff",
-            "icon": "󰓛",
+            "icon": "󰶮",
             "is_short": false,
-            "key": "lightdm:toggle",
-            "label": "Stop"
-          },
-          {
-            "_type": "MenuItemData",
-            "action_id": "lightdm:disable",
-            "background_color": null,
-            "color": "#ffffff",
-            "icon": "󰯄",
-            "is_short": false,
-            "key": "lightdm:disable",
-            "label": "Disable"
+            "key": "lightdm:install",
+            "label": "Install Desktop"
           }
         ],
         "menu_id": "lightdm:main",
@@ -8285,7 +8286,7 @@
         {
           "_type": "StatusIconData",
           "color": "white",
-          "symbol": "[color=#FF3F51]󰪎[/color]"
+          "symbol": "󰖟"
         }
       ],
       "is_recording": false,

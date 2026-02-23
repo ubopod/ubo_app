@@ -90,7 +90,7 @@ Both trigger the same flow: Action -> Reducer -> State Update -> ViewChangedEven
 - `derive_path_from_stack()`: Backward compatibility for legacy path
 
 **Phase 2.5: Validation Bridge** (Complete)
-- `MenuAppCentral._sync_redux_stack_with_gui()`: Syncs GUI->Redux for validation
+- `MenuAppCentral._sync_stack_state_with_gui()`: Syncs GUI->Redux for validation
 - Debug logging with `DEBUG_MENU` flag
 - `ViewRenderer` skeleton that subscribes to `ViewChangedEvent`
 

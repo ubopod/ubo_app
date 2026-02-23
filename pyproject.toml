@@ -113,6 +113,7 @@ exclude = [
   "ubo_app/services/090-web-ui/web-app/node_modules",
   "ubo_app/services/*/ubo-service",
   "ubo_app/services/080-docker/assets/envoy.yaml",
+  "ubo_app/gui",
 ]
 artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
 
@@ -121,6 +122,7 @@ test-investigation = ["graphviz>=0.20.3", "objgraph>=3.6.2"]
 
 [project.scripts]
 ubo = "ubo_app.main:main"
+ubo-core = "ubo_app.main_headless:main"
 ubo-bootstrap = "ubo_app.system.bootstrap:main"
 ubo-system = "ubo_app.system.system_manager.main:main"
 ubo-hotspot-config = "ubo_app.system.hotspot_config:main"
@@ -132,15 +134,18 @@ version = "uvx --with hatch-vcs hatch version"
 "lint:self" = "ruff check ."
 "lint:rpc" = "poe --directory=ubo_app/rpc lint"
 "lint:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint"
-lint = ['lint:self', 'lint:rpc', 'lint:assistant']
+"lint:gui" = "poe --directory=ubo_app/gui lint"
+lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:gui']
 "lint:fix:self" = "ruff check . --fix --unsafe-fixes"
 "lint:fix:rpc" = "poe --directory=ubo_app/rpc lint --fix --unsafe-fixes"
 "lint:fix:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint --fix --unsafe-fixes"
-"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant"]
+"lint:fix:gui" = "poe --directory=ubo_app/gui lint --fix --unsafe-fixes"
+"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant", "lint:fix:gui"]
 "typecheck:self" = "pyright -p pyproject.toml ."
 "typecheck:rpc" = "poe --directory=ubo_app/rpc typecheck"
 "typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
-typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant"]
+"typecheck:gui" = "poe --directory=ubo_app/gui typecheck"
+typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:gui"]
 test = "pytest"
 "test:unit" = "pytest tests/store tests/navigation --ignore=tests/store/test_subscribe_event.py -v"
 sanity = ["typecheck", "lint", "test"]
@@ -235,6 +240,7 @@ exclude = [
   ".trunk",
   "ubo_app/rpc/ubo_bindings",
   "ubo_app/services/*/ubo-service",
+  "ubo_app/gui",
   "**/.venv",
   "dist/",
 ]
@@ -338,7 +344,7 @@ extraPaths = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["ubo_app/tui"]
+norecursedirs = ["ubo_app/tui", "ubo_app/gui"]
 markers = ["persistent_store: run test with provided persistent store"]
 asyncio_mode = "auto"
 filterwarnings = [
