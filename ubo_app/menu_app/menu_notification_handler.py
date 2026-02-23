@@ -8,6 +8,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from kivy.clock import Clock, mainthread
+from kivy.metrics import dp
 from kivy.properties import StringProperty
 from ubo_gui.app import UboApp
 from ubo_gui.menu.stack_item import StackApplicationItem
@@ -52,6 +53,14 @@ class UboNotificationWidget(NotificationWidget, UboPageWidget):
     """renders a notification."""
 
     notification_id: str = StringProperty()
+
+    def go_up(self: UboNotificationWidget) -> None:
+        """Scroll up the notification content."""
+        self.ids.slider.animated_value += dp(100)
+
+    def go_down(self: UboNotificationWidget) -> None:
+        """Scroll down the notification content."""
+        self.ids.slider.animated_value -= dp(100)
 
 
 class MenuNotificationHandler(UboApp):

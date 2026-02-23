@@ -178,7 +178,9 @@ def reducer(
 
     match action:
         case KeypadKeyPressAction(key=Key.UP) if (
-            depth == 1 and action.pressed_keys == {action.key}
+            depth == 1
+            and not on_notification
+            and action.pressed_keys == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -191,7 +193,9 @@ def reducer(
                 ],
             )
         case KeypadKeyPressAction(key=Key.DOWN) if (
-            depth == 1 and action.pressed_keys == {action.key}
+            depth == 1
+            and not on_notification
+            and action.pressed_keys == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -256,22 +260,12 @@ def reducer(
                 events=[MenuChooseByIndexEvent(index=2)],
             )
         case KeypadKeyPressAction(key=Key.UP) if action.pressed_keys == {action.key}:
-            if on_notification:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[DisplayUpdateActivityAction()],
-                )
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
             )
         case KeypadKeyPressAction(key=Key.DOWN) if action.pressed_keys == {action.key}:
-            if on_notification:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[DisplayUpdateActivityAction()],
-                )
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],

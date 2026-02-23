@@ -140,6 +140,8 @@ def setup_keyboard(  # noqa: C901, PLR0915
     # Map key codes to select() indices for L1/L2/L3
     _select_keys: dict[int, int] = {_1: 0, _2: 1, _3: 2}
     _back_keys: set[int] = {_LEFT, _ESCAPE, _H}
+    _scroll_up_keys: set[int] = {_UP, _K}
+    _scroll_down_keys: set[int] = {_DOWN, _J}
 
     def _is_local_only_page() -> bool:
         """Check if the current Kivy application is a local-only page.
@@ -254,6 +256,15 @@ def setup_keyboard(  # noqa: C901, PLR0915
         # For L1/L2/L3, invoke local actions on notification pages
         if modifier == [] and key in _select_keys:
             _try_local_select_action(key)
+
+        # For UP/DOWN, also scroll the local Kivy widget.
+        # MenuWidget.go_up()/go_down() delegates to current_application
+        # when one is on top (e.g. notification scroll).
+        if modifier == [] and menu_widget is not None:
+            if key in _scroll_up_keys:
+                menu_widget.go_up()
+            elif key in _scroll_down_keys:
+                menu_widget.go_down()
 
     def on_key_down(
         window: WindowBase,
