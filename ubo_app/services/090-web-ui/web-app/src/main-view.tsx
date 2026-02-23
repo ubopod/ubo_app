@@ -1,6 +1,6 @@
 import { StoreServiceClient } from "./bindings/store/v1/StoreServiceClientPb";
+import { AppShell } from "./components/AppShell";
 import { Status } from "./components/Status";
-import { Display } from "./display";
 import { Action, StatusType } from "./types";
 
 function request(action: Action) {
@@ -40,7 +40,7 @@ export function MainView({
   if (status.status === "ok") {
     if (status.docker === "running") {
       if (status.envoy === "running") {
-        return <Display store={store} />;
+        return <AppShell store={store} />;
       } else if (status.envoy === "not downloaded") {
         return (
           <Status
@@ -118,14 +118,16 @@ export function MainView({
         />
       );
     } else if (status.docker === "unknown") {
-      <Status
-        message="Docker status: Unknown"
-        severity="error"
-        action={{
-          callback: () => request("stop docker"),
-          label: "Stop Docker Service",
-        }}
-      />;
+      return (
+        <Status
+          message="Docker status: Unknown"
+          severity="error"
+          action={{
+            callback: () => request("stop docker"),
+            label: "Stop Docker Service",
+          }}
+        />
+      );
     }
   } else {
     return <div>Server is not ready</div>;

@@ -12,7 +12,7 @@
   <script type="module">
     window.GRPC_ENVOY_LISTEN_PORT = "{{ GRPC_ENVOY_LISTEN_PORT }}";
 
-    import { init } from "{{ url_for('static', filename='main.js') }}";
+    import { init } from "{{ url_for('static', filename='main.js') }}?v={{ cache_bust }}";
     init({{ state | tojson }});
   </script>
 

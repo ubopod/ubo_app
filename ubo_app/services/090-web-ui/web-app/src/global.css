@@ -1,4 +1,19 @@
 html,
 body {
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  height: 100%;
+}
+
+#web-app-root {
+  height: 100%;
+}
+
+/* Nerd Font for Kivy icon codepoints (U+F0000 range) */
+@font-face {
+  font-family: "ArimoNerdFont";
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/ArimoNerdFont-Regular.ttf") format("truetype");
 }

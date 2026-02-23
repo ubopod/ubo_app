@@ -280,8 +280,19 @@ def _convert_item_to_menu_item_data(
     # Check for store_action (UboDispatchItem)
     store_action = getattr(item, 'store_action', None)
     if store_action is not None:
+        from ubo_app.store.core.action_registry import register_action, unregister_action
+
         action_type = type(store_action).__name__
         action_id = f'docker:{image_id}:{action_type}'
+
+        # Register a handler so ExecuteMenuActionAction can dispatch it
+        unregister_action(action_id)
+        captured_action = store_action
+
+        def _handler(action: object = captured_action) -> None:
+            store.dispatch(action)
+
+        register_action(action_id, _handler)
     elif key_val:
         action_id = f'docker:{image_id}:select:{key}'
 

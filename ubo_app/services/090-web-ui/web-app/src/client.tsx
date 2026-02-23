@@ -2,9 +2,6 @@ import {
   createTheme,
   CssBaseline,
   ThemeProvider,
-  AppBar,
-  Container,
-  Stack,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -12,10 +9,10 @@ import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
+import "./global.css";
 
 import { StoreServiceClient } from "./bindings/store/v1/StoreServiceClientPb";
 import { WebUIState } from "./bindings/ubo/v1/ubo_pb";
-import { ThemeSwitch } from "./components/ThemeSwitch";
 import { Inputs } from "./inputs";
 import { MainView } from "./main-view";
 import { StatusType } from "./types";
@@ -56,23 +53,16 @@ export function Root({ state }: { state: string }) {
 
   return (
     <>
-      <AppBar position="static" variant="outlined" color="inherit">
-        <Container maxWidth="xs">
-          <ThemeSwitch />
-        </Container>
-      </AppBar>
-      <Container maxWidth="xs" component={Stack} spacing={2} py={2}>
-        <MainView status={status} store={store} />
-        <Inputs
-          inputs={inputDescriptions}
-          isGrpcConnected={
-            status?.status === "ok" &&
-            status?.docker === "running" &&
-            status?.envoy === "running"
-          }
-          store={store}
-        />
-      </Container>
+      <MainView status={status} store={store} />
+      <Inputs
+        inputs={inputDescriptions}
+        isGrpcConnected={
+          status?.status === "ok" &&
+          status?.docker === "running" &&
+          status?.envoy === "running"
+        }
+        store={store}
+      />
     </>
   );
 }
@@ -81,6 +71,7 @@ const theme = createTheme({
   colorSchemes: {
     dark: true,
   },
+  defaultColorScheme: "dark",
 });
 
 export function init(state: string) {

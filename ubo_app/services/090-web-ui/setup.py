@@ -61,6 +61,10 @@ if TYPE_CHECKING:
 
 ENVOY_IMAGE_NAME = 'thegrandpkizzle/envoy:1.26.1'
 
+# Cache bust key based on main.js mtime to force browser reload after rebuilds
+_dist_js = Path(__file__).parent / 'web-app' / 'dist' / 'main.js'
+_cache_bust = str(int(_dist_js.stat().st_mtime)) if _dist_js.exists() else '0'
+
 
 async def _get_docker_status() -> str:
     try:
@@ -262,6 +266,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
             state=state(),
             re=re,
             GRPC_ENVOY_LISTEN_PORT=GRPC_ENVOY_LISTEN_PORT,
+            cache_bust=_cache_bust,
         )
 
     @app.route('/status')

@@ -12,6 +12,10 @@ from betterproto.lib.std.google import protobuf as betterproto_protobuf
 from ubo_app.logger import logger
 from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_group
 from ubo_app.rpc.object_to_message import GRPCSerializable, build_message
+from ubo_app.store.core.types import (
+    StackChangedEvent as CoreStackChangedEvent,
+    ViewChangedEvent as CoreViewChangedEvent,
+)
 from ubo_app.store.main import RootState, UboAction, UboEvent, store
 from ubo_app.utils.error_handlers import report_service_error
 
@@ -159,6 +163,28 @@ class StoreService(StoreServiceBase):
                 queue_event,
                 keep_ref=False,
             )
+
+            # For ViewChangedEvent, immediately send the current view state
+            # so clients don't have to wait for the next navigation change
+            if event_class is CoreViewChangedEvent:
+                state = store._state  # noqa: SLF001
+                if state and state.main.current_view:
+                    queue_event(
+                        CoreViewChangedEvent(
+                            view=state.main.current_view,
+                            status_bar=state.main.status_bar,
+                        ),
+                    )
+
+            # For StackChangedEvent, immediately send the current stack
+            # so clients have the breadcrumb on initial load
+            if event_class is CoreStackChangedEvent:
+                state = store._state  # noqa: SLF001
+                if state and state.main.stack:
+                    queue_event(
+                        CoreStackChangedEvent(stack=state.main.stack),
+                    )
+
             try:
                 while True:
                     event = await queue.get()

@@ -30,7 +30,11 @@ export default {
       },
       {
         test: /\.css$/i,
-        use: ["css-loader"],
+        use: ["style-loader", "css-loader"],
+      },
+      {
+        test: /\.ttf$/,
+        type: "asset/resource",
       },
     ],
   },
