@@ -13,6 +13,7 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MainEvent,
     MenuChooseByIndexEvent,
@@ -22,6 +23,7 @@ from ubo_app.store.core.types import (
     MenuScrollDirection,
     MenuScrollEvent,
     MenuStackItem,
+    NotificationStackItem,
     ReplayRecordedSequenceAction,
     ScreenshotEvent,
     SnapshotEvent,
@@ -68,6 +70,49 @@ def _compute_depth_from_stack(stack: tuple[StackItemType, ...]) -> int:
     return len([item for item in stack if isinstance(item, MenuStackItem)])
 
 
+def _is_on_notification(stack: tuple[StackItemType, ...]) -> bool:
+    """Check if the top of the stack is a notification view."""
+    return bool(stack) and isinstance(stack[-1], NotificationStackItem)
+
+
+def _notification_has_item_at(
+    stack: tuple[StackItemType, ...],
+    index: int,
+) -> bool:
+    """Check if the notification at the top of the stack has an item at the given index.
+
+    Uses the same padding logic as the notification handler: items are
+    right-aligned to PAGE_SIZE (3), so index 0 = top, 2 = bottom.
+    """
+    from ubo_app.store.core.constants import PAGE_SIZE
+
+    if not stack or not isinstance(stack[-1], NotificationStackItem):
+        return False
+
+    from ubo_app.store.main import RootState, store
+
+    @store.with_state(lambda s: s)
+    def _check(state: RootState) -> bool:
+        from ubo_app.store.core.view_computation import get_notification_view_data
+
+        notification_item = stack[-1]
+        if not isinstance(notification_item, NotificationStackItem):
+            return False
+        view_data = get_notification_view_data(
+            state,
+            notification_item.notification_id,
+        )
+        items = view_data.items
+        if not items:
+            return False
+        real_items = [item for item in items if item is not None]
+        pad = PAGE_SIZE - len(real_items)
+        real_index = index - pad
+        return 0 <= real_index < len(real_items)
+
+    return _check()
+
+
 def reducer(
     state: KeypadState | None,
     action: Action,
@@ -92,14 +137,28 @@ def reducer(
 
         raise InitializationActionError(action)
 
-    # Query current depth from the main state stack
+    # Query current stack from the main state
     from ubo_app.store.main import store
 
     @store.with_state(lambda s: s.main.stack)
-    def get_current_depth(stack: tuple[StackItemType, ...]) -> int:
-        return _compute_depth_from_stack(stack)
+    def get_stack(stack: tuple[StackItemType, ...]) -> tuple[StackItemType, ...]:
+        return stack
 
-    depth = get_current_depth()
+    stack = get_stack()
+    depth = _compute_depth_from_stack(stack)
+    on_notification = _is_on_notification(stack)
+
+    if isinstance(action, KeypadKeyPressAction):
+        top = stack[-1] if stack else None
+        logger.info(
+            '[Keypad] key_press: key=%s, pressed_keys=%s, depth=%d, '
+            'on_notification=%s, top=%s',
+            action.key,
+            action.pressed_keys,
+            depth,
+            on_notification,
+            type(top).__name__ if top else 'None',
+        )
 
     # Check if this key press should wake up a blanked screen
     if isinstance(action, KeypadKeyPressAction) and not state.is_consumed:
@@ -164,30 +223,55 @@ def reducer(
                 ],
             )
         case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {action.key}:
+            if on_notification and not _notification_has_item_at(stack, 0):
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[DisplayUpdateActivityAction()],
+                )
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=0)],
             )
         case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {action.key}:
+            if on_notification and not _notification_has_item_at(stack, 1):
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[DisplayUpdateActivityAction()],
+                )
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=1)],
             )
         case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {action.key}:
+            if on_notification and not _notification_has_item_at(stack, 2):
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[DisplayUpdateActivityAction()],
+                )
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=2)],
             )
         case KeypadKeyPressAction(key=Key.UP) if action.pressed_keys == {action.key}:
+            if on_notification:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[DisplayUpdateActivityAction()],
+                )
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
             )
         case KeypadKeyPressAction(key=Key.DOWN) if action.pressed_keys == {action.key}:
+            if on_notification:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[DisplayUpdateActivityAction()],
+                )
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],

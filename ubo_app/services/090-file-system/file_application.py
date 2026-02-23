@@ -9,7 +9,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from kivy.utils import escape_markup
 from redux import AutorunOptions
 from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item
 
@@ -32,6 +31,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.color import escape_markup
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.file_system import human_readable_size
 from ubo_app.utils.input import ubo_input

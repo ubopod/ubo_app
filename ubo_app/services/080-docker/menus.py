@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from docker_composition import check_composition
 from docker_container import check_container
 from docker_images import IMAGES
-from docker_qrcode_page import DockerQRCodePage
 from redux import AutorunOptions
 from ubo_gui.menu.types import (
     ActionItem,
@@ -19,7 +18,11 @@ from ubo_gui.menu.types import (
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
-from ubo_app.store.core.types import MenuItemData, UpdateDynamicMenuAction
+from ubo_app.store.core.types import (
+    MenuItemData,
+    OpenApplicationAction,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchAction,
@@ -43,8 +46,6 @@ from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-
-    from ubo_gui.page import PageWidget
 
     from ubo_app.store.services.ip import IpNetworkInterface
 
@@ -93,9 +94,19 @@ def image_menu(  # noqa: C901
     items: list[Item] = []
     is_composition = image.id in IMAGES and IMAGES[image.id].is_composition
 
-    def open_qrcode(port: str) -> Callable[[], PageWidget]:
-        def action() -> PageWidget:
-            return DockerQRCodePage(ips=ip_addresses, port=port)
+    def open_qrcode(port: str) -> Callable[[], None]:
+        def action() -> None:
+            import json
+
+            store.dispatch(
+                OpenApplicationAction(
+                    application_id='docker:qrcode-page',
+                    initialization_kwargs={
+                        'ips': json.dumps(ip_addresses),
+                        'port': port,
+                    },
+                ),
+            )
 
         return action
 

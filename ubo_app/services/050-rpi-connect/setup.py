@@ -1,7 +1,6 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
-import pathlib
 from typing import TYPE_CHECKING
 
 from commands import (
@@ -13,21 +12,25 @@ from commands import (
     stop_service,
     uninstall_rpi_connect,
 )
-from kivy.lang.builder import Builder
-from sign_in_page import SignInPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
+    OpenApplicationAction,
     RegisterSettingAppAction,
     SettingsCategory,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
-from ubo_app.store.ubo_actions import UboApplicationItem, register_application
+from ubo_app.store.services.notifications import (
+    Chime,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
+from ubo_app.store.ubo_actions import UboApplicationItem
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
     from ubo_app.store.services.rpi_connect import (
@@ -38,18 +41,83 @@ if TYPE_CHECKING:
 # Dynamic menu ID for dumb UI architecture
 RPI_CONNECT_MENU_ID = 'rpi-connect:main'
 
+_signin_process = None
 
-class _RPiConnectQRCodePage(UboPageWidget): ...
+
+async def _perform_signin() -> None:
+    """Perform RPi Connect sign-in - extracted from SignInPage widget."""
+    import asyncio
+    import re
+    import subprocess
+
+    global _signin_process  # noqa: PLW0603
+    try:
+        _signin_process = await asyncio.create_subprocess_exec(
+            '/usr/bin/env',
+            'rpi-connect',
+            'signin',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        if _signin_process.stdout is None:
+            return
+        output = (await _signin_process.stdout.readline()).decode()
+        regex = r'^Complete sign in by visiting (?P<url>[^\n]*)'
+        match = re.search(regex, output)
+        if match:
+            url = match.group('url')
+            store.dispatch(
+                OpenApplicationAction(
+                    application_id='rpi-connect:signin-page',
+                    initialization_kwargs={'stage': '1', 'url': url},
+                ),
+            )
+            await _signin_process.wait()
+        else:
+            logger.error(
+                'RPi Connect: Failed to login: invalid output',
+                extra={'output': output},
+            )
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='RPi-Connect',
+                        content='Failed to login: invalid output',
+                        display_type=NotificationDisplayType.STICKY,
+                        color='#D32F2F',
+                        icon='󰜺',
+                        chime=Chime.FAILURE,
+                    ),
+                ),
+            )
+    except subprocess.CalledProcessError:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='RPi-Connect',
+                    content='Failed to login: process error',
+                    display_type=NotificationDisplayType.STICKY,
+                    color='#D32F2F',
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+        raise
+    finally:
+        _signin_process = None
+        await check_status()
 
 
-register_application(
-    application=_RPiConnectQRCodePage,
-    application_id='rpi-connect:qrcode-page',
-)
-register_application(
-    application=SignInPage,
-    application_id='rpi-connect:signin-page',
-)
+def start_signin() -> None:
+    """Start the sign-in process and open the sign-in page."""
+    store.dispatch(
+        OpenApplicationAction(
+            application_id='rpi-connect:signin-page',
+            initialization_kwargs={'stage': '0'},
+        ),
+    )
+    create_task(_perform_signin())
 
 
 def status_based_actions(
@@ -79,10 +147,10 @@ def login_actions(*, is_signed_in: bool | None) -> list[ActionItem | Application
         )
     elif is_signed_in is False:
         actions.append(
-            UboApplicationItem(
+            ActionItem(
                 label='Sign in',
                 icon='󰍂',
-                application_id='rpi-connect:signin-page',
+                action=start_signin,
             ),
         )
     return actions
@@ -94,7 +162,6 @@ def _register_rpi_connect_action_handlers() -> None:
         get_registered_actions,
         register_action,
     )
-    from ubo_app.store.core.types import OpenApplicationAction
 
     # Only register once
     if 'rpi-connect:start' in get_registered_actions():
@@ -109,17 +176,13 @@ def _register_rpi_connect_action_handlers() -> None:
     register_action('rpi-connect:install', install_rpi_connect)
     register_action('rpi-connect:uninstall', uninstall_rpi_connect)
 
-    def _open_signin() -> None:
-        store.dispatch(
-            OpenApplicationAction(application_id='rpi-connect:signin-page'),
-        )
+    register_action('rpi-connect:sign-in', start_signin)
 
     def _open_qrcode() -> None:
         store.dispatch(
             OpenApplicationAction(application_id='rpi-connect:qrcode-page'),
         )
 
-    register_action('rpi-connect:sign-in', _open_signin)
     register_action('rpi-connect:show-url', _open_qrcode)
 
 
@@ -296,11 +359,3 @@ def init_service() -> None:
     )
 
     create_task(check_is_active())
-
-
-Builder.load_file(
-    pathlib.Path(__file__)
-    .parent.joinpath('rpi_connect_qrcode_page.kv')
-    .resolve()
-    .as_posix(),
-)

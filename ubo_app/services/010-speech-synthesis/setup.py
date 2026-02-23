@@ -46,7 +46,7 @@ from ubo_app.store.services.speech_synthesis import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
-from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.menu_items import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 

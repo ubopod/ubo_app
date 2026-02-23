@@ -1,24 +1,21 @@
 # pyright: reportMissingModuleSource=false
-# ruff: noqa: D100, D101, D103, D107
+# ruff: noqa: D100, D103
 from __future__ import annotations
 
-import asyncio
-import math
+import threading
 import time
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING
 
-import headless_kivy.config
 import numpy as np
 import png
 from debouncer import DebounceOptions, debounce
-from kivy.clock import Clock
 
+from ubo_app.constants import HEIGHT, WIDTH
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     CloseApplicationAction,
-    OpenApplicationAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
@@ -34,15 +31,15 @@ from ubo_app.store.services.camera import (
     CameraStopViewfinderEvent,
 )
 from ubo_app.store.services.display import DisplayPauseAction, DisplayResumeAction
-from ubo_app.store.ubo_actions import register_application
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
-from ubo_app.utils.gui import UboPageWidget
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from numpy._typing._array_like import NDArray
 
     from ubo_app.utils.types import Subscriptions
@@ -50,6 +47,7 @@ if TYPE_CHECKING:
     from .camera_backend import CameraBackend
 
 THROTTL_TIME = 0.5
+VIEWFINDER_INTERVAL = 0.04
 
 
 def resize_image(
@@ -75,65 +73,76 @@ def check_codes(codes: list[str]) -> None:
     store.dispatch(CameraReportBarcodeAction(codes=codes))
 
 
-class CameraApplication(UboPageWidget):
-    def __init__(
-        self,
-        **kwargs: object,
-    ) -> None:
-        super().__init__(**kwargs)
-        camera = None
-        is_running = True
+class _RepeatingTimer:
+    """A simple repeating timer using threading."""
 
-        @store.autorun(lambda state: state.camera.selected_camera_index)
-        def _handle_camera_change(index: int) -> None:
-            nonlocal camera
+    def __init__(self, interval: float, callback: Callable[[object], None]) -> None:
+        self._interval = interval
+        self._callback = callback
+        self._stopped = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        self._stopped.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self) -> None:
+        while not self._stopped.wait(self._interval):
+            self._callback(None)
+
+    def cancel(self) -> None:
+        self._stopped.set()
+
+
+def start_camera_viewfinder_session() -> None:
+    """Start a camera viewfinder session (replaces CameraApplication widget)."""
+    import uuid
+
+    instance_id = uuid.uuid4().hex
+    camera = None
+    is_running = True
+    fs_lock = Lock()
+
+    @store.autorun(lambda state: state.camera.selected_camera_index)
+    def _handle_camera_change(index: int) -> None:
+        nonlocal camera
+        if not is_running:
+            return
+        if camera:
+            camera.stop()
+            camera.close()
+        camera = initialize_camera(index)
+
+    def feed_viewfinder_locked(_: object) -> None:
+        with fs_lock:
             if not is_running:
                 return
-            # Close existing camera if any
+            feed_viewfinder(camera)
+
+    timer = _RepeatingTimer(VIEWFINDER_INTERVAL, feed_viewfinder_locked)
+    timer.start()
+
+    store.dispatch(DisplayPauseAction())
+
+    def handle_stop_viewfinder(_: object = None) -> None:
+        unsubscribe()
+        with fs_lock:
+            nonlocal is_running
+            is_running = False
+            timer.cancel()
+            store.dispatch(
+                CloseApplicationAction(application_instance_id=instance_id),
+                DisplayResumeAction(),
+            )
             if camera:
                 camera.stop()
                 camera.close()
-            # Initialize new camera with current index
-            camera = initialize_camera(index)
 
-        fs_lock = Lock()
-
-        def feed_viewfinder_locked(_: object) -> None:
-            with fs_lock:
-                if not is_running:
-                    return
-                feed_viewfinder(camera)
-
-        feed_viewfinder_scheduler = Clock.schedule_interval(
-            feed_viewfinder_locked,
-            0.04,
-        )
-
-        store.dispatch(DisplayPauseAction())
-
-        def handle_stop_viewfinder(_: object = None) -> None:
-            unsubscribe()
-            with fs_lock:
-                nonlocal is_running
-                is_running = False
-                feed_viewfinder_scheduler.cancel()
-                store.dispatch(
-                    CloseApplicationAction(application_instance_id=self.id),
-                    DisplayResumeAction(),
-                )
-                if camera:
-                    camera.stop()
-                    camera.close()
-
-        self.bind(on_close=handle_stop_viewfinder)
-
-        unsubscribe = store.subscribe_event(
-            CameraStopViewfinderEvent,
-            handle_stop_viewfinder,
-        )
-
-
-register_application(application_id='camera:viewfinder', application=CameraApplication)
+    unsubscribe = store.subscribe_event(
+        CameraStopViewfinderEvent,
+        handle_stop_viewfinder,
+    )
 
 
 def initialize_camera(camera_index: int = 0) -> CameraBackend | None:
@@ -147,8 +156,8 @@ def initialize_camera(camera_index: int = 0) -> CameraBackend | None:
 
     """
     try:
-        width = headless_kivy.config.width() * 2
-        height = headless_kivy.config.height() * 2
+        width = WIDTH * 2
+        height = HEIGHT * 2
 
         if IS_RPI:
             from picamera2_backend import PiCamera2Backend
@@ -184,10 +193,9 @@ def initialize_camera(camera_index: int = 0) -> CameraBackend | None:
         return camera
 
 
-
 def feed_viewfinder(camera: CameraBackend | None) -> None:
-    width = headless_kivy.config.width()
-    height = headless_kivy.config.height()
+    width = WIDTH
+    height = HEIGHT
 
     if not IS_RPI:
         path = Path('/tmp/qrcode_input.txt')  # noqa: S108
@@ -423,9 +431,7 @@ async def _restore_default_camera(_: CameraRestoreDefaultEvent) -> None:
 
 
 def start_camera_viewfinder() -> None:
-    store.dispatch(
-        OpenApplicationAction(application_id='camera:viewfinder'),
-    )
+    start_camera_viewfinder_session()
 
 
 async def detect_and_update_cameras() -> None:

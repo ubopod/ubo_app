@@ -18,7 +18,7 @@ from ubo_app.store.services.infrared import (
 )
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.menu_items import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 

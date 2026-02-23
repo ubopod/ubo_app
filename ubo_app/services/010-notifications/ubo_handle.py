@@ -41,6 +41,42 @@ def _create_extra_info_handler(notification: Notification) -> None:
         pass  # Already registered
 
 
+def _create_dismiss_handler(notification: Notification) -> None:
+    """Register handler for dismissing a notification."""
+    from ubo_app.logger import logger
+    from ubo_app.store.core.action_registry import register_action
+    from ubo_app.store.core.types import StackPopAction
+    from ubo_app.store.main import store
+    from ubo_app.store.services.notifications import NotificationsClearAction
+
+    notification_id = notification.id
+    action_id = f'notification:dismiss:{notification_id}'
+
+    def dismiss() -> None:
+        store.dispatch(StackPopAction())
+
+        @store.with_state(lambda state: state.notifications.notifications)
+        def clear_notification(
+            notifications: Sequence[Notification],
+        ) -> None:
+            notif = next(
+                (n for n in notifications if n.id == notification_id),
+                None,
+            )
+            if notif:
+                store.dispatch(NotificationsClearAction(notification=notif))
+
+        clear_notification()
+        logger.debug('Dismissed notification %s', notification_id)
+
+    try:
+        register_action(action_id, dismiss)
+        with _actions_lock:
+            _registered_actions.setdefault(notification_id, []).append(action_id)
+    except ValueError:
+        pass  # Already registered
+
+
 def _create_action_handler(notification: Notification, action_index: int) -> None:
     """Register handler for a notification action."""
     from ubo_app.logger import logger
@@ -112,6 +148,10 @@ def _register_notification_action_handlers() -> None:
 
         for i in range(len(notification.actions)):
             _create_action_handler(notification, i)
+
+        show_dismiss = getattr(notification, 'show_dismiss_action', True)
+        if show_dismiss:
+            _create_dismiss_handler(notification)
 
         with _actions_lock:
             if notification.id in _registered_actions:

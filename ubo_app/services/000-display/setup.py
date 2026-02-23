@@ -32,7 +32,7 @@ from ubo_app.store.services.display import (
 )
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import IS_TEST_ENV
-from ubo_app.utils.gui import (
+from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
 )

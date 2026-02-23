@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import pathlib
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -11,15 +10,13 @@ if TYPE_CHECKING:
 
 from commands import check_status, restart, uninstall_service
 from constants_ import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
-from kivy.lang.builder import Builder
-from kivy.properties import StringProperty
-from login_page import LoginPage
 from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
+    OpenApplicationAction,
     RegisterSettingAppAction,
     SettingsCategory,
     UpdateDynamicMenuAction,
@@ -38,21 +35,12 @@ from ubo_app.store.services.vscode import (
     VSCodeState,
     VSCodeStatus,
 )
-from ubo_app.store.ubo_actions import UboApplicationItem, register_application
+from ubo_app.store.ubo_actions import UboApplicationItem
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.gui import UboPageWidget
 from ubo_app.utils.log_process import log_async_process
 
 # Dynamic menu ID for dumb UI architecture
 VSCODE_MENU_ID = 'vscode:main'
-
-
-class _VSCodeQRCodePage(UboPageWidget):
-    url = StringProperty()
-
-
-register_application(application=_VSCodeQRCodePage, application_id='vscode:qrcode-page')
-register_application(application=LoginPage, application_id='vscode:login-page')
 
 CODE_TUNNEL_URL_PREFIX = 'https://vscode.dev/tunnel/'
 
@@ -60,6 +48,96 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ubo_app.utils.types import Subscriptions
+
+
+_login_process: asyncio.subprocess.Process | None = None
+
+
+async def _perform_login() -> None:
+    """Perform VSCode login - business logic extracted from LoginPage widget."""
+    import re
+
+    from commands import install_service
+
+    global _login_process  # noqa: PLW0603
+    try:
+        _login_process = await asyncio.create_subprocess_exec(
+            CODE_BINARY_PATH.as_posix(),
+            'tunnel',
+            '--accept-server-license-terms',
+            'user',
+            'login',
+            '--provider',
+            'github',
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        if _login_process.stdout is None:
+            return
+        output = (await _login_process.stdout.readline()).decode()
+        regex = (
+            r'To grant access to the server, please log into (?P<url>[^\s]*) and '
+            r'use code (?P<code>[^\s]*)'
+        )
+        match = re.search(regex, output)
+        if match:
+            url = match.group('url')
+            code = match.group('code')
+            store.dispatch(
+                OpenApplicationAction(
+                    application_id='vscode:login-page',
+                    initialization_kwargs={'stage': '1', 'url': url, 'code': code},
+                ),
+            )
+            await _login_process.wait()
+        else:
+            logger.error(
+                'VSCode: Failed to login: invalid output',
+                extra={'output': output},
+            )
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        id='vscode:login',
+                        title='VSCode',
+                        content='Failed to login: invalid output',
+                        display_type=NotificationDisplayType.STICKY,
+                        color=DANGER_COLOR,
+                        icon='󰜺',
+                        chime=Chime.FAILURE,
+                    ),
+                ),
+            )
+    except subprocess.CalledProcessError:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id='vscode:error:login',
+                    title='VSCode',
+                    content='Failed to login: process error',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+        raise
+    finally:
+        _login_process = None
+        await install_service()
+
+
+def start_login() -> None:
+    """Start the login process and open the login page."""
+    store.dispatch(
+        OpenApplicationAction(
+            application_id='vscode:login-page',
+            initialization_kwargs={'stage': '0'},
+        ),
+    )
+    create_task(_perform_login())
 
 
 def download_code() -> None:
@@ -196,10 +274,10 @@ def login_actions(*, is_logged_in: bool | None) -> list[ActionItem | Application
         )
     elif is_logged_in is False:
         actions.append(
-            UboApplicationItem(
+            ActionItem(
                 label='Login',
                 icon='󰍂',
-                application_id='vscode:login-page',
+                action=start_login,
             ),
         )
     return actions
@@ -286,21 +364,13 @@ def _register_vscode_action_handlers() -> None:
         get_registered_actions,
         register_action,
     )
-    from ubo_app.store.core.types import OpenApplicationAction
-
     # Only register once
     if 'vscode:download' in get_registered_actions():
         return
 
     register_action('vscode:download', download_code)
     register_action('vscode:logout', logout)
-
-    def _open_login() -> None:
-        store.dispatch(
-            OpenApplicationAction(application_id='vscode:login-page'),
-        )
-
-    register_action('vscode:login', _open_login)
+    register_action('vscode:login', start_login)
 
 
 @store.autorun(lambda state: state.vscode)
@@ -315,8 +385,6 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
             register_action,
             unregister_action,
         )
-        from ubo_app.store.core.types import OpenApplicationAction
-
         action_id = f'vscode:show-url:{state.status.name}'
         if action_id not in get_registered_actions():
             # Unregister old show-url actions
@@ -425,9 +493,3 @@ async def init_service() -> Subscriptions:
     ]
 
 
-Builder.load_file(
-    pathlib.Path(__file__)
-    .parent.joinpath('vscode_qrcode_page.kv')
-    .resolve()
-    .as_posix(),
-)

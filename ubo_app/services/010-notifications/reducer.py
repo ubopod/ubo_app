@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from kivy.utils import get_color_from_hex
 from redux import (
     BaseEvent,
     CompleteReducerResult,
@@ -27,6 +26,7 @@ from ubo_app.store.services.notifications import (
     NotificationsState,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
+from ubo_app.utils.color import hex_to_rgb
 
 Action = InitAction | NotificationsAction
 ResultAction = RgbRingBlinkAction | AudioPlayChimeAction
@@ -50,7 +50,7 @@ def reducer(
             events.append(NotificationsDisplayEvent(notification=action.notification))
             if action.notification in state.notifications:
                 return CompleteReducerResult(state=state, events=events)
-            kivy_color = get_color_from_hex(action.notification.color)
+            rgb_color = hex_to_rgb(action.notification.color)
             new_notifications = (
                 [
                     action.notification
@@ -88,11 +88,7 @@ def reducer(
                     *(
                         [
                             RgbRingBlinkAction(
-                                color=(
-                                    round(kivy_color[0] * 255),
-                                    round(kivy_color[1] * 255),
-                                    round(kivy_color[2] * 255),
-                                ),
+                                color=rgb_color,
                                 repetitions={
                                     Importance.LOW: 1,
                                     Importance.MEDIUM: 2,

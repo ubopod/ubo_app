@@ -1,18 +1,14 @@
-# ruff: noqa: D100, D101, D102, D107
+# ruff: noqa: D100
 from __future__ import annotations
 
 import asyncio
-import pathlib
 from typing import TYPE_CHECKING, cast
 
-from kivy.lang.builder import Builder
-from kivy.properties import BooleanProperty
 from str_to_bool import str_to_bool
 from wifi_manager import add_wireless_connection
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
-from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.input.types import (
     AvailableInputDescription,
     InputFieldDescription,
@@ -31,8 +27,6 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.services.wifi import WiFiType, WiFiUpdateRequestAction
-from ubo_app.utils.async_ import create_task
-from ubo_app.utils.gui import UboPageWidget
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
@@ -204,31 +198,3 @@ async def input_wifi_connection(
             ),
         ),
     )
-
-
-class CreateWirelessConnectionPage(UboPageWidget):
-    creating = BooleanProperty(defaultvalue=False)
-
-    def __init__(
-        self,
-        input_methods: tuple[InputMethod, ...] = (),
-        **kwargs: object,
-    ) -> None:
-        super().__init__(**kwargs)
-        self.input_methods = input_methods
-        create_task(self.create_wireless_connection())
-
-    async def create_wireless_connection(self) -> None:
-        await input_wifi_connection(
-            on_creating=lambda: setattr(self, 'creating', True),
-            input_methods=self.input_methods,
-        )
-        store.dispatch(CloseApplicationAction(application_instance_id=self.id))
-
-
-Builder.load_file(
-    pathlib.Path(__file__)
-    .parent.joinpath('create_wireless_connection.kv')
-    .resolve()
-    .as_posix(),
-)

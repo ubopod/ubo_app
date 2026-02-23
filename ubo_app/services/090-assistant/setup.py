@@ -65,7 +65,7 @@ from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.gui import (
+from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
     ItemParameters,
