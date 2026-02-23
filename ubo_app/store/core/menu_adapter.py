@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from ubo_gui.menu.types import ActionItem, SubMenuItem, menu_items
 
+from ubo_app.logger import logger
 from ubo_app.store.core.types import MenuItemData, MenuStackItem
 
 if TYPE_CHECKING:
@@ -59,26 +60,60 @@ def find_menu_for_item(items: Sequence[Item], key: str) -> Menu | None:
     """
     item = next((item for item in items if item.key == key), None)
     if item is None:
+        logger.info('[MenuAdapter] find_menu_for_item: no item with key=%s', key)
         return None
+
+    logger.info(
+        '[MenuAdapter] find_menu_for_item: key=%s, item_type=%s',
+        key,
+        type(item).__name__,
+    )
 
     # Handle SubMenuItem - has sub_menu attribute
     if isinstance(item, SubMenuItem):
         sub_menu = item.sub_menu
-        return sub_menu() if callable(sub_menu) else sub_menu
+        logger.info(
+            '[MenuAdapter] find_menu_for_item: SubMenuItem sub_menu is %s',
+            'callable' if callable(sub_menu) else type(sub_menu).__name__,
+        )
+        try:
+            result = sub_menu() if callable(sub_menu) else sub_menu
+        except Exception:
+            logger.exception(
+                '[MenuAdapter] find_menu_for_item: sub_menu() raised exception '
+                'for key=%s',
+                key,
+            )
+            return None
+        logger.info(
+            '[MenuAdapter] find_menu_for_item: sub_menu resolved to %s',
+            type(result).__name__ if result else 'None',
+        )
+        return result
 
     # Handle ActionItem - action may return a menu or callable that returns menu
     if isinstance(item, ActionItem) and item.action:
         try:
+            logger.info('[MenuAdapter] find_menu_for_item: calling ActionItem.action()')
             result = item.action()
+            logger.info(
+                '[MenuAdapter] find_menu_for_item: action() returned %s',
+                type(result).__name__ if result else 'None',
+            )
             # If result is callable (e.g., autorun wrapper), call it to get menu
             if callable(result):
                 result = result()
+                logger.info(
+                    '[MenuAdapter] find_menu_for_item: callable result resolved to %s',
+                    type(result).__name__ if result else 'None',
+                )
             # Check if result is a Menu (HeadedMenu, HeadlessMenu, etc.)
             if hasattr(result, 'items') and hasattr(result, 'title'):
                 return result
-        except Exception:  # noqa: BLE001, S110
-            # Action failed or didn't return a menu - silently ignore
-            pass
+        except Exception:
+            logger.exception(
+                '[MenuAdapter] find_menu_for_item: action() raised exception',
+            )
 
     return None
 
@@ -209,9 +244,21 @@ def get_current_menu_from_stack(
     for item in menu_path[1:]:  # Skip root
         if current_menu is None:
             return None
+        logger.info(
+            '[MenuAdapter] traversing to key=%s',
+            item.menu_key,
+        )
         items = menu_items(current_menu)
         # Use find_menu_for_item which handles both SubMenuItem and ActionItem
         current_menu = find_menu_for_item(items, item.menu_key)
         if current_menu is None:
+            logger.info(
+                '[MenuAdapter] traversal stopped: no menu for key=%s',
+                item.menu_key,
+            )
             return None
+    logger.info(
+        '[MenuAdapter] traversal complete: menu=%s',
+        type(current_menu).__name__ if current_menu else 'None',
+    )
     return current_menu

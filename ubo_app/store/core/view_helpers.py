@@ -132,7 +132,12 @@ def find_dynamic_menu_for_position(
         return None
 
     title_val = current_menu.title
-    current_title = str(title_val() if callable(title_val) else (title_val or ''))
+    try:
+        current_title = str(title_val() if callable(title_val) else (title_val or ''))
+    except Exception:  # noqa: BLE001
+        # Callable titles (autorun wrappers) may fail outside service context.
+        # This is a fallback path, so we just skip title-based matching.
+        return None
     if not current_title:
         return None
 

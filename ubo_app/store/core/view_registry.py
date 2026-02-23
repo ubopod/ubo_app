@@ -145,6 +145,26 @@ def register_menu_content_dependency(
     return unregister
 
 
+def get_registered_status_bar_dependencies(state: RootState) -> tuple[Any, ...]:
+    """Get registered status bar dependency values.
+
+    Args:
+        state: The current RootState.
+
+    Returns:
+        Tuple of all registered status bar dependency values.
+
+    """
+    registry = _get_registry()
+    results: list[Any] = []
+    for selector in registry.status_bar_selectors.values():
+        try:
+            results.append(selector(state))
+        except (AttributeError, KeyError):
+            results.append(None)
+    return tuple(results)
+
+
 def get_registered_dependencies(state: RootState) -> tuple[Any, ...]:
     """Get registered dependency values for view computation.
 

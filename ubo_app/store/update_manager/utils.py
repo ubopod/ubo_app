@@ -48,7 +48,7 @@ from ubo_app.store.update_manager.types import (
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.download import download_file
-from ubo_app.utils.gui import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.menu_items import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:

@@ -34,7 +34,7 @@ from ubo_app.store.ubo_actions import (
     UboApplicationItem,
     UboDispatchItem,
 )
-from ubo_app.utils.gui import (
+from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
     ItemParameters,

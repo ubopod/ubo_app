@@ -307,11 +307,18 @@ class _UboEventHandler(Generic[StrictEvent]):
         return f'<UboEventHandler:{self.handler_str}>'
 
 
+def _is_page_widget(obj: object) -> bool:
+    """Check if obj is a PageWidget without importing kivy."""
+    for cls in type(obj).__mro__:
+        if cls.__module__.startswith('ubo_gui.page') and cls.__name__ == 'PageWidget':
+            return True
+    return False
+
+
 class UboStore(Store[RootState, UboAction, UboEvent]):
     @classmethod
     def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:  # noqa: C901
         from redux.autorun import Autorun
-        from ubo_gui.page import PageWidget
 
         if isinstance(obj, Autorun):
             obj = obj()
@@ -331,7 +338,7 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
             return f'<function:{obj.__name__}>'
         if isinstance(obj, dict):
             return {k: cls.serialize_value(v) for k, v in obj.items()}
-        if isinstance(obj, Handle | Fake | PageWidget):
+        if isinstance(obj, Handle | Fake) or _is_page_widget(obj):
             return f'<{type(obj).__name__}>'
         return super().serialize_value(obj)
 

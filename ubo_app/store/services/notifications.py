@@ -17,10 +17,10 @@ from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
 from ubo_app.store.ubo_actions import UboApplicationItem, UboDispatchItem
 from ubo_app.utils.dataclass import default_provider
 
+Color = tuple[float, ...] | str
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-
-    from kivy.graphics.context_instructions import Color
 
     from ubo_app.store.services.speech_synthesis import ReadableInformation
 
