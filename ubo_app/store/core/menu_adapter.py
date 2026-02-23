@@ -60,10 +60,10 @@ def find_menu_for_item(items: Sequence[Item], key: str) -> Menu | None:
     """
     item = next((item for item in items if item.key == key), None)
     if item is None:
-        logger.info('[MenuAdapter] find_menu_for_item: no item with key=%s', key)
+        logger.debug('[MenuAdapter] find_menu_for_item: no item with key=%s', key)
         return None
 
-    logger.info(
+    logger.debug(
         '[MenuAdapter] find_menu_for_item: key=%s, item_type=%s',
         key,
         type(item).__name__,
@@ -72,7 +72,7 @@ def find_menu_for_item(items: Sequence[Item], key: str) -> Menu | None:
     # Handle SubMenuItem - has sub_menu attribute
     if isinstance(item, SubMenuItem):
         sub_menu = item.sub_menu
-        logger.info(
+        logger.debug(
             '[MenuAdapter] find_menu_for_item: SubMenuItem sub_menu is %s',
             'callable' if callable(sub_menu) else type(sub_menu).__name__,
         )
@@ -85,7 +85,7 @@ def find_menu_for_item(items: Sequence[Item], key: str) -> Menu | None:
                 key,
             )
             return None
-        logger.info(
+        logger.debug(
             '[MenuAdapter] find_menu_for_item: sub_menu resolved to %s',
             type(result).__name__ if result else 'None',
         )
@@ -94,16 +94,16 @@ def find_menu_for_item(items: Sequence[Item], key: str) -> Menu | None:
     # Handle ActionItem - action may return a menu or callable that returns menu
     if isinstance(item, ActionItem) and item.action:
         try:
-            logger.info('[MenuAdapter] find_menu_for_item: calling ActionItem.action()')
+            logger.debug('[MenuAdapter] find_menu_for_item: calling ActionItem.action()')
             result = item.action()
-            logger.info(
+            logger.debug(
                 '[MenuAdapter] find_menu_for_item: action() returned %s',
                 type(result).__name__ if result else 'None',
             )
             # If result is callable (e.g., autorun wrapper), call it to get menu
             if callable(result):
                 result = result()
-                logger.info(
+                logger.debug(
                     '[MenuAdapter] find_menu_for_item: callable result resolved to %s',
                     type(result).__name__ if result else 'None',
                 )
@@ -244,7 +244,7 @@ def get_current_menu_from_stack(
     for item in menu_path[1:]:  # Skip root
         if current_menu is None:
             return None
-        logger.info(
+        logger.debug(
             '[MenuAdapter] traversing to key=%s',
             item.menu_key,
         )
@@ -252,12 +252,12 @@ def get_current_menu_from_stack(
         # Use find_menu_for_item which handles both SubMenuItem and ActionItem
         current_menu = find_menu_for_item(items, item.menu_key)
         if current_menu is None:
-            logger.info(
+            logger.debug(
                 '[MenuAdapter] traversal stopped: no menu for key=%s',
                 item.menu_key,
             )
             return None
-    logger.info(
+    logger.debug(
         '[MenuAdapter] traversal complete: menu=%s',
         type(current_menu).__name__ if current_menu else 'None',
     )

@@ -15,7 +15,7 @@ from ubo_gui.menu.types import menu_items
 
 from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
-from ubo_app.store.core.constants import PAGE_SIZE
+from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
 from ubo_app.store.core.menu_adapter import (
     get_current_menu_from_stack,
     item_to_menu_item_data,
@@ -317,7 +317,10 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         if dynamic_menu:
             items = dynamic_menu.items
             page_index = top_item.page_index
-            total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
+            total_pages = compute_total_pages(
+                len(items),
+                is_headed=dynamic_menu.heading is not None,
+            )
 
             return MenuViewData(
                 show_status_bar=page_index == 0,

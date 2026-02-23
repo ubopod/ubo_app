@@ -408,11 +408,19 @@ def _handle_scroll(event: MenuScrollEvent) -> None:
     if not isinstance(top, MenuStackItem):
         return
 
-    items = _get_current_items()
-    if items is None:
-        return
+    # Use pre-computed current_view (same pattern as _handle_choose_by_index)
+    from ubo_app.store.core.types import MenuViewData
 
-    total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
+    current_view = state.main.current_view
+    if isinstance(current_view, MenuViewData) and current_view.total_pages > 0:
+        total_pages = current_view.total_pages
+    else:
+        # Fallback to item counting
+        items = _get_current_items()
+        if items is None:
+            return
+        total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
+
     page_index = top.page_index
 
     if event.direction == MenuScrollDirection.UP:

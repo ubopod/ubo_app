@@ -12,7 +12,7 @@ from redux import (
 )
 from ubo_gui.menu.types import menu_items
 
-from ubo_app.store.core.constants import PAGE_SIZE
+from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
 from ubo_app.store.core.menu_adapter import (
     get_current_menu_from_stack,
     item_to_menu_item_data,
@@ -168,8 +168,8 @@ def compute_view_from_stack(
             sub_heading_val() if callable(sub_heading_val) else sub_heading_val,
         )
 
-    # Calculate total pages
-    total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
+    # Calculate total pages (HeadedMenu heading+sub_heading occupy visual slots)
+    total_pages = compute_total_pages(len(items), is_headed=heading is not None)
 
     # Determine if at home (depth 1) or in a submenu
     depth = len([i for i in stack if isinstance(i, MenuStackItem)])
