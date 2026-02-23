@@ -362,6 +362,8 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         super().__init__(**kwargs)
         self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)
         self._last_page_index: int | None = None
+        self._last_header_visible: bool | None = None
+        self._last_footer_visible: bool | None = None
 
         _patch_transition_handlers(self.menu_widget)
 
@@ -433,7 +435,16 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self.handle_is_header_visible_change(is_header_visible)
         self.handle_is_footer_visible_change(is_footer_visible)
 
-        # Also notify the core so it can update its state
+        # Skip gRPC dispatch if values haven't changed (avoids flood during
+        # view transitions where page_index/pages properties fire rapidly)
+        if (
+            is_header_visible == self._last_header_visible
+            and is_footer_visible == self._last_footer_visible
+        ):
+            return
+        self._last_header_visible = is_header_visible
+        self._last_footer_visible = is_footer_visible
+
         self.grpc_client.dispatch_set_enclosures_visible(
             header=is_header_visible,
             footer=is_footer_visible,

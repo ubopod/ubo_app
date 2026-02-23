@@ -147,7 +147,7 @@ class TestItemToMenuItemData:
         assert result is not None
         assert result.key == 'reboot'
         assert result.label == 'Reboot'
-        assert result.action_id == 'menu:select:reboot'
+        assert result.action_id is None  # ActionItems don't get menu:select:
 
     def test_callable_label(self) -> None:
         """Verify callable label is resolved to its return value."""

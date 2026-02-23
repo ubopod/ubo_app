@@ -150,10 +150,14 @@ def item_to_menu_item_data(
     if item is None:
         return None
 
-    # Determine action_id based on item type
+    # Determine action_id based on item type.
+    # Only SubMenuItems get menu:select: — these trigger StackPushMenuAction.
+    # ActionItems must NOT get menu:select: because pushing them onto the stack
+    # causes find_menu_for_item to call action() on every autorun cycle,
+    # triggering repeated side effects (e.g. notification floods).
     action_id: str | None = None
     key_val = getattr(item, 'key', None)
-    if key_val and isinstance(key_val, str):
+    if key_val and isinstance(key_val, str) and isinstance(item, SubMenuItem):
         action_id = f'menu:select:{key_val}'
 
     # Get values with safe defaults, handling callables
