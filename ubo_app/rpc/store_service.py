@@ -117,14 +117,15 @@ class StoreService(StoreServiceBase):
                 },
             )
         else:
-            logger.debug(
-                'Dispatching action coming from gRPC',
-                extra={
-                    'request': dispatch_action_request,
-                    'action': action,
-                },
+            logger.info(
+                'Dispatching action coming from gRPC: %s',
+                type(action).__name__,
             )
             store.dispatch(cast('UboAction', action))
+            logger.info(
+                'Dispatched action via gRPC completed: %s',
+                type(action).__name__,
+            )
         return DispatchActionResponse()
 
     async def subscribe_event(

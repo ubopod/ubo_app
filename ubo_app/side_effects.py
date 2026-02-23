@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import atexit
+import functools
 import json
 import signal
 import subprocess
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -92,7 +94,13 @@ def _write_image(image_path: Path, array: NDArray) -> None:
 
 def _take_screenshot() -> None:
     """Take a screenshot of the screen."""
-    from headless_kivy import HeadlessWidget
+    try:
+        from headless_kivy import HeadlessWidget
+    except ImportError:
+        from ubo_app.logger import logger
+
+        logger.warning('Cannot take screenshot: headless_kivy not available')
+        return
 
     counter = 0
     while (path := Path(f'screenshots/ubo-screenshot-{counter:03d}.png')).exists():
@@ -183,14 +191,20 @@ def setup_side_effects() -> Subscriptions:
         bus_provider.clean_up,
     ]
 
-    from kivy.clock import mainthread
+    def _to_main_thread(func):  # type: ignore[misc]  # noqa: ANN001, ANN202
+        @functools.wraps(func)
+        def wrapper(*args: object, **kwargs: object) -> None:
+            if threading.current_thread() is threading.main_thread():
+                func(*args, **kwargs)
+
+        return wrapper
 
     @store.autorun(lambda state: state.settings.pdb_signal)
-    @mainthread
+    @_to_main_thread
     def _pdb_debug_mode(pdb_signal: bool) -> None:  # noqa: FBT001
         """Set the PDB debug mode."""
 
-        def signal_handler(signum: int, _: object) -> None:
+        def pdb_signal_handler(signum: int, _: object) -> None:
             if signum == signal.SIGUSR1:
                 import ipdb  # noqa: T100
 
@@ -198,7 +212,7 @@ def setup_side_effects() -> Subscriptions:
                 return
 
         if pdb_signal:
-            signal.signal(signal.SIGUSR1, signal_handler)
+            signal.signal(signal.SIGUSR1, pdb_signal_handler)
         else:
             signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pathlib
 import uuid
 from enum import StrEnum
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING
 
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
@@ -22,23 +22,18 @@ from ubo_gui.page import PageWidget
 from ubo_gui.prompt import PromptWidget
 from ubo_gui.utils import mainthread_if_needed
 
-from ubo_app.colors import SUCCESS_COLOR
 from ubo_app.constants import HEIGHT, WIDTH
+from ubo_app.utils.menu_items import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+    ItemParameters,
+)
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
 
 ZOOM_FACTOR = 1.1
 SCROLL_STEP = 10
-ItemParameters: TypeAlias = dict[Literal['background_color', 'color', 'icon'], str]
-
-SELECTED_ITEM_PARAMETERS: ItemParameters = {
-    'background_color': SUCCESS_COLOR,
-    'icon': '󰱒',
-}
-UNSELECTED_ITEM_PARAMETERS: ItemParameters = {
-    'icon': '󰄱',
-}
 
 
 class UboPageWidget(PageWidget):

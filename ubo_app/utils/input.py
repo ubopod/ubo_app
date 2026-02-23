@@ -183,21 +183,15 @@ async def ubo_input(
 
     def handle_input_provide_event(event: InputProvideEvent) -> None:
         if event.id == selected_input_description.id:
-            from kivy.utils import get_color_from_hex
+            from ubo_app.utils.color import hex_to_rgb
 
             loop.call_soon_threadsafe(
                 future.set_result,
                 (event.value, event.result),
             )
-            kivy_color = get_color_from_hex('#21E693')
-            color = (
-                round(kivy_color[0] * 255),
-                round(kivy_color[1] * 255),
-                round(kivy_color[2] * 255),
-            )
             store.dispatch(
                 RgbRingBlinkAction(
-                    color=color,
+                    color=hex_to_rgb('#21E693'),
                     repetitions=1,
                     wait=200,
                 ),

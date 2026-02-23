@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import math
 from typing import TYPE_CHECKING
 
 from kivy.clock import mainthread
@@ -29,12 +28,13 @@ from ubo_app.store.core.types import (
     MenuViewData,
     NotificationStackItem,
     NotificationViewData,
-    ProgressNotificationData,
     StatusBarData,
-    StatusIconData,
     ViewChangedEvent,
 )
-from ubo_app.store.core.view_computation import get_notification_view_data
+from ubo_app.store.core.view_computation import (
+    compute_status_bar_data,
+    get_notification_view_data,
+)
 from ubo_app.store.core.view_helpers import (
     find_dynamic_menu_for_position as _find_dynamic_menu_for_position,
 )
@@ -53,75 +53,6 @@ if TYPE_CHECKING:
     from ubo_app.store.core.types import ViewData
     from ubo_app.store.main import RootState
     from ubo_app.store.services.notifications import Notification
-
-
-def compute_status_bar_data(state: RootState) -> StatusBarData:
-    """Compute StatusBarData from the full Redux state.
-
-    This consolidates all status bar information from various state slices
-    into a single serializable object.
-    """
-    # Compute progress notifications from notifications with progress
-    progress_notifications: list[ProgressNotificationData] = []
-    with contextlib.suppress(AttributeError, TypeError):
-        progress_notifications = [
-            ProgressNotificationData(
-                id=notification.id,
-                progress=(
-                    None
-                    if math.isnan(notification.progress)
-                    else notification.progress
-                ),
-                color=notification.color,
-            )
-            for notification in state.notifications.notifications
-            if notification.progress is not None
-        ]
-
-    # Compute icons from status_icons state
-    icons: tuple[StatusIconData, ...] = ()
-    try:
-        icons = tuple(
-            StatusIconData(symbol=icon.symbol, color=icon.color)
-            for icon in state.status_icons.icons
-        )
-    except (AttributeError, TypeError) as e:
-        if DEBUG_MENU:
-            logger.warning('[ViewRenderer] Failed to compute icons: %s', e)
-
-    # Get temperature and light from sensors
-    temperature: float | None = None
-    light_level: float | None = None
-    with contextlib.suppress(AttributeError, TypeError):
-        temperature = state.sensors.temperature.value
-        light_level = state.sensors.light.value
-
-    # Get system metrics (clock)
-    clock = ''
-    with contextlib.suppress(AttributeError, TypeError):
-        clock = state.system.clock
-
-    # Get recording states
-    is_recording = False
-    is_replaying = False
-    is_recording_audio = False
-    with contextlib.suppress(AttributeError, TypeError):
-        is_recording = state.main.is_recording
-        is_replaying = state.main.is_replaying
-    with contextlib.suppress(AttributeError, TypeError):
-        is_recording_audio = state.audio.is_recording
-
-    return StatusBarData(
-        title='',  # Title is managed by MenuWidget binding
-        is_recording=is_recording,
-        is_replaying=is_replaying,
-        is_recording_audio=is_recording_audio,
-        progress_notifications=tuple(progress_notifications),
-        clock=clock,
-        temperature=temperature,
-        light_level=light_level,
-        icons=icons,
-    )
 
 
 # =============================================================================

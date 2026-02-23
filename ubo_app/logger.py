@@ -285,11 +285,14 @@ def setup_loggers() -> Subscriptions:
     gui_level = get_gui_log_level()
 
     if gui_level is not None:
-        import ubo_gui.logger
+        try:
+            import ubo_gui.logger
 
-        ubo_gui.logger.logger.setLevel(gui_level)
-        ubo_gui.logger.add_file_handler(gui_level)
-        ubo_gui.logger.add_stdout_handler(gui_level)
+            ubo_gui.logger.logger.setLevel(gui_level)
+            ubo_gui.logger.add_file_handler(gui_level)
+            ubo_gui.logger.add_stdout_handler(gui_level)
+        except ImportError:
+            pass
 
     return subscriptions
 
