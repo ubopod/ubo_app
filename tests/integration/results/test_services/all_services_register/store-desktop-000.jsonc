@@ -1009,9 +1009,8 @@
                               "_type": "HeadlessMenu",
                               "items": [
                                 {
-                                  "_type": "UboApplicationItem",
-                                  "application": "<function:<lambda>>",
-                                  "application_id": "wifi:create-connection-page",
+                                  "_type": "ActionItem",
+                                  "action": "<function:_start_create_connection>",
                                   "background_color": "#68B7FF",
                                   "color": [
                                     1,
@@ -1020,8 +1019,6 @@
                                     1
                                   ],
                                   "icon": "󱛃",
-                                  "initialization_args": [],
-                                  "initialization_kwargs": null,
                                   "is_short": false,
                                   "key": null,
                                   "label": "Add",
@@ -8295,7 +8292,7 @@
       "light_level": 0.0,
       "progress_notifications": [],
       "temperature": 0.0,
-      "title": ""
+      "title": "󰋜test-hostname.local"
     }
   },
   "notifications": {
@@ -8571,32 +8568,17 @@
     "intents": [
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "SpeechRecognitionSetIsAssistantActiveAction",
-          "is_active": true
-        },
+        "action_id": "speech:assistant-on",
         "phrase": "Turn on Assistant"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "SpeechRecognitionSetIsAssistantActiveAction",
-          "is_active": false
-        },
+        "action_id": "speech:assistant-off",
         "phrase": "Turn off Assistant"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "OpenApplicationAction",
-          "application_id": "wifi:create-connection-page",
-          "initialization_args": [],
-          "initialization_kwargs": {
-            "input_methods": [
-              "camera"
-            ]
-          }
-        },
+        "action_id": "speech:wifi-camera",
         "phrase": [
           "Create WiFi Connection with Camera",
           "Create WiFi Connection with QR Code",
@@ -8606,16 +8588,7 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "OpenApplicationAction",
-          "application_id": "wifi:create-connection-page",
-          "initialization_args": [],
-          "initialization_kwargs": {
-            "input_methods": [
-              "web_dashboard"
-            ]
-          }
-        },
+        "action_id": "speech:wifi-web",
         "phrase": [
           "Create WiFi Connection with Web Dashboard",
           "Create WiFi Connection with Web",
@@ -8627,11 +8600,7 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "InfraredSendCodeAction",
-          "protocol": "nec",
-          "scancode": "0x40"
-        },
+        "action_id": "speech:light-strip-toggle",
         "phrase": [
           "Turn on light strip",
           "Turn off light strip"
@@ -8639,198 +8608,97 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            255,
-            255,
-            255
-          ]
-        },
+        "action_id": "speech:lights-on",
         "phrase": "Turn on Lights"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            0,
-            0,
-            0
-          ]
-        },
+        "action_id": "speech:lights-off",
         "phrase": "Turn off Lights"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            255,
-            0,
-            0
-          ]
-        },
+        "action_id": "speech:lights-red",
         "phrase": "Turn Lights Red"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            0,
-            255,
-            0
-          ]
-        },
+        "action_id": "speech:lights-green",
         "phrase": "Turn Lights Green"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            0,
-            0,
-            255
-          ]
-        },
+        "action_id": "speech:lights-blue",
         "phrase": "Turn Lights Blue"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            255,
-            255,
-            0
-          ]
-        },
+        "action_id": "speech:lights-yellow",
         "phrase": "Turn Lights Yellow"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            255,
-            0,
-            255
-          ]
-        },
+        "action_id": "speech:lights-purple",
         "phrase": "Turn Lights Purple"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            0,
-            255,
-            255
-          ]
-        },
+        "action_id": "speech:lights-cyan",
         "phrase": "Turn Lights Cyan"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            255,
-            100,
-            0
-          ]
-        },
+        "action_id": "speech:lights-orange",
         "phrase": "Turn Lights Orange"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingSetAllAction",
-          "color": [
-            255,
-            255,
-            255
-          ]
-        },
+        "action_id": "speech:lights-white",
         "phrase": "Turn Lights White"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "RgbRingRainbowAction",
-          "rounds": 0,
-          "wait": 2500
-        },
+        "action_id": "speech:lights-rainbow",
         "phrase": "Turn Lights Rainbow"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "AudioChangeVolumeAction",
-          "amount": 0.1,
-          "device": "Output"
-        },
+        "action_id": "speech:volume-up",
         "phrase": "Turn Volume Up"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "AudioChangeVolumeAction",
-          "amount": -0.1,
-          "device": "Output"
-        },
+        "action_id": "speech:volume-down",
         "phrase": "Turn Volume Down"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "AudioSetMuteStatusAction",
-          "device": "Output",
-          "is_mute": true
-        },
+        "action_id": "speech:mute",
         "phrase": "Mute Volume"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "AudioSetMuteStatusAction",
-          "device": "Output",
-          "is_mute": false
-        },
+        "action_id": "speech:unmute",
         "phrase": "Unmute Volume"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "MenuChooseByIndexAction",
-          "index": 0
-        },
+        "action_id": "speech:button-one",
         "phrase": "Activate Button One"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "MenuChooseByIndexAction",
-          "index": 1
-        },
+        "action_id": "speech:button-two",
         "phrase": "Activate Button Two"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "MenuChooseByIndexAction",
-          "index": 1
-        },
+        "action_id": "speech:button-three",
         "phrase": "Activate Button Three"
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "MenuGoBackAction"
-        },
+        "action_id": "speech:go-back",
         "phrase": [
           "Activate Back Button",
           "Go Back"
@@ -8838,9 +8706,7 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "MenuGoHomeAction"
-        },
+        "action_id": "speech:go-home",
         "phrase": [
           "Activate Home Button",
           "Go Home"
@@ -8848,10 +8714,7 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "MenuScrollAction",
-          "direction": "up"
-        },
+        "action_id": "speech:scroll-up",
         "phrase": [
           "Activate Up Button",
           "Scroll Up"
@@ -8859,10 +8722,7 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action": {
-          "_type": "MenuScrollAction",
-          "direction": "down"
-        },
+        "action_id": "speech:scroll-down",
         "phrase": [
           "Activate Down Button",
           "Scroll Down"

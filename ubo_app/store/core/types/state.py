@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING
 from immutable import Immutable
 
 if TYPE_CHECKING:
-    from redux import BaseAction
     from ubo_gui.menu.types import Menu
 
     from ubo_app.store.core.types.stack_items import StackItemType
     from ubo_app.store.core.types.status_bar import StatusBarData
     from ubo_app.store.core.types.view_data import ViewData
+    from ubo_app.store.services.keypad import KeypadAction
 
 
 class MainState(Immutable):
@@ -30,7 +30,7 @@ class MainState(Immutable):
     settings_items_priorities: dict[str, int] = field(default_factory=dict)
     is_recording: bool = False
     is_replaying: bool = False
-    recorded_sequence: list[BaseAction] = field(default_factory=list)
+    recorded_sequence: list[KeypadAction] = field(default_factory=list)
     # New: Computed view data for dumb UI architecture
     current_view: ViewData | None = None
     status_bar: StatusBarData | None = None

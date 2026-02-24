@@ -180,7 +180,7 @@ def reducer(
         case KeypadKeyPressAction(key=Key.UP) if (
             depth == 1
             and not on_notification
-            and action.pressed_keys == {action.key}
+            and set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -195,7 +195,7 @@ def reducer(
         case KeypadKeyPressAction(key=Key.DOWN) if (
             depth == 1
             and not on_notification
-            and action.pressed_keys == {action.key}
+            and set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -208,7 +208,7 @@ def reducer(
                 ],
             )
         case KeypadKeyPressAction(key=Key.HOME) if (
-            depth == 1 and action.pressed_keys == {action.key}
+            depth == 1 and set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
@@ -217,7 +217,7 @@ def reducer(
                     AssistantStartListeningAction(),
                 ],
             )
-        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.HOME) if (
+        case KeypadKeyReleaseAction(pressed_keys=(), key=Key.HOME) if (
             depth == 1
         ):
             return CompleteReducerResult(
@@ -226,7 +226,9 @@ def reducer(
                     AssistantStopListeningAction(),
                 ],
             )
-        case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {action.key}:
+        case KeypadKeyPressAction(key=Key.L1) if (
+            set(action.pressed_keys) == {action.key}
+        ):
             if on_notification and not _notification_has_item_at(stack, 0):
                 return CompleteReducerResult(
                     state=state,
@@ -237,7 +239,9 @@ def reducer(
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=0)],
             )
-        case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {action.key}:
+        case KeypadKeyPressAction(key=Key.L2) if (
+            set(action.pressed_keys) == {action.key}
+        ):
             if on_notification and not _notification_has_item_at(stack, 1):
                 return CompleteReducerResult(
                     state=state,
@@ -248,7 +252,9 @@ def reducer(
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=1)],
             )
-        case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {action.key}:
+        case KeypadKeyPressAction(key=Key.L3) if (
+            set(action.pressed_keys) == {action.key}
+        ):
             if on_notification and not _notification_has_item_at(stack, 2):
                 return CompleteReducerResult(
                     state=state,
@@ -259,19 +265,23 @@ def reducer(
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuChooseByIndexEvent(index=2)],
             )
-        case KeypadKeyPressAction(key=Key.UP) if action.pressed_keys == {action.key}:
+        case KeypadKeyPressAction(key=Key.UP) if (
+            set(action.pressed_keys) == {action.key}
+        ):
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
             )
-        case KeypadKeyPressAction(key=Key.DOWN) if action.pressed_keys == {action.key}:
+        case KeypadKeyPressAction(key=Key.DOWN) if (
+            set(action.pressed_keys) == {action.key}
+        ):
             return CompleteReducerResult(
                 state=state,
                 actions=[DisplayUpdateActivityAction()],
                 events=[MenuScrollEvent(direction=MenuScrollDirection.DOWN)],
             )
-        case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.L1) if set(action.pressed_keys) == {
             Key.HOME,
             Key.L1,
         }:
@@ -280,7 +290,7 @@ def reducer(
                 actions=[DisplayUpdateActivityAction()],
                 events=[ScreenshotEvent()],
             )
-        case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.L2) if set(action.pressed_keys) == {
             Key.HOME,
             Key.L2,
         }:
@@ -289,7 +299,7 @@ def reducer(
                 actions=[DisplayUpdateActivityAction()],
                 events=[SnapshotEvent()],
             )
-        case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.L3) if set(action.pressed_keys) == {
             Key.HOME,
             Key.L3,
         }:
@@ -297,7 +307,7 @@ def reducer(
                 state=state,
                 actions=[DisplayUpdateActivityAction(), ToggleRecordingAction()],
             )
-        case KeypadKeyPressAction(key=Key.L1) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.L1) if set(action.pressed_keys) == {
             Key.BACK,
             Key.L1,
         }:
@@ -305,7 +315,7 @@ def reducer(
                 state=state,
                 actions=[DisplayUpdateActivityAction(), AudioToggleRecordingAction()],
             )
-        case KeypadKeyPressAction(key=Key.L2) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.L2) if set(action.pressed_keys) == {
             Key.BACK,
             Key.L2,
         }:
@@ -313,7 +323,7 @@ def reducer(
                 state=state,
                 actions=[DisplayUpdateActivityAction(), AudioPlayRecordingAction()],
             )
-        case KeypadKeyPressAction(key=Key.L3) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.L3) if set(action.pressed_keys) == {
             Key.BACK,
             Key.L3,
         }:
@@ -321,7 +331,7 @@ def reducer(
                 state=state,
                 actions=[DisplayUpdateActivityAction(), ReplayRecordedSequenceAction()],
             )
-        case KeypadKeyPressAction(key=Key.BACK) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.BACK) if set(action.pressed_keys) == {
             Key.HOME,
             Key.BACK,
         }:
@@ -331,7 +341,7 @@ def reducer(
                 events=[FinishEvent()],
             )
         # DEMO {
-        case KeypadKeyPressAction(key=Key.UP) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.UP) if set(action.pressed_keys) == {
             Key.HOME,
             Key.UP,
         }:
@@ -348,7 +358,7 @@ def reducer(
                     ),
                 ],
             )
-        case KeypadKeyPressAction(key=Key.DOWN) if action.pressed_keys == {
+        case KeypadKeyPressAction(key=Key.DOWN) if set(action.pressed_keys) == {
             Key.HOME,
             Key.DOWN,
         }:
@@ -371,11 +381,11 @@ def reducer(
             return state
 
         case KeypadKeyHoldAction(key=Key.HOME) if (
-            action.pressed_keys
+            set(action.pressed_keys)
             == {
                 Key.HOME,
             }
-            and action.held_keys == {Key.HOME}
+            and set(action.held_keys) == {Key.HOME}
             and depth > 1
         ):
             return CompleteReducerResult(
@@ -392,12 +402,12 @@ def reducer(
         case KeypadKeyReleaseAction() if state.is_consumed:
             return state(is_consumed=False)
 
-        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.BACK):
+        case KeypadKeyReleaseAction(pressed_keys=(), key=Key.BACK):
             return CompleteReducerResult(
                 state=state,
                 events=[MenuGoBackEvent()],
             )
-        case KeypadKeyReleaseAction(pressed_keys=set(), key=Key.HOME):
+        case KeypadKeyReleaseAction(pressed_keys=(), key=Key.HOME):
             return CompleteReducerResult(
                 state=state,
                 actions=[AssistantStopListeningAction()],

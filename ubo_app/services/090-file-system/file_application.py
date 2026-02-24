@@ -118,8 +118,8 @@ def _copy(path: Path) -> None:
 
         store.dispatch(
             FileSystemCopyAction(
-                sources=[path],
-                destination=Path(destination),
+                sources=[path.as_posix()],
+                destination=destination,
             ),
         )
 
@@ -146,8 +146,8 @@ def _move(path: Path) -> None:
 
         store.dispatch(
             FileSystemMoveAction(
-                sources=[path],
-                destination=Path(destination),
+                sources=[path.as_posix()],
+                destination=destination,
             ),
         )
 
@@ -170,7 +170,9 @@ def _remove(path: Path) -> None:
                         key='confirm',
                         label='Remove',
                         icon='󰆴',
-                        store_action=FileSystemRemoveAction(paths=[path]),
+                        store_action=FileSystemRemoveAction(
+                            paths=[path.as_posix()],
+                        ),
                         close_notification=True,
                     ),
                 ],
@@ -291,11 +293,11 @@ def _show_file(path: Path) -> HeadlessMenu | None:
 
 
 def _select(path: Path) -> None:
-    store.dispatch(FileSystemReportSelectionAction(path=path))
+    store.dispatch(FileSystemReportSelectionAction(path=path.as_posix()))
 
 
 def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem]]:
-    path = config.initial_path or Path('/')
+    path = Path(config.initial_path) if config.initial_path else Path('/')
     if config.accepts_directories and config.accepts_files:
         select_directory = select_file = _select
     elif config.accepts_directories:
@@ -332,7 +334,7 @@ def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem
                 icon='󰉋',
                 action=functools.partial(
                     open_path,
-                    config=replace(config, initial_path=item),
+                    config=replace(config, initial_path=item.as_posix()),
                 ),
             )
             if item.is_dir()
@@ -379,7 +381,7 @@ def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem
 def open_path(*, config: PathSelectorConfig | None = None) -> HeadlessMenu | None:
     """Open a directory and return a HeadlessMenu for its contents."""
     config = config or PathSelectorConfig()
-    path = config.initial_path or Path('/')
+    path = Path(config.initial_path) if config.initial_path else Path('/')
 
     try:
         if path.is_dir():

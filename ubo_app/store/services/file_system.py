@@ -9,7 +9,6 @@ from redux import BaseAction, BaseEvent
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from pathlib import Path
 
     from ubo_app.store.input.types import PathInputDescription
 
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
 class PathSelectorConfig(Immutable):
     """Configuration for the path selector."""
 
-    initial_path: Path | None = None
+    initial_path: str | None = None
     show_hidden: bool = False
     accepts_files: bool | None = None
     accepts_directories: bool | None = None
@@ -31,27 +30,27 @@ class FileSystemAction(BaseAction):
 class FileSystemReportSelectionAction(FileSystemAction):
     """Report a file system selection."""
 
-    path: Path
+    path: str
 
 
 class FileSystemCopyAction(FileSystemAction):
     """Copy files or directories to a new location."""
 
-    sources: Sequence[Path]
-    destination: Path
+    sources: Sequence[str]
+    destination: str
 
 
 class FileSystemMoveAction(FileSystemAction):
     """Move files or directories to a new location."""
 
-    sources: Sequence[Path]
-    destination: Path
+    sources: Sequence[str]
+    destination: str
 
 
 class FileSystemRemoveAction(FileSystemAction):
     """Remove files or directories."""
 
-    paths: Sequence[Path]
+    paths: Sequence[str]
 
 
 class FileSystemEvent(BaseEvent):
@@ -67,21 +66,21 @@ class FileSystemSelectEvent(FileSystemEvent):
 class FileSystemCopyEvent(FileSystemEvent):
     """Event for copying filesystem items."""
 
-    sources: Sequence[Path]
-    destination: Path
+    sources: Sequence[str]
+    destination: str
 
 
 class FileSystemMoveEvent(FileSystemEvent):
     """Event for moving filesystem items."""
 
-    sources: Sequence[Path]
-    destination: Path
+    sources: Sequence[str]
+    destination: str
 
 
 class FileSystemRemoveEvent(FileSystemEvent):
     """Event for removing filesystem items."""
 
-    paths: Sequence[Path]
+    paths: Sequence[str]
 
 
 class FileSystemState(Immutable):

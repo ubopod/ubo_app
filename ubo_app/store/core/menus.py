@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import socket
-from datetime import UTC, datetime
+import time
 from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
@@ -113,7 +113,7 @@ def update_notifications_dynamic_menu(
     if notifications is None:
         items: tuple[MenuItemData | None, ...] = ()
     else:
-        now = datetime.now(tz=UTC)
+        now = time.time()
         items = tuple(
             MenuItemData(
                 key=str(notification.id),
@@ -167,7 +167,7 @@ def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item
         )
         for index, notification in enumerate(notifications)
         if notification.expiration_timestamp is None
-        or notification.expiration_timestamp > datetime.now(tz=UTC)
+        or notification.expiration_timestamp > time.time()
     ]
 
 

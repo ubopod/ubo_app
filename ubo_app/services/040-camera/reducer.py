@@ -1,9 +1,9 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
-import datetime
 import functools
 import re
+import time
 
 from redux import (
     CompleteReducerResult,
@@ -12,6 +12,7 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.input.types import (
     InputAction,
     InputCancelAction,
@@ -68,7 +69,7 @@ def prompt_notification(description: QRCodeInputDescription) -> NotificationsAdd
             display_type=NotificationDisplayType.STICKY,
             is_read=True,
             extra_information=description.instructions,
-            expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
+            expiration_timestamp=time.time(),
             color='#ffffff',
             actions=[
                 NotificationDispatchItem(
@@ -81,9 +82,11 @@ def prompt_notification(description: QRCodeInputDescription) -> NotificationsAdd
             ],
             show_dismiss_action=False,
             dismiss_on_close=True,
-            on_close=functools.partial(
-                store.dispatch,
-                InputCancelAction(id=description.id),
+            on_close_id=register_auto_callback(
+                functools.partial(
+                    store.dispatch,
+                    InputCancelAction(id=description.id),
+                ),
             ),
         ),
     )

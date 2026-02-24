@@ -186,10 +186,6 @@ class _ProtoGenerator(ast.NodeVisitor):
                 return _BasicType(type='bool')
             if value.id == 'bytes':
                 return _BasicType(type='bytes')
-            if value.id == 'datetime':
-                return _BasicType(type='int64')
-            if value.id == 'Path':
-                return _BasicType(type='string')
             return _BasicType(type=value.id)
         if isinstance(value, ast.Constant) and value.value is None:
             return _BasicType(type='None')

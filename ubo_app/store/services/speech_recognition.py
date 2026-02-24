@@ -12,8 +12,6 @@ from redux import BaseAction, BaseEvent
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ubo_app.store.main import UboAction
-
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
@@ -43,7 +41,7 @@ class SpeechRecognitionIntent(Immutable):
     """Intent for speech recognition service."""
 
     phrase: str | Sequence[str]
-    action: UboAction | Sequence[UboAction]
+    action_id: str
 
 
 class SpeechRecognitionReportWakeWordDetectionAction(SpeechRecognitionAction):

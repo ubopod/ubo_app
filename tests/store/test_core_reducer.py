@@ -405,15 +405,20 @@ class TestToggleRecording:
         assert any(isinstance(e, StoreRecordedSequenceEvent) for e in events)
 
     def test_recording_captures_actions(self) -> None:
-        """Verify actions dispatched during recording are captured."""
+        """Verify KeypadAction dispatched during recording are captured."""
+        from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
+
         state = _init_state()
         state = _get_state(reducer(state, ToggleRecordingAction()))
-        # Dispatch some actions while recording
-        state = _get_state(reducer(state, MenuGoBackAction()))
-        state = _get_state(reducer(state, MenuGoHomeAction()))
-        # The recorded_sequence should have the actions
-        # (including ToggleRecording toggle)
-        assert len(state.recorded_sequence) > 0
+        # Dispatch keypad actions while recording (only KeypadAction captured)
+        state = _get_state(
+            reducer(
+                state,
+                KeypadKeyPressAction(key=Key.L1, pressed_keys=(Key.L1,)),
+            ),
+        )
+        # The recorded_sequence should have the keypad action
+        assert len(state.recorded_sequence) == 1
 
     def test_toggle_during_replaying_noop(self) -> None:
         """Verify toggle recording is a no-op while replaying."""

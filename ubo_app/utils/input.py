@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import functools
 import inspect
+import time
 from asyncio import Future
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast, overload
 
 from typing_extensions import TypeVar
 
+from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.input.types import (
     AvailableInputDescription,
     InputCancelEvent,
@@ -110,13 +111,15 @@ async def select_input_description(
                     'enter this input. Please choose one by pressing one of the '
                     'left buttons.',
                 ),
-                expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
+                expiration_timestamp=time.time(),
                 color='#ffffff',
                 show_dismiss_action=False,
                 dismiss_on_close=True,
                 actions=actions,
-                on_close=lambda: loop.call_soon_threadsafe(
-                    input_method_future.cancel,
+                on_close_id=register_auto_callback(
+                    lambda: loop.call_soon_threadsafe(
+                        input_method_future.cancel,
+                    ),
                 ),
             ),
         ),

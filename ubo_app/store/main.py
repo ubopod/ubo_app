@@ -8,7 +8,6 @@ import inspect
 import threading
 import weakref
 from asyncio import Handle, iscoroutine
-from datetime import datetime
 from enum import Flag, IntEnum, StrEnum
 from types import GenericAlias
 from typing import (
@@ -317,19 +316,15 @@ def _is_page_widget(obj: object) -> bool:
 
 class UboStore(Store[RootState, UboAction, UboEvent]):
     @classmethod
-    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:  # noqa: C901
+    def serialize_value(cls: type[UboStore], obj: object | type) -> SnapshotAtom:
         from redux.autorun import Autorun
 
         if isinstance(obj, Autorun):
             obj = obj()
         if isinstance(obj, Flag):
             return obj.value
-        if isinstance(obj, set):
-            return {'_type': 'set', 'value': [cls.serialize_value(i) for i in obj]}
         if isinstance(obj, bytes):
             return {'_type': 'bytes', 'value': base64.b64encode(obj).decode('utf-8')}
-        if isinstance(obj, datetime):
-            return {'_type': 'datetime', 'value': obj.isoformat()}
         if isinstance(obj, functools.partial):
             return f'<functools.partial:{cls.serialize_value(obj.func)}>'
         if is_immutable(obj):

@@ -109,9 +109,15 @@ class MenuNotificationHandler(UboApp):
             )
             if notification.dismiss_on_close and notification_id:
                 self.grpc_client.dispatch_notifications_clear(notification_id)
-            on_close = getattr(notification.value, 'on_close', None)
-            if on_close:
-                on_close()
+            on_close_id = getattr(notification.value, 'on_close_id', None)
+            if on_close_id:
+                from ubo_app.store.core.callback_registry import (
+                    execute_callback,
+                    unregister_callback,
+                )
+
+                execute_callback(on_close_id)
+                unregister_callback(on_close_id)
 
         notification_application = UboNotificationWidget(
             notification_id=notification_id or '',

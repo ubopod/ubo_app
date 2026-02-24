@@ -129,11 +129,7 @@ def _store_recorded_sequence(event: StoreRecordedSequenceEvent) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     json_dump = json.dumps(
-        [
-            store.serialize_value(action)
-            for action in event.recorded_sequence
-            if type(action).__name__.startswith('Keypad')
-        ],
+        [store.serialize_value(action) for action in event.recorded_sequence],
         indent=2,
     )
 

@@ -46,18 +46,14 @@ def _build_key_maps() -> tuple[dict, dict, dict]:
         AudioToggleMuteStatusAction,
         Key,
         KeypadKeyPressAction,
-        KeypadKeyPressActionPressedKeysSetType,
         KeypadKeyReleaseAction,
-        KeypadKeyReleaseActionPressedKeysSetType,
     )
 
     def _press(key: Key, *extra_keys: Key) -> Action:
         return Action(
             keypad_key_press_action=KeypadKeyPressAction(
                 key=key,
-                pressed_keys=KeypadKeyPressActionPressedKeysSetType(
-                    items=[key, *extra_keys],
-                ),
+                pressed_keys=[key, *extra_keys],
             ),
         )
 
@@ -65,9 +61,7 @@ def _build_key_maps() -> tuple[dict, dict, dict]:
         return Action(
             keypad_key_release_action=KeypadKeyReleaseAction(
                 key=key,
-                pressed_keys=KeypadKeyReleaseActionPressedKeysSetType(
-                    items=list(extra_keys),
-                ),
+                pressed_keys=list(extra_keys),
             ),
         )
 

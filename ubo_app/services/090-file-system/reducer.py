@@ -140,9 +140,9 @@ def reducer(
                 actions=[
                     InputProvideAction(
                         id=state.queue[0].id,
-                        value=action.path.as_posix(),
+                        value=action.path,
                         result=InputResult(
-                            data={'path': action.path.as_posix()},
+                            data={'path': action.path},
                             files={},
                             method=InputMethod.PATH_SELECTOR,
                         ),

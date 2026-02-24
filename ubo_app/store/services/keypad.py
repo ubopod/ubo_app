@@ -21,8 +21,8 @@ class Key(StrEnum):
 
 class KeypadAction(BaseAction):
     key: Key
-    pressed_keys: set[Key]
-    held_keys: set[Key] = field(default_factory=set)
+    pressed_keys: tuple[Key, ...]
+    held_keys: tuple[Key, ...] = ()
     time: float = field(default_factory=time.time)
 
 

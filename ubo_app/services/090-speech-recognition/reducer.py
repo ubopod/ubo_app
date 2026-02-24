@@ -1,11 +1,10 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from redux import CompleteReducerResult, InitAction, InitializationActionError
+from redux import BaseAction, CompleteReducerResult, InitAction, InitializationActionError
 
 from ubo_app.constants.assistant import ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
 from ubo_app.store.core.types import (
@@ -47,12 +46,29 @@ from ubo_app.store.services.speech_recognition import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from redux import ReducerResult
 
     from ubo_app.store.main import UboAction
 
 
 ACKNOWLEDGMENT_ACTION = RgbRingBlankAction()
+
+# Registry mapping intent action_ids to their actions
+_intent_actions: dict[str, list[UboAction]] = {}
+
+
+def _register_intent(
+    action_id: str,
+    phrase: str | Sequence[str],
+    action: UboAction | Sequence[UboAction],
+) -> SpeechRecognitionIntent:
+    """Register an intent action and return the intent with an action_id."""
+    _intent_actions[action_id] = (
+        [a for a in action] if not isinstance(action, BaseAction) else [action]
+    )
+    return SpeechRecognitionIntent(phrase=phrase, action_id=action_id)
 
 
 def reducer(
@@ -63,34 +79,34 @@ def reducer(
         if isinstance(action, InitAction):
             return SpeechRecognitionState(
                 intents=[
-                    SpeechRecognitionIntent(
-                        phrase='Turn on Assistant',
-                        action=SpeechRecognitionSetIsAssistantActiveAction(
-                            is_active=True,
-                        ),
+                    _register_intent(
+                        'speech:assistant-on',
+                        'Turn on Assistant',
+                        SpeechRecognitionSetIsAssistantActiveAction(is_active=True),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn off Assistant',
-                        action=SpeechRecognitionSetIsAssistantActiveAction(
-                            is_active=False,
-                        ),
+                    _register_intent(
+                        'speech:assistant-off',
+                        'Turn off Assistant',
+                        SpeechRecognitionSetIsAssistantActiveAction(is_active=False),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase=[
+                    _register_intent(
+                        'speech:wifi-camera',
+                        [
                             'Create WiFi Connection with Camera',
                             'Create WiFi Connection with QR Code',
                             'Create WiFi Connection using Camera',
                             'Create WiFi Connection using QR Code',
                         ],
-                        action=OpenApplicationAction(
+                        OpenApplicationAction(
                             application_id='wifi:create-connection-page',
                             initialization_kwargs={
                                 'input_methods': (InputMethod.CAMERA,),
                             },
                         ),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase=[
+                    _register_intent(
+                        'speech:wifi-web',
+                        [
                             'Create WiFi Connection with Web Dashboard',
                             'Create WiFi Connection with Web',
                             'Create WiFi Connection with Web UI',
@@ -98,119 +114,133 @@ def reducer(
                             'Create WiFi Connection using Web UI',
                             'Create WiFi Connection using Web',
                         ],
-                        action=OpenApplicationAction(
+                        OpenApplicationAction(
                             application_id='wifi:create-connection-page',
                             initialization_kwargs={
                                 'input_methods': (InputMethod.WEB_DASHBOARD,),
                             },
                         ),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase=['Turn on light strip', 'Turn off light strip'],
-                        action=InfraredSendCodeAction(
-                            protocol='nec',
-                            scancode='0x40',
-                        ),
+                    _register_intent(
+                        'speech:light-strip-toggle',
+                        ['Turn on light strip', 'Turn off light strip'],
+                        InfraredSendCodeAction(protocol='nec', scancode='0x40'),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn on Lights',
-                        action=RgbRingSetAllAction(color=(255, 255, 255)),
+                    _register_intent(
+                        'speech:lights-on',
+                        'Turn on Lights',
+                        RgbRingSetAllAction(color=(255, 255, 255)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn off Lights',
-                        action=RgbRingSetAllAction(color=(0, 0, 0)),
+                    _register_intent(
+                        'speech:lights-off',
+                        'Turn off Lights',
+                        RgbRingSetAllAction(color=(0, 0, 0)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Red',
-                        action=RgbRingSetAllAction(color=(255, 0, 0)),
+                    _register_intent(
+                        'speech:lights-red',
+                        'Turn Lights Red',
+                        RgbRingSetAllAction(color=(255, 0, 0)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Green',
-                        action=RgbRingSetAllAction(color=(0, 255, 0)),
+                    _register_intent(
+                        'speech:lights-green',
+                        'Turn Lights Green',
+                        RgbRingSetAllAction(color=(0, 255, 0)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Blue',
-                        action=RgbRingSetAllAction(color=(0, 0, 255)),
+                    _register_intent(
+                        'speech:lights-blue',
+                        'Turn Lights Blue',
+                        RgbRingSetAllAction(color=(0, 0, 255)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Yellow',
-                        action=RgbRingSetAllAction(color=(255, 255, 0)),
+                    _register_intent(
+                        'speech:lights-yellow',
+                        'Turn Lights Yellow',
+                        RgbRingSetAllAction(color=(255, 255, 0)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Purple',
-                        action=RgbRingSetAllAction(color=(255, 0, 255)),
+                    _register_intent(
+                        'speech:lights-purple',
+                        'Turn Lights Purple',
+                        RgbRingSetAllAction(color=(255, 0, 255)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Cyan',
-                        action=RgbRingSetAllAction(color=(0, 255, 255)),
+                    _register_intent(
+                        'speech:lights-cyan',
+                        'Turn Lights Cyan',
+                        RgbRingSetAllAction(color=(0, 255, 255)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Orange',
-                        action=RgbRingSetAllAction(color=(255, 100, 0)),
+                    _register_intent(
+                        'speech:lights-orange',
+                        'Turn Lights Orange',
+                        RgbRingSetAllAction(color=(255, 100, 0)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights White',
-                        action=RgbRingSetAllAction(color=(255, 255, 255)),
+                    _register_intent(
+                        'speech:lights-white',
+                        'Turn Lights White',
+                        RgbRingSetAllAction(color=(255, 255, 255)),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Lights Rainbow',
-                        action=RgbRingRainbowAction(rounds=0, wait=2500),
+                    _register_intent(
+                        'speech:lights-rainbow',
+                        'Turn Lights Rainbow',
+                        RgbRingRainbowAction(rounds=0, wait=2500),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Volume Up',
-                        action=AudioChangeVolumeAction(
-                            amount=0.1,
-                            device=AudioDevice.OUTPUT,
-                        ),
+                    _register_intent(
+                        'speech:volume-up',
+                        'Turn Volume Up',
+                        AudioChangeVolumeAction(amount=0.1, device=AudioDevice.OUTPUT),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Turn Volume Down',
-                        action=AudioChangeVolumeAction(
-                            amount=-0.1,
-                            device=AudioDevice.OUTPUT,
-                        ),
+                    _register_intent(
+                        'speech:volume-down',
+                        'Turn Volume Down',
+                        AudioChangeVolumeAction(amount=-0.1, device=AudioDevice.OUTPUT),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Mute Volume',
-                        action=AudioSetMuteStatusAction(
+                    _register_intent(
+                        'speech:mute',
+                        'Mute Volume',
+                        AudioSetMuteStatusAction(
                             is_mute=True,
                             device=AudioDevice.OUTPUT,
                         ),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Unmute Volume',
-                        action=AudioSetMuteStatusAction(
+                    _register_intent(
+                        'speech:unmute',
+                        'Unmute Volume',
+                        AudioSetMuteStatusAction(
                             is_mute=False,
                             device=AudioDevice.OUTPUT,
                         ),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Activate Button One',
-                        action=MenuChooseByIndexAction(index=0),
+                    _register_intent(
+                        'speech:button-one',
+                        'Activate Button One',
+                        MenuChooseByIndexAction(index=0),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Activate Button Two',
-                        action=MenuChooseByIndexAction(index=1),
+                    _register_intent(
+                        'speech:button-two',
+                        'Activate Button Two',
+                        MenuChooseByIndexAction(index=1),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase='Activate Button Three',
-                        action=MenuChooseByIndexAction(index=1),
+                    _register_intent(
+                        'speech:button-three',
+                        'Activate Button Three',
+                        MenuChooseByIndexAction(index=1),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase=['Activate Back Button', 'Go Back'],
-                        action=MenuGoBackAction(),
+                    _register_intent(
+                        'speech:go-back',
+                        ['Activate Back Button', 'Go Back'],
+                        MenuGoBackAction(),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase=['Activate Home Button', 'Go Home'],
-                        action=MenuGoHomeAction(),
+                    _register_intent(
+                        'speech:go-home',
+                        ['Activate Home Button', 'Go Home'],
+                        MenuGoHomeAction(),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase=['Activate Up Button', 'Scroll Up'],
-                        action=MenuScrollAction(direction=MenuScrollDirection.UP),
+                    _register_intent(
+                        'speech:scroll-up',
+                        ['Activate Up Button', 'Scroll Up'],
+                        MenuScrollAction(direction=MenuScrollDirection.UP),
                     ),
-                    SpeechRecognitionIntent(
-                        phrase=['Activate Down Button', 'Scroll Down'],
-                        action=MenuScrollAction(direction=MenuScrollDirection.DOWN),
+                    _register_intent(
+                        'speech:scroll-down',
+                        ['Activate Down Button', 'Scroll Down'],
+                        MenuScrollAction(direction=MenuScrollDirection.DOWN),
                     ),
                 ],
             )
@@ -271,18 +301,14 @@ def reducer(
             )
 
         case SpeechRecognitionReportIntentDetectionAction():
-            actions = (
-                action.intent.action
-                if isinstance(action.intent.action, Sequence)
-                else [action.intent.action]
-            )
+            resolved = _intent_actions.get(action.intent.action_id)
+            if resolved is None:
+                return replace(state, status=SpeechRecognitionStatus.IDLE)
             rgb_ring_actions = [
-                action for action in actions if isinstance(action, RgbRingCommandAction)
+                a for a in resolved if isinstance(a, RgbRingCommandAction)
             ]
             non_rgb_ring_actions = [
-                action
-                for action in actions
-                if not isinstance(action, RgbRingCommandAction)
+                a for a in resolved if not isinstance(a, RgbRingCommandAction)
             ]
             return CompleteReducerResult(
                 state=replace(state, status=SpeechRecognitionStatus.IDLE),

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
+import time
 from asyncio import Future
 from typing import TYPE_CHECKING
 
@@ -16,6 +16,7 @@ from ubo_gui.menu.types import (
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
+from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
@@ -115,7 +116,7 @@ async def delete_account(event: UsersDeleteUserEvent) -> None:
                     text='This will delete the system user account and its home '
                     'directory.',
                 ),
-                expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
+                expiration_timestamp=time.time(),
                 actions=[
                     NotificationActionItem(
                         action=lambda: loop.call_soon_threadsafe(
@@ -129,7 +130,9 @@ async def delete_account(event: UsersDeleteUserEvent) -> None:
                 ],
                 show_dismiss_action=False,
                 dismiss_on_close=True,
-                on_close=lambda: loop.call_soon_threadsafe(notification_future.cancel),
+                on_close_id=register_auto_callback(
+                    lambda: loop.call_soon_threadsafe(notification_future.cancel),
+                ),
             ),
         ),
     )

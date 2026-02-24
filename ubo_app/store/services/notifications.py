@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import socket
+import time
 from dataclasses import field
-from datetime import UTC, datetime
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from immutable import Immutable
@@ -20,7 +20,7 @@ from ubo_app.utils.dataclass import default_provider
 Color = tuple[float, ...] | str
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Sequence
 
     from ubo_app.store.services.speech_synthesis import ReadableInformation
 
@@ -62,13 +62,13 @@ class Chime(StrEnum):
 
 
 class NotificationActionItem(ActionItem):
-    background_color: Color | Callable[[], Color] = SECONDARY_COLOR_LIGHT
+    background_color: Color = SECONDARY_COLOR_LIGHT
     dismiss_notification: bool = False
     close_notification: bool = True
 
 
 class NotificationApplicationItem(UboApplicationItem):
-    background_color: Color | Callable[[], Color] = SECONDARY_COLOR_LIGHT
+    background_color: Color = SECONDARY_COLOR_LIGHT
     dismiss_notification: bool = False
     close_notification: bool = True
 
@@ -83,7 +83,7 @@ class Notification(Immutable):
     extra_information: ReadableInformation | None = None
     importance: Importance = Importance.LOW
     chime: Chime | None = None
-    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+    timestamp: float = field(default_factory=time.time)
     is_read: bool = False
     sender: str | None = None
     actions: Sequence[
@@ -103,12 +103,12 @@ class Notification(Immutable):
             lambda importance: IMPORTANCE_COLORS[importance],
         ),
     )
-    expiration_timestamp: datetime | None = None
+    expiration_timestamp: float | None = None
     display_type: NotificationDisplayType = NotificationDisplayType.NOT_SET
     flash_time: float = NOTIFICATIONS_FLASH_TIME
     show_dismiss_action: bool = True
     dismiss_on_close: bool = False
-    on_close: Callable[[], Any] | None = None
+    on_close_id: str | None = None
     blink: bool = True
     progress: float | None = None
     progress_weight: float = 1

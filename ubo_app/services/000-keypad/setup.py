@@ -179,8 +179,8 @@ class Keypad:
             store.dispatch(
                 KeypadKeyPressAction(
                     key=KEY_INDEX[index],
-                    held_keys={KEY_INDEX[i] for i in self.held_buttons},
-                    pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                    held_keys=tuple(KEY_INDEX[i] for i in self.held_buttons),
+                    pressed_keys=tuple(KEY_INDEX[i] for i in self.pressed_buttons),
                 ),
             )
 
@@ -189,8 +189,8 @@ class Keypad:
                 store.dispatch(
                     KeypadKeyHoldAction(
                         key=KEY_INDEX[index],
-                        held_keys={KEY_INDEX[i] for i in self.held_buttons},
-                        pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                        held_keys=tuple(KEY_INDEX[i] for i in self.held_buttons),
+                        pressed_keys=tuple(KEY_INDEX[i] for i in self.pressed_buttons),
                     ),
                 )
                 self.button_release_events[index].wait()
@@ -198,16 +198,16 @@ class Keypad:
                 store.dispatch(
                     KeypadKeyUnholdAction(
                         key=KEY_INDEX[index],
-                        held_keys={KEY_INDEX[i] for i in self.held_buttons},
-                        pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                        held_keys=tuple(KEY_INDEX[i] for i in self.held_buttons),
+                        pressed_keys=tuple(KEY_INDEX[i] for i in self.pressed_buttons),
                     ),
                 )
 
             store.dispatch(
                 KeypadKeyReleaseAction(
                     key=KEY_INDEX[index],
-                    held_keys={KEY_INDEX[i] for i in self.held_buttons},
-                    pressed_keys={KEY_INDEX[i] for i in self.pressed_buttons},
+                    held_keys=tuple(KEY_INDEX[i] for i in self.held_buttons),
+                    pressed_keys=tuple(KEY_INDEX[i] for i in self.pressed_buttons),
                 ),
             )
 

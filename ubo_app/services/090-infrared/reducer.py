@@ -146,14 +146,14 @@ def reducer(
                 return CompleteReducerResult(
                     state=state,
                     actions=[
-                        KeypadKeyPressAction(key=key, pressed_keys={key}),
+                        KeypadKeyPressAction(key=key, pressed_keys=(key,)),
                     ],
                 )
             if key_action_type is KeypadKeyReleaseAction:
                 return CompleteReducerResult(
                     state=state,
                     actions=[
-                        KeypadKeyReleaseAction(key=key, pressed_keys=set()),
+                        KeypadKeyReleaseAction(key=key, pressed_keys=()),
                     ],
                 )
 

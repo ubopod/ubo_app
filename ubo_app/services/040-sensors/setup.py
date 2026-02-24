@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import errno
-from datetime import UTC, datetime
+import time
 from typing import TYPE_CHECKING, TypeVar
 
 import adafruit_pct2075
@@ -37,12 +37,12 @@ def read_sensors(_: float | None = None) -> None:
         SensorsReportReadingAction(
             sensor=Sensor.TEMPERATURE,
             reading=temperature,
-            timestamp=datetime.now(tz=UTC),
+            timestamp=time.time(),
         ),
         SensorsReportReadingAction(
             sensor=Sensor.LIGHT,
             reading=light,
-            timestamp=datetime.now(tz=UTC),
+            timestamp=time.time(),
         ),
     )
 

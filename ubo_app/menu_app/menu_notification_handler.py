@@ -115,8 +115,14 @@ class MenuNotificationHandler(UboApp):
                 store.dispatch(
                     NotificationsClearAction(notification=notification.value),
                 )
-            if notification.value.on_close:
-                notification.value.on_close()
+            if notification.value.on_close_id:
+                from ubo_app.store.core.callback_registry import (
+                    execute_callback,
+                    unregister_callback,
+                )
+
+                execute_callback(notification.value.on_close_id)
+                unregister_callback(notification.value.on_close_id)
 
         def clear_notification(event: NotificationsClearEvent) -> None:
             if event.notification == notification.value:

@@ -1,7 +1,6 @@
 # ruff: noqa: SLF001, D100, D103
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Protocol, TypeAlias, TypeVar, cast, overload
 
@@ -43,7 +42,7 @@ def get_enum(object_: Enum) -> type[betterproto.Enum]:
 T = TypeVar('T', bound=betterproto.Message)
 DictWrapperT = TypeVar('DictWrapperT', bound='DictWrapperMessage')
 
-GRPCSerializable: TypeAlias = 'Enum | Immutable | datetime | None'
+GRPCSerializable: TypeAlias = 'Enum | Immutable | None'
 
 
 class DictWrapperMessage(Protocol):
@@ -141,9 +140,6 @@ def build_message(  # noqa: C901, PLR0912
     object_: GRPCSerializable,
     expected_type: type[T] | None = None,
 ) -> ReturnType | T:
-    if isinstance(object_, datetime):
-        return object_.astimezone(UTC).timestamp()
-
     if (expected_type and issubclass(expected_type, betterproto.Enum)) or isinstance(
         object_,
         Enum,

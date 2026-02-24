@@ -12,7 +12,7 @@ from redux import (
 )
 from ubo_gui.menu.types import menu_items
 
-from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
+from ubo_app.store.core.constants import compute_total_pages
 from ubo_app.store.core.menu_adapter import (
     get_current_menu_from_stack,
     item_to_menu_item_data,
@@ -213,13 +213,16 @@ def reducer(
         raise InitializationActionError(action)
 
     if state.is_recording:
-        state = replace(
-            state,
-            recorded_sequence=[
-                *state.recorded_sequence,
-                action,
-            ],
-        )
+        from ubo_app.store.services.keypad import KeypadAction
+
+        if isinstance(action, KeypadAction):
+            state = replace(
+                state,
+                recorded_sequence=[
+                    *state.recorded_sequence,
+                    action,
+                ],
+            )
 
     match action:
         case MenuGoBackAction():

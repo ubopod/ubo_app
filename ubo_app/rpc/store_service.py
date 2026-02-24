@@ -14,6 +14,8 @@ from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_grou
 from ubo_app.rpc.object_to_message import GRPCSerializable, build_message
 from ubo_app.store.core.types import (
     StackChangedEvent as CoreStackChangedEvent,
+)
+from ubo_app.store.core.types import (
     ViewChangedEvent as CoreViewChangedEvent,
 )
 from ubo_app.store.main import RootState, UboAction, UboEvent, store

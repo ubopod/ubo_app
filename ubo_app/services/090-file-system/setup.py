@@ -8,6 +8,7 @@ from constants import SELECTOR_APPLICATION_ID
 from file_application import open_path
 from ubo_gui.menu.types import ActionItem
 
+from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.core.types import RegisterRegularAppAction
 from ubo_app.store.input.types import InputCancelAction
 from ubo_app.store.main import store
@@ -49,9 +50,11 @@ def init_service() -> None:
                     icon='󰉋',
                     display_type=NotificationDisplayType.STICKY,
                     show_dismiss_action=False,
-                    on_close=functools.partial(
-                        store.dispatch,
-                        InputCancelAction(id=event.description.id),
+                    on_close_id=register_auto_callback(
+                        functools.partial(
+                            store.dispatch,
+                            InputCancelAction(id=event.description.id),
+                        ),
                     ),
                     actions=[
                         NotificationActionItem(
@@ -70,24 +73,32 @@ def init_service() -> None:
         )
 
     def handle_copy_event(event: FileSystemCopyEvent) -> None:
+        from pathlib import Path
         from shutil import copyfile, copytree
 
-        for source in event.sources:
+        destination = Path(event.destination)
+        for source_str in event.sources:
+            source = Path(source_str)
             if source.is_dir():
-                copytree(source, event.destination / source.name)
+                copytree(source, destination / source.name)
             else:
-                copyfile(source, event.destination / source.name)
+                copyfile(source, destination / source.name)
 
     def handle_move_event(event: FileSystemMoveEvent) -> None:
+        from pathlib import Path
         from shutil import move
 
-        for source in event.sources:
-            move(source, event.destination / source.name)
+        destination = Path(event.destination)
+        for source_str in event.sources:
+            source = Path(source_str)
+            move(source, destination / source.name)
 
     def handle_remove_event(event: FileSystemRemoveEvent) -> None:
+        from pathlib import Path
         from shutil import rmtree
 
-        for source in event.paths:
+        for path_str in event.paths:
+            source = Path(path_str)
             if source.is_dir():
                 rmtree(source)
             else:

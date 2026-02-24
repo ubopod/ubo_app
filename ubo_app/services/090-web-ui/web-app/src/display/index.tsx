@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { subscribeToBrowserEvents } from "./browser-event-handler";
 import { Layout } from "./layout";
@@ -9,7 +9,6 @@ import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
   Key,
-  KeypadAction,
   KeypadKeyPressAction,
   KeypadKeyReleaseAction,
 } from "../bindings/ubo/v1/ubo_pb";
@@ -27,16 +26,14 @@ export function Display({ store }: { store: StoreServiceClient }) {
     });
   }, [canvas]);
 
-  const pressedKeys = useMemo(() => new KeypadAction.PressedKeysSetType(), []);
+  const pressedKeys = useRef<Key[]>([]);
 
   function keyUpHandler(key: Key) {
-    pressedKeys.setItemsList(
-      pressedKeys.getItemsList().filter((item) => item !== key),
-    );
+    pressedKeys.current = pressedKeys.current.filter((item) => item !== key);
 
     const keypadKeyReleaseAction = new KeypadKeyReleaseAction();
     keypadKeyReleaseAction.setKey(key);
-    keypadKeyReleaseAction.setPressedKeys(pressedKeys);
+    keypadKeyReleaseAction.setPressedKeysList(pressedKeys.current);
 
     const action = new Action();
     action.setKeypadKeyReleaseAction(keypadKeyReleaseAction);
@@ -48,11 +45,11 @@ export function Display({ store }: { store: StoreServiceClient }) {
   }
 
   function keyDownHandler(key: Key) {
-    pressedKeys.addItems(key);
+    pressedKeys.current = [...pressedKeys.current, key];
 
     const keypadKeyPressAction = new KeypadKeyPressAction();
     keypadKeyPressAction.setKey(key);
-    keypadKeyPressAction.setPressedKeys(pressedKeys);
+    keypadKeyPressAction.setPressedKeysList(pressedKeys.current);
 
     const action = new Action();
     action.setKeypadKeyPressAction(keypadKeyPressAction);

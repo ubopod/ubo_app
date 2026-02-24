@@ -23,8 +23,10 @@ from ubo_app.store.core.types import (
     MenuScrollDirection,
     MenuStackItem,
     MenuViewData,
+    StackPageIndexChangedEvent,
     StackPushMenuAction,
     StackSetPageIndexAction,
+    ViewChangedEvent,
 )
 
 if TYPE_CHECKING:
@@ -269,11 +271,6 @@ class TestScrollSync:
         nav.clear_events()
 
         _scroll(nav, MenuScrollDirection.DOWN)
-
-        from ubo_app.store.core.types import (
-            StackPageIndexChangedEvent,
-            ViewChangedEvent,
-        )
 
         page_events = [
             e for e in nav.last_events if isinstance(e, StackPageIndexChangedEvent)

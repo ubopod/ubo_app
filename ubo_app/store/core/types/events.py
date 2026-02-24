@@ -5,13 +5,14 @@ from __future__ import annotations
 from dataclasses import field
 from typing import TYPE_CHECKING
 
-from redux import BaseAction, BaseEvent
+from redux import BaseEvent
 
 if TYPE_CHECKING:
     from ubo_app.store.core.types.enums import MenuScrollDirection
     from ubo_app.store.core.types.stack_items import StackItemType
     from ubo_app.store.core.types.status_bar import StatusBarData
     from ubo_app.store.core.types.view_data import ViewData
+    from ubo_app.store.services.keypad import KeypadAction
     from ubo_app.store.ubo_actions import BasicType
 
 
@@ -139,7 +140,7 @@ class SnapshotEvent(MainEvent):
 class StoreRecordedSequenceEvent(MainEvent):
     """Event for storing a recorded sequence."""
 
-    recorded_sequence: list[BaseAction]
+    recorded_sequence: list[KeypadAction]
 
 
 class ReplayRecordedSequenceEvent(MainEvent):

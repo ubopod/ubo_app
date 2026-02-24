@@ -1,10 +1,10 @@
 """Implementation of the web-ui service."""
 
 import asyncio
-import datetime
 import functools
 import json
 import re
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
@@ -20,6 +20,7 @@ from ubo_app.constants import (
 )
 from ubo_app.logger import logger
 from ubo_app.rpc.object_to_message import build_message
+from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.input.types import (
     InputCancelAction,
     InputMethod,
@@ -184,12 +185,14 @@ async def initialize(event: WebUIInitializeEvent) -> None:
                         f'http://{{{{hostname}}}}:{WEB_UI_LISTEN_PORT} in your browser.'
                     ),
                 ),
-                expiration_timestamp=datetime.datetime.now(tz=datetime.UTC),
+                expiration_timestamp=time.time(),
                 show_dismiss_action=False,
                 dismiss_on_close=True,
-                on_close=functools.partial(
-                    store.dispatch,
-                    InputCancelAction(id=event.description.id),
+                on_close_id=register_auto_callback(
+                    functools.partial(
+                        store.dispatch,
+                        InputCancelAction(id=event.description.id),
+                    ),
                 ),
             ),
         ),
