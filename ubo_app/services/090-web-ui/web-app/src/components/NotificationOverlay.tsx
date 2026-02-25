@@ -1,9 +1,7 @@
-import { ArrowBack } from "@mui/icons-material";
+import { ArrowBack, Close, RecordVoiceOver } from "@mui/icons-material";
 import {
   Box,
-  Button,
   Card,
-  CardActions,
   CardContent,
   IconButton,
   Stack,
@@ -14,7 +12,7 @@ import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClient
 import type { NotificationViewData } from "../bindings/ubo/v1/ubo_pb";
 import { dismissNotification, executeAction } from "../store/action-dispatcher";
 import { unwrapItems } from "../store/helpers";
-import { parseKivyIcon, stripKivyMarkup } from "../utils/kivy-markup";
+import { stripColorMarkup } from "../utils/color-markup";
 
 interface NotificationOverlayProps {
   data: NotificationViewData.AsObject;
@@ -26,6 +24,14 @@ export function NotificationOverlay({
   store,
 }: NotificationOverlayProps) {
   const items = unwrapItems(data.items?.itemsList);
+
+  // Separate dismiss actions from other actions (e.g. read-aloud)
+  const actionItems = items.filter(
+    (item) => item.key !== "dismiss" && !item.actionId?.startsWith("notification:dismiss:"),
+  );
+  const hasDismiss = items.some(
+    (item) => item.key === "dismiss" || item.actionId?.startsWith("notification:dismiss:"),
+  );
 
   return (
     <Box
@@ -48,67 +54,94 @@ export function NotificationOverlay({
       >
         <CardContent>
           <Stack direction="row" alignItems="flex-start" spacing={1}>
-            <IconButton size="small" onClick={() => dismissNotification(store, data.notificationId ?? "")}>
+            <IconButton
+              size="small"
+              onClick={() => dismissNotification(store, data.notificationId ?? "")}
+              sx={{ mt: -0.5 }}
+            >
               <ArrowBack />
             </IconButton>
             <Box sx={{ flex: 1 }}>
-              {data.icon && (() => {
-                const parsed = parseKivyIcon(data.icon!);
-                return (
-                  <Typography
-                    sx={{
-                      fontFamily: "ArimoNerdFont",
-                      fontSize: 32,
-                      color: parsed.color || data.color || "primary.main",
-                      mb: 1,
-                    }}
-                  >
-                    {parsed.icon}
-                  </Typography>
-                );
-              })()}
               <Typography variant="h6" gutterBottom>
-                {stripKivyMarkup(data.title ?? "")}
+                {stripColorMarkup(data.title ?? "")}
               </Typography>
               {data.content && (
                 <Typography variant="body2" color="text.secondary">
-                  {stripKivyMarkup(data.content)}
+                  {stripColorMarkup(data.content)}
                 </Typography>
               )}
               {data.extraInformation && (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ mt: 1, display: "block", fontFamily: "monospace" }}
-                >
-                  {data.extraInformation}
-                </Typography>
+                <Stack direction="row" alignItems="flex-start" spacing={1} sx={{ mt: 1 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ flex: 1, fontFamily: "monospace" }}
+                  >
+                    {data.extraInformation}
+                  </Typography>
+                  {actionItems.length > 0 && (
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        if (actionItems[0].actionId) {
+                          executeAction(store, actionItems[0].actionId);
+                        }
+                      }}
+                      sx={{
+                        backgroundColor: "primary.main",
+                        color: "#fff",
+                        width: 28,
+                        height: 28,
+                        flexShrink: 0,
+                        "&:hover": {
+                          backgroundColor: "primary.dark",
+                        },
+                      }}
+                    >
+                      <RecordVoiceOver sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
+                </Stack>
+              )}
+              {/* Show action buttons when there's no extra information to attach them to */}
+              {!data.extraInformation && actionItems.length > 0 && (
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  {actionItems.map((item, index) => (
+                    <IconButton
+                      key={`${item.key || "item"}-${index}`}
+                      size="small"
+                      onClick={() => {
+                        if (item.actionId) {
+                          executeAction(store, item.actionId);
+                        }
+                      }}
+                      sx={{
+                        backgroundColor: "primary.main",
+                        color: "#fff",
+                        width: 28,
+                        height: 28,
+                        "&:hover": {
+                          backgroundColor: "primary.dark",
+                        },
+                      }}
+                    >
+                      <RecordVoiceOver sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  ))}
+                </Stack>
               )}
             </Box>
+            {hasDismiss && (
+              <IconButton
+                size="small"
+                onClick={() => dismissNotification(store, data.notificationId ?? "")}
+                sx={{ mt: -0.5, color: "text.secondary" }}
+              >
+                <Close sx={{ fontSize: 18 }} />
+              </IconButton>
+            )}
           </Stack>
         </CardContent>
-        {items.length > 0 && (
-          <CardActions sx={{ px: 2, pb: 2, flexWrap: "wrap", gap: 1 }}>
-            {items.map((item, index) => (
-              <Button
-                key={item.key || index}
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  if (item.actionId) {
-                    executeAction(store, item.actionId);
-                  }
-                }}
-                sx={{
-                  color: item.color || undefined,
-                  borderColor: item.color || undefined,
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
-          </CardActions>
-        )}
       </Card>
     </Box>
   );

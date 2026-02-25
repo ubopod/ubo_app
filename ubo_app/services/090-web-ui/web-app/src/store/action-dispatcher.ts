@@ -34,9 +34,13 @@ export function chooseByIndex(
 export function executeAction(
   store: StoreServiceClient,
   actionId: string,
+  menuKey?: string,
 ): void {
   const executeAction = new ExecuteMenuActionAction();
   executeAction.setActionId(actionId);
+  if (menuKey) {
+    executeAction.setMenuKey(menuKey);
+  }
   const action = new Action();
   action.setExecuteMenuActionAction(executeAction);
   dispatch(store, action);

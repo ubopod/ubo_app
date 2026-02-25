@@ -1,11 +1,11 @@
 import { Box, Typography } from "@mui/material";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Tile } from "./Tile";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { MenuItemData } from "../bindings/ubo/v1/ubo_pb";
 import { chooseByIndex, executeAction, navigateTo } from "../store/action-dispatcher";
-import { splitIconFromText, stripKivyMarkup } from "../utils/kivy-markup";
+import { parseColorMarkup, splitIconFromText, stripColorMarkup } from "../utils/color-markup";
 
 
 interface TileGridProps {
@@ -25,11 +25,21 @@ export function TileGrid({
 }: TileGridProps) {
   const [focusIndex, setFocusIndex] = useState(0);
   const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const gridRef = useRef<HTMLDivElement>(null);
   const columns = items.length <= 2 ? items.length : items.length <= 4 ? 2 : 3;
+
+  // Stable identity key derived from item keys — only changes when
+  // the actual menu items change, not on every status-bar poll.
+  const itemsKey = useMemo(
+    () => items.map((i) => i.key).join("\0"),
+    [items],
+  );
 
   useEffect(() => {
     setFocusIndex(0);
-  }, [items]);
+    // Auto-focus the grid when items change so keyboard events are captured
+    gridRef.current?.focus();
+  }, [itemsKey]);
 
   useEffect(() => {
     tileRefs.current[focusIndex]?.focus();
@@ -40,7 +50,7 @@ export function TileGrid({
       if (item.actionId?.startsWith("menu:select:")) {
         navigateTo(store, item.actionId.slice("menu:select:".length));
       } else if (item.actionId) {
-        executeAction(store, item.actionId);
+        executeAction(store, item.actionId, item.key || undefined);
       } else {
         chooseByIndex(store, index);
       }
@@ -90,7 +100,7 @@ export function TileGrid({
         <Box sx={{ mb: 2 }}>
           {heading && (
             <Typography variant="overline" color="text.secondary">
-              {stripKivyMarkup(heading)}
+              {stripColorMarkup(heading)}
             </Typography>
           )}
           {title && (() => {
@@ -107,23 +117,36 @@ export function TileGrid({
             );
           })()}
           {subHeading && (
-            <Typography variant="body2" color="text.secondary">
-              {stripKivyMarkup(subHeading)}
+            <Typography variant="body2" color="text.secondary" component="div">
+              {parseColorMarkup(subHeading).map((seg, i) => (
+                <span
+                  key={i}
+                  style={{
+                    color: seg.color || undefined,
+                    fontFamily: seg.isIcon ? "ArimoNerdFont" : undefined,
+                  }}
+                >
+                  {seg.text}
+                </span>
+              ))}
             </Typography>
           )}
         </Box>
       )}
       <Box
+        ref={gridRef}
+        tabIndex={0}
         onKeyDown={handleKeyDown}
         sx={{
           display: "grid",
           gridTemplateColumns: `repeat(${columns}, 1fr)`,
           gap: 2,
+          outline: "none",
         }}
       >
         {items.map((item, index) => (
           <Tile
-            key={item.key || index}
+            key={`${item.key || "item"}-${index}`}
             ref={(el) => {
               tileRefs.current[index] = el;
             }}

@@ -2,7 +2,7 @@ import { ButtonBase, Paper, Typography } from "@mui/material";
 import { forwardRef } from "react";
 
 import type { MenuItemData } from "../bindings/ubo/v1/ubo_pb";
-import { parseKivyIcon } from "../utils/kivy-markup";
+import { parseColoredIcon } from "../utils/color-markup";
 
 interface TileProps {
   item: MenuItemData.AsObject;
@@ -20,7 +20,7 @@ function deriveLabel(key: string): string {
 export const Tile = forwardRef<HTMLButtonElement, TileProps>(
   function Tile({ item, focused, onActivate }, ref) {
     const displayLabel = item.label || deriveLabel(item.key);
-    const parsedIcon = item.icon ? parseKivyIcon(item.icon) : null;
+    const parsedIcon = item.icon ? parseColoredIcon(item.icon) : null;
 
     return (
       <ButtonBase
@@ -44,7 +44,7 @@ export const Tile = forwardRef<HTMLButtonElement, TileProps>(
             alignItems: "center",
             justifyContent: "center",
             minHeight: 120,
-            backgroundColor: item.backgroundColor || "background.paper",
+            backgroundColor: item.backgroundColor || "#1976d2",
             border: focused ? 2 : 1,
             borderColor: focused ? "primary.main" : "divider",
             borderStyle: "solid",
@@ -60,7 +60,7 @@ export const Tile = forwardRef<HTMLButtonElement, TileProps>(
               variant="h4"
               sx={{
                 mb: 1,
-                color: parsedIcon.color || item.color || "text.primary",
+                color: parsedIcon.color || item.color || "#ffffff",
                 fontFamily: "ArimoNerdFont",
                 fontSize: 40,
               }}
@@ -71,7 +71,7 @@ export const Tile = forwardRef<HTMLButtonElement, TileProps>(
           <Typography
             variant="body2"
             sx={{
-              color: item.color || "text.primary",
+              color: item.color || "#ffffff",
               fontWeight: 500,
               overflow: "hidden",
               textOverflow: "ellipsis",

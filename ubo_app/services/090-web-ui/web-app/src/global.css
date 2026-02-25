@@ -10,7 +10,7 @@ body {
   height: 100%;
 }
 
-/* Nerd Font for Kivy icon codepoints (U+F0000 range) */
+/* Nerd Font for icon codepoints (PUA range) */
 @font-face {
   font-family: "ArimoNerdFont";
   font-style: normal;

@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { StackItemType } from "../bindings/ubo/v1/ubo_pb";
 import { goBack, goHome } from "../store/action-dispatcher";
-import { splitIconFromText, stripKivyMarkup } from "../utils/kivy-markup";
+import { splitIconFromText, stripColorMarkup } from "../utils/color-markup";
 
 interface BreadcrumbProps {
   stack: StackItemType.AsObject[];

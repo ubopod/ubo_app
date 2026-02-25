@@ -20,7 +20,7 @@ import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClient
 import type { StatusBarData } from "../bindings/ubo/v1/ubo_pb";
 import { powerOff, reboot } from "../store/action-dispatcher";
 import { useAppState } from "../store/useAppState";
-import { parseKivyIcon } from "../utils/kivy-markup";
+import { parseColoredIcon } from "../utils/color-markup";
 
 interface StatusBarProps {
   data: StatusBarData.AsObject | null;
@@ -54,7 +54,7 @@ export function StatusBar({ data, store }: StatusBarProps) {
       {/* Status icons */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flex: 1 }}>
         {icons.map((icon, index) => {
-          const parsed = parseKivyIcon(icon.symbol ?? "");
+          const parsed = parseColoredIcon(icon.symbol ?? "");
           return (
             <Typography
               key={index}
