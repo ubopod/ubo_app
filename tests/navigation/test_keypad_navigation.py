@@ -14,10 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ubo_gui.menu.types import SubMenuItem, menu_items  # pyright: ignore[reportMissingImports]
-
 from ubo_app.store.core.constants import PAGE_SIZE
-from ubo_app.store.core.menu_adapter import get_current_menu_from_stack
 from ubo_app.store.core.types import (
     HomeViewData,
     MenuScrollDirection,
@@ -26,7 +23,6 @@ from ubo_app.store.core.types import (
     StackPageIndexChangedEvent,
     StackPushMenuAction,
     StackSetPageIndexAction,
-    ViewChangedEvent,
 )
 
 if TYPE_CHECKING:
@@ -36,18 +32,21 @@ if TYPE_CHECKING:
 def _choose_by_index(nav: ReducerRunner, index: int) -> None:
     """Simulate what menu_event_handlers._handle_choose_by_index does.
 
-    Looks up the item at the given visual index (accounting for page_index),
-    and dispatches the corresponding StackPushMenuAction.
+    Looks up the item at the given visual index (accounting for page_index)
+    from the dynamic menu view, and dispatches the corresponding
+    StackPushMenuAction.
     """
-    state = nav.state
-    stack = state.stack
-    menu = state.menu
+    view = nav.view
 
-    current_menu = get_current_menu_from_stack(menu, stack)
-    assert current_menu is not None, 'No current menu'
-    items = list(menu_items(current_menu))
+    if isinstance(view, HomeViewData):
+        items = view.menu_items
+    elif isinstance(view, MenuViewData):
+        items = view.items
+    else:
+        msg = f'Cannot choose from view type {type(view)}'
+        raise TypeError(msg)
 
-    top = stack[-1]
+    top = nav.state.stack[-1]
     page_index = top.page_index if isinstance(top, MenuStackItem) else 0
     actual_index = page_index * PAGE_SIZE + index
 
@@ -56,7 +55,7 @@ def _choose_by_index(nav: ReducerRunner, index: int) -> None:
     )
 
     item = items[actual_index]
-    assert isinstance(item, SubMenuItem), f'Expected SubMenuItem, got {type(item)}'
+    assert item is not None
     assert item.key is not None
     nav.dispatch(StackPushMenuAction(menu_key=item.key))
 
@@ -67,17 +66,13 @@ def _scroll(nav: ReducerRunner, direction: MenuScrollDirection) -> None:
     Computes the new page index from the current page and dispatches
     StackSetPageIndexAction.
     """
-    state = nav.state
-    stack = state.stack
-    top = stack[-1]
+    view = nav.view
+    assert isinstance(view, MenuViewData), 'Can only scroll in menu views'
+
+    top = nav.state.stack[-1]
     assert isinstance(top, MenuStackItem), 'Top is not a MenuStackItem'
 
-    menu = state.menu
-    current_menu = get_current_menu_from_stack(menu, stack)
-    assert current_menu is not None
-    items = list(menu_items(current_menu))
-
-    total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
+    total_pages = view.total_pages
     page_index = top.page_index
 
     if direction == MenuScrollDirection.UP:
@@ -97,7 +92,7 @@ def _items_for_page(
     start = page_index * PAGE_SIZE
     end = min(start + PAGE_SIZE, len(all_items))
     return [
-        item.label
+        getattr(item, 'label', '')
         for item in all_items[start:end]
         if item is not None and hasattr(item, 'label')
     ]
@@ -275,9 +270,5 @@ class TestScrollSync:
         page_events = [
             e for e in nav.last_events if isinstance(e, StackPageIndexChangedEvent)
         ]
-        view_events = [
-            e for e in nav.last_events if isinstance(e, ViewChangedEvent)
-        ]
         assert len(page_events) == 1
         assert page_events[0].page_index == 1
-        assert len(view_events) == 1

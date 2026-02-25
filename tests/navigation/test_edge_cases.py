@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from ubo_app.store.core.types import (
     HomeViewData,
     MenuStackItem,
+    MenuViewData,
     StackPopAction,
     StackPopToRootAction,
     StackPushApplicationAction,
@@ -133,8 +134,10 @@ class TestInvalidMenuKey:
         """Push with invalid key still adds to stack."""
         nav.dispatch(StackPushMenuAction(menu_key='nonexistent'))
         assert len(nav.state.stack) == 2
-        # View computation can't find the menu, falls back
-        assert isinstance(nav.view, HomeViewData)
+        # View computation can't find the menu, returns empty MenuViewData
+        view = nav.view
+        assert isinstance(view, MenuViewData)
+        assert view.items == ()
 
     def test_path_includes_invalid_key(self, nav: ReducerRunner) -> None:
         """Path reflects the key even if the menu doesn't exist."""

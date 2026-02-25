@@ -5,120 +5,14 @@ Tests conversion between ubo-gui types and Redux-native MenuItemData.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
-import pytest
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, SubMenuItem
-
-from ubo_app.store.core.menu_adapter import (
-    find_menu_for_item,
-    find_sub_menu_item,
-    get_current_menu_from_stack,
-    item_to_menu_item_data,
-    menu_to_menu_data,
-)
-from ubo_app.store.core.types import (
-    ApplicationStackItem,
-    MenuItemData,
-    MenuStackItem,
-    NotificationStackItem,
-)
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-
-def _resolve_items(menu: HeadlessMenu) -> Sequence[Item]:
-    """Resolve menu items, handling callable items."""
-    items = menu.items
-    if callable(items):
-        return items()
-    return items
+from ubo_app.store.core.menu_adapter import item_to_menu_item_data
+from ubo_app.store.core.types import MenuItemData
 
 
 # Test menus
 LEAF_MENU = HeadlessMenu(title='Leaf', items=[], placeholder='Empty')
-
-CHILD_MENU = HeadlessMenu(
-    title='Child',
-    items=[
-        SubMenuItem(key='leaf', label='Leaf', icon='L', sub_menu=LEAF_MENU),
-    ],
-)
-
-ROOT_MENU = HeadlessMenu(
-    title='Root',
-    items=[
-        SubMenuItem(key='child', label='Child', icon='C', sub_menu=CHILD_MENU),
-        SubMenuItem(key='other', label='Other', icon='O', sub_menu=LEAF_MENU),
-    ],
-)
-
-
-class TestFindSubMenuItem:
-    """Tests for find_sub_menu_item."""
-
-    def test_finds_existing_item(self) -> None:
-        """Verify find_sub_menu_item locates an item by key."""
-        items = list(_resolve_items(ROOT_MENU))
-        result = find_sub_menu_item(items, 'child')
-        assert isinstance(result, SubMenuItem)
-        assert result.key == 'child'
-
-    def test_raises_for_missing_key(self) -> None:
-        """Verify find_sub_menu_item raises for a missing key."""
-        items = list(_resolve_items(ROOT_MENU))
-        with pytest.raises(TypeError, match='Nonexistent'):
-            find_sub_menu_item(items, 'nonexistent')
-
-    def test_raises_for_non_submenu_item(self) -> None:
-        """Verify find_sub_menu_item raises for a non-SubMenuItem."""
-        items = [
-            ActionItem(
-                key='action', label='Action', icon='A', action=lambda: None,
-            ),
-        ]
-        with pytest.raises(TypeError):
-            find_sub_menu_item(items, 'action')
-
-
-class TestFindMenuForItem:
-    """Tests for find_menu_for_item."""
-
-    def test_finds_submenu(self) -> None:
-        """Verify find_menu_for_item returns the correct submenu."""
-        items = list(_resolve_items(ROOT_MENU))
-        result = find_menu_for_item(items, 'child')
-        assert result is not None
-        assert result.title == 'Child'
-
-    def test_returns_none_for_missing(self) -> None:
-        """Verify find_menu_for_item returns None for missing key."""
-        items = list(_resolve_items(ROOT_MENU))
-        result = find_menu_for_item(items, 'nonexistent')
-        assert result is None
-
-    def test_handles_callable_sub_menu(self) -> None:
-        """Verify find_menu_for_item resolves callable sub_menu."""
-        menu = HeadlessMenu(title='Dynamic', items=[])
-        items = [SubMenuItem(key='dyn', label='Dyn', icon='D', sub_menu=lambda: menu)]
-        result = find_menu_for_item(items, 'dyn')
-        assert result is not None
-        assert result.title == 'Dynamic'
-
-    def test_handles_action_item_returning_menu(self) -> None:
-        """Verify ActionItem returning a menu is handled correctly."""
-        menu = HeadlessMenu(title='FromAction', items=[])
-        items = [ActionItem(key='act', label='Act', icon='A', action=lambda: menu)]
-        result = find_menu_for_item(items, 'act')
-        assert result is not None
-        assert result.title == 'FromAction'
-
-    def test_handles_action_item_returning_none(self) -> None:
-        """Verify ActionItem returning None yields None result."""
-        items = [ActionItem(key='act', label='Act', icon='A', action=lambda: None)]
-        result = find_menu_for_item(items, 'act')
-        assert result is None
 
 
 class TestItemToMenuItemData:
@@ -142,7 +36,9 @@ class TestItemToMenuItemData:
 
     def test_action_item_conversion(self) -> None:
         """Verify ActionItem converts to MenuItemData correctly."""
-        item = ActionItem(key='reboot', label='Reboot', icon='R', action=lambda: None)
+        item = ActionItem(
+            key='reboot', label='Reboot', icon='R', action=lambda: None,
+        )
         result = item_to_menu_item_data(item, 1)
         assert result is not None
         assert result.key == 'reboot'
@@ -192,100 +88,3 @@ class TestItemToMenuItemData:
         result = item_to_menu_item_data(item, 5)
         assert result is not None
         assert result.key == 'item_5'
-
-
-class TestMenuToMenuData:
-    """Tests for menu_to_menu_data."""
-
-    def test_none_returns_empty(self) -> None:
-        """Verify None menu returns an empty tuple."""
-        assert menu_to_menu_data(None) == ()
-
-    def test_converts_menu_items(self) -> None:
-        """Verify menu items are converted to MenuItemData tuple."""
-        result = menu_to_menu_data(ROOT_MENU)
-        assert len(result) == 2
-        assert result[0] is not None
-        assert result[0].key == 'child'
-        assert result[1] is not None
-        assert result[1].key == 'other'
-
-    def test_empty_menu(self) -> None:
-        """Verify empty menu returns an empty tuple."""
-        menu = HeadlessMenu(title='Empty', items=[])
-        result = menu_to_menu_data(menu)
-        assert result == ()
-
-
-class TestGetCurrentMenuFromStack:
-    """Tests for get_current_menu_from_stack."""
-
-    def test_root_returns_root_menu(self) -> None:
-        """Verify root stack returns the root menu."""
-        stack = (MenuStackItem(id='root', menu_key='', page_index=0),)
-        result = get_current_menu_from_stack(ROOT_MENU, stack)
-        assert result is not None
-        assert result.title == 'Root'
-
-    def test_one_level_deep(self) -> None:
-        """Verify one-level-deep stack returns the child menu."""
-        stack = (
-            MenuStackItem(id='root', menu_key='', page_index=0),
-            MenuStackItem(id='c', menu_key='child', page_index=0),
-        )
-        result = get_current_menu_from_stack(ROOT_MENU, stack)
-        assert result is not None
-        assert result.title == 'Child'
-
-    def test_two_levels_deep(self) -> None:
-        """Verify two-level-deep stack returns the leaf menu."""
-        stack = (
-            MenuStackItem(id='root', menu_key='', page_index=0),
-            MenuStackItem(id='c', menu_key='child', page_index=0),
-            MenuStackItem(id='l', menu_key='leaf', page_index=0),
-        )
-        result = get_current_menu_from_stack(ROOT_MENU, stack)
-        assert result is not None
-        assert result.title == 'Leaf'
-
-    def test_nonexistent_key_returns_none(self) -> None:
-        """Verify nonexistent menu key returns None."""
-        stack = (
-            MenuStackItem(id='root', menu_key='', page_index=0),
-            MenuStackItem(id='x', menu_key='nonexistent', page_index=0),
-        )
-        result = get_current_menu_from_stack(ROOT_MENU, stack)
-        assert result is None
-
-    def test_none_root_menu_returns_none(self) -> None:
-        """Verify None root menu returns None."""
-        stack = (MenuStackItem(id='root', menu_key='', page_index=0),)
-        result = get_current_menu_from_stack(None, stack)
-        assert result is None
-
-    def test_empty_stack_returns_none(self) -> None:
-        """Verify empty stack returns None."""
-        result = get_current_menu_from_stack(ROOT_MENU, ())
-        assert result is None
-
-    def test_skips_non_menu_items(self) -> None:
-        """Verify non-menu stack items are skipped during traversal."""
-        stack = (
-            MenuStackItem(id='root', menu_key='', page_index=0),
-            ApplicationStackItem(id='app', application_id='test:app'),
-            MenuStackItem(id='c', menu_key='child', page_index=0),
-        )
-        result = get_current_menu_from_stack(ROOT_MENU, stack)
-        assert result is not None
-        assert result.title == 'Child'
-
-    def test_ignores_notification_items(self) -> None:
-        """Verify notification items are ignored during traversal."""
-        stack = (
-            MenuStackItem(id='root', menu_key='', page_index=0),
-            MenuStackItem(id='c', menu_key='child', page_index=0),
-            NotificationStackItem(id='n', notification_id='n1'),
-        )
-        result = get_current_menu_from_stack(ROOT_MENU, stack)
-        assert result is not None
-        assert result.title == 'Child'

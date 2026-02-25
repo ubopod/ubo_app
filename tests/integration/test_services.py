@@ -55,27 +55,8 @@ async def test_all_services_register(
     def wait_for_docker_menu_items() -> None:
         state = store._state  # noqa: SLF001
         assert state is not None
-        main_menu = state.main.menu
-        # Drill into main -> apps submenu where app entries are registered
-        main_items = list(getattr(main_menu, 'items', []))
-        main_entry = next(
-            (i for i in main_items if getattr(i, 'key', None) == 'main'),
-            None,
-        )
-        assert main_entry is not None
-        apps_menu = getattr(main_entry, 'sub_menu', None)
-        assert apps_menu is not None
-        apps_items = list(getattr(apps_menu, 'items', []))
-        apps_entry = next(
-            (i for i in apps_items if getattr(i, 'key', None) == 'apps'),
-            None,
-            )
-        assert apps_entry is not None
-        apps_sub_menu = getattr(apps_entry, 'sub_menu', None)
-        assert apps_sub_menu is not None
-        app_items = list(getattr(apps_sub_menu, 'items', []))
-        keys = {getattr(item, 'key', None) for item in app_items}
-        assert 'docker:envoy_grpc' in keys
+        # Verify the docker app is registered in the serializable registry
+        assert 'docker:envoy_grpc' in state.main.registered_apps
 
     await wait_for_docker_menu_items()
 

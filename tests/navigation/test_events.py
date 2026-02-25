@@ -1,6 +1,11 @@
 """Tests for event emission during navigation.
 
 Verifies that correct events are emitted for stack operations.
+
+NOTE: ViewChangedEvent is no longer emitted inline by the reducer.
+It is now emitted by the view autorun in view_computation.py when
+it dispatches UpdateCurrentViewAction. Stack operations only emit
+StackChangedEvent (and StackPageIndexChangedEvent for page changes).
 """
 
 from __future__ import annotations
@@ -20,7 +25,6 @@ from ubo_app.store.core.types import (
     StackPushMenuAction,
     StackPushNotificationAction,
     StackSetPageIndexAction,
-    ViewChangedEvent,
 )
 
 if TYPE_CHECKING:
@@ -39,49 +43,35 @@ class TestPushEvents:
         assert len(stack_events) == 1
         assert stack_events[0].stack == nav.state.stack
 
-    def test_push_menu_emits_view_changed(
+    def test_push_app_emits_stack_changed(
         self, nav: ReducerRunner, events: EventCapture,
     ) -> None:
-        """Verify pushing a menu emits a ViewChangedEvent."""
-        nav.dispatch(StackPushMenuAction(menu_key='main'))
-        view_events = events.capture_from(nav, ViewChangedEvent)
-        assert len(view_events) == 1
-
-    def test_push_app_emits_both(
-        self, nav: ReducerRunner, events: EventCapture,
-    ) -> None:
-        """Verify pushing an app emits StackChanged and ViewChanged."""
+        """Verify pushing an app emits StackChangedEvent."""
         nav.dispatch(StackPushApplicationAction(application_id='test:app'))
         stack_events = events.capture_from(nav, StackChangedEvent)
-        view_events = events.capture_from(nav, ViewChangedEvent)
         assert len(stack_events) == 1
-        assert len(view_events) == 1
 
-    def test_push_notification_emits_both(
+    def test_push_notification_emits_stack_changed(
         self, nav: ReducerRunner, events: EventCapture,
     ) -> None:
-        """Verify pushing a notification emits StackChanged and ViewChanged."""
+        """Verify pushing a notification emits StackChangedEvent."""
         nav.dispatch(StackPushNotificationAction(notification_id='n1'))
         stack_events = events.capture_from(nav, StackChangedEvent)
-        view_events = events.capture_from(nav, ViewChangedEvent)
         assert len(stack_events) == 1
-        assert len(view_events) == 1
 
 
 class TestPopEvents:
     """Tests for events emitted on pop operations."""
 
-    def test_pop_emits_both_events(
+    def test_pop_emits_stack_changed(
         self, nav: ReducerRunner, events: EventCapture,
     ) -> None:
-        """Verify popping emits both StackChanged and ViewChanged events."""
+        """Verify popping emits a StackChangedEvent."""
         nav.dispatch(StackPushMenuAction(menu_key='main'))
         nav.clear_events()
         nav.dispatch(StackPopAction())
         stack_events = events.capture_from(nav, StackChangedEvent)
-        view_events = events.capture_from(nav, ViewChangedEvent)
         assert len(stack_events) == 1
-        assert len(view_events) == 1
 
     def test_pop_at_root_no_events(
         self, nav: ReducerRunner, events: EventCapture,
@@ -89,25 +79,21 @@ class TestPopEvents:
         """Verify popping at root emits no events."""
         nav.dispatch(StackPopAction())
         stack_events = events.capture_from(nav, StackChangedEvent)
-        view_events = events.capture_from(nav, ViewChangedEvent)
         assert len(stack_events) == 0
-        assert len(view_events) == 0
 
-    def test_pop_to_root_emits_events(
+    def test_pop_to_root_emits_stack_changed(
         self, nav: ReducerRunner, events: EventCapture,
     ) -> None:
-        """Verify pop-to-root emits StackChanged and ViewChanged events."""
+        """Verify pop-to-root emits a StackChangedEvent."""
         nav.dispatch(StackPushMenuAction(menu_key='main'))
         nav.dispatch(StackPushMenuAction(menu_key='settings'))
         nav.clear_events()
         nav.dispatch(StackPopToRootAction())
         stack_events = events.capture_from(nav, StackChangedEvent)
-        view_events = events.capture_from(nav, ViewChangedEvent)
         assert len(stack_events) == 1
-        assert len(view_events) == 1
 
     def test_pop_to_root_at_root_no_events(
-        self, nav: ReducerRunner, events: EventCapture,  # noqa: ARG002
+        self, nav: ReducerRunner, events: EventCapture,
     ) -> None:
         """Verify pop-to-root at root emits no events."""
         nav.dispatch(StackPopToRootAction())
@@ -127,16 +113,6 @@ class TestPageIndexEvents:
         page_events = events.capture_from(nav, StackPageIndexChangedEvent)
         assert len(page_events) == 1
         assert page_events[0].page_index == 1
-
-    def test_set_page_index_emits_view_changed(
-        self, nav: ReducerRunner, events: EventCapture,
-    ) -> None:
-        """Verify setting page index emits a ViewChangedEvent."""
-        nav.dispatch(StackPushMenuAction(menu_key='main'))
-        nav.clear_events()
-        nav.dispatch(StackSetPageIndexAction(page_index=1))
-        view_events = events.capture_from(nav, ViewChangedEvent)
-        assert len(view_events) == 1
 
 
 class TestMenuActionEvents:

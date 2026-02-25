@@ -3,7 +3,7 @@
 These tests call the reducer directly to test navigation flows,
 avoiding the singleton store and Kivy dependencies entirely.
 
-NOTE: reducer.py imports menus.py which imports store.main, creating a
+NOTE: reducer.py imports from menus.py which imports store.main, creating a
 circular import. We pre-populate sys.modules with a fake menus module
 before importing the reducer.
 """
@@ -11,27 +11,25 @@ before importing the reducer.
 from __future__ import annotations
 
 import sys
-from dataclasses import replace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 from redux import CompleteReducerResult, InitAction
-from ubo_gui.menu.types import HeadlessMenu, SubMenuItem, menu_items
 
-from ubo_app.store.core.constants import PAGE_SIZE
-from ubo_app.store.core.menu_adapter import (
-    get_current_menu_from_stack,
-    item_to_menu_item_data,
-)
+from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
+    DynamicMenuData,
+    DynamicMenusState,
     HomeViewData,
     MainState,
+    MenuItemData,
     MenuStackItem,
     MenuViewData,
     NotificationStackItem,
     NotificationViewData,
+    UpdateDynamicMenuAction,
     ViewData,
 )
 
@@ -42,78 +40,110 @@ if TYPE_CHECKING:
 
 
 # ============================================================================
-# Test Menu Tree
+# Test Dynamic Menus (replaces legacy menu tree)
 # ============================================================================
-# A self-contained menu tree for testing, avoiding imports from menus.py
-# which trigger store autoruns at module level.
+# Define test menus as dynamic menu data, matching the old tree structure.
 
-WIFI_MENU = HeadlessMenu(title='Wi-Fi', items=[], placeholder='No networks')
-BT_MENU = HeadlessMenu(title='Bluetooth', items=[], placeholder='No devices')
-NETWORK_MENU = HeadlessMenu(
-    title='Network',
-    items=[
-        SubMenuItem(key='wifi', label='Wi-Fi', icon='W', sub_menu=WIFI_MENU),
-        SubMenuItem(key='bt', label='Bluetooth', icon='B', sub_menu=BT_MENU),
-    ],
-)
-SYSTEM_MENU = HeadlessMenu(title='System', items=[], placeholder='No settings')
+TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
+    'home:main': DynamicMenuData(
+        menu_id='home:main',
+        title='Home',
+        items=(
+            MenuItemData(key='main', label='Main', icon='M', is_short=True,
+                         action_id='menu:navigate:main'),
+            MenuItemData(key='notifications', label='Notifications', icon='N',
+                         is_short=True, action_id='menu:navigate:notifications'),
+            MenuItemData(key='power', label='Power', icon='P', is_short=True,
+                         action_id='menu:navigate:power'),
+        ),
+    ),
+    'main:menu': DynamicMenuData(
+        menu_id='main:menu',
+        title='Main',
+        items=(
+            MenuItemData(key='apps', label='Apps', icon='A',
+                         action_id='menu:navigate:apps'),
+            MenuItemData(key='settings', label='Settings', icon='S',
+                         action_id='menu:navigate:settings'),
+        ),
+    ),
+    'apps:list': DynamicMenuData(
+        menu_id='apps:list',
+        title='Apps',
+        items=tuple(
+            MenuItemData(key=f'app{i}', label=f'App {i}', icon=str(i),
+                         action_id=f'menu:select:app{i}')
+            for i in range(7)  # 7 items -> 3 pages (PAGE_SIZE=3)
+        ),
+    ),
+    'settings:categories': DynamicMenuData(
+        menu_id='settings:categories',
+        title='Settings',
+        items=(
+            MenuItemData(key='network', label='Network', icon='N',
+                         action_id='menu:navigate:settings:network'),
+            MenuItemData(key='system', label='System', icon='S',
+                         action_id='menu:navigate:settings:system'),
+        ),
+    ),
+    'settings:network': DynamicMenuData(
+        menu_id='settings:network',
+        title='Network',
+        items=(
+            MenuItemData(key='wifi', label='Wi-Fi', icon='W',
+                         action_id='menu:select:wifi'),
+            MenuItemData(key='bt', label='Bluetooth', icon='B',
+                         action_id='menu:select:bt'),
+        ),
+    ),
+    'settings:system': DynamicMenuData(
+        menu_id='settings:system',
+        title='System',
+        items=(),
+        placeholder='No settings',
+    ),
+    'wifi:list': DynamicMenuData(
+        menu_id='wifi:list',
+        title='Wi-Fi',
+        items=(),
+        placeholder='No networks',
+    ),
+    'bt:list': DynamicMenuData(
+        menu_id='bt:list',
+        title='Bluetooth',
+        items=(),
+        placeholder='No devices',
+    ),
+    'notifications:list': DynamicMenuData(
+        menu_id='notifications:list',
+        title='Notifications',
+        items=(),
+        placeholder='No notifications',
+    ),
+    'power:options': DynamicMenuData(
+        menu_id='power:options',
+        title='Power',
+        items=(
+            MenuItemData(key='reboot', label='Reboot', icon='R',
+                         action_id='power:reboot'),
+            MenuItemData(key='poweroff', label='Power Off', icon='P',
+                         action_id='power:off'),
+        ),
+    ),
+}
 
-APPS_MENU = HeadlessMenu(
-    title='Apps',
-    items=[
-        SubMenuItem(
-            key=f'app{i}',
-            label=f'App {i}',
-            icon=str(i),
-            sub_menu=HeadlessMenu(title=f'App {i}', items=[]),
-        )
-        for i in range(7)  # 7 items → 3 pages (PAGE_SIZE=3)
-    ],
-)
-SETTINGS_MENU = HeadlessMenu(
-    title='Settings',
-    items=[
-        SubMenuItem(key='network', label='Network', icon='N',
-                    sub_menu=NETWORK_MENU),
-        SubMenuItem(key='system', label='System', icon='S',
-                    sub_menu=SYSTEM_MENU),
-    ],
-)
-
-MAIN_MENU = HeadlessMenu(
-    title='Main',
-    items=[
-        SubMenuItem(key='apps', label='Apps', icon='A', sub_menu=APPS_MENU),
-        SubMenuItem(key='settings', label='Settings', icon='S',
-                    sub_menu=SETTINGS_MENU),
-    ],
-)
-
-POWER_MENU = HeadlessMenu(
-    title='Power',
-    items=[
-        SubMenuItem(key='reboot', label='Reboot', icon='R',
-                    sub_menu=HeadlessMenu(title='Confirm Reboot', items=[])),
-        SubMenuItem(key='poweroff', label='Power Off', icon='P',
-                    sub_menu=HeadlessMenu(title='Confirm Power Off', items=[])),
-    ],
-)
-
-NOTIFICATIONS_MENU = HeadlessMenu(
-    title='Notifications',
-    items=[],
-    placeholder='No notifications',
-)
-
-TEST_HOME_MENU = HeadlessMenu(
-    title='Home',
-    items=[
-        SubMenuItem(key='main', label='Main', icon='M', sub_menu=MAIN_MENU),
-        SubMenuItem(key='notifications', label='Notifications', icon='N',
-                    sub_menu=NOTIFICATIONS_MENU),
-        SubMenuItem(key='power', label='Power', icon='P', sub_menu=POWER_MENU),
-    ],
-)
+# Path-to-menu-id mappings for the test menus
+TEST_PATH_MAPPINGS: dict[tuple[str, ...], str] = {
+    ('main',): 'main:menu',
+    ('main', 'apps'): 'apps:list',
+    ('main', 'settings'): 'settings:categories',
+    ('main', 'settings', 'network'): 'settings:network',
+    ('main', 'settings', 'system'): 'settings:system',
+    ('main', 'settings', 'network', 'wifi'): 'wifi:list',
+    ('main', 'settings', 'network', 'bt'): 'bt:list',
+    ('notifications',): 'notifications:list',
+    ('power',): 'power:options',
+}
 
 
 # ============================================================================
@@ -136,7 +166,6 @@ def _import_reducer() -> Callable:
         from types import ModuleType
 
         fake_menus = ModuleType(menus_key)
-        fake_menus.HOME_MENU = TEST_HOME_MENU  # type: ignore[attr-defined]
         sys.modules[menus_key] = fake_menus
 
     from ubo_app.store.core.reducer import reducer
@@ -154,17 +183,19 @@ reducer = _import_reducer()
 
 
 # ============================================================================
-# Local compute_view_from_stack (avoids circular import)
+# View computation from dynamic menus (replaces legacy compute_view_from_stack)
 # ============================================================================
 
-def compute_view_from_stack(state: MainState) -> ViewData:
-    """Compute view data from the current stack and menu state.
+def compute_view_from_dynamic_menus(
+    state: MainState,
+    dynamic_menus: dict[str, DynamicMenuData],
+    path_mappings: dict[tuple[str, ...], str],
+) -> ViewData:
+    """Compute view data from dynamic menus instead of the legacy menu tree.
 
-    Local copy to avoid importing from reducer.py which may not have
-    been fully loaded yet due to circular imports.
+    This mirrors the logic in view_computation.py but uses local test data.
     """
     stack = state.stack
-    menu = state.menu
 
     if not stack:
         return HomeViewData()
@@ -190,54 +221,48 @@ def compute_view_from_stack(state: MainState) -> ViewData:
     if not isinstance(top_item, MenuStackItem):
         return HomeViewData()
 
-    current_menu = get_current_menu_from_stack(menu, stack)
-    if current_menu is None:
-        return HomeViewData()
-
-    items = menu_items(current_menu)
-    page_index = top_item.page_index
-
-    menu_item_data = tuple(
-        item_to_menu_item_data(item, i) for i, item in enumerate(items)
-    )
-
-    title_value = current_menu.title
-    title = title_value() if callable(title_value) else (title_value or '')
-
-    heading: str | None = None
-    sub_heading: str | None = None
-    heading_val = getattr(current_menu, 'heading', None)
-    if heading_val is not None:
-        heading = str(heading_val() if callable(heading_val) else heading_val)
-    sub_heading_val = getattr(current_menu, 'sub_heading', None)
-    if sub_heading_val is not None:
-        sub_heading = str(
-            sub_heading_val() if callable(sub_heading_val) else sub_heading_val,
-        )
-
-    total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
-
+    # Check depth
     depth = len([i for i in stack if isinstance(i, MenuStackItem)])
-    is_home = depth <= 1
-
-    if is_home:
-        home_items = tuple(item for item in menu_item_data if item is not None)
+    if depth <= 1:
+        home_menu = dynamic_menus.get('home:main')
+        home_items = home_menu.items if home_menu else ()
         return HomeViewData(
             show_status_bar=True,
-            menu_items=home_items,
+            menu_items=tuple(item for item in home_items if item is not None),
             cpu_percent=0.0,
             ram_percent=0.0,
             volume_level=0.0,
         )
 
+    # Look up dynamic menu by path
+    path = state.path
+    menu_id = path_mappings.get(path)
+    if menu_id:
+        dynamic_menu = dynamic_menus.get(menu_id)
+        if dynamic_menu:
+            items = dynamic_menu.items
+            page_index = top_item.page_index
+            total_pages = compute_total_pages(
+                len(items),
+                is_headed=dynamic_menu.heading is not None,
+            )
+            return MenuViewData(
+                show_status_bar=page_index == 0,
+                title=dynamic_menu.title,
+                heading=dynamic_menu.heading,
+                sub_heading=dynamic_menu.sub_heading,
+                items=items,
+                page_index=page_index,
+                total_pages=total_pages,
+            )
+
+    # No match - return empty menu view
     return MenuViewData(
-        show_status_bar=page_index == 0,
-        title=cast('str', title),
-        heading=heading,
-        sub_heading=sub_heading,
-        items=menu_item_data,
-        page_index=page_index,
-        total_pages=total_pages,
+        show_status_bar=True,
+        title='',
+        items=(),
+        page_index=0,
+        total_pages=1,
     )
 
 
@@ -253,11 +278,18 @@ class ReducerRunner:
     Tracks state and events from each dispatch.
     """
 
-    def __init__(self, state: MainState) -> None:
+    def __init__(
+        self,
+        state: MainState,
+        dynamic_menus: dict[str, DynamicMenuData] | None = None,
+        path_mappings: dict[tuple[str, ...], str] | None = None,
+    ) -> None:
         """Initialize the runner with the given state."""
         self.state = state
         self.last_events: list[MainEvent] = []
         self.all_events: list[MainEvent] = []
+        self.dynamic_menus = dynamic_menus or dict(TEST_DYNAMIC_MENUS)
+        self.path_mappings = path_mappings or dict(TEST_PATH_MAPPINGS)
 
     def dispatch(self, action: MainAction) -> MainState:
         """Dispatch an action through the reducer, updating state."""
@@ -274,7 +306,11 @@ class ReducerRunner:
     @property
     def view(self) -> ViewData:
         """Get the current computed view."""
-        return compute_view_from_stack(self.state)
+        return compute_view_from_dynamic_menus(
+            self.state,
+            self.dynamic_menus,
+            self.path_mappings,
+        )
 
     @property
     def current_view(self) -> ViewData | None:
@@ -289,7 +325,7 @@ class ReducerRunner:
 
 @pytest.fixture
 def nav() -> ReducerRunner:
-    """Create a ReducerRunner with initialized state and test menu tree.
+    """Create a ReducerRunner with initialized state and test dynamic menus.
 
     Usage::
 
@@ -299,8 +335,7 @@ def nav() -> ReducerRunner:
     """
     result = reducer(None, InitAction())
     assert isinstance(result, MainState)
-    state = replace(result, menu=TEST_HOME_MENU)
-    return ReducerRunner(state)
+    return ReducerRunner(result)
 
 
 class EventCapture:

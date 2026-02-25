@@ -3,9 +3,9 @@
 These tests call the reducer function directly with various actions
 and assert on the resulting state and events.
 
-NOTE: reducer.py imports HOME_MENU from menus.py which triggers store
+NOTE: reducer.py imports from menus.py which triggers store
 initialization. We use a lazy import inside _get_reducer() to break the
-circular import, and replace HOME_MENU with a test menu after init.
+circular import.
 """
 
 from __future__ import annotations
@@ -16,10 +16,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 from redux import CompleteReducerResult, InitAction, InitializationActionError
-from ubo_gui.menu.types import HeadlessMenu, SubMenuItem
 
 from ubo_app.store.core.types import (
-    ApplicationViewData,
     CloseApplicationAction,
     CloseApplicationEvent,
     MainAction,
@@ -32,8 +30,6 @@ from ubo_app.store.core.types import (
     MenuGoBackEvent,
     MenuGoHomeAction,
     MenuGoHomeEvent,
-    MenuViewData,
-    NotificationViewData,
     OpenApplicationAction,
     OpenApplicationEvent,
     PowerOffAction,
@@ -55,36 +51,17 @@ from ubo_app.store.core.types import (
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
-    ViewChangedEvent,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-# Test menu tree
-TEST_MENU = HeadlessMenu(
-    title='Home',
-    items=[
-        SubMenuItem(key='main', label='Main', icon='M', sub_menu=HeadlessMenu(
-            title='Main',
-            items=[
-                SubMenuItem(key='apps', label='Apps', icon='A',
-                            sub_menu=HeadlessMenu(title='Apps', items=[])),
-                SubMenuItem(key='settings', label='Settings', icon='S',
-                            sub_menu=HeadlessMenu(title='Settings', items=[])),
-            ],
-        )),
-        SubMenuItem(key='notifications', label='Notifications', icon='N',
-                    sub_menu=HeadlessMenu(title='Notifications', items=[])),
-    ],
-)
 
 
 def _import_reducer() -> Callable:
     """Import the reducer, working around the circular import.
 
     reducer.py -> menus.py -> store.main -> reducer.py is circular.
-    We pre-populate sys.modules with a fake menus module that has HOME_MENU,
+    We pre-populate sys.modules with a fake menus module,
     import the reducer, then clean up ALL newly loaded modules so they don't
     interfere with integration tests.
     """
@@ -96,7 +73,6 @@ def _import_reducer() -> Callable:
         from types import ModuleType
 
         fake_menus = ModuleType(menus_key)
-        fake_menus.HOME_MENU = TEST_MENU  # type: ignore[attr-defined]
         sys.modules[menus_key] = fake_menus
 
     from ubo_app.store.core.reducer import reducer as _reducer
@@ -114,24 +90,26 @@ reducer = _import_reducer()
 
 
 def _init_state() -> MainState:
-    """Create an initialized state with TEST_MENU."""
+    """Create an initialized state."""
     result = reducer(None, InitAction())
     assert isinstance(result, MainState)
-    return replace(result, menu=TEST_MENU)
+    return result
 
 
 def _get_state(result: object) -> MainState:
     """Extract state from reducer result."""
-    if isinstance(result, CompleteReducerResult):
-        return result.state
-    assert isinstance(result, MainState)
-    return result
+    if isinstance(result, MainState):
+        return result
+    assert isinstance(result, CompleteReducerResult)
+    state = result.state  # pyright: ignore[reportAttributeAccessIssue]
+    assert isinstance(state, MainState)
+    return state
 
 
 def _get_events(result: object) -> list:
     """Extract events from reducer result."""
     if isinstance(result, CompleteReducerResult):
-        return list(result.events or ())
+        return list(result.events or ())  # pyright: ignore[reportAttributeAccessIssue]
     return []
 
 
@@ -147,11 +125,6 @@ class TestInitAction:
         """Verify InitAction creates a stack with one root item."""
         state = _get_state(reducer(None, InitAction()))
         assert len(state.stack) == 1
-
-    def test_init_sets_menu(self) -> None:
-        """Verify InitAction sets the menu on the state."""
-        state = _get_state(reducer(None, InitAction()))
-        assert state.menu is not None
 
     def test_non_init_on_none_state_raises(self) -> None:
         """Verify non-init action on None state raises error."""
@@ -212,20 +185,13 @@ class TestStackPushActions:
         new_state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
         assert len(new_state.stack) == 2
 
-    def test_push_menu_updates_view(self) -> None:
-        """Verify pushing a menu updates current_view to MenuViewData."""
-        state = _init_state()
-        new_state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
-        assert isinstance(new_state.current_view, MenuViewData)
-
-    def test_push_menu_emits_stack_and_view_events(self) -> None:
-        """Verify pushing a menu emits stack and view changed events."""
+    def test_push_menu_emits_stack_event(self) -> None:
+        """Verify pushing a menu emits a stack changed event."""
         state = _init_state()
         result = reducer(state, StackPushMenuAction(menu_key='main'))
         events = _get_events(result)
         event_types = [type(e) for e in events]
         assert StackChangedEvent in event_types
-        assert ViewChangedEvent in event_types
 
     def test_push_application_emits_events(self) -> None:
         """Verify pushing an application emits the expected events."""
@@ -236,25 +202,22 @@ class TestStackPushActions:
         events = _get_events(result)
         event_types = [type(e) for e in events]
         assert StackChangedEvent in event_types
-        assert ViewChangedEvent in event_types
 
-    def test_push_application_view_is_application(self) -> None:
-        """Verify pushing an application sets ApplicationViewData."""
+    def test_push_application_grows_stack(self) -> None:
+        """Verify pushing an application grows the stack."""
         state = _init_state()
         new_state = _get_state(reducer(state, StackPushApplicationAction(
             application_id='test:app',
         )))
-        assert isinstance(new_state.current_view, ApplicationViewData)
-        assert new_state.current_view.application_id == 'test:app'
+        assert len(new_state.stack) == 2
 
-    def test_push_notification_view_is_notification(self) -> None:
-        """Verify pushing a notification sets NotificationViewData."""
+    def test_push_notification_grows_stack(self) -> None:
+        """Verify pushing a notification grows the stack."""
         state = _init_state()
         new_state = _get_state(reducer(state, StackPushNotificationAction(
             notification_id='notif-1',
         )))
-        assert isinstance(new_state.current_view, NotificationViewData)
-        assert new_state.current_view.notification_id == 'notif-1'
+        assert len(new_state.stack) == 2
 
 
 class TestStackPopActions:
@@ -277,14 +240,13 @@ class TestStackPopActions:
         assert len(new_state.stack) == 1
 
     def test_pop_emits_events(self) -> None:
-        """Verify pop emits stack and view changed events."""
+        """Verify pop emits stack changed event."""
         state = _init_state()
         state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
         result = reducer(state, StackPopAction())
         events = _get_events(result)
         event_types = [type(e) for e in events]
         assert StackChangedEvent in event_types
-        assert ViewChangedEvent in event_types
 
     def test_pop_to_root_from_deep(self) -> None:
         """Verify pop to root clears all items above root."""
@@ -327,22 +289,13 @@ class TestSetPageIndex:
     """Tests for StackSetPageIndexAction."""
 
     def test_set_page_index(self) -> None:
-        """Verify setting page index updates the current view."""
-        state = _init_state()
-        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
-        result = reducer(state, StackSetPageIndexAction(page_index=1))
-        new_state = _get_state(result)
-        assert isinstance(new_state.current_view, MenuViewData)
-
-    def test_set_page_index_emits_events(self) -> None:
-        """Verify setting page index emits page and view events."""
+        """Verify setting page index works."""
         state = _init_state()
         state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
         result = reducer(state, StackSetPageIndexAction(page_index=1))
         events = _get_events(result)
         event_types = [type(e) for e in events]
         assert StackPageIndexChangedEvent in event_types
-        assert ViewChangedEvent in event_types
 
     def test_set_page_index_on_non_menu_unchanged(self) -> None:
         """Verify setting page index on non-menu top is a no-op."""

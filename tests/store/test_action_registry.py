@@ -66,24 +66,29 @@ class TestExecuteAction:
         """Verify execute_action calls the registered handler."""
         called = []
         register_action('test:action', lambda: called.append(True))
-        result = execute_action('test:action')
-        assert result is True
+        execute_action('test:action')
         assert called == [True]
 
-    def test_returns_false_for_missing(self) -> None:
-        """Verify execute_action returns False for missing action."""
-        result = execute_action('nonexistent')
-        assert result is False
+    def test_executes_handler_returns_value(self) -> None:
+        """Verify execute_action returns the handler's return value."""
+        register_action('test:return', lambda: 'menu_result')
+        result = execute_action('test:return')
+        assert result == 'menu_result'
 
-    def test_returns_false_on_handler_error(self) -> None:
-        """Verify execute_action returns False when handler raises."""
+    def test_returns_none_for_missing(self) -> None:
+        """Verify execute_action returns None for missing action."""
+        result = execute_action('nonexistent')
+        assert result is None
+
+    def test_returns_none_on_handler_error(self) -> None:
+        """Verify execute_action returns None when handler raises."""
         def failing_handler() -> None:
             msg = 'intentional'
             raise RuntimeError(msg)
 
         register_action('test:fail', failing_handler)
         result = execute_action('test:fail')
-        assert result is False
+        assert result is None
 
 
 class TestGetRegisteredActions:
@@ -128,7 +133,7 @@ class TestActionLifecycle:
         execute_action('lifecycle')
         assert results == ['executed']
         unregister_action('lifecycle')
-        assert execute_action('lifecycle') is False
+        assert execute_action('lifecycle') is None
         assert results == ['executed']  # Not called again
 
     def test_re_register_after_unregister(self) -> None:
