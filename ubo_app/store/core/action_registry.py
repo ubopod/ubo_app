@@ -14,38 +14,38 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ubo_app.logger import logger
+from ubo_app.store.core.handler_registry import HandlerRegistry
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-# Global registry mapping action_id -> handler function
-_action_handlers: dict[str, Callable[[], object]] = {}
+# Singleton action registry instance
+_registry = HandlerRegistry('action')
 
 
 def register_action(
     action_id: str,
     handler: Callable[[], object],
+    *,
+    allow_reregister: bool = False,
 ) -> Callable[[], object]:
     """Register an action handler for a given action_id.
 
     Args:
         action_id: Unique identifier for the action (e.g., 'wifi:connect:MyNetwork').
         handler: Callable to invoke when the action is executed.
+        allow_reregister: If True, silently replaces an existing handler
+            with the same ID. If False (default), raises ValueError.
 
     Returns:
         The handler function (for chaining/decorator use).
 
     Raises:
-        ValueError: If an action with the same ID is already registered.
+        ValueError: If an action with the same ID is already registered
+            and allow_reregister is False.
 
     """
-    if action_id in _action_handlers:
-        msg = f"Action '{action_id}' is already registered"
-        raise ValueError(msg)
-    _action_handlers[action_id] = handler
-    logger.debug('Registered action handler: %s', action_id)
-    return handler
+    return _registry.register(action_id, handler, allow_reregister=allow_reregister)
 
 
 def unregister_action(action_id: str) -> bool:
@@ -58,11 +58,7 @@ def unregister_action(action_id: str) -> bool:
         True if the action was found and removed, False otherwise.
 
     """
-    if action_id in _action_handlers:
-        del _action_handlers[action_id]
-        logger.debug('Unregistered action handler: %s', action_id)
-        return True
-    return False
+    return _registry.unregister(action_id)
 
 
 def get_action(action_id: str) -> Callable[[], object] | None:
@@ -75,7 +71,7 @@ def get_action(action_id: str) -> Callable[[], object] | None:
         The handler callable, or None if not found.
 
     """
-    return _action_handlers.get(action_id)
+    return _registry.get(action_id)
 
 
 def execute_action(action_id: str) -> object:
@@ -90,16 +86,8 @@ def execute_action(action_id: str) -> object:
         pushed onto the navigation stack.
 
     """
-    handler = _action_handlers.get(action_id)
-    if handler is not None:
-        logger.debug('Executing action: %s', action_id)
-        try:
-            return handler()
-        except Exception:
-            logger.exception('Error executing action: %s', action_id)
-            return None
-    logger.warning('No handler registered for action: %s', action_id)
-    return None
+    _, result = _registry.execute(action_id)
+    return result
 
 
 def get_registered_actions() -> list[str]:
@@ -109,7 +97,7 @@ def get_registered_actions() -> list[str]:
         List of registered action ID strings.
 
     """
-    return list(_action_handlers.keys())
+    return _registry.get_registered_ids()
 
 
 def clear_all_actions() -> None:
@@ -117,5 +105,4 @@ def clear_all_actions() -> None:
 
     Primarily useful for testing.
     """
-    _action_handlers.clear()
-    logger.debug('Cleared all action handlers')
+    _registry.clear()

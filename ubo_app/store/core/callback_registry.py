@@ -13,15 +13,14 @@ When the notification is closed, the handler code calls:
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
-from ubo_app.logger import logger
+from ubo_app.store.core.handler_registry import HandlerRegistry
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-# Global registry mapping callback_id -> handler function
-_callback_handlers: dict[str, Callable[[], object]] = {}
+# Singleton callback registry instance
+_registry = HandlerRegistry('callback')
 
 
 def register_callback(callback_id: str, handler: Callable[[], object]) -> str:
@@ -38,11 +37,7 @@ def register_callback(callback_id: str, handler: Callable[[], object]) -> str:
         ValueError: If a callback with the same ID is already registered.
 
     """
-    if callback_id in _callback_handlers:
-        msg = f"Callback '{callback_id}' is already registered"
-        raise ValueError(msg)
-    _callback_handlers[callback_id] = handler
-    logger.debug('Registered callback handler: %s', callback_id)
+    _registry.register(callback_id, handler)
     return callback_id
 
 
@@ -56,10 +51,7 @@ def register_auto_callback(handler: Callable[[], object]) -> str:
         The auto-generated callback_id.
 
     """
-    callback_id = f'callback:{uuid4().hex}'
-    _callback_handlers[callback_id] = handler
-    logger.debug('Registered auto callback handler: %s', callback_id)
-    return callback_id
+    return _registry.register_auto(handler)
 
 
 def execute_callback(callback_id: str) -> bool:
@@ -72,17 +64,8 @@ def execute_callback(callback_id: str) -> bool:
         True if the callback was found and executed, False otherwise.
 
     """
-    handler = _callback_handlers.get(callback_id)
-    if handler is not None:
-        logger.debug('Executing callback: %s', callback_id)
-        try:
-            handler()
-        except Exception:
-            logger.exception('Error executing callback: %s', callback_id)
-            return False
-        return True
-    logger.warning('No handler registered for callback: %s', callback_id)
-    return False
+    success, _ = _registry.execute(callback_id)
+    return success
 
 
 def unregister_callback(callback_id: str) -> bool:
@@ -95,11 +78,7 @@ def unregister_callback(callback_id: str) -> bool:
         True if the callback was found and removed, False otherwise.
 
     """
-    if callback_id in _callback_handlers:
-        del _callback_handlers[callback_id]
-        logger.debug('Unregistered callback handler: %s', callback_id)
-        return True
-    return False
+    return _registry.unregister(callback_id)
 
 
 def clear_all_callbacks() -> None:
@@ -107,5 +86,4 @@ def clear_all_callbacks() -> None:
 
     Primarily useful for testing.
     """
-    _callback_handlers.clear()
-    logger.debug('Cleared all callback handlers')
+    _registry.clear()
