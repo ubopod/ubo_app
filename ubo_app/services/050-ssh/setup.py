@@ -64,19 +64,12 @@ def disable_ssh_service() -> None:
 
 def _register_ssh_action_handlers() -> None:
     """Register action handlers for SSH menu items."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-    )
+    from ubo_app.store.core.action_registry import register_action
 
-    # Only register once
-    if 'ssh:start' in get_registered_actions():
-        return
-
-    register_action('ssh:start', start_ssh_service)
-    register_action('ssh:stop', stop_ssh_service)
-    register_action('ssh:enable', enable_ssh_service)
-    register_action('ssh:disable', disable_ssh_service)
+    register_action('ssh:start', start_ssh_service, allow_reregister=True)
+    register_action('ssh:stop', stop_ssh_service, allow_reregister=True)
+    register_action('ssh:enable', enable_ssh_service, allow_reregister=True)
+    register_action('ssh:disable', disable_ssh_service, allow_reregister=True)
 
 
 @store.autorun(lambda state: state.ssh)
@@ -170,8 +163,9 @@ def init_service() -> None:
     """Initialize the SSH service."""
     from ubo_app.store.core.action_registry import register_action
 
-    def _open_ssh_menu() -> None:
+    def _open_ssh_menu() -> bool:
         create_task(check_is_ssh_enabled())
+        return True
 
     register_action('ssh:open_menu', _open_ssh_menu)
     store.dispatch(

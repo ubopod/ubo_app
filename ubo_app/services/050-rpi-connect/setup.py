@@ -119,32 +119,27 @@ def start_signin() -> None:
 
 def _register_rpi_connect_action_handlers() -> None:
     """Register action handlers for RPi Connect menu items."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-    )
-
-    # Only register once
-    if 'rpi-connect:start' in get_registered_actions():
-        return
+    from ubo_app.store.core.action_registry import register_action
 
     def _start_service() -> None:
         start_service()
 
-    register_action('rpi-connect:start', _start_service)
-    register_action('rpi-connect:stop', stop_service)
-    register_action('rpi-connect:sign-out', sign_out)
-    register_action('rpi-connect:install', install_rpi_connect)
-    register_action('rpi-connect:uninstall', uninstall_rpi_connect)
+    register_action('rpi-connect:start', _start_service, allow_reregister=True)
+    register_action('rpi-connect:stop', stop_service, allow_reregister=True)
+    register_action('rpi-connect:sign-out', sign_out, allow_reregister=True)
+    register_action('rpi-connect:install', install_rpi_connect, allow_reregister=True)
+    register_action(
+        'rpi-connect:uninstall', uninstall_rpi_connect, allow_reregister=True,
+    )
 
-    register_action('rpi-connect:sign-in', start_signin)
+    register_action('rpi-connect:sign-in', start_signin, allow_reregister=True)
 
     def _open_qrcode() -> None:
         store.dispatch(
             OpenApplicationAction(application_id='rpi-connect:qrcode-page'),
         )
 
-    register_action('rpi-connect:show-url', _open_qrcode)
+    register_action('rpi-connect:show-url', _open_qrcode, allow_reregister=True)
 
 
 def _compute_rpi_connect_sub_heading(state: RPiConnectState) -> str:
@@ -242,7 +237,7 @@ def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=RPI_CONNECT_MENU_ID,
-            title='RPi Connect',
+            title='󰌕 RPi Connect',
             heading='RPi Connect',
             sub_heading=_compute_rpi_connect_sub_heading(state),
             items=tuple(items),
@@ -254,14 +249,15 @@ def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
 def init_service() -> None:
     from ubo_app.store.core.action_registry import register_action
 
-    def _open_rpi_connect_menu() -> None:
+    def _open_rpi_connect_menu() -> bool:
         create_task(check_status())
+        return True
 
     register_action('rpi-connect:open_menu', _open_rpi_connect_menu)
     store.dispatch(
         RegisterSettingAppAction(
             label='RPi Connect',
-            icon='',
+            icon='󰌕',
             action_id='rpi-connect:open_menu',
             category=SettingsCategory.REMOTE,
         ),
