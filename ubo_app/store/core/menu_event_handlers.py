@@ -42,7 +42,7 @@ from ubo_app.store.services.notifications import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ubo_app.store.core.types import MenuItemData
+    from ubo_app.store.core.types import HomeViewData, MenuItemData, MenuViewData
     from ubo_app.utils.types import Subscriptions
 
 
@@ -195,8 +195,75 @@ def _execute_view_item_action(item: MenuItemData) -> bool:
     return True
 
 
+def _handle_home_view_index(
+    current_view: HomeViewData,
+    index: int,
+) -> None:
+    """Handle item selection on the home view.
+
+    HomeViewData has no pagination, so ``index`` maps directly to items.
+    """
+    if not current_view.menu_items:
+        logger.warning('[MenuHandler] choose_by_index: home view has no items')
+        return
+
+    item = (
+        current_view.menu_items[index]
+        if 0 <= index < len(current_view.menu_items)
+        else None
+    )
+    if item is not None:
+        _execute_view_item_action(item)
+    else:
+        logger.info(
+            '[MenuHandler] choose_by_index: home item at index %d is None',
+            index,
+        )
+
+
+def _handle_menu_view_index(
+    current_view: MenuViewData,
+    index: int,
+) -> None:
+    """Handle item selection on a paginated menu view."""
+    if not current_view.items:
+        logger.warning('[MenuHandler] choose_by_index: menu view has no items')
+        return
+
+    page_index = current_view.page_index
+
+    # For headed menus, the heading/sub_heading occupy visual slots
+    # on page 0, shifting which items map to which button indices.
+    header_offset = 0
+    if current_view.heading is not None:
+        from ubo_app.store.core.constants import HEADED_MENU_HEADER_SLOTS
+
+        header_offset = HEADED_MENU_HEADER_SLOTS
+
+    actual_index = page_index * PAGE_SIZE + index - header_offset
+    item = (
+        current_view.items[actual_index]
+        if 0 <= actual_index < len(current_view.items)
+        else None
+    )
+    if item is None:
+        logger.info(
+            '[MenuHandler] choose_by_index: menu item at index %d is None '
+            '(page=%d, actual=%d, total=%d)',
+            index,
+            page_index,
+            actual_index,
+            len(current_view.items),
+        )
+        return
+    _execute_view_item_action(item)
+
+
 def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
-    """Handle menu item selection by index."""
+    """Handle menu item selection by index.
+
+    Routes to a view-type-specific handler based on the current view.
+    """
     from ubo_app.store.core.types import HomeViewData, MenuViewData
 
     state = store._state  # noqa: SLF001
@@ -217,60 +284,17 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         _handle_notification_choose_by_index(top.notification_id, event.index)
         return
 
-    # Use the pre-computed current_view
+    # Route to view-type-specific handler
     current_view = state.main.current_view
-    logger.info(
-        '[MenuHandler] choose_by_index: current_view type=%s, has_items=%s',
-        type(current_view).__name__ if current_view else 'None',
-        bool(getattr(current_view, 'items', None)),
-    )
-
-    # Get items from the current view (HomeViewData or MenuViewData)
-    view_items: tuple[MenuItemData | None, ...] = ()
-    if isinstance(current_view, HomeViewData) and current_view.menu_items:
-        view_items = current_view.menu_items
-    elif isinstance(current_view, MenuViewData) and current_view.items:
-        view_items = current_view.items
-
-    if view_items:
-        # Use page_index from the current_view (authoritative, matches
-        # what the user sees) rather than from the stack item directly,
-        # to avoid timing issues where the stack was updated but the
-        # view hasn't been recomputed yet.
-        if isinstance(current_view, MenuViewData):
-            page_index = current_view.page_index
-        else:
-            page_index = 0
-
-        # For headed menus, the heading/sub_heading occupy visual slots
-        # on page 0, shifting which items map to which button indices.
-        header_offset = 0
-        if (
-            isinstance(current_view, MenuViewData)
-            and current_view.heading is not None
-        ):
-            from ubo_app.store.core.constants import HEADED_MENU_HEADER_SLOTS
-
-            header_offset = HEADED_MENU_HEADER_SLOTS
-
-        actual_index = page_index * PAGE_SIZE + event.index - header_offset
-        item = view_items[actual_index] if 0 <= actual_index < len(
-            view_items,
-        ) else None
-        if item is None:
-            logger.info(
-                '[MenuHandler] choose_by_index: current_view item at index %d '
-                'is None (page=%d, actual=%d, total=%d)',
-                event.index,
-                page_index,
-                actual_index,
-                len(view_items),
-            )
-            return
-        _execute_view_item_action(item)
-        return
-
-    logger.warning('[MenuHandler] choose_by_index: no current items')
+    if isinstance(current_view, HomeViewData):
+        _handle_home_view_index(current_view, event.index)
+    elif isinstance(current_view, MenuViewData):
+        _handle_menu_view_index(current_view, event.index)
+    else:
+        logger.warning(
+            '[MenuHandler] choose_by_index: unhandled view type %s',
+            type(current_view).__name__ if current_view else 'None',
+        )
 
 
 def _get_current_view_items(

@@ -44,7 +44,7 @@ def reducer(
             new_menus = {**state.menus, action.menu_id: menu_data}
 
             return CompleteReducerResult(
-                state=replace(state, menus=new_menus),
+                state=replace(state, menus=new_menus, version=state.version + 1),
                 events=[DynamicMenuChangedEvent(menu_id=action.menu_id)],
             )
 
@@ -55,7 +55,7 @@ def reducer(
             new_menus = {k: v for k, v in state.menus.items() if k != action.menu_id}
 
             return CompleteReducerResult(
-                state=replace(state, menus=new_menus),
+                state=replace(state, menus=new_menus, version=state.version + 1),
                 events=[DynamicMenuChangedEvent(menu_id=action.menu_id)],
             )
 

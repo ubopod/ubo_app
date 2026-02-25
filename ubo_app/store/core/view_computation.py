@@ -7,7 +7,6 @@ non-GUI contexts (gRPC/TUI).
 
 from __future__ import annotations
 
-import contextlib
 import math
 import socket
 from typing import TYPE_CHECKING
@@ -157,7 +156,7 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     """
     # Compute progress notifications from notifications with progress
     progress_notifications: list[ProgressNotificationData] = []
-    with contextlib.suppress(AttributeError, TypeError):
+    if hasattr(state, 'notifications') and state.notifications.notifications:
         progress_notifications = [
             ProgressNotificationData(
                 id=notification.id,
@@ -174,36 +173,36 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
 
     # Compute icons from status_icons state
     icons: tuple[StatusIconData, ...] = ()
-    try:
-        icons = tuple(
-            StatusIconData(symbol=icon.symbol, color=icon.color)
-            for icon in state.status_icons.icons
-        )
-    except (AttributeError, TypeError) as e:
-        if DEBUG_MENU:
-            logger.warning('[ViewRenderer] Failed to compute icons: %s', e)
+    if hasattr(state, 'status_icons') and state.status_icons.icons is not None:
+        try:
+            icons = tuple(
+                StatusIconData(symbol=icon.symbol, color=icon.color)
+                for icon in state.status_icons.icons
+            )
+        except (AttributeError, TypeError) as e:
+            if DEBUG_MENU:
+                logger.warning('[ViewRenderer] Failed to compute icons: %s', e)
 
     # Get temperature and light from sensors
     temperature: float | None = None
     light_level: float | None = None
-    with contextlib.suppress(AttributeError, TypeError):
-        temperature = state.sensors.temperature.value
-        light_level = state.sensors.light.value
+    if hasattr(state, 'sensors'):
+        temperature = getattr(
+            getattr(state.sensors, 'temperature', None), 'value', None,
+        )
+        light_level = getattr(
+            getattr(state.sensors, 'light', None), 'value', None,
+        )
 
     # Get system metrics (clock)
-    clock = ''
-    with contextlib.suppress(AttributeError, TypeError):
-        clock = state.system.clock
+    clock = getattr(getattr(state, 'system', None), 'clock', '') or ''
 
-    # Get recording states
-    is_recording = False
-    is_replaying = False
-    is_recording_audio = False
-    with contextlib.suppress(AttributeError, TypeError):
-        is_recording = state.main.is_recording
-        is_replaying = state.main.is_replaying
-    with contextlib.suppress(AttributeError, TypeError):
-        is_recording_audio = state.audio.is_recording
+    # Get recording states (main is always present)
+    is_recording = state.main.is_recording
+    is_replaying = state.main.is_replaying
+    is_recording_audio = getattr(
+        getattr(state, 'audio', None), 'is_recording', False,
+    )
 
     return StatusBarData(
         title=_HOSTNAME_TITLE,
@@ -367,15 +366,13 @@ def setup_dynamic_view_autorun() -> None:
         lambda state: (
             # Core state (always needed)
             state.main.stack,
-            tuple(state.dynamic_menus.menus.keys()),
-            # Also watch for menu content changes
-            tuple(
-                (k, m.items) for k, m in state.dynamic_menus.menus.items()
-            ),
+            # Use version counter for cheap dynamic menu change detection
+            # instead of rebuilding tuple of all menu keys and items
+            state.dynamic_menus.version,
             state.main.is_recording,
             state.main.is_replaying,
             # Watch registered_apps for dynamic menu updates from registrations
-            tuple(state.main.registered_apps.items()),
+            tuple(state.main.registered_apps.keys()),
             # Watch for notification content changes (for progress updates, etc.)
             tuple(
                 (n.id, n.title, n.content, n.icon, n.color, n.progress)

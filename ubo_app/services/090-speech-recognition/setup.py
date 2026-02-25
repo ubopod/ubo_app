@@ -125,7 +125,7 @@ def _register_static_menus() -> None:
                 ),
                 MenuItemData(
                     key='engine',
-                    label='Recognition Engine',
+                    label='Engines',
                     icon='\uf2a2',
                     action_id='speech-recognition:open_engines',
                 ),
@@ -139,7 +139,7 @@ def _register_static_menus() -> None:
             category=SettingsCategory.ACCESSIBILITY,
             priority=30,
             label='Speech Recognition',
-            icon='',
+            icon='\uf2a2',
         ),
     )
 

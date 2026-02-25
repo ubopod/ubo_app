@@ -38,6 +38,13 @@ class DynamicMenusState(Immutable):
     This is the Redux state that holds computed menu content from services.
     When a service's state changes, its autorun dispatches UpdateDynamicMenuAction
     to update the relevant menu here.
+
+    The ``version`` counter increments on every update or clear, enabling
+    efficient change detection in autorun selectors (compare one integer
+    instead of rebuilding tuple representations of all menus).  Note that
+    multiple menu updates within the same reducer tick share one version
+    bump — the counter signals "something changed", not per-menu versions.
     """
 
     menus: dict[str, DynamicMenuData] = field(default_factory=dict)
+    version: int = 0
