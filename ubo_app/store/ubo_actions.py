@@ -2,46 +2,25 @@
 
 from __future__ import annotations
 
-from dataclasses import field
 from typing import TYPE_CHECKING, TypeAlias
 
-from ubo_gui.menu.types import ActionItem, ApplicationItem
-
-from ubo_app.utils.dataclass import default_provider
+from immutable import Immutable
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from ubo_gui.page import PageWidget
-
     from ubo_app.store.main import UboAction
     from ubo_app.utils.gui import UboPageWidget
 
 
-def _default_action(store_action: UboAction) -> Callable[[], None]:
-    def action() -> None:
-        from ubo_app.store.main import store
-
-        store.dispatch(store_action)
-
-    setattr(action, '_is_default_action_of_ubo_dispatch_item', True)  # noqa: B010
-
-    return action
-
-
-class UboDispatchItem(ActionItem):
+class UboDispatchItem(Immutable):
     """Menu item that dispatches an action."""
 
-    store_action: UboAction | list[UboAction]
-    action: Callable[[], None] = field(
-        default_factory=default_provider(['store_action'], _default_action),
-    )
-
-    def __post_init__(self: UboDispatchItem) -> None:
-        """Post-initialization method."""
-        if not getattr(self.action, '_is_default_action_of_ubo_dispatch_item', False):
-            msg = 'The `action` attribute of `UboDispatchItem` must not be set'
-            raise ValueError(msg)
+    key: str | None = None
+    label: str = ''
+    icon: str | None = None
+    color: str = '#ffffff'
+    background_color: str | None = None
+    is_short: bool = False
+    store_action: UboAction | list[UboAction] | None = None
 
 
 application_registry: dict[str, type[UboPageWidget]] = {}
@@ -49,29 +28,16 @@ application_registry: dict[str, type[UboPageWidget]] = {}
 BasicType: TypeAlias = str | bytes | int | float | bool | None
 
 
-class UboApplicationItem(ApplicationItem):
+class UboApplicationItem(Immutable):
     """Immutable application item."""
 
-    # TODO(@sassanh): This is a hack to maintain backward compatibility  # noqa: FIX002
-    # until #261 is implemented
-    application: (
-        PageWidget
-        | Callable[[], PageWidget]
-        | type[PageWidget]
-        | Callable[[], type[PageWidget]]
-    ) = field(
-        default_factory=default_provider(
-            ['application_id', 'initialization_args', 'initialization_kwargs'],
-            lambda application_id,
-            initialization_args,
-            initialization_kwargs: lambda: application_registry[application_id](
-                *(initialization_args),
-                **(initialization_kwargs or {}),
-            ),
-        ),
-    )
-
     application_id: str
+    key: str | None = None
+    label: str = ''
+    icon: str | None = None
+    color: str = '#ffffff'
+    background_color: str | None = None
+    is_short: bool = False
     initialization_args: tuple[BasicType, ...] = ()
     initialization_kwargs: dict[str, BasicType] | None = None
 

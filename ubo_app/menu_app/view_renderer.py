@@ -51,6 +51,7 @@ if TYPE_CHECKING:
 
     from ubo_app.menu_app.menu_central import MenuAppCentral
     from ubo_app.store.core.types import ViewData
+    from ubo_app.store.core.types.status_bar import ProgressNotificationData
     from ubo_app.store.main import RootState
     from ubo_app.store.services.notifications import Notification
 

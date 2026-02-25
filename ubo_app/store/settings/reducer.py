@@ -10,8 +10,8 @@ from redux import (
     InitializationActionError,
     ReducerResult,
 )
-from ubo_gui.constants import SUCCESS_COLOR
 
+from ubo_app.colors import SUCCESS_COLOR
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,

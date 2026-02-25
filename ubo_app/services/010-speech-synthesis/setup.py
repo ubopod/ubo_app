@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import struct
 from asyncio import CancelledError
 from typing import TYPE_CHECKING
 
 import fasteners
 import pvorca
+from download_model import download_piper_model
 from piper.voice import AudioChunk, PiperVoice
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.constants.assistant import (
     PICOVOICE_ACCESS_KEY_SECRET_ID,
+    PIPER_MODEL_HASH,
+    PIPER_MODEL_JSON_PATH,
     PIPER_MODEL_PATH,
 )
-from ubo_app.engines.piper import PiperEngine
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
@@ -55,12 +58,9 @@ from ubo_app.utils.menu_items import (
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
 
     from ubo_app.utils.types import Subscriptions
-
-
-_piper_engine = PiperEngine()
 
 
 class _Context:
@@ -84,7 +84,7 @@ class _Context:
                 self.picovoice_instance = pvorca.create(access_key)
 
     def load_piper(self: _Context) -> None:
-        if _piper_engine.is_setup:
+        if _is_piper_downloaded():
             self.piper_voice = PiperVoice.load(PIPER_MODEL_PATH)
 
 
@@ -225,31 +225,6 @@ def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
         )
 
 
-@store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
-def _menu_items(is_access_key_set: bool | None) -> Sequence[ActionItem]:  # noqa: FBT001
-    if is_access_key_set:
-        return [
-            ActionItem(
-                label='Clear Access Key',
-                icon='󰌊',
-                action=clear_access_key,
-            ),
-        ]
-    return [
-        ActionItem(
-            label='Set Access Key',
-            icon='󰐲',
-            action=input_access_key,
-        ),
-    ]
-
-
-@store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
-def _menu_sub_heading(_: bool | None) -> str:  # noqa: FBT001
-    return f"""Set the access key
-Current value: {secrets.read_covered_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)}"""
-
-
 ENGINE_LABELS = {
     SpeechSynthesisEngineName.PIPER: 'Piper',
     SpeechSynthesisEngineName.PICOVOICE: 'Picovoice',
@@ -276,11 +251,6 @@ def create_engine_selector(engine: SpeechSynthesisEngineName) -> Callable[[], No
         )
 
     return _engine_selector
-
-
-def _download_model_callback() -> None:
-    _speech_synthesis_menu()
-    _context.load_piper()
 
 
 def _is_piper_downloaded() -> bool:
@@ -311,65 +281,6 @@ def _is_piper_downloaded() -> bool:
 
 SPEECH_SYNTHESIS_MENU_ID = 'speech-synthesis:main'
 PICOVOICE_SETTINGS_MENU_ID = 'speech-synthesis:picovoice'
-
-
-
-@store.autorun(
-    lambda state: (
-        state.speech_synthesis.selected_engine,
-        state.assistant.provider_setup_status,
-    ),
-    options=AutorunOptions(memoization=False),
-)
-def _speech_synthesis_menu(
-    data: tuple[SpeechSynthesisEngineName, dict[str, bool]],
-) -> HeadlessMenu:
-    selected_engine, _ = data
-
-    if _piper_engine.is_setup and _context.piper_voice is None:
-        to_thread(_context.load_piper)
-
-    return HeadlessMenu(
-        title='󰔊Speech Synthesis',
-        items=[
-            *(
-                [
-                    ActionItem(
-                        key='download',
-                        label='Setup Piper',
-                        icon='󰇚',
-                        action=_piper_engine.setup,
-                    ),
-                ]
-                if not _piper_engine.is_setup
-                else []
-            ),
-            SubMenuItem(
-                key='select_engine',
-                label='Select Engine',
-                icon='󰔊',
-                sub_menu=HeadlessMenu(
-                    title=f'󰔊Select Engine: {selected_engine}',
-                    items=[
-                        (
-                            selection_parameters := SELECTED_ITEM_PARAMETERS
-                            if engine == selected_engine
-                            else UNSELECTED_ITEM_PARAMETERS,
-                        )
-                        and ActionItem(
-                            label=ENGINE_LABELS[engine],
-                            action=create_engine_selector(engine),
-                            key=engine.name,
-                            **selection_parameters,
-                        )
-                        for engine in SpeechSynthesisEngineName
-                        if _piper_engine.is_setup
-                        or engine != SpeechSynthesisEngineName.PIPER
-                    ],
-                ),
-            ),
-        ],
-    )
 
 
 def _download_piper_wrapper() -> None:

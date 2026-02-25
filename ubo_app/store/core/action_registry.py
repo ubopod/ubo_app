@@ -65,6 +65,19 @@ def unregister_action(action_id: str) -> bool:
     return False
 
 
+def get_action(action_id: str) -> Callable[[], object] | None:
+    """Get the handler for an action_id without executing it.
+
+    Args:
+        action_id: The action ID to look up.
+
+    Returns:
+        The handler callable, or None if not found.
+
+    """
+    return _action_handlers.get(action_id)
+
+
 def execute_action(action_id: str) -> object:
     """Execute the handler for an action_id.
 

@@ -1,14 +1,9 @@
-# ruff: noqa: D100, D103
+# ruff: noqa: D100
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from constants import WIFI_CONNECTIONS_MENU_ID, get_signal_icon
-from ubo_gui.menu.types import (
-    ActionItem,
-    HeadlessMenu,
-    SubMenuItem,
-)
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -20,12 +15,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiConnection,
-    WiFiUpdateRequestAction,
 )
-from ubo_app.store.ubo_actions import UboApplicationItem
-from ubo_app.utils.async_ import create_task
-
-from .create_wireless_connection import input_wifi_connection
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -122,85 +112,3 @@ def update_wifi_dynamic_menu(
             placeholder=placeholder,
         ),
     )
-
-
-@store.autorun(lambda state: state.wifi.connections)
-def wireless_connections_menu(
-    connections: Sequence[WiFiConnection] | None,
-) -> HeadlessMenu:
-    if connections is None:
-        return HeadlessMenu(
-            title='Wi-Fi',
-            items=[],
-            placeholder='Loading...',
-        )
-
-    icons = {
-        ConnectionState.CONNECTED: '󱚽',
-        ConnectionState.DISCONNECTED: '󱛅',
-        ConnectionState.CONNECTING: '󱛇',
-        ConnectionState.UNKNOWN: '󱚵',
-    }
-    items = (
-        [
-            UboApplicationItem(
-                key=connection.ssid,
-                label=connection.ssid,
-                application_id='wifi:connection-page',
-                icon=get_signal_icon(connection.signal_strength)
-                if connection.state == ConnectionState.DISCONNECTED
-                else icons[connection.state],
-                initialization_kwargs={
-                    'ssid': connection.ssid,
-                },
-            )
-            for connection in connections
-        ]
-        if connections is not None
-        else []
-    )
-
-    placeholder = 'Loading...' if connections is None else 'No Wi-Fi connections found'
-
-    return HeadlessMenu(
-        title='Wi-Fi',
-        items=items,
-        placeholder=placeholder,
-    )
-
-
-def list_connections() -> Callable[[], HeadlessMenu]:
-    store.dispatch(WiFiUpdateRequestAction())
-    return wireless_connections_menu
-
-
-def _start_create_connection() -> None:
-    """Start the WiFi connection creation flow."""
-    store.dispatch(
-        OpenApplicationAction(
-            application_id='wifi:create-connection-page',
-            initialization_kwargs={},
-        ),
-    )
-    create_task(input_wifi_connection())
-
-
-WiFiMainMenu = SubMenuItem(
-    label='WiFi',
-    icon='󰖩',
-    sub_menu=HeadlessMenu(
-        title='WiFi Settings',
-        items=[
-            ActionItem(
-                label='Add',
-                icon='󱛃',
-                action=_start_create_connection,
-            ),
-            ActionItem(
-                label='Select',
-                icon='󱖫',
-                action=list_connections,
-            ),
-        ],
-    ),
-)

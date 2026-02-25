@@ -22,9 +22,9 @@ from ubo_app.store.input.types import (
     InputResult,
 )
 from ubo_app.store.main import store
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
-    NotificationActionItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
@@ -86,7 +86,7 @@ async def select_input_description(
         }, or {METHOD_NAMES[input_methods[-1]]}"""
 
     actions = [
-        NotificationActionItem(
+        create_notification_action(
             key=METHOD_NAMES[method],
             icon=METHOD_ICONS[method],
             label=METHOD_NAMES[method].capitalize(),

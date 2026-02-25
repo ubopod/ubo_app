@@ -8,7 +8,6 @@ from contextlib import suppress
 from typing import TYPE_CHECKING
 
 import psutil
-from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -131,36 +130,6 @@ def update_ip_dynamic_menu(interfaces: Sequence[IpNetworkInterface]) -> None:
                 placeholder='No IP addresses',
             ),
         )
-
-
-@store.autorun(lambda state: state.ip.interfaces)
-def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuItem]:
-    if not interfaces:
-        return []
-    return [
-        SubMenuItem(
-            label=interface.name,
-            icon='󰈀'
-            if interface.name.startswith('eth')
-            else ''
-            if interface.name.startswith('wlan')
-            else '󰕇'
-            if interface.name.startswith('lo')
-            else '󰛳',
-            sub_menu=HeadlessMenu(
-                title=f'󰩟{interface.name}',
-                items=[
-                    Item(
-                        label=ip_address,
-                        icon='󰩠',
-                    )
-                    for ip_address in interface.ip_addresses
-                ],
-                placeholder='No IP addresses',
-            ),
-        )
-        for interface in interfaces
-    ]
 
 
 _last_interfaces: list[IpNetworkInterface] | None = None

@@ -10,8 +10,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item
 
+from ubo_app.store.core.action_registry import register_action, unregister_action
+from ubo_app.store.core.types import (
+    MenuItemData,
+    StackPushMenuAction,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.input.types import PathInputDescription
 from ubo_app.store.main import store
 from ubo_app.store.services.file_system import (
@@ -22,9 +27,9 @@ from ubo_app.store.services.file_system import (
     FileSystemReportSelectionAction,
     PathSelectorConfig,
 )
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
-    NotificationActionItem,
     NotificationApplicationItem,
     NotificationDispatchItem,
     NotificationDisplayType,
@@ -39,7 +44,12 @@ from ubo_app.utils.input import ubo_input
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    _SelectFn = Callable[[Path], None]
+
 FILE_VIEWER_SIZE_LIMIT = 2**11  # 2 KiB
+
+# Module-level tracking for file browser action IDs
+_file_browser_action_ids: dict[str, list[str]] = {}
 
 
 def _file_info(path: Path) -> str:
@@ -93,7 +103,7 @@ def _get_file_content(path: Path) -> str:
             )
             .replace(
                 '\t',
-                '[color=#666][/color]',
+                '[color=#666][/color]',
             )
         )
 
@@ -181,7 +191,7 @@ def _remove(path: Path) -> None:
     )
 
 
-def _show_directory(path: Path) -> HeadlessMenu | None:
+def _show_directory(path: Path) -> None:
     """Show the path in a notification."""
     store.dispatch(
         NotificationsAddAction(
@@ -192,21 +202,21 @@ def _show_directory(path: Path) -> HeadlessMenu | None:
                 display_type=NotificationDisplayType.STICKY,
                 show_dismiss_action=False,
                 actions=[
-                    NotificationActionItem(
+                    create_notification_action(
                         key='copy',
                         label='Copy Directory',
                         icon='󰆏',
                         action=functools.partial(_copy, path),
                         close_notification=False,
                     ),
-                    NotificationActionItem(
+                    create_notification_action(
                         key='move',
                         label='Move Directory',
                         icon='󰉒',
                         action=functools.partial(_move, path),
                         close_notification=False,
                     ),
-                    NotificationActionItem(
+                    create_notification_action(
                         key='remove',
                         label='Remove Directory',
                         icon='󰉘',
@@ -219,7 +229,7 @@ def _show_directory(path: Path) -> HeadlessMenu | None:
     )
 
 
-def _show_file(path: Path) -> HeadlessMenu | None:
+def _show_file(path: Path) -> None:
     """Show the path in a notification."""
     file_type, _ = mimetypes.guess_type(path)
     match file_type:
@@ -263,21 +273,21 @@ def _show_file(path: Path) -> HeadlessMenu | None:
                 show_dismiss_action=False,
                 actions=[
                     view_action,
-                    NotificationActionItem(
+                    create_notification_action(
                         key='copy',
                         label='Copy File',
                         icon='󰆏',
                         action=functools.partial(_copy, path),
                         close_notification=False,
                     ),
-                    NotificationActionItem(
+                    create_notification_action(
                         key='move',
                         label='Move File',
                         icon='󰪹',
                         action=functools.partial(_move, path),
                         close_notification=False,
                     ),
-                    NotificationActionItem(
+                    create_notification_action(
                         key='remove',
                         label='Remove File',
                         icon='󰮘',
@@ -296,8 +306,70 @@ def _select(path: Path) -> None:
     store.dispatch(FileSystemReportSelectionAction(path=path.as_posix()))
 
 
-def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem]]:
+def _get_menu_id_for_path(path: Path) -> str:
+    """Get a unique dynamic menu ID for a directory path."""
+    return f'file-system:dir:{path.as_posix()}'
+
+
+def _build_entry_item(
+    entry: Path,
+    *,
+    config: PathSelectorConfig,
+    menu_id: str,
+    select_directory: _SelectFn | None,
+    select_file: _SelectFn | None,
+) -> MenuItemData:
+    """Build a MenuItemData for a single directory entry."""
+    entry_key = entry.as_posix()
+
+    if entry.is_dir():
+        action_id = f'file-system:open:{entry_key}'
+        _file_browser_action_ids[menu_id].append(action_id)
+        register_action(
+            action_id,
+            functools.partial(
+                open_path,
+                config=replace(config, initial_path=entry.as_posix()),
+            ),
+        )
+        return MenuItemData(
+            key=entry_key,
+            label=escape_markup(entry.name),
+            icon='󰉋',
+            background_color='#303030' if select_directory is None else None,
+            action_id=action_id,
+        )
+
+    if select_file:
+        is_grayed = config.acceptable_suffixes and not any(
+            suffix in config.acceptable_suffixes for suffix in entry.suffixes
+        )
+        action_id = f'file-system:file:{entry_key}'
+        _file_browser_action_ids[menu_id].append(action_id)
+        register_action(
+            action_id,
+            functools.partial(select_file, entry),
+        )
+        return MenuItemData(
+            key=entry_key,
+            label=escape_markup(entry.name),
+            icon='󰈔',
+            background_color='#303030' if is_grayed else None,
+            action_id=action_id,
+        )
+
+    return MenuItemData(
+        key=entry_key,
+        label=escape_markup(entry.name),
+        icon='󰈔',
+        background_color='#303030',
+    )
+
+
+def _items_generator(config: PathSelectorConfig) -> None:
     path = Path(config.initial_path) if config.initial_path else Path('/')
+    menu_id = _get_menu_id_for_path(path)
+
     if config.accepts_directories and config.accepts_files:
         select_directory = select_file = _select
     elif config.accepts_directories:
@@ -311,84 +383,79 @@ def _items_generator(config: PathSelectorConfig) -> Callable[[], list[ActionItem
         select_file = _show_file
 
     @store.autorun(lambda _: None, options=AutorunOptions(memoization=False))
-    def items(_: None) -> list[Item]:
-        return (
-            [
-                ActionItem(
+    def items(_: None) -> None:
+        # Clean up old actions
+        for action_id in _file_browser_action_ids.get(menu_id, []):
+            unregister_action(action_id)
+        _file_browser_action_ids[menu_id] = []
+
+        menu_items: list[MenuItemData] = []
+
+        # "Select" or "Info" button for current directory
+        if select_directory:
+            select_action_id = f'file-system:select:{path.as_posix()}'
+            _file_browser_action_ids[menu_id].append(select_action_id)
+            register_action(
+                select_action_id,
+                functools.partial(select_directory, path),
+            )
+            menu_items.append(
+                MenuItemData(
                     key='select',
                     label='[b]Select[/b]'
                     if config.accepts_directories
                     else '[b]Info[/b]',
-                    icon='',
+                    icon='',
                     background_color='#2d5b86',
-                    action=functools.partial(select_directory, path),
-                ),
-            ]
-            if select_directory
-            else []
-        ) + [
-            ActionItem(
-                key=item.as_posix(),
-                label=escape_markup(item.name),
-                background_color='#303030' if select_directory is None else None,
-                icon='󰉋',
-                action=functools.partial(
-                    open_path,
-                    config=replace(config, initial_path=item.as_posix()),
+                    action_id=select_action_id,
                 ),
             )
-            if item.is_dir()
-            else ActionItem(
-                key=item.as_posix(),
-                label=escape_markup(item.name),
-                background_color='#303030'
-                if item.is_file()
-                and (
-                    select_file is None
-                    or (
-                        config.acceptable_suffixes
-                        and not any(
-                            suffix in config.acceptable_suffixes
-                            for suffix in item.suffixes
-                        )
-                    )
-                )
-                else None,
-                icon='󰈔',
-                action=functools.partial(select_file, item),
-            )
-            if select_file
-            else Item(
-                key=item.as_posix(),
-                label=escape_markup(item.name),
-                background_color='#303030',
-                icon='󰈔',
-            )
-            for item in sorted(
+
+        # Directory contents
+        try:
+            entries = sorted(
                 path.iterdir(),
                 key=lambda x: x.name.lower(),
             )
-            if config.show_hidden or not item.name.startswith('.')
-        ]
+        except (PermissionError, OSError):
+            entries = []
+
+        for entry in entries:
+            if not config.show_hidden and entry.name.startswith('.'):
+                continue
+            menu_items.append(
+                _build_entry_item(
+                    entry,
+                    config=config,
+                    menu_id=menu_id,
+                    select_directory=select_directory,
+                    select_file=select_file,
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=menu_id,
+                title=escape_markup(path.as_posix()),
+                items=tuple(menu_items),
+            ),
+        )
 
     items()
-
     store.subscribe_event(FileSystemEvent, items)
 
-    return items
 
-
-def open_path(*, config: PathSelectorConfig | None = None) -> HeadlessMenu | None:
-    """Open a directory and return a HeadlessMenu for its contents."""
+def open_path(*, config: PathSelectorConfig | None = None) -> None:
+    """Open a directory and show its contents as a dynamic menu."""
     config = config or PathSelectorConfig()
     path = Path(config.initial_path) if config.initial_path else Path('/')
+    menu_id = _get_menu_id_for_path(path)
 
     try:
         if path.is_dir():
-            return HeadlessMenu(
-                title=escape_markup(path.as_posix()),
-                items=_items_generator(config),
-            )
+            _items_generator(config)
+            store.dispatch(StackPushMenuAction(menu_key=menu_id))
+            return
     except PermissionError:
         store.dispatch(
             NotificationsAddAction(
@@ -400,7 +467,7 @@ def open_path(*, config: PathSelectorConfig | None = None) -> HeadlessMenu | Non
                 ),
             ),
         )
-        return None
+        return
     except Exception:
         store.dispatch(
             NotificationsAddAction(
@@ -414,15 +481,14 @@ def open_path(*, config: PathSelectorConfig | None = None) -> HeadlessMenu | Non
             ),
         )
         raise
-    else:
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    title='Invalid Selection',
-                    content=f'{escape_markup(path.as_posix())} is not a directory.',
-                    icon='󰍛',
-                    display_type=NotificationDisplayType.FLASH,
-                ),
+
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title='Invalid Selection',
+                content=f'{escape_markup(path.as_posix())} is not a directory.',
+                icon='󰍛',
+                display_type=NotificationDisplayType.FLASH,
             ),
-        )
-        return None
+        ),
+    )

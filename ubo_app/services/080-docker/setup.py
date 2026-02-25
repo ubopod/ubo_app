@@ -30,7 +30,6 @@ from docker_images import IMAGES, ContainerEntry
 from menus import docker_item_menu, setup_docker_image_dynamic_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
-from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
@@ -84,7 +83,6 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
-from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import secrets
 from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
@@ -134,8 +132,6 @@ def _docker_path_matcher(path: tuple[str, ...]) -> str | None:
     return None
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
-
     from ubo_app.utils.types import Subscriptions
 
 
@@ -359,77 +355,6 @@ def update_docker_setup_dynamic_menu(status: DockerStatus) -> None:
             placeholder=str(menu_data['placeholder']),
         ),
     )
-
-
-@store.autorun(lambda state: state.docker.service.status)
-def setup_menu(status: DockerStatus) -> HeadedMenu:
-    """Get the menu items for the Docker service."""
-    title = 'Setup Docker'
-    return {
-        DockerStatus.UNKNOWN: HeadedMenu(
-            title=title,
-            heading='Checking',
-            sub_heading='Checking Docker service status',
-            items=[],
-            placeholder='',
-        ),
-        DockerStatus.NOT_INSTALLED: HeadedMenu(
-            title=title,
-            heading='Docker is not Installed',
-            sub_heading='Install it to enjoy the power of Docker on your Ubo pod',
-            items=[
-                UboDispatchItem(
-                    label='Install Docker',
-                    icon='󰶮',
-                    store_action=DockerInstallAction(),
-                ),
-            ],
-        ),
-        DockerStatus.INSTALLING: HeadedMenu(
-            title=title,
-            heading='Installing...',
-            sub_heading='Docker is being installed',
-            items=[],
-            placeholder='',
-        ),
-        DockerStatus.NOT_RUNNING: HeadedMenu(
-            title=title,
-            heading='Docker is not Running',
-            sub_heading='Run it to enjoy the power of Docker on your Ubo pod',
-            items=[
-                UboDispatchItem(
-                    label='Start Docker',
-                    icon='󰐊',
-                    store_action=DockerStartAction(),
-                ),
-            ],
-        ),
-        DockerStatus.RUNNING: HeadedMenu(
-            title=title,
-            heading='Docker is Running',
-            sub_heading='Enjoy the power of Docker on your Ubo pod',
-            items=[
-                UboDispatchItem(
-                    label='Stop Docker',
-                    icon='󰓛',
-                    store_action=DockerStopAction(),
-                ),
-            ],
-        ),
-        DockerStatus.ERROR: HeadedMenu(
-            title=title,
-            heading='Docker Error',
-            sub_heading='Please check the logs for more information',
-            items=[],
-            placeholder='',
-        ),
-    }[status]
-
-
-def setup_menu_action() -> Callable[[], HeadedMenu]:
-    """Get the menu items for the Docker service."""
-    create_task(check_docker())
-    return setup_menu
 
 
 def input_credentials() -> None:
@@ -682,50 +607,101 @@ def clear_credentials(registry: str) -> None:
     store.dispatch(DockerRemoveUsernameAction(registry=registry))
 
 
-@store.autorun(lambda state: state.docker.service.usernames)
-def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
-    """Get the settings menu items for the Docker service."""
-    from ubo_app.store.core.menu_item_bridge import sync_items_to_dynamic_menu
+_registries_action_ids: list[str] = []
 
-    items: list[Item] = [
-        ActionItem(
+
+@store.autorun(lambda state: state.docker.service.usernames)
+def registries_menu_items(usernames: dict[str, str]) -> None:
+    """Update the dynamic menu for Docker registries."""
+    from ubo_app.store.core.action_registry import register_action, unregister_action
+
+    # Unregister old action handlers from previous autorun invocation
+    for action_id in _registries_action_ids:
+        unregister_action(action_id)
+    _registries_action_ids.clear()
+
+    # Register action for "Add Registry"
+    add_registry_action_id = 'docker:add-registry'
+    unregister_action(add_registry_action_id)
+    register_action(add_registry_action_id, input_credentials)
+    _registries_action_ids.append(add_registry_action_id)
+
+    items: list[MenuItemData] = [
+        MenuItemData(
+            key='docker:add-registry',
             label='Add Registry',
             icon='󰌉',
-            action=input_credentials,
-        ),
-        *(
-            [
-                SubMenuItem(
-                    label='Registries',
-                    icon='󱕴',
-                    sub_menu=HeadedMenu(
-                        title='󱕴Registries',
-                        heading='Logged in Registries',
-                        sub_heading='Log out of any registry by selecting it',
-                        items=[
-                            ActionItem(
-                                label=registry,
-                                icon='󰌊',
-                                background_color=DANGER_COLOR,
-                                action=functools.partial(clear_credentials, registry),
-                            )
-                            for registry in usernames
-                        ],
-                    ),
-                ),
-            ]
-            if usernames
-            else []
+            action_id=add_registry_action_id,
         ),
     ]
-    sync_items_to_dynamic_menu(
-        menu_id='docker:registries',
-        title='Docker Registries',
-        heading='󰡨 Docker',
-        sub_heading='Log in to a registry:',
-        items=items,
+
+    if usernames:
+        # Build registry items and register their actions
+        registry_items: list[MenuItemData] = []
+        for registry in usernames:
+            action_id = f'docker:clear-credentials:{registry}'
+            unregister_action(action_id)
+            register_action(
+                action_id,
+                functools.partial(clear_credentials, registry),
+            )
+            _registries_action_ids.append(action_id)
+            registry_items.append(
+                MenuItemData(
+                    key=f'docker:registry:{registry}',
+                    label=registry,
+                    icon='󰌊',
+                    background_color=DANGER_COLOR,
+                    action_id=action_id,
+                ),
+            )
+
+        # Register action to open the registries sub-menu
+        open_registries_action_id = 'docker:open-registries'
+        unregister_action(open_registries_action_id)
+        register_action(
+            open_registries_action_id,
+            lambda: store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id='docker:registries:list',
+                    title='󱕴Registries',
+                    heading='Logged in Registries',
+                    sub_heading='Log out of any registry by selecting it',
+                    items=tuple(registry_items),
+                ),
+            ),
+        )
+        _registries_action_ids.append(open_registries_action_id)
+
+        items.append(
+            MenuItemData(
+                key='docker:registries-list',
+                label='Registries',
+                icon='󱕴',
+                action_id=open_registries_action_id,
+            ),
+        )
+
+        # Also dispatch the child menu so it's ready if already navigated
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='docker:registries:list',
+                title='󱕴Registries',
+                heading='Logged in Registries',
+                sub_heading='Log out of any registry by selecting it',
+                items=tuple(registry_items),
+            ),
+        )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=DOCKER_REGISTRIES_MENU_ID,
+            title='Docker Registries',
+            heading='󰡨 Docker',
+            sub_heading='Log in to a registry:',
+            items=tuple(items),
+        ),
     )
-    return items
 
 
 def _register_composition_entry(image_id: str) -> None:
@@ -750,7 +726,6 @@ def _register_composition_entry(image_id: str) -> None:
             key=image_id,
         ),
     )
-    # Set up dynamic menu updates for TUI (dumb UI architecture)
     setup_docker_image_dynamic_menu(image_id)
 
 
@@ -771,7 +746,6 @@ def _register_container_entry(image_id: str) -> None:
             key=image_id,
         ),
     )
-    # Set up dynamic menu updates for TUI (dumb UI architecture)
     setup_docker_image_dynamic_menu(image_id)
 
 
@@ -852,7 +826,6 @@ async def init_service() -> Subscriptions:
     from ubo_app.store.core.action_registry import register_action
 
     register_action('docker:import_composition', input_docker_composition)
-    register_action('docker:setup_menu', setup_menu_action)
     store.dispatch(
         RegisterRegularAppAction(
             priority=1,
@@ -867,7 +840,6 @@ async def init_service() -> Subscriptions:
             category=SettingsCategory.DOCKER,
             label='Service',
             icon='',
-            action_id='docker:setup_menu',
             key='service',
         ),
         RegisterSettingAppAction(

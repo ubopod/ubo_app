@@ -63,9 +63,11 @@ class NeedsSetupMixin(EngineMixin, abc.ABC):
         """Check if the engine is set up before running."""
         if isinstance(self, BackgroundRunningMixin) and not self.is_setup:
             from ubo_app.store.main import store
+            from ubo_app.store.services.notification_helpers import (
+                create_notification_action,
+            )
             from ubo_app.store.services.notifications import (
                 Notification,
-                NotificationActionItem,
                 NotificationsAddAction,
             )
 
@@ -77,7 +79,7 @@ class NeedsSetupMixin(EngineMixin, abc.ABC):
                         content=self.not_setup_message,
                         color=DANGER_COLOR,
                         actions=[
-                            NotificationActionItem(
+                            create_notification_action(
                                 key='setup',
                                 label='Set Up',
                                 action=self.setup,

@@ -9,7 +9,10 @@ if TYPE_CHECKING:
 
     from ubo_handle import ReducerRegistrar, register
 
-    from ubo_app.store.services.notifications import Notification
+    from ubo_app.store.services.notifications import (
+        Notification,
+        NotificationActionItem,
+    )
 
 # Track registered action IDs to clean up on notification close
 _registered_actions: dict[str, list[str]] = {}
@@ -77,13 +80,72 @@ def _create_dismiss_handler(notification: Notification) -> None:
         pass  # Already registered
 
 
-def _create_action_handler(notification: Notification, action_index: int) -> None:
-    """Register handler for a notification action."""
-    from ubo_app.logger import logger
-    from ubo_app.store.core.action_registry import register_action
+def _dispatch_action_type(action: NotificationActionItem) -> None:
+    """Dispatch store actions for dispatch/application notification items."""
+    from ubo_app.store.main import store
+    from ubo_app.store.services.notifications import (
+        NotificationApplicationItem,
+        NotificationDispatchItem,
+    )
+
+    if isinstance(action, NotificationDispatchItem) and action.store_action:
+        sa = action.store_action
+        if isinstance(sa, list):
+            store.dispatch(*sa)
+        else:
+            store.dispatch(sa)
+    elif isinstance(action, NotificationApplicationItem) and action.application_id:
+        from ubo_app.store.core.types import OpenApplicationAction
+
+        store.dispatch(
+            OpenApplicationAction(
+                application_id=action.application_id,
+                initialization_kwargs=action.initialization_kwargs,
+            ),
+        )
+    elif action.action_id:
+        from ubo_app.logger import logger
+        from ubo_app.store.core.action_registry import get_action
+
+        handler = get_action(action.action_id)
+        if handler:
+            try:
+                handler()
+            except Exception:
+                logger.exception('Error executing notification action')
+
+
+def _handle_close_dismiss(
+    action: NotificationActionItem,
+    notification_id: str,
+) -> None:
+    """Handle close/dismiss behavior after action execution."""
     from ubo_app.store.core.types import StackPopAction
     from ubo_app.store.main import store
     from ubo_app.store.services.notifications import NotificationsClearAction
+
+    if action.close_notification or action.dismiss_notification:
+        store.dispatch(StackPopAction())
+
+    if action.dismiss_notification:
+
+        @store.with_state(lambda state: state.notifications.notifications)
+        def clear_notification(
+            notifications: Sequence[Notification],
+        ) -> None:
+            notif = next(
+                (n for n in notifications if n.id == notification_id),
+                None,
+            )
+            if notif:
+                store.dispatch(NotificationsClearAction(notification=notif))
+
+        clear_notification()
+
+
+def _create_action_handler(notification: Notification, action_index: int) -> None:
+    """Register handler for a notification action."""
+    from ubo_app.store.core.action_registry import register_action
 
     if action_index >= len(notification.actions):
         return
@@ -93,35 +155,8 @@ def _create_action_handler(notification: Notification, action_index: int) -> Non
     action_id = f'notification:action:{notification_id}:{action_index}'
 
     def execute_action() -> None:
-        # Execute the action's callback
-        action_func = getattr(action, 'action', None)
-        if callable(action_func):
-            try:
-                action_func()
-            except Exception:
-                logger.exception('Error executing notification action')
-
-        # Check if we should close/dismiss
-        close = getattr(action, 'close_notification', True)
-        dismiss = getattr(action, 'dismiss_notification', False)
-
-        if close or dismiss:
-            store.dispatch(StackPopAction())
-
-        if dismiss:
-            # Re-fetch notification for clearing using with_state
-            @store.with_state(lambda state: state.notifications.notifications)
-            def clear_notification(
-                notifications: Sequence[Notification],
-            ) -> None:
-                notif = next(
-                    (n for n in notifications if n.id == notification_id),
-                    None,
-                )
-                if notif:
-                    store.dispatch(NotificationsClearAction(notification=notif))
-
-            clear_notification()
+        _dispatch_action_type(action)
+        _handle_close_dismiss(action, notification_id)
 
     try:
         register_action(action_id, execute_action)

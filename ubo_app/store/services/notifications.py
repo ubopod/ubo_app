@@ -10,11 +10,9 @@ from uuid import uuid4
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
-from ubo_gui.menu.types import ActionItem
 
 from ubo_app.colors import SECONDARY_COLOR_LIGHT
 from ubo_app.constants import NOTIFICATIONS_FLASH_TIME
-from ubo_app.store.ubo_actions import UboApplicationItem, UboDispatchItem
 from ubo_app.utils.dataclass import default_provider
 
 Color = tuple[float, ...] | str
@@ -22,7 +20,9 @@ Color = tuple[float, ...] | str
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from ubo_app.store.main import UboAction
     from ubo_app.store.services.speech_synthesis import ReadableInformation
+    from ubo_app.store.ubo_actions import BasicType
 
 
 class Importance(StrEnum):
@@ -35,7 +35,7 @@ class Importance(StrEnum):
 IMPORTANCE_ICONS = {
     Importance.CRITICAL: '󰅚',
     Importance.HIGH: '󰀪',
-    Importance.MEDIUM: '',
+    Importance.MEDIUM: '',
     Importance.LOW: '󰌶',
 }
 
@@ -61,19 +61,28 @@ class Chime(StrEnum):
     VOLUME_CHANGE = 'volume'
 
 
-class NotificationActionItem(ActionItem):
+class NotificationActionItem(Immutable):
+    key: str = ''
+    label: str = ''
+    icon: str = ''
+    color: str = '#ffffff'
     background_color: Color = SECONDARY_COLOR_LIGHT
+    is_short: bool = True
+    action_id: str | None = None
     dismiss_notification: bool = False
     close_notification: bool = True
 
 
-class NotificationApplicationItem(UboApplicationItem):
-    background_color: Color = SECONDARY_COLOR_LIGHT
-    dismiss_notification: bool = False
-    close_notification: bool = True
+class NotificationDispatchItem(NotificationActionItem):
+    store_action: UboAction | list[UboAction] | None = None
 
 
-class NotificationDispatchItem(UboDispatchItem, NotificationActionItem): ...
+class NotificationApplicationItem(NotificationActionItem):
+    application_id: str = ''
+    initialization_kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
 
 
 class Notification(Immutable):

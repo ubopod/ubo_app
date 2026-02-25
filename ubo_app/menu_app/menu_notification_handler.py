@@ -4,7 +4,6 @@ from __future__ import annotations
 import functools
 import math
 import weakref
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from kivy.clock import Clock, mainthread
@@ -12,19 +11,21 @@ from kivy.metrics import dp
 from kivy.properties import StringProperty
 from ubo_gui.app import UboApp
 from ubo_gui.menu.stack_item import StackApplicationItem
-from ubo_gui.menu.types import HeadlessMenu
+from ubo_gui.menu.types import ActionItem, HeadlessMenu
 from ubo_gui.notification import NotificationWidget
 from ubo_gui.page import PAGE_MAX_ITEMS
 
 from ubo_app.colors import INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.menu_app.notification_info import NotificationInfo
+from ubo_app.store.core.action_registry import get_action
 from ubo_app.store.core.types import CloseApplicationAction
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
     NotificationApplicationItem,
+    NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsClearAction,
     NotificationsClearEvent,
@@ -202,7 +203,7 @@ class MenuNotificationHandler(UboApp):
         self,
         notification: NotificationReference,
         close: Callable[[], None],
-    ) -> list[NotificationActionItem | NotificationApplicationItem | None]:
+    ) -> list[ActionItem | None]:
         def dismiss(_: object = None) -> None:
             close()
             if not notification.dismiss_on_close:
@@ -210,29 +211,82 @@ class MenuNotificationHandler(UboApp):
                     NotificationsClearAction(notification=notification.value),
                 )
 
-        def run_notification_action(
+        def _make_action_callable(
             action: NotificationActionItem,
-        ) -> Menu | Callable[[], Menu] | type[PageWidget] | PageWidget | None:
-            result = action.action()
-            if action.close_notification:
-                if action.dismiss_notification:
-                    dismiss()
-                else:
-                    close()
-            return result
+        ) -> Callable[
+            [],
+            Menu | Callable[[], Menu] | type[PageWidget] | PageWidget | None,
+        ]:
+            """Build a callable for a notification action item."""
 
-        top_items: list[
-            NotificationActionItem | NotificationApplicationItem | None
-        ] = []
-        bottom_items: list[
-            NotificationActionItem | NotificationApplicationItem | None
-        ] = []
+            def run() -> (
+                Menu | Callable[[], Menu] | type[PageWidget] | PageWidget | None
+            ):
+                result: Menu | Callable[[], Menu] | type[PageWidget] | PageWidget | None = None  # noqa: E501
+                # Handle dispatch items
+                if isinstance(action, NotificationDispatchItem) and action.store_action:
+                    sa = action.store_action
+                    if isinstance(sa, list):
+                        store.dispatch(*sa)
+                    else:
+                        store.dispatch(sa)
+                # Handle application items
+                elif (
+                    isinstance(action, NotificationApplicationItem)
+                    and action.application_id
+                ):
+                    from ubo_app.store.ubo_actions import get_registered_application
+
+                    app_cls = get_registered_application(action.application_id)
+                    return app_cls
+                # Handle action_id (registered callable)
+                elif action.action_id:
+                    handler = get_action(action.action_id)
+                    if handler:
+                        handler_result = handler()
+                        if handler_result is not None:
+                            result = handler_result  # type: ignore[assignment]
+
+                if action.close_notification:
+                    if action.dismiss_notification:
+                        dismiss()
+                    else:
+                        close()
+                return result
+
+            return run
+
+        def _to_action_item(action: NotificationActionItem) -> ActionItem:
+            """Convert a serializable NotificationActionItem to ubo_gui ActionItem."""
+            action_callable = _make_action_callable(action)
+            setattr(  # noqa: B010
+                action_callable,
+                '_is_default_action_of_ubo_dispatch_item',
+                True,
+            )
+            bg_color = (
+                action.background_color
+                if isinstance(action.background_color, str)
+                else None
+            )
+            return ActionItem(
+                key=action.key or None,
+                label=action.label,
+                icon=action.icon,
+                color=action.color,
+                is_short=True,
+                background_color=bg_color,
+                action=action_callable,
+            )
+
+        top_items: list[ActionItem | None] = []
+        bottom_items: list[ActionItem | None] = []
 
         if notification.value.extra_information:
             text = notification.value.extra_information.text
 
             top_items.append(
-                NotificationActionItem(
+                ActionItem(
                     key='info',
                     icon='󰋼',
                     action=lambda: NotificationInfo(text=text),
@@ -242,24 +296,11 @@ class MenuNotificationHandler(UboApp):
                 ),
             )
 
-        def get_application_runner(
-            action: NotificationApplicationItem,
-        ) -> Callable[[], PageWidget | type[PageWidget]]:
-            def run_application() -> PageWidget | type[PageWidget]:
-                if callable(action.application) and not isinstance(
-                    action.application,
-                    type,
-                ):
-                    return action.application()
-                return action.application
-
-            return run_application
-
         if notification.value.show_dismiss_action:
             bottom_items.append(
-                NotificationActionItem(
+                ActionItem(
                     key='dismiss',
-                    icon='',
+                    icon='',
                     action=dismiss,
                     label='',
                     is_short=True,
@@ -271,61 +312,27 @@ class MenuNotificationHandler(UboApp):
             len(top_items) + len(notification.value.actions) + len(bottom_items)
         )
 
-        def convert_action(
-            action: NotificationActionItem | NotificationApplicationItem,
-        ) -> NotificationActionItem:
-            return (
-                replace(
-                    action,
-                    is_short=True,
-                    action=(
-                        action_ := functools.partial(
-                            run_notification_action,
-                            action,
-                        ),
-                        setattr(
-                            action_,
-                            '_is_default_action_of_ubo_dispatch_item',
-                            True,
-                        ),
-                    )[0],
-                )
-                if isinstance(action, NotificationActionItem)
-                else NotificationActionItem(
-                    action=get_application_runner(action),
-                    background_color=action.background_color,
-                    close_notification=action.close_notification,
-                    color=action.color,
-                    dismiss_notification=action.dismiss_notification,
-                    icon=action.icon,
-                    is_short=True,
-                    key=action.key,
-                    label=action.label,
-                    opacity=action.opacity,
-                    progress=action.progress,
-                )
-            )
-
         if actions_quantity > PAGE_MAX_ITEMS:
 
             def open_options() -> HeadlessMenu:
                 return HeadlessMenu(
                     title=notification.value.icon + ' Select',
                     items=[
-                        convert_action(action) for action in notification.value.actions
+                        _to_action_item(action)
+                        for action in notification.value.actions
                     ],
                 )
 
             return (
                 top_items
                 + [
-                    convert_action(action)
+                    _to_action_item(action)
                     for action in notification.value.actions[
                         : PAGE_MAX_ITEMS - len(top_items) - len(bottom_items) - 1
                     ]
                 ]
                 + [
-                    NotificationActionItem(
+                    ActionItem(
                         key='all',
                         icon='󰍜',
                         action=open_options,
@@ -337,7 +344,7 @@ class MenuNotificationHandler(UboApp):
 
         items = (
             top_items
-            + [convert_action(action) for action in notification.value.actions]
+            + [_to_action_item(action) for action in notification.value.actions]
             + bottom_items
         )
         return [None] * (PAGE_MAX_ITEMS - len(items)) + items

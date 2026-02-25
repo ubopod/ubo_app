@@ -6,10 +6,8 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
-from ubo_gui.constants import WARNING_COLOR
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, Item, Menu
 
-from ubo_app.colors import RUNNING_COLOR, STOPPED_COLOR
+from ubo_app.colors import RUNNING_COLOR, STOPPED_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -27,8 +25,6 @@ from ubo_app.utils.server import send_command
 SSH_MENU_ID = 'ssh:main'
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from ubo_app.store.services.ssh import SSHState
 
 
@@ -143,37 +139,9 @@ def update_ssh_dynamic_menu(state: SSHState) -> None:
     )
 
 
-@store.autorun(lambda state: state.ssh)
-def ssh_items(state: SSHState) -> Sequence[Item]:
-    """Get the SSH menu items."""
-    return [
-        ActionItem(
-            label='Stop' if state.is_active else 'Start',
-            icon='󰓛' if state.is_active else '󰐊',
-            action=stop_ssh_service if state.is_active else start_ssh_service,
-        ),
-        Item(
-            label='...',
-            icon='',
-        )
-        if state.is_enabled is None
-        else ActionItem(
-            label='Disable',
-            icon=f'[color={RUNNING_COLOR}]󰯄[/color]',
-            action=disable_ssh_service,
-        )
-        if state.is_enabled
-        else ActionItem(
-            label='Enable',
-            icon=f'[color={STOPPED_COLOR}]󰯅[/color]',
-            action=enable_ssh_service,
-        ),
-    ]
-
-
 @store.autorun(
     lambda state: state.ssh,
-    options=AutorunOptions(default_value=f'[color={WARNING_COLOR}][/color]'),
+    options=AutorunOptions(default_value=f'[color={WARNING_COLOR}][/color]'),
 )
 def ssh_icon(state: SSHState) -> str:
     """Get the SSH icon."""
@@ -198,18 +166,14 @@ async def check_is_ssh_enabled() -> None:
         store.dispatch(SSHUpdateStateAction(is_enabled=False))
 
 
-def open_ssh_menu() -> Menu:
-    """Open the SSH menu."""
-    create_task(check_is_ssh_enabled())
-
-    return HeadlessMenu(title=ssh_title, items=ssh_items)
-
-
 def init_service() -> None:
     """Initialize the SSH service."""
     from ubo_app.store.core.action_registry import register_action
 
-    register_action('ssh:open_menu', open_ssh_menu)
+    def _open_ssh_menu() -> None:
+        create_task(check_is_ssh_enabled())
+
+    register_action('ssh:open_menu', _open_ssh_menu)
     store.dispatch(
         RegisterSettingAppAction(
             priority=1,

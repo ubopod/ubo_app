@@ -10,9 +10,8 @@ from functools import reduce
 
 import aiostream
 from typing_extensions import override
-from ubo_gui.constants import WARNING_COLOR
 
-from ubo_app.colors import DANGER_COLOR, INFO_COLOR
+from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants.assistant import (
     PIPER_DOWNLOAD_NOTIFICATION_ID,
     PIPER_MODEL_HASH,
@@ -24,10 +23,10 @@ from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import AssistantUpdateProvidersAction
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
-    NotificationActionItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
@@ -158,7 +157,7 @@ the screen.""",
                     content='Download the Piper model.',
                     color=WARNING_COLOR,
                     actions=[
-                        NotificationActionItem(
+                        create_notification_action(
                             label='Download Model',
                             icon='󰇚',
                             action=self._download_piper_model,

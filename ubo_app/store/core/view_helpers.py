@@ -39,7 +39,7 @@ def get_dynamic_menu_id_for_stack(main_state: MainState) -> str | None:
 def find_dynamic_menu_for_position(
     main_state: MainState,
     dynamic_menus_state: DynamicMenusState | None,
-    stack: tuple,
+    stack: tuple,  # noqa: ARG001
 ) -> tuple[str, str] | None:
     """Find a dynamic menu matching the current navigation position.
 

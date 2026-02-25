@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
-from ubo_app.store.core.menu_adapter import item_to_menu_item_data
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
@@ -95,20 +94,22 @@ def get_notification_view_data(
         # Convert each notification action to MenuItemData
         # Notification items are always is_short=True (compact icon buttons)
         for i, action in enumerate(notification.actions):
-            item_data = item_to_menu_item_data(action, i)
-            if item_data is not None:
-                # Override action_id and force is_short for notification layout
-                items.append(
-                    MenuItemData(
-                        key=item_data.key,
-                        label=item_data.label,
-                        icon=item_data.icon,
-                        color=item_data.color,
-                        is_short=True,
-                        background_color=item_data.background_color,
-                        action_id=f'notification:action:{notification_id}:{i}',
-                    ),
-                )
+            bg_color = (
+                action.background_color
+                if isinstance(action.background_color, str)
+                else None
+            )
+            items.append(
+                MenuItemData(
+                    key=action.key or f'action_{i}',
+                    label=action.label,
+                    icon=action.icon,
+                    color=action.color,
+                    is_short=True,
+                    background_color=bg_color,
+                    action_id=f'notification:action:{notification_id}:{i}',
+                ),
+            )
 
         # Add dismiss button at the bottom if show_dismiss_action is True
         show_dismiss = getattr(notification, 'show_dismiss_action', True)

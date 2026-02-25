@@ -6,8 +6,13 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from ubo_app.logger import logger
-from ubo_app.store.core.menu_item_bridge import sync_items_to_dynamic_menu
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.action_registry import register_action
+from ubo_app.store.core.types import (
+    RegisterSettingAppAction,
+    SettingsCategory,
+    UpdateDynamicMenuAction,
+)
+from ubo_app.store.core.types.view_data import MenuItemData
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
     InfraredHandleReceivedCodeAction,
@@ -15,7 +20,6 @@ from ubo_app.store.services.infrared import (
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
 )
-from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
@@ -25,8 +29,6 @@ from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
-    from ubo_gui.menu.types import Item
-
     from ubo_app.utils.types import Subscriptions
 
 
@@ -114,46 +116,62 @@ def init_service() -> Subscriptions:
         lambda state: state.infrared.should_receive_keypad_actions,
     )
 
+    @store.with_state(lambda state: state.infrared.should_propagate_keypad_actions)
+    def _toggle_propagate(current: bool) -> None:  # noqa: FBT001
+        store.dispatch(
+            InfraredSetShouldPropagateAction(
+                should_propagate=not current,
+            ),
+        )
+
+    @store.with_state(lambda state: state.infrared.should_receive_keypad_actions)
+    def _toggle_receive(current: bool) -> None:  # noqa: FBT001
+        store.dispatch(
+            InfraredSetShouldReceiveAction(
+                should_receive=not current,
+            ),
+        )
+
+    register_action('infrared:toggle-propagate', _toggle_propagate)
+    register_action('infrared:toggle-receive', _toggle_receive)
+
     @store.autorun(
         lambda state: (
             state.infrared.should_propagate_keypad_actions,
             state.infrared.should_receive_keypad_actions,
         ),
     )
-    def menu_items(data: tuple[bool, bool]) -> list[Item]:
+    def menu_items(data: tuple[bool, bool]) -> None:
         should_propagate_keypad_actions, should_receive_keypad_actions = data
-        items: list[Item] = [
-            UboDispatchItem(
+        items = (
+            MenuItemData(
                 key='propagate_keys',
                 label='Propagate Keys',
-                store_action=InfraredSetShouldPropagateAction(
-                    should_propagate=not should_propagate_keypad_actions,
-                ),
+                action_id='infrared:toggle-propagate',
                 **(
                     SELECTED_ITEM_PARAMETERS
                     if should_propagate_keypad_actions
                     else UNSELECTED_ITEM_PARAMETERS
                 ),
             ),
-            UboDispatchItem(
+            MenuItemData(
                 key='receive_keys',
                 label='Receive Keys',
-                store_action=InfraredSetShouldReceiveAction(
-                    should_receive=not should_receive_keypad_actions,
-                ),
+                action_id='infrared:toggle-receive',
                 **(
                     SELECTED_ITEM_PARAMETERS
                     if should_receive_keypad_actions
                     else UNSELECTED_ITEM_PARAMETERS
                 ),
             ),
-        ]
-        sync_items_to_dynamic_menu(
-            menu_id='infrared:settings',
-            title='Infrared',
-            items=items,
         )
-        return items
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='infrared:settings',
+                title='Infrared',
+                items=items,
+            ),
+        )
 
     store.dispatch(
         RegisterSettingAppAction(

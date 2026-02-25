@@ -12,7 +12,6 @@ from commands import (
     stop_service,
     uninstall_rpi_connect,
 )
-from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -29,13 +28,11 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.ubo_actions import UboApplicationItem
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from ubo_app.store.services.rpi_connect import (
         RPiConnectState,
-        RPiConnectStatus,
     )
 
 # Dynamic menu ID for dumb UI architecture
@@ -118,42 +115,6 @@ def start_signin() -> None:
         ),
     )
     create_task(_perform_signin())
-
-
-def status_based_actions(
-    status: RPiConnectStatus,
-) -> list[ActionItem | ApplicationItem]:
-    actions = []
-
-    if (
-        status.screen_sharing_sessions is not None
-        or status.remote_shell_sessions is not None
-    ):
-        actions.append(
-            UboApplicationItem(
-                label='Show URL',
-                icon='󰐲',
-                application_id='rpi-connect:qrcode-page',
-            ),
-        )
-    return actions
-
-
-def login_actions(*, is_signed_in: bool | None) -> list[ActionItem | ApplicationItem]:
-    actions = []
-    if is_signed_in:
-        actions.append(
-            ActionItem(label='Sign out', icon='󰍃', action=sign_out),
-        )
-    elif is_signed_in is False:
-        actions.append(
-            ActionItem(
-                label='Sign in',
-                icon='󰍂',
-                action=start_signin,
-            ),
-        )
-    return actions
 
 
 def _register_rpi_connect_action_handlers() -> None:
@@ -290,87 +251,17 @@ def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
     )
 
 
-@store.autorun(lambda state: state.rpi_connect)
-def actions(state: RPiConnectState) -> list[ActionItem | ApplicationItem]:
-    actions = []
-    if not state.is_downloading:
-        if state.is_installed:
-            if state.status:
-                actions.extend(status_based_actions(state.status))
-            actions.extend(login_actions(is_signed_in=state.is_signed_in))
-            actions.append(
-                ActionItem(
-                    label='Stop' if state.is_active else 'Start',
-                    icon='󰓛' if state.is_active else '󰐊',
-                    action=stop_service if state.is_active else start_service,
-                ),
-            )
-
-        if state.is_installed is not None:
-            actions.append(
-                ActionItem(
-                    label='Uninstall RPi-Connect'
-                    if state.is_installed
-                    else 'Install RPi-Connect',
-                    icon='󰇚',
-                    action=uninstall_rpi_connect
-                    if state.is_installed
-                    else install_rpi_connect,
-                ),
-            )
-    return actions
-
-
-@store.autorun(lambda state: state.rpi_connect)
-def status(state: RPiConnectState) -> str:
-    if state.status:
-        status = 'Screen sharing: '
-        if state.status.screen_sharing_sessions is None:
-            status += 'unavailable'
-        else:
-            status += f'{state.status.screen_sharing_sessions} sessions'
-        status += '\nRemote shell: '
-        if state.status.remote_shell_sessions is None:
-            status += 'unavailable'
-        else:
-            status += f'{state.status.remote_shell_sessions} sessions'
-    elif state.is_downloading:
-        status = 'Downloading...'
-    elif state.is_installed is None:
-        status = 'Checking status...'
-    elif not state.is_installed:
-        status = 'Not installed'
-    elif not state.is_active:
-        status = 'Not running'
-    elif not state.is_signed_in:
-        status = 'Needs authentication'
-    else:
-        status = 'Unknown state'
-    return status
-
-
-ROOT_MENU = HeadedMenu(
-    title='RPi Connect',
-    heading='RPi Connect',
-    sub_heading=status,
-    items=actions,
-    placeholder='',
-)
-
-
-def generate_rpi_connect_menu() -> HeadedMenu:
-    create_task(check_status())
-    return ROOT_MENU
-
-
 def init_service() -> None:
     from ubo_app.store.core.action_registry import register_action
 
-    register_action('rpi-connect:open_menu', generate_rpi_connect_menu)
+    def _open_rpi_connect_menu() -> None:
+        create_task(check_status())
+
+    register_action('rpi-connect:open_menu', _open_rpi_connect_menu)
     store.dispatch(
         RegisterSettingAppAction(
             label='RPi Connect',
-            icon='',
+            icon='',
             action_id='rpi-connect:open_menu',
             category=SettingsCategory.REMOTE,
         ),

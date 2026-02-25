@@ -24,9 +24,9 @@ from ubo_app.store.services.docker import (
     DockerImageRunAction,
     DockerItemStatus,
 )
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
-    NotificationActionItem,
     NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
@@ -149,7 +149,7 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                         content='Setting up the Ollama assistant engine.',
                         color=WARNING_COLOR,
                         actions=[
-                            NotificationActionItem(
+                            create_notification_action(
                                 label='Download Model',
                                 icon='󰇚',
                                 action=self._download_model,

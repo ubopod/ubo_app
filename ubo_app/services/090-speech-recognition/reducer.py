@@ -4,7 +4,12 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from redux import BaseAction, CompleteReducerResult, InitAction, InitializationActionError
+from redux import (
+    BaseAction,
+    CompleteReducerResult,
+    InitAction,
+    InitializationActionError,
+)
 
 from ubo_app.constants.assistant import ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
 from ubo_app.store.core.types import (
@@ -66,7 +71,7 @@ def _register_intent(
 ) -> SpeechRecognitionIntent:
     """Register an intent action and return the intent with an action_id."""
     _intent_actions[action_id] = (
-        [a for a in action] if not isinstance(action, BaseAction) else [action]
+        list(action) if not isinstance(action, BaseAction) else [action]
     )
     return SpeechRecognitionIntent(phrase=phrase, action_id=action_id)
 

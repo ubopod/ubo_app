@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
 
 from engines_registry import (
     IMAGE_GENERATOR_ENGINES,
@@ -12,7 +11,6 @@ from engines_registry import (
     TTS_ENGINES,
 )
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadedMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
@@ -30,11 +28,14 @@ from ubo_app.constants.assistant import (
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
 from ubo_app.logger import logger
-from ubo_app.store.core.menu_item_bridge import sync_items_to_dynamic_menu
+from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuGoBackAction,
+    MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPushMenuAction,
+    UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_menu_content_dependency
 from ubo_app.store.input.types import (
@@ -63,7 +64,6 @@ from ubo_app.store.services.assistant import (
     McpServerType,
 )
 from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
-from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
@@ -73,9 +73,6 @@ from ubo_app.utils.menu_items import (
     ItemParameters,
 )
 from ubo_app.utils.persistent_store import register_persistent_store
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -282,10 +279,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     Returns:
         Tuple of (providers, stt_providers, llm_providers, tts_providers,
                   image_generator_providers, mcp_servers_menu,
-                  handle_add_mcp_server, handle_delete_mcp_server,
-                  handle_sync_mcp_servers)
+                  handle_add_mcp_server, handle_delete_mcp_server)
 
     """
+    _provider_action_ids: list[str] = []
+    _stt_action_ids: list[str] = []
+    _llm_action_ids: list[str] = []
+    _tts_action_ids: list[str] = []
+    _img_gen_action_ids: list[str] = []
+    _mcp_action_ids: list[str] = []
 
     # Secrets file monitor - tracks API key changes
     @store.autorun(
@@ -315,9 +317,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         ),
         options=AutorunOptions(memoization=False),
     )
-    def providers(_: tuple[float, dict[str, bool]]) -> Sequence[Item]:
-        """Return items for recognition engine selection."""
-        providers = sorted(
+    def providers(_: tuple[float, dict[str, bool]]) -> None:
+        """Update dynamic menu for provider management."""
+        for action_id in _provider_action_ids:
+            unregister_action(action_id)
+        _provider_action_ids.clear()
+
+        providers_list = sorted(
             {
                 type(engine): engine
                 for engine in {
@@ -333,34 +339,46 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 p.label.lower(),
             ),
         )
-        items = [
-            ActionItem(
-                key=provider.name,
-                label=provider.label,
-                action=provider.setup,
-                **(
+
+        items: list[MenuItemData] = []
+        for provider in providers_list:
+            if isinstance(provider, NeedsSetupMixin):
+                action_id = f'assistant:setup-provider:{provider.name}'
+                _provider_action_ids.append(action_id)
+                register_action(action_id, provider.setup)
+                params = (
                     _get_setup_item_parameters()
                     if provider.is_setup
                     else _get_not_setup_item_parameters()
-                ),
-            )
-            if isinstance(provider, NeedsSetupMixin)
-            else Item(
-                key=provider.name,
-                label=provider.label,
-                icon='󰱒',
-            )
-            for provider in providers
-        ]
-        sync_items_to_dynamic_menu(
-            menu_id='assistant:providers',
-            title='Manage Providers',
-            heading='Setup providers to be used by different '
-            'assistant features',
-            sub_heading='',
-            items=items,
+                )
+                items.append(
+                    MenuItemData(
+                        key=provider.name,
+                        label=provider.label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+            else:
+                items.append(
+                    MenuItemData(
+                        key=provider.name,
+                        label=provider.label,
+                        icon='󰱒',
+                    ),
+                )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:providers',
+                title='Manage Providers',
+                heading='Setup providers to be used by different assistant features',
+                sub_heading='',
+                items=tuple(items),
+            ),
         )
-        return items
 
     @store.autorun(
         lambda state: (
@@ -372,46 +390,69 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     )
     def stt_providers(
         data: tuple[AssistantSTTName, float, dict[str, bool]],
-    ) -> Sequence[Item]:
-        """Return items for recognition engine selection."""
+    ) -> None:
+        """Update dynamic menu for STT engine selection."""
         selected_stt, _, _ = data
-        items = [
-            ActionItem(
-                key=engine_name,
-                label=engine.instance_label,
-                action=engine.setup,
-                **_get_not_setup_item_parameters(
-                    is_offline=not isinstance(engine, RemoteMixin),
-                ),
-            )
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
-            else UboDispatchItem(
-                key=engine_name,
-                label=engine.instance_label,
-                store_action=AssistantSetSelectedSTTAction(
-                    stt_name=AssistantSTTName(engine_name),
-                ),
-                **(
-                    _get_selected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
+
+        for action_id in _stt_action_ids:
+            unregister_action(action_id)
+        _stt_action_ids.clear()
+
+        items: list[MenuItemData] = []
+        for engine_name, engine in STT_ENGINES.items():
+            is_offline = not isinstance(engine, RemoteMixin)
+            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
+                action_id = f'assistant:setup-stt:{engine_name}'
+                _stt_action_ids.append(action_id)
+                register_action(action_id, engine.setup)
+                params = _get_not_setup_item_parameters(is_offline=is_offline)
+                items.append(
+                    MenuItemData(
+                        key=engine_name,
+                        label=engine.instance_label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+            else:
+                action_id = f'assistant:select-stt:{engine_name}'
+                _stt_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    lambda _en=engine_name: store.dispatch(
+                        AssistantSetSelectedSTTAction(
+                            stt_name=AssistantSTTName(_en),
+                        ),
+                    ),
+                )
+                params = (
+                    _get_selected_item_parameters(is_offline=is_offline)
                     if selected_stt == engine_name
-                    else _get_unselected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
-                ),
-            )
-            for engine_name, engine in STT_ENGINES.items()
-        ]
-        sync_items_to_dynamic_menu(
-            menu_id='assistant:stt',
-            title='Speech Recognition',
-            heading='Select Active Engine',
-            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-            items=items,
+                    else _get_unselected_item_parameters(is_offline=is_offline)
+                )
+                items.append(
+                    MenuItemData(
+                        key=engine_name,
+                        label=engine.instance_label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:stt',
+                title='Speech Recognition',
+                heading='Select Active Engine',
+                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+                items=tuple(items),
+            ),
         )
-        return items
 
     @store.autorun(
         lambda state: (
@@ -423,46 +464,69 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     )
     def llm_providers(
         data: tuple[AssistantLLMName, float, dict[str, bool]],
-    ) -> Sequence[Item]:
-        """Return items for LLM engine selection."""
+    ) -> None:
+        """Update dynamic menu for LLM engine selection."""
         selected_llm, _, _ = data
-        items = [
-            ActionItem(
-                key=engine_name,
-                label=engine.instance_label,
-                action=engine.setup,
-                **_get_not_setup_item_parameters(
-                    is_offline=not isinstance(engine, RemoteMixin),
-                ),
-            )
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
-            else UboDispatchItem(
-                key=engine_name,
-                label=engine.instance_label,
-                store_action=AssistantSetSelectedLLMAction(
-                    llm_name=AssistantLLMName(engine_name),
-                ),
-                **(
-                    _get_selected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
+
+        for action_id in _llm_action_ids:
+            unregister_action(action_id)
+        _llm_action_ids.clear()
+
+        items: list[MenuItemData] = []
+        for engine_name, engine in LLM_ENGINES.items():
+            is_offline = not isinstance(engine, RemoteMixin)
+            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
+                action_id = f'assistant:setup-llm:{engine_name}'
+                _llm_action_ids.append(action_id)
+                register_action(action_id, engine.setup)
+                params = _get_not_setup_item_parameters(is_offline=is_offline)
+                items.append(
+                    MenuItemData(
+                        key=engine_name,
+                        label=engine.instance_label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+            else:
+                action_id = f'assistant:select-llm:{engine_name}'
+                _llm_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    lambda _en=engine_name: store.dispatch(
+                        AssistantSetSelectedLLMAction(
+                            llm_name=AssistantLLMName(_en),
+                        ),
+                    ),
+                )
+                params = (
+                    _get_selected_item_parameters(is_offline=is_offline)
                     if selected_llm == engine_name
-                    else _get_unselected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
-                ),
-            )
-            for engine_name, engine in LLM_ENGINES.items()
-        ]
-        sync_items_to_dynamic_menu(
-            menu_id='assistant:llm',
-            title='Language Model',
-            heading='Select Active Engine',
-            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-            items=items,
+                    else _get_unselected_item_parameters(is_offline=is_offline)
+                )
+                items.append(
+                    MenuItemData(
+                        key=engine_name,
+                        label=engine.instance_label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:llm',
+                title='Language Model',
+                heading='Select Active Engine',
+                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+                items=tuple(items),
+            ),
         )
-        return items
 
     @store.autorun(
         lambda state: (
@@ -474,46 +538,69 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     )
     def tts_providers(
         data: tuple[AssistantTTSName, float, dict[str, bool]],
-    ) -> Sequence[Item]:
-        """Return items for TTS engine selection."""
+    ) -> None:
+        """Update dynamic menu for TTS engine selection."""
         selected_tts, _, _ = data
-        items = [
-            ActionItem(
-                key=tts_name,
-                label=engine.instance_label,
-                action=engine.setup,
-                **_get_not_setup_item_parameters(
-                    is_offline=not isinstance(engine, RemoteMixin),
-                ),
-            )
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
-            else UboDispatchItem(
-                key=tts_name,
-                label=engine.instance_label if engine else tts_name.value,
-                store_action=AssistantSetSelectedTTSAction(
-                    tts_name=AssistantTTSName(tts_name),
-                ),
-                **(
-                    _get_selected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
+
+        for action_id in _tts_action_ids:
+            unregister_action(action_id)
+        _tts_action_ids.clear()
+
+        items: list[MenuItemData] = []
+        for tts_name, engine in TTS_ENGINES.items():
+            is_offline = not isinstance(engine, RemoteMixin)
+            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
+                action_id = f'assistant:setup-tts:{tts_name}'
+                _tts_action_ids.append(action_id)
+                register_action(action_id, engine.setup)
+                params = _get_not_setup_item_parameters(is_offline=is_offline)
+                items.append(
+                    MenuItemData(
+                        key=tts_name,
+                        label=engine.instance_label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+            else:
+                action_id = f'assistant:select-tts:{tts_name}'
+                _tts_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    lambda _tn=tts_name: store.dispatch(
+                        AssistantSetSelectedTTSAction(
+                            tts_name=AssistantTTSName(_tn),
+                        ),
+                    ),
+                )
+                params = (
+                    _get_selected_item_parameters(is_offline=is_offline)
                     if selected_tts == tts_name
-                    else _get_unselected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
-                ),
-            )
-            for tts_name, engine in TTS_ENGINES.items()
-        ]
-        sync_items_to_dynamic_menu(
-            menu_id='assistant:tts',
-            title='Speech Synthesis',
-            heading='Select Active Engine',
-            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-            items=items,
+                    else _get_unselected_item_parameters(is_offline=is_offline)
+                )
+                items.append(
+                    MenuItemData(
+                        key=tts_name,
+                        label=engine.instance_label if engine else tts_name.value,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:tts',
+                title='Speech Synthesis',
+                heading='Select Active Engine',
+                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+                items=tuple(items),
+            ),
         )
-        return items
 
     @store.autorun(
         lambda state: (
@@ -525,46 +612,69 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     )
     def image_generator_providers(
         data: tuple[AssistantImageGeneratorName, float, dict[str, bool]],
-    ) -> Sequence[Item]:
-        """Return items for image generator engine selection."""
+    ) -> None:
+        """Update dynamic menu for image generator engine selection."""
         selected_image_generator, _, _ = data
-        items = [
-            ActionItem(
-                key=img_gen_name,
-                label=engine.instance_label,
-                action=engine.setup,
-                **_get_not_setup_item_parameters(
-                    is_offline=not isinstance(engine, RemoteMixin),
-                ),
-            )
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
-            else UboDispatchItem(
-                key=img_gen_name,
-                label=engine.instance_label if engine else img_gen_name.value,
-                store_action=AssistantSetSelectedImageGeneratorAction(
-                    image_generator_name=AssistantImageGeneratorName(img_gen_name),
-                ),
-                **(
-                    _get_selected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
+
+        for action_id in _img_gen_action_ids:
+            unregister_action(action_id)
+        _img_gen_action_ids.clear()
+
+        items: list[MenuItemData] = []
+        for img_gen_name, engine in IMAGE_GENERATOR_ENGINES.items():
+            is_offline = not isinstance(engine, RemoteMixin)
+            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
+                action_id = f'assistant:setup-img-gen:{img_gen_name}'
+                _img_gen_action_ids.append(action_id)
+                register_action(action_id, engine.setup)
+                params = _get_not_setup_item_parameters(is_offline=is_offline)
+                items.append(
+                    MenuItemData(
+                        key=img_gen_name,
+                        label=engine.instance_label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+            else:
+                action_id = f'assistant:select-img-gen:{img_gen_name}'
+                _img_gen_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    lambda _ign=img_gen_name: store.dispatch(
+                        AssistantSetSelectedImageGeneratorAction(
+                            image_generator_name=AssistantImageGeneratorName(_ign),
+                        ),
+                    ),
+                )
+                params = (
+                    _get_selected_item_parameters(is_offline=is_offline)
                     if selected_image_generator == img_gen_name
-                    else _get_unselected_item_parameters(
-                        is_offline=not isinstance(engine, RemoteMixin),
-                    )
-                ),
-            )
-            for img_gen_name, engine in IMAGE_GENERATOR_ENGINES.items()
-        ]
-        sync_items_to_dynamic_menu(
-            menu_id='assistant:image_generator',
-            title='Image Generator',
-            heading='Select Active Engine',
-            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-            items=items,
+                    else _get_unselected_item_parameters(is_offline=is_offline)
+                )
+                items.append(
+                    MenuItemData(
+                        key=img_gen_name,
+                        label=(engine.instance_label if engine else img_gen_name.value),
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:image_generator',
+                title='Image Generator',
+                heading='Select Active Engine',
+                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+                items=tuple(items),
+            ),
         )
-        return items
 
     # MCP Tools menu - main list
     @store.autorun(
@@ -575,10 +685,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     )
     def mcp_servers_menu(
         state_data: tuple[dict[str, McpServerMetadata], list[str]],
-    ) -> Sequence[Item]:
-        """Return items for MCP servers menu."""
-        # Use state as source of truth (already loaded from filesystem in reducer)
+    ) -> None:
+        """Update dynamic menu for MCP servers."""
         loaded_servers, enabled_servers = state_data
+
+        for action_id in _mcp_action_ids:
+            unregister_action(action_id)
+        _mcp_action_ids.clear()
 
         logger.debug(
             'MCP servers menu autorun triggered',
@@ -589,42 +702,60 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             },
         )
 
-        items: list[Item] = [
-            ActionItem(
+        add_action_id = 'assistant:add-mcp-server'
+        _mcp_action_ids.append(add_action_id)
+        register_action(add_action_id, input_mcp_server)
+
+        items: list[MenuItemData] = [
+            MenuItemData(
                 key='add_server',
                 label='Add Server',
                 icon='󰌉',
-                action=input_mcp_server,
+                action_id=add_action_id,
             ),
         ]
 
         for server_id, server in loaded_servers.items():
             is_enabled = server_id in enabled_servers
+            open_action_id = f'assistant:open-mcp:{server_id}'
+            _mcp_action_ids.append(open_action_id)
+            register_action(
+                open_action_id,
+                lambda _sid=server_id: store.dispatch(
+                    StackPushMenuAction(menu_key=_sid),
+                ),
+            )
             items.append(
-                SubMenuItem(
+                MenuItemData(
                     key=server_id,
                     label=server.name,
-                    sub_menu=mcp_server_menu(server_id),
                     icon='󰄬' if is_enabled else '󰖭',
                     background_color=INFO_COLOR if is_enabled else WARNING_COLOR,
+                    action_id=open_action_id,
                 ),
             )
 
-        sync_items_to_dynamic_menu(
-            menu_id='assistant:mcp_tools',
-            title='MCP Tools',
-            heading='Model Context Protocol Tools',
-            sub_heading='Add and manage MCP servers',
-            items=items,
-        )
-        return items
+            # Set up the detail menu for this server
+            mcp_server_menu(server_id)
 
-    def mcp_server_menu(server_id: str) -> Callable[[], HeadedMenu]:
-        """Generate a dynamic menu for a specific MCP server."""
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:mcp_tools',
+                title='MCP Tools',
+                heading='Model Context Protocol Tools',
+                sub_heading='Add and manage MCP servers',
+                items=tuple(items),
+            ),
+        )
+
+    def mcp_server_menu(server_id: str) -> None:
+        """Set up dynamic menu updates for a specific MCP server."""
         from ubo_app.store.services.assistant import (
             AssistantDeleteMcpServerAction,
             AssistantToggleMcpServerAction,
         )
+
+        _server_action_ids: list[str] = []
 
         @store.autorun(
             lambda state: (
@@ -635,59 +766,69 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         )
         def menu(
             state_data: tuple[McpServerMetadata | None, bool],
-        ) -> HeadedMenu:
+        ) -> None:
             server, is_enabled = state_data
 
+            for action_id in _server_action_ids:
+                unregister_action(action_id)
+            _server_action_ids.clear()
+
             if not server:
-                sync_items_to_dynamic_menu(
-                    menu_id=f'assistant:mcp:{server_id}',
-                    title='MCP Server',
-                    items=[],
-                    heading='Server Not Found',
+                store.dispatch(
+                    UpdateDynamicMenuAction(
+                        menu_id=f'assistant:mcp:{server_id}',
+                        title='MCP Server',
+                        items=(),
+                        heading='Server Not Found',
+                    ),
                 )
-                return HeadedMenu(
-                    title='MCP Server',
-                    heading='Server Not Found',
-                    sub_heading='',
-                    items=[],
-                )
+                return
+
+            toggle_action_id = f'assistant:toggle-mcp:{server_id}'
+            _server_action_ids.append(toggle_action_id)
+            register_action(
+                toggle_action_id,
+                lambda: store.dispatch(
+                    AssistantToggleMcpServerAction(server_id=server_id),
+                ),
+            )
+
+            delete_action_id = f'assistant:delete-mcp:{server_id}'
+            _server_action_ids.append(delete_action_id)
+            register_action(
+                delete_action_id,
+                lambda: store.dispatch(
+                    AssistantDeleteMcpServerAction(server_id=server_id),
+                ),
+            )
 
             status_text = 'Enabled' if is_enabled else 'Disabled'
-            items = [
-                UboDispatchItem(
+            items = (
+                MenuItemData(
+                    key='toggle',
                     label='Disable' if is_enabled else 'Enable',
                     icon='󰖭' if is_enabled else '󰄬',
                     background_color=WARNING_COLOR if is_enabled else INFO_COLOR,
-                    store_action=AssistantToggleMcpServerAction(
-                        server_id=server_id,
-                    ),
+                    action_id=toggle_action_id,
                 ),
-                UboDispatchItem(
+                MenuItemData(
+                    key='delete',
                     label='Delete',
                     icon='󰆴',
                     background_color=DANGER_COLOR,
-                    store_action=AssistantDeleteMcpServerAction(
-                        server_id=server_id,
-                    ),
+                    action_id=delete_action_id,
                 ),
-            ]
-
-            sync_items_to_dynamic_menu(
-                menu_id=f'assistant:mcp:{server_id}',
-                title=f'MCP: {server.name}',
-                items=items,
-                heading=server.name,
-                sub_heading=f'Type: {server.type} • {status_text}',
             )
 
-            return HeadedMenu(
-                title=f'MCP: {server.name}',
-                heading=server.name,
-                sub_heading=f'Type: {server.type} • {status_text}',
-                items=items,
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:mcp:{server_id}',
+                    title=f'MCP: {server.name}',
+                    items=items,
+                    heading=server.name,
+                    sub_heading=f'Type: {server.type} • {status_text}',
+                ),
             )
-
-        return menu
 
     # Event handlers for MCP servers
     def handle_add_mcp_server(_event: AssistantAddMcpServerEvent) -> None:
@@ -714,6 +855,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         store.dispatch(AssistantSyncMcpServersAction())
 
     return (
+        secrets_monitor,
         providers,
         stt_providers,
         llm_providers,
@@ -796,6 +938,7 @@ async def init_service() -> None:
     )
 
     (
+        _secrets_monitor,
         _providers,
         _stt_providers,
         _llm_providers,

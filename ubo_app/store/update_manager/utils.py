@@ -15,7 +15,6 @@ import aiohttp
 import requests
 from debouncer import DebounceOptions, debounce
 from redux import FinishAction
-from ubo_gui.menu.types import HeadedMenu, HeadlessMenu, Item, SubMenuItem
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR
 from ubo_app.constants import (
@@ -24,17 +23,22 @@ from ubo_app.constants import (
     UPDATE_ASSETS_PATH,
 )
 from ubo_app.logger import logger
+from ubo_app.store.core.action_registry import register_action, unregister_action
+from ubo_app.store.core.types import (
+    MenuItemData,
+    StackPushMenuAction,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
-    NotificationActionItem,
     NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
-from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.store.update_manager.installed_versions import get_installed_versions
 from ubo_app.store.update_manager.types import (
     UPDATE_MANAGER_NOTIFICATION_ID,
@@ -48,7 +52,10 @@ from ubo_app.store.update_manager.types import (
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.download import download_file
-from ubo_app.utils.menu_items import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.menu_items import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+)
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -347,44 +354,251 @@ def activate_version(version: Path) -> None:
     store.dispatch(FinishAction())
 
 
-def open_about_menu() -> HeadedMenu:
-    """Get the about menu items."""
+def open_about_menu() -> None:
+    """Trigger about menu update and navigation."""
     store.dispatch(UpdateManagerRequestCheckAction())
 
-    return HeadedMenu(
-        title='About',
-        heading=f'Ubo v{CURRENT_VERSION}',
-        sub_heading=f'Base image: {BASE_IMAGE[:11]}\n{BASE_IMAGE[11:]}',
-        items=about_menu_items,
+
+def _about_path_matcher(path: tuple[str, ...]) -> str | None:
+    """Match about/update navigation paths to dynamic menu IDs."""
+    if len(path) >= 2 and path[1] == 'about:main':  # noqa: PLR2004
+        if len(path) == 2:  # noqa: PLR2004
+            return 'about:main'
+        if len(path) == 3:  # noqa: PLR2004
+            return path[2]
+    return None
+
+
+def register_about_path_matcher() -> None:
+    """Register path matcher for about/update menus."""
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher('about:paths', _about_path_matcher)
+
+
+_about_action_ids: list[str] = []
+
+
+def _build_recent_versions_submenu(
+    state: UpdateManagerState,
+) -> MenuItemData:
+    """Build recent versions submenu and return navigation item."""
+    recent_items: list[MenuItemData] = []
+    for version in state.recent_versions:
+        action_id = f'update:install-version:{version}'
+        _about_action_ids.append(action_id)
+        register_action(
+            action_id,
+            lambda _v=version: store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        id=f'update-manager-install-{_v}',
+                        title=f'Install {_v} now?',
+                        content='Press 󰜉 button to start installation of version '
+                        f'"{_v}"',
+                        icon='󰜉',
+                        extra_information=ReadableInformation(
+                            text='Do you want to replace the current installed '
+                            'version of ubo-app with the selected version?',
+                        ),
+                        color=INFO_COLOR,
+                        dismiss_on_close=True,
+                        display_type=NotificationDisplayType.STICKY,
+                        show_dismiss_action=True,
+                        actions=[
+                            NotificationDispatchItem(
+                                icon='󰜉',
+                                store_action=UpdateManagerRequestUpdateAction(
+                                    version=_v,
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+        )
+        recent_items.append(
+            MenuItemData(key=version, label=version, icon='󰜉', action_id=action_id),
+        )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id='update:recent-versions',
+            title='󰜉Recent versions',
+            items=tuple(recent_items),
+        ),
+    )
+
+    recent_nav_id = 'update:open-recent-versions'
+    _about_action_ids.append(recent_nav_id)
+    register_action(
+        recent_nav_id,
+        lambda: store.dispatch(
+            StackPushMenuAction(menu_key='update:recent-versions'),
+        ),
+    )
+    return MenuItemData(
+        key='recent_versions',
+        label='Recent versions',
+        icon='󰜉',
+        action_id=recent_nav_id,
+    )
+
+
+def _build_installed_versions_submenu() -> MenuItemData:
+    """Build installed versions submenu and return navigation item."""
+    installed_items: list[MenuItemData] = []
+    for item in get_installed_versions():
+        action_id = f'update:activate-version:{item.name}'
+        _about_action_ids.append(action_id)
+        params = (
+            SELECTED_ITEM_PARAMETERS
+            if item.name == CURRENT_VERSION
+            else UNSELECTED_ITEM_PARAMETERS
+        )
+        register_action(
+            action_id,
+            lambda _item=item: store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        id=f'update-manager-activate-{_item.name}',
+                        title=f'Activate {_item.name} now?',
+                        content=f'Press 󰯍 button to activate version "{_item.name}"',
+                        icon='󰯍',
+                        extra_information=ReadableInformation(
+                            text='Do you want to activate the selected version of '
+                            'ubo-app?',
+                        ),
+                        color=INFO_COLOR,
+                        dismiss_on_close=True,
+                        display_type=NotificationDisplayType.STICKY,
+                        show_dismiss_action=True,
+                        actions=[
+                            create_notification_action(
+                                icon='󰯍',
+                                action=functools.partial(
+                                    activate_version,
+                                    version=_item,
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+        )
+        installed_items.append(
+            MenuItemData(
+                key=item.name,
+                label=item.name,
+                icon=params.get('icon', ''),
+                color=params.get('color', '#ffffff'),
+                background_color=params.get('background_color'),
+                action_id=action_id,
+            ),
+        )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id='update:installed-versions',
+            title='󰯍Installed versions',
+            items=tuple(installed_items),
+        ),
+    )
+
+    installed_nav_id = 'update:open-installed-versions'
+    _about_action_ids.append(installed_nav_id)
+    register_action(
+        installed_nav_id,
+        lambda: store.dispatch(
+            StackPushMenuAction(menu_key='update:installed-versions'),
+        ),
+    )
+    return MenuItemData(
+        key='installed_versions',
+        label='Installed versions',
+        icon='󰯍',
+        action_id=installed_nav_id,
     )
 
 
 @store.autorun(lambda state: (state.update_manager, state.settings.beta_versions))
-def about_menu_items(data: tuple[UpdateManagerState, bool]) -> list[Item]:
-    """Get the update menu items."""
+def about_menu_items(data: tuple[UpdateManagerState, bool]) -> None:
+    """Update the about menu items."""
     state, beta_versions = data
-    items: list[Item] = []
 
-    recent_versions_item = SubMenuItem(
-        key='recent_versions',
-        label='Recent versions',
-        icon='󰜉',
-        sub_menu=HeadlessMenu(
-            title='󰜉Recent versions',
-            items=[
-                UboDispatchItem(
-                    label=version,
-                    icon='󰜉',
-                    store_action=NotificationsAddAction(
+    # Clean up old actions
+    for action_id in _about_action_ids:
+        unregister_action(action_id)
+    _about_action_ids.clear()
+
+    items: list[MenuItemData] = []
+
+    recent_versions_item = _build_recent_versions_submenu(state)
+    installed_versions_item = _build_installed_versions_submenu()
+
+    # Build main about menu items based on update status
+    if state.update_status is UpdateStatus.CHECKING:
+        items = [
+            MenuItemData(
+                key='checking',
+                label='Checking for updates...',
+                icon='󰬬',
+                background_color='#00000000',
+            ),
+        ]
+    if state.update_status is UpdateStatus.FAILED_TO_CHECK:
+        check_action_id = 'update:retry-check'
+        _about_action_ids.append(check_action_id)
+        register_action(
+            check_action_id,
+            lambda: store.dispatch(UpdateManagerRequestCheckAction()),
+        )
+        items = [
+            MenuItemData(
+                key='failed_to_check',
+                label='Failed to check for updates',
+                icon='󰜺',
+                background_color=DANGER_COLOR,
+                action_id=check_action_id,
+            ),
+        ]
+    if state.update_status is UpdateStatus.UP_TO_DATE:
+        check_action_id = 'update:recheck'
+        _about_action_ids.append(check_action_id)
+        register_action(
+            check_action_id,
+            lambda: store.dispatch(UpdateManagerRequestCheckAction()),
+        )
+        items = [
+            MenuItemData(
+                key='up_to_date',
+                label='Already up to date!',
+                icon='󰄬',
+                background_color=SUCCESS_COLOR,
+                color='#000000',
+                action_id=check_action_id,
+            ),
+            recent_versions_item,
+        ]
+        if beta_versions:
+            items.append(installed_versions_item)
+    if state.update_status is UpdateStatus.OUTDATED:
+        outdated_items: list[MenuItemData] = []
+        if state.latest_version is not None:
+            update_action_id = f'update:update-to:{state.latest_version}'
+            _about_action_ids.append(update_action_id)
+            register_action(
+                update_action_id,
+                lambda _v=state.latest_version: store.dispatch(
+                    NotificationsAddAction(
                         notification=Notification(
-                            id=f'update-manager-install-{version}',
-                            title=f'Install {version} now?',
-                            content='Press 󰜉 button to start installation of version '
-                            f'"{version}"',
-                            icon='󰜉',
+                            id=f'update-manager-latest-{_v}',
+                            title=f'Install {_v} now?',
+                            content='Press 󰬬 button to start installation of '
+                            f'version "{_v}"',
+                            icon='󰬬',
                             extra_information=ReadableInformation(
-                                text="""Do you want to replace the current installed \
-version of ubo-app with the selected version?""",
+                                text='Do you want to update to the latest version?',
                             ),
                             color=INFO_COLOR,
                             dismiss_on_close=True,
@@ -392,142 +606,46 @@ version of ubo-app with the selected version?""",
                             show_dismiss_action=True,
                             actions=[
                                 NotificationDispatchItem(
-                                    icon='󰜉',
+                                    icon='󰬬',
                                     store_action=UpdateManagerRequestUpdateAction(
-                                        version=version,
+                                        version=_v,
                                     ),
                                 ),
                             ],
                         ),
                     ),
-                )
-                for version in state.recent_versions
-            ],
-        ),
-    )
-
-    installed_versions_item = SubMenuItem(
-        key='installed_versions',
-        label='Installed versions',
-        icon='󰯍',
-        sub_menu=HeadlessMenu(
-            title='󰯍Installed versions',
-            items=[
-                UboDispatchItem(
-                    label=item.name,
-                    **(
-                        SELECTED_ITEM_PARAMETERS
-                        if item.name == CURRENT_VERSION
-                        else UNSELECTED_ITEM_PARAMETERS
-                    ),
-                    store_action=NotificationsAddAction(
-                        notification=Notification(
-                            id=f'update-manager-activate-{item.name}',
-                            title=f'Activate {item.name} now?',
-                            content=f'Press 󰯍 button to activate version "{item.name}"',
-                            icon='󰯍',
-                            extra_information=ReadableInformation(
-                                text="""Do you want to activate the selected version of
-    ubo-app?""",
-                            ),
-                            color=INFO_COLOR,
-                            dismiss_on_close=True,
-                            display_type=NotificationDisplayType.STICKY,
-                            show_dismiss_action=True,
-                            actions=[
-                                NotificationActionItem(
-                                    icon='󰯍',
-                                    action=functools.partial(
-                                        activate_version,
-                                        version=item,
-                                    ),
-                                ),
-                            ],
-                        ),
-                    ),
-                )
-                for item in get_installed_versions()
-            ],
-        ),
-    )
-
-    if state.update_status is UpdateStatus.CHECKING:
-        items = [
-            Item(
-                label='Checking for updates...',
-                icon='󰬬',
-                background_color='#00000000',
-            ),
-        ]
-    if state.update_status is UpdateStatus.FAILED_TO_CHECK:
-        items = [
-            UboDispatchItem(
-                label='Failed to check for updates',
-                store_action=UpdateManagerRequestCheckAction(),
-                icon='󰜺',
-                background_color=DANGER_COLOR,
-            ),
-        ]
-    if state.update_status is UpdateStatus.UP_TO_DATE:
-        items = [
-            UboDispatchItem(
-                label='Already up to date!',
-                icon='󰄬',
-                store_action=UpdateManagerRequestCheckAction(),
-                background_color=SUCCESS_COLOR,
-                color='#000000',
-            ),
-            recent_versions_item,
-        ]
-        if beta_versions:
-            items.append(installed_versions_item)
-    if state.update_status is UpdateStatus.OUTDATED:
-        items = [
-            *(
-                []
-                if state.latest_version is None
-                else [
-                    UboDispatchItem(
-                        label=f'Update to v{state.latest_version}',
-                        icon='󰬬',
-                        store_action=NotificationsAddAction(
-                            notification=Notification(
-                                id=f'update-manager-latest-{state.latest_version}',
-                                title=f'Install {state.latest_version} now?',
-                                content='Press 󰬬 button to start installation of '
-                                f'version "{state.latest_version}"',
-                                icon='󰬬',
-                                extra_information=ReadableInformation(
-                                    text='Do you want to update to the latest version?',
-                                ),
-                                color=INFO_COLOR,
-                                dismiss_on_close=True,
-                                display_type=NotificationDisplayType.STICKY,
-                                show_dismiss_action=True,
-                                actions=[
-                                    NotificationDispatchItem(
-                                        icon='󰬬',
-                                        store_action=UpdateManagerRequestUpdateAction(
-                                            version=state.latest_version,
-                                        ),
-                                    ),
-                                ],
-                            ),
-                        ),
-                    ),
-                ]
-            ),
-            recent_versions_item,
-        ]
+                ),
+            )
+            outdated_items.append(
+                MenuItemData(
+                    key='update_latest',
+                    label=f'Update to v{state.latest_version}',
+                    icon='󰬬',
+                    action_id=update_action_id,
+                ),
+            )
+        outdated_items.append(recent_versions_item)
+        items = outdated_items
         if beta_versions:
             items.append(installed_versions_item)
     if state.update_status is UpdateStatus.UPDATING:
         items = [
-            Item(
+            MenuItemData(
+                key='updating',
                 label='Updating...',
                 icon='󰇚',
                 background_color='#00000000',
             ),
         ]
 
-    return items
+    # Dispatch the about menu
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id='about:main',
+            title='About',
+            heading=f'Ubo v{CURRENT_VERSION}',
+            sub_heading=f'Base image: {BASE_IMAGE[:11]}\n{BASE_IMAGE[11:]}',
+            items=tuple(items),
+            placeholder='',
+        ),
+    )

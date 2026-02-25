@@ -2,24 +2,21 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 from docker_composition import check_composition
 from docker_container import check_container
 from docker_images import IMAGES
 from redux import AutorunOptions
-from ubo_gui.menu.types import (
-    ActionItem,
-    HeadedMenu,
-    HeadlessMenu,
-    Item,
-    SubMenuItem,
-)
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.logger import logger
+from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
+    MenuItemData,
     OpenApplicationAction,
+    StackPushMenuAction,
+    UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
@@ -32,18 +29,17 @@ from ubo_app.store.services.docker import (
     DockerItemStatus,
     ImageState,
 )
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
-    NotificationActionItem,
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
-from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Sequence
 
     from ubo_app.store.services.ip import IpNetworkInterface
 
@@ -68,7 +64,7 @@ def _show_delete_confirmation(image_id: str) -> None:
                 importance=Importance.HIGH,
                 icon='󰆴',
                 actions=[
-                    NotificationActionItem(
+                    create_notification_action(
                         action=_delete_action,
                         icon='󰆴',
                         background_color=DANGER_COLOR,
@@ -80,138 +76,255 @@ def _show_delete_confirmation(image_id: str) -> None:
     )
 
 
-@store.with_state(lambda state: state.ip.interfaces if hasattr(state, 'ip') else None)
-def image_menu(  # noqa: C901
-    interfaces: Sequence[IpNetworkInterface] | None,
+_image_action_ids: dict[str, list[str]] = {}
+
+
+def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
     image: ImageState,
-) -> HeadedMenu:
-    """Get the menu for the docker image."""
+    interfaces: Sequence[IpNetworkInterface] | None,
+) -> None:
+    """Update the dynamic menu for a docker image."""
+    menu_id = get_docker_image_menu_id(image.id)
+    is_composition = image.id in IMAGES and IMAGES[image.id].is_composition
+
+    # Clean up old actions
+    for action_id in _image_action_ids.get(menu_id, []):
+        unregister_action(action_id)
+    _image_action_ids[menu_id] = []
+
     ip_addresses = [
         ip for interface in interfaces or [] for ip in interface.ip_addresses
     ]
-    items: list[Item] = []
-    is_composition = image.id in IMAGES and IMAGES[image.id].is_composition
-
-    def open_qrcode(port: str) -> Callable[[], None]:
-        def action() -> None:
-            import json
-
-            store.dispatch(
-                OpenApplicationAction(
-                    application_id='docker:qrcode-page',
-                    initialization_kwargs={
-                        'ips': json.dumps(ip_addresses),
-                        'port': port,
-                    },
-                ),
-            )
-
-        return action
+    items: list[MenuItemData] = []
 
     if image.status == DockerItemStatus.NOT_AVAILABLE:
+        action_id = f'docker:fetch:{image.id}'
+        _image_action_ids[menu_id].append(action_id)
+        register_action(
+            action_id,
+            lambda _id=image.id: store.dispatch(DockerImageFetchAction(image=_id)),
+        )
         items.append(
-            UboDispatchItem(
+            MenuItemData(
+                key='fetch',
                 label='Pull Images' if is_composition else 'Fetch',
                 icon='󰇚',
-                store_action=DockerImageFetchAction(image=image.id),
+                action_id=action_id,
             ),
         )
     elif image.status == DockerItemStatus.FETCHING:
         pass
     elif image.status == DockerItemStatus.AVAILABLE:
-        items.extend(
-            [
-                UboDispatchItem(
-                    label='Start',
-                    icon='󰐊',
-                    store_action=DockerImageRunAction(image=image.id),
-                ),
-                ActionItem(
-                    label='Delete Application' if is_composition else 'Remove Image',
-                    icon='󰆴',
-                    background_color=DANGER_COLOR,
-                    action=lambda img_id=image.id: _show_delete_confirmation(img_id),
-                ) if is_composition else UboDispatchItem(
-                    label='Remove Image',
-                    icon='󰆴',
-                    store_action=DockerImageRemoveAction(image=image.id),
-                    background_color=DANGER_COLOR,
-                ),
-            ],
+        start_id = f'docker:start:{image.id}'
+        _image_action_ids[menu_id].append(start_id)
+        register_action(
+            start_id,
+            lambda _id=image.id: store.dispatch(DockerImageRunAction(image=_id)),
         )
-    elif image.status == DockerItemStatus.CREATED:
-        items.extend(
-            [
-                UboDispatchItem(
-                    label='Start',
-                    icon='󰐊',
-                    store_action=DockerImageRunAction(image=image.id),
-                ),
-                UboDispatchItem(
-                    label='Release Resources' if is_composition else 'Remove Container',
-                    icon='󰆴',
-                    store_action=DockerImageReleaseAction(image=image.id)
-                    if is_composition
-                    else DockerImageRemoveContainerAction(image=image.id),
-                    background_color=DANGER_COLOR if not is_composition else None,
-                ),
-            ],
-        )
-    elif image.status == DockerItemStatus.RUNNING:
         items.append(
-            UboDispatchItem(
-                label='Stop',
-                key='stop',
-                icon='󰓛',
-                store_action=DockerImageStopAction(image=image.id),
+            MenuItemData(
+                key='start',
+                label='Start',
+                icon='󰐊',
+                action_id=start_id,
             ),
         )
+
         if is_composition:
+            delete_id = f'docker:delete:{image.id}'
+            _image_action_ids[menu_id].append(delete_id)
+            register_action(
+                delete_id,
+                lambda _id=image.id: _show_delete_confirmation(_id),
+            )
             items.append(
-                UboDispatchItem(
-                    label='Instructions',
-                    key='instructions',
-                    icon='󰋗',
-                    store_action=NotificationsAddAction(
-                        notification=Notification(
-                            icon='󰋗',
-                            title='Instructions',
-                            content='',
-                            extra_information=ReadableInformation(
-                                text=image.instructions,
-                            )
-                            if image.instructions
-                            else None,
-                        ),
-                    ),
+                MenuItemData(
+                    key='delete',
+                    label='Delete Application',
+                    icon='󰆴',
+                    background_color=DANGER_COLOR,
+                    action_id=delete_id,
                 ),
             )
         else:
+            remove_id = f'docker:remove:{image.id}'
+            _image_action_ids[menu_id].append(remove_id)
+            register_action(
+                remove_id,
+                lambda _id=image.id: store.dispatch(
+                    DockerImageRemoveAction(image=_id),
+                ),
+            )
             items.append(
-                SubMenuItem(
-                    label='Ports',
-                    key='ports',
-                    icon='󰙜',
-                    sub_menu=HeadlessMenu(
-                        title='Ports',
-                        items=[
-                            ActionItem(
-                                label=port,
-                                key=port,
-                                icon='󰙜',
-                                action=open_qrcode(port.split(':')[-1]),
-                            )
-                            if port.startswith('0.0.0.0') and ip_addresses  # noqa: S104
-                            else Item(label=port, icon='󰙜')
-                            for port in image.ports
-                        ],
-                        placeholder='No ports',
+                MenuItemData(
+                    key='remove',
+                    label='Remove Image',
+                    icon='󰆴',
+                    background_color=DANGER_COLOR,
+                    action_id=remove_id,
+                ),
+            )
+    elif image.status == DockerItemStatus.CREATED:
+        start_id = f'docker:start:{image.id}'
+        _image_action_ids[menu_id].append(start_id)
+        register_action(
+            start_id,
+            lambda _id=image.id: store.dispatch(DockerImageRunAction(image=_id)),
+        )
+        items.append(
+            MenuItemData(
+                key='start',
+                label='Start',
+                icon='󰐊',
+                action_id=start_id,
+            ),
+        )
+
+        release_id = f'docker:release:{image.id}'
+        _image_action_ids[menu_id].append(release_id)
+        if is_composition:
+            register_action(
+                release_id,
+                lambda _id=image.id: store.dispatch(
+                    DockerImageReleaseAction(image=_id),
+                ),
+            )
+            items.append(
+                MenuItemData(
+                    key='release',
+                    label='Release Resources',
+                    icon='󰆴',
+                    action_id=release_id,
+                ),
+            )
+        else:
+            register_action(
+                release_id,
+                lambda _id=image.id: store.dispatch(
+                    DockerImageRemoveContainerAction(image=_id),
+                ),
+            )
+            items.append(
+                MenuItemData(
+                    key='remove_container',
+                    label='Remove Container',
+                    icon='󰆴',
+                    background_color=DANGER_COLOR,
+                    action_id=release_id,
+                ),
+            )
+    elif image.status == DockerItemStatus.RUNNING:
+        stop_id = f'docker:stop:{image.id}'
+        _image_action_ids[menu_id].append(stop_id)
+        register_action(
+            stop_id,
+            lambda _id=image.id: store.dispatch(DockerImageStopAction(image=_id)),
+        )
+        items.append(
+            MenuItemData(
+                key='stop',
+                label='Stop',
+                icon='󰓛',
+                action_id=stop_id,
+            ),
+        )
+
+        if is_composition:
+            if image.instructions:
+                instructions_id = f'docker:instructions:{image.id}'
+                _image_action_ids[menu_id].append(instructions_id)
+                register_action(
+                    instructions_id,
+                    lambda _img=image: store.dispatch(
+                        NotificationsAddAction(
+                            notification=Notification(
+                                icon='󰋗',
+                                title='Instructions',
+                                content='',
+                                extra_information=ReadableInformation(
+                                    text=_img.instructions,
+                                )
+                                if _img.instructions
+                                else None,
+                            ),
+                        ),
                     ),
+                )
+                items.append(
+                    MenuItemData(
+                        key='instructions',
+                        label='Instructions',
+                        icon='󰋗',
+                        action_id=instructions_id,
+                    ),
+                )
+        else:
+            # Ports submenu navigation
+            ports_nav_id = f'docker:open-ports:{image.id}'
+            _image_action_ids[menu_id].append(ports_nav_id)
+            register_action(
+                ports_nav_id,
+                lambda: store.dispatch(
+                    StackPushMenuAction(menu_key='ports'),
+                ),
+            )
+            items.append(
+                MenuItemData(
+                    key='ports',
+                    label='Ports',
+                    icon='󰙜',
+                    action_id=ports_nav_id,
+                ),
+            )
+
+            # Build ports submenu
+            port_items: list[MenuItemData] = []
+            for port in image.ports:
+                if port.startswith('0.0.0.0'):  # noqa: S104
+                    port_action_id = f'docker:qrcode:{image.id}:{port}'
+                    _image_action_ids[menu_id].append(port_action_id)
+                    port_number = port.split(':')[-1]
+                    register_action(
+                        port_action_id,
+                        lambda _port=port_number, _ips=ip_addresses: store.dispatch(
+                            OpenApplicationAction(
+                                application_id='docker:qrcode-page',
+                                initialization_kwargs={
+                                    'ips': json.dumps(_ips),
+                                    'port': _port,
+                                },
+                            ),
+                        ),
+                    )
+                    port_items.append(
+                        MenuItemData(
+                            key=port,
+                            label=port,
+                            icon='󰙜',
+                            action_id=port_action_id,
+                        ),
+                    )
+                else:
+                    port_items.append(
+                        MenuItemData(
+                            key=port,
+                            label=port,
+                            icon='󰙜',
+                        ),
+                    )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'docker:image:{image.id}:ports',
+                    title='Ports',
+                    items=tuple(port_items),
+                    placeholder='No ports',
                 ),
             )
     elif image.status == DockerItemStatus.PROCESSING:
         pass
 
+    # Status messages
     if is_composition:
         messages = {
             DockerItemStatus.NOT_AVAILABLE: 'Need to fetch images',
@@ -224,8 +337,6 @@ def image_menu(  # noqa: C901
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
     else:
-        # For containers, use note from IMAGES
-        # For compositions, use generic message
         running_message = (
             IMAGES[image.id].note
             if image.id in IMAGES
@@ -241,24 +352,20 @@ def image_menu(  # noqa: C901
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
 
-    return HeadedMenu(
-        title=f'Docker - {image.label}',
-        heading=image.label,
-        sub_heading=messages[image.status],
-        items=items,
-        placeholder='',
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=menu_id,
+            title=f'Docker - {image.label}',
+            heading=image.label,
+            sub_heading=messages[image.status],
+            items=tuple(items),
+            placeholder='',
+        ),
     )
 
 
 def setup_docker_image_dynamic_menu(image_id: str) -> None:
-    """Set up dynamic menu updates for a Docker image.
-
-    This creates an autorun that watches the image state and dispatches
-    UpdateDynamicMenuAction when it changes. This ensures TUI gets
-    up-to-date menu state without coupling core to Docker service.
-    """
-    menu_id = get_docker_image_menu_id(image_id)
-
+    """Set up dynamic menu updates for a Docker image."""
     @store.autorun(
         lambda state: getattr(state.docker, image_id, None),
         lambda state: (
@@ -272,70 +379,27 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
         if image is None:
             return
 
-        # Get the menu from image_menu (same logic as GUI uses)
-        menu: HeadedMenu = image_menu(image)  # pyright: ignore[reportCallIssue]
-
-        # Resolve callable fields (HeadedMenu fields can be callables)
-        items_raw = menu.items
-        resolved = items_raw() if callable(items_raw) else items_raw
-        items_list: list[Item] = list(resolved) if resolved else []  # pyright: ignore[reportArgumentType]
-
-        title_raw = menu.title
-        title = title_raw() if callable(title_raw) else (title_raw or '')
-
-        heading_raw = menu.heading
-        heading = heading_raw() if callable(heading_raw) else heading_raw
-
-        sub_heading_raw = menu.sub_heading
-        sub_heading = (
-            sub_heading_raw() if callable(sub_heading_raw) else sub_heading_raw
-        )
-
-        placeholder_raw = menu.placeholder
-        placeholder = (
-            placeholder_raw() if callable(placeholder_raw) else placeholder_raw
-        )
-
-        logger.debug(
-            '[Docker] Updating dynamic menu for %s: status=%s, items=%d',
-            image_id,
-            image.status,
-            len(items_list),
-        )
-
-        from ubo_app.store.core.menu_item_bridge import (  # pyright: ignore[reportMissingImports]
-            sync_items_to_dynamic_menu,
-        )
-
-        sync_items_to_dynamic_menu(
-            menu_id=menu_id,
-            title=str(title),
-            heading=str(heading) if heading else '',
-            sub_heading=str(sub_heading) if sub_heading else '',
-            items=items_list,
-            placeholder=str(placeholder) if placeholder else '',
-        )
-
-
-def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
-    """Get the menu items for the Docker service."""
-    # Don't check status during ongoing operations (FETCHING, PROCESSING)
-    # The operation itself manages the status
-    def menu_with_check(image: ImageState) -> HeadedMenu:
-        # Only check status if not in middle of an operation
+        # Check status if not in middle of an operation
         if image.status not in (DockerItemStatus.FETCHING, DockerItemStatus.PROCESSING):
             is_composition = image_id in IMAGES and IMAGES[image_id].is_composition
             if is_composition:
                 create_task(check_composition(id=image_id))
             else:
                 check_container(image_id=image_id)
-        return image_menu(image)  # pyright: ignore[reportCallIssue]
 
-    return store.autorun(
-        lambda state: getattr(state.docker, image_id),
-        lambda state: (
-            getattr(state.docker, image_id),
-            state.ip.interfaces if hasattr(state, 'ip') else None,
-        ),
-        options=AutorunOptions(default_value=None),
-    )(menu_with_check)
+        @store.with_state(
+            lambda state: state.ip.interfaces if hasattr(state, 'ip') else None,
+        )
+        def _get_interfaces(
+            interfaces: Sequence[IpNetworkInterface] | None,
+        ) -> Sequence[IpNetworkInterface] | None:
+            return interfaces
+
+        _update_docker_image_menu(image, _get_interfaces())
+
+
+def docker_item_menu(image_id: str) -> None:
+    """Navigate to the Docker image menu."""
+    # menu_key uses 'docker:<image_id>' format to match the path matcher,
+    # which maps it to the dynamic menu ID 'docker:image:<image_id>'
+    store.dispatch(StackPushMenuAction(menu_key=f'docker:{image_id}'))

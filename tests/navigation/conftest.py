@@ -16,12 +16,11 @@ from typing import TYPE_CHECKING
 import pytest
 from redux import CompleteReducerResult, InitAction
 
-from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
+from ubo_app.store.core.constants import compute_total_pages
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
     DynamicMenuData,
-    DynamicMenusState,
     HomeViewData,
     MainState,
     MenuItemData,
@@ -29,7 +28,6 @@ from ubo_app.store.core.types import (
     MenuViewData,
     NotificationStackItem,
     NotificationViewData,
-    UpdateDynamicMenuAction,
     ViewData,
 )
 

@@ -17,17 +17,28 @@ from ubo_app.store.services.file_system import (
     FileSystemRemoveEvent,
     FileSystemSelectEvent,
 )
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
-    NotificationActionItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
 
 
+def _file_system_path_matcher(path: tuple[str, ...]) -> str | None:
+    """Match file system navigation paths to dynamic menu IDs."""
+    for element in path:
+        if element.startswith('file-system:dir:'):
+            return element
+    return None
+
+
 def init_service() -> None:
     """Initialize the service by registering the File System application."""
     from ubo_app.store.core.action_registry import register_action
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher('file-system:paths', _file_system_path_matcher)
 
     register_action('file-system:open', open_path)
     store.dispatch(
@@ -57,7 +68,7 @@ def init_service() -> None:
                         ),
                     ),
                     actions=[
-                        NotificationActionItem(
+                        create_notification_action(
                             key='open-path',
                             label='Open Path Selector',
                             icon='󰉋',

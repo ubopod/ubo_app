@@ -28,7 +28,6 @@ from ubo_app.store.services.display import (
     DisplayUnblankEvent,
     DisplayUpdateActivityAction,
 )
-from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import IS_TEST_ENV
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
@@ -37,9 +36,7 @@ from ubo_app.utils.menu_items import (
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from ubo_gui.menu.types import Item
+    from collections.abc import Callable
 
     from ubo_app.utils.types import Subscriptions
 
@@ -138,24 +135,6 @@ def handle_unblank_event(_: DisplayUnblankEvent) -> None:
 
 
 DISPLAY_TIMEOUT_MENU_ID = 'display:timeout'
-
-
-@store.autorun(lambda state: state.display.selected_blank_timeout)
-def timeout_options(selected_timeout: DisplayBlankTimeout) -> Sequence[Item]:
-    """Generate menu items for timeout selection."""
-    return [
-        UboDispatchItem(
-            key=timeout.value,
-            label=timeout.get_label(),
-            store_action=DisplaySetBlankTimeoutAction(timeout=timeout),
-            **(
-                SELECTED_ITEM_PARAMETERS
-                if selected_timeout == timeout
-                else UNSELECTED_ITEM_PARAMETERS
-            ),
-        )
-        for timeout in DisplayBlankTimeout
-    ]
 
 
 def _register_display_action_handlers() -> None:

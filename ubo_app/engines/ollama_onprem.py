@@ -31,9 +31,9 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedModelAction,
     AssistantUpdateProvidersAction,
 )
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
-    NotificationActionItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
@@ -202,7 +202,7 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                             ),
                             color=WARNING_COLOR,
                             actions=[
-                                NotificationActionItem(
+                                create_notification_action(
                                     label='Download Model',
                                     icon='󰇚',
                                     action=self._download_model,
@@ -313,10 +313,10 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                         ),
                         color=WARNING_COLOR,
                         actions=[
-                            NotificationActionItem(
+                            create_notification_action(
                                 label='Download Model',
                                 icon='󰇚',
-                                action=self._download_model,
+                                action=self._download_model,  # type: ignore[arg-type]
                             ),
                         ],
                     ),

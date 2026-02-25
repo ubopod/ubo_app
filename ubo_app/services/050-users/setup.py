@@ -7,13 +7,6 @@ import time
 from asyncio import Future
 from typing import TYPE_CHECKING
 
-from ubo_gui.menu.types import (
-    HeadedMenu,
-    HeadlessMenu,
-    Menu,
-    SubMenuItem,
-)
-
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.callback_registry import register_auto_callback
@@ -25,10 +18,10 @@ from ubo_app.store.core.types import (
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
+from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
-    NotificationActionItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
@@ -44,7 +37,6 @@ from ubo_app.store.services.users import (
     UsersState,
     UserState,
 )
-from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.bus_provider import get_system_bus
 from ubo_app.utils.dbus_interfaces import AccountsInterface, UserInterface
@@ -121,7 +113,7 @@ async def delete_account(event: UsersDeleteUserEvent) -> None:
                 ),
                 expiration_timestamp=time.time(),
                 actions=[
-                    NotificationActionItem(
+                    create_notification_action(
                         action=lambda: loop.call_soon_threadsafe(
                             notification_future.set_result,
                             None,
@@ -227,9 +219,9 @@ def _register_user_detail_actions(users: Sequence[UserState]) -> None:
 
     # Unregister old user-specific actions
     for action_id in list(get_registered_actions()):
-        if action_id.startswith('users:open-user:') or action_id.startswith(
-            'users:reset-password:',
-        ) or action_id.startswith('users:delete:'):
+        if action_id.startswith(
+            ('users:open-user:', 'users:reset-password:', 'users:delete:'),
+        ):
             unregister_action(action_id)
 
     for user in users:
@@ -328,54 +320,6 @@ def update_users_dynamic_menu(state: UsersState) -> None:
             items=tuple(items),
             placeholder='Loading...' if state.users is None else '',
         ),
-    )
-
-
-@store.autorun(lambda state: state.users)
-def users_menu(state: UsersState) -> Menu:
-    """Get the SSH menu items."""
-    if state.users is None:
-        return HeadedMenu(
-            title='󰡉Users',
-            heading='Loading...',
-            sub_heading='Please wait...',
-            items=[],
-        )
-    return HeadlessMenu(
-        title='󰡉Users',
-        items=[
-            UboDispatchItem(
-                label='Add',
-                icon='󰀔',
-                store_action=UsersCreateUserAction(),
-                background_color=WARNING_COLOR,
-            ),
-            *[
-                SubMenuItem(
-                    key=user.id,
-                    label=user.id,
-                    icon='󰀄',
-                    sub_menu=HeadlessMenu(
-                        title=user.id,
-                        items=[
-                            UboDispatchItem(
-                                label='Reset Password',
-                                icon='󰯄',
-                                store_action=UsersResetPasswordAction(id=user.id),
-                                background_color=WARNING_COLOR,
-                            ),
-                            UboDispatchItem(
-                                label='Delete',
-                                icon='󰀕',
-                                store_action=UsersDeleteUserAction(id=user.id),
-                                background_color=DANGER_COLOR,
-                            ),
-                        ],
-                    ),
-                )
-                for user in state.users
-            ],
-        ],
     )
 
 

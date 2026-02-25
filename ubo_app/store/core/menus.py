@@ -291,10 +291,19 @@ def _register_settings_category_handlers() -> None:
 def _register_about_action_handler() -> None:
     """Register action handler for about menu."""
     from ubo_app.store.core.action_registry import register_action
-    from ubo_app.store.update_manager.utils import open_about_menu as _open_about
+    from ubo_app.store.core.types import StackPushMenuAction
+    from ubo_app.store.update_manager.utils import (
+        open_about_menu as _open_about,
+    )
+    from ubo_app.store.update_manager.utils import (
+        register_about_path_matcher,
+    )
+
+    register_about_path_matcher()
 
     def _handle_about() -> None:
         _open_about()
+        store.dispatch(StackPushMenuAction(menu_key='about:main'))
 
     register_action('menu:about', _handle_about)
 

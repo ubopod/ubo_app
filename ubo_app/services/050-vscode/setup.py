@@ -5,12 +5,8 @@ import asyncio
 import subprocess
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 from commands import check_status, restart, uninstall_service
 from constants_ import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
-from ubo_gui.menu.types import ActionItem, ApplicationItem, HeadedMenu
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
@@ -33,9 +29,7 @@ from ubo_app.store.services.vscode import (
     VSCodeRestartEvent,
     VSCodeStartDownloadingAction,
     VSCodeState,
-    VSCodeStatus,
 )
-from ubo_app.store.ubo_actions import UboApplicationItem
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.log_process import log_async_process
 
@@ -245,64 +239,6 @@ def logout() -> None:
     create_task(act())
 
 
-def status_based_actions(status: VSCodeStatus) -> list[ActionItem | ApplicationItem]:
-    actions = []
-
-    if status.is_running:
-        actions.append(
-            UboApplicationItem(
-                label='Show URL',
-                icon='󰐲',
-                application_id='vscode:qrcode-page',
-                initialization_kwargs={'url': f'{CODE_TUNNEL_URL_PREFIX}{status.name}'},
-            ),
-        )
-    return actions
-
-
-def login_actions(*, is_logged_in: bool | None) -> list[ActionItem | ApplicationItem]:
-    actions = []
-    if is_logged_in:
-        actions.extend(
-            [
-                ActionItem(
-                    label='Logout',
-                    icon='󰍃',
-                    action=logout,
-                ),
-            ],
-        )
-    elif is_logged_in is False:
-        actions.append(
-            ActionItem(
-                label='Login',
-                icon='󰍂',
-                action=start_login,
-            ),
-        )
-    return actions
-
-
-def generate_actions(state: VSCodeState) -> list[ActionItem | ApplicationItem]:
-    actions = []
-    if not state.is_pending and not state.is_downloading:
-        if state.is_binary_installed:
-            if state.is_logged_in and state.status:
-                actions.extend(status_based_actions(state.status))
-            actions.extend(login_actions(is_logged_in=state.is_logged_in))
-
-        actions.append(
-            ActionItem(
-                label='Redownload Code'
-                if state.is_binary_installed
-                else 'Download Code CLI',
-                icon='󰇚',
-                action=download_code,
-            ),
-        )
-    return actions
-
-
 def _generate_dynamic_menu_items(state: VSCodeState) -> list[MenuItemData]:
     """Generate MenuItemData for the dynamic menu (dumb UI architecture)."""
     items: list[MenuItemData] = []
@@ -453,48 +389,6 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
     )
 
 
-@store.autorun(lambda state: state.vscode)
-def vscode_menu(state: VSCodeState) -> HeadedMenu:
-    actions = generate_actions(state)
-
-    status = ''
-    if state.is_pending:
-        status = '[size=48dp][/size]'
-    elif state.status:
-        if state.status.is_running:
-            if state.status.name:
-                status = f'Service is running, name:\n{state.status.name}'
-            else:
-                status = 'Service is running\nWaiting for name...'
-        elif not state.status.is_service_installed:
-            status = 'Service not installed'
-        else:
-            status = 'Service installed but not running'
-    elif state.is_downloading:
-        status = 'Downloading...'
-    elif not state.is_binary_installed:
-        status = 'Code CLI not installed'
-    elif state.is_logged_in is None:
-        status = 'Checking status...'
-    elif state.is_logged_in is False:
-        status = 'Needs authentication'
-    else:
-        status = 'Unknown status'
-
-    return HeadedMenu(
-        title='󰨞VSCode',
-        heading='VSCode Remote Tunnel',
-        sub_heading=status,
-        items=actions,
-        placeholder='',
-    )
-
-
-def generate_vscode_menu() -> Callable[[], HeadedMenu]:
-    create_task(check_status())
-    return vscode_menu
-
-
 async def _monitor_status(end_event: asyncio.Event) -> None:
     while not end_event.is_set():
         await check_status()
@@ -504,7 +398,10 @@ async def _monitor_status(end_event: asyncio.Event) -> None:
 async def init_service() -> Subscriptions:
     from ubo_app.store.core.action_registry import register_action
 
-    register_action('vscode:open_menu', generate_vscode_menu)
+    def _open_vscode_menu() -> None:
+        create_task(check_status())
+
+    register_action('vscode:open_menu', _open_vscode_menu)
     store.dispatch(
         RegisterSettingAppAction(
             label='VSCode',
