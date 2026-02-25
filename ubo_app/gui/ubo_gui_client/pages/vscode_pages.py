@@ -6,6 +6,7 @@ import pathlib
 
 from kivy.lang.builder import Builder
 from kivy.properties import NumericProperty, StringProperty
+
 from ubo_gui_client.gui_utils import UboPageWidget
 
 

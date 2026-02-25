@@ -1,7 +1,6 @@
 # ruff: noqa: D100, D101, D102, D107
 from __future__ import annotations
 
-import functools
 import math
 import weakref
 from typing import TYPE_CHECKING
@@ -237,8 +236,7 @@ class MenuNotificationHandler(UboApp):
                 ):
                     from ubo_app.store.ubo_actions import get_registered_application
 
-                    app_cls = get_registered_application(action.application_id)
-                    return app_cls
+                    return get_registered_application(action.application_id)
                 # Handle action_id (registered callable)
                 elif action.action_id:
                     handler = get_action(action.action_id)

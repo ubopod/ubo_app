@@ -24,9 +24,13 @@ from ubo_gui.utils import mainthread_if_needed
 
 from ubo_app.constants import HEIGHT, WIDTH
 from ubo_app.utils.menu_items import (
-    SELECTED_ITEM_PARAMETERS,
-    UNSELECTED_ITEM_PARAMETERS,
-    ItemParameters,
+    SELECTED_ITEM_PARAMETERS as SELECTED_ITEM_PARAMETERS,
+)
+from ubo_app.utils.menu_items import (
+    UNSELECTED_ITEM_PARAMETERS as UNSELECTED_ITEM_PARAMETERS,
+)
+from ubo_app.utils.menu_items import (
+    ItemParameters as ItemParameters,
 )
 
 if TYPE_CHECKING:

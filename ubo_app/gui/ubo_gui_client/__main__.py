@@ -82,7 +82,6 @@ def main() -> None:
             'Unhandled exception: %s: %s',
             exc_type.__name__,
             exc_value,
-            exc_info=True,
         )
 
     def _threading_excepthook(hook_args: threading.ExceptHookArgs) -> None:
@@ -91,7 +90,6 @@ def main() -> None:
             hook_args.thread,
             hook_args.exc_type.__name__ if hook_args.exc_type else 'Unknown',
             hook_args.exc_value,
-            exc_info=True,
         )
 
     sys.excepthook = _excepthook
