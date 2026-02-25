@@ -137,10 +137,14 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
                 total_pages=total_pages,
             )
 
-    # Fall back to legacy view computation from main reducer
-    from ubo_app.store.core.reducer import compute_view_from_stack
-
-    return compute_view_from_stack(main_state)
+    # No dynamic menu matched - return empty menu view
+    return MenuViewData(
+        show_status_bar=True,
+        title='',
+        items=(),
+        page_index=0,
+        total_pages=1,
+    )
 
 
 def _view_to_dict(view: ViewData) -> dict:

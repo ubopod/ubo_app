@@ -216,7 +216,7 @@ class MenuView(BaseView):
                 yield Label(label_text, classes=classes, id=f"menu-item-{i}")
 
     def _strip_color_markup(self, text: str) -> str:
-        """Strip Kivy-style color markup tags from text.
+        """Strip color markup tags from text.
 
         Handles [color=...]...[/color] and similar BBCode-style tags.
         """

@@ -139,13 +139,18 @@ class TUIClient:
             )
             self._client.dispatch(action=action)
 
-    def execute_action(self, action_id: str) -> None:
+    def execute_action(
+        self,
+        action_id: str,
+        menu_key: str | None = None,
+    ) -> None:
         """Execute a menu action by its action_id.
 
         This dispatches ExecuteMenuActionAction with the given action_id.
 
         Args:
             action_id: The action_id to execute.
+            menu_key: Optional menu key to push if the handler returns a result.
         """
         from ubo_bindings.ubo.v1 import Action, ExecuteMenuActionAction
 
@@ -156,6 +161,7 @@ class TUIClient:
         action = Action(
             execute_menu_action_action=ExecuteMenuActionAction(
                 action_id=action_id,
+                menu_key=menu_key or "",
             ),
         )
         self._client.dispatch(action=action)

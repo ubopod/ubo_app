@@ -1,11 +1,9 @@
 # ruff: noqa: D100, D101, D102, D107
 from __future__ import annotations
 
-import weakref
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from debouncer import DebounceOptions, debounce
 from ubo_gui.app import UboApp
 from ubo_gui.menu.menu_widget import MenuPageWidget, MenuWidget
 from ubo_gui.menu.stack_item import StackApplicationItem, StackItem, StackMenuItem
@@ -100,16 +98,19 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
 
     def _setup_autoruns(self) -> None:
-        """Set up Redux store autoruns."""
-        _self = weakref.ref(self)
+        """Set up Redux store autoruns.
 
-        @store.autorun(lambda state: state.main.menu)
-        @debounce(0.1, DebounceOptions(leading=True, trailing=True, time_window=0.1))
-        def _(menu: Menu | None) -> None:
-            self = _self()
-            if not self or not menu:
-                return
-            self.menu_widget.set_root_menu(menu)
+        The legacy menu autorun (state.main.menu -> set_root_menu) has been
+        replaced with a minimal root menu initialization. The dynamic menu
+        system drives actual content rendering via view computation autoruns.
+        """
+        from ubo_gui.menu.types import HeadlessMenu
+
+        # Set a minimal root menu to initialize the MenuWidget's stack.
+        # The ViewRenderer handles actual content rendering from current_view.
+        self.menu_widget.set_root_menu(
+            HeadlessMenu(title='Home', items=[]),
+        )
 
     def build(self) -> Widget | None:
         root = super().build()
@@ -158,7 +159,8 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self._dispatch_enclosure_visibility()
 
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
-        self.root.title = title
+        if self.root:
+            self.root.title = title
 
     def handle_stack_change(
         self: MenuAppCentral,

@@ -247,7 +247,11 @@ class GUIClient:
             )
             self._client.dispatch(action=action)
 
-    def execute_action(self, action_id: str) -> None:
+    def execute_action(
+        self,
+        action_id: str,
+        menu_key: str | None = None,
+    ) -> None:
         """Execute a menu action by its action_id."""
         from ubo_bindings.ubo.v1 import Action, ExecuteMenuActionAction
 
@@ -258,6 +262,7 @@ class GUIClient:
         action = Action(
             execute_menu_action_action=ExecuteMenuActionAction(
                 action_id=action_id,
+                menu_key=menu_key or '',
             ),
         )
         self._client.dispatch(action=action)
@@ -323,27 +328,6 @@ class GUIClient:
                 wi_fi_update_request_action=WiFiUpdateRequestAction(reset=reset),
             )
             self._client.dispatch(action=action)
-
-    def subscribe_root_menu(
-        self,
-        callback: Callable[[object], None],
-    ) -> object:
-        """Subscribe to root menu changes from the core.
-
-        The callback receives the proto Menu object whenever the root menu
-        changes. Returns an unsubscribe callable.
-        """
-        if not self._client:
-            msg = 'Client not connected'
-            raise RuntimeError(msg)
-
-        @self._client.autorun(['state.main.menu'])
-        def handler(results: list) -> None:
-            menu = results[0] if results else None
-            if menu is not None:
-                callback(menu)
-
-        return handler
 
     def dispatch_set_enclosures_visible(
         self,
