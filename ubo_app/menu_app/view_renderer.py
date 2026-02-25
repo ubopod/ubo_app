@@ -85,13 +85,10 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
     # Handle application views
     if isinstance(top_item, ApplicationStackItem):
-        extra_data: dict[str, str] = {}
-        for k, v in top_item.initialization_kwargs.items():
-            extra_data[k] = str(v)
         return ApplicationViewData(
             application_id=top_item.application_id,
             show_status_bar=False,
-            extra_data=extra_data,
+            extra_data=dict(top_item.initialization_kwargs),
         )
 
     # Handle notification views

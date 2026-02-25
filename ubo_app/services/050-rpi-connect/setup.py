@@ -376,14 +376,14 @@ def init_service() -> None:
         ),
     )
 
-    from ubo_app.store.core.view_registry import register_path_menu_matcher
+    from ubo_app.store.core.view_registry import (
+        create_settings_path_matcher,
+        register_path_menu_matcher,
+    )
 
     register_path_menu_matcher(
         'rpi-connect:settings',
-        lambda path: RPI_CONNECT_MENU_ID
-        if len(path) >= 4  # noqa: PLR2004
-        and path[3] == 'rpi_connect:'
-        else None,
+        create_settings_path_matcher('rpi_connect:', RPI_CONNECT_MENU_ID),
     )
 
     create_task(check_is_active())

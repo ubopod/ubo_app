@@ -514,14 +514,14 @@ async def init_service() -> Subscriptions:
         ),
     )
 
-    from ubo_app.store.core.view_registry import register_path_menu_matcher
+    from ubo_app.store.core.view_registry import (
+        create_settings_path_matcher,
+        register_path_menu_matcher,
+    )
 
     register_path_menu_matcher(
         'vscode:settings',
-        lambda path: VSCODE_MENU_ID
-        if len(path) >= 4  # noqa: PLR2004
-        and path[3] == 'vscode:'
-        else None,
+        create_settings_path_matcher('vscode:', VSCODE_MENU_ID),
     )
 
     await check_status()

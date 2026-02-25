@@ -356,7 +356,7 @@ class ViewRenderer:
 
         # Get extra_data kwargs for the widget
         extra_data_obj = getattr(view, 'extra_data', None)
-        kwargs: dict[str, str] = {}
+        kwargs: dict[str, object] = {}
         if extra_data_obj is not None:
             items_dict = getattr(extra_data_obj, 'items', None)
             if isinstance(items_dict, dict):

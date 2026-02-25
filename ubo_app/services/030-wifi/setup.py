@@ -158,14 +158,14 @@ def init_service() -> Subscriptions:
     )
 
     # Register path matcher for WiFi menu navigation
-    from ubo_app.store.core.view_registry import register_path_menu_matcher
+    from ubo_app.store.core.view_registry import (
+        create_settings_path_matcher,
+        register_path_menu_matcher,
+    )
 
     register_path_menu_matcher(
         'wifi:settings',
-        lambda path: 'wifi:connections'
-        if len(path) >= 4  # noqa: PLR2004
-        and path[3] == 'wifi:'
-        else None,
+        create_settings_path_matcher('wifi:', 'wifi:connections'),
     )
 
     create_task(_check_connection())

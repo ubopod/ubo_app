@@ -15,6 +15,8 @@ from immutable import Immutable
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from ubo_app.store.ubo_actions import BasicType
+
 
 class MenuItemData(Immutable):
     """Serializable representation of a menu item for rendering.
@@ -72,7 +74,10 @@ class ApplicationViewData(Immutable):
     type: str = 'application'  # Literal discriminator
     show_status_bar: bool = False
     application_id: str = ''
-    extra_data: Mapping[str, str] = field(default_factory=dict)  # e.g., {'text': '...'}
+    extra_data: Mapping[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
 
 
 class NotificationViewData(Immutable):

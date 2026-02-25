@@ -165,6 +165,536 @@
   "dynamic_menus": {
     "_type": "DynamicMenusState",
     "menus": {
+      "apps:list": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:import_composition",
+            "background_color": "#FFC107",
+            "color": "#ffffff",
+            "icon": "󰋺",
+            "is_short": false,
+            "key": "docker:_import",
+            "label": "Import YAML file"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:envoy_grpc",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󱂇",
+            "is_short": false,
+            "key": "docker:envoy_grpc",
+            "label": "Envoy for gRPC"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:home_assistant",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰟐",
+            "is_short": false,
+            "key": "docker:home_assistant",
+            "label": "Home Assistant"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:home_bridge",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰘘",
+            "is_short": false,
+            "key": "docker:home_bridge",
+            "label": "Home Bridge"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:immich",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "docker:immich",
+            "label": "Immich"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:ngrok",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰛶",
+            "is_short": false,
+            "key": "docker:ngrok",
+            "label": "Ngrok"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:ollama",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰳆",
+            "is_short": false,
+            "key": "docker:ollama",
+            "label": "Ollama"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:open_webui",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰾔",
+            "is_short": false,
+            "key": "docker:open_webui",
+            "label": "Open WebUI"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:pi_hole",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰇖",
+            "is_short": false,
+            "key": "docker:pi_hole",
+            "label": "Pi-hole"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:open:portainer",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "docker:portainer",
+            "label": "Portainer"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "file-system:open",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰉋",
+            "is_short": false,
+            "key": "file_system:file-system",
+            "label": "File System"
+          }
+        ],
+        "menu_id": "apps:list",
+        "placeholder": "No apps",
+        "sub_heading": null,
+        "title": "󰀻Docker Apps"
+      },
+      "assistant:image_generator": {
+        "_type": "DynamicMenuData",
+        "heading": "Select Active Engine",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:image_generator:google",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google",
+            "label": "Google"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:image_generator:openai",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "openai",
+            "label": "OpenAI"
+          }
+        ],
+        "menu_id": "assistant:image_generator",
+        "placeholder": "",
+        "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+        "title": "Image Generator"
+      },
+      "assistant:llm": {
+        "_type": "DynamicMenuData",
+        "heading": "Select Active Engine",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:llm:ollama",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "ollama",
+            "label": "Ollama"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:llm:ollama_onprem",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "ollama_onprem",
+            "label": "Ollama (On-Prem)"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:llm:google_vertex",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google_vertex",
+            "label": "Google Vertex"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:llm:grok",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "grok",
+            "label": "Grok"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:llm:cerebras",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "cerebras",
+            "label": "Cerebras"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:llm:openai",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "openai",
+            "label": "OpenAI"
+          }
+        ],
+        "menu_id": "assistant:llm",
+        "placeholder": "",
+        "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+        "title": "Language Model"
+      },
+      "assistant:mcp_tools": {
+        "_type": "DynamicMenuData",
+        "heading": "Model Context Protocol Tools",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:mcp_tools:add_server",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰌉",
+            "is_short": false,
+            "key": "add_server",
+            "label": "Add Server"
+          }
+        ],
+        "menu_id": "assistant:mcp_tools",
+        "placeholder": "",
+        "sub_heading": "Add and manage MCP servers",
+        "title": "MCP Tools"
+      },
+      "assistant:providers": {
+        "_type": "DynamicMenuData",
+        "heading": "Setup providers to be used by different assistant features",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:ollama",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "ollama",
+            "label": "Ollama"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:piper",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "piper",
+            "label": "Piper"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:vosk",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "vosk",
+            "label": "Vosk"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:assemblyai",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "assemblyai",
+            "label": "AssemblyAI"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:cerebras",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "cerebras",
+            "label": "Cerebras"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:deepgram",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "deepgram",
+            "label": "Deepgram"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:elevenlabs",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "elevenlabs",
+            "label": "ElevenLabs"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:google",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google",
+            "label": "Google"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:google_cloud",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google_cloud",
+            "label": "Google Cloud"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:grok",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "grok",
+            "label": "Grok"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:ollama_onprem",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "ollama_onprem",
+            "label": "Ollama (On-Prem)"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:openai",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "openai",
+            "label": "OpenAI"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:providers:rime",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "rime",
+            "label": "Rime"
+          }
+        ],
+        "menu_id": "assistant:providers",
+        "placeholder": "",
+        "sub_heading": "",
+        "title": "Manage Providers"
+      },
+      "assistant:stt": {
+        "_type": "DynamicMenuData",
+        "heading": "Select Active Engine",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:stt:vosk",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "vosk",
+            "label": "Vosk"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:stt:google",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google",
+            "label": "Google (continuous)"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:stt:google_segmented",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google_segmented",
+            "label": "Google (segmented)"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:stt:openai",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "openai",
+            "label": "OpenAI"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:stt:deepgram",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "deepgram",
+            "label": "Deepgram"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:stt:assemblyai",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "assemblyai",
+            "label": "AssemblyAI"
+          }
+        ],
+        "menu_id": "assistant:stt",
+        "placeholder": "",
+        "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+        "title": "Speech Recognition"
+      },
+      "assistant:tts": {
+        "_type": "DynamicMenuData",
+        "heading": "Select Active Engine",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:tts:piper",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "piper",
+            "label": "Piper"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:tts:google",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google",
+            "label": "Google"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:tts:openai",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "openai",
+            "label": "OpenAI"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:tts:elevenlabs",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "elevenlabs",
+            "label": "ElevenLabs"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "assistant:tts:rime",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "rime",
+            "label": "Rime"
+          }
+        ],
+        "menu_id": "assistant:tts",
+        "placeholder": "",
+        "sub_heading": "[color=#2196F3]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+        "title": "Speech Synthesis"
+      },
+      "camera:main": {
+        "_type": "DynamicMenuData",
+        "heading": "Select Camera Device",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "camera:detect",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄄",
+            "is_short": false,
+            "key": "camera:detect",
+            "label": "Detect Cameras"
+          }
+        ],
+        "menu_id": "camera:main",
+        "placeholder": "No cameras detected. Click \"Detect Cameras\" to scan.",
+        "sub_heading": "No cameras detected",
+        "title": "Camera Settings"
+      },
       "display:timeout": {
         "_type": "DynamicMenuData",
         "heading": "Screen Timeout",
@@ -241,7 +771,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:envoy_grpc:DockerImageFetchAction",
+            "action_id": "docker:image:envoy_grpc:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -261,7 +791,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:home_assistant:DockerImageFetchAction",
+            "action_id": "docker:image:home_assistant:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -281,7 +811,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:home_bridge:DockerImageFetchAction",
+            "action_id": "docker:image:home_bridge:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -301,7 +831,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:immich:DockerImageFetchAction",
+            "action_id": "docker:image:immich:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -321,7 +851,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:ngrok:DockerImageFetchAction",
+            "action_id": "docker:image:ngrok:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -341,7 +871,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:ollama:DockerImageFetchAction",
+            "action_id": "docker:image:ollama:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -361,7 +891,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:open_webui:DockerImageFetchAction",
+            "action_id": "docker:image:open_webui:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -381,7 +911,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:pi_hole:DockerImageFetchAction",
+            "action_id": "docker:image:pi_hole:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -401,7 +931,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:portainer:DockerImageFetchAction",
+            "action_id": "docker:image:portainer:item_0",
             "background_color": "#68B7FF",
             "color": "#ffffff",
             "icon": "󰇚",
@@ -415,9 +945,29 @@
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Portainer"
       },
+      "docker:registries": {
+        "_type": "DynamicMenuData",
+        "heading": "󰡨 Docker",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:registries:item_0",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰌉",
+            "is_short": false,
+            "key": "item_0",
+            "label": "Add Registry"
+          }
+        ],
+        "menu_id": "docker:registries",
+        "placeholder": "",
+        "sub_heading": "Log in to a registry:",
+        "title": "Docker Registries"
+      },
       "docker:setup": {
         "_type": "DynamicMenuData",
-        "heading": null,
+        "heading": "Docker is Running",
         "items": [
           {
             "_type": "MenuItemData",
@@ -432,8 +982,98 @@
         ],
         "menu_id": "docker:setup",
         "placeholder": "",
-        "sub_heading": null,
+        "sub_heading": "Docker service is active",
         "title": "Setup Docker"
+      },
+      "eth0": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": null,
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰩠",
+            "is_short": false,
+            "key": "ip:eth0:192.168.1.1",
+            "label": "192.168.1.1"
+          }
+        ],
+        "menu_id": "eth0",
+        "placeholder": "No IP addresses",
+        "sub_heading": null,
+        "title": "󰩟eth0"
+      },
+      "home:main": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:main",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰍜",
+            "is_short": true,
+            "key": "main",
+            "label": ""
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:notifications",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": true,
+            "key": "notifications",
+            "label": ""
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:power",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰐥",
+            "is_short": true,
+            "key": "power",
+            "label": ""
+          }
+        ],
+        "menu_id": "home:main",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Home"
+      },
+      "infrared:settings": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "infrared:settings:propagate_keys",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "propagate_keys",
+            "label": "Propagate Keys"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "infrared:settings:receive_keys",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "receive_keys",
+            "label": "Receive Keys"
+          }
+        ],
+        "menu_id": "infrared:settings",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Infrared"
       },
       "ip:addresses": {
         "_type": "DynamicMenuData",
@@ -485,6 +1125,46 @@
         "sub_heading": null,
         "title": "Desktop"
       },
+      "main:menu": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:apps",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰀻",
+            "is_short": false,
+            "key": "apps",
+            "label": "Apps"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "settings",
+            "label": "Settings"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:about",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "about",
+            "label": "About"
+          }
+        ],
+        "menu_id": "main:menu",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "󰍜Main"
+      },
       "notifications:list": {
         "_type": "DynamicMenuData",
         "heading": null,
@@ -494,14 +1174,4011 @@
         "sub_heading": null,
         "title": "Notifications"
       },
-      "rpi-connect:main": {
+      "power:options": {
         "_type": "DynamicMenuData",
         "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "power:reboot",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰜉",
+            "is_short": false,
+            "key": "reboot",
+            "label": "Reboot"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "power:off",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰐥",
+            "is_short": false,
+            "key": "poweroff",
+            "label": "Power off"
+          }
+        ],
+        "menu_id": "power:options",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "󰐥Power"
+      },
+      "rpi-connect:main": {
+        "_type": "DynamicMenuData",
+        "heading": "RPi Connect",
         "items": [],
         "menu_id": "rpi-connect:main",
         "placeholder": "",
-        "sub_heading": null,
+        "sub_heading": "Not installed",
         "title": "RPi Connect"
+      },
+      "settings:Accessibility": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:speech_recognition:",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "speech_recognition:",
+            "label": "Speech Recognition"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:speech_synthesis:engines",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰔊",
+            "is_short": false,
+            "key": "speech_synthesis:engines",
+            "label": "Speech Synthesis"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:speech_synthesis:settings",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "PV",
+            "is_short": false,
+            "key": "speech_synthesis:settings",
+            "label": "Picovoice Settings"
+          }
+        ],
+        "menu_id": "settings:Accessibility",
+        "placeholder": "No settings in this category",
+        "sub_heading": null,
+        "title": "󰙋Accessibility"
+      },
+      "settings:Assistant": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:assistant:stt",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "assistant:stt",
+            "label": "Speech Recognition"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:assistant:llm",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰁤",
+            "is_short": false,
+            "key": "assistant:llm",
+            "label": "Language Model"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:assistant:tts",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰔊",
+            "is_short": false,
+            "key": "assistant:tts",
+            "label": "Speech Synthesis"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:assistant:image_generator",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰹉",
+            "is_short": false,
+            "key": "assistant:image_generator",
+            "label": "Image Generator"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:assistant:mcp_tools",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰒋",
+            "is_short": false,
+            "key": "assistant:mcp_tools",
+            "label": "MCP Tools"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:assistant:providers",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰶗",
+            "is_short": false,
+            "key": "assistant:providers",
+            "label": "Manage"
+          }
+        ],
+        "menu_id": "settings:Assistant",
+        "placeholder": "No settings in this category",
+        "sub_heading": null,
+        "title": "󰚩Assistant"
+      },
+      "settings:Docker": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:docker:registries",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󱥉",
+            "is_short": false,
+            "key": "docker:registries",
+            "label": "Registries"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "docker:setup_menu",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "docker:service",
+            "label": "Service"
+          }
+        ],
+        "menu_id": "settings:Docker",
+        "placeholder": "No settings in this category",
+        "sub_heading": null,
+        "title": "󰡨Docker"
+      },
+      "settings:Hardware": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:display:",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰍹",
+            "is_short": false,
+            "key": "display:",
+            "label": "Display"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:camera:",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "camera:",
+            "label": "Camera"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:infrared:infrared",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰻅",
+            "is_short": false,
+            "key": "infrared:infrared",
+            "label": "Infrared"
+          }
+        ],
+        "menu_id": "settings:Hardware",
+        "placeholder": "No settings in this category",
+        "sub_heading": null,
+        "title": "Hardware"
+      },
+      "settings:Network": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:wifi:",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰖩",
+            "is_short": false,
+            "key": "wifi:",
+            "label": "WiFi"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:ip:",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰩟",
+            "is_short": false,
+            "key": "ip:",
+            "label": "IP Addresses"
+          }
+        ],
+        "menu_id": "settings:Network",
+        "placeholder": "No settings in this category",
+        "sub_heading": null,
+        "title": "󰛳Network"
+      },
+      "settings:Remote": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "ssh:open_menu",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰣀",
+            "is_short": false,
+            "key": "ssh:",
+            "label": "SSH"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "rpi-connect:open_menu",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "rpi_connect:",
+            "label": "RPi Connect"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "vscode:open_menu",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰨞",
+            "is_short": false,
+            "key": "vscode:",
+            "label": "VSCode"
+          }
+        ],
+        "menu_id": "settings:Remote",
+        "placeholder": "No settings in this category",
+        "sub_heading": null,
+        "title": "󰑔Remote"
+      },
+      "settings:System": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:select:users:",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰡉",
+            "is_short": false,
+            "key": "users:",
+            "label": "Users"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "lightdm:open_menu",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰍹",
+            "is_short": false,
+            "key": "lightdm:",
+            "label": "Desktop"
+          }
+        ],
+        "menu_id": "settings:System",
+        "placeholder": "No settings in this category",
+        "sub_heading": null,
+        "title": "󰒔System"
+      },
+      "settings:categories": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings:Network",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰛳",
+            "is_short": false,
+            "key": "Network",
+            "label": "Network"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings:Remote",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰑔",
+            "is_short": false,
+            "key": "Remote",
+            "label": "Remote"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings:System",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰒔",
+            "is_short": false,
+            "key": "System",
+            "label": "System"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings:Hardware",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "Hardware",
+            "label": "Hardware"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings:Assistant",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰚩",
+            "is_short": false,
+            "key": "Assistant",
+            "label": "Assistant"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings:Docker",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰡨",
+            "is_short": false,
+            "key": "Docker",
+            "label": "Docker"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "menu:navigate:settings:Accessibility",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰙋",
+            "is_short": false,
+            "key": "Accessibility",
+            "label": "Accessibility"
+          }
+        ],
+        "menu_id": "settings:categories",
+        "placeholder": "No settings categories",
+        "sub_heading": null,
+        "title": "Settings"
+      },
+      "settings:service:assistant": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Assistant",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:assistant",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Assistant"
+      },
+      "settings:service:assistant:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:assistant:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:assistant:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:assistant:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:audio": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Audio",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:audio",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Audio"
+      },
+      "settings:service:audio:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:audio:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:audio:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:audio:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:camera": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Camera",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:camera",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Camera"
+      },
+      "settings:service:camera:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:camera:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:camera:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:camera:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:display": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Display",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:display",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Display"
+      },
+      "settings:service:display:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:display:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:display:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:display:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:docker": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Docker",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:docker",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Docker"
+      },
+      "settings:service:docker:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:docker:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:docker:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:docker:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:ethernet": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Ethernet",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:ethernet",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Ethernet"
+      },
+      "settings:service:ethernet:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:ethernet:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:ethernet:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:ethernet:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:file_system": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] File System",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:file_system",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "File System"
+      },
+      "settings:service:file_system:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:file_system:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:file_system:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:file_system:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:infrared": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Infrared",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:infrared",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Infrared"
+      },
+      "settings:service:infrared:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:infrared:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:infrared:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:infrared:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:ip": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] IP",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:ip",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "IP"
+      },
+      "settings:service:ip:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:ip:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:ip:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:ip:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:keyboard": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Keyboard",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:keyboard",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Keyboard"
+      },
+      "settings:service:keyboard:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:keyboard:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:keyboard:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:keyboard:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:keypad": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Keypad",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:keypad",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Keypad"
+      },
+      "settings:service:keypad:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:keypad:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:keypad:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:keypad:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:lightdm": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] LightDM",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:lightdm",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "LightDM"
+      },
+      "settings:service:lightdm:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:lightdm:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:lightdm:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:lightdm:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:notifications": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Notifications",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:notifications",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Notifications"
+      },
+      "settings:service:notifications:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:notifications:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:notifications:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:notifications:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:rgb_ring": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] RGB Ring",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:rgb_ring",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "RGB Ring"
+      },
+      "settings:service:rgb_ring:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:rgb_ring:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:rgb_ring:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:rgb_ring:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:rpi_connect": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] RPi Connect",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:rpi_connect",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "RPi Connect"
+      },
+      "settings:service:rpi_connect:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:rpi_connect:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:rpi_connect:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:rpi_connect:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:sensors": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Sensors",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:sensors",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Sensors"
+      },
+      "settings:service:sensors:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:sensors:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:sensors:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:sensors:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:speech_recognition": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Speech Recognition",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:speech_recognition",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Speech Recognition"
+      },
+      "settings:service:speech_recognition:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:speech_recognition:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:speech_recognition:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:speech_recognition:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:speech_synthesis": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Speech Synthesis",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:speech_synthesis",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Speech Synthesis"
+      },
+      "settings:service:speech_synthesis:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:speech_synthesis:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:speech_synthesis:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:speech_synthesis:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:ssh": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] SSH",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:ssh",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "SSH"
+      },
+      "settings:service:ssh:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:ssh:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:ssh:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:ssh:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:users": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Users",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:users",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Users"
+      },
+      "settings:service:users:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:users:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:users:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:users:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:vscode": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] VSCode",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:vscode",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "VSCode"
+      },
+      "settings:service:vscode:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:vscode:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:vscode:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:vscode:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:web_ui": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] Web UI",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:web_ui",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "Web UI"
+      },
+      "settings:service:web_ui:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:web_ui:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:web_ui:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:web_ui:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:service:wifi": {
+        "_type": "DynamicMenuData",
+        "heading": "[color=#008000]󰪥[/color] WiFi",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:stop",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "stop",
+            "label": "Stop"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:disable",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "enabled",
+            "label": "Auto Load"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:navigate_log_level",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "log_level",
+            "label": "Level: INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:enable_restart",
+            "background_color": "#000000",
+            "color": "#ffffff",
+            "icon": "󰶕",
+            "is_short": false,
+            "key": "auto_restart",
+            "label": "Auto Restart"
+          }
+        ],
+        "menu_id": "settings:service:wifi",
+        "placeholder": "",
+        "sub_heading": "No errors raised in this service",
+        "title": "WiFi"
+      },
+      "settings:service:wifi:errors": {
+        "_type": "DynamicMenuData",
+        "heading": "Errors",
+        "items": [],
+        "menu_id": "settings:service:wifi:errors",
+        "placeholder": "No errors",
+        "sub_heading": "Errors raised in this service",
+        "title": "Errors"
+      },
+      "settings:service:wifi:log_level": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:log_level:0",
+            "background_color": "#000000",
+            "color": "#545454",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "NOTSET",
+            "label": "NOTSET"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:log_level:5",
+            "background_color": "#000000",
+            "color": "#848484",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "VERBOSE",
+            "label": "VERBOSE"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:log_level:10",
+            "background_color": "#000000",
+            "color": "#b6b6b6",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:log_level:20",
+            "background_color": "#64C864",
+            "color": "#ffffff",
+            "icon": "󰱒",
+            "is_short": false,
+            "key": "INFO",
+            "label": "INFO"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:log_level:30",
+            "background_color": "#000000",
+            "color": "#FFA500",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:log_level:40",
+            "background_color": "#000000",
+            "color": "#FF9696",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "ERROR",
+            "label": "ERROR"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:log_level:50",
+            "background_color": "#000000",
+            "color": "#FF00FF",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "CRITICAL",
+            "label": "CRITICAL"
+          }
+        ],
+        "menu_id": "settings:service:wifi:log_level",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Log Level: INFO"
+      },
+      "settings:system:general": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:general:toggle_pdb",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "pdb_signal",
+            "label": "PDB Signal"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:general:toggle_visual_debug",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "visual_debug",
+            "label": "Visual Debug"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:general:toggle_beta",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "beta_versions",
+            "label": "Beta Versions"
+          }
+        ],
+        "menu_id": "settings:system:general",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "󰒓General"
+      },
+      "settings:system:services": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:assistant:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "assistant",
+            "label": "Assistant"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:audio:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "audio",
+            "label": "Audio"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:camera:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "camera",
+            "label": "Camera"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:display:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "display",
+            "label": "Display"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "docker",
+            "label": "Docker"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ethernet:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "ethernet",
+            "label": "Ethernet"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:file_system:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "file_system",
+            "label": "File System"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ip:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "ip",
+            "label": "IP"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:infrared:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "infrared",
+            "label": "Infrared"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keyboard:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "keyboard",
+            "label": "Keyboard"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:keypad:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "keypad",
+            "label": "Keypad"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:lightdm:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "lightdm",
+            "label": "LightDM"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:notifications:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "notifications",
+            "label": "Notifications"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rgb_ring:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "rgb_ring",
+            "label": "RGB Ring"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:rpi_connect:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "rpi_connect",
+            "label": "RPi Connect"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:ssh:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "ssh",
+            "label": "SSH"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:sensors:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "sensors",
+            "label": "Sensors"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_recognition:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "speech_recognition",
+            "label": "Speech Recognition"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:speech_synthesis:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "speech_synthesis",
+            "label": "Speech Synthesis"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:users:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "users",
+            "label": "Users"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:vscode:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "vscode",
+            "label": "VSCode"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:web_ui:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "web_ui",
+            "label": "Web UI"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:wifi:navigate",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#008000]󰪥[/color]",
+            "is_short": false,
+            "key": "wifi",
+            "label": "WiFi"
+          }
+        ],
+        "menu_id": "settings:system:services",
+        "placeholder": "No services",
+        "sub_heading": null,
+        "title": "Services"
+      },
+      "settings:system:third_party": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:third_party:install_audio",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "install_audio",
+            "label": "Re/Install Audio"
+          }
+        ],
+        "menu_id": "settings:system:third_party",
+        "placeholder": "No third party tools",
+        "sub_heading": null,
+        "title": "Third Party Tools"
+      },
+      "speech-recognition:engines": {
+        "_type": "DynamicMenuData",
+        "heading": "Select Active Engine",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-recognition:engines:vosk",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "vosk",
+            "label": "Setup Vosk"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-recognition:engines:google_cloud",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "google_cloud",
+            "label": "Setup Google Cloud"
+          }
+        ],
+        "menu_id": "speech-recognition:engines",
+        "placeholder": "",
+        "sub_heading": "[color=#03F7AE]󱓻[/color] Offline models\n[color=#FFC107]󱓻[/color] Online models",
+        "title": "Recognition Engines"
+      },
+      "speech-recognition:main": {
+        "_type": "DynamicMenuData",
+        "heading": "Speech Recognition Settings",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-recognition:open_services",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "services",
+            "label": "Services"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-recognition:open_engines",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "engine",
+            "label": "Recognition Engine"
+          }
+        ],
+        "menu_id": "speech-recognition:main",
+        "placeholder": "",
+        "sub_heading": "Vosk is used for wake word detection",
+        "title": "Speech Recognition"
+      },
+      "speech-recognition:services": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-recognition:services:is_intents_active",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "is_intents_active",
+            "label": "Command Interface"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-recognition:services:is_assistant_active",
+            "background_color": "#68B7FF",
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "is_assistant_active",
+            "label": "Voice Assistant"
+          }
+        ],
+        "menu_id": "speech-recognition:services",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "Services"
+      },
+      "speech-synthesis:engines": {
+        "_type": "DynamicMenuData",
+        "heading": "Select Active Engine",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "speech-synthesis:engine:picovoice",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰄱",
+            "is_short": false,
+            "key": "PICOVOICE",
+            "label": "Picovoice"
+          }
+        ],
+        "menu_id": "speech-synthesis:engines",
+        "placeholder": "",
+        "sub_heading": "Choose the speech synthesis engine to use",
+        "title": "󰔊Select Engine: piper"
       },
       "speech-synthesis:main": {
         "_type": "DynamicMenuData",
@@ -613,9 +5290,39 @@
         "sub_heading": null,
         "title": "Users"
       },
-      "vscode:main": {
+      "users:user:Fake": {
         "_type": "DynamicMenuData",
         "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "users:reset-password:Fake",
+            "background_color": "#FFC107",
+            "color": "#ffffff",
+            "icon": "󰯄",
+            "is_short": false,
+            "key": "users:reset-password:Fake",
+            "label": "Reset Password"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "users:delete:Fake",
+            "background_color": "#FF3F51",
+            "color": "#ffffff",
+            "icon": "󰀕",
+            "is_short": false,
+            "key": "users:delete:Fake",
+            "label": "Delete"
+          }
+        ],
+        "menu_id": "users:user:Fake",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "<function:>"
+      },
+      "vscode:main": {
+        "_type": "DynamicMenuData",
+        "heading": "VSCode Remote Tunnel",
         "items": [
           {
             "_type": "MenuItemData",
@@ -630,7 +5337,7 @@
         ],
         "menu_id": "vscode:main",
         "placeholder": "",
-        "sub_heading": null,
+        "sub_heading": "Code CLI not installed",
         "title": "VSCode"
       }
     }
@@ -688,7 +5395,38 @@
     "current_view": {
       "_type": "HomeViewData",
       "cpu_percent": 0.0,
-      "menu_items": [],
+      "menu_items": [
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:navigate:main",
+          "background_color": null,
+          "color": "#ffffff",
+          "icon": "󰍜",
+          "is_short": true,
+          "key": "main",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:navigate:notifications",
+          "background_color": null,
+          "color": "#ffffff",
+          "icon": "",
+          "is_short": true,
+          "key": "notifications",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:navigate:power",
+          "background_color": null,
+          "color": "#ffffff",
+          "icon": "󰐥",
+          "is_short": true,
+          "key": "power",
+          "label": ""
+        }
+      ],
       "ram_percent": 0.0,
       "show_status_bar": true,
       "type": "home",
@@ -1084,7 +5822,7 @@
       "light_level": 0.0,
       "progress_notifications": [],
       "temperature": 0.0,
-      "title": ""
+      "title": "󰋜test-hostname.local"
     }
   },
   "notifications": {

@@ -62,6 +62,7 @@ from ubo_app.store.core.types.enums import (
 from ubo_app.store.core.types.events import (
     CloseApplicationEvent,
     DynamicMenuChangedEvent,
+    ExecuteMenuActionEvent,
     InitEvent,
     MainEvent,
     MenuChooseByIconEvent,
@@ -124,6 +125,7 @@ __all__ = [
     'DynamicMenuData',
     'DynamicMenusState',
     'ExecuteMenuActionAction',
+    'ExecuteMenuActionEvent',
     'HomeViewData',
     'InitEvent',
     'MainAction',

@@ -320,14 +320,14 @@ def init_service() -> None:
         ),
     )
 
-    from ubo_app.store.core.view_registry import register_path_menu_matcher
+    from ubo_app.store.core.view_registry import (
+        create_settings_path_matcher,
+        register_path_menu_matcher,
+    )
 
     register_path_menu_matcher(
         'lightdm:settings',
-        lambda path: LIGHTDM_MENU_ID
-        if len(path) >= 4  # noqa: PLR2004
-        and path[3] == 'lightdm:'
-        else None,
+        create_settings_path_matcher('lightdm:', LIGHTDM_MENU_ID),
     )
 
     create_task(check_lightdm())

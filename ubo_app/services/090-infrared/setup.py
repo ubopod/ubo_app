@@ -165,14 +165,14 @@ def init_service() -> Subscriptions:
     )
 
     # Register path matcher for Infrared menu navigation
-    from ubo_app.store.core.view_registry import register_path_menu_matcher
+    from ubo_app.store.core.view_registry import (
+        create_settings_path_matcher,
+        register_path_menu_matcher,
+    )
 
     register_path_menu_matcher(
         'infrared:settings',
-        lambda path: 'infrared:settings'
-        if len(path) >= 4  # noqa: PLR2004
-        and path[3] == 'infrared:infrared'
-        else None,
+        create_settings_path_matcher('infrared:infrared', 'infrared:settings'),
     )
 
     return [

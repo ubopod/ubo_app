@@ -143,5 +143,17 @@ class StoreRecordedSequenceEvent(MainEvent):
     recorded_sequence: list[KeypadAction]
 
 
+class ExecuteMenuActionEvent(MainEvent):
+    """Event for executing a menu action by its action_id.
+
+    Emitted by the reducer when an ExecuteMenuActionAction is dispatched.
+    The event handler layer calls execute_action() and optionally pushes
+    a menu onto the stack if the handler returns a result.
+    """
+
+    action_id: str
+    menu_key: str | None = None
+
+
 class ReplayRecordedSequenceEvent(MainEvent):
     """Event for replaying a recorded sequence."""

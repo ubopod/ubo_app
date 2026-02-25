@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import math
+import socket
 from typing import TYPE_CHECKING
 
 from ubo_app.constants import DEBUG_MENU
@@ -27,10 +28,7 @@ from ubo_app.store.core.types import (
     StatusBarData,
     StatusIconData,
 )
-from ubo_app.store.core.view_helpers import (
-    find_dynamic_menu_for_position,
-    get_dynamic_menu_id_for_stack,
-)
+from ubo_app.store.core.view_helpers import find_dynamic_menu_for_position
 from ubo_app.store.core.view_registry import (
     get_home_view_data,
     get_registered_dependencies,
@@ -41,6 +39,9 @@ if TYPE_CHECKING:
     from ubo_app.store.core.types import ViewData
     from ubo_app.store.main import RootState
 
+# Cache hostname at module load — it doesn't change at runtime
+_HOSTNAME_TITLE = f'󰋜{socket.gethostname()}.local'
+
 __all__ = [
     'PAGE_SIZE',
     'compute_status_bar_data',
@@ -49,11 +50,6 @@ __all__ = [
     'setup_dynamic_view_autorun',
 ]
 
-# Re-export PAGE_SIZE for backward compatibility (main __all__ is above)
-
-# Re-export for backward compatibility
-_get_dynamic_menu_id_for_stack = get_dynamic_menu_id_for_stack
-_find_dynamic_menu_for_position = find_dynamic_menu_for_position
 
 
 def get_notification_view_data(
@@ -208,13 +204,8 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     with contextlib.suppress(AttributeError, TypeError):
         is_recording_audio = state.audio.is_recording
 
-    # Title shows hostname (previously from legacy HOME_MENU.title)
-    import socket
-
-    title = f'󰋜{socket.gethostname()}.local'
-
     return StatusBarData(
-        title=title,
+        title=_HOSTNAME_TITLE,
         is_recording=is_recording,
         is_replaying=is_replaying,
         is_recording_audio=is_recording_audio,
@@ -252,13 +243,10 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
     # Handle application views
     if isinstance(top_item, ApplicationStackItem):
-        extra_data: dict[str, str] = {}
-        for k, v in top_item.initialization_kwargs.items():
-            extra_data[k] = str(v)
         return ApplicationViewData(
             application_id=top_item.application_id,
             show_status_bar=False,
-            extra_data=extra_data,
+            extra_data=dict(top_item.initialization_kwargs),
         )
 
     # Handle notification views
@@ -296,7 +284,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         )
 
     # Try to find a dynamic menu for the current position
-    dynamic_match = _find_dynamic_menu_for_position(
+    dynamic_match = find_dynamic_menu_for_position(
         main_state,
         dynamic_menus_state,
         stack,

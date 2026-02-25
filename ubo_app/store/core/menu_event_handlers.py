@@ -16,6 +16,7 @@ from ubo_app.logger import logger
 from ubo_app.store.core.constants import PAGE_SIZE
 from ubo_app.store.core.types import (
     ExecuteMenuActionAction,
+    ExecuteMenuActionEvent,
     MenuChooseByIconEvent,
     MenuChooseByIndexEvent,
     MenuChooseByLabelEvent,
@@ -356,6 +357,21 @@ def _handle_scroll(event: MenuScrollEvent) -> None:
         store.dispatch(StackSetPageIndexAction(page_index=new_page))
 
 
+def _handle_execute_menu_action(event: ExecuteMenuActionEvent) -> None:
+    """Handle menu action execution via the action registry.
+
+    This is the side-effect layer for ExecuteMenuActionAction. The reducer
+    emits ExecuteMenuActionEvent and this handler calls execute_action().
+    If the handler returns a result and a menu_key was provided, it pushes
+    the menu onto the stack.
+    """
+    from ubo_app.store.core.action_registry import execute_action
+
+    result = execute_action(event.action_id)
+    if result is not None and event.menu_key:
+        store.dispatch(StackPushMenuAction(menu_key=event.menu_key))
+
+
 def _handle_notification_display(event: NotificationsDisplayEvent) -> None:
     """Handle notification display by pushing it onto the stack."""
     notification_id = getattr(event.notification, 'id', None)
@@ -398,6 +414,10 @@ def setup_menu_event_handlers() -> Subscriptions:
         store.subscribe_event(MenuGoBackEvent, _handle_go_back),
         store.subscribe_event(MenuGoHomeEvent, _handle_go_home),
         store.subscribe_event(MenuScrollEvent, _handle_scroll),
+        store.subscribe_event(
+            ExecuteMenuActionEvent,
+            _handle_execute_menu_action,
+        ),
         store.subscribe_event(
             NotificationsClearEvent,
             _handle_notification_clear,

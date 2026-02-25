@@ -201,6 +201,33 @@ def get_registered_dependencies(state: RootState) -> tuple[Any, ...]:
 # =============================================================================
 
 
+def create_settings_path_matcher(
+    path_key: str,
+    menu_id: str,
+) -> Callable[[tuple[str, ...]], str | None]:
+    """Create a standard settings path matcher.
+
+    Most services use the same pattern: match when path[3] equals their key.
+    This helper eliminates the boilerplate lambda.
+
+    Args:
+        path_key: The key to match at path[3] (e.g., 'wifi:').
+        menu_id: The dynamic menu ID to return on match.
+
+    Returns:
+        A matcher function suitable for register_path_menu_matcher.
+
+    """
+    min_path_length = 4
+
+    def _matcher(path: tuple[str, ...]) -> str | None:
+        if len(path) >= min_path_length and path[3] == path_key:
+            return menu_id
+        return None
+
+    return _matcher
+
+
 def register_path_menu_matcher(
     matcher_id: str,
     matcher: Callable[[tuple[str, ...]], str | None],

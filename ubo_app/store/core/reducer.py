@@ -31,6 +31,7 @@ from ubo_app.store.core.types import (
     CloseApplicationEvent,
     DeregisterRegularAppAction,
     ExecuteMenuActionAction,
+    ExecuteMenuActionEvent,
     InitEvent,
     MainAction,
     MainEvent,
@@ -315,18 +316,16 @@ def reducer(
             )
 
         case ExecuteMenuActionAction():
-            # Execute a menu action by its action_id
-            from ubo_app.store.core.action_registry import execute_action
-
-            result = execute_action(action.action_id)
-            # If handler returns a Menu and menu_key is provided, push it
-            if result is not None and action.menu_key:
-                new_state = push_menu(state, action.menu_key)
-                return CompleteReducerResult(
-                    state=new_state,
-                    events=[StackChangedEvent(stack=new_state.stack)],
-                )
-            return state
+            # Emit event for the side-effect layer to handle
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    ExecuteMenuActionEvent(
+                        action_id=action.action_id,
+                        menu_key=action.menu_key,
+                    ),
+                ],
+            )
 
         case _:
             return state
