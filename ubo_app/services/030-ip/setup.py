@@ -47,18 +47,17 @@ def _get_interface_icon(name: str) -> str:
     return '󰛳'
 
 
+_ip_action_ids: list[str] = []
+
+
 def _register_ip_action_handlers(interfaces: Sequence[IpNetworkInterface]) -> None:
     """Register action handlers for IP interface menus."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-        unregister_action,
-    )
+    from ubo_app.store.core.action_registry import register_action, unregister_action
 
-    # Unregister all existing ip:open-interface: handlers
-    for action_id in get_registered_actions():
-        if action_id.startswith('ip:open-interface:'):
-            unregister_action(action_id)
+    # Unregister previously tracked actions
+    for action_id in _ip_action_ids:
+        unregister_action(action_id)
+    _ip_action_ids.clear()
 
     if not interfaces:
         return
@@ -73,7 +72,9 @@ def _register_ip_action_handlers(interfaces: Sequence[IpNetworkInterface]) -> No
 
             return _handler
 
-        register_action(f'ip:open-interface:{name}', _make_handler(name))
+        aid = f'ip:open-interface:{name}'
+        register_action(aid, _make_handler(name))
+        _ip_action_ids.append(aid)
 
 
 @store.autorun(lambda state: state.ip.interfaces)

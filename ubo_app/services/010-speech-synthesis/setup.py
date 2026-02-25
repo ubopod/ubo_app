@@ -51,10 +51,7 @@ from ubo_app.store.services.speech_synthesis import (
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
 from ubo_app.utils.input import ubo_input
-from ubo_app.utils.menu_items import (
-    SELECTED_ITEM_PARAMETERS,
-    UNSELECTED_ITEM_PARAMETERS,
-)
+from ubo_app.utils.menu_items import build_selection_menu
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
@@ -290,23 +287,29 @@ def _download_piper_wrapper() -> None:
 
 def _register_speech_synthesis_action_handlers() -> None:
     """Register action handlers for speech synthesis menu items."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action(
+        'speech-synthesis:download_piper',
+        _download_piper_wrapper,
+        allow_reregister=True,
     )
-
-    # Only register once
-    if 'speech-synthesis:download_piper' in get_registered_actions():
-        return
-
-    register_action('speech-synthesis:download_piper', _download_piper_wrapper)
-    register_action('speech-synthesis:set_access_key', input_access_key)
-    register_action('speech-synthesis:clear_access_key', clear_access_key)
+    register_action(
+        'speech-synthesis:set_access_key',
+        input_access_key,
+        allow_reregister=True,
+    )
+    register_action(
+        'speech-synthesis:clear_access_key',
+        clear_access_key,
+        allow_reregister=True,
+    )
     register_action(
         'speech-synthesis:select_engine',
         lambda: store.dispatch(
             StackPushMenuAction(menu_key='speech-synthesis:engines'),
         ),
+        allow_reregister=True,
     )
 
     # Register engine-specific actions
@@ -315,6 +318,7 @@ def _register_speech_synthesis_action_handlers() -> None:
             register_action(
                 f'speech-synthesis:engine:{engine.value}',
                 create_engine_selector(engine),
+                allow_reregister=True,
             )
 
 
@@ -372,35 +376,26 @@ def update_engines_dynamic_menu(
     selected_engine: SpeechSynthesisEngineName,
 ) -> None:
     """Update the dynamic menu for engine selection."""
-    items: list[MenuItemData] = []
-    for engine in SpeechSynthesisEngineName:
-        if _is_piper_downloaded() or engine != SpeechSynthesisEngineName.PIPER:
-            is_selected = engine == selected_engine
-            items.append(
-                MenuItemData(
-                    key=engine.name,
-                    label=ENGINE_LABELS[engine],
-                    icon=SELECTED_ITEM_PARAMETERS['icon']
-                    if is_selected
-                    else UNSELECTED_ITEM_PARAMETERS['icon'],
-                    action_id=f'speech-synthesis:engine:{engine.value}',
-                    background_color=SELECTED_ITEM_PARAMETERS.get(
-                        'background_color',
-                    )
-                    if is_selected
-                    else None,
-                ),
-            )
+    available_engines = [
+        engine
+        for engine in SpeechSynthesisEngineName
+        if _is_piper_downloaded() or engine != SpeechSynthesisEngineName.PIPER
+    ]
 
-    store.dispatch(
-        UpdateDynamicMenuAction(
-            menu_id=SPEECH_SYNTHESIS_ENGINES_MENU_ID,
-            title=f'󰔊Select Engine: {selected_engine}',
-            heading='Select Active Engine',
-            sub_heading='Choose the speech synthesis engine to use',
-            items=tuple(items),
-            placeholder='',
+    build_selection_menu(
+        options=tuple(
+            (
+                engine.name,
+                ENGINE_LABELS[engine],
+                f'speech-synthesis:engine:{engine.value}',
+            )
+            for engine in available_engines
         ),
+        selected_key=selected_engine.name,
+        menu_id=SPEECH_SYNTHESIS_ENGINES_MENU_ID,
+        title=f'󰔊Select Engine: {selected_engine}',
+        heading='Select Active Engine',
+        sub_heading='Choose the speech synthesis engine to use',
     )
 
 

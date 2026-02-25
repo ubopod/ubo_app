@@ -296,18 +296,11 @@ def _generate_dynamic_menu_items(state: VSCodeState) -> list[MenuItemData]:
 
 def _register_vscode_action_handlers() -> None:
     """Register action handlers for VSCode menu items."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-    )
+    from ubo_app.store.core.action_registry import register_action
 
-    # Only register once
-    if 'vscode:download' in get_registered_actions():
-        return
-
-    register_action('vscode:download', download_code)
-    register_action('vscode:logout', logout)
-    register_action('vscode:login', start_login)
+    register_action('vscode:download', download_code, allow_reregister=True)
+    register_action('vscode:logout', logout, allow_reregister=True)
+    register_action('vscode:login', start_login, allow_reregister=True)
 
 
 def _compute_vscode_sub_heading(state: VSCodeState) -> str:
@@ -333,6 +326,9 @@ def _compute_vscode_sub_heading(state: VSCodeState) -> str:
     return 'Unknown status'
 
 
+_vscode_show_url_action_ids: list[str] = []
+
+
 @store.autorun(lambda state: state.vscode)
 def update_vscode_dynamic_menu(state: VSCodeState) -> None:
     """Update the dynamic menu for VSCode (dumb UI architecture)."""
@@ -341,32 +337,32 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
     # Register show-url action dynamically based on current status
     if state.status and state.status.is_running and state.status.name:
         from ubo_app.store.core.action_registry import (
-            get_registered_actions,
             register_action,
             unregister_action,
         )
 
+        # Unregister previously tracked show-url actions
+        for old_id in _vscode_show_url_action_ids:
+            unregister_action(old_id)
+        _vscode_show_url_action_ids.clear()
+
         action_id = f'vscode:show-url:{state.status.name}'
-        if action_id not in get_registered_actions():
-            # Unregister old show-url actions
-            for old_action_id in get_registered_actions():
-                if old_action_id.startswith('vscode:show-url:'):
-                    unregister_action(old_action_id)
 
-            def _make_show_url_handler(name: str) -> Callable[[], None]:
-                def _handler() -> None:
-                    store.dispatch(
-                        OpenApplicationAction(
-                            application_id='vscode:qrcode-page',
-                            initialization_kwargs={
-                                'url': f'{CODE_TUNNEL_URL_PREFIX}{name}',
-                            },
-                        ),
-                    )
+        def _make_show_url_handler(name: str) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(
+                    OpenApplicationAction(
+                        application_id='vscode:qrcode-page',
+                        initialization_kwargs={
+                            'url': f'{CODE_TUNNEL_URL_PREFIX}{name}',
+                        },
+                    ),
+                )
 
-                return _handler
+            return _handler
 
-            register_action(action_id, _make_show_url_handler(state.status.name))
+        register_action(action_id, _make_show_url_handler(state.status.name))
+        _vscode_show_url_action_ids.append(action_id)
 
     items = _generate_dynamic_menu_items(state)
 
@@ -380,7 +376,7 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=VSCODE_MENU_ID,
-            title='VSCode',
+            title='󰨞 VSCode',
             heading='VSCode Remote Tunnel',
             sub_heading=_compute_vscode_sub_heading(state),
             items=tuple(items),
@@ -398,8 +394,9 @@ async def _monitor_status(end_event: asyncio.Event) -> None:
 async def init_service() -> Subscriptions:
     from ubo_app.store.core.action_registry import register_action
 
-    def _open_vscode_menu() -> None:
+    def _open_vscode_menu() -> bool:
         create_task(check_status())
+        return True
 
     register_action('vscode:open_menu', _open_vscode_menu)
     store.dispatch(

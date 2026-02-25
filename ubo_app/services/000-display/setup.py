@@ -12,10 +12,8 @@ if TYPE_CHECKING:
 from ubo_app.display import display
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
-    MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
-    UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_path_menu_matcher
 from ubo_app.store.main import store
@@ -29,10 +27,7 @@ from ubo_app.store.services.display import (
     DisplayUpdateActivityAction,
 )
 from ubo_app.utils import IS_TEST_ENV
-from ubo_app.utils.menu_items import (
-    SELECTED_ITEM_PARAMETERS,
-    UNSELECTED_ITEM_PARAMETERS,
-)
+from ubo_app.utils.menu_items import build_selection_menu
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
@@ -139,14 +134,7 @@ DISPLAY_TIMEOUT_MENU_ID = 'display:timeout'
 
 def _register_display_action_handlers() -> None:
     """Register action handlers for display timeout settings."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-    )
-
-    # Only register once
-    if 'display:set_timeout:off' in get_registered_actions():
-        return
+    from ubo_app.store.core.action_registry import register_action
 
     for timeout in DisplayBlankTimeout:
         def _make_timeout_handler(t: DisplayBlankTimeout) -> Callable[[], None]:
@@ -158,6 +146,7 @@ def _register_display_action_handlers() -> None:
         register_action(
             f'display:set_timeout:{timeout.value}',
             _make_timeout_handler(timeout),
+            allow_reregister=True,
         )
 
 
@@ -166,28 +155,20 @@ def update_display_dynamic_menu(selected_timeout: DisplayBlankTimeout) -> None:
     """Update the dynamic menu for display timeout settings (dumb UI)."""
     _register_display_action_handlers()
 
-    # Convert timeout options to MenuItemData
-    menu_items = tuple(
-        MenuItemData(
-            key=timeout.value,
-            label=timeout.get_label(),
-            icon=SELECTED_ITEM_PARAMETERS['icon']
-            if selected_timeout == timeout
-            else UNSELECTED_ITEM_PARAMETERS['icon'],
-            action_id=f'display:set_timeout:{timeout.value}',
-        )
-        for timeout in DisplayBlankTimeout
-    )
-
-    store.dispatch(
-        UpdateDynamicMenuAction(
-            menu_id=DISPLAY_TIMEOUT_MENU_ID,
-            title='Display Settings',
-            heading='Screen Timeout',
-            sub_heading='Select screen blank timeout',
-            items=menu_items,
-            placeholder='',
+    build_selection_menu(
+        options=tuple(
+            (
+                timeout.value,
+                timeout.get_label(),
+                f'display:set_timeout:{timeout.value}',
+            )
+            for timeout in DisplayBlankTimeout
         ),
+        selected_key=selected_timeout.value,
+        menu_id=DISPLAY_TIMEOUT_MENU_ID,
+        title='Display Settings',
+        heading='Screen Timeout',
+        sub_heading='Select screen blank timeout',
     )
 
 

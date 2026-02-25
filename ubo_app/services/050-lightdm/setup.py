@@ -123,20 +123,13 @@ def disable_lightdm_service() -> None:
 
 def _register_lightdm_action_handlers() -> None:
     """Register action handlers for LightDM menu items."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-    )
+    from ubo_app.store.core.action_registry import register_action
 
-    # Only register once
-    if 'lightdm:install' in get_registered_actions():
-        return
-
-    register_action('lightdm:install', install_lightdm)
-    register_action('lightdm:start', start_lightdm_service)
-    register_action('lightdm:stop', stop_lightdm_service)
-    register_action('lightdm:enable', enable_lightdm_service)
-    register_action('lightdm:disable', disable_lightdm_service)
+    register_action('lightdm:install', install_lightdm, allow_reregister=True)
+    register_action('lightdm:start', start_lightdm_service, allow_reregister=True)
+    register_action('lightdm:stop', stop_lightdm_service, allow_reregister=True)
+    register_action('lightdm:enable', enable_lightdm_service, allow_reregister=True)
+    register_action('lightdm:disable', disable_lightdm_service, allow_reregister=True)
 
 
 @store.autorun(lambda state: state.lightdm)
@@ -245,8 +238,9 @@ def init_service() -> None:
     """Initialize the LightDM service."""
     from ubo_app.store.core.action_registry import register_action
 
-    def _open_lightdm_menu() -> None:
+    def _open_lightdm_menu() -> bool:
         create_task(check_lightdm())
+        return True
 
     register_action('lightdm:open_menu', _open_lightdm_menu)
     store.dispatch(

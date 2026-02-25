@@ -392,66 +392,22 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         data: tuple[AssistantSTTName, float, dict[str, bool]],
     ) -> None:
         """Update dynamic menu for STT engine selection."""
-        selected_stt, _, _ = data
+        from engine_menu_builder import build_engine_menu
 
-        for action_id in _stt_action_ids:
-            unregister_action(action_id)
-        _stt_action_ids.clear()
-
-        items: list[MenuItemData] = []
-        for engine_name, engine in STT_ENGINES.items():
-            is_offline = not isinstance(engine, RemoteMixin)
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
-                action_id = f'assistant:setup-stt:{engine_name}'
-                _stt_action_ids.append(action_id)
-                register_action(action_id, engine.setup)
-                params = _get_not_setup_item_parameters(is_offline=is_offline)
-                items.append(
-                    MenuItemData(
-                        key=engine_name,
-                        label=engine.instance_label,
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
+        build_engine_menu(
+            engines=STT_ENGINES,
+            selected_name=data[0],
+            menu_id='assistant:stt',
+            title='Speech Recognition',
+            action_prefix='stt',
+            select_action_factory=lambda en: (
+                lambda: store.dispatch(
+                    AssistantSetSelectedSTTAction(
+                        stt_name=AssistantSTTName(en),
                     ),
                 )
-            else:
-                action_id = f'assistant:select-stt:{engine_name}'
-                _stt_action_ids.append(action_id)
-                register_action(
-                    action_id,
-                    lambda _en=engine_name: store.dispatch(
-                        AssistantSetSelectedSTTAction(
-                            stt_name=AssistantSTTName(_en),
-                        ),
-                    ),
-                )
-                params = (
-                    _get_selected_item_parameters(is_offline=is_offline)
-                    if selected_stt == engine_name
-                    else _get_unselected_item_parameters(is_offline=is_offline)
-                )
-                items.append(
-                    MenuItemData(
-                        key=engine_name,
-                        label=engine.instance_label,
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
-                    ),
-                )
-
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id='assistant:stt',
-                title='Speech Recognition',
-                heading='Select Active Engine',
-                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-                items=tuple(items),
             ),
+            action_ids_list=_stt_action_ids,
         )
 
     @store.autorun(
@@ -466,66 +422,22 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         data: tuple[AssistantLLMName, float, dict[str, bool]],
     ) -> None:
         """Update dynamic menu for LLM engine selection."""
-        selected_llm, _, _ = data
+        from engine_menu_builder import build_engine_menu
 
-        for action_id in _llm_action_ids:
-            unregister_action(action_id)
-        _llm_action_ids.clear()
-
-        items: list[MenuItemData] = []
-        for engine_name, engine in LLM_ENGINES.items():
-            is_offline = not isinstance(engine, RemoteMixin)
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
-                action_id = f'assistant:setup-llm:{engine_name}'
-                _llm_action_ids.append(action_id)
-                register_action(action_id, engine.setup)
-                params = _get_not_setup_item_parameters(is_offline=is_offline)
-                items.append(
-                    MenuItemData(
-                        key=engine_name,
-                        label=engine.instance_label,
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
+        build_engine_menu(
+            engines=LLM_ENGINES,
+            selected_name=data[0],
+            menu_id='assistant:llm',
+            title='Language Model',
+            action_prefix='llm',
+            select_action_factory=lambda en: (
+                lambda: store.dispatch(
+                    AssistantSetSelectedLLMAction(
+                        llm_name=AssistantLLMName(en),
                     ),
                 )
-            else:
-                action_id = f'assistant:select-llm:{engine_name}'
-                _llm_action_ids.append(action_id)
-                register_action(
-                    action_id,
-                    lambda _en=engine_name: store.dispatch(
-                        AssistantSetSelectedLLMAction(
-                            llm_name=AssistantLLMName(_en),
-                        ),
-                    ),
-                )
-                params = (
-                    _get_selected_item_parameters(is_offline=is_offline)
-                    if selected_llm == engine_name
-                    else _get_unselected_item_parameters(is_offline=is_offline)
-                )
-                items.append(
-                    MenuItemData(
-                        key=engine_name,
-                        label=engine.instance_label,
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
-                    ),
-                )
-
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id='assistant:llm',
-                title='Language Model',
-                heading='Select Active Engine',
-                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-                items=tuple(items),
             ),
+            action_ids_list=_llm_action_ids,
         )
 
     @store.autorun(
@@ -540,66 +452,22 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         data: tuple[AssistantTTSName, float, dict[str, bool]],
     ) -> None:
         """Update dynamic menu for TTS engine selection."""
-        selected_tts, _, _ = data
+        from engine_menu_builder import build_engine_menu
 
-        for action_id in _tts_action_ids:
-            unregister_action(action_id)
-        _tts_action_ids.clear()
-
-        items: list[MenuItemData] = []
-        for tts_name, engine in TTS_ENGINES.items():
-            is_offline = not isinstance(engine, RemoteMixin)
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
-                action_id = f'assistant:setup-tts:{tts_name}'
-                _tts_action_ids.append(action_id)
-                register_action(action_id, engine.setup)
-                params = _get_not_setup_item_parameters(is_offline=is_offline)
-                items.append(
-                    MenuItemData(
-                        key=tts_name,
-                        label=engine.instance_label,
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
+        build_engine_menu(
+            engines=TTS_ENGINES,
+            selected_name=data[0],
+            menu_id='assistant:tts',
+            title='Speech Synthesis',
+            action_prefix='tts',
+            select_action_factory=lambda en: (
+                lambda: store.dispatch(
+                    AssistantSetSelectedTTSAction(
+                        tts_name=AssistantTTSName(en),
                     ),
                 )
-            else:
-                action_id = f'assistant:select-tts:{tts_name}'
-                _tts_action_ids.append(action_id)
-                register_action(
-                    action_id,
-                    lambda _tn=tts_name: store.dispatch(
-                        AssistantSetSelectedTTSAction(
-                            tts_name=AssistantTTSName(_tn),
-                        ),
-                    ),
-                )
-                params = (
-                    _get_selected_item_parameters(is_offline=is_offline)
-                    if selected_tts == tts_name
-                    else _get_unselected_item_parameters(is_offline=is_offline)
-                )
-                items.append(
-                    MenuItemData(
-                        key=tts_name,
-                        label=engine.instance_label if engine else tts_name.value,
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
-                    ),
-                )
-
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id='assistant:tts',
-                title='Speech Synthesis',
-                heading='Select Active Engine',
-                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-                items=tuple(items),
             ),
+            action_ids_list=_tts_action_ids,
         )
 
     @store.autorun(
@@ -614,66 +482,22 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         data: tuple[AssistantImageGeneratorName, float, dict[str, bool]],
     ) -> None:
         """Update dynamic menu for image generator engine selection."""
-        selected_image_generator, _, _ = data
+        from engine_menu_builder import build_engine_menu
 
-        for action_id in _img_gen_action_ids:
-            unregister_action(action_id)
-        _img_gen_action_ids.clear()
-
-        items: list[MenuItemData] = []
-        for img_gen_name, engine in IMAGE_GENERATOR_ENGINES.items():
-            is_offline = not isinstance(engine, RemoteMixin)
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
-                action_id = f'assistant:setup-img-gen:{img_gen_name}'
-                _img_gen_action_ids.append(action_id)
-                register_action(action_id, engine.setup)
-                params = _get_not_setup_item_parameters(is_offline=is_offline)
-                items.append(
-                    MenuItemData(
-                        key=img_gen_name,
-                        label=engine.instance_label,
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
+        build_engine_menu(
+            engines=IMAGE_GENERATOR_ENGINES,
+            selected_name=data[0],
+            menu_id='assistant:image_generator',
+            title='Image Generator',
+            action_prefix='img-gen',
+            select_action_factory=lambda en: (
+                lambda: store.dispatch(
+                    AssistantSetSelectedImageGeneratorAction(
+                        image_generator_name=AssistantImageGeneratorName(en),
                     ),
                 )
-            else:
-                action_id = f'assistant:select-img-gen:{img_gen_name}'
-                _img_gen_action_ids.append(action_id)
-                register_action(
-                    action_id,
-                    lambda _ign=img_gen_name: store.dispatch(
-                        AssistantSetSelectedImageGeneratorAction(
-                            image_generator_name=AssistantImageGeneratorName(_ign),
-                        ),
-                    ),
-                )
-                params = (
-                    _get_selected_item_parameters(is_offline=is_offline)
-                    if selected_image_generator == img_gen_name
-                    else _get_unselected_item_parameters(is_offline=is_offline)
-                )
-                items.append(
-                    MenuItemData(
-                        key=img_gen_name,
-                        label=(engine.instance_label if engine else img_gen_name.value),
-                        icon=params.get('icon', ''),
-                        color=params.get('color', '#ffffff'),
-                        background_color=params.get('background_color'),
-                        action_id=action_id,
-                    ),
-                )
-
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id='assistant:image_generator',
-                title='Image Generator',
-                heading='Select Active Engine',
-                sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
-                f'[color={WARNING_COLOR}]󱓻[/color] Online models',
-                items=tuple(items),
             ),
+            action_ids_list=_img_gen_action_ids,
         )
 
     # MCP Tools menu - main list

@@ -194,35 +194,25 @@ later.""",
 
 def _register_users_action_handlers() -> None:
     """Register action handlers for Users menu items."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-    )
-
-    # Only register once
-    if 'users:add' in get_registered_actions():
-        return
+    from ubo_app.store.core.action_registry import register_action
 
     def _add_user() -> None:
         store.dispatch(UsersCreateUserAction())
 
-    register_action('users:add', _add_user)
+    register_action('users:add', _add_user, allow_reregister=True)
+
+
+_user_detail_action_ids: list[str] = []
 
 
 def _register_user_detail_actions(users: Sequence[UserState]) -> None:
     """Register action handlers and dynamic menus for each user's detail page."""
-    from ubo_app.store.core.action_registry import (
-        get_registered_actions,
-        register_action,
-        unregister_action,
-    )
+    from ubo_app.store.core.action_registry import register_action, unregister_action
 
-    # Unregister old user-specific actions
-    for action_id in list(get_registered_actions()):
-        if action_id.startswith(
-            ('users:open-user:', 'users:reset-password:', 'users:delete:'),
-        ):
-            unregister_action(action_id)
+    # Unregister previously tracked user-specific actions
+    for action_id in _user_detail_action_ids:
+        unregister_action(action_id)
+    _user_detail_action_ids.clear()
 
     for user in users:
         uid = user.id
@@ -245,9 +235,15 @@ def _register_user_detail_actions(users: Sequence[UserState]) -> None:
 
             return _handler
 
-        register_action(f'users:open-user:{uid}', _make_open_handler(uid))
-        register_action(f'users:reset-password:{uid}', _make_reset_handler(uid))
-        register_action(f'users:delete:{uid}', _make_delete_handler(uid))
+        aids = [
+            f'users:open-user:{uid}',
+            f'users:reset-password:{uid}',
+            f'users:delete:{uid}',
+        ]
+        register_action(aids[0], _make_open_handler(uid))
+        register_action(aids[1], _make_reset_handler(uid))
+        register_action(aids[2], _make_delete_handler(uid))
+        _user_detail_action_ids.extend(aids)
 
         # Create dynamic menu for user detail page
         store.dispatch(
