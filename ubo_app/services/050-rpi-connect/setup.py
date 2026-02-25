@@ -186,6 +186,21 @@ def _register_rpi_connect_action_handlers() -> None:
     register_action('rpi-connect:show-url', _open_qrcode)
 
 
+def _compute_rpi_connect_sub_heading(state: RPiConnectState) -> str:
+    """Compute the sub_heading for RPi Connect menu from state."""
+    if state.status:
+        screen = state.status.screen_sharing_sessions
+        shell = state.status.remote_shell_sessions
+        screen_text = 'unavailable' if screen is None else f'{screen} sessions'
+        shell_text = 'unavailable' if shell is None else f'{shell} sessions'
+        return f'Screen sharing: {screen_text}\nRemote shell: {shell_text}'
+    if state.is_downloading:
+        return 'Downloading...'
+    if state.is_installed:
+        return 'Installed'
+    return 'Not installed'
+
+
 @store.autorun(lambda state: state.rpi_connect)
 def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
     """Update the dynamic menu for RPi Connect (dumb UI architecture)."""
@@ -267,6 +282,8 @@ def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
         UpdateDynamicMenuAction(
             menu_id=RPI_CONNECT_MENU_ID,
             title='RPi Connect',
+            heading='RPi Connect',
+            sub_heading=_compute_rpi_connect_sub_heading(state),
             items=tuple(items),
             placeholder='',
         ),
@@ -347,15 +364,26 @@ def generate_rpi_connect_menu() -> HeadedMenu:
 
 
 def init_service() -> None:
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action('rpi-connect:open_menu', generate_rpi_connect_menu)
     store.dispatch(
         RegisterSettingAppAction(
-            menu_item=ActionItem(
-                label='RPi Connect',
-                icon='',
-                action=generate_rpi_connect_menu,
-            ),
+            label='RPi Connect',
+            icon='',
+            action_id='rpi-connect:open_menu',
             category=SettingsCategory.REMOTE,
         ),
+    )
+
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher(
+        'rpi-connect:settings',
+        lambda path: RPI_CONNECT_MENU_ID
+        if len(path) >= 4  # noqa: PLR2004
+        and path[3] == 'rpi_connect:'
+        else None,
     )
 
     create_task(check_is_active())

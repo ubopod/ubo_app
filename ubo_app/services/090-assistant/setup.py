@@ -30,6 +30,7 @@ from ubo_app.constants.assistant import (
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
 from ubo_app.logger import logger
+from ubo_app.store.core.menu_item_bridge import sync_items_to_dynamic_menu
 from ubo_app.store.core.types import (
     MenuGoBackAction,
     RegisterSettingAppAction,
@@ -65,12 +66,12 @@ from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
     ItemParameters,
 )
-from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
@@ -275,7 +276,7 @@ def _register_persistent_stores() -> None:
     )
 
 
-def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
+def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     """Set up all autorun functions and MCP event handlers.
 
     Returns:
@@ -285,6 +286,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
                   handle_sync_mcp_servers)
 
     """
+
     # Secrets file monitor - tracks API key changes
     @store.autorun(
         lambda _: secrets_modification_time(),
@@ -331,7 +333,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
                 p.label.lower(),
             ),
         )
-        return [
+        items = [
             ActionItem(
                 key=provider.name,
                 label=provider.label,
@@ -350,6 +352,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             for provider in providers
         ]
+        sync_items_to_dynamic_menu(
+            menu_id='assistant:providers',
+            title='Manage Providers',
+            heading='Setup providers to be used by different '
+            'assistant features',
+            sub_heading='',
+            items=items,
+        )
+        return items
 
     @store.autorun(
         lambda state: (
@@ -364,9 +375,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
     ) -> Sequence[Item]:
         """Return items for recognition engine selection."""
         selected_stt, _, _ = data
-        return [
+        items = [
             ActionItem(
-                key=engine.name,
+                key=engine_name,
                 label=engine.instance_label,
                 action=engine.setup,
                 **_get_not_setup_item_parameters(
@@ -375,7 +386,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
             else UboDispatchItem(
-                key=engine.name,
+                key=engine_name,
                 label=engine.instance_label,
                 store_action=AssistantSetSelectedSTTAction(
                     stt_name=AssistantSTTName(engine_name),
@@ -392,6 +403,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             for engine_name, engine in STT_ENGINES.items()
         ]
+        sync_items_to_dynamic_menu(
+            menu_id='assistant:stt',
+            title='Speech Recognition',
+            heading='Select Active Engine',
+            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+            items=items,
+        )
+        return items
 
     @store.autorun(
         lambda state: (
@@ -406,9 +426,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
     ) -> Sequence[Item]:
         """Return items for LLM engine selection."""
         selected_llm, _, _ = data
-        return [
+        items = [
             ActionItem(
-                key=engine.name,
+                key=engine_name,
                 label=engine.instance_label,
                 action=engine.setup,
                 **_get_not_setup_item_parameters(
@@ -417,7 +437,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
             else UboDispatchItem(
-                key=engine.name,
+                key=engine_name,
                 label=engine.instance_label,
                 store_action=AssistantSetSelectedLLMAction(
                     llm_name=AssistantLLMName(engine_name),
@@ -434,6 +454,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             for engine_name, engine in LLM_ENGINES.items()
         ]
+        sync_items_to_dynamic_menu(
+            menu_id='assistant:llm',
+            title='Language Model',
+            heading='Select Active Engine',
+            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+            items=items,
+        )
+        return items
 
     @store.autorun(
         lambda state: (
@@ -448,9 +477,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
     ) -> Sequence[Item]:
         """Return items for TTS engine selection."""
         selected_tts, _, _ = data
-        return [
+        items = [
             ActionItem(
-                key=engine.name,
+                key=tts_name,
                 label=engine.instance_label,
                 action=engine.setup,
                 **_get_not_setup_item_parameters(
@@ -459,7 +488,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
             else UboDispatchItem(
-                key=engine.name if engine else tts_name,
+                key=tts_name,
                 label=engine.instance_label if engine else tts_name.value,
                 store_action=AssistantSetSelectedTTSAction(
                     tts_name=AssistantTTSName(tts_name),
@@ -476,6 +505,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             for tts_name, engine in TTS_ENGINES.items()
         ]
+        sync_items_to_dynamic_menu(
+            menu_id='assistant:tts',
+            title='Speech Synthesis',
+            heading='Select Active Engine',
+            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+            items=items,
+        )
+        return items
 
     @store.autorun(
         lambda state: (
@@ -490,9 +528,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
     ) -> Sequence[Item]:
         """Return items for image generator engine selection."""
         selected_image_generator, _, _ = data
-        return [
+        items = [
             ActionItem(
-                key=engine.name,
+                key=img_gen_name,
                 label=engine.instance_label,
                 action=engine.setup,
                 **_get_not_setup_item_parameters(
@@ -501,7 +539,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             if isinstance(engine, NeedsSetupMixin) and not engine.is_setup
             else UboDispatchItem(
-                key=engine.name if engine else img_gen_name,
+                key=img_gen_name,
                 label=engine.instance_label if engine else img_gen_name.value,
                 store_action=AssistantSetSelectedImageGeneratorAction(
                     image_generator_name=AssistantImageGeneratorName(img_gen_name),
@@ -518,6 +556,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             )
             for img_gen_name, engine in IMAGE_GENERATOR_ENGINES.items()
         ]
+        sync_items_to_dynamic_menu(
+            menu_id='assistant:image_generator',
+            title='Image Generator',
+            heading='Select Active Engine',
+            sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline models\n'
+            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+            items=items,
+        )
+        return items
 
     # MCP Tools menu - main list
     @store.autorun(
@@ -563,6 +610,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
                 ),
             )
 
+        sync_items_to_dynamic_menu(
+            menu_id='assistant:mcp_tools',
+            title='MCP Tools',
+            heading='Model Context Protocol Tools',
+            sub_heading='Add and manage MCP servers',
+            items=items,
+        )
         return items
 
     def mcp_server_menu(server_id: str) -> Callable[[], HeadedMenu]:
@@ -585,6 +639,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
             server, is_enabled = state_data
 
             if not server:
+                sync_items_to_dynamic_menu(
+                    menu_id=f'assistant:mcp:{server_id}',
+                    title='MCP Server',
+                    items=[],
+                    heading='Server Not Found',
+                )
                 return HeadedMenu(
                     title='MCP Server',
                     heading='Server Not Found',
@@ -593,29 +653,38 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
                 )
 
             status_text = 'Enabled' if is_enabled else 'Disabled'
+            items = [
+                UboDispatchItem(
+                    label='Disable' if is_enabled else 'Enable',
+                    icon='󰖭' if is_enabled else '󰄬',
+                    background_color=WARNING_COLOR if is_enabled else INFO_COLOR,
+                    store_action=AssistantToggleMcpServerAction(
+                        server_id=server_id,
+                    ),
+                ),
+                UboDispatchItem(
+                    label='Delete',
+                    icon='󰆴',
+                    background_color=DANGER_COLOR,
+                    store_action=AssistantDeleteMcpServerAction(
+                        server_id=server_id,
+                    ),
+                ),
+            ]
+
+            sync_items_to_dynamic_menu(
+                menu_id=f'assistant:mcp:{server_id}',
+                title=f'MCP: {server.name}',
+                items=items,
+                heading=server.name,
+                sub_heading=f'Type: {server.type} • {status_text}',
+            )
 
             return HeadedMenu(
                 title=f'MCP: {server.name}',
                 heading=server.name,
                 sub_heading=f'Type: {server.type} • {status_text}',
-                items=[
-                    UboDispatchItem(
-                        label='Disable' if is_enabled else 'Enable',
-                        icon='󰖭' if is_enabled else '󰄬',
-                        background_color=WARNING_COLOR if is_enabled else INFO_COLOR,
-                        store_action=AssistantToggleMcpServerAction(
-                            server_id=server_id,
-                        ),
-                    ),
-                    UboDispatchItem(
-                        label='Delete',
-                        icon='󰆴',
-                        background_color=DANGER_COLOR,
-                        store_action=AssistantDeleteMcpServerAction(
-                            server_id=server_id,
-                        ),
-                    ),
-                ],
+                items=items,
             )
 
         return menu
@@ -656,6 +725,42 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901
     )
 
 
+def _register_assistant_path_matchers() -> None:
+    """Register path matchers for assistant sub-pages."""
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    # Map assistant menu keys to dynamic menu IDs
+    assistant_menus = {
+        'assistant:providers': 'assistant:providers',
+        'assistant:stt': 'assistant:stt',
+        'assistant:llm': 'assistant:llm',
+        'assistant:tts': 'assistant:tts',
+        'assistant:image_generator': 'assistant:image_generator',
+        'assistant:mcp_tools': 'assistant:mcp_tools',
+    }
+
+    def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:
+        # Paths like ('main', 'settings', 'Assistant', 'assistant:stt')
+        if (
+            len(path) >= 4  # noqa: PLR2004
+            and path[:3] == ('main', 'settings', 'Assistant')
+        ):
+            menu_key = path[3]
+            # MCP server detail pages must be checked BEFORE the general
+            # assistant_menus lookup, otherwise 'assistant:mcp_tools' matches
+            # the list menu and the detail path is never reached.
+            # Path: ('main', 'settings', 'Assistant',
+            #   'assistant:mcp_tools', '{server_id}')
+            if len(path) >= 5 and menu_key == 'assistant:mcp_tools':  # noqa: PLR2004
+                server_id = path[4]
+                return f'assistant:mcp:{server_id}'
+            if menu_key in assistant_menus:
+                return assistant_menus[menu_key]
+        return None
+
+    register_path_menu_matcher('assistant:menus', _assistant_path_matcher)
+
+
 async def init_service() -> None:
     """Initialize the assistant service."""
     _register_persistent_stores()
@@ -691,12 +796,12 @@ async def init_service() -> None:
     )
 
     (
-        providers,
-        stt_providers,
-        llm_providers,
-        tts_providers,
-        image_generator_providers,
-        mcp_servers_menu,
+        _providers,
+        _stt_providers,
+        _llm_providers,
+        _tts_providers,
+        _image_generator_providers,
+        _mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
     ) = _setup_autorun_and_handlers()
@@ -706,102 +811,48 @@ async def init_service() -> None:
             category=SettingsCategory.ASSISTANT,
             priority=10,
             key='providers',
-            menu_item=SubMenuItem(
-                label='Manage',
-                icon='󰶗',
-                sub_menu=HeadedMenu(
-                    title='󰶗Manage',
-                    heading='Setup providers to be used by different '
-                    'assistant features',
-                    sub_heading='',
-                    items=providers,
-                ),
-            ),
+            label='Manage',
+            icon='󰶗',
         ),
         RegisterSettingAppAction(
             category=SettingsCategory.ASSISTANT,
             priority=50,
             key='stt',
-            menu_item=SubMenuItem(
-                label='Speech Recognition',
-                icon='',
-                sub_menu=HeadedMenu(
-                    title='Speech Recognition',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=stt_providers,
-                ),
-            ),
+            label='Speech Recognition',
+            icon='',
         ),
         RegisterSettingAppAction(
             category=SettingsCategory.ASSISTANT,
             priority=40,
             key='llm',
-            menu_item=SubMenuItem(
-                label='Language Model',
-                icon='󰁤',
-                sub_menu=HeadedMenu(
-                    title='󰁤Language Model',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=llm_providers,
-                ),
-            ),
+            label='Language Model',
+            icon='󰁤',
         ),
         RegisterSettingAppAction(
             category=SettingsCategory.ASSISTANT,
             priority=30,
             key='tts',
-            menu_item=SubMenuItem(
-                label='Speech Synthesis',
-                icon='󰔊',
-                sub_menu=HeadedMenu(
-                    title='󰁤Speech Synthesis',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=tts_providers,
-                ),
-            ),
+            label='Speech Synthesis',
+            icon='󰔊',
         ),
         RegisterSettingAppAction(
             category=SettingsCategory.ASSISTANT,
             priority=20,
             key='image_generator',
-            menu_item=SubMenuItem(
-                label='Image Generator',
-                icon='󰹉',
-                sub_menu=HeadedMenu(
-                    title='󰁤Image Generator',
-                    heading='Select Active Engine',
-                    sub_heading=f'[color={INFO_COLOR}]󱓻[/color] Offline '
-                    f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                    'models',
-                    items=image_generator_providers,
-                ),
-            ),
+            label='Image Generator',
+            icon='󰹉',
         ),
         RegisterSettingAppAction(
             category=SettingsCategory.ASSISTANT,
             priority=15,
             key='mcp_tools',
-            menu_item=SubMenuItem(
-                label='MCP Tools',
-                icon='󰒋',
-                sub_menu=HeadedMenu(
-                    title='󰒋MCP Tools',
-                    heading='Model Context Protocol Tools',
-                    sub_heading='Add and manage MCP servers',
-                    items=mcp_servers_menu,
-                ),
-            ),
+            label='MCP Tools',
+            icon='󰒋',
         ),
     )
+
+    # Register path matchers for assistant sub-pages
+    _register_assistant_path_matchers()
 
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
     store.subscribe_event(AssistantAddMcpServerEvent, handle_add_mcp_server)

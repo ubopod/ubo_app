@@ -19,9 +19,7 @@ from ubo_gui.menu.types import (
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
-    MenuItemData,
     OpenApplicationAction,
-    UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
@@ -252,59 +250,6 @@ def image_menu(  # noqa: C901
     )
 
 
-def _convert_item_to_menu_item_data(
-    item: Item,
-    index: int,
-    image_id: str,
-) -> MenuItemData:
-    """Convert a ubo_gui Item to MenuItemData for dynamic menus."""
-    # Get key
-    key_val = getattr(item, 'key', None)
-    key = key_val if isinstance(key_val, str) else f'item_{index}'
-
-    # Get label
-    label_val = getattr(item, 'label', '')
-    label = label_val() if callable(label_val) else (label_val or '')
-
-    # Get icon
-    icon_val = getattr(item, 'icon', '')
-    icon = icon_val() if callable(icon_val) else (icon_val or '')
-
-    # Get background_color
-    bg_color_val = getattr(item, 'background_color', None)
-    bg_color: str | None = bg_color_val if isinstance(bg_color_val, str) else None
-
-    # Determine action_id based on item type
-    action_id: str | None = None
-
-    # Check for store_action (UboDispatchItem)
-    store_action = getattr(item, 'store_action', None)
-    if store_action is not None:
-        from ubo_app.store.core.action_registry import register_action, unregister_action
-
-        action_type = type(store_action).__name__
-        action_id = f'docker:{image_id}:{action_type}'
-
-        # Register a handler so ExecuteMenuActionAction can dispatch it
-        unregister_action(action_id)
-        captured_action = store_action
-
-        def _handler(action: object = captured_action) -> None:
-            store.dispatch(action)
-
-        register_action(action_id, _handler)
-    elif key_val:
-        action_id = f'docker:{image_id}:select:{key}'
-
-    return MenuItemData(
-        key=key,
-        label=str(label),
-        icon=str(icon),
-        action_id=action_id,
-        background_color=bg_color,
-    )
-
-
 def setup_docker_image_dynamic_menu(image_id: str) -> None:
     """Set up dynamic menu updates for a Docker image.
 
@@ -328,11 +273,12 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
             return
 
         # Get the menu from image_menu (same logic as GUI uses)
-        menu = image_menu(image)
+        menu: HeadedMenu = image_menu(image)  # pyright: ignore[reportCallIssue]
 
         # Resolve callable fields (HeadedMenu fields can be callables)
         items_raw = menu.items
-        items_list = items_raw() if callable(items_raw) else items_raw
+        resolved = items_raw() if callable(items_raw) else items_raw
+        items_list: list[Item] = list(resolved) if resolved else []  # pyright: ignore[reportArgumentType]
 
         title_raw = menu.title
         title = title_raw() if callable(title_raw) else (title_raw or '')
@@ -350,29 +296,24 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
             placeholder_raw() if callable(placeholder_raw) else placeholder_raw
         )
 
-        # Convert menu items to MenuItemData
-        menu_items = tuple(
-            _convert_item_to_menu_item_data(item, i, image_id)
-            for i, item in enumerate(items_list)
-            if item is not None
-        )
-
         logger.debug(
             '[Docker] Updating dynamic menu for %s: status=%s, items=%d',
             image_id,
             image.status,
-            len(menu_items),
+            len(items_list),
         )
 
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id=menu_id,
-                title=str(title),
-                heading=str(heading) if heading else None,
-                sub_heading=str(sub_heading) if sub_heading else None,
-                items=menu_items,
-                placeholder=str(placeholder) if placeholder else '',
-            ),
+        from ubo_app.store.core.menu_item_bridge import (  # pyright: ignore[reportMissingImports]
+            sync_items_to_dynamic_menu,
+        )
+
+        sync_items_to_dynamic_menu(
+            menu_id=menu_id,
+            title=str(title),
+            heading=str(heading) if heading else '',
+            sub_heading=str(sub_heading) if sub_heading else '',
+            items=items_list,
+            placeholder=str(placeholder) if placeholder else '',
         )
 
 
@@ -388,7 +329,7 @@ def docker_item_menu(image_id: str) -> Callable[[], HeadedMenu]:
                 create_task(check_composition(id=image_id))
             else:
                 check_container(image_id=image_id)
-        return image_menu(image)
+        return image_menu(image)  # pyright: ignore[reportCallIssue]
 
     return store.autorun(
         lambda state: getattr(state.docker, image_id),

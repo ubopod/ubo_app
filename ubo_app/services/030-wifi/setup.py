@@ -5,7 +5,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from debouncer import DebounceOptions, debounce
-from pages import create_wireless_connection, main
+from pages import create_wireless_connection
 from wifi_manager import (
     get_connections,
     get_wifi_device,
@@ -152,8 +152,20 @@ def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             priority=2,
             category=SettingsCategory.NETWORK,
-            menu_item=main.WiFiMainMenu,
+            label='WiFi',
+            icon='󰖩',
         ),
+    )
+
+    # Register path matcher for WiFi menu navigation
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher(
+        'wifi:settings',
+        lambda path: 'wifi:connections'
+        if len(path) >= 4  # noqa: PLR2004
+        and path[3] == 'wifi:'
+        else None,
     )
 
     create_task(_check_connection())

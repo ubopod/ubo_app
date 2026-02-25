@@ -16,18 +16,23 @@ from ubo_app.constants import HEIGHT, WIDTH
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     CloseApplicationAction,
+    MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
+    CameraDetectAction,
     CameraDetectEvent,
     CameraInstallDriverEvent,
     CameraReportBarcodeAction,
     CameraReportImageEvent,
     CameraRestoreDefaultEvent,
     CameraSetAvailableCamerasAction,
+    CameraSetIndexAction,
     CameraStartViewfinderEvent,
+    CameraState,
     CameraStopViewfinderEvent,
 )
 from ubo_app.store.services.display import DisplayPauseAction, DisplayResumeAction
@@ -464,16 +469,111 @@ def handle_camera_detect(_: CameraDetectEvent) -> None:
     create_task(detect_and_update_cameras())
 
 
-def init_service() -> Subscriptions:
-    from pages import CameraSettingsMenu
+CAMERA_MENU_ID = 'camera:main'
 
+
+def _register_camera_action_handlers() -> None:
+    """Register action handlers for camera menu items."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+    )
+
+    if 'camera:detect' in get_registered_actions():
+        return
+
+    register_action(
+        'camera:detect',
+        lambda: store.dispatch(CameraDetectAction()),
+    )
+
+
+def _register_camera_index_actions(available_cameras: tuple[int, ...]) -> None:
+    """Register action handlers for each camera index."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+        unregister_action,
+    )
+
+    for action_id in list(get_registered_actions()):
+        if action_id.startswith('camera:select:'):
+            unregister_action(action_id)
+
+    for index in available_cameras:
+        def _make_handler(i: int) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(CameraSetIndexAction(index=i))
+
+            return _handler
+
+        register_action(f'camera:select:{index}', _make_handler(index))
+
+
+@store.autorun(lambda state: state.camera)
+def update_camera_dynamic_menu(state: CameraState) -> None:
+    """Update the dynamic menu for camera settings."""
+    _register_camera_action_handlers()
+    _register_camera_index_actions(state.available_cameras)
+
+    items: list[MenuItemData] = []
+
+    for index in state.available_cameras:
+        is_selected = index == state.selected_camera_index
+        items.append(
+            MenuItemData(
+                key=f'camera:index:{index}',
+                label=f'Camera {index}',
+                icon='\uf030',
+                action_id=f'camera:select:{index}',
+                background_color='#00ff00' if is_selected else None,
+            ),
+        )
+
+    items.append(
+        MenuItemData(
+            key='camera:detect',
+            label='Detect Cameras',
+            icon='󰄄',
+            action_id='camera:detect',
+        ),
+    )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=CAMERA_MENU_ID,
+            title='Camera Settings',
+            heading='Select Camera Device',
+            sub_heading=f'Current: Camera {state.selected_camera_index}'
+            if state.available_cameras
+            else 'No cameras detected',
+            items=tuple(items),
+            placeholder='No cameras detected. Click "Detect Cameras" to scan.'
+            if not state.available_cameras
+            else '',
+        ),
+    )
+
+
+def init_service() -> Subscriptions:
     # Register camera settings menu
     store.dispatch(
         RegisterSettingAppAction(
             priority=1,
             category=SettingsCategory.HARDWARE,
-            menu_item=CameraSettingsMenu,
+            label='Camera',
+            icon='',
         ),
+    )
+
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher(
+        'camera:settings',
+        lambda path: CAMERA_MENU_ID
+        if len(path) >= 4  # noqa: PLR2004
+        and path[3] == 'camera:'
+        else None,
     )
 
     # Detect cameras on startup

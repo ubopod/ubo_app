@@ -9,8 +9,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from ubo_gui.menu.types import HeadedMenu, SubMenuItem
-
 from ubo_app.display import display
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
@@ -168,7 +166,7 @@ def _register_display_action_handlers() -> None:
     )
 
     # Only register once
-    if 'display:set_timeout:OFF' in get_registered_actions():
+    if 'display:set_timeout:off' in get_registered_actions():
         return
 
     for timeout in DisplayBlankTimeout:
@@ -223,7 +221,7 @@ def init_service() -> Subscriptions:
         # Match: ('main', 'settings', <category>, '000-display:')
         if (
             len(path) == 4  # noqa: PLR2004
-            and path[3] == '000-display:'
+            and path[3] == 'display:'
         ):
             return DISPLAY_TIMEOUT_MENU_ID
         return None
@@ -244,16 +242,8 @@ def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             category=SettingsCategory.HARDWARE,
             priority=10,
-            menu_item=SubMenuItem(
-                label='Display',
-                icon='󰍹',
-                sub_menu=HeadedMenu(
-                    title='Display Settings',
-                    heading='Screen Timeout',
-                    sub_heading='Select screen blank timeout',
-                    items=timeout_options,
-                ),
-            ),
+            label='Display',
+            icon='󰍹',
         ),
     )
 

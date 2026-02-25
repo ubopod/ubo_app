@@ -10,7 +10,7 @@ import fasteners
 import pvorca
 from piper.voice import AudioChunk, PiperVoice
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, SubMenuItem
+from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.constants.assistant import (
     PICOVOICE_ACCESS_KEY_SECRET_ID,
@@ -21,6 +21,7 @@ from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_path_menu_matcher
@@ -46,8 +47,11 @@ from ubo_app.store.services.speech_synthesis import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task, to_thread
-from ubo_app.utils.menu_items import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
 from ubo_app.utils.input import ubo_input
+from ubo_app.utils.menu_items import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+)
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
@@ -387,6 +391,20 @@ def _register_speech_synthesis_action_handlers() -> None:
     register_action('speech-synthesis:download_piper', _download_piper_wrapper)
     register_action('speech-synthesis:set_access_key', input_access_key)
     register_action('speech-synthesis:clear_access_key', clear_access_key)
+    register_action(
+        'speech-synthesis:select_engine',
+        lambda: store.dispatch(
+            StackPushMenuAction(menu_key='speech-synthesis:engines'),
+        ),
+    )
+
+    # Register engine-specific actions
+    for engine in SpeechSynthesisEngineName:
+        if _is_piper_downloaded() or engine != SpeechSynthesisEngineName.PIPER:
+            register_action(
+                f'speech-synthesis:engine:{engine.value}',
+                create_engine_selector(engine),
+            )
 
 
 @store.autorun(
@@ -426,6 +444,49 @@ def update_speech_synthesis_dynamic_menu(
         UpdateDynamicMenuAction(
             menu_id=SPEECH_SYNTHESIS_MENU_ID,
             title='󰔊Speech Synthesis',
+            items=tuple(items),
+            placeholder='',
+        ),
+    )
+
+
+SPEECH_SYNTHESIS_ENGINES_MENU_ID = 'speech-synthesis:engines'
+
+
+@store.autorun(
+    lambda state: state.speech_synthesis.selected_engine,
+    options=AutorunOptions(memoization=False),
+)
+def update_engines_dynamic_menu(
+    selected_engine: SpeechSynthesisEngineName,
+) -> None:
+    """Update the dynamic menu for engine selection."""
+    items: list[MenuItemData] = []
+    for engine in SpeechSynthesisEngineName:
+        if _is_piper_downloaded() or engine != SpeechSynthesisEngineName.PIPER:
+            is_selected = engine == selected_engine
+            items.append(
+                MenuItemData(
+                    key=engine.name,
+                    label=ENGINE_LABELS[engine],
+                    icon=SELECTED_ITEM_PARAMETERS['icon']
+                    if is_selected
+                    else UNSELECTED_ITEM_PARAMETERS['icon'],
+                    action_id=f'speech-synthesis:engine:{engine.value}',
+                    background_color=SELECTED_ITEM_PARAMETERS.get(
+                        'background_color',
+                    )
+                    if is_selected
+                    else None,
+                ),
+            )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=SPEECH_SYNTHESIS_ENGINES_MENU_ID,
+            title=f'󰔊Select Engine: {selected_engine}',
+            heading='Select Active Engine',
+            sub_heading='Choose the speech synthesis engine to use',
             items=tuple(items),
             placeholder='',
         ),
@@ -474,14 +535,18 @@ def update_picovoice_dynamic_menu(
 
 def init_service() -> Subscriptions:
     """Initialize speech synthesis service."""
+
     # Register path matchers for speech synthesis settings navigation
     def _speech_synthesis_path_matcher(path: tuple[str, ...]) -> str | None:
-        # Match: ('main', 'settings', <category>, '010-speech-synthesis:engines')
-        if len(path) == 4:  # noqa: PLR2004
+        if len(path) >= 4:  # noqa: PLR2004
             service_key = path[3]
-            if service_key == '010-speech-synthesis:engines':
-                return SPEECH_SYNTHESIS_MENU_ID
-            if service_key == '010-speech-synthesis:settings':
+            if service_key == 'speech_synthesis:engines':
+                if len(path) == 4:  # noqa: PLR2004
+                    return SPEECH_SYNTHESIS_MENU_ID
+                # Engines submenu
+                if len(path) == 5 and path[4] == 'speech-synthesis:engines':  # noqa: PLR2004
+                    return SPEECH_SYNTHESIS_ENGINES_MENU_ID
+            if service_key == 'speech_synthesis:settings':
                 return PICOVOICE_SETTINGS_MENU_ID
         return None
 
@@ -507,11 +572,8 @@ def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             category=SettingsCategory.ACCESSIBILITY,
             priority=10,
-            menu_item=SubMenuItem(
-                label='Speech Synthesis',
-                icon='󰔊',
-                sub_menu=_speech_synthesis_menu,
-            ),
+            label='Speech Synthesis',
+            icon='󰔊',
             key='engines',
         ),
     )
@@ -520,16 +582,8 @@ def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             category=SettingsCategory.ACCESSIBILITY,
             priority=0,
-            menu_item=SubMenuItem(
-                label='Picovoice Settings',
-                icon='PV',
-                sub_menu=HeadedMenu(
-                    title='Picovoice Settings',
-                    heading='Picovoice',
-                    sub_heading=_menu_sub_heading,
-                    items=_menu_items,
-                ),
-            ),
+            label='Picovoice Settings',
+            icon='PV',
             key='settings',
         ),
     )

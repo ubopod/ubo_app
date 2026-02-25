@@ -364,6 +364,7 @@ def _register_vscode_action_handlers() -> None:
         get_registered_actions,
         register_action,
     )
+
     # Only register once
     if 'vscode:download' in get_registered_actions():
         return
@@ -371,6 +372,29 @@ def _register_vscode_action_handlers() -> None:
     register_action('vscode:download', download_code)
     register_action('vscode:logout', logout)
     register_action('vscode:login', start_login)
+
+
+def _compute_vscode_sub_heading(state: VSCodeState) -> str:
+    """Compute the sub_heading for VSCode menu from state."""
+    if state.is_pending:
+        return ''
+    if state.status:
+        if state.status.is_running:
+            if state.status.name:
+                return f'Service is running, name:\n{state.status.name}'
+            return 'Service is running\nWaiting for name...'
+        if not state.status.is_service_installed:
+            return 'Service not installed'
+        return 'Service installed but not running'
+    if state.is_downloading:
+        return 'Downloading...'
+    if not state.is_binary_installed:
+        return 'Code CLI not installed'
+    if state.is_logged_in is None:
+        return 'Checking status...'
+    if state.is_logged_in is False:
+        return 'Needs authentication'
+    return 'Unknown status'
 
 
 @store.autorun(lambda state: state.vscode)
@@ -385,6 +409,7 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
             register_action,
             unregister_action,
         )
+
         action_id = f'vscode:show-url:{state.status.name}'
         if action_id not in get_registered_actions():
             # Unregister old show-url actions
@@ -420,6 +445,8 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
         UpdateDynamicMenuAction(
             menu_id=VSCODE_MENU_ID,
             title='VSCode',
+            heading='VSCode Remote Tunnel',
+            sub_heading=_compute_vscode_sub_heading(state),
             items=tuple(items),
             placeholder='',
         ),
@@ -475,11 +502,26 @@ async def _monitor_status(end_event: asyncio.Event) -> None:
 
 
 async def init_service() -> Subscriptions:
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action('vscode:open_menu', generate_vscode_menu)
     store.dispatch(
         RegisterSettingAppAction(
-            menu_item=ActionItem(label='VSCode', icon='󰨞', action=generate_vscode_menu),
+            label='VSCode',
+            icon='󰨞',
+            action_id='vscode:open_menu',
             category=SettingsCategory.REMOTE,
         ),
+    )
+
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher(
+        'vscode:settings',
+        lambda path: VSCODE_MENU_ID
+        if len(path) >= 4  # noqa: PLR2004
+        and path[3] == 'vscode:'
+        else None,
     )
 
     await check_status()
@@ -491,5 +533,3 @@ async def init_service() -> Subscriptions:
         store.subscribe_event(VSCodeRestartEvent, restart),
         end_event.set,
     ]
-
-

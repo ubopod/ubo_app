@@ -21,6 +21,7 @@ from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
@@ -53,6 +54,8 @@ from ubo_app.utils.server import send_command
 USERS_MENU_ID = 'users:main'
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
     from ubo_app.utils.types import Subscriptions
 
 
@@ -213,7 +216,70 @@ def _register_users_action_handlers() -> None:
 
     register_action('users:add', _add_user)
 
-    # User-specific actions are registered dynamically based on state
+
+def _register_user_detail_actions(users: Sequence[UserState]) -> None:
+    """Register action handlers and dynamic menus for each user's detail page."""
+    from ubo_app.store.core.action_registry import (
+        get_registered_actions,
+        register_action,
+        unregister_action,
+    )
+
+    # Unregister old user-specific actions
+    for action_id in list(get_registered_actions()):
+        if action_id.startswith('users:open-user:') or action_id.startswith(
+            'users:reset-password:',
+        ) or action_id.startswith('users:delete:'):
+            unregister_action(action_id)
+
+    for user in users:
+        uid = user.id
+
+        def _make_open_handler(user_id: str) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(StackPushMenuAction(menu_key=f'users:user:{user_id}'))
+
+            return _handler
+
+        def _make_reset_handler(user_id: str) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(UsersResetPasswordAction(id=user_id))
+
+            return _handler
+
+        def _make_delete_handler(user_id: str) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(UsersDeleteUserAction(id=user_id))
+
+            return _handler
+
+        register_action(f'users:open-user:{uid}', _make_open_handler(uid))
+        register_action(f'users:reset-password:{uid}', _make_reset_handler(uid))
+        register_action(f'users:delete:{uid}', _make_delete_handler(uid))
+
+        # Create dynamic menu for user detail page
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=f'users:user:{uid}',
+                title=uid,
+                items=(
+                    MenuItemData(
+                        key=f'users:reset-password:{uid}',
+                        label='Reset Password',
+                        icon='󰯄',
+                        action_id=f'users:reset-password:{uid}',
+                        background_color=WARNING_COLOR,
+                    ),
+                    MenuItemData(
+                        key=f'users:delete:{uid}',
+                        label='Delete',
+                        icon='󰀕',
+                        action_id=f'users:delete:{uid}',
+                        background_color=DANGER_COLOR,
+                    ),
+                ),
+            ),
+        )
 
 
 @store.autorun(lambda state: state.users)
@@ -224,6 +290,8 @@ def update_users_dynamic_menu(state: UsersState) -> None:
     items: list[MenuItemData] = []
 
     if state.users is not None:
+        _register_user_detail_actions(state.users)
+
         # Add user action
         items.append(
             MenuItemData(
@@ -255,6 +323,8 @@ def update_users_dynamic_menu(state: UsersState) -> None:
         UpdateDynamicMenuAction(
             menu_id=USERS_MENU_ID,
             title='Users',
+            heading='Loading...' if state.users is None else None,
+            sub_heading='Please wait...' if state.users is None else None,
             items=tuple(items),
             placeholder='Loading...' if state.users is None else '',
         ),
@@ -315,13 +385,24 @@ async def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             priority=1,
             category=SettingsCategory.SYSTEM,
-            menu_item=SubMenuItem(
-                label='Users',
-                icon='󰡉',
-                sub_menu=users_menu,
-            ),
+            label='Users',
+            icon='󰡉',
         ),
     )
+
+    # Register path matcher for Users menu navigation
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    def _users_path_matcher(path: tuple[str, ...]) -> str | None:
+        if len(path) >= 4 and path[3] == 'users:':  # noqa: PLR2004
+            if len(path) == 4:  # noqa: PLR2004
+                return USERS_MENU_ID
+            # User detail page: path[4] is 'users:user:{username}'
+            if len(path) == 5:  # noqa: PLR2004
+                return path[4]
+        return None
+
+    register_path_menu_matcher('users:settings', _users_path_matcher)
 
     bus = get_system_bus()
     accounts_service = AccountsInterface.new_proxy(

@@ -207,16 +207,27 @@ def open_ssh_menu() -> Menu:
 
 def init_service() -> None:
     """Initialize the SSH service."""
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action('ssh:open_menu', open_ssh_menu)
     store.dispatch(
         RegisterSettingAppAction(
             priority=1,
             category=SettingsCategory.REMOTE,
-            menu_item=ActionItem(
-                label='SSH',
-                icon=ssh_icon,
-                action=open_ssh_menu,
-            ),
+            label='SSH',
+            icon='󰣀',
+            action_id='ssh:open_menu',
         ),
+    )
+
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher(
+        'ssh:settings',
+        lambda path: SSH_MENU_ID
+        if len(path) >= 4  # noqa: PLR2004
+        and path[3] == 'ssh:'
+        else None,
     )
 
     create_task(check_is_ssh_enabled())

@@ -113,6 +113,25 @@ def update_ip_dynamic_menu(interfaces: Sequence[IpNetworkInterface]) -> None:
         ),
     )
 
+    # Create dynamic menus for each interface's detail page
+    for interface in interfaces:
+        interface_items = tuple(
+            MenuItemData(
+                key=f'ip:{interface.name}:{ip_address}',
+                label=ip_address,
+                icon='󰩠',
+            )
+            for ip_address in interface.ip_addresses
+        )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=interface.name,
+                title=f'󰩟{interface.name}',
+                items=interface_items,
+                placeholder='No IP addresses',
+            ),
+        )
+
 
 @store.autorun(lambda state: state.ip.interfaces)
 def get_ip_addresses(interfaces: Sequence[IpNetworkInterface]) -> list[SubMenuItem]:
@@ -246,25 +265,29 @@ async def monitor_connections(end_event: asyncio.Event) -> None:
         await asyncio.sleep(0.25)
 
 
-IpMainMenu = SubMenuItem(
-    label='IP Addresses',
-    icon='󰩟',
-    sub_menu=HeadlessMenu(
-        title='󰩟IP Addresses',
-        items=get_ip_addresses,
-        placeholder='No IP addresses',
-    ),
-)
-
-
 async def init_service() -> Subscriptions:
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
             category=SettingsCategory.NETWORK,
-            menu_item=IpMainMenu,
+            label='IP Addresses',
+            icon='󰩟',
         ),
     )
+
+    # Register path matcher for IP addresses menu navigation
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    def _ip_path_matcher(path: tuple[str, ...]) -> str | None:
+        if len(path) >= 4 and path[3] == 'ip:':  # noqa: PLR2004
+            if len(path) == 4:  # noqa: PLR2004
+                return IP_ADDRESSES_MENU_ID
+            # Interface detail page: path[4] is the interface name (e.g. 'en0')
+            if len(path) == 5:  # noqa: PLR2004
+                return path[4]
+        return None
+
+    register_path_menu_matcher('ip:settings', _ip_path_matcher)
 
     end_event = asyncio.Event()
     create_task(monitor_connections(end_event))

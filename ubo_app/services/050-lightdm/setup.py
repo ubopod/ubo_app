@@ -208,10 +208,22 @@ def update_lightdm_dynamic_menu(state: LightDMState) -> None:
         state.is_active,
     )
 
+    # Compute dynamic heading/sub_heading from state
+    heading: str | None = None
+    sub_heading: str | None = None
+    if state.is_installing:
+        heading = 'Installing Desktop'
+        sub_heading = 'This may take a few minutes'
+    elif not state.is_installed:
+        heading = 'Desktop is not Installed'
+        sub_heading = 'Install it to enable desktop access on your Ubo pod'
+
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=LIGHTDM_MENU_ID,
             title='Desktop',
+            heading=heading,
+            sub_heading=sub_heading,
             items=tuple(items),
             placeholder=placeholder,
         ),
@@ -295,16 +307,27 @@ def open_lightdm_menu() -> Callable[[], Menu]:
 
 def init_service() -> None:
     """Initialize the LightDM service."""
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action('lightdm:open_menu', open_lightdm_menu)
     store.dispatch(
         RegisterSettingAppAction(
             priority=0,
             category=SettingsCategory.SYSTEM,
-            menu_item=ActionItem(
-                label='Desktop',
-                icon=lightdm_icon,
-                action=open_lightdm_menu,
-            ),
+            label='Desktop',
+            icon='󰍹',
+            action_id='lightdm:open_menu',
         ),
+    )
+
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher(
+        'lightdm:settings',
+        lambda path: LIGHTDM_MENU_ID
+        if len(path) >= 4  # noqa: PLR2004
+        and path[3] == 'lightdm:'
+        else None,
     )
 
     create_task(check_lightdm())

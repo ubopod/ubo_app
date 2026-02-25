@@ -6,7 +6,6 @@ import functools
 
 from constants import SELECTOR_APPLICATION_ID
 from file_application import open_path
-from ubo_gui.menu.types import ActionItem
 
 from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.core.types import RegisterRegularAppAction
@@ -28,13 +27,14 @@ from ubo_app.store.services.notifications import (
 
 def init_service() -> None:
     """Initialize the service by registering the File System application."""
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action('file-system:open', open_path)
     store.dispatch(
         RegisterRegularAppAction(
-            menu_item=ActionItem(
-                label='File System',
-                icon='󰉋',
-                action=open_path,
-            ),
+            label='File System',
+            icon='󰉋',
+            action_id='file-system:open',
             key='file-system',
         ),
     )

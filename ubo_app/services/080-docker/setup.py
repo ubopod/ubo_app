@@ -108,20 +108,27 @@ def _docker_path_matcher(path: tuple[str, ...]) -> str | None:
         The dynamic menu ID if this is a Docker path, None otherwise.
 
     """
-    # Match Docker app paths: (..., 'apps', '080-docker:<image_id>')
-    if len(path) >= 2:  # noqa: PLR2004
-        app_key = path[-1]
-        if ':' in app_key:
-            prefix, image_id = app_key.split(':', 1)
-            if prefix == '080-docker' and image_id:
-                return f'docker:image:{image_id}'
+    # Match Docker app paths: (..., 'docker:<image_id>', [sub_key, ...])
+    # Find the docker image element in the path
+    for i, element in enumerate(path):
+        if ':' in element:
+            prefix, image_id = element.split(':', 1)
+            if prefix == 'docker' and image_id and image_id not in (
+                'service',
+                'registries',
+            ):
+                menu_id = f'docker:image:{image_id}'
+                # Append any nested keys (e.g., 'ports')
+                for nested_key in path[i + 1 :]:
+                    menu_id = f'{menu_id}:{nested_key}'
+                return menu_id
 
     # Match Docker settings paths
     if len(path) == 4:  # noqa: PLR2004
         service_key = path[3]
-        if service_key == '080-docker:service':
+        if service_key == 'docker:service':
             return DOCKER_SETUP_MENU_ID
-        if service_key == '080-docker:registries':
+        if service_key == 'docker:registries':
             return DOCKER_REGISTRIES_MENU_ID
 
     return None
@@ -243,11 +250,15 @@ async def check_docker() -> None:
 _DOCKER_STATUS_MENU_DATA: dict[DockerStatus, dict[str, object]] = {
     DockerStatus.UNKNOWN: {
         'title': 'Setup Docker',
+        'heading': 'Checking',
+        'sub_heading': 'Checking Docker service status',
         'items': (),
         'placeholder': 'Checking Docker service status...',
     },
     DockerStatus.NOT_INSTALLED: {
         'title': 'Setup Docker',
+        'heading': 'Docker is not Installed',
+        'sub_heading': 'Install it to enjoy the power of Docker on your Ubo pod',
         'items': (
             MenuItemData(
                 key='docker:install',
@@ -260,11 +271,15 @@ _DOCKER_STATUS_MENU_DATA: dict[DockerStatus, dict[str, object]] = {
     },
     DockerStatus.INSTALLING: {
         'title': 'Setup Docker',
+        'heading': 'Installing...',
+        'sub_heading': 'This may take a few minutes',
         'items': (),
         'placeholder': 'Docker is being installed...',
     },
     DockerStatus.NOT_RUNNING: {
         'title': 'Setup Docker',
+        'heading': 'Docker is not Running',
+        'sub_heading': 'Start the Docker service',
         'items': (
             MenuItemData(
                 key='docker:start',
@@ -277,6 +292,8 @@ _DOCKER_STATUS_MENU_DATA: dict[DockerStatus, dict[str, object]] = {
     },
     DockerStatus.RUNNING: {
         'title': 'Setup Docker',
+        'heading': 'Docker is Running',
+        'sub_heading': 'Docker service is active',
         'items': (
             MenuItemData(
                 key='docker:stop',
@@ -289,6 +306,8 @@ _DOCKER_STATUS_MENU_DATA: dict[DockerStatus, dict[str, object]] = {
     },
     DockerStatus.ERROR: {
         'title': 'Setup Docker',
+        'heading': 'Docker Error',
+        'sub_heading': 'Check logs for details',
         'items': (),
         'placeholder': 'Docker Error - check logs',
     },
@@ -334,6 +353,8 @@ def update_docker_setup_dynamic_menu(status: DockerStatus) -> None:
         UpdateDynamicMenuAction(
             menu_id=DOCKER_SETUP_MENU_ID,
             title=str(menu_data['title']),
+            heading=str(menu_data.get('heading', '')),
+            sub_heading=str(menu_data.get('sub_heading', '')),
             items=menu_data['items'],  # type: ignore[arg-type]
             placeholder=str(menu_data['placeholder']),
         ),
@@ -664,7 +685,9 @@ def clear_credentials(registry: str) -> None:
 @store.autorun(lambda state: state.docker.service.usernames)
 def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
     """Get the settings menu items for the Docker service."""
-    return [
+    from ubo_app.store.core.menu_item_bridge import sync_items_to_dynamic_menu
+
+    items: list[Item] = [
         ActionItem(
             label='Add Registry',
             icon='󰌉',
@@ -695,6 +718,14 @@ def registries_menu_items(usernames: dict[str, str]) -> Sequence[Item]:
             else []
         ),
     ]
+    sync_items_to_dynamic_menu(
+        menu_id='docker:registries',
+        title='Docker Registries',
+        heading='󰡨 Docker',
+        sub_heading='Log in to a registry:',
+        items=items,
+    )
+    return items
 
 
 def _register_composition_entry(image_id: str) -> None:
@@ -704,13 +735,18 @@ def _register_composition_entry(image_id: str) -> None:
         return
 
     image_entry = IMAGES[image_id]
+    action_id = f'docker:open:{image_id}'
+    from contextlib import suppress
+
+    from ubo_app.store.core.action_registry import register_action
+
+    with suppress(ValueError):
+        register_action(action_id, functools.partial(docker_item_menu, image_id))
     store.dispatch(
         RegisterRegularAppAction(
-            menu_item=ActionItem(
-                label=image_entry.label,
-                icon=image_entry.icon or '󰣆',
-                action=functools.partial(docker_item_menu, image_id),
-            ),
+            label=image_entry.label,
+            icon=image_entry.icon or '󰣆',
+            action_id=action_id,
             key=image_id,
         ),
     )
@@ -720,13 +756,18 @@ def _register_composition_entry(image_id: str) -> None:
 
 def _register_container_entry(image_id: str) -> None:
     """Register a regular container in the main menu."""
+    action_id = f'docker:open:{image_id}'
+    from contextlib import suppress
+
+    from ubo_app.store.core.action_registry import register_action
+
+    with suppress(ValueError):
+        register_action(action_id, functools.partial(docker_item_menu, image_id))
     store.dispatch(
         RegisterRegularAppAction(
-            menu_item=ActionItem(
-                label=IMAGES[image_id].label,
-                icon=IMAGES[image_id].icon,
-                action=functools.partial(docker_item_menu, image_id),
-            ),
+            label=IMAGES[image_id].label,
+            icon=IMAGES[image_id].icon,
+            action_id=action_id,
             key=image_id,
         ),
     )
@@ -808,45 +849,35 @@ async def init_service() -> Subscriptions:
         lambda state: state.docker.service.usernames,
     )
 
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action('docker:import_composition', input_docker_composition)
+    register_action('docker:setup_menu', setup_menu_action)
     store.dispatch(
         RegisterRegularAppAction(
             priority=1,
-            menu_item=ActionItem(
-                label='Import YAML file',
-                icon='󰋺',
-                background_color=WARNING_COLOR,
-                color='black',
-                action=input_docker_composition,
-            ),
+            label='Import YAML file',
+            icon='󰋺',
+            background_color=WARNING_COLOR,
+            action_id='docker:import_composition',
             key='_import',
         ),
         RegisterSettingAppAction(
             priority=1,
             category=SettingsCategory.DOCKER,
-            menu_item=ActionItem(
-                label='Service',
-                icon='',
-                action=setup_menu_action,
-            ),
+            label='Service',
+            icon='',
+            action_id='docker:setup_menu',
             key='service',
         ),
         RegisterSettingAppAction(
             priority=2,
             category=SettingsCategory.DOCKER,
-            menu_item=SubMenuItem(
-                label='Registries',
-                icon='󱥉',
-                sub_menu=HeadedMenu(
-                    title='󱥉Docker Registries',
-                    heading='󰡨 Docker',
-                    sub_heading='Log in to a registry:',
-                    items=registries_menu_items,
-                ),
-            ),
+            label='Registries',
+            icon='󱥉',
             key='registries',
         ),
     )
-
 
     subscriptions = [
         store.subscribe_event(

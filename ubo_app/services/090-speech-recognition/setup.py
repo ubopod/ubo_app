@@ -8,11 +8,18 @@ from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
 from constants import OFFLINE_ENGINES
 from engines_manager import EnginesManager
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadedMenu, HeadlessMenu, Item, SubMenuItem
+from ubo_gui.menu.types import ActionItem, Item
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
-from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
+from ubo_app.store.core.menu_item_bridge import sync_items_to_dynamic_menu
+from ubo_app.store.core.types import (
+    MenuItemData,
+    RegisterSettingAppAction,
+    SettingsCategory,
+    StackPushMenuAction,
+    UpdateDynamicMenuAction,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionEngineName,
@@ -92,7 +99,7 @@ def init_service() -> Subscriptions:
                     ActionItem(
                         key=engine_name,
                         label=f'Setup {engine.label}',
-                        icon='',
+                        icon='\ue615',
                         action=engine.setup,
                     ),
                 )
@@ -117,6 +124,14 @@ def init_service() -> Subscriptions:
                 ),
             )
 
+        sync_items_to_dynamic_menu(
+            menu_id='speech-recognition:engines',
+            title='Recognition Engines',
+            heading='Select Active Engine',
+            sub_heading=f'[color={SUCCESS_COLOR}]󱓻[/color] Offline models\n'
+            f'[color={WARNING_COLOR}]󱓻[/color] Online models',
+            items=items,
+        )
         return items
 
     @store.autorun(
@@ -128,7 +143,7 @@ def init_service() -> Subscriptions:
     def speech_recognition_items(data: tuple[bool, bool]) -> list[Item]:
         is_intents_active, is_assistant_active = data
 
-        return [
+        items: list[Item] = [
             UboDispatchItem(
                 key='is_intents_active',
                 label='Command Interface',
@@ -154,45 +169,77 @@ def init_service() -> Subscriptions:
                 ),
             ),
         ]
+        sync_items_to_dynamic_menu(
+            menu_id='speech-recognition:services',
+            title='Services',
+            items=items,
+        )
+        return items
+
+    # Register action handlers for main menu navigation
+    from ubo_app.store.core.action_registry import register_action
+
+    register_action(
+        'speech-recognition:open_services',
+        lambda: store.dispatch(
+            StackPushMenuAction(menu_key='speech-recognition:services'),
+        ),
+    )
+    register_action(
+        'speech-recognition:open_engines',
+        lambda: store.dispatch(
+            StackPushMenuAction(menu_key='speech-recognition:engines'),
+        ),
+    )
+
+    # Create the top-level speech recognition menu with two submenus
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id='speech-recognition:main',
+            title='Speech Recognition',
+            heading='Speech Recognition Settings',
+            sub_heading='Vosk is used for wake word detection',
+            items=(
+                MenuItemData(
+                    key='services',
+                    label='Services',
+                    icon='\uf4a7',
+                    action_id='speech-recognition:open_services',
+                ),
+                MenuItemData(
+                    key='engine',
+                    label='Recognition Engine',
+                    icon='\uf2a2',
+                    action_id='speech-recognition:open_engines',
+                ),
+            ),
+            placeholder='',
+        ),
+    )
 
     store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.ACCESSIBILITY,
             priority=30,
-            menu_item=SubMenuItem(
-                label='Speech Recognition',
-                icon='',
-                sub_menu=HeadedMenu(
-                    title='Speech Recognition',
-                    heading='Speech Recognition Settings',
-                    sub_heading='Vosk is used for wake word detection',
-                    items=[
-                        SubMenuItem(
-                            key='services',
-                            label='Services',
-                            icon='',
-                            sub_menu=HeadlessMenu(
-                                title='Services',
-                                items=speech_recognition_items,
-                            ),
-                        ),
-                        SubMenuItem(
-                            key='engine',
-                            label='Recognition Engine',
-                            icon='',
-                            sub_menu=HeadedMenu(
-                                title='Recognition Engine',
-                                heading='Select Active Engine',
-                                sub_heading=f'[color={SUCCESS_COLOR}]󱓻[/color] Offline '
-                                f'models\n[color={WARNING_COLOR}]󱓻[/color] Online '
-                                'models',
-                                items=recognition_engine_items,
-                            ),
-                        ),
-                    ],
-                ),
-            ),
+            label='Speech Recognition',
+            icon='',
         ),
+    )
+
+    # Register path matcher for Speech Recognition menu navigation
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    def _speech_recognition_path_matcher(path: tuple[str, ...]) -> str | None:
+        if len(path) >= 4 and path[3] == 'speech_recognition:':  # noqa: PLR2004
+            if len(path) == 4:  # noqa: PLR2004
+                return 'speech-recognition:main'
+            if len(path) == 5:  # noqa: PLR2004
+                return path[4]
+        return None
+
+    register_path_menu_matcher(
+        'speech-recognition:settings',
+        _speech_recognition_path_matcher,
     )
 
     return engines_manager.subscriptions

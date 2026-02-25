@@ -5,9 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from ubo_gui.menu.types import HeadlessMenu, Item, SubMenuItem
-
 from ubo_app.logger import logger
+from ubo_app.store.core.menu_item_bridge import sync_items_to_dynamic_menu
 from ubo_app.store.core.types import RegisterSettingAppAction, SettingsCategory
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
@@ -18,11 +17,16 @@ from ubo_app.store.services.infrared import (
 )
 from ubo_app.store.ubo_actions import UboDispatchItem
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.menu_items import SELECTED_ITEM_PARAMETERS, UNSELECTED_ITEM_PARAMETERS
+from ubo_app.utils.menu_items import (
+    SELECTED_ITEM_PARAMETERS,
+    UNSELECTED_ITEM_PARAMETERS,
+)
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
+    from ubo_gui.menu.types import Item
+
     from ubo_app.utils.types import Subscriptions
 
 
@@ -118,7 +122,7 @@ def init_service() -> Subscriptions:
     )
     def menu_items(data: tuple[bool, bool]) -> list[Item]:
         should_propagate_keypad_actions, should_receive_keypad_actions = data
-        return [
+        items: list[Item] = [
             UboDispatchItem(
                 key='propagate_keys',
                 label='Propagate Keys',
@@ -144,20 +148,31 @@ def init_service() -> Subscriptions:
                 ),
             ),
         ]
+        sync_items_to_dynamic_menu(
+            menu_id='infrared:settings',
+            title='Infrared',
+            items=items,
+        )
+        return items
 
     store.dispatch(
         RegisterSettingAppAction(
             key='infrared',
             category=SettingsCategory.HARDWARE,
-            menu_item=SubMenuItem(
-                label='Infrared',
-                icon='󰻅',
-                sub_menu=HeadlessMenu(
-                    title='󰻅Infrared',
-                    items=menu_items,
-                ),
-            ),
+            label='Infrared',
+            icon='󰻅',
         ),
+    )
+
+    # Register path matcher for Infrared menu navigation
+    from ubo_app.store.core.view_registry import register_path_menu_matcher
+
+    register_path_menu_matcher(
+        'infrared:settings',
+        lambda path: 'infrared:settings'
+        if len(path) >= 4  # noqa: PLR2004
+        and path[3] == 'infrared:infrared'
+        else None,
     )
 
     return [
