@@ -165,6 +165,36 @@
   "dynamic_menus": {
     "_type": "DynamicMenusState",
     "menus": {
+      "about:main": {
+        "_type": "DynamicMenuData",
+        "heading": "Ubo v0.0.0",
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "update:recheck",
+            "background_color": "#03F7AE",
+            "color": "#000000",
+            "icon": "󰄬",
+            "is_short": false,
+            "key": "up_to_date",
+            "label": "Already up to date!"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "update:open-recent-versions",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰜉",
+            "is_short": false,
+            "key": "recent_versions",
+            "label": "Recent versions"
+          }
+        ],
+        "menu_id": "about:main",
+        "placeholder": "",
+        "sub_heading": "Base image: [unknown]\n",
+        "title": "About"
+      },
       "apps:list": {
         "_type": "DynamicMenuData",
         "heading": null,
@@ -291,9 +321,9 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:image_generator:google",
+            "action_id": "assistant:setup-img-gen:google",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "google",
@@ -301,9 +331,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:image_generator:openai",
+            "action_id": "assistant:setup-img-gen:openai",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "openai",
@@ -321,9 +351,9 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:llm:ollama",
+            "action_id": "assistant:setup-llm:ollama",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#2196F3",
             "icon": "",
             "is_short": false,
             "key": "ollama",
@@ -331,9 +361,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:llm:ollama_onprem",
+            "action_id": "assistant:setup-llm:ollama_onprem",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "ollama_onprem",
@@ -341,9 +371,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:llm:google_vertex",
+            "action_id": "assistant:setup-llm:google_vertex",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "google_vertex",
@@ -351,9 +381,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:llm:grok",
+            "action_id": "assistant:setup-llm:grok",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "grok",
@@ -361,9 +391,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:llm:cerebras",
+            "action_id": "assistant:setup-llm:cerebras",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "cerebras",
@@ -371,9 +401,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:llm:openai",
+            "action_id": "assistant:setup-llm:openai",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "openai",
@@ -391,8 +421,8 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:mcp_tools:add_server",
-            "background_color": "#68B7FF",
+            "action_id": "assistant:add-mcp-server",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰌉",
             "is_short": false,
@@ -411,7 +441,7 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:ollama",
+            "action_id": "assistant:setup-provider:ollama",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -421,7 +451,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:piper",
+            "action_id": "assistant:setup-provider:piper",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -431,7 +461,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:vosk",
+            "action_id": "assistant:setup-provider:vosk",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -441,7 +471,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:assemblyai",
+            "action_id": "assistant:setup-provider:assemblyai",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -451,7 +481,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:cerebras",
+            "action_id": "assistant:setup-provider:cerebras",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -461,7 +491,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:deepgram",
+            "action_id": "assistant:setup-provider:deepgram",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -471,7 +501,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:elevenlabs",
+            "action_id": "assistant:setup-provider:elevenlabs",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -481,7 +511,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:google",
+            "action_id": "assistant:setup-provider:google",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -491,7 +521,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:google_cloud",
+            "action_id": "assistant:setup-provider:google_cloud",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -501,7 +531,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:grok",
+            "action_id": "assistant:setup-provider:grok",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -511,7 +541,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:ollama_onprem",
+            "action_id": "assistant:setup-provider:ollama_onprem",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -521,7 +551,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:openai",
+            "action_id": "assistant:setup-provider:openai",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -531,7 +561,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:providers:rime",
+            "action_id": "assistant:setup-provider:rime",
             "background_color": "#000000",
             "color": "#ffffff",
             "icon": "",
@@ -551,9 +581,9 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:stt:vosk",
+            "action_id": "assistant:setup-stt:vosk",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#2196F3",
             "icon": "",
             "is_short": false,
             "key": "vosk",
@@ -561,9 +591,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:stt:google",
+            "action_id": "assistant:setup-stt:google",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "google",
@@ -571,9 +601,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:stt:google_segmented",
+            "action_id": "assistant:setup-stt:google_segmented",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "google_segmented",
@@ -581,9 +611,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:stt:openai",
+            "action_id": "assistant:setup-stt:openai",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "openai",
@@ -591,9 +621,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:stt:deepgram",
+            "action_id": "assistant:setup-stt:deepgram",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "deepgram",
@@ -601,9 +631,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:stt:assemblyai",
+            "action_id": "assistant:setup-stt:assemblyai",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "assemblyai",
@@ -621,9 +651,9 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:tts:piper",
+            "action_id": "assistant:setup-tts:piper",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#2196F3",
             "icon": "",
             "is_short": false,
             "key": "piper",
@@ -631,9 +661,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:tts:google",
+            "action_id": "assistant:setup-tts:google",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "google",
@@ -641,9 +671,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:tts:openai",
+            "action_id": "assistant:setup-tts:openai",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "openai",
@@ -651,9 +681,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:tts:elevenlabs",
+            "action_id": "assistant:setup-tts:elevenlabs",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "elevenlabs",
@@ -661,9 +691,9 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "assistant:tts:rime",
+            "action_id": "assistant:setup-tts:rime",
             "background_color": "#000000",
-            "color": "#ffffff",
+            "color": "#FFC107",
             "icon": "",
             "is_short": false,
             "key": "rime",
@@ -722,7 +752,7 @@
           {
             "_type": "MenuItemData",
             "action_id": "display:set_timeout:ten_minutes",
-            "background_color": null,
+            "background_color": "#03F7AE",
             "color": "#ffffff",
             "icon": "󰱒",
             "is_short": false,
@@ -771,17 +801,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:envoy_grpc:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:envoy_grpc",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:envoy_grpc",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Envoy for gRPC"
       },
@@ -791,17 +821,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:home_assistant:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:home_assistant",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:home_assistant",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Home Assistant"
       },
@@ -811,17 +841,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:home_bridge:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:home_bridge",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:home_bridge",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Home Bridge"
       },
@@ -831,17 +861,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:immich:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:immich",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Pull Images"
           }
         ],
         "menu_id": "docker:image:immich",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch images",
         "title": "Docker - Immich"
       },
@@ -851,17 +881,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:ngrok:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:ngrok",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:ngrok",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Ngrok"
       },
@@ -871,17 +901,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:ollama:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:ollama",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:ollama",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Ollama"
       },
@@ -891,17 +921,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:open_webui:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:open_webui",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:open_webui",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Open WebUI"
       },
@@ -911,17 +941,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:pi_hole:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:pi_hole",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:pi_hole",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Pi-hole"
       },
@@ -931,17 +961,17 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:image:portainer:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:fetch:portainer",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰇚",
             "is_short": false,
-            "key": "item_0",
+            "key": "fetch",
             "label": "Fetch"
           }
         ],
         "menu_id": "docker:image:portainer",
-        "placeholder": "",
+        "placeholder": "",
         "sub_heading": "Need to fetch the image",
         "title": "Docker - Portainer"
       },
@@ -951,12 +981,12 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "docker:registries:item_0",
-            "background_color": "#68B7FF",
+            "action_id": "docker:add-registry",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰌉",
             "is_short": false,
-            "key": "item_0",
+            "key": "docker:add-registry",
             "label": "Add Registry"
           }
         ],
@@ -967,22 +997,11 @@
       },
       "docker:setup": {
         "_type": "DynamicMenuData",
-        "heading": "Docker is Running",
-        "items": [
-          {
-            "_type": "MenuItemData",
-            "action_id": "docker:stop",
-            "background_color": null,
-            "color": "#ffffff",
-            "icon": "󰓛",
-            "is_short": false,
-            "key": "docker:stop",
-            "label": "Stop Docker"
-          }
-        ],
+        "heading": "Checking",
+        "items": [],
         "menu_id": "docker:setup",
-        "placeholder": "",
-        "sub_heading": "Docker service is active",
+        "placeholder": "Checking Docker service status...",
+        "sub_heading": "Checking Docker service status",
         "title": "Setup Docker"
       },
       "eth0": {
@@ -1051,8 +1070,8 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "infrared:settings:propagate_keys",
-            "background_color": "#68B7FF",
+            "action_id": "infrared:toggle-propagate",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰄱",
             "is_short": false,
@@ -1061,8 +1080,8 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "infrared:settings:receive_keys",
-            "background_color": "#68B7FF",
+            "action_id": "infrared:toggle-receive",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰄱",
             "is_short": false,
@@ -1211,7 +1230,7 @@
         "menu_id": "rpi-connect:main",
         "placeholder": "",
         "sub_heading": "Not installed",
-        "title": "RPi Connect"
+        "title": "󰌕 RPi Connect"
       },
       "settings:Accessibility": {
         "_type": "DynamicMenuData",
@@ -1339,7 +1358,7 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "docker:setup_menu",
+            "action_id": "menu:select:docker:service",
             "background_color": null,
             "color": "#ffffff",
             "icon": "",
@@ -1442,7 +1461,7 @@
             "action_id": "rpi-connect:open_menu",
             "background_color": null,
             "color": "#ffffff",
-            "icon": "",
+            "icon": "󰌕",
             "is_short": false,
             "key": "rpi_connect:",
             "label": "RPi Connect"
@@ -2131,7 +2150,7 @@
       },
       "settings:service:docker": {
         "_type": "DynamicMenuData",
-        "heading": "[color=#008000]󰪥[/color] Docker",
+        "heading": "[color=#FFC107]󰪥[/color] Docker",
         "items": [
           {
             "_type": "MenuItemData",
@@ -2172,17 +2191,198 @@
             "is_short": false,
             "key": "auto_restart",
             "label": "Auto Restart"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:navigate_errors",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "errors",
+            "label": "Errors"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:clear_errors",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "",
+            "is_short": false,
+            "key": "clear_errors",
+            "label": "Clear errors"
           }
         ],
         "menu_id": "settings:service:docker",
         "placeholder": "",
-        "sub_heading": "No errors raised in this service",
+        "sub_heading": "16 errors raised in this service",
         "title": "Docker"
       },
       "settings:service:docker:errors": {
         "_type": "DynamicMenuData",
         "heading": "Errors",
-        "items": [],
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:0",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "0",
+            "label": "2026-02-25 20:30:29"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:1",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "1",
+            "label": "2026-02-25 20:30:30"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:2",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "2",
+            "label": "2026-02-25 20:30:30"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:3",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "3",
+            "label": "2026-02-25 20:30:30"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:4",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "4",
+            "label": "2026-02-25 20:30:30"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:5",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "5",
+            "label": "2026-02-25 20:30:30"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:6",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "6",
+            "label": "2026-02-25 20:30:31"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:7",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "7",
+            "label": "2026-02-25 20:30:31"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:8",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "8",
+            "label": "2026-02-25 20:30:31"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:9",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "9",
+            "label": "2026-02-25 20:30:31"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:10",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "10",
+            "label": "2026-02-25 20:30:31"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:11",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "11",
+            "label": "2026-02-25 20:30:31"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:12",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "12",
+            "label": "2026-02-25 20:30:31"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:13",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "13",
+            "label": "2026-02-25 20:30:32"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:14",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "14",
+            "label": "2026-02-25 20:30:32"
+          },
+          {
+            "_type": "MenuItemData",
+            "action_id": "settings:service:docker:error:15",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "[color=#FF3F51][/color]",
+            "is_short": false,
+            "key": "15",
+            "label": "2026-02-25 20:30:32"
+          }
+        ],
         "menu_id": "settings:service:docker:errors",
         "placeholder": "No errors",
         "sub_heading": "Errors raised in this service",
@@ -4859,7 +5059,7 @@
             "action_id": "settings:service:docker:navigate",
             "background_color": null,
             "color": "#ffffff",
-            "icon": "[color=#008000]󰪥[/color]",
+            "icon": "[color=#FFC107]󰪥[/color]",
             "is_short": false,
             "key": "docker",
             "label": "Docker"
@@ -5076,8 +5276,8 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "speech-recognition:engines:vosk",
-            "background_color": "#68B7FF",
+            "action_id": "speech-recognition:setup-engine:vosk",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "",
             "is_short": false,
@@ -5086,8 +5286,8 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "speech-recognition:engines:google_cloud",
-            "background_color": "#68B7FF",
+            "action_id": "speech-recognition:setup-engine:google_cloud",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "",
             "is_short": false,
@@ -5122,7 +5322,7 @@
             "icon": "",
             "is_short": false,
             "key": "engine",
-            "label": "Recognition Engine"
+            "label": "Engines"
           }
         ],
         "menu_id": "speech-recognition:main",
@@ -5136,8 +5336,8 @@
         "items": [
           {
             "_type": "MenuItemData",
-            "action_id": "speech-recognition:services:is_intents_active",
-            "background_color": "#68B7FF",
+            "action_id": "speech-recognition:toggle-intents",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰄱",
             "is_short": false,
@@ -5146,8 +5346,8 @@
           },
           {
             "_type": "MenuItemData",
-            "action_id": "speech-recognition:services:is_assistant_active",
-            "background_color": "#68B7FF",
+            "action_id": "speech-recognition:toggle-assistant",
+            "background_color": null,
             "color": "#ffffff",
             "icon": "󰄱",
             "is_short": false,
@@ -5260,6 +5460,35 @@
         "sub_heading": null,
         "title": "SSH"
       },
+      "update:installed-versions": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [],
+        "menu_id": "update:installed-versions",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "󰯍Installed versions"
+      },
+      "update:recent-versions": {
+        "_type": "DynamicMenuData",
+        "heading": null,
+        "items": [
+          {
+            "_type": "MenuItemData",
+            "action_id": "update:install-version:0.0.0",
+            "background_color": null,
+            "color": "#ffffff",
+            "icon": "󰜉",
+            "is_short": false,
+            "key": "0.0.0",
+            "label": "0.0.0"
+          }
+        ],
+        "menu_id": "update:recent-versions",
+        "placeholder": "",
+        "sub_heading": null,
+        "title": "󰜉Recent versions"
+      },
       "users:main": {
         "_type": "DynamicMenuData",
         "heading": null,
@@ -5338,9 +5567,10 @@
         "menu_id": "vscode:main",
         "placeholder": "",
         "sub_heading": "Code CLI not installed",
-        "title": "VSCode"
+        "title": "󰨞 VSCode"
       }
-    }
+    },
+    "version": 509
   },
   "file_system": {
     "_type": "FileSystemState",
@@ -5631,7 +5861,7 @@
       },
       "docker:service": {
         "_type": "RegisteredAppEntry",
-        "action_id": "docker:setup_menu",
+        "action_id": null,
         "background_color": null,
         "category": "Docker",
         "icon": "",
@@ -5684,7 +5914,7 @@
         "action_id": "rpi-connect:open_menu",
         "background_color": null,
         "category": "Remote",
-        "icon": "",
+        "icon": "󰌕",
         "key": "rpi_connect:",
         "label": "RPi Connect",
         "priority": null
@@ -5901,7 +6131,88 @@
       },
       "docker": {
         "_type": "ServiceState",
-        "errors": [],
+        "errors": [
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/portainer/portainer-ce:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1443' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051429.2447593
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: ghcr.io/open-webui/open-webui:main\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1444' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051430.0393097
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/pihole/pihole:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1445' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051430.4751573
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/homeassistant/home-assistant:stable\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1446' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051430.6197014
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/homebridge/homebridge:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1447' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051430.8300183
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/ollama/ollama:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1487' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051430.9596505
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/ngrok/ngrok:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1488' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051431.0742993
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/thegrandpkizzle/envoy:1.26.1\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1511' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
+            "timestamp": 1772051431.1734574
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/ollama/ollama:latest\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] docker.io/ollama/ollama:latest\n\n[b]future:[/b] <Task finished name='Task-1699' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('docker.io/ollama/ollama:latest')>",
+            "timestamp": 1772051431.2563224
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/homebridge/homebridge:latest\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] docker.io/homebridge/homebridge:latest\n\n[b]future:[/b] <Task finished name='Task-1706' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('docker.io/homebridge/homebridge:latest')>",
+            "timestamp": 1772051431.375092
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: ghcr.io/open-webui/open-webui:main\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] ghcr.io/open-webui/open-webui:main\n\n[b]future:[/b] <Task finished name='Task-1708' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('ghcr.io/open-webui/open-webui:main')>",
+            "timestamp": 1772051431.5222013
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/ngrok/ngrok:latest\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] docker.io/ngrok/ngrok:latest\n\n[b]future:[/b] <Task finished name='Task-1713' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('docker.io/ngrok/ngrok:latest')>",
+            "timestamp": 1772051431.7435055
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/thegrandpkizzle/envoy:1.26.1\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] docker.io/thegrandpkizzle/envoy:1.26.1\n\n[b]future:[/b] <Task finished name='Task-2304' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('docker.io/thegrandpkizzle/envoy:1.26.1')>",
+            "timestamp": 1772051431.943286
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/pihole/pihole:latest\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] docker.io/pihole/pihole:latest\n\n[b]future:[/b] <Task finished name='Task-2305' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('docker.io/pihole/pihole:latest')>",
+            "timestamp": 1772051432.067931
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/homeassistant/home-assistant:stable\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] docker.io/homeassistant/home-assistant:stable\n\n[b]future:[/b] <Task finished name='Task-2306' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('docker.io/homeassistant/home-assistant:stable')>",
+            "timestamp": 1772051432.1940475
+          },
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/portainer/portainer-ce:latest\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] docker.io/portainer/portainer-ce:latest\n\n[b]future:[/b] <Task finished name='Task-2307' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ImageNotFound('docker.io/portainer/portainer-ce:latest')>",
+            "timestamp": 1772051432.2947152
+          }
+        ],
         "id": "docker",
         "is_active": true,
         "is_enabled": true,

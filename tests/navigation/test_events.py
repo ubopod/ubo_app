@@ -93,7 +93,7 @@ class TestPopEvents:
         assert len(stack_events) == 1
 
     def test_pop_to_root_at_root_no_events(
-        self, nav: ReducerRunner, events: EventCapture,
+        self, nav: ReducerRunner, events: EventCapture,  # noqa: ARG002
     ) -> None:
         """Verify pop-to-root at root emits no events."""
         nav.dispatch(StackPopToRootAction())
