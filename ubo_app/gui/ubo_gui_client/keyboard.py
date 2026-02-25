@@ -183,17 +183,17 @@ def setup_keyboard(  # noqa: C901, PLR0915
         if current_app is None:
             return
         item = current_app.get_item(_select_keys[key])
-        if item is not None and hasattr(item, 'action') and callable(
-            item.action,
-        ):
-            logger.info(
-                '[Keyboard] Local action for L%d on %s',
-                _select_keys[key] + 1,
-                type(current_app).__name__,
-            )
-            item.action()
+        if item is not None and hasattr(item, 'action'):
+            action = getattr(item, 'action', None)
+            if callable(action):
+                logger.info(
+                    '[Keyboard] Local action for L%d on %s',
+                    _select_keys[key] + 1,
+                    type(current_app).__name__,
+                )
+                action()
 
-    def on_keyboard(
+    def on_keyboard(  # noqa: C901
         window: WindowBase,
         key: int,
         scancode: int,

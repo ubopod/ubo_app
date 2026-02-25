@@ -16,6 +16,7 @@ from ubo_gui_client.home_page import HomePage
 from ubo_gui_client.menu_notification_handler import MenuNotificationHandler
 
 if TYPE_CHECKING:
+    from kivy.uix.screenmanager import TransitionBase
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Menu
 
@@ -85,7 +86,7 @@ class MenuWidgetWithHomePage(MenuWidget):
             padding_top=self.padding_top,
         )
 
-    def _render_menu(
+    def _render_menu(  # type: ignore[override]
         self: MenuWidgetWithHomePage,
         menu: Menu,
     ) -> Widget:
@@ -277,9 +278,11 @@ class MenuWidgetWithHomePage(MenuWidget):
             page_index,
             self.depth,
         )
-        if page_index is not None and isinstance(self.top, StackMenuItem):
-            self.top.page_index = page_index
-        self._replace_menu(self.top, menu)
+        top = self.top
+        if page_index is not None and isinstance(top, StackMenuItem):
+            top.page_index = page_index
+        if isinstance(top, StackMenuItem):
+            self._replace_menu(top, menu)
 
 
 def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
@@ -294,11 +297,11 @@ def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
 
     This monkey-patches the handlers with null-safe wrappers.
     """
-    original_progress = widget._handle_transition_progress
-    original_complete = widget._handle_transition_complete
+    original_progress = widget._handle_transition_progress  # noqa: SLF001
+    original_complete = widget._handle_transition_complete  # noqa: SLF001
 
     def _safe_progress(
-        transition: object,
+        transition: TransitionBase,
         progression: float,
     ) -> None:
         if getattr(transition, 'screen_out', None) is None or getattr(
@@ -307,60 +310,55 @@ def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
             None,
         ) is None:
             logger.warning(
-                '[MenuWidget] Transition progress with None screen (screen_out=%s, screen_in=%s)',
+                '[MenuWidget] Transition progress with None screen'
+                ' (screen_out=%s, screen_in=%s)',
                 getattr(transition, 'screen_out', 'N/A'),
                 getattr(transition, 'screen_in', 'N/A'),
             )
             return
         original_progress(transition, progression)
 
-    def _safe_complete(transition: object) -> None:
+    def _safe_complete(transition: TransitionBase) -> None:
         if getattr(transition, 'screen_out', None) is None or getattr(
             transition,
             'screen_in',
             None,
         ) is None:
             logger.warning(
-                '[MenuWidget] Transition complete with None screen (screen_out=%s, screen_in=%s)',
+                '[MenuWidget] Transition complete with None screen'
+                ' (screen_out=%s, screen_in=%s)',
                 getattr(transition, 'screen_out', 'N/A'),
                 getattr(transition, 'screen_in', 'N/A'),
             )
             # Clear the running state and process queued transitions
-            with widget._transition_progress_lock:
+            with widget._transition_progress_lock:  # noqa: SLF001
                 if widget.transition_queue:
                     (
                         (screen, next_transition, direction, duration),
                         *widget.transition_queue,
                     ) = widget.transition_queue
-                    widget._perform_switch(
+                    widget._perform_switch(  # noqa: SLF001
                         screen,
                         transition=next_transition,
-                        **(
-                            {'duration': duration}
-                            if duration is not None
-                            else {}
-                        ),
-                        **(
-                            {'direction': direction}
-                            if direction is not None
-                            else {}
-                        ),
+                        duration=duration,
+                        direction=direction,
                     )
                 else:
-                    widget._running_transition_end_time = None
+                    widget._running_transition_end_time = None  # noqa: SLF001
             return
         original_complete(transition)
 
-    widget._handle_transition_progress = _safe_progress
-    widget._handle_transition_complete = _safe_complete
+    widget._handle_transition_progress = _safe_progress  # noqa: SLF001
+    widget._handle_transition_complete = _safe_complete  # noqa: SLF001
 
 
 class MenuAppCentral(MenuNotificationHandler, UboApp):
     grpc_client: GUIClient
+    menu_widget: MenuWidgetWithHomePage
 
     def __init__(self: MenuAppCentral, **kwargs: object) -> None:
         super().__init__(**kwargs)
-        self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)
+        self.menu_widget = MenuWidgetWithHomePage(render_surroundings=True)  # pyright: ignore[reportIncompatibleVariableOverride]
         self._last_page_index: int | None = None
         self._last_header_visible: bool | None = None
         self._last_footer_visible: bool | None = None
@@ -371,7 +369,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         # This prevents the home page (with gauges) from bleeding through
         # transparent areas of menu/notification screens.
         self.menu_widget.screen_manager.bind(
-            current=self.menu_widget._on_screen_changed,
+            current=self.menu_widget._on_screen_changed,  # noqa: SLF001
         )
 
         self._setup_bindings()
@@ -412,7 +410,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             logger.info(
                 '[MenuAppCentral] Root menu updated: title=%s, items=%d',
                 ubo_menu.title,
-                len(ubo_menu.items),
+                len(ubo_menu.items) if not callable(ubo_menu.items) else -1,
             )
 
         self.menu_widget.set_root_menu(ubo_menu)

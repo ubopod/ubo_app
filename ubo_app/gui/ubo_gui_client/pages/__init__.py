@@ -37,8 +37,10 @@ def get_grpc_client() -> GUIClient:
     from kivy.app import App
 
     app = App.get_running_app()
+    if app is None:
+        msg = 'No running Kivy app'
+        raise RuntimeError(msg)
     return app.grpc_client
-
 
 def register_all_pages() -> None:
     """Register all page widgets in the application registry."""

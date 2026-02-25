@@ -32,7 +32,6 @@ class BlankOverlay(Widget):
             Color(0, 0, 0, 1)
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
-
     def _update_rect(self: BlankOverlay, *_args: object) -> None:
         """Update rectangle size and position."""
         self.rect.size = self.size
@@ -49,7 +48,6 @@ class DisconnectOverlay(FloatLayout):
             Color(0, 0, 0, 1)
             self._bg_rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_bg, pos=self._update_bg)
-
         self._title_label = Label(
             text='Disconnected',
             font_size=dp(20),

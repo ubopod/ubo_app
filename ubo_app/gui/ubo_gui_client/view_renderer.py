@@ -22,12 +22,15 @@ if TYPE_CHECKING:
     from ubo_bindings.ubo.v1 import (
         HomeViewData,
         MenuViewData,
+        NotificationViewData,
         StatusBarData,
         ViewData,
     )
 
+    from ubo_gui_client.app import UboGUIApp
     from ubo_gui_client.client import GUIClient
     from ubo_gui_client.menu_central import MenuWidgetWithHomePage
+    from ubo_gui_client.menu_notification_handler import UboNotificationWidget
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +53,7 @@ class ViewRenderer:
     def __init__(
         self,
         menu_widget: MenuWidgetWithHomePage,
-        app: object,
+        app: UboGUIApp,
         client: GUIClient,
     ) -> None:
         """Initialize the ViewRenderer.
@@ -336,7 +339,7 @@ class ViewRenderer:
             self.menu_widget.depth,
         )
 
-    def _render_application_view(self, view: object) -> None:
+    def _render_application_view(self, view: ViewData) -> None:
         """Render an application view by opening the registered widget."""
         application_id = getattr(view, 'application_id', None)
 
@@ -373,7 +376,7 @@ class ViewRenderer:
         self.menu_widget.replace_top_with_application(widget)
         self._current_view_type = 'application'
 
-    def _render_notification_view(self, view: object) -> None:
+    def _render_notification_view(self, view: NotificationViewData) -> None:
         """Render a notification view by opening a NotificationWidget."""
         from ubo_gui.page import PAGE_MAX_ITEMS
 
@@ -437,10 +440,10 @@ class ViewRenderer:
             notification_id,
         )
 
-    def _apply_notification_data(
+    def _apply_notification_data(  # noqa: C901
         self,
-        widget: object,
-        view: object,
+        widget: UboNotificationWidget,
+        view: NotificationViewData,
     ) -> None:
         """Apply notification view data to a widget (create or update)."""
         from ubo_gui.menu.types import ActionItem
@@ -485,12 +488,12 @@ class ViewRenderer:
             item_is_short = getattr(item_data, 'is_short', False) or False
 
             if action_id.startswith('notification:extra_info:'):
-                def make_info_action(
+                def make_info_action(  # noqa: PLR0913
                     renderer: ViewRenderer,
                     text: str,
                     i_icon: str,
                     i_label: str,
-                    i_short: bool,
+                    i_short: bool,  # noqa: FBT001
                     i_bg: str | None,
                     i_color: str,
                 ) -> ActionItem:
@@ -538,7 +541,7 @@ class ViewRenderer:
 
         if items and hasattr(widget, 'items'):
             padded_items = [None] * (PAGE_MAX_ITEMS - len(items)) + items
-            widget.items = padded_items
+            widget.items = padded_items  # type: ignore[assignment]
 
     def _convert_view_items(self, view: MenuViewData) -> list[ActionItem]:
         """Convert MenuViewData items to ubo_gui ActionItem objects."""
@@ -547,7 +550,6 @@ class ViewRenderer:
         if items_wrapper is None:
             return result
 
-        # MenuViewDataItems.items is list[MenuViewDataItemsItem]
         raw_items = getattr(items_wrapper, 'items', []) or []
 
         for wrapper_item in raw_items:
@@ -698,31 +700,29 @@ class ViewRenderer:
         if hasattr(self.app, 'recording_sign'):
             self._update_sign_widget(
                 sign=self.app.recording_sign,
-                should_show=status_bar.is_recording or status_bar.is_recording_audio,
+                should_show=bool(
+                    status_bar.is_recording or status_bar.is_recording_audio,
+                ),
                 color=(0, 0, 1, 1) if status_bar.is_recording else (0, 1, 0, 1),
             )
 
         if hasattr(self.app, 'replaying_sign'):
             self._update_sign_widget(
                 sign=self.app.replaying_sign,
-                should_show=status_bar.is_replaying,
+                should_show=bool(status_bar.is_replaying),
                 color=(0, 1, 0, 1),
             )
 
     def _update_sign_widget(
         self,
-        sign: object,
+        sign: Widget,
         should_show: bool,  # noqa: FBT001
         color: tuple[int, int, int, int],
     ) -> None:
         """Update a sign widget (recording or replaying indicator)."""
-        from kivy.uix.widget import Widget
-
-        if not isinstance(sign, Widget):
-            return
         if should_show:
             if sign not in self.app.header_content.children:
-                sign.color = color  # type: ignore[attr-defined]
+                sign.color = color
                 self.app.header_content.add_widget(sign)
                 if hasattr(self.app, 'sign_animation'):
                     self.app.sign_animation.start(sign)
@@ -753,8 +753,7 @@ class ViewRenderer:
             if isinstance(widget, ProgressRingWidget) and pn.progress is not None:
                 widget.progress = pn.progress
             if isinstance(widget, Widget):
-                widget.color = pn.color  # type: ignore[attr-defined]
-
+                widget.color = pn.color
         # Remove old notifications
         for id_ in set(self.app.notification_widgets) - seen_ids:
             del self.app.notification_widgets[id_]

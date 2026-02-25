@@ -85,3 +85,4 @@ quote-style = "single"
 
 [tool.pyright]
 exclude = ["**/.venv", "dist/"]
+stubPath = "../../typings"

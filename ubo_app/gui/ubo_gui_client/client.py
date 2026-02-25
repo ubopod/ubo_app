@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_bindings.ubo.v1 import StatusBarData, ViewData
+    from ubo_bindings.ubo.v1 import Action, StatusBarData, ViewData
 
 # Reconnection parameters
 MAX_RETRIES = 50
@@ -59,7 +59,7 @@ class GUIClient:
         if self._client:
             self._client.close()
 
-    def subscribe_view_changes(
+    def subscribe_view_changes(  # noqa: C901
         self,
         callback: Callable[[ViewData, StatusBarData | None], None],
         *,
@@ -87,7 +87,7 @@ class GUIClient:
             msg = 'Client not connected'
             raise RuntimeError(msg)
 
-        async def _subscription_loop() -> None:
+        async def _subscription_loop() -> None:  # noqa: C901, PLR0912
             from ubo_bindings.client import _unpack_from_any
             from ubo_bindings.store.v1 import SubscribeStoreRequest
 
@@ -129,9 +129,14 @@ class GUIClient:
                                 _unpack_from_any(item) for item in response.results
                             ]
                             current_view = results[0] if len(results) > 0 else None
-                            status_bar = results[1] if len(results) > 1 else None
+                            status_bar_data = results[1] if len(results) > 1 else None
                             if current_view is not None:
-                                callback(current_view, status_bar)
+                                from typing import cast
+
+                                callback(
+                                    cast('ViewData', current_view),
+                                    cast('StatusBarData | None', status_bar_data),
+                                )
 
                 except asyncio.CancelledError:
                     logger.info('[GUIClient] Subscription cancelled')
@@ -285,7 +290,7 @@ class GUIClient:
 
     def dispatch_notifications_clear(self, notification_id: str) -> None:
         """Clear a notification by ID."""
-        from ubo_bindings.ubo.v1 import Action, NotificationsClearAction
+        from ubo_bindings.ubo.v1 import Action, NotificationsClearByIdAction
 
         if self._client:
             logger.info(
@@ -293,26 +298,30 @@ class GUIClient:
                 notification_id,
             )
             action = Action(
-                notifications_clear_action=NotificationsClearAction(
-                    notification_id=notification_id,
+                notifications_clear_by_id_action=NotificationsClearByIdAction(
+                    id=notification_id,
                 ),
             )
             self._client.dispatch(action=action)
 
     def dispatch_speech_read_text(self, text: str) -> None:
         """Request speech synthesis for text."""
-        from ubo_bindings.ubo.v1 import Action, SpeechSynthesisReadTextAction
+        from ubo_bindings.ubo.v1 import (
+            Action,
+            ReadableInformation,
+            SpeechSynthesisReadTextAction,
+        )
 
         if self._client:
             logger.info('[GUIClient] dispatch_speech_read_text: text=%s', text)
             action = Action(
                 speech_synthesis_read_text_action=SpeechSynthesisReadTextAction(
-                    text=text,
+                    information=ReadableInformation(text=text),
                 ),
             )
             self._client.dispatch(action=action)
 
-    def dispatch_raw(self, action: object) -> None:
+    def dispatch_raw(self, action: Action) -> None:
         """Dispatch a raw protobuf Action to the core."""
         if self._client:
             logger.info('[GUIClient] dispatch_raw: action=%s', type(action).__name__)

@@ -6,7 +6,7 @@ import json
 import logging
 from functools import cache
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from ubo_gui_client.constants import IS_RPI
 
@@ -59,4 +59,4 @@ def get_eeprom_data() -> EepromData:
         if 'serial_number' not in data or 'version' not in data:
             logger.debug('Invalid EEPROM data')
             return EMPTY_EEPROM_DATA
-        return {**EMPTY_EEPROM_DATA, **data}
+        return cast('EepromData', {**EMPTY_EEPROM_DATA, **data})

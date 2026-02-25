@@ -82,7 +82,7 @@ class Display:
                 from adafruit_blinka.agnostic import detector
 
                 if detector.board.any_raspberry_pi_5_board:
-                    import lgpio  # pyright: ignore [reportMissingModuleSource]
+                    import lgpio  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
                     from adafruit_blinka.microcontroller.generic_linux import lgpio_pin
 
                     lgpio.gpiochip_close(lgpio_pin.CHIP)

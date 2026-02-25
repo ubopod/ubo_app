@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
     from kivy._clock import ClockEvent
     from ubo_gui.menu.menu_widget import MenuWidget
+    from ubo_gui.menu.types import ActionItem
 
     from ubo_gui_client.client import GUIClient
 
@@ -111,13 +112,18 @@ class MenuNotificationHandler(UboApp):
                 self.grpc_client.dispatch_notifications_clear(notification_id)
             on_close_id = getattr(notification.value, 'on_close_id', None)
             if on_close_id:
-                from ubo_app.store.core.callback_registry import (
-                    execute_callback,
-                    unregister_callback,
-                )
+                try:
+                    from ubo_app.store.core.callback_registry import (  # pyright: ignore[reportMissingImports]
+                        execute_callback,
+                        unregister_callback,
+                    )
 
-                execute_callback(on_close_id)
-                unregister_callback(on_close_id)
+                    execute_callback(on_close_id)
+                    unregister_callback(on_close_id)
+                except ImportError:
+                    logger.debug(
+                        'callback_registry not available in GUI client',
+                    )
 
         notification_application = UboNotificationWidget(
             notification_id=notification_id or '',
@@ -125,7 +131,6 @@ class MenuNotificationHandler(UboApp):
         )
 
         notification_application.bind(on_close=close)
-
         self._update_notification_widget(
             notification_application,
             event,
@@ -139,7 +144,7 @@ class MenuNotificationHandler(UboApp):
         self,
         notification: NotificationReference,
         close: Callable[[], None],
-    ) -> list[object]:
+    ) -> list[ActionItem | None]:
         def dismiss(_: object = None) -> None:
             close()
             notification_id = getattr(notification.value, 'id', None)
@@ -148,8 +153,8 @@ class MenuNotificationHandler(UboApp):
 
         from ubo_gui.menu.types import ActionItem
 
-        top_items: list[object] = []
-        bottom_items: list[object] = []
+        top_items: list[ActionItem | None] = []
+        bottom_items: list[ActionItem | None] = []
 
         extra_info = getattr(notification.value, 'extra_information', None)
         if extra_info:
@@ -181,8 +186,11 @@ class MenuNotificationHandler(UboApp):
         actions = getattr(notification.value, 'actions', [])
         actions_quantity = len(top_items) + len(actions) + len(bottom_items)
 
+        def _noop() -> None:
+            pass
+
         def convert_action(action: object) -> ActionItem:
-            action_fn = getattr(action, 'action', None)
+            action_fn = getattr(action, 'action', None) or _noop
             return ActionItem(
                 key=getattr(action, 'key', ''),
                 icon=getattr(action, 'icon', ''),
@@ -251,7 +259,7 @@ class MenuNotificationHandler(UboApp):
             else ''
         )
         notification_application.color = getattr(notification.value, 'color', '')
-        notification_application.items = self._notification_items(
+        notification_application.items = self._notification_items(  # type: ignore[assignment]
             notification,
             close,
         )

@@ -9,6 +9,7 @@ from typing import Any
 from kivy.lang.builder import Builder
 from kivy.properties import BooleanProperty, StringProperty
 from ubo_gui.prompt import PromptWidget
+
 from ubo_gui_client.gui_utils import UboPageWidget, UboPromptWidget
 from ubo_gui_client.pages import get_grpc_client
 

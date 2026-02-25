@@ -138,7 +138,6 @@ class MenuAppFooter(UboApp):
             self.icons_layout.add_widget(label)
         self.icons_layout.add_widget(Widget(size_hint=(None, 1), width=dp(2)))
         self.icons_layout.bind(minimum_width=self.icons_layout.setter('width'))
-
     @mainthread
     def handle_is_footer_visible_change(
         self: MenuAppFooter,
