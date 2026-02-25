@@ -1,7 +1,7 @@
 """View computation utilities for the dumb UI architecture.
 
 This module provides functions to compute ViewData from the full RootState,
-including support for dynamic menus. It can be used by both GUI (Kivy) and
+using dynamic menus exclusively. It can be used by both GUI (Kivy) and
 non-GUI contexts (gRPC/TUI).
 """
 
@@ -11,15 +11,10 @@ import contextlib
 import math
 from typing import TYPE_CHECKING
 
-from ubo_gui.menu.types import menu_items
-
 from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
-from ubo_app.store.core.menu_adapter import (
-    get_current_menu_from_stack,
-    item_to_menu_item_data,
-)
+from ubo_app.store.core.menu_adapter import item_to_menu_item_data
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
@@ -94,7 +89,7 @@ def get_notification_view_data(
                 MenuItemData(
                     key='extra_info',
                     label='',
-                    icon='󰋼',  # info icon
+                    icon='\U000f02fc',  # info icon
                     color='#2196F3',
                     is_short=True,
                     action_id=f'notification:extra_info:{notification_id}',
@@ -213,11 +208,10 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     with contextlib.suppress(AttributeError, TypeError):
         is_recording_audio = state.audio.is_recording
 
-    # Compute title from root menu or hostname
-    title = ''
-    with contextlib.suppress(AttributeError, TypeError):
-        if state.main.menu is not None:
-            title = getattr(state.main.menu, 'title', '') or ''
+    # Title shows hostname (previously from legacy HOME_MENU.title)
+    import socket
+
+    title = f'󰋜{socket.gethostname()}.local'
 
     return StatusBarData(
         title=title,
@@ -233,11 +227,10 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
 
 
 def compute_view_from_root_state(state: RootState) -> ViewData:
-    """Compute ViewData from the full RootState, using dynamic menus when available.
+    """Compute ViewData from the full RootState, using dynamic menus.
 
-    This is the dumb UI architecture's view computation function. It checks if
-    there's a dynamic menu for the current navigation position, and if so, uses
-    its items directly instead of traversing the legacy menu tree.
+    This is the dumb UI architecture's view computation function. It uses
+    dynamic menus exclusively for all menu views.
 
     Args:
         state: The full Redux RootState.
@@ -246,6 +239,8 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         ViewData describing what the UI should render.
 
     """
+    from ubo_app.store.core.menus import HOME_MENU_ID
+
     main_state = state.main
     dynamic_menus_state = state.dynamic_menus
     stack = main_state.stack
@@ -277,24 +272,20 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
     # Check if we're at home (depth 1)
     depth = len([i for i in stack if isinstance(i, MenuStackItem)])
     if depth <= 1:
-        # Home view - get menu items from the root menu
-        # Use registry to get home view data from services
+        # Home view - get items from the HOME_MENU_ID dynamic menu
         home_data = get_home_view_data(state)
         cpu_percent = home_data.get('cpu_percent', 0.0)
         ram_percent = home_data.get('ram_percent', 0.0)
         volume_level = home_data.get('volume_level', 0.0)
 
-        # Get menu items from the current menu
         from ubo_app.store.core.types import MenuItemData
 
         home_items: tuple[MenuItemData, ...] = ()
-        current_menu = get_current_menu_from_stack(main_state.menu, stack)
-        if current_menu is not None:
-            items = menu_items(current_menu)
-            menu_item_data = tuple(
-                item_to_menu_item_data(item, i) for i, item in enumerate(items)
+        home_menu = dynamic_menus_state.menus.get(HOME_MENU_ID)
+        if home_menu is not None:
+            home_items = tuple(
+                item for item in home_menu.items if item is not None
             )
-            home_items = tuple(item for item in menu_item_data if item is not None)
 
         return HomeViewData(
             show_status_bar=True,
@@ -332,10 +323,14 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
                 total_pages=total_pages,
             )
 
-    # Fall back to legacy view computation from main reducer
-    from ubo_app.store.core.reducer import compute_view_from_stack
-
-    return compute_view_from_stack(main_state)
+    # No dynamic menu found - return empty menu view
+    return MenuViewData(
+        show_status_bar=True,
+        title='',
+        items=(),
+        page_index=0,
+        total_pages=1,
+    )
 
 
 def setup_dynamic_view_autorun() -> None:
@@ -390,6 +385,8 @@ def setup_dynamic_view_autorun() -> None:
             ),
             state.main.is_recording,
             state.main.is_replaying,
+            # Watch registered_apps for dynamic menu updates from registrations
+            tuple(state.main.registered_apps.items()),
             # Watch for notification content changes (for progress updates, etc.)
             tuple(
                 (n.id, n.title, n.content, n.icon, n.color, n.progress)
@@ -398,7 +395,7 @@ def setup_dynamic_view_autorun() -> None:
             # Dynamic dependencies from registry (menu content only)
             get_registered_dependencies(state),
             # Home view data (volume, CPU, RAM) and status bar data (clock,
-            # temperature, icons) — needed for gRPC GUI clients that rely on
+            # temperature, icons) -- needed for gRPC GUI clients that rely on
             # current_view for all rendering
             get_home_view_data(state),
             get_registered_status_bar_dependencies(state),

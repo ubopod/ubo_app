@@ -10,8 +10,6 @@ from redux import BaseAction
 from ubo_app.utils.service import ServiceUnavailableError
 
 if TYPE_CHECKING:
-    from ubo_gui.menu.types import Item
-
     from ubo_app.store.core.types.enums import MenuScrollDirection, SettingsCategory
     from ubo_app.store.core.types.status_bar import StatusBarData
     from ubo_app.store.core.types.view_data import MenuItemData, ViewData
@@ -40,9 +38,16 @@ class UpdateLightDMState(MainAction):
 
 
 class RegisterAppAction(MainAction):
-    """Base class for app registration actions."""
+    """Base class for app registration actions.
 
-    menu_item: Item
+    All fields are serializable (no callables or Menu objects).
+    Services register action handlers in the action_registry separately.
+    """
+
+    label: str
+    icon: str = ''
+    action_id: str | None = None
+    background_color: str | None = None
     service: str | None = field(default_factory=service_default_factory)
     key: str | None = None
 
@@ -256,9 +261,13 @@ class ExecuteMenuActionAction(MainAction):
     This action triggers the execution of a registered action handler.
     Services register handlers via action_registry.register_action().
     The UI dispatches this when a menu item with an action_id is selected.
+
+    If menu_key is provided and the handler returns a non-None result
+    (e.g., a Menu), the reducer will push the menu_key onto the stack.
     """
 
     action_id: str
+    menu_key: str | None = None
 
 
 class OpenApplicationAction(MainAction):

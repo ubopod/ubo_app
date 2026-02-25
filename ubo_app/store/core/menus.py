@@ -1,14 +1,11 @@
-"""Menu definitions for the Ubo GUI."""
+"""Dynamic menu definitions and setup for the Ubo GUI."""
 
 from __future__ import annotations
 
-import math
-import socket
 import time
 from typing import TYPE_CHECKING
 
 from redux import AutorunOptions
-from ubo_gui.menu.types import ActionItem, HeadlessMenu, SubMenuItem
 
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import SETTINGS_CATEGORY_ICONS
@@ -22,18 +19,11 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.core.view_registry import register_category_icon
 from ubo_app.store.main import store
-from ubo_app.store.services.notifications import (
-    Notification,
-    NotificationsDisplayAction,
-)
-from ubo_app.store.settings.menu import SYSTEM_MENU
-from ubo_app.store.ubo_actions import UboDispatchItem
-from ubo_app.store.update_manager.utils import open_about_menu
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from ubo_gui.menu.types import Item
+    from ubo_app.store.services.notifications import Notification
 
 # =============================================================================
 # Dynamic Menu IDs for Core Menus
@@ -44,62 +34,6 @@ MAIN_MENU_ID = 'main:menu'
 APPS_MENU_ID = 'apps:list'
 SETTINGS_MENU_ID = 'settings:categories'
 POWER_MENU_ID = 'power:options'
-
-
-APPS_MENU = HeadlessMenu(
-    title='󰀻Docker Apps',
-    items=[],
-    placeholder='No apps',
-)
-
-SETTINGS_MENU = HeadlessMenu(
-    title='Settings',
-    items=[
-        SubMenuItem(
-            key=category,
-            label=category,
-            icon=SETTINGS_CATEGORY_ICONS.get(category, ''),
-            sub_menu=HeadlessMenu(
-                title=SETTINGS_CATEGORY_ICONS.get(category, '') + category,
-                items=SYSTEM_MENU if category is SettingsCategory.SYSTEM else [],
-                placeholder='No settings in this category',
-            ),
-        )
-        for category in SettingsCategory
-    ],
-)
-
-MAIN_MENU = HeadlessMenu(
-    title='󰍜Main',
-    items=[
-        SubMenuItem(
-            key='apps',
-            label='Apps',
-            icon='󰀻',
-            sub_menu=APPS_MENU,
-        ),
-        SubMenuItem(
-            key='settings',
-            label='Settings',
-            icon='',
-            sub_menu=SETTINGS_MENU,
-        ),
-        ActionItem(
-            key='about',
-            label='About',
-            icon='',
-            action=open_about_menu,
-        ),
-    ],
-)
-
-
-@store.autorun(
-    lambda state: state.notifications.unread_count,
-    options=AutorunOptions(default_value='Notifications (not loaded)'),
-)
-def _notifications_title(unread_count: int) -> str:
-    return f'Notifications ({unread_count})'
 
 
 @store.autorun(
@@ -143,91 +77,8 @@ def update_notifications_dynamic_menu(
     )
 
 
-@store.autorun(
-    lambda state: state.notifications.notifications,
-    options=AutorunOptions(default_value=[]),
-)
-def notifications_menu_items(notifications: Sequence[Notification]) -> list[Item]:
-    """Return a list of menu items for the notification manager."""
-    return [
-        UboDispatchItem(
-            key=str(notification.id),
-            label=notification.title,
-            icon=notification.icon,
-            color='black',
-            background_color=notification.color,
-            store_action=NotificationsDisplayAction(
-                notification=notification,
-                index=index,
-                count=len(notifications),
-            ),
-            progress=None
-            if notification.progress is None or math.isnan(notification.progress)
-            else notification.progress,
-        )
-        for index, notification in enumerate(notifications)
-        if notification.expiration_timestamp is None
-        or notification.expiration_timestamp > time.time()
-    ]
-
-
-@store.autorun(
-    lambda state: len(state.notifications.notifications),
-    options=AutorunOptions(default_value='white'),
-)
-def _notifications_color(unread_count: int) -> str:
-    return 'yellow' if unread_count > 0 else 'white'
-
-
-HOME_MENU = HeadlessMenu(
-    title=f'󰋜{socket.gethostname()}.local',
-    items=[
-        SubMenuItem(
-            key='main',
-            label='',
-            sub_menu=MAIN_MENU,
-            icon='󰍜',
-            is_short=True,
-        ),
-        SubMenuItem(
-            key='notifications',
-            label='',
-            sub_menu=HeadlessMenu(
-                title=_notifications_title,
-                items=notifications_menu_items,
-                placeholder='No notifications',
-            ),
-            color=_notifications_color,
-            icon='',
-            is_short=True,
-        ),
-        SubMenuItem(
-            key='power',
-            label='',
-            sub_menu=HeadlessMenu(
-                title='󰐥Power',
-                items=[
-                    UboDispatchItem(
-                        label='Reboot',
-                        store_action=RebootAction(),
-                        icon='󰜉',
-                    ),
-                    UboDispatchItem(
-                        label='Power off',
-                        store_action=PowerOffAction(),
-                        icon='󰐥',
-                    ),
-                ],
-            ),
-            icon='󰐥',
-            is_short=True,
-        ),
-    ],
-)
-
-
 # =============================================================================
-# Dynamic Menu Autoruns for Dumb UI Architecture
+# Dynamic Menu Initialization Functions
 # =============================================================================
 
 
@@ -236,24 +87,24 @@ def update_main_dynamic_menu() -> None:
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=MAIN_MENU_ID,
-            title='󰍜Main',
+            title='\U000f035cMain',
             items=(
                 MenuItemData(
                     key='apps',
                     label='Apps',
-                    icon='󰀻',
+                    icon='\U000f003b',
                     action_id='menu:navigate:apps',
                 ),
                 MenuItemData(
                     key='settings',
                     label='Settings',
-                    icon='',
+                    icon='\ue690',
                     action_id='menu:navigate:settings',
                 ),
                 MenuItemData(
                     key='about',
                     label='About',
-                    icon='',
+                    icon='\uf129',
                     action_id='menu:about',
                 ),
             ),
@@ -267,18 +118,18 @@ def update_power_dynamic_menu() -> None:
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=POWER_MENU_ID,
-            title='󰐥Power',
+            title='\U000f0425Power',
             items=(
                 MenuItemData(
                     key='reboot',
                     label='Reboot',
-                    icon='󰜉',
+                    icon='\U000f0709',
                     action_id='power:reboot',
                 ),
                 MenuItemData(
                     key='poweroff',
                     label='Power off',
-                    icon='󰐥',
+                    icon='\U000f0425',
                     action_id='power:off',
                 ),
             ),
@@ -321,6 +172,54 @@ def update_apps_dynamic_menu() -> None:
             title=get_apps_menu_title(),
             items=(),
             placeholder='No apps',
+        ),
+    )
+
+
+def update_settings_category_dynamic_menus() -> None:
+    """Initialize empty dynamic menus for each settings category."""
+    for category in SettingsCategory:
+        icon = SETTINGS_CATEGORY_ICONS.get(category, '')
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=f'settings:{category.value}',
+                title=f'{icon}{category.value}',
+                items=(),
+                placeholder='No settings in this category',
+            ),
+        )
+
+
+def update_home_dynamic_menu() -> None:
+    """Update the dynamic menu for the home screen."""
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=HOME_MENU_ID,
+            title='Home',
+            items=(
+                MenuItemData(
+                    key='main',
+                    label='',
+                    icon='\U000f035c',
+                    is_short=True,
+                    action_id='menu:navigate:main',
+                ),
+                MenuItemData(
+                    key='notifications',
+                    label='',
+                    icon='\ueaa2',
+                    is_short=True,
+                    action_id='menu:navigate:notifications',
+                ),
+                MenuItemData(
+                    key='power',
+                    label='',
+                    icon='\U000f0425',
+                    is_short=True,
+                    action_id='menu:navigate:power',
+                ),
+            ),
+            placeholder='',
         ),
     )
 
@@ -424,6 +323,12 @@ def _register_core_path_matchers() -> None:
         ('power',): POWER_MENU_ID,
     }
 
+    # Add settings category path mappings
+    for category in SettingsCategory:
+        core_path_mappings[('main', 'settings', category.value)] = (
+            f'settings:{category.value}'
+        )
+
     def _core_path_matcher(path: tuple[str, ...]) -> str | None:
         return core_path_mappings.get(path)
 
@@ -432,12 +337,7 @@ def _register_core_path_matchers() -> None:
 
 
 def _register_category_icons() -> None:
-    """Register icons for settings categories.
-
-    This allows the UI to display icons for each settings category.
-    Uses SETTINGS_CATEGORY_ICONS defined at module level for consistency with
-    the static SETTINGS_MENU.
-    """
+    """Register icons for settings categories."""
     for category, icon in SETTINGS_CATEGORY_ICONS.items():
         register_category_icon(category, icon)
 
@@ -457,7 +357,134 @@ def setup_core_dynamic_menus() -> None:
     _register_core_action_handlers()
 
     # Initialize dynamic menus
+    update_home_dynamic_menu()
     update_main_dynamic_menu()
     update_power_dynamic_menu()
     update_settings_categories_dynamic_menu()
     update_apps_dynamic_menu()
+    update_settings_category_dynamic_menus()
+
+    # Set up dynamic menus for System settings (General, Services, Third Party)
+    from ubo_app.store.settings.dynamic_system_menus import (
+        setup_dynamic_system_menus,
+    )
+
+    setup_dynamic_system_menus()
+
+    # Set up autoruns to keep dynamic menus in sync with registered_apps
+    _setup_registered_apps_autoruns()
+
+
+def _setup_registered_apps_autoruns() -> None:
+    """Set up autoruns that keep dynamic menus in sync with registered_apps.
+
+    Watches `state.main.registered_apps` and auto-populates the apps menu
+    and each settings category menu from the registered entries.
+    """
+    from ubo_app.store.core.types.state import RegisteredAppEntry
+    from ubo_app.store.core.view_registry import get_apps_menu_title
+
+    @store.autorun(
+        lambda state: (
+            state.main.registered_apps,
+            state.main.apps_items_priorities,
+        ),
+        options=AutorunOptions(default_value=None),
+    )
+    def _sync_apps_dynamic_menu(
+        data: tuple[dict[str, RegisteredAppEntry], dict[str, int]] | None,
+    ) -> None:
+        """Sync apps dynamic menu from registered_apps."""
+        if data is None:
+            return
+
+        registered_apps, priorities = data
+
+        # Filter to regular apps (no category)
+        app_entries = [
+            (key, entry)
+            for key, entry in registered_apps.items()
+            if isinstance(entry, RegisteredAppEntry) and entry.category is None
+        ]
+
+        # Sort by priority (descending) then key
+        def sort_key(pair: tuple[str, RegisteredAppEntry]) -> tuple[int, str]:
+            return (-(priorities.get(pair[0], 0) or 0), pair[0])
+
+        app_entries.sort(key=sort_key)
+
+        items = tuple(
+            MenuItemData(
+                key=key,
+                label=entry.label,
+                icon=entry.icon,
+                action_id=entry.action_id or f'menu:select:{key}',
+                background_color=entry.background_color,
+            )
+            for key, entry in app_entries
+        )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=APPS_MENU_ID,
+                title=get_apps_menu_title(),
+                items=items,
+                placeholder='No apps',
+            ),
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.main.registered_apps,
+            state.main.settings_items_priorities,
+        ),
+        options=AutorunOptions(default_value=None),
+    )
+    def _sync_settings_dynamic_menus(
+        data: tuple[dict[str, RegisteredAppEntry], dict[str, int]] | None,
+    ) -> None:
+        """Sync settings category dynamic menus from registered_apps."""
+        if data is None:
+            return
+
+        registered_apps, priorities = data
+
+        for category in SettingsCategory:
+            # Filter to settings in this category
+            category_entries = [
+                (key, entry)
+                for key, entry in registered_apps.items()
+                if isinstance(entry, RegisteredAppEntry)
+                and entry.category == category.value
+            ]
+
+            # Sort by priority (descending) then key
+            def sort_key(
+                pair: tuple[str, RegisteredAppEntry],
+                *,
+                _priorities: dict[str, int] = priorities,
+            ) -> tuple[int, str]:
+                return (-(_priorities.get(pair[0], 0) or 0), pair[0])
+
+            category_entries.sort(key=sort_key)
+
+            icon = SETTINGS_CATEGORY_ICONS.get(category, '')
+            items = tuple(
+                MenuItemData(
+                    key=key,
+                    label=entry.label,
+                    icon=entry.icon,
+                    action_id=entry.action_id or f'menu:select:{key}',
+                    background_color=entry.background_color,
+                )
+                for key, entry in category_entries
+            )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'settings:{category.value}',
+                    title=f'{icon}{category.value}',
+                    items=items,
+                    placeholder='No settings in this category',
+                ),
+            )

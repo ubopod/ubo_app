@@ -1,23 +1,17 @@
 """Menu registration logic extracted from the reducer.
 
-This module provides functions for registering apps and settings in the menu tree.
-These functions reduce the complexity of the main reducer.
+This module provides functions for registering apps and settings in the
+registered_apps dict. Dynamic menus are updated via autoruns in menus.py.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
-from ubo_gui.menu.types import Menu, SubMenuItem, menu_items
-
-from ubo_app.store.core.menu_adapter import find_sub_menu_item
+from ubo_app.store.core.types.state import RegisteredAppEntry
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from ubo_gui.menu.types import Item
-
     from ubo_app.store.core.types import (
         DeregisterRegularAppAction,
         MainState,
@@ -35,7 +29,7 @@ def register_setting_app(
 
     Args:
         state: Current main state.
-        action: The registration action with menu item and category.
+        action: The registration action with label, icon, action_id, and category.
 
     Returns:
         New state with the setting app registered.
@@ -44,102 +38,39 @@ def register_setting_app(
         ValueError: If an app with the same key already exists.
 
     """
-    menu = state.menu
-    if not menu or not action.service:
+    if not action.service:
         return state
-
-    root_menu_items = menu_items(menu)
-    main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-    main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
-    settings_menu_item = find_sub_menu_item(main_menu_items, 'settings')
-    settings_menu_items = menu_items(cast('Menu', settings_menu_item.sub_menu))
-
-    category_menu_item = cast(
-        'SubMenuItem',
-        next(
-            item
-            for item in settings_menu_items
-            if item.label == action.category
-        ),
-    )
 
     key = f'{action.service}:'
     if action.key is not None:
         key += action.key
+
+    if key in state.registered_apps:
+        msg = f"""Settings application with key "{key}", in category \
+"{action.category}", already exists. Consider providing a unique `key` field \
+for the `RegisterSettingAppAction` instance."""
+        raise ValueError(msg)
 
     priorities = {
         **state.settings_items_priorities,
         key: action.priority,
     }
 
-    def sort_key(item: Item) -> tuple[int, str]:
-        key_ = item.key or (item.label() if callable(item.label) else item.label)
-        return (-(priorities.get(key_, 0) or 0), key_)
-
-    if any(
-        item.key == key
-        for item in cast(
-            'Sequence[Item]',
-            cast('Menu', category_menu_item.sub_menu).items,
-        )
-    ):
-        msg = f"""Settings application with key "{key}", in category \
-"{category_menu_item.label}", already exists. Consider providing a unique `key` field \
-for the `RegisterSettingAppAction` instance."""
-        raise ValueError(msg)
-
-    menu_item = replace(action.menu_item, key=key)
-    new_items = sorted(
-        [
-            *cast(
-                'Sequence[Item]',
-                cast('Menu', category_menu_item.sub_menu).items,
-            ),
-            menu_item,
-        ],
-        key=sort_key,
-    )
-
-    new_category_menu_item = replace(
-        category_menu_item,
-        sub_menu=replace(
-            cast('Menu', category_menu_item.sub_menu),
-            items=new_items,
-        ),
-    )
-
-    new_settings_menu_item = replace(
-        settings_menu_item,
-        sub_menu=replace(
-            cast('Menu', settings_menu_item.sub_menu),
-            items=[
-                new_category_menu_item if item == category_menu_item else item
-                for item in settings_menu_items
-            ],
-        ),
-    )
-
-    new_main_menu_item = replace(
-        main_menu_item,
-        sub_menu=replace(
-            cast('Menu', main_menu_item.sub_menu),
-            items=[
-                new_settings_menu_item if item == settings_menu_item else item
-                for item in main_menu_items
-            ],
-        ),
+    # Store in registered_apps dict
+    entry = RegisteredAppEntry(
+        key=key,
+        label=action.label,
+        icon=action.icon,
+        action_id=action.action_id,
+        background_color=action.background_color,
+        priority=action.priority,
+        category=action.category.value,
     )
 
     return replace(
         state,
         settings_items_priorities=priorities,
-        menu=replace(
-            menu,
-            items=[
-                new_main_menu_item if item == main_menu_item else item
-                for item in root_menu_items
-            ],
-        ),
+        registered_apps={**state.registered_apps, key: entry},
     )
 
 
@@ -151,7 +82,7 @@ def register_regular_app(
 
     Args:
         state: Current main state.
-        action: The registration action with menu item.
+        action: The registration action with label, icon, action_id.
 
     Returns:
         New state with the app registered.
@@ -160,21 +91,14 @@ def register_regular_app(
         ValueError: If an app with the same key already exists.
 
     """
-    menu = state.menu
-    if not menu or not action.service:
+    if not action.service:
         return state
-
-    root_menu_items = menu_items(menu)
-    main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-    main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
-    apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
-    apps_menu_items = menu_items(cast('Menu', apps_menu_item.sub_menu))
 
     key = f'{action.service}:'
     if action.key is not None:
         key += action.key
 
-    if any(item.key == key for item in apps_menu_items):
+    if key in state.registered_apps:
         msg = f"""Regular application with key "{key}", already exists. \
 Consider providing a unique `key` field for the `RegisterRegularAppAction` instance."""
         raise ValueError(msg)
@@ -184,47 +108,21 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
         key: action.priority,
     }
 
-    def sort_key(item: Item) -> tuple[int, str]:
-        key_ = item.key or (item.label() if callable(item.label) else item.label)
-        return (-(priorities.get(key_, 0) or 0), key_)
-
-    menu_item = replace(action.menu_item, key=key)
-    new_items = sorted(
-        [
-            *cast('Sequence[Item]', apps_menu_items),
-            menu_item,
-        ],
-        key=sort_key,
-    )
-
-    apps_menu_item = replace(
-        apps_menu_item,
-        sub_menu=replace(
-            cast('Menu', apps_menu_item.sub_menu),
-            items=new_items,
-        ),
-    )
-
-    main_menu_item = replace(
-        main_menu_item,
-        sub_menu=replace(
-            cast('Menu', main_menu_item.sub_menu),
-            items=[
-                apps_menu_item if item.key == 'apps' else item
-                for item in main_menu_items
-            ],
-        ),
+    # Store in registered_apps dict
+    entry = RegisteredAppEntry(
+        key=key,
+        label=action.label,
+        icon=action.icon,
+        action_id=action.action_id,
+        background_color=action.background_color,
+        priority=action.priority,
+        category=None,
     )
 
     return replace(
         state,
-        menu=replace(
-            menu,
-            items=[
-                main_menu_item if index == 0 else item
-                for index, item in enumerate(root_menu_items)
-            ],
-        ),
+        apps_items_priorities=priorities,
+        registered_apps={**state.registered_apps, key: entry},
     )
 
 
@@ -251,37 +149,6 @@ def deregister_regular_app(
     if action.key is not None:
         key += action.key
 
-    menu = state.menu
-    if not menu:
-        return state, []
-
-    root_menu_items = menu_items(menu)
-    main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-    main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
-    apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
-    apps_menu_items = menu_items(cast('Menu', apps_menu_item.sub_menu))
-
-    new_items = [item for item in apps_menu_items if item.key != key]
-
-    new_apps_menu_item = replace(
-        apps_menu_item,
-        sub_menu=replace(
-            cast('Menu', apps_menu_item.sub_menu),
-            items=new_items,
-        ),
-    )
-
-    new_main_menu_item = replace(
-        main_menu_item,
-        sub_menu=replace(
-            cast('Menu', main_menu_item.sub_menu),
-            items=[
-                new_apps_menu_item if item == apps_menu_item else item
-                for item in main_menu_items
-            ],
-        ),
-    )
-
     events: list[MenuGoBackEvent] = []
 
     # Use reactive path from state (computed by reducer)
@@ -289,15 +156,14 @@ def deregister_regular_app(
     if path[:3] == ('main', 'apps', key):
         events = [MenuGoBackEvent()] * (len(path) - 2)
 
+    # Remove from registered_apps
+    new_registered_apps = {
+        k: v for k, v in state.registered_apps.items() if k != key
+    }
+
     new_state = replace(
         state,
-        menu=replace(
-            menu,
-            items=[
-                new_main_menu_item if item == main_menu_item else item
-                for item in root_menu_items
-            ],
-        ),
+        registered_apps=new_registered_apps,
     )
 
     return new_state, events
@@ -321,72 +187,6 @@ def update_service_status(
     """
     from ubo_app.store.core.types import MenuGoBackEvent
 
-    menu = state.menu
-    if not menu:
-        return state, []
-
-    root_menu_items = menu_items(menu)
-    main_menu_item = find_sub_menu_item(root_menu_items, 'main')
-    main_menu_items = menu_items(cast('Menu', main_menu_item.sub_menu))
-    apps_menu_item = find_sub_menu_item(main_menu_items, 'apps')
-    apps_menu_items = menu_items(cast('Menu', apps_menu_item.sub_menu))
-    settings_menu_item = find_sub_menu_item(main_menu_items, 'settings')
-    settings_menu_items = menu_items(cast('Menu', settings_menu_item.sub_menu))
-
-    new_apps_menu_item = replace(
-        apps_menu_item,
-        sub_menu=replace(
-            cast('Menu', apps_menu_item.sub_menu),
-            items=[
-                item
-                for item in apps_menu_items
-                if item.key is None
-                or not item.key.startswith(f'{action.service_id}:')
-            ],
-        ),
-    )
-
-    new_settings_menu_item = replace(
-        settings_menu_item,
-        sub_menu=replace(
-            cast('Menu', settings_menu_item.sub_menu),
-            items=[
-                replace(
-                    category_menu_item,
-                    sub_menu=replace(
-                        cast('Menu', category_menu_item.sub_menu),
-                        items=[
-                            item
-                            for item in menu_items(
-                                cast('Menu', category_menu_item.sub_menu),
-                            )
-                            if item.key is None
-                            or not item.key.startswith(f'{action.service_id}:')
-                        ],
-                    ),
-                )
-                if isinstance(category_menu_item, SubMenuItem)
-                else category_menu_item
-                for category_menu_item in settings_menu_items
-            ],
-        ),
-    )
-
-    new_main_menu_item = replace(
-        main_menu_item,
-        sub_menu=replace(
-            cast('Menu', main_menu_item.sub_menu),
-            items=[
-                new_apps_menu_item
-                if item == apps_menu_item
-                else new_settings_menu_item
-                if item == settings_menu_item
-                else item
-                for item in main_menu_items
-            ],
-        ),
-    )
-
     events: list[MenuGoBackEvent] = []
 
     # Use reactive path from state (computed by reducer)
@@ -405,15 +205,16 @@ def update_service_status(
     ):
         events = [MenuGoBackEvent()] * (len(path) - 3)
 
+    # Remove from registered_apps
+    new_registered_apps = {
+        k: v
+        for k, v in state.registered_apps.items()
+        if not k.startswith(f'{action.service_id}:')
+    }
+
     new_state = replace(
         state,
-        menu=replace(
-            menu,
-            items=[
-                new_main_menu_item if item == main_menu_item else item
-                for item in root_menu_items
-            ],
-        ),
+        registered_apps=new_registered_apps,
     )
 
     return new_state, events

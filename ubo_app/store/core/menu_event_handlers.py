@@ -12,15 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ubo_gui.menu.types import (  # pyright: ignore[reportMissingImports]
-    ActionItem,
-    SubMenuItem,
-    menu_items,
-)
-
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import PAGE_SIZE
-from ubo_app.store.core.menu_adapter import get_current_menu_from_stack
 from ubo_app.store.core.types import (
     ExecuteMenuActionAction,
     MenuChooseByIconEvent,
@@ -48,83 +41,8 @@ from ubo_app.store.services.notifications import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ubo_gui.menu.types import Item
-
+    from ubo_app.store.core.types import MenuItemData
     from ubo_app.utils.types import Subscriptions
-
-
-def _select_item(item: Item) -> None:
-    """Execute the selection logic for a menu item."""
-    if isinstance(item, SubMenuItem):
-        key = getattr(item, 'key', None)
-        if key:
-            logger.info('[MenuHandler] _select_item: pushing SubMenuItem key=%s', key)
-            store.dispatch(StackPushMenuAction(menu_key=key))
-        else:
-            logger.warning('SubMenuItem has no key, cannot navigate')
-    elif isinstance(item, ActionItem) and item.action:
-        try:
-            logger.info('[MenuHandler] _select_item: executing ActionItem action')
-            result = item.action()
-            if result is not None:
-                key = getattr(item, 'key', None)
-                logger.info(
-                    '[MenuHandler] _select_item: ActionItem returned result, '
-                    'pushing key=%s',
-                    key,
-                )
-                if key:
-                    store.dispatch(StackPushMenuAction(menu_key=key))
-        except Exception:
-            logger.exception('Error executing menu item action')
-    else:
-        logger.info(
-            '[MenuHandler] _select_item: unhandled item type=%s',
-            type(item).__name__,
-        )
-
-
-def _get_current_items() -> list[Item] | None:
-    """Get current menu items from the store state.
-
-    WARNING: This traverses the static menu tree, which may call autorun-wrapped
-    callables (sub_menu(), items()) that deadlock outside service context.
-    Callers must wrap this in try/except.
-    """
-    state = store._state  # noqa: SLF001
-    if state is None:
-        logger.info('[MenuHandler] _get_current_items: state is None')
-        return None
-    stack = state.main.stack
-    root_menu = state.main.menu
-    if not stack or root_menu is None:
-        logger.info('[MenuHandler] _get_current_items: no stack or root_menu')
-        return None
-    menu_path = [
-        item.menu_key
-        for item in stack
-        if isinstance(item, MenuStackItem)
-    ]
-    logger.info('[MenuHandler] _get_current_items: menu_path=%s', menu_path)
-
-    # Check if menu.items is a callable (autorun wrapper) before traversal.
-    # If so, calling it outside service context will deadlock for 30s.
-    current_menu = get_current_menu_from_stack(root_menu, stack)
-    if current_menu is None:
-        logger.info('[MenuHandler] _get_current_items: menu not found in tree')
-        return None
-    if callable(current_menu.items):
-        logger.warning(
-            '[MenuHandler] _get_current_items: menu.items is callable '
-            '(autorun wrapper), skipping to avoid deadlock',
-        )
-        return None
-    items = list(menu_items(current_menu))
-    logger.info(
-        '[MenuHandler] _get_current_items: found %d items',
-        len(items),
-    )
-    return items
 
 
 def _handle_notification_choose_by_index(
@@ -228,9 +146,57 @@ def _show_extra_info(notification_id: str) -> None:
         )
 
 
+def _execute_view_item_action(item: MenuItemData) -> bool:
+    """Execute the action for a dynamic menu item.
+
+    Returns True if the item was handled, False otherwise.
+    """
+    if not item.action_id:
+        logger.info(
+            '[MenuHandler] choose_by_index: current_view item label=%s '
+            'has no action_id',
+            item.label,
+        )
+        return False
+
+    # menu:select:* action_ids are auto-generated for SubMenuItems.
+    # These need StackPushMenuAction, not the action registry.
+    if item.action_id.startswith('menu:select:'):
+        menu_key = item.action_id[len('menu:select:'):]
+        logger.info(
+            '[MenuHandler] choose_by_index: pushing menu key=%s '
+            'for label=%s',
+            menu_key,
+            item.label,
+        )
+        store.dispatch(StackPushMenuAction(menu_key=menu_key))
+        return True
+
+    logger.info(
+        '[MenuHandler] choose_by_index: using current_view, '
+        'executing action_id=%s for label=%s',
+        item.action_id,
+        item.label,
+    )
+    # Call execute_action directly (not via dispatch) so we can
+    # handle return values -- handlers returning a Menu signal
+    # that a sub-menu should be pushed onto the stack.
+    from ubo_app.store.core.action_registry import execute_action
+
+    result = execute_action(item.action_id)
+    if result is not None and item.key:
+        logger.info(
+            '[MenuHandler] choose_by_index: action returned '
+            'result, pushing key=%s',
+            item.key,
+        )
+        store.dispatch(StackPushMenuAction(menu_key=item.key))
+    return True
+
+
 def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
     """Handle menu item selection by index."""
-    from ubo_app.store.core.types import MenuViewData
+    from ubo_app.store.core.types import HomeViewData, MenuViewData
 
     state = store._state  # noqa: SLF001
     if state is None:
@@ -250,20 +216,45 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         _handle_notification_choose_by_index(top.notification_id, event.index)
         return
 
-    # Try using the pre-computed current_view first. This avoids calling
-    # autorun-wrapped callables (sub_menu(), items()) during menu tree
-    # traversal, which can deadlock outside service context.
+    # Use the pre-computed current_view
     current_view = state.main.current_view
     logger.info(
         '[MenuHandler] choose_by_index: current_view type=%s, has_items=%s',
         type(current_view).__name__ if current_view else 'None',
         bool(getattr(current_view, 'items', None)),
     )
-    if isinstance(current_view, MenuViewData) and current_view.items:
-        page_index = top.page_index if isinstance(top, MenuStackItem) else 0
-        actual_index = page_index * PAGE_SIZE + event.index
-        item = current_view.items[actual_index] if actual_index < len(
-            current_view.items,
+
+    # Get items from the current view (HomeViewData or MenuViewData)
+    view_items: tuple[MenuItemData | None, ...] = ()
+    if isinstance(current_view, HomeViewData) and current_view.menu_items:
+        view_items = current_view.menu_items
+    elif isinstance(current_view, MenuViewData) and current_view.items:
+        view_items = current_view.items
+
+    if view_items:
+        # Use page_index from the current_view (authoritative, matches
+        # what the user sees) rather than from the stack item directly,
+        # to avoid timing issues where the stack was updated but the
+        # view hasn't been recomputed yet.
+        if isinstance(current_view, MenuViewData):
+            page_index = current_view.page_index
+        else:
+            page_index = 0
+
+        # For headed menus, the heading/sub_heading occupy visual slots
+        # on page 0, shifting which items map to which button indices.
+        header_offset = 0
+        if (
+            isinstance(current_view, MenuViewData)
+            and current_view.heading is not None
+        ):
+            from ubo_app.store.core.constants import HEADED_MENU_HEADER_SLOTS
+
+            header_offset = HEADED_MENU_HEADER_SLOTS
+
+        actual_index = page_index * PAGE_SIZE + event.index - header_offset
+        item = view_items[actual_index] if 0 <= actual_index < len(
+            view_items,
         ) else None
         if item is None:
             logger.info(
@@ -272,99 +263,37 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
                 event.index,
                 page_index,
                 actual_index,
-                len(current_view.items),
+                len(view_items),
             )
             return
-        if item.action_id:
-            # menu:select:* action_ids are auto-generated for SubMenuItems.
-            # These need StackPushMenuAction, not the action registry.
-            if item.action_id.startswith('menu:select:'):
-                menu_key = item.action_id[len('menu:select:'):]
-                logger.info(
-                    '[MenuHandler] choose_by_index: pushing menu key=%s '
-                    'for label=%s',
-                    menu_key,
-                    item.label,
-                )
-                store.dispatch(StackPushMenuAction(menu_key=menu_key))
-                return
-            logger.info(
-                '[MenuHandler] choose_by_index: using current_view, '
-                'dispatching action_id=%s for label=%s',
-                item.action_id,
-                item.label,
-            )
-            store.dispatch(ExecuteMenuActionAction(action_id=item.action_id))
-            return
-        # Item exists but has no action_id — fall through to static menu
-        # which can resolve SubMenuItem/ActionItem directly.
-        logger.info(
-            '[MenuHandler] choose_by_index: current_view item label=%s '
-            'has no action_id, falling through to static menu',
-            item.label,
-        )
-
-    # Fall back to static menu tree traversal for menus that don't use
-    # the dynamic/view system (legacy path).
-    # NOTE: This can deadlock/crash when menu items or sub_menu are autorun
-    # wrappers called outside service context. Catch all exceptions to prevent
-    # the handler from crashing the event loop.
-    try:
-        items = _get_current_items()
-    except Exception:
-        logger.exception(
-            '[MenuHandler] choose_by_index: _get_current_items() failed '
-            '(likely autorun outside service context)',
-        )
-        return
-    if items is None:
-        logger.warning('[MenuHandler] choose_by_index: no current items')
+        _execute_view_item_action(item)
         return
 
-    # Account for page_index
-    page_index = top.page_index if isinstance(top, MenuStackItem) else 0
-    actual_index = page_index * PAGE_SIZE + event.index
+    logger.warning('[MenuHandler] choose_by_index: no current items')
 
-    logger.info(
-        '[MenuHandler] choose_by_index: page=%d, actual_index=%d, total_items=%d',
-        page_index,
-        actual_index,
-        len(items),
-    )
 
-    if actual_index >= len(items):
-        logger.info(
-            '[MenuHandler] choose_by_index: index %d out of range (items=%d)',
-            actual_index,
-            len(items),
-        )
-        return
+def _get_current_view_items(
+    current_view: object,
+) -> tuple[MenuItemData | None, ...]:
+    """Extract menu items from any view type that has them."""
+    from ubo_app.store.core.types import HomeViewData, MenuViewData
 
-    item = items[actual_index]
-    if item is not None:
-        label = getattr(item, 'label', None)
-        label_val = label() if callable(label) else label
-        logger.info(
-            '[MenuHandler] choose_by_index: selecting item label=%s, type=%s',
-            label_val,
-            type(item).__name__,
-        )
-        _select_item(item)
+    if isinstance(current_view, HomeViewData) and current_view.menu_items:
+        return current_view.menu_items
+    if isinstance(current_view, MenuViewData) and current_view.items:
+        return current_view.items
+    return ()
 
 
 def _handle_choose_by_icon(event: MenuChooseByIconEvent) -> None:
     """Handle menu item selection by icon."""
-    items = _get_current_items()
-    if items is None:
+    state = store._state  # noqa: SLF001
+    if state is None:
         return
 
-    for item in items:
-        if item is None:
-            continue
-        icon = getattr(item, 'icon', None)
-        icon_val = icon() if callable(icon) else icon
-        if icon_val == event.icon:
-            _select_item(item)
+    for item in _get_current_view_items(state.main.current_view):
+        if item is not None and item.icon == event.icon:
+            _execute_view_item_action(item)
             return
 
     logger.warning('No item with icon "%s"', event.icon)
@@ -372,17 +301,13 @@ def _handle_choose_by_icon(event: MenuChooseByIconEvent) -> None:
 
 def _handle_choose_by_label(event: MenuChooseByLabelEvent) -> None:
     """Handle menu item selection by label."""
-    items = _get_current_items()
-    if items is None:
+    state = store._state  # noqa: SLF001
+    if state is None:
         return
 
-    for item in items:
-        if item is None:
-            continue
-        label = getattr(item, 'label', None)
-        label_val = label() if callable(label) else label
-        if label_val == event.label:
-            _select_item(item)
+    for item in _get_current_view_items(state.main.current_view):
+        if item is not None and item.label == event.label:
+            _execute_view_item_action(item)
             return
 
     logger.warning('No item with label "%s"', event.label)
@@ -400,6 +325,8 @@ def _handle_go_home(_: MenuGoHomeEvent) -> None:
 
 def _handle_scroll(event: MenuScrollEvent) -> None:
     """Handle menu scroll event."""
+    from ubo_app.store.core.types import MenuViewData
+
     state = store._state  # noqa: SLF001
     if state is None:
         return
@@ -412,19 +339,12 @@ def _handle_scroll(event: MenuScrollEvent) -> None:
     if not isinstance(top, MenuStackItem):
         return
 
-    # Use pre-computed current_view (same pattern as _handle_choose_by_index)
-    from ubo_app.store.core.types import MenuViewData
-
+    # Use pre-computed current_view for total_pages
     current_view = state.main.current_view
-    if isinstance(current_view, MenuViewData) and current_view.total_pages > 0:
-        total_pages = current_view.total_pages
-    else:
-        # Fallback to item counting
-        items = _get_current_items()
-        if items is None:
-            return
-        total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
+    if not isinstance(current_view, MenuViewData) or current_view.total_pages <= 0:
+        return
 
+    total_pages = current_view.total_pages
     page_index = top.page_index
 
     if event.direction == MenuScrollDirection.UP:

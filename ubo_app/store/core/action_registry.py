@@ -20,10 +20,13 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 # Global registry mapping action_id -> handler function
-_action_handlers: dict[str, Callable[[], None]] = {}
+_action_handlers: dict[str, Callable[[], object]] = {}
 
 
-def register_action(action_id: str, handler: Callable[[], None]) -> Callable[[], None]:
+def register_action(
+    action_id: str,
+    handler: Callable[[], object],
+) -> Callable[[], object]:
     """Register an action handler for a given action_id.
 
     Args:
@@ -62,27 +65,28 @@ def unregister_action(action_id: str) -> bool:
     return False
 
 
-def execute_action(action_id: str) -> bool:
+def execute_action(action_id: str) -> object:
     """Execute the handler for an action_id.
 
     Args:
         action_id: The action ID to execute.
 
     Returns:
-        True if the action was found and executed, False otherwise.
+        The handler's return value, or None if not found or on error.
+        Handlers that return Menu objects signal that a sub-menu should be
+        pushed onto the navigation stack.
 
     """
     handler = _action_handlers.get(action_id)
     if handler is not None:
         logger.debug('Executing action: %s', action_id)
         try:
-            handler()
+            return handler()
         except Exception:
             logger.exception('Error executing action: %s', action_id)
-            return False
-        return True
+            return None
     logger.warning('No handler registered for action: %s', action_id)
-    return False
+    return None
 
 
 def get_registered_actions() -> list[str]:

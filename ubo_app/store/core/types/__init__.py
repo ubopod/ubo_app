@@ -93,7 +93,7 @@ from ubo_app.store.core.types.stack_items import (
 )
 
 # State
-from ubo_app.store.core.types.state import MainState
+from ubo_app.store.core.types.state import MainState, RegisteredAppEntry
 
 # Status bar
 from ubo_app.store.core.types.status_bar import (
@@ -113,19 +113,14 @@ from ubo_app.store.core.types.view_data import (
 )
 
 __all__ = [
-    # Stack items
     'ApplicationStackItem',
-    # View data
     'ApplicationViewData',
-    # Actions
     'ClearDynamicMenuAction',
     'CloseApplicationAction',
-    # Events
     'CloseApplicationEvent',
     'DeregisterRegularAppAction',
     'DynamicMenuAction',
     'DynamicMenuChangedEvent',
-    # Dynamic menus
     'DynamicMenuData',
     'DynamicMenusState',
     'ExecuteMenuActionAction',
@@ -133,7 +128,6 @@ __all__ = [
     'InitEvent',
     'MainAction',
     'MainEvent',
-    # State
     'MainState',
     'MenuAction',
     'MenuChooseByIconAction',
@@ -149,7 +143,6 @@ __all__ = [
     'MenuGoHomeEvent',
     'MenuItemData',
     'MenuScrollAction',
-    # Enums
     'MenuScrollDirection',
     'MenuScrollEvent',
     'MenuStackItem',
@@ -162,13 +155,13 @@ __all__ = [
     'PowerEvent',
     'PowerOffAction',
     'PowerOffEvent',
-    # Status bar
     'ProgressNotificationData',
     'RebootAction',
     'RebootEvent',
     'RegisterAppAction',
     'RegisterRegularAppAction',
     'RegisterSettingAppAction',
+    'RegisteredAppEntry',
     'ReplayRecordedSequenceAction',
     'ReplayRecordedSequenceEvent',
     'ReportReplayingDoneAction',

@@ -666,6 +666,11 @@ register_status_bar_dependency(
     lambda s: tuple(s.status_icons.icons) if hasattr(s, 'status_icons') else (),
 )
 
+# Set up core dynamic menus (home, main, settings, apps, power, etc.)
+from ubo_app.store.core.menus import setup_core_dynamic_menus  # noqa: E402
+
+setup_core_dynamic_menus()
+
 # Set up dynamic view computation for dumb UI architecture
 setup_dynamic_view_autorun()
 
