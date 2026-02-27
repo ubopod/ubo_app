@@ -88,6 +88,6 @@ done
 
 # Build and deploy GUI client
 gui_args=(--index="$index")
-[[ "$deps" == "True" ]] && gui_args+=("--deps")
+[[ "$skip_deps" != "True" ]] && gui_args+=("--deps")
 [[ "$offline" == "True" ]] && gui_args+=("--offline")
 uv run --directory ubo_app/gui poe deploy-to-device "${gui_args[@]}"

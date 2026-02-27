@@ -5,7 +5,7 @@ set -o pipefail
 set -o nounset
 
 deps=${deps:-"False"}
-offline=${env:-"False"}
+offline=${offline:-"False"}
 
 echo "Building ubo-gui-client"
 if [ "$offline" == "True" ]; then
@@ -22,7 +22,7 @@ else
 fi
 
 LATEST_WHEEL=$(basename $(ls -rt dist/ubo_gui_client-*.whl | tail -n 1))
-LATEST_BINDINGS_WHEEL=$(basename $(ls -rt ../../../dist/ubo_app_raw_bindings-*.whl | tail -n 1))
+LATEST_BINDINGS_WHEEL=$(basename $(ls -rt ../../dist/ubo_app_raw_bindings-*.whl | tail -n 1))
 
 function run_on_pod() {
   if [ $# -lt 1 ]; then
@@ -50,7 +50,7 @@ function run_on_pod_as_root() {
 
 run_on_pod_as_root "rm /tmp/ubo_gui_client*.whl || true"
 scp dist/$LATEST_WHEEL ubo-development-pod-$index:/tmp/
-scp ../../../dist/$LATEST_BINDINGS_WHEEL ubo-development-pod-$index:/tmp/
+scp ../../dist/$LATEST_BINDINGS_WHEEL ubo-development-pod-$index:/tmp/
 
 run_on_pod "$(if [ "$deps" == "True" ]; then echo "pip install --upgrade /tmp/$LATEST_WHEEL &&"; fi)
 pip install --no-index --upgrade --force-reinstall --no-deps /tmp/$LATEST_WHEEL
