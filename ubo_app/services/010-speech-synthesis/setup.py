@@ -2,24 +2,20 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import struct
 from asyncio import CancelledError
 from typing import TYPE_CHECKING
 
 import fasteners
 import pvorca
-from download_model import download_piper_model
 from piper.voice import AudioChunk, PiperVoice
 from redux import AutorunOptions
 
 from ubo_app.constants.assistant import (
     PICOVOICE_ACCESS_KEY_SECRET_ID,
-    PIPER_MODEL_HASH,
-    PIPER_MODEL_JSON_PATH,
     PIPER_MODEL_PATH,
 )
+from ubo_app.engines.piper import PiperEngine
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
@@ -60,6 +56,9 @@ if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
 
 
+_piper_engine = PiperEngine()
+
+
 class _Context:
     picovoice_instance: pvorca.Orca | None = None
     piper_voice: PiperVoice | None = None
@@ -81,7 +80,7 @@ class _Context:
                 self.picovoice_instance = pvorca.create(access_key)
 
     def load_piper(self: _Context) -> None:
-        if _is_piper_downloaded():
+        if _piper_engine.is_setup:
             self.piper_voice = PiperVoice.load(PIPER_MODEL_PATH)
 
 
@@ -250,39 +249,13 @@ def create_engine_selector(engine: SpeechSynthesisEngineName) -> Callable[[], No
     return _engine_selector
 
 
-def _is_piper_downloaded() -> bool:
-    if not PIPER_MODEL_PATH.exists() or not PIPER_MODEL_JSON_PATH.exists():
-        return False
-
-    with PIPER_MODEL_JSON_PATH.open('r') as f:
-        try:
-            data = json.load(f)
-        except json.JSONDecodeError:
-            return False
-        else:
-            if data['dataset'] != 'kristin':
-                return False
-
-    # check checksum
-    with PIPER_MODEL_PATH.open('rb') as f:
-        sha256_hash = hashlib.sha256()
-
-        for chunk in iter(lambda: f.read(4096), b''):
-            sha256_hash.update(chunk)
-
-        if sha256_hash.hexdigest() != PIPER_MODEL_HASH:
-            return False
-
-    return True
-
-
 SPEECH_SYNTHESIS_MENU_ID = 'speech-synthesis:main'
 PICOVOICE_SETTINGS_MENU_ID = 'speech-synthesis:picovoice'
 
 
 def _download_piper_wrapper() -> None:
     """Download Piper model and reload context after completion."""
-    download_piper_model(callback=_context.load_piper)
+    _piper_engine.setup()
 
 
 def _register_speech_synthesis_action_handlers() -> None:
@@ -314,7 +287,7 @@ def _register_speech_synthesis_action_handlers() -> None:
 
     # Register engine-specific actions
     for engine in SpeechSynthesisEngineName:
-        if _is_piper_downloaded() or engine != SpeechSynthesisEngineName.PIPER:
+        if _piper_engine.is_setup or engine != SpeechSynthesisEngineName.PIPER:
             register_action(
                 f'speech-synthesis:engine:{engine.value}',
                 create_engine_selector(engine),
@@ -323,19 +296,25 @@ def _register_speech_synthesis_action_handlers() -> None:
 
 
 @store.autorun(
-    lambda state: state.speech_synthesis.selected_engine,
+    lambda state: (
+        state.speech_synthesis.selected_engine,
+        state.assistant.provider_setup_status,
+    ),
     options=AutorunOptions(memoization=False),
 )
 def update_speech_synthesis_dynamic_menu(
-    _selected_engine: SpeechSynthesisEngineName,
+    _data: tuple[SpeechSynthesisEngineName, object],
 ) -> None:
     """Update the dynamic menu for speech synthesis (dumb UI)."""
     _register_speech_synthesis_action_handlers()
 
+    if _piper_engine.is_setup and _context.piper_voice is None:
+        to_thread(_context.load_piper)
+
     items: list[MenuItemData] = []
 
     # Add download option if Piper not downloaded
-    if not _is_piper_downloaded():
+    if not _piper_engine.is_setup:
         items.append(
             MenuItemData(
                 key='download',
@@ -369,17 +348,21 @@ SPEECH_SYNTHESIS_ENGINES_MENU_ID = 'speech-synthesis:engines'
 
 
 @store.autorun(
-    lambda state: state.speech_synthesis.selected_engine,
+    lambda state: (
+        state.speech_synthesis.selected_engine,
+        state.assistant.provider_setup_status,
+    ),
     options=AutorunOptions(memoization=False),
 )
 def update_engines_dynamic_menu(
-    selected_engine: SpeechSynthesisEngineName,
+    data: tuple[SpeechSynthesisEngineName, object],
 ) -> None:
     """Update the dynamic menu for engine selection."""
+    selected_engine = SpeechSynthesisEngineName(data[0])
     available_engines = [
         engine
         for engine in SpeechSynthesisEngineName
-        if _is_piper_downloaded() or engine != SpeechSynthesisEngineName.PIPER
+        if _piper_engine.is_setup or engine != SpeechSynthesisEngineName.PIPER
     ]
 
     build_selection_menu(
