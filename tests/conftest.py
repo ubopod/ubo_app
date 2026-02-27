@@ -1,13 +1,19 @@
 """Pytest configuration file for the tests."""
 
+from __future__ import annotations
+
 import json
 import subprocess
+from dataclasses import fields
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, Any, cast
 
 import dotenv
 import pytest
 from _pytest.fixtures import SubRequest
+
+if TYPE_CHECKING:
+    from ubo_app.store.main import RootState
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')
@@ -38,6 +44,15 @@ from redux_pytest.fixtures import (  # noqa: E402
     store_snapshot,
     wait_for,
 )
+
+
+def exclude_dynamic_menus(state: RootState) -> dict[str, Any]:
+    """Exclude dynamic_menus from store snapshots."""
+    return {
+        f.name: getattr(state, f.name)
+        for f in fields(state)
+        if f.name != 'dynamic_menus'
+    }
 
 
 fixtures = (

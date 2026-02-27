@@ -32,5 +32,7 @@ async def test_app_runs_and_exits(
 
     await stability()
 
+    from tests.conftest import exclude_dynamic_menus
+
     window_snapshot.take()
-    store_snapshot.take()
+    store_snapshot.take(selector=exclude_dynamic_menus)

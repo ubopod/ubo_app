@@ -1,0 +1,49 @@
+// store-desktop-000
+{
+  "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
+  "input": null,
+  "main": {
+    "_type": "MainState",
+    "apps_items_priorities": {},
+    "current_view": null,
+    "is_footer_visible": true,
+    "is_header_visible": true,
+    "is_recording": false,
+    "is_replaying": false,
+    "path": [],
+    "recorded_sequence": [],
+    "registered_apps": {},
+    "settings_items_priorities": {},
+    "stack": [
+      {
+        "_type": "MenuStackItem",
+        "id": "f728b4fa42485e3a0a5d2f346baa9455",
+        "menu_key": "",
+        "page_index": 0
+      }
+    ],
+    "status_bar": null
+  },
+  "settings": {
+    "_type": "SettingsState",
+    "beta_versions": false,
+    "pdb_signal": false,
+    "services": {},
+    "services_status": "loading",
+    "visual_debug": false
+  },
+  "status_icons": {
+    "_type": "StatusIconsState",
+    "icons": []
+  },
+  "update_manager": {
+    "_type": "UpdateManagerState",
+    "base_image_variant": "[unknown]",
+    "current_version": "0.0.0",
+    "latest_version": "0.0.0",
+    "recent_versions": [
+      "0.0.0"
+    ],
+    "update_status": "up_to_date"
+  }
+}

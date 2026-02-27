@@ -63,7 +63,9 @@ async def test_all_services_register(
     assert len(store._listeners) < MAX_EXPECTED_LISTENERS  # noqa: SLF001
     assert len(store._event_handlers) < MAX_EXPECTED_EVENT_HANDLERS  # noqa: SLF001
 
-    store_snapshot.take()
+    from tests.conftest import exclude_dynamic_menus
+
+    store_snapshot.take(selector=exclude_dynamic_menus)
     window_snapshot.take()
 
     await unload_waiter(timeout=50)

@@ -89,6 +89,23 @@ def _monkeypatch_datetime(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(datetime, 'datetime', DateTime)
 
+    # Mock time.time() only in error_handlers for deterministic ErrorReport timestamps
+    # Global mock breaks timing-dependent services (status icons, polling, etc.)
+    import ubo_app.utils.error_handlers as _error_handlers_module
+
+    _real_time_module = _error_handlers_module.time
+
+    class _DeterministicTimeProxy:
+        """Proxy that intercepts time() but delegates everything else."""
+
+        def time(self: _DeterministicTimeProxy) -> float:
+            return 1672531200.0
+
+        def __getattr__(self: _DeterministicTimeProxy, name: str) -> object:
+            return getattr(_real_time_module, name)
+
+    monkeypatch.setattr(_error_handlers_module, 'time', _DeterministicTimeProxy())
+
 
 def _monkeypatch_uuid(monkeypatch: pytest.MonkeyPatch) -> None:
     import uuid
