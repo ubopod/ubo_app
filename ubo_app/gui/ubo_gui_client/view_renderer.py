@@ -69,11 +69,13 @@ class ViewRenderer:
         self.client = client
         self._last_status_bar: StatusBarData | None = None
         self._last_view: ViewData | None = None
+        self._last_is_blanked: bool | None = None
         self._view_changed_count: int = 0
         self._last_home_item_keys: tuple[str, ...] = ()
         # Track the current view type so _render_menu_view knows whether
         # to push (home→menu) or replace (menu→menu).
         self._current_view_type: ViewType | None = None
+        self._camera_unsubscribe: Callable[[], None] | None = None
 
         # Ensure a root menu always exists so that non-home views arriving
         # first (e.g. on reconnect to a core already in a submenu) get
@@ -90,8 +92,10 @@ class ViewRenderer:
 
         Called on gRPC reconnection so the GUI fully resyncs with the core.
         """
+        self._cleanup_camera_subscription()
         self._last_view = None
         self._last_status_bar = None
+        self._last_is_blanked = None
         self._last_home_item_keys = ()
         self._current_view_type = None
         self.menu_widget.reset_to_root()
@@ -116,13 +120,30 @@ class ViewRenderer:
         if hasattr(self.app, 'hide_disconnect_overlay'):
             self.app.hide_disconnect_overlay()
 
+    def _apply_blank_state(self, is_blanked: bool) -> None:  # noqa: FBT001
+        """Apply display blank state: control backlight and overlay."""
+        from ubo_gui_client.display import display
+
+        logger.info(
+            '[ViewRenderer] Display blank state changed: is_blanked=%s',
+            is_blanked,
+        )
+        display.set_backlight(enabled=not is_blanked)
+        self.app.handle_blank_state(is_blanked)
+
     @mainthread
     def _on_state_update(
         self,
         view_data: ViewData,
         status_bar: StatusBarData | None,
+        is_blanked: bool | None = None,  # noqa: FBT001
     ) -> None:
         """Handle state updates from gRPC subscription."""
+        # Handle display blank state changes
+        if is_blanked is not None and is_blanked != self._last_is_blanked:
+            self._last_is_blanked = is_blanked
+            self._apply_blank_state(is_blanked)
+
         self._view_changed_count += 1
         transition_end = getattr(
             self.menu_widget, '_running_transition_end_time', None,
@@ -168,8 +189,16 @@ class ViewRenderer:
                     self._view_changed_count,
                 )
 
+    def _cleanup_camera_subscription(self) -> None:
+        """Clean up any active camera frame subscription."""
+        if self._camera_unsubscribe is not None:
+            self._camera_unsubscribe()
+            self._camera_unsubscribe = None
+            logger.info('[ViewRenderer] Camera subscription cleaned up')
+
     def _render_view(self, view: ViewData) -> None:
         """Dispatch to the appropriate render method based on view type."""
+        self._cleanup_camera_subscription()
         from ubo_bindings.ubo.v1 import (
             ApplicationViewData as ProtoApplicationViewData,
         )
@@ -378,6 +407,22 @@ class ViewRenderer:
         )
         self.menu_widget.replace_top_with_application(widget)
         self._current_view_type = 'application'
+
+        # Start camera frame subscription for the viewfinder
+        if application_id == 'camera:viewfinder':
+            from ubo_gui_client.pages.camera_viewfinder import (
+                CameraViewfinderPage,
+            )
+
+            if isinstance(widget, CameraViewfinderPage):
+
+                @mainthread
+                def _on_frame(data: bytes, width: int, height: int) -> None:
+                    widget.update_frame(data, width, height)
+
+                self._camera_unsubscribe = self.client.subscribe_camera_frames(
+                    _on_frame,
+                )
 
     def _render_notification_view(self, view: NotificationViewData) -> None:
         """Render a notification view by opening a NotificationWidget."""

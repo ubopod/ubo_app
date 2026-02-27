@@ -17,10 +17,11 @@ from debouncer import DebounceOptions, debounce
 from ubo_app.constants import HEIGHT, WIDTH
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
-    CloseApplicationAction,
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPopAction,
+    StackPushApplicationAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
@@ -33,11 +34,11 @@ from ubo_app.store.services.camera import (
     CameraRestoreDefaultEvent,
     CameraSetAvailableCamerasAction,
     CameraSetIndexAction,
+    CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
     CameraStopViewfinderEvent,
 )
-from ubo_app.store.services.display import DisplayPauseAction, DisplayResumeAction
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
@@ -102,53 +103,86 @@ class _RepeatingTimer:
         self._stopped.set()
 
 
+class _ViewfinderSession:
+    """Manages a camera viewfinder session lifecycle."""
+
+    def __init__(self) -> None:
+        self.camera: CameraBackend | None = None
+        self.is_running = True
+        self.fs_lock = Lock()
+        self._event_unsubscribe: Callable[[], None] = lambda: None
+        self._stack_unsubscribe: Callable[[], None] = lambda: None
+
+    def handle_camera_change(self, index: int) -> None:
+        """Reinitialize camera when selected index changes."""
+        if not self.is_running:
+            return
+        if self.camera:
+            self.camera.stop()
+            self.camera.close()
+        self.camera = initialize_camera(index)
+
+    def feed_locked(self, _: object) -> None:
+        """Feed viewfinder under lock."""
+        with self.fs_lock:
+            if not self.is_running:
+                return
+            feed_viewfinder(self.camera)
+
+    def cleanup(self, timer: _RepeatingTimer, *, pop_stack: bool = False) -> None:
+        """Shut down the viewfinder session and release the camera."""
+        self._event_unsubscribe()
+        self._stack_unsubscribe()
+        with self.fs_lock:
+            if not self.is_running:
+                return
+            self.is_running = False
+            timer.cancel()
+            if pop_stack:
+                store.dispatch(StackPopAction())
+            if self.camera:
+                self.camera.stop()
+                self.camera.close()
+
+
+def _is_viewfinder_on_stack(
+    stack: tuple[object, ...],
+) -> bool:
+    from ubo_app.store.core.types.stack_items import ApplicationStackItem
+
+    return any(
+        isinstance(item, ApplicationStackItem)
+        and item.application_id == 'camera:viewfinder'
+        for item in stack
+    )
+
+
 def start_camera_viewfinder_session() -> None:
     """Start a camera viewfinder session (replaces CameraApplication widget)."""
-    import uuid
+    from ubo_app.store.core.types import StackChangedEvent
 
-    instance_id = uuid.uuid4().hex
-    camera = None
-    is_running = True
-    fs_lock = Lock()
+    session = _ViewfinderSession()
 
     @store.autorun(lambda state: state.camera.selected_camera_index)
     def _handle_camera_change(index: int) -> None:
-        nonlocal camera
-        if not is_running:
-            return
-        if camera:
-            camera.stop()
-            camera.close()
-        camera = initialize_camera(index)
+        session.handle_camera_change(index)
 
-    def feed_viewfinder_locked(_: object) -> None:
-        with fs_lock:
-            if not is_running:
-                return
-            feed_viewfinder(camera)
-
-    timer = _RepeatingTimer(VIEWFINDER_INTERVAL, feed_viewfinder_locked)
+    timer = _RepeatingTimer(VIEWFINDER_INTERVAL, session.feed_locked)
     timer.start()
 
-    store.dispatch(DisplayPauseAction())
+    store.dispatch(StackPushApplicationAction(application_id='camera:viewfinder'))
 
-    def handle_stop_viewfinder(_: object = None) -> None:
-        unsubscribe()
-        with fs_lock:
-            nonlocal is_running
-            is_running = False
-            timer.cancel()
-            store.dispatch(
-                CloseApplicationAction(application_instance_id=instance_id),
-                DisplayResumeAction(),
-            )
-            if camera:
-                camera.stop()
-                camera.close()
+    def _handle_stack_changed(event: StackChangedEvent) -> None:
+        if session.is_running and not _is_viewfinder_on_stack(event.stack):
+            session.cleanup(timer)
 
-    unsubscribe = store.subscribe_event(
+    session._stack_unsubscribe = store.subscribe_event(  # noqa: SLF001
+        StackChangedEvent,
+        _handle_stack_changed,
+    )
+    session._event_unsubscribe = store.subscribe_event(  # noqa: SLF001
         CameraStopViewfinderEvent,
-        handle_stop_viewfinder,
+        lambda _: session.cleanup(timer, pop_stack=True),
     )
 
 
@@ -236,50 +270,6 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
 
         # Mirror the image
         data = np.rot90(data, 2)[:, ::-1, :3]
-
-        viewfinder_data = data.astype(np.uint16)
-
-        # Render an empty rounded rectangle
-        margin = 15
-        thickness = 7
-
-        lines = [
-            ((margin, width - margin), (margin, margin + thickness)),
-            (
-                (margin, width - margin),
-                (height - margin - thickness, height - margin),
-            ),
-            (
-                (margin, margin + thickness),
-                (margin + thickness, height - margin - thickness),
-            ),
-            (
-                (width - margin - thickness, width - margin),
-                (margin + thickness, height - margin - thickness),
-            ),
-        ]
-        for line in lines:
-            viewfinder_data[line[0][0] : line[0][1], line[1][0] : line[1][1]] = (
-                0xFF - viewfinder_data[line[0][0] : line[0][1], line[1][0] : line[1][1]]
-            ) // 2
-
-        color = (
-            (viewfinder_data[:, :, 2] & 0xF8) << 8
-            | (viewfinder_data[:, :, 1] & 0xFC) << 3
-            | viewfinder_data[:, :, 0] >> 3
-        )
-
-        data_bytes = bytes(
-            np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist(),
-        )
-
-        from ubo_app.display import display
-
-        display.render_block(
-            rectangle=(0, 0, width - 1, height - 1),
-            data_bytes=data_bytes,
-            bypass_pause=True,
-        )
 
         store._dispatch(  # noqa: SLF001
             [
@@ -488,6 +478,12 @@ def _register_camera_action_handlers() -> None:
         'camera:detect',
         lambda: store.dispatch(CameraDetectAction()),
     )
+    register_action(
+        'camera:open-viewfinder',
+        lambda: store.dispatch(
+            CameraStartViewfinderAction(pattern=None),
+        ),
+    )
 
 
 def _register_camera_index_actions(available_cameras: tuple[int, ...]) -> None:
@@ -538,6 +534,15 @@ def update_camera_dynamic_menu(state: CameraState) -> None:
             label='Detect Cameras',
             icon='󰄄',
             action_id='camera:detect',
+        ),
+    )
+
+    items.append(
+        MenuItemData(
+            key='camera:viewfinder',
+            label='View Finder',
+            icon='󰄀',
+            action_id='camera:open-viewfinder',
         ),
     )
 

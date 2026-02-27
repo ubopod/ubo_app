@@ -61,20 +61,21 @@ class GUIClient:
 
     def subscribe_view_changes(  # noqa: C901
         self,
-        callback: Callable[[ViewData, StatusBarData | None], None],
+        callback: Callable[[ViewData, StatusBarData | None, bool | None], None],
         *,
         on_reconnect: Callable[[], None] | None = None,
         on_disconnect: Callable[[float, int, int], None] | None = None,
         on_connected: Callable[[], None] | None = None,
     ) -> None:
-        """Subscribe to view and status bar state changes with auto-reconnect.
+        """Subscribe to view, status bar, and display blank state changes.
 
         The subscription runs as a background async task. On connection loss,
         it automatically reconnects with exponential backoff (like the TUI
         client).
 
         Args:
-            callback: Called with (view_data, status_bar) on each state update.
+            callback: Called with (view_data, status_bar, is_blanked) on each
+                state update.
             on_reconnect: Called after a successful reconnection so the
                 ViewRenderer can reset its state.
             on_disconnect: Called with (delay, attempt, max_retries) when the
@@ -106,6 +107,7 @@ class GUIClient:
                         selectors=[
                             'state.main.current_view',
                             'state.main.status_bar',
+                            'state.display.is_blanked',
                         ],
                     )
                     logger.info(
@@ -130,12 +132,14 @@ class GUIClient:
                             ]
                             current_view = results[0] if len(results) > 0 else None
                             status_bar_data = results[1] if len(results) > 1 else None
+                            is_blanked = results[2] if len(results) > 2 else None  # noqa: PLR2004
                             if current_view is not None:
                                 from typing import cast
 
                                 callback(
                                     cast('ViewData', current_view),
                                     cast('StatusBarData | None', status_bar_data),
+                                    cast('bool | None', is_blanked),
                                 )
 
                 except asyncio.CancelledError:
@@ -326,6 +330,36 @@ class GUIClient:
         if self._client:
             logger.info('[GUIClient] dispatch_raw: action=%s', type(action).__name__)
             self._client.dispatch(action=action)
+
+    def subscribe_camera_frames(
+        self,
+        callback: Callable[[bytes, int, int], None],
+    ) -> Callable[[], None]:
+        """Subscribe to camera frame events from the core.
+
+        Args:
+            callback: Called with (data, width, height) for each frame.
+
+        Returns:
+            Unsubscribe callable to stop receiving frames.
+
+        """
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+
+        from ubo_bindings.ubo.v1 import CameraReportImageEvent, Event
+
+        return self._client.subscribe_event(
+            event_type=Event(
+                camera_report_image_event=CameraReportImageEvent(),
+            ),
+            callback=lambda event: callback(
+                event.camera_report_image_event.data,
+                event.camera_report_image_event.width,
+                event.camera_report_image_event.height,
+            ),
+        )
 
     def dispatch_wifi_update_request(self, *, reset: bool = False) -> None:
         """Request a WiFi state update from the core."""

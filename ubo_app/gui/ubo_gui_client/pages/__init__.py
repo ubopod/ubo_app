@@ -44,6 +44,7 @@ def get_grpc_client() -> GUIClient:
 
 def register_all_pages() -> None:
     """Register all page widgets in the application registry."""
+    from .camera_viewfinder import CameraViewfinderPage
     from .docker_qrcode_page import DockerQRCodePage
     from .rpi_connect_pages import RPiConnectQRCodePage, RPiConnectSignInPage
     from .vscode_pages import VSCodeLoginPage, VSCodeQRCodePage
@@ -76,4 +77,8 @@ def register_all_pages() -> None:
     register_application(
         application_id='wifi:create-connection-page',
         application=WiFiCreateConnectionPage,
+    )
+    register_application(
+        application_id='camera:viewfinder',
+        application=CameraViewfinderPage,
     )
