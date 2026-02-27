@@ -156,6 +156,9 @@ class ViewRenderer:
                     type(view_data).__name__,
                 )
 
+            # Hide loading overlay after first successful render
+            self.app.hide_loading_overlay()
+
         if status_bar is not None:
             try:
                 self._render_status_bar(status_bar)

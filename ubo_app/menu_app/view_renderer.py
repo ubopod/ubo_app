@@ -4,8 +4,8 @@ This module provides the ViewRenderer class that subscribes to ViewChangedEvent
 and renders the UI based on the view data received. This is the core of the
 dumb UI architecture where the UI is a pure renderer with no internal state.
 
-It also provides `compute_view_from_root_state` which uses dynamic menus when
-available, falling back to the legacy menu traversal when not.
+It uses `compute_view_from_root_state` from `view_computation` which uses
+dynamic menus for all menu views.
 """
 from __future__ import annotations
 
@@ -19,24 +19,20 @@ from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import PAGE_SIZE
 from ubo_app.store.core.types import (
-    ApplicationStackItem,
     ApplicationViewData,
     DynamicMenuChangedEvent,
     HomeViewData,
     MenuItemData,
-    MenuStackItem,
     MenuViewData,
-    NotificationStackItem,
     NotificationViewData,
     StatusBarData,
     ViewChangedEvent,
 )
 from ubo_app.store.core.view_computation import (
     compute_status_bar_data,
-    get_notification_view_data,
 )
-from ubo_app.store.core.view_helpers import (
-    find_dynamic_menu_for_position as _find_dynamic_menu_for_position,
+from ubo_app.store.core.view_computation import (
+    compute_view_from_root_state as _compute_view_from_root_state,
 )
 from ubo_app.store.core.view_helpers import (
     get_dynamic_menu_id_for_stack as _get_dynamic_menu_id_for_stack,
@@ -54,95 +50,6 @@ if TYPE_CHECKING:
     from ubo_app.store.core.types.status_bar import ProgressNotificationData
     from ubo_app.store.main import RootState
     from ubo_app.store.services.notifications import Notification
-
-
-# =============================================================================
-# Dynamic Menu Integration - View Computation from RootState
-# =============================================================================
-
-
-def compute_view_from_root_state(state: RootState) -> ViewData:
-    """Compute ViewData from the full RootState, using dynamic menus when available.
-
-    This is the dumb UI architecture's view computation function. It checks if
-    there's a dynamic menu for the current navigation position, and if so, uses
-    its items directly instead of traversing the legacy menu tree.
-
-    Args:
-        state: The full Redux RootState.
-
-    Returns:
-        ViewData describing what the UI should render.
-
-    """
-    main_state = state.main
-    dynamic_menus_state = state.dynamic_menus
-    stack = main_state.stack
-
-    if not stack:
-        return HomeViewData()
-
-    top_item = stack[-1]
-
-    # Handle application views
-    if isinstance(top_item, ApplicationStackItem):
-        return ApplicationViewData(
-            application_id=top_item.application_id,
-            show_status_bar=False,
-            extra_data=dict(top_item.initialization_kwargs),
-        )
-
-    # Handle notification views
-    if isinstance(top_item, NotificationStackItem):
-        return get_notification_view_data(state, top_item.notification_id)
-
-    # Must be MenuStackItem
-    if not isinstance(top_item, MenuStackItem):
-        return HomeViewData()
-
-    # Check if we're at home (depth 1)
-    depth = len([i for i in stack if isinstance(i, MenuStackItem)])
-    if depth <= 1:
-        # Home view doesn't use dynamic menus, it has fixed items
-        return HomeViewData(
-            show_status_bar=True,
-            menu_items=(),
-            cpu_percent=0.0,
-            ram_percent=0.0,
-            volume_level=0.0,
-        )
-
-    # Try to find a dynamic menu for the current position
-    dynamic_match = _find_dynamic_menu_for_position(
-        main_state,
-        dynamic_menus_state,
-        stack,
-    )
-
-    if dynamic_match is not None:
-        menu_id, title = dynamic_match
-        dynamic_menu = dynamic_menus_state.menus.get(menu_id)
-        if dynamic_menu:
-            items = dynamic_menu.items
-            page_index = top_item.page_index
-            total_pages = max(1, (len(items) + PAGE_SIZE - 1) // PAGE_SIZE)
-
-            return MenuViewData(
-                show_status_bar=page_index == 0,
-                title=title,
-                items=items,
-                page_index=page_index,
-                total_pages=total_pages,
-            )
-
-    # No dynamic menu matched - return empty menu view
-    return MenuViewData(
-        show_status_bar=True,
-        title='',
-        items=(),
-        page_index=0,
-        total_pages=1,
-    )
 
 
 def _view_to_dict(view: ViewData) -> dict:
@@ -269,7 +176,7 @@ def _compute_view_and_status_bar(
     state: RootState,
 ) -> tuple[ViewData, StatusBarData]:
     """Compute both view and status bar from current state."""
-    return compute_view_from_root_state(state), compute_status_bar_data(state)
+    return _compute_view_from_root_state(state), compute_status_bar_data(state)
 
 
 @store.with_state(lambda state: state)
@@ -304,7 +211,7 @@ def _get_dynamic_menu_state(
         return None
 
     # Recompute view using dynamic menu data
-    new_view = compute_view_from_root_state(state)
+    new_view = _compute_view_from_root_state(state)
     return state, new_view, current_menu_id
 
 
@@ -560,8 +467,12 @@ class ViewRenderer:
             self._render_notification_view(view)
 
     def _render_home_view(self, view: HomeViewData) -> None:
-        """Render the home view with CPU/RAM gauges and volume."""
-        _ = view  # view.cpu_percent etc. not populated yet, read from state
+        """Render the home view with CPU/RAM gauges and volume.
+
+        Menu items are set once during initialization in _setup_autoruns
+        and must not be updated here to avoid re-creating the home page widget.
+        """
+        _ = view  # View data not used directly; gauges read from state below
 
         # Read values from full state using helper
         cpu, ram, vol = _get_home_view_state()
@@ -680,6 +591,11 @@ class ViewRenderer:
                 len(status_bar.icons),
                 len(status_bar.progress_notifications),
             )
+
+        # Update title from StatusBarData (hostname on home view)
+        title = status_bar.title or ''
+        if title and hasattr(self.app, 'root') and self.app.root is not None:
+            self.app.root.title = title
 
         # Update footer widgets
         self._render_footer(status_bar)

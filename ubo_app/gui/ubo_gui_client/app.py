@@ -32,7 +32,25 @@ class BlankOverlay(Widget):
             Color(0, 0, 0, 1)
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
+
     def _update_rect(self: BlankOverlay, *_args: object) -> None:
+        """Update rectangle size and position."""
+        self.rect.size = self.size
+        self.rect.pos = self.pos
+
+
+class LoadingOverlay(Widget):
+    """Full-screen black overlay shown until first meaningful gRPC data arrives."""
+
+    def __init__(self: LoadingOverlay, **kwargs: object) -> None:
+        """Initialize the loading overlay."""
+        super().__init__(**kwargs)
+        with self.canvas:
+            Color(0, 0, 0, 1)
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+        self.bind(size=self._update_rect, pos=self._update_rect)
+
+    def _update_rect(self: LoadingOverlay, *_args: object) -> None:
         """Update rectangle size and position."""
         self.rect.size = self.size
         self.rect.pos = self.pos
@@ -132,6 +150,7 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         super().__init__(**kwargs)
         self.is_stopped = False
         self.blank_overlay: BlankOverlay | None = None
+        self.loading_overlay: LoadingOverlay | None = None
         self.disconnect_overlay: DisconnectOverlay | None = None
         self.saved_children: list[Widget] = []
 
@@ -199,6 +218,13 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
 
     def on_start(self: UboGUIApp) -> None:
         """Start the application and connect to gRPC."""
+        from kivy.core.window import Window
+
+        # Show loading overlay until first meaningful gRPC data arrives
+        self.loading_overlay = LoadingOverlay(size=Window.size)
+        Window.add_widget(self.loading_overlay)
+        Window.bind(size=self._sync_loading_overlay_size)
+
         logger.info('[App] on_start: connecting to gRPC...')
         self.grpc_client.connect()
         logger.info(
@@ -222,9 +248,29 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         self._keyboard_cleanup = setup_keyboard(self.grpc_client, self.menu_widget)
         logger.info('[App] Keyboard handling set up, app ready')
 
+    @mainthread
+    def hide_loading_overlay(self: UboGUIApp) -> None:
+        """Hide the loading overlay (idempotent)."""
+        from kivy.core.window import Window
+
+        if self.loading_overlay is not None:
+            if self.loading_overlay.parent is not None:
+                Window.remove_widget(self.loading_overlay)
+            self.loading_overlay = None
+
+    def _sync_loading_overlay_size(
+        self: UboGUIApp,
+        _window: object,
+        size: tuple[int, int],
+    ) -> None:
+        """Keep the loading overlay sized to the window."""
+        if self.loading_overlay is not None:
+            self.loading_overlay.size = size
+
     def stop(self, *largs: object) -> None:
         """Stop the application."""
         logger.info('[App] Stopping...')
+        self.hide_loading_overlay()
         super().stop(*largs)
         self.is_stopped = True
         if hasattr(self, '_keyboard_cleanup'):

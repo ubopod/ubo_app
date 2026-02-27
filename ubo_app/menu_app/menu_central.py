@@ -100,23 +100,57 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     def _setup_autoruns(self) -> None:
         """Set up Redux store autoruns.
 
-        The legacy menu autorun (state.main.menu -> set_root_menu) has been
-        replaced with a minimal root menu initialization. The dynamic menu
-        system drives actual content rendering via view computation autoruns.
+        Note: set_root_menu is called in build() after padding is set, so that
+        the HomePage widget is created with the correct padding values.
         """
-        from ubo_gui.menu.types import HeadlessMenu
 
-        # Set a minimal root menu to initialize the MenuWidget's stack.
-        # The ViewRenderer handles actual content rendering from current_view.
-        self.menu_widget.set_root_menu(
-            HeadlessMenu(title='Home', items=[]),
-        )
+    def _get_home_menu_items(self) -> list:
+        """Read home menu items from the HOME_MENU_ID dynamic menu.
+
+        The dynamic menu is populated by setup_core_dynamic_menus() during
+        store initialization, so it is guaranteed to be available here.
+        """
+        from ubo_gui.menu.types import ActionItem
+
+        from ubo_app.store.core.menus import HOME_MENU_ID
+
+        items: list[ActionItem] = []
+
+        @store.with_state(lambda state: state.dynamic_menus)
+        def _get_home_items(dynamic_menus_state: object) -> None:
+            home_menu = dynamic_menus_state.menus.get(HOME_MENU_ID)  # type: ignore[union-attr]
+            if home_menu:
+                for item_data in home_menu.items:
+                    if item_data:
+                        kwargs: dict = {
+                            'label': item_data.label,
+                            'icon': item_data.icon,
+                            'is_short': item_data.is_short,
+                            'action': lambda: None,
+                        }
+                        if item_data.color:
+                            kwargs['color'] = item_data.color
+                        if item_data.background_color:
+                            kwargs['background_color'] = item_data.background_color
+                        items.append(ActionItem(**kwargs))
+
+        _get_home_items()
+        return items
 
     def build(self) -> Widget | None:
         root = super().build()
         if root:
             self.menu_widget.padding_top = root.ids.header_layout.height
             self.menu_widget.padding_bottom = root.ids.footer_layout.height
+
+        # Set root menu AFTER padding is set so the HomePage cached property
+        # is created with the correct padding_top/padding_bottom values.
+        from ubo_gui.menu.types import HeadlessMenu
+
+        items = self._get_home_menu_items()
+        self.menu_widget.set_root_menu(
+            HeadlessMenu(title='', items=items),
+        )
 
         return root
 
@@ -159,7 +193,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self._dispatch_enclosure_visibility()
 
     def handle_title_change(self: MenuAppCentral, _: MenuWidget, title: str) -> None:
-        if self.root:
+        if self.root and title:
             self.root.title = title
 
     def handle_stack_change(
