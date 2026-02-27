@@ -345,7 +345,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             if isinstance(provider, NeedsSetupMixin):
                 action_id = f'assistant:setup-provider:{provider.name}'
                 _provider_action_ids.append(action_id)
-                register_action(action_id, provider.setup)
+                register_action(action_id, provider.setup, allow_reregister=True)
                 params = (
                     _get_setup_item_parameters()
                     if provider.is_setup
