@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from ubo_app.display import display
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     RegisterSettingAppAction,
@@ -118,13 +117,12 @@ async def monitor_inactivity() -> None:
 
 def handle_blank_event(_: DisplayBlankEvent) -> None:
     """Handle screen blanking event."""
-    logger.info('Blanking screen and turning off backlight')
-    display.set_backlight(enabled=False)
+    logger.info('Blanking screen')
+
 
 def handle_unblank_event(_: DisplayUnblankEvent) -> None:
     """Handle screen unblanking event."""
-    logger.info('Unblanking screen and turning on backlight')
-    display.set_backlight(enabled=True)
+    logger.info('Unblanking screen')
     # Signal the inactivity monitor to wake up
     _unblank_event.set()
 

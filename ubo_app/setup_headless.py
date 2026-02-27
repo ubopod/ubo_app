@@ -187,13 +187,7 @@ def signal_handler(signum: int, _: object) -> None:
 
     _clear_signal_handlers()
 
-    try:
-        from ubo_app.display import display
-
-        logger.info('Received signal %s, turning off the display...', signum)
-        display.turn_off()
-    except ImportError:
-        logger.info('Received signal %s (no display module available)', signum)
+    logger.info('Received signal %s', signum)
 
     if signum == signal.SIGINT:
         logger.info('Exiting gracefully, sending the signal again will force exit!')
