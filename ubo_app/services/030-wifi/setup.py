@@ -38,7 +38,7 @@ from ubo_app.store.services.wifi import (
     WiFiUpdateAction,
     WiFiUpdateRequestEvent,
 )
-from ubo_app.utils import IS_UBO_POD
+from ubo_app.utils import IS_RPI, IS_UBO_POD
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
 from ubo_app.utils.persistent_store import (
@@ -167,6 +167,23 @@ def init_service() -> Subscriptions:
         'wifi:settings',
         create_settings_path_matcher('wifi:', 'wifi:connections'),
     )
+
+    # Register the dynamic menu for WiFi connections
+    if IS_RPI:
+        from pages import main as _pages_main  # noqa: F401
+    else:
+        from constants import WIFI_CONNECTIONS_MENU_ID
+
+        from ubo_app.store.core.types import UpdateDynamicMenuAction
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=WIFI_CONNECTIONS_MENU_ID,
+                title='Wi-Fi',
+                items=(),
+                placeholder='D-Bus unavailable on this platform',
+            ),
+        )
 
     create_task(_check_connection())
 

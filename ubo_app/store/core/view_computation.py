@@ -307,6 +307,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
                 heading=dynamic_menu.heading,
                 sub_heading=dynamic_menu.sub_heading,
                 items=items,
+                placeholder=dynamic_menu.placeholder or None,
                 page_index=page_index,
                 total_pages=total_pages,
             )

@@ -61,6 +61,7 @@ class MenuViewData(Immutable):
     heading: str | None = None  # Optional heading (for HeadedMenu)
     sub_heading: str | None = None  # Optional sub-heading (for HeadedMenu)
     items: tuple[MenuItemData | None, ...] = ()  # Items for current page
+    placeholder: str | None = None  # Text shown when items is empty
     page_index: int = 0
     total_pages: int = 1
 

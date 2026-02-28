@@ -16,6 +16,7 @@ from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiConnection,
 )
+from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -97,7 +98,14 @@ def update_wifi_dynamic_menu(
             )
             for connection in connections
         )
-        placeholder = 'No Wi-Fi connections found' if not connections else ''
+        if not connections:
+            placeholder = (
+                'No Wi-Fi connections found'
+                if IS_RPI
+                else 'D-Bus unavailable on this platform'
+            )
+        else:
+            placeholder = ''
 
     logger.debug(
         '[WiFi Service] Updating dynamic menu: %d connections',

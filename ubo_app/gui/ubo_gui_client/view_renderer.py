@@ -314,6 +314,7 @@ class ViewRenderer:
         items = self._convert_view_items(view)
         heading = getattr(view, 'heading', None)
         sub_heading = getattr(view, 'sub_heading', None)
+        placeholder = getattr(view, 'placeholder', None) or None
         if heading:
             from ubo_gui.menu.types import HeadedMenu
 
@@ -322,9 +323,10 @@ class ViewRenderer:
                 heading=heading,
                 sub_heading=sub_heading or '',
                 items=items,
+                placeholder=placeholder,
             )
         else:
-            menu = HeadlessMenu(title=title, items=items)
+            menu = HeadlessMenu(title=title, items=items, placeholder=placeholder)
         page_index = getattr(view, 'page_index', None)
 
         if self._current_view_type == 'menu':
