@@ -239,6 +239,34 @@ def _register_system_path_matchers() -> None:
 # =============================================================================
 
 
+def get_system_submenu_items() -> tuple[MenuItemData, ...]:
+    """Return the static System sub-menu items (General, Services, Third Party).
+
+    These items are prepended to the System category menu so that the
+    autorun in menus.py doesn't overwrite them with only service entries.
+    """
+    return (
+        MenuItemData(
+            key='general',
+            label='General',
+            icon='\U000f0493',
+            action_id='menu:navigate:settings:System:general',
+        ),
+        MenuItemData(
+            key='services',
+            label='Services',
+            icon='\uf03a',
+            action_id='menu:navigate:settings:System:services',
+        ),
+        MenuItemData(
+            key='third_party',
+            label='Third Party',
+            icon='\uf08e',
+            action_id='menu:navigate:settings:System:third_party',
+        ),
+    )
+
+
 def _setup_system_category_items() -> None:
     """Register action handlers and dispatch System category items."""
     from ubo_app.store.core.action_registry import register_action
@@ -262,27 +290,8 @@ def _setup_system_category_items() -> None:
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id='settings:System',
-            title='󰒔System',
-            items=(
-                MenuItemData(
-                    key='general',
-                    label='General',
-                    icon='󰒓',
-                    action_id='menu:navigate:settings:System:general',
-                ),
-                MenuItemData(
-                    key='services',
-                    label='Services',
-                    icon='',
-                    action_id='menu:navigate:settings:System:services',
-                ),
-                MenuItemData(
-                    key='third_party',
-                    label='Third Party',
-                    icon='',
-                    action_id='menu:navigate:settings:System:third_party',
-                ),
-            ),
+            title='\U000f0494System',
+            items=get_system_submenu_items(),
             placeholder='',
         ),
     )

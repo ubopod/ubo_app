@@ -478,7 +478,7 @@ def _setup_registered_apps_autoruns() -> None:
             category_entries.sort(key=sort_key)
 
             icon = SETTINGS_CATEGORY_ICONS.get(category, '')
-            items = tuple(
+            service_items = tuple(
                 MenuItemData(
                     key=key,
                     label=entry.label,
@@ -488,6 +488,18 @@ def _setup_registered_apps_autoruns() -> None:
                 )
                 for key, entry in category_entries
             )
+
+            # For System category, prepend static sub-menu items
+            # (General, Services, Third Party) so they aren't lost
+            # when the autorun overwrites the menu.
+            if category == SettingsCategory.SYSTEM:
+                from ubo_app.store.settings.dynamic_system_menus import (
+                    get_system_submenu_items,
+                )
+
+                items = (*get_system_submenu_items(), *service_items)
+            else:
+                items = service_items
 
             store.dispatch(
                 UpdateDynamicMenuAction(
