@@ -27,7 +27,9 @@ def create_notification_action(  # noqa: PLR0913
     """Create a NotificationActionItem with a registered callable action.
 
     This registers the callable in the action registry and returns a
-    NotificationActionItem with the corresponding action_id.
+    NotificationActionItem with the corresponding action_id. The action_id
+    is accessible via the returned item's ``action_id`` attribute and can
+    be used to unregister the action when the notification is cleared.
     """
     action_id = f'notification:custom:{uuid4().hex}'
     register_action(action_id, action)
