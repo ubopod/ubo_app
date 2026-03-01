@@ -84,7 +84,7 @@ def get_notification_view_data(
                     key='extra_info',
                     label='',
                     icon='\U000f02fc',  # info icon
-                    color='#2196F3',
+                    color='#ffffff',
                     is_short=True,
                     action_id=f'notification:extra_info:{notification_id}',
                 ),
