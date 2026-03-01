@@ -41,6 +41,27 @@ def _noop() -> None:
     """No-op action for menu items; real selection goes via gRPC."""
 
 
+def _unwrap_extra_data_value(value: object) -> object:
+    """Unwrap a proto extra_data value to a Python primitive.
+
+    Proto map values are wrapped in BasicType → BasicTypeOptional.
+    This extracts the underlying Python value (str, int, float, bool, bytes).
+    """
+    basic_type = getattr(value, 'basic_type', None)
+    if basic_type is None:
+        return value
+    items = getattr(basic_type, 'items', None)
+    if items is None:
+        return value
+    # Use to_dict() to get the set oneof field
+    to_dict = getattr(items, 'to_dict', None)
+    if to_dict is not None:
+        d = to_dict()
+        if d:
+            return next(iter(d.values()))
+    return value
+
+
 class ViewRenderer:
     """Renders the UI based on ViewData from gRPC state subscription.
 
@@ -391,13 +412,15 @@ class ViewRenderer:
             )
             return
 
-        # Get extra_data kwargs for the widget
+        # Get extra_data kwargs for the widget, unwrapping proto wrappers
         extra_data_obj = getattr(view, 'extra_data', None)
         kwargs: dict[str, object] = {}
         if extra_data_obj is not None:
             items_dict = getattr(extra_data_obj, 'items', None)
             if isinstance(items_dict, dict):
-                kwargs = dict(items_dict)
+                kwargs = {
+                    k: _unwrap_extra_data_value(v) for k, v in items_dict.items()
+                }
 
         widget = app_class(**kwargs)
 

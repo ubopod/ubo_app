@@ -82,3 +82,14 @@ def register_all_pages() -> None:
         application_id='camera:viewfinder',
         application=CameraViewfinderPage,
     )
+
+    from ubo_gui_client.gui_utils import RawImageViewer, RawTextViewer
+
+    register_application(
+        application_id='ubo:raw-text-viewer',
+        application=RawTextViewer,
+    )
+    register_application(
+        application_id='ubo:raw-image-viewer',
+        application=RawImageViewer,
+    )

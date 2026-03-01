@@ -60,6 +60,50 @@ def _build_dict_wrapper_message(
     return wrapper_cls(items=items)
 
 
+def _convert_basic_value(
+    value: object,
+    value_cls: type[betterproto.Message],
+) -> betterproto.Message:
+    """Convert a Python value to a proto map-value message.
+
+    Handles the ``BasicType`` wrapping hierarchy used by ``extra_data`` maps:
+    ``value_cls(basic_type=BasicType(items=BasicTypeOptional(field=value)))``
+    for scalar values, and the ``list`` oneof arm for sequences.
+    """
+    from ubo_bindings.ubo import v1
+
+    if isinstance(value, str | int | float | bool | bytes | None):
+        # Build BasicTypeOptional
+        if value is None:
+            optional = v1.BasicTypeOptional()
+        elif isinstance(value, str):
+            optional = v1.BasicTypeOptional(string=value)
+        elif isinstance(value, bool):
+            # bool before int since bool is subclass of int
+            optional = v1.BasicTypeOptional(bool=value)
+        elif isinstance(value, int):
+            optional = v1.BasicTypeOptional(int64=value)
+        elif isinstance(value, float):
+            optional = v1.BasicTypeOptional(float=value)
+        else:
+            optional = v1.BasicTypeOptional(bytes=value)
+
+        basic_type = v1.BasicType(items=optional)
+        return value_cls(basic_type=basic_type)  # type: ignore[call-arg]
+
+    if isinstance(value, list | tuple):
+        # For list/tuple values, check if value_cls has a 'list' oneof arm
+        list_cls = value_cls._betterproto.cls_by_field.get('list')
+        if list_cls is not None:
+            converted_items = [
+                _convert_basic_value(item, value_cls) for item in value
+            ]
+            return value_cls(list=list_cls(items=converted_items))  # type: ignore[call-arg]
+
+    msg = f'Cannot convert {type(value)} to {value_cls}'
+    raise TypeError(msg)
+
+
 def _try_wrap_oneof(
     object_: Immutable,
     message_class: type[betterproto.Message],
@@ -189,8 +233,18 @@ def build_message(  # noqa: C901, PLR0912
         if expected_type and hasattr(expected_type, '_betterproto'):
             field_names = expected_type._betterproto.sorted_field_names
             if field_names == ('items',):
-                # It's a dict wrapper like StdioMcpConfigEnvDict
-                # Cast to DictWrapperMessage protocol for proper typing
+                cls_by_field = expected_type._betterproto.cls_by_field
+                value_cls = cls_by_field.get('items.value')
+                if value_cls is not None and issubclass(
+                    value_cls, betterproto.Message,
+                ):
+                    # Map values need conversion (e.g. extra_data map)
+                    converted = {
+                        k: _convert_basic_value(v, value_cls)
+                        for k, v in object_.items()
+                    }
+                    return cast('T', expected_type(items=converted))  # type: ignore[call-arg]
+                # Simple dict wrapper (e.g. StdioMcpConfigEnvDict with str values)
                 wrapper_cls = cast('type[DictWrapperMessage]', expected_type)
                 return cast('T', _build_dict_wrapper_message(wrapper_cls, object_))
         # Otherwise return as-is (for map fields)
