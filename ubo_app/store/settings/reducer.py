@@ -21,6 +21,7 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.settings.types import (
     ServicesStatus,
     SettingsAction,
+    SettingsClearServiceErrorsAction,
     SettingsEvent,
     SettingsReportServiceErrorAction,
     SettingsServiceSetIsEnabledAction,
@@ -231,6 +232,20 @@ def reducer(
                     action.service_id: replace(
                         state.services[action.service_id],
                         should_auto_restart=action.should_auto_restart,
+                    ),
+                }
+                if state.services
+                else {},
+            )
+
+        case SettingsClearServiceErrorsAction():
+            return replace(
+                state,
+                services={
+                    **state.services,
+                    action.service_id: replace(
+                        state.services[action.service_id],
+                        errors=[],
                     ),
                 }
                 if state.services

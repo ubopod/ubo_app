@@ -91,13 +91,13 @@ class ServiceMenuController:
         register_action(
             f'{prefix}:navigate_log_level',
             lambda: store.dispatch(
-                StackPushMenuAction(menu_key=f'{sid}:log_level'),
+                StackPushMenuAction(menu_key='log_level'),
             ),
         )
         register_action(
             f'{prefix}:navigate_errors',
             lambda: store.dispatch(
-                StackPushMenuAction(menu_key=f'{sid}:errors'),
+                StackPushMenuAction(menu_key='errors'),
             ),
         )
 
@@ -197,33 +197,33 @@ class ServiceMenuController:
         # Start / Stop
         if svc.is_active:
             items.append(MenuItemData(
-                key='stop', label='Stop', icon='',
+                key='stop', label='Stop', icon='\uf04d',
                 background_color=DANGER_COLOR,
                 action_id=f'{prefix}:stop',
             ))
         else:
             items.append(MenuItemData(
                 key='start', label='Start',
-                icon=f'[color={RUNNING_COLOR}][/color]',
+                icon=f'[color={RUNNING_COLOR}]\uf04b[/color]',
                 action_id=f'{prefix}:start',
             ))
 
         # Enable / Disable
         if svc.is_enabled:
             items.append(MenuItemData(
-                key='enabled', label='Auto Load', icon='',
+                key='enabled', label='Auto Load', icon='\uf205',
                 action_id=f'{prefix}:disable',
             ))
             items.append(MenuItemData(
                 key='log_level',
                 label=f'Level: {logging.getLevelName(svc.log_level)}',
-                icon='',
+                icon='\uf4ed',
                 background_color=logger.COLORS_HEX[svc.log_level],
                 action_id=f'{prefix}:navigate_log_level',
             ))
         else:
             items.append(MenuItemData(
-                key='enabled', label='Auto Load', icon='',
+                key='enabled', label='Auto Load', icon='\uf204',
                 background_color='#000000',
                 action_id=f'{prefix}:enable',
             ))
@@ -245,11 +245,11 @@ class ServiceMenuController:
         if svc.errors:
             items.append(MenuItemData(
                 key='errors', label='Errors',
-                icon=f'[color={DANGER_COLOR}][/color]',
+                icon=f'[color={DANGER_COLOR}]\uf06a[/color]',
                 action_id=f'{prefix}:navigate_errors',
             ))
             items.append(MenuItemData(
-                key='clear_errors', label='Clear errors', icon='',
+                key='clear_errors', label='Clear errors', icon='\uf00d',
                 action_id=f'{prefix}:clear_errors',
             ))
 
@@ -361,7 +361,7 @@ class ServiceMenuController:
                 label=datetime.datetime.fromtimestamp(error.timestamp)
                     .astimezone()
                     .strftime('%Y-%m-%d %H:%M:%S'),
-                icon=f'[color={DANGER_COLOR}][/color]',
+                icon=f'[color={DANGER_COLOR}]\uf06a[/color]',
                 action_id=error_action_id,
             ))
 
