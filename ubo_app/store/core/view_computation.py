@@ -295,11 +295,13 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         dynamic_menu = dynamic_menus_state.menus.get(menu_id)
         if dynamic_menu:
             items = dynamic_menu.items
-            page_index = top_item.page_index
             total_pages = compute_total_pages(
                 len(items),
                 is_headed=dynamic_menu.heading is not None,
             )
+            # Clamp page_index to valid range in case dynamic menu
+            # items changed and the old page_index is now out of bounds.
+            page_index = min(top_item.page_index, max(total_pages - 1, 0))
 
             return MenuViewData(
                 show_status_bar=page_index == 0,
