@@ -47,7 +47,12 @@ from ubo_app.store.services.notifications import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ubo_app.store.core.types import HomeViewData, MenuItemData, MenuViewData
+    from ubo_app.store.core.types import (
+        HomeViewData,
+        MenuItemData,
+        MenuViewData,
+        StackItemType,
+    )
     from ubo_app.utils.types import Subscriptions
 
 
@@ -118,7 +123,23 @@ def _dismiss_notification(notification_id: str) -> None:
         NotificationsClearAction,
     )
 
-    store.dispatch(StackPopAction())
+    # Pop the specific notification stack item (not just the top)
+    @store.with_state(lambda state: state.main.stack)
+    def pop_notification_item(
+        stack: Sequence[StackItemType],
+    ) -> None:
+        for item in stack:
+            if (
+                isinstance(item, NotificationStackItem)
+                and item.notification_id == notification_id
+            ):
+                store.dispatch(StackPopItemAction(item_id=item.id))
+                return
+        # No matching item — notification was already dismissed (e.g.
+        # manual dismiss before FLASH auto-dismiss timer fired).  Do
+        # nothing to avoid popping an unrelated stack item.
+
+    pop_notification_item()
 
     @store.with_state(lambda state: state.notifications.notifications)
     def clear_notification(
@@ -136,20 +157,25 @@ def _dismiss_notification(notification_id: str) -> None:
 
 def _show_extra_info(notification_id: str) -> None:
     """Show a notification's extra information via speech synthesis."""
+    from ubo_app.store.services.notifications import Notification
     from ubo_app.store.services.speech_synthesis import SpeechSynthesisReadTextAction
 
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return
-
-    notification = next(
-        (n for n in state.notifications.notifications if n.id == notification_id),
-        None,
-    )
-    if notification and notification.extra_information:
-        store.dispatch(
-            SpeechSynthesisReadTextAction(information=notification.extra_information),
+    @store.with_state(lambda state: state.notifications.notifications)
+    def _dispatch_speech(
+        notifications: Sequence[Notification],
+    ) -> None:
+        notification = next(
+            (n for n in notifications if n.id == notification_id),
+            None,
         )
+        if notification and notification.extra_information:
+            store.dispatch(
+                SpeechSynthesisReadTextAction(
+                    information=notification.extra_information,
+                ),
+            )
+
+    _dispatch_speech()
 
 
 def _execute_view_item_action(item: MenuItemData) -> bool:
@@ -415,7 +441,25 @@ def _handle_notification_display(event: NotificationsDisplayEvent) -> None:
     if not notification_id:
         logger.warning('NotificationsDisplayEvent with no notification ID')
         return
-    store.dispatch(StackPushNotificationAction(notification_id=notification_id))
+
+    # Don't push a duplicate if this notification is already on the stack
+    @store.with_state(lambda state: state.main.stack)
+    def _push_if_needed(stack: Sequence[StackItemType]) -> None:
+        if any(
+            isinstance(item, NotificationStackItem)
+            and item.notification_id == notification_id
+            for item in stack
+        ):
+            logger.debug(
+                'NotificationStackItem for %s already on stack, skipping push',
+                notification_id,
+            )
+        else:
+            store.dispatch(
+                StackPushNotificationAction(notification_id=notification_id),
+            )
+
+    _push_if_needed()
 
     # Schedule auto-dismiss for FLASH notifications
     if notification.display_type is NotificationDisplayType.FLASH:
@@ -436,22 +480,21 @@ def _handle_notification_clear(event: NotificationsClearEvent) -> None:
     if not notification_id:
         return
 
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return
+    @store.with_state(lambda state: state.main.stack)
+    def _pop_matching(stack: Sequence[StackItemType]) -> None:
+        for item in stack:
+            if (
+                isinstance(item, NotificationStackItem)
+                and item.notification_id == notification_id
+            ):
+                logger.info(
+                    '[MenuHandler] notification_clear: popping notification %s',
+                    notification_id,
+                )
+                store.dispatch(StackPopItemAction(item_id=item.id))
+                return
 
-    # Find the NotificationStackItem with the matching notification_id
-    for item in state.main.stack:
-        if (
-            isinstance(item, NotificationStackItem)
-            and item.notification_id == notification_id
-        ):
-            logger.info(
-                '[MenuHandler] notification_clear: popping notification %s',
-                notification_id,
-            )
-            store.dispatch(StackPopItemAction(item_id=item.id))
-            return
+    _pop_matching()
 
 
 def _handle_open_application(event: OpenApplicationEvent) -> None:
@@ -467,17 +510,18 @@ def _handle_open_application(event: OpenApplicationEvent) -> None:
 
 def _handle_close_application(event: CloseApplicationEvent) -> None:
     """Handle close application event by popping the matching stack item."""
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return
 
-    for item in state.main.stack:
-        if (
-            isinstance(item, ApplicationStackItem)
-            and item.id == event.application_instance_id
-        ):
-            store.dispatch(StackPopItemAction(item_id=item.id))
-            return
+    @store.with_state(lambda state: state.main.stack)
+    def _pop_matching(stack: Sequence[StackItemType]) -> None:
+        for item in stack:
+            if (
+                isinstance(item, ApplicationStackItem)
+                and item.id == event.application_instance_id
+            ):
+                store.dispatch(StackPopItemAction(item_id=item.id))
+                return
+
+    _pop_matching()
 
 
 def setup_menu_event_handlers() -> Subscriptions:
