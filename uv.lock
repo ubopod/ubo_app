@@ -2567,6 +2567,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
+version = "1.7.1.dev260301103491015757"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },

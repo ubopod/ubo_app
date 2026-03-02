@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 import dotenv
 import pytest
-from _pytest.fixtures import SubRequest
 
 if TYPE_CHECKING:
+    from _pytest.fixtures import SubRequest
+
     from ubo_app.store.main import RootState
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
