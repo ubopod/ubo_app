@@ -142,12 +142,14 @@ class AssistanceFrame(Immutable):
     timestamp: float
     id: str
     index: int
+    session_id: str = ''
 
 
 class AssistanceTextFrame(AssistanceFrame):
     """A text assistance frame."""
 
     text: str
+    source: str = ''
 
 
 class AssistanceAudioFrame(AssistanceFrame):
@@ -166,8 +168,17 @@ class AssistanceImageFrame(AssistanceFrame):
     metadata: dict[str, str]
 
 
+class AssistanceErrorFrame(AssistanceFrame):
+    """An error assistance frame."""
+
+    error: str
+
+
 AcceptableAssistanceFrame: TypeAlias = (
-    AssistanceTextFrame | AssistanceAudioFrame | AssistanceImageFrame
+    AssistanceTextFrame
+    | AssistanceAudioFrame
+    | AssistanceImageFrame
+    | AssistanceErrorFrame
 )
 
 
@@ -218,6 +229,34 @@ class AssistantSyncMcpServersAction(AssistantAction):
     """Action to sync MCP servers from filesystem."""
 
 
+class AssistantTranscribeAction(AssistantAction):
+    """Action to request standalone streaming transcription."""
+
+    audio: bytes
+    session_id: str
+    sample_rate: int = 16000
+    num_channels: int = 1
+    stt_provider: AssistantSTTName | None = None
+
+
+class AssistantSynthesizeAction(AssistantAction):
+    """Action to request standalone text-to-speech synthesis."""
+
+    text: str
+    session_id: str
+    tts_provider: AssistantTTSName | None = None
+
+
+class AssistantCompleteAction(AssistantAction):
+    """Action to request standalone LLM completion."""
+
+    text: str
+    session_id: str
+    llm_provider: AssistantLLMName | None = None
+    system_prompt: str | None = None
+    enable_tools: bool = False
+
+
 class AssistantEvent(BaseEvent):
     """Base class for assistant events."""
 
@@ -251,6 +290,34 @@ class AssistantDeleteMcpServerEvent(AssistantEvent):
     """Event to delete an MCP server."""
 
     server_id: str
+
+
+class AssistantTranscribeEvent(AssistantEvent):
+    """Event for assistant service to process standalone transcription."""
+
+    audio: bytes
+    session_id: str
+    sample_rate: int
+    num_channels: int
+    stt_provider: AssistantSTTName
+
+
+class AssistantSynthesizeEvent(AssistantEvent):
+    """Event for assistant service to process standalone TTS synthesis."""
+
+    text: str
+    session_id: str
+    tts_provider: AssistantTTSName
+
+
+class AssistantCompleteEvent(AssistantEvent):
+    """Event for assistant service to process standalone LLM completion."""
+
+    text: str
+    session_id: str
+    llm_provider: AssistantLLMName
+    system_prompt: str | None
+    enable_tools: bool
 
 
 class AssistantState(Immutable):

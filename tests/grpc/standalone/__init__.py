@@ -1,0 +1,1 @@
+"""Standalone handler integration tests."""

@@ -263,6 +263,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
+                        source='llm',
                     ),
                 ),
             )

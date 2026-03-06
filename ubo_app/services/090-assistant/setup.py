@@ -43,7 +43,9 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistanceAudioFrame,
+    AssistanceErrorFrame,
     AssistanceImageFrame,
+    AssistanceTextFrame,
     AssistantAddMcpServerEvent,
     AssistantDeleteMcpServerEvent,
     AssistantHandleReportEvent,
@@ -239,6 +241,25 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
                         'height': image.height,
                     },
                 ),
+            )
+
+        case AssistanceTextFrame() as text_frame:
+            logger.debug(
+                'Assistant text frame received',
+                extra={
+                    'source': text_frame.source,
+                    'session_id': text_frame.session_id,
+                    'text': text_frame.text[:100],
+                },
+            )
+
+        case AssistanceErrorFrame() as error_frame:
+            logger.error(
+                'Assistant error frame received',
+                extra={
+                    'session_id': error_frame.session_id,
+                    'error': error_frame.error,
+                },
             )
 
 

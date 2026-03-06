@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, cast, overload
 
 from betterproto.lib.std.google import protobuf as betterproto_protobuf
 from grpclib.client import Channel
+from grpclib.exceptions import GRPCError, StreamTerminatedError
 
 import ubo_bindings.ubo.v1
 from ubo_bindings.secrets.v1 import QuerySecretRequest, SecretsServiceStub
@@ -94,10 +95,18 @@ class UboRPCClient:
         """Subscribe to the remote store."""
 
         async def iterator() -> None:
-            async for response in self.store_service.subscribe_event(
-                SubscribeEventRequest(event=event_type),
-            ):
-                callback(response.event)
+            try:
+                async for response in self.store_service.subscribe_event(
+                    SubscribeEventRequest(event=event_type),
+                ):
+                    callback(response.event)
+            except asyncio.CancelledError:
+                pass
+            except (GRPCError, StreamTerminatedError, OSError):
+                logging.getLogger().debug(
+                    'Event subscription stream ended',
+                    exc_info=True,
+                )
 
         task = self.event_loop.create_task(iterator())
 

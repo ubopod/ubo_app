@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import enum
+import functools
 import importlib
+import typing
 from datetime import UTC, datetime
-from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin
+from typing import Any, TypeAlias, TypeVar, cast, get_args
 
 import betterproto
 import betterproto.casing
@@ -154,21 +156,26 @@ def rebuild_object(  # noqa: C901
     return destination_class(**fields)
 
 
+@functools.lru_cache(maxsize=128)
+def _get_cached_type_hints(cls: type) -> dict[str, Any]:
+    return typing.get_type_hints(cls, include_extras=True)
+
+
 def get_field_value(
     destination_class: type[Immutable],
     message: betterproto.Message,
     key: str,
 ) -> ReturnType | _MissingType:
     if getattr(message, key) is None:
-        # check if destination_class which is a dataclass has a default value for this
-        # field
-        field_type = destination_class.__dataclass_fields__.get(key)
-        origin = get_origin(field_type)
-        is_none_accepted = (
-            type(None) in get_args(field_type)
-            if origin is Union
-            else field_type is type(None)
-        )
+        # check if the destination field accepts None
+        try:
+            hints = _get_cached_type_hints(destination_class)
+        except (TypeError, NameError, AttributeError):
+            return MISSING
+        field_annotation = hints.get(key)
+        if field_annotation is None:
+            return MISSING
+        is_none_accepted = type(None) in get_args(field_annotation)
 
         if not is_none_accepted:
             return MISSING

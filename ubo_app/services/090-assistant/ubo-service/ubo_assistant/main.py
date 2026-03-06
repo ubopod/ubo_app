@@ -227,6 +227,16 @@ class Assistant:
 def main() -> None:
     try:
         assistant = Assistant()
+
+        # Register standalone handlers for decoupled STT/TTS/LLM
+        from ubo_assistant.standalone_llm import setup_standalone_llm
+        from ubo_assistant.standalone_stt import setup_standalone_stt
+        from ubo_assistant.standalone_tts import setup_standalone_tts
+
+        setup_standalone_stt(assistant.client)
+        setup_standalone_tts(assistant.client)
+        setup_standalone_llm(assistant.client)
+
         asyncio.get_event_loop().run_until_complete(assistant.run())
     except Exception as exception:
         logger.info('An error occurred', extra={'exception': exception})

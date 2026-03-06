@@ -18,6 +18,8 @@ from ubo_app.store.services.assistant import (
     AssistantAction,
     AssistantAddMcpServerAction,
     AssistantAddMcpServerEvent,
+    AssistantCompleteAction,
+    AssistantCompleteEvent,
     AssistantDeleteMcpServerAction,
     AssistantDeleteMcpServerEvent,
     AssistantDownloadOllamaModelAction,
@@ -35,8 +37,12 @@ from ubo_app.store.services.assistant import (
     AssistantState,
     AssistantStopListeningAction,
     AssistantSyncMcpServersAction,
+    AssistantSynthesizeAction,
+    AssistantSynthesizeEvent,
     AssistantToggleListeningAction,
     AssistantToggleMcpServerAction,
+    AssistantTranscribeAction,
+    AssistantTranscribeEvent,
     AssistantUpdateProvidersAction,
 )
 from ubo_app.store.services.audio import (
@@ -288,6 +294,52 @@ def reducer(
                     enabled_mcp_servers_with_metadata_json=enabled_mcp_servers_with_metadata_json,
                 ),
                 events=[AssistantDeleteMcpServerEvent(server_id=action.server_id)],
+            )
+
+        case AssistantTranscribeAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantTranscribeEvent(
+                        audio=action.audio,
+                        session_id=action.session_id,
+                        sample_rate=action.sample_rate,
+                        num_channels=action.num_channels,
+                        stt_provider=action.stt_provider
+                        if action.stt_provider is not None
+                        else state.selected_stt,
+                    ),
+                ],
+            )
+
+        case AssistantSynthesizeAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantSynthesizeEvent(
+                        text=action.text,
+                        session_id=action.session_id,
+                        tts_provider=action.tts_provider
+                        if action.tts_provider is not None
+                        else state.selected_tts,
+                    ),
+                ],
+            )
+
+        case AssistantCompleteAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantCompleteEvent(
+                        text=action.text,
+                        session_id=action.session_id,
+                        llm_provider=action.llm_provider
+                        if action.llm_provider is not None
+                        else state.selected_llm,
+                        system_prompt=action.system_prompt,
+                        enable_tools=action.enable_tools,
+                    ),
+                ],
             )
 
         case AssistantSyncMcpServersAction():

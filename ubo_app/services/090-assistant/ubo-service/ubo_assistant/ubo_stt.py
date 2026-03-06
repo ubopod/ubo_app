@@ -185,6 +185,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
+                        source='stt',
                     ),
                 ),
             )

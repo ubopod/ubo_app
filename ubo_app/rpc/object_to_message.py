@@ -54,7 +54,7 @@ def build_message(
 def build_message(
     object_: GRPCSerializable,
 ) -> ReturnType: ...
-def build_message(  # noqa: C901
+def build_message(  # noqa: C901, PLR0912
     object_: GRPCSerializable,
     expected_type: type[T] | None = None,
 ) -> ReturnType | T:
@@ -110,6 +110,16 @@ def build_message(  # noqa: C901
     if expected_type and (
         message_class is None or not issubclass(message_class, expected_type)
     ):
+        # Check if expected_type is a oneof wrapper that accepts message_class
+        if message_class and hasattr(expected_type, '_betterproto'):
+            cls_by_field = expected_type._betterproto.cls_by_field
+            for field_name, field_cls in cls_by_field.items():
+                if message_class is field_cls or issubclass(
+                    message_class,
+                    field_cls,
+                ):
+                    inner = build_message(object_)
+                    return expected_type(**{field_name: inner})
         msg = f'Expected {expected_type}, got {message_class}'
         raise ValueError(msg)
 
