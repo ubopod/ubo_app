@@ -170,7 +170,7 @@ class ViewRenderer:
             self.menu_widget, '_running_transition_end_time', None,
         )
         queue_len = len(getattr(self.menu_widget, 'transition_queue', []))
-        logger.info(
+        logger.debug(
             '[ViewRenderer] State update #%d: %s (transition_end=%s, queue=%d)',
             self._view_changed_count,
             type(view_data).__name__,
@@ -234,7 +234,7 @@ class ViewRenderer:
         )
 
         view_type = type(view).__name__
-        logger.info(
+        logger.debug(
             '[ViewRenderer] Rendering %s (#%d, prev=%s, depth=%d, app=%s)',
             view_type,
             self._view_changed_count,

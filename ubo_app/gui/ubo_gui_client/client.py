@@ -191,7 +191,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, MenuChooseByIndexAction
 
         if self._client:
-            logger.info('[GUIClient] select_item: index=%s', index)
+            logger.debug('[GUIClient] select_item: index=%s', index)
             action = Action(
                 menu_choose_by_index_action=MenuChooseByIndexAction(index=index),
             )
@@ -202,7 +202,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, MenuChooseByLabelAction
 
         if self._client:
-            logger.info('[GUIClient] select_by_label: label=%s', label)
+            logger.debug('[GUIClient] select_by_label: label=%s', label)
             action = Action(
                 menu_choose_by_label_action=MenuChooseByLabelAction(label=label),
             )
@@ -213,7 +213,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, MenuScrollAction, MenuScrollDirection
 
         if self._client:
-            logger.info('[GUIClient] scroll: direction=%s', direction)
+            logger.debug('[GUIClient] scroll: direction=%s', direction)
             dir_enum = (
                 MenuScrollDirection.UP
                 if direction == 'up'
@@ -229,7 +229,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, MenuGoBackAction
 
         if self._client:
-            logger.info('[GUIClient] go_back')
+            logger.debug('[GUIClient] go_back')
             action = Action(menu_go_back_action=MenuGoBackAction())
             self._client.dispatch(action=action)
 
@@ -238,7 +238,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, MenuGoHomeAction
 
         if self._client:
-            logger.info('[GUIClient] go_home')
+            logger.debug('[GUIClient] go_home')
             action = Action(menu_go_home_action=MenuGoHomeAction())
             self._client.dispatch(action=action)
 
@@ -247,7 +247,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, AudioChangeVolumeAction, AudioDevice
 
         if self._client:
-            logger.info('[GUIClient] change_volume: amount=%s', amount)
+            logger.debug('[GUIClient] change_volume: amount=%s', amount)
             action = Action(
                 audio_change_volume_action=AudioChangeVolumeAction(
                     amount=amount,
@@ -267,7 +267,7 @@ class GUIClient:
         if not self._client:
             return
 
-        logger.info('[GUIClient] execute_action: action_id=%s', action_id)
+        logger.debug('[GUIClient] execute_action: action_id=%s', action_id)
         action = Action(
             execute_menu_action_action=ExecuteMenuActionAction(
                 action_id=action_id,
@@ -281,7 +281,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, CloseApplicationAction
 
         if self._client:
-            logger.info(
+            logger.debug(
                 '[GUIClient] dispatch_close_application: instance_id=%s',
                 instance_id,
             )
@@ -297,7 +297,7 @@ class GUIClient:
         from ubo_bindings.ubo.v1 import Action, NotificationsClearByIdAction
 
         if self._client:
-            logger.info(
+            logger.debug(
                 '[GUIClient] dispatch_notifications_clear: notification_id=%s',
                 notification_id,
             )

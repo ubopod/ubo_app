@@ -310,7 +310,7 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         return
 
     top = state.main.stack[-1] if state.main.stack else None
-    logger.info(
+    logger.debug(
         '[MenuHandler] choose_by_index: index=%d, top=%s, stack_depth=%d',
         event.index,
         type(top).__name__ if top else 'None',
@@ -487,7 +487,7 @@ def _handle_notification_clear(event: NotificationsClearEvent) -> None:
                 isinstance(item, NotificationStackItem)
                 and item.notification_id == notification_id
             ):
-                logger.info(
+                logger.debug(
                     '[MenuHandler] notification_clear: popping notification %s',
                     notification_id,
                 )
