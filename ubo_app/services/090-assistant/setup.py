@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from engines_registry import (
     IMAGE_GENERATOR_ENGINES,
@@ -288,6 +292,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     _tts_action_ids: list[str] = []
     _img_gen_action_ids: list[str] = []
     _mcp_action_ids: list[str] = []
+    _mcp_server_unsubscribers: dict[str, Callable] = {}
 
     # Secrets file monitor - tracks API key changes
     @store.autorun(
@@ -312,12 +317,11 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
     @store.autorun(
         lambda state: (
-            secrets_modification_time(),
+            secrets_monitor.value,
             state.assistant.provider_setup_status,
         ),
-        options=AutorunOptions(memoization=False),
     )
-    def providers(_: tuple[float, dict[str, bool]]) -> None:
+    def providers(_: tuple[dict[str, str | None], dict[str, bool]]) -> None:
         """Update dynamic menu for provider management."""
         for action_id in _provider_action_ids:
             unregister_action(action_id)
@@ -383,13 +387,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     @store.autorun(
         lambda state: (
             state.assistant.selected_stt,
-            secrets_modification_time(),
+            secrets_monitor.value,
             state.assistant.provider_setup_status,
         ),
-        options=AutorunOptions(memoization=False),
     )
     def stt_providers(
-        data: tuple[AssistantSTTName, float, dict[str, bool]],
+        data: tuple[AssistantSTTName, dict[str, str | None], dict[str, bool]],
     ) -> None:
         """Update dynamic menu for STT engine selection."""
         from engine_menu_builder import build_engine_menu
@@ -413,13 +416,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     @store.autorun(
         lambda state: (
             state.assistant.selected_llm,
-            secrets_modification_time(),
+            secrets_monitor.value,
             state.assistant.provider_setup_status,
         ),
-        options=AutorunOptions(memoization=False),
     )
     def llm_providers(
-        data: tuple[AssistantLLMName, float, dict[str, bool]],
+        data: tuple[AssistantLLMName, dict[str, str | None], dict[str, bool]],
     ) -> None:
         """Update dynamic menu for LLM engine selection."""
         from engine_menu_builder import build_engine_menu
@@ -443,13 +445,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     @store.autorun(
         lambda state: (
             state.assistant.selected_tts,
-            secrets_modification_time(),
+            secrets_monitor.value,
             state.assistant.provider_setup_status,
         ),
-        options=AutorunOptions(memoization=False),
     )
     def tts_providers(
-        data: tuple[AssistantTTSName, float, dict[str, bool]],
+        data: tuple[AssistantTTSName, dict[str, str | None], dict[str, bool]],
     ) -> None:
         """Update dynamic menu for TTS engine selection."""
         from engine_menu_builder import build_engine_menu
@@ -473,13 +474,16 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     @store.autorun(
         lambda state: (
             state.assistant.selected_image_generator,
-            secrets_modification_time(),
+            secrets_monitor.value,
             state.assistant.provider_setup_status,
         ),
-        options=AutorunOptions(memoization=False),
     )
     def image_generator_providers(
-        data: tuple[AssistantImageGeneratorName, float, dict[str, bool]],
+        data: tuple[
+            AssistantImageGeneratorName,
+            dict[str, str | None],
+            dict[str, bool],
+        ],
     ) -> None:
         """Update dynamic menu for image generator engine selection."""
         from engine_menu_builder import build_engine_menu
@@ -539,6 +543,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             ),
         ]
 
+        # Clean up autoruns for servers no longer in the list
+        removed_ids = set(_mcp_server_unsubscribers.keys()) - set(
+            loaded_servers.keys(),
+        )
+        for removed_id in removed_ids:
+            _mcp_server_unsubscribers.pop(removed_id)()
+
         for server_id, server in loaded_servers.items():
             is_enabled = server_id in enabled_servers
             open_action_id = f'assistant:open-mcp:{server_id}'
@@ -559,8 +570,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 ),
             )
 
-            # Set up the detail menu for this server
-            mcp_server_menu(server_id)
+            # Set up the detail menu for this server (only if not already tracked)
+            if server_id not in _mcp_server_unsubscribers:
+                _mcp_server_unsubscribers[server_id] = mcp_server_menu(server_id)
 
         store.dispatch(
             UpdateDynamicMenuAction(
@@ -572,7 +584,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             ),
         )
 
-    def mcp_server_menu(server_id: str) -> None:
+    def mcp_server_menu(server_id: str) -> Callable:
         """Set up dynamic menu updates for a specific MCP server."""
         from ubo_app.store.services.assistant import (
             AssistantDeleteMcpServerAction,
@@ -653,6 +665,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                     sub_heading=f'Type: {server.type} • {status_text}',
                 ),
             )
+
+        return menu.unsubscribe
 
     # Event handlers for MCP servers
     def handle_add_mcp_server(_event: AssistantAddMcpServerEvent) -> None:
