@@ -246,7 +246,13 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         from ubo_gui_client.keyboard import setup_keyboard
 
         self._keyboard_cleanup = setup_keyboard(self.grpc_client, self.menu_widget)
-        logger.info('[App] Keyboard handling set up, app ready')
+        logger.info('[App] Keyboard handling set up')
+
+        # Subscribe to screenshot events from the core
+        self._screenshot_unsubscribe = self.grpc_client.subscribe_screenshot_events(
+            self._handle_screenshot_event,
+        )
+        logger.info('[App] Screenshot event subscription set up, app ready')
 
     @mainthread
     def hide_loading_overlay(self: UboGUIApp) -> None:
@@ -267,6 +273,40 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         if self.loading_overlay is not None:
             self.loading_overlay.size = size
 
+    def _handle_screenshot_event(self: UboGUIApp) -> None:
+        """Capture window screenshot and send back to core via gRPC."""
+        import hashlib
+        import io
+
+        import numpy as np
+        import png
+        from headless_kivy import HeadlessWidget
+
+        raw = HeadlessWidget.raw_data
+        hash_value = hashlib.sha256(raw.tobytes()).hexdigest()
+
+        array = np.flipud(raw)
+        output = io.BytesIO()
+        png.Writer(
+            alpha=True,
+            width=array.shape[0],
+            height=array.shape[1],
+            greyscale=False,  # pyright: ignore [reportArgumentType]
+            bitdepth=8,
+        ).write(output, array.reshape(-1, array.shape[1] * 4).tolist())
+        png_bytes = output.getvalue()
+
+        from ubo_bindings.ubo.v1 import Action, ScreenshotDataAction
+
+        self.grpc_client.dispatch_raw(
+            Action(
+                screenshot_data_action=ScreenshotDataAction(
+                    data=png_bytes,
+                    hash=hash_value,
+                ),
+            ),
+        )
+
     def stop(self, *largs: object) -> None:
         """Stop the application."""
         logger.info('[App] Stopping...')
@@ -276,5 +316,7 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         if hasattr(self, '_keyboard_cleanup'):
             for cleanup in self._keyboard_cleanup:
                 cleanup()
+        if hasattr(self, '_screenshot_unsubscribe'):
+            self._screenshot_unsubscribe()
         self.grpc_client.disconnect()
         logger.info('[App] Stopped')

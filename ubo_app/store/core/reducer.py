@@ -59,6 +59,8 @@ from ubo_app.store.core.types import (
     ReplayRecordedSequenceAction,
     ReplayRecordedSequenceEvent,
     ReportReplayingDoneAction,
+    ScreenshotDataAction,
+    ScreenshotDataEvent,
     SetAreEnclosuresVisibleAction,
     StackChangedEvent,
     StackPageIndexChangedEvent,
@@ -312,6 +314,14 @@ def reducer(
                         view=action.view,
                         status_bar=action.status_bar,
                     ),
+                ],
+            )
+
+        case ScreenshotDataAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    ScreenshotDataEvent(data=action.data, hash=action.hash),
                 ],
             )
 

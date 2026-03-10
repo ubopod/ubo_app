@@ -361,6 +361,27 @@ class GUIClient:
             ),
         )
 
+    def subscribe_screenshot_events(
+        self,
+        callback: Callable[[], None],
+    ) -> Callable[[], None]:
+        """Subscribe to screenshot events from the core.
+
+        Returns:
+            Unsubscribe callable to stop receiving events.
+
+        """
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+
+        from ubo_bindings.ubo.v1 import Event, ScreenshotEvent
+
+        return self._client.subscribe_event(
+            event_type=Event(screenshot_event=ScreenshotEvent()),
+            callback=lambda _event: callback(),
+        )
+
     def dispatch_wifi_update_request(self, *, reset: bool = False) -> None:
         """Request a WiFi state update from the core."""
         from ubo_bindings.ubo.v1 import Action, WiFiUpdateRequestAction

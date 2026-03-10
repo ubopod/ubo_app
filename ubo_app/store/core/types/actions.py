@@ -304,3 +304,10 @@ class ReplayRecordedSequenceAction(MainAction):
 
 class ReportReplayingDoneAction(MainAction):
     """Action for reporting that replaying is done."""
+
+
+class ScreenshotDataAction(MainAction):
+    """Action dispatched by GUI client with captured screenshot data."""
+
+    data: bytes
+    hash: str

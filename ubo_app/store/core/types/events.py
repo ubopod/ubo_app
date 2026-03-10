@@ -157,3 +157,10 @@ class ExecuteMenuActionEvent(MainEvent):
 
 class ReplayRecordedSequenceEvent(MainEvent):
     """Event for replaying a recorded sequence."""
+
+
+class ScreenshotDataEvent(MainEvent):
+    """Event emitted when screenshot data is received from GUI client."""
+
+    data: bytes
+    hash: str

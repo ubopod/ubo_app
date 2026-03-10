@@ -18,6 +18,7 @@ from ubo_app.store.core.types import (
     PowerOffEvent,
     RebootEvent,
     ReplayRecordedSequenceEvent,
+    ScreenshotDataEvent,
     ScreenshotEvent,
     SnapshotEvent,
     StoreRecordedSequenceEvent,
@@ -139,6 +140,16 @@ def _store_recorded_sequence(event: StoreRecordedSequenceEvent) -> None:
         file.write(json_dump)
 
 
+def _save_screenshot_data(event: ScreenshotDataEvent) -> None:
+    """Save screenshot data received from GUI client to disk."""
+    counter = 0
+    while (path := Path(f'screenshots/ubo-screenshot-{counter:03d}.png')).exists():
+        counter += 1
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open('wb') as f:
+        f.write(event.data)
+
+
 async def _replay_recorded_sequence() -> None:
     """Replay the recorded sequence."""
     await replay_actions(store, Path('recordings/active.json'))
@@ -178,6 +189,7 @@ def setup_side_effects() -> Subscriptions:
         store.subscribe_event(UpdateManagerUpdateEvent, update),
         store.subscribe_event(UpdateManagerCheckEvent, check_version),
         store.subscribe_event(ScreenshotEvent, _take_screenshot),
+        store.subscribe_event(ScreenshotDataEvent, _save_screenshot_data),
         store.subscribe_event(SnapshotEvent, _take_snapshot),
         store.subscribe_event(StoreRecordedSequenceEvent, _store_recorded_sequence),
         store.subscribe_event(ReplayRecordedSequenceEvent, _replay_recorded_sequence),
