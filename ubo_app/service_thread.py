@@ -619,12 +619,15 @@ async def stop(event: SettingsStopServiceEvent) -> None:
 
 
 def _report_successful_reducer_registration(services: list[UboServiceThread]) -> None:
+    from ubo_app.store.core.view_computation import release_view_autorun
+
     logger.info(
         'All reducers registered successfully',
         extra={
             'service_ids': [service.service_id for service in services],
         },
     )
+    release_view_autorun()
 
 
 def stop_services(
@@ -696,6 +699,13 @@ def load_services(
         for service in SERVICES_BY_PATH.values()
         if service.is_enabled and (not service_ids or service.service_id in service_ids)
     ]
+
+    # Suppress redundant view autorun computations during the reducer
+    # registration burst.  Released in _report_successful_reducer_registration.
+    if to_run_services:
+        from ubo_app.store.core.view_computation import suppress_view_autorun
+
+        suppress_view_autorun()
 
     reducer_barrier = threading.Barrier(
         len(to_run_services),

@@ -389,6 +389,11 @@ def _setup_registered_apps_autoruns() -> None:
 
     Watches `state.main.registered_apps` and auto-populates the apps menu
     and each settings category menu from the registered entries.
+
+    Optimisation: the settings autorun caches computed items per category
+    and only dispatches ``UpdateDynamicMenuAction`` for categories whose
+    items actually changed, avoiding 6 redundant dispatches when a single
+    service registers.
     """
     from ubo_app.store.core.types.state import RegisteredAppEntry
     from ubo_app.store.core.view_registry import get_apps_menu_title
@@ -441,6 +446,10 @@ def _setup_registered_apps_autoruns() -> None:
                 placeholder='No apps',
             ),
         )
+
+    # Cache of last-dispatched items per settings category so we only
+    # dispatch UpdateDynamicMenuAction for categories that actually changed.
+    _last_category_items: dict[SettingsCategory, tuple[MenuItemData | None, ...]] = {}
 
     @store.autorun(
         lambda state: (
@@ -497,9 +506,17 @@ def _setup_registered_apps_autoruns() -> None:
                     get_system_submenu_items,
                 )
 
-                items = (*get_system_submenu_items(), *service_items)
+                items: tuple[MenuItemData | None, ...] = (
+                    *get_system_submenu_items(),
+                    *service_items,
+                )
             else:
                 items = service_items
+
+            # Only dispatch if this category's items actually changed
+            if _last_category_items.get(category) == items:
+                continue
+            _last_category_items[category] = items
 
             store.dispatch(
                 UpdateDynamicMenuAction(

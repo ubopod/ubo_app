@@ -25,14 +25,18 @@ _registry = HandlerRegistry('action')
 
 def register_action(
     action_id: str,
-    handler: Callable[[], object],
+    handler: Callable[..., object],
     *,
     allow_reregister: bool = False,
-) -> Callable[[], object]:
+) -> Callable[..., object]:
     """Register an action handler for a given action_id.
 
+    If *action_id* ends with ``":*"``, the handler is registered as a prefix
+    handler and will be called with the full action_id as its first argument.
+
     Args:
-        action_id: Unique identifier for the action (e.g., 'wifi:connect:MyNetwork').
+        action_id: Unique identifier for the action (e.g., 'wifi:connect:MyNetwork')
+            or a prefix pattern (e.g., 'settings:service:wifi:log_level:*').
         handler: Callable to invoke when the action is executed.
         allow_reregister: If True, silently replaces an existing handler
             with the same ID. If False (default), raises ValueError.
@@ -61,7 +65,7 @@ def unregister_action(action_id: str) -> bool:
     return _registry.unregister(action_id)
 
 
-def get_action(action_id: str) -> Callable[[], object] | None:
+def get_action(action_id: str) -> Callable[..., object] | None:
     """Get the handler for an action_id without executing it.
 
     Args:

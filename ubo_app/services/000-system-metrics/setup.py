@@ -20,14 +20,36 @@ from ubo_app.utils.async_ import create_task
 if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
 
+# Only dispatch CPU/RAM if delta exceeds this threshold (percentage points)
+_METRICS_THRESHOLD = 0.5
+
+# Cached last-dispatched values to skip redundant dispatches.
+# Container pattern avoids ``global`` statements.
+_last: dict[str, float | str] = {'clock': '', 'cpu': -1.0, 'ram': -1.0}
+
 
 def read_metrics() -> None:
-    """Read system metrics and dispatch update action."""
+    """Read system metrics and dispatch update action.
+
+    Skips dispatch when values haven't changed meaningfully to reduce
+    autorun evaluations and state churn.
+    """
     cpu_percent = psutil.cpu_percent(interval=None)
     ram_percent = psutil.virtual_memory().percent
     # Use local timezone for clock display
     local_tz = datetime.now(tz=UTC).astimezone().tzinfo
     clock = datetime.now(tz=local_tz).strftime('%H:%M')
+
+    clock_changed = clock != _last['clock']
+    cpu_changed = abs(cpu_percent - float(_last['cpu'])) > _METRICS_THRESHOLD
+    ram_changed = abs(ram_percent - float(_last['ram'])) > _METRICS_THRESHOLD
+
+    if not (clock_changed or cpu_changed or ram_changed):
+        return
+
+    _last['clock'] = clock
+    _last['cpu'] = cpu_percent
+    _last['ram'] = ram_percent
 
     logger.verbose(
         '[SystemMetrics] Dispatching: cpu=%.1f, ram=%.1f, clock=%s',

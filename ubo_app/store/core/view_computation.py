@@ -45,8 +45,35 @@ __all__ = [
     'compute_status_bar_data',
     'compute_view_from_root_state',
     'get_notification_view_data',
+    'release_view_autorun',
     'setup_dynamic_view_autorun',
+    'suppress_view_autorun',
 ]
+
+# Gate to suppress redundant view computations during startup (service
+# reducer registration burst).  When suppressed, autorun callbacks mark
+# dirty instead of computing immediately.  On release, a single
+# computation runs if dirty.
+# Container pattern avoids ``global`` statements.
+_view_autorun_state: dict[str, object] = {
+    'suppressed': False,
+    'dirty': False,
+    'dispatch_fn': None,
+}
+
+
+def suppress_view_autorun() -> None:
+    """Suppress view autorun during startup (e.g. service registration)."""
+    _view_autorun_state['suppressed'] = True
+
+
+def release_view_autorun() -> None:
+    """Release the startup gate and run one deferred computation if needed."""
+    _view_autorun_state['suppressed'] = False
+    dispatch_fn = _view_autorun_state['dispatch_fn']
+    if _view_autorun_state['dirty'] and dispatch_fn is not None:
+        _view_autorun_state['dirty'] = False
+        dispatch_fn()  # type: ignore[operator]
 
 
 
@@ -324,75 +351,128 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
     )
 
 
-def setup_dynamic_view_autorun() -> None:
-    """Set up an autorun to update current_view and status_bar when state changes.
-
-    This should be called after the store is initialized. It watches for
-    changes to dynamic_menus, navigation stack, and status bar data, then
-    dispatches UpdateCurrentViewAction with the computed view and status bar.
-    """
-    from redux import AutorunOptions
-
+def _dispatch_view_update(state: RootState) -> None:
+    """Compute view and status bar, then dispatch if changed."""
     from ubo_app.store.core.types import UpdateCurrentViewAction
     from ubo_app.store.main import store
 
-    @store.with_state(lambda state: state)
-    def _compute_and_dispatch_view(state: RootState) -> None:
-        """Compute view and status bar, then dispatch if changed."""
+    computed_view = compute_view_from_root_state(state)
+    computed_status_bar = compute_status_bar_data(state)
+
+    view_changed = state.main.current_view != computed_view
+    status_bar_changed = state.main.status_bar != computed_status_bar
+
+    if view_changed or status_bar_changed:
         logger.debug(
-            'view_computation: autorun triggered, stack_len=%d',
-            len(state.main.stack),
+            'view_computation: dispatching update '
+            '(view_changed=%s, status_bar_changed=%s)',
+            view_changed,
+            status_bar_changed,
+        )
+        store.dispatch(
+            UpdateCurrentViewAction(
+                view=computed_view,
+                status_bar=computed_status_bar,
+            ),
         )
 
+
+def _dispatch_status_bar_update(state: RootState) -> None:
+    """Compute status bar (and home view if visible), dispatch if changed."""
+    from ubo_app.store.core.types import UpdateCurrentViewAction
+    from ubo_app.store.main import store
+
+    computed_status_bar = compute_status_bar_data(state)
+    status_bar_changed = state.main.status_bar != computed_status_bar
+
+    # When on the home screen, CPU/RAM/volume gauges are part of the
+    # view, not just the status bar - recompute the view too.
+    current_view = state.main.current_view
+    view_changed = False
+    computed_view = current_view
+    if isinstance(current_view, HomeViewData):
         computed_view = compute_view_from_root_state(state)
-        computed_status_bar = compute_status_bar_data(state)
+        view_changed = current_view != computed_view
 
-        view_changed = state.main.current_view != computed_view
-        status_bar_changed = state.main.status_bar != computed_status_bar
+    if view_changed or status_bar_changed:
+        logger.debug(
+            'view_computation: status-bar autorun dispatching '
+            '(view_changed=%s, status_bar_changed=%s)',
+            view_changed,
+            status_bar_changed,
+        )
+        store.dispatch(
+            UpdateCurrentViewAction(
+                view=computed_view or HomeViewData(),
+                status_bar=computed_status_bar,
+            ),
+        )
 
-        # Only dispatch if view or status bar actually changed
-        if view_changed or status_bar_changed:
-            logger.debug(
-                'view_computation: dispatching update '
-                '(view_changed=%s, status_bar_changed=%s)',
-                view_changed,
-                status_bar_changed,
-            )
-            store.dispatch(
-                UpdateCurrentViewAction(
-                    view=computed_view,
-                    status_bar=computed_status_bar,
-                ),
-            )
+
+def setup_dynamic_view_autorun() -> None:
+    """Set up autoruns to update current_view and status_bar when state changes.
+
+    This should be called after the store is initialized.  Two autoruns are
+    created to separate concerns:
+
+    1. **View autorun** - watches navigation stack, dynamic menus,
+       notifications, and registered apps.  Fires infrequently (on user
+       interaction / service registration).
+
+    2. **Status-bar autorun** - watches home-view data (CPU, RAM, volume)
+       and status-bar dependencies (clock, temperature, icons).  Fires more
+       often but only recomputes status bar data (cheap).
+    """
+    from redux import AutorunOptions
+
+    from ubo_app.store.main import store
+
+    @store.with_state(lambda state: state)
+    def _view_dispatch(state: RootState) -> None:
+        _dispatch_view_update(state)
+
+    @store.with_state(lambda state: state)
+    def _status_bar_dispatch(state: RootState) -> None:
+        _dispatch_status_bar_update(state)
+
+    # Store reference so release_view_autorun() can trigger a computation
+    _view_autorun_state['dispatch_fn'] = _view_dispatch
+
+    # -- View autorun (infrequent) ------------------------------------------
 
     @store.autorun(
         lambda state: (
-            # Core state (always needed)
             state.main.stack,
-            # Use version counter for cheap dynamic menu change detection
-            # instead of rebuilding tuple of all menu keys and items
             state.dynamic_menus.version,
             state.main.is_recording,
             state.main.is_replaying,
-            # Watch registered_apps for dynamic menu updates from registrations
             tuple(state.main.registered_apps.keys()),
-            # Watch for notification content changes (for progress updates, etc.)
             tuple(
                 (n.id, n.title, n.content, n.icon, n.color, n.progress)
                 for n in state.notifications.notifications
             ),
-            # Dynamic dependencies from registry (menu content only)
             get_registered_dependencies(state),
-            # Home view data (volume, CPU, RAM) and status bar data (clock,
-            # temperature, icons) -- needed for gRPC GUI clients that rely on
-            # current_view for all rendering
+        ),
+        options=AutorunOptions(default_value=None),
+    )
+    def _update_view_on_navigation_change(_: tuple | None) -> None:
+        """Update current_view when stack, dynamic menus, etc. change."""
+        if _view_autorun_state['suppressed']:
+            _view_autorun_state['dirty'] = True
+            return
+        _view_dispatch()  # type: ignore[call-arg]
+
+    # -- Status-bar autorun (frequent but cheap) ----------------------------
+
+    @store.autorun(
+        lambda state: (
             get_home_view_data(state),
             get_registered_status_bar_dependencies(state),
         ),
         options=AutorunOptions(default_value=None),
     )
-    def update_current_view_on_dynamic_change(
-        _: tuple | None,
-    ) -> None:
-        """Update current_view when stack, dynamic menus, or status bar data change."""
-        _compute_and_dispatch_view()
+    def _update_status_bar_on_metrics_change(_: tuple | None) -> None:
+        """Update status bar when metrics / clock / icons change."""
+        if _view_autorun_state['suppressed']:
+            return
+        _status_bar_dispatch()  # type: ignore[call-arg]

@@ -49,28 +49,55 @@ class ServiceMenuController:
 
     @classmethod
     def setup_if_needed(cls, service_id: str) -> None:
-        """Set up menus for *service_id* exactly once."""
+        """Set up action handlers and autoruns for *service_id* exactly once.
+
+        Action handlers are registered eagerly (needed when the user taps a
+        menu item).  Autoruns that keep dynamic menus in sync are set up
+        lazily on first call to :meth:`ensure_autoruns` — typically when the
+        user navigates to the Services settings page.
+        """
         if service_id in cls._setup_ids:
             return
         cls._setup_ids.add(service_id)
         controller = cls(service_id)
         controller.register_actions()
-        controller.setup_autoruns()
+        # Store controller for lazy autorun setup
+        cls._controllers[service_id] = controller
+
+    # Controllers pending lazy autorun setup
+    _controllers: ClassVar[dict[str, ServiceMenuController]] = {}
+
+    @classmethod
+    def ensure_autoruns(cls, service_id: str) -> None:
+        """Set up autoruns for *service_id* if not already done.
+
+        Called when the user actually navigates to a service's detail page,
+        avoiding 3 autoruns per service at startup.
+        """
+        controller = cls._controllers.pop(service_id, None)
+        if controller is not None:
+            controller.setup_autoruns()
 
     @classmethod
     def _reset(cls) -> None:
-        """Clear tracked service IDs.
+        """Clear tracked service IDs and pending controllers.
 
         Primarily useful for testing to ensure isolation between tests.
         """
         cls._setup_ids.clear()
+        cls._controllers.clear()
 
     # ------------------------------------------------------------------
     # Action Registration
     # ------------------------------------------------------------------
 
     def register_actions(self) -> None:
-        """Register all action handlers for this service."""
+        """Register all action handlers for this service.
+
+        Uses a single parameterized handler for log level changes instead
+        of registering one handler per level (7 -> 1), reducing total
+        registration count per service from ~17 to ~11.
+        """
         from ubo_app.store.settings.types import (
             SettingsClearServiceErrorsAction,
             SettingsServiceSetIsEnabledAction,
@@ -83,11 +110,12 @@ class ServiceMenuController:
         sid = self.service_id
         prefix = f'settings:service:{sid}'
 
-        # Navigation
-        register_action(
-            f'{prefix}:navigate',
-            lambda: store.dispatch(StackPushMenuAction(menu_key=sid)),
-        )
+        # Navigation — also triggers lazy autorun setup
+        def _navigate() -> None:
+            ServiceMenuController.ensure_autoruns(sid)
+            store.dispatch(StackPushMenuAction(menu_key=sid))
+
+        register_action(f'{prefix}:navigate', _navigate)
         register_action(
             f'{prefix}:navigate_log_level',
             lambda: store.dispatch(
@@ -149,16 +177,22 @@ class ServiceMenuController:
             ),
         )
 
-        # Log level actions
-        for level in logger.COLORS_HEX:
-            register_action(
-                f'{prefix}:log_level:{level}',
-                lambda _lvl=level: store.dispatch(
-                    SettingsServiceSetLogLevelAction(
-                        service_id=sid, log_level=_lvl,
-                    ),
+        # Single parameterized handler for all log levels (instead of one
+        # per level).  The action_id encodes the level as the last segment:
+        #   settings:service:<sid>:log_level:<int_level>
+        def _handle_log_level(action_id: str) -> None:
+            level_str = action_id.rsplit(':', maxsplit=1)[-1]
+            store.dispatch(
+                SettingsServiceSetLogLevelAction(
+                    service_id=sid,
+                    log_level=int(level_str),
                 ),
             )
+
+        register_action(
+            f'{prefix}:log_level:*',
+            _handle_log_level,
+        )
 
     # ------------------------------------------------------------------
     # Autoruns
