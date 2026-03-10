@@ -2,7 +2,7 @@
 
 Usage::
 
-    python test_standalone_tts.py [--host HOST] [--port PORT] \
+    python tools/grpc/standalone/test_standalone_tts.py [--host HOST] [--port PORT] \
         [--provider PROVIDER] [--output out.wav] "text to speak"
 
 Prerequisites: core running with gRPC enabled + assistant service running.

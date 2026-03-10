@@ -102,3 +102,7 @@ ubo_app/_version.py
 # Claude Code
 .claude/
 CLAUDE.md
+
+# local scratch artifacts
+/diff.patch
+/output*.wav

@@ -60,6 +60,7 @@ class UboRPCClient:
         self.channel = Channel(host=host, port=port, loop=self.event_loop)
         self.store_service = StoreServiceStub(self.channel)
         self.secrets_service = SecretsServiceStub(self.channel)
+        self._event_subscription_health: dict[str, bool] = {}
 
     def close(self) -> None:
         """Close the channel."""
@@ -93,6 +94,8 @@ class UboRPCClient:
         callback: Callable[[Event], None],
     ) -> Callable[[], None]:
         """Subscribe to the remote store."""
+        event_name = self._event_name(event_type)
+        self._event_subscription_health[event_name] = True
 
         async def iterator() -> None:
             try:
@@ -103,8 +106,10 @@ class UboRPCClient:
             except asyncio.CancelledError:
                 pass
             except (GRPCError, StreamTerminatedError, OSError):
-                logging.getLogger().debug(
-                    'Event subscription stream ended',
+                self._event_subscription_health[event_name] = False
+                logging.getLogger().warning(
+                    'Event subscription stream ended unexpectedly',
+                    extra={'event_type': event_name},
                     exc_info=True,
                 )
 
@@ -112,8 +117,18 @@ class UboRPCClient:
 
         def unsubscribe() -> None:
             task.cancel()
+            self._event_subscription_health.pop(event_name, None)
 
         return unsubscribe
+
+    def get_event_subscription_health(self) -> dict[str, bool]:
+        """Return current event subscription health by event type."""
+        return dict(self._event_subscription_health)
+
+    @staticmethod
+    def _event_name(event_type: Event) -> str:
+        group = getattr(event_type, '_group_current', {})
+        return str(next(iter(group.values()), 'unknown_event'))
 
     def autorun(
         self,

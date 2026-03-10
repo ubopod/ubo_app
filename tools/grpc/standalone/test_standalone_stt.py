@@ -2,7 +2,7 @@
 
 Usage::
 
-    python test_standalone_stt.py [--host HOST] [--port PORT] \
+    python tools/grpc/standalone/test_standalone_stt.py [--host HOST] [--port PORT] \
         [--provider PROVIDER] audio.wav
 
 Prerequisites: core running with gRPC enabled + assistant service running.

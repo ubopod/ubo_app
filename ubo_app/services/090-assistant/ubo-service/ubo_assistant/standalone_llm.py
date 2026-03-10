@@ -13,6 +13,7 @@ from pipecat.frames.frames import (
     EndFrame,
     Frame,
     LLMFullResponseEndFrame,
+    LLMSetToolsFrame,
     LLMMessagesFrame,
     LLMTextFrame,
 )
@@ -29,6 +30,9 @@ from ubo_bindings.ubo.v1 import (
     AssistantReportAction,
     Event,
 )
+
+from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
+from ubo_assistant.tools import create_combined_tools
 
 if TYPE_CHECKING:
     from pipecat.services.llm_service import LLMService
@@ -66,6 +70,36 @@ class _LLMOutputCollector(FrameProcessor):
         self._session_id = session_id
         self._assistance_id = assistance_id
         self._index = 0
+        self._sent_last_frame = False
+
+    @property
+    def sent_last_frame(self) -> bool:
+        """Whether an end-of-stream marker has been dispatched."""
+        return self._sent_last_frame
+
+    def dispatch_last_frame(self) -> None:
+        """Dispatch a final marker frame exactly once."""
+        if self._sent_last_frame:
+            return
+        self._client.dispatch(
+            action=Action(
+                assistant_report_action=AssistantReportAction(
+                    source_id='standalone_llm',
+                    data=AcceptableAssistanceFrame(
+                        assistance_text_frame=AssistanceTextFrame(
+                            text='',
+                            timestamp=self._client.event_loop.time(),
+                            id=self._assistance_id,
+                            index=self._index,
+                            source='llm_standalone',
+                            session_id=self._session_id,
+                            is_last_frame=True,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        self._sent_last_frame = True
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process output frames from the LLM."""
@@ -92,24 +126,7 @@ class _LLMOutputCollector(FrameProcessor):
             self._index += 1
 
         elif isinstance(frame, LLMFullResponseEndFrame):
-            self._client.dispatch(
-                action=Action(
-                    assistant_report_action=AssistantReportAction(
-                        source_id='standalone_llm',
-                        data=AcceptableAssistanceFrame(
-                            assistance_text_frame=AssistanceTextFrame(
-                                text='',
-                                timestamp=self._client.event_loop.time(),
-                                id=self._assistance_id,
-                                index=self._index,
-                                source='llm_standalone',
-                                session_id=self._session_id,
-                                is_last_frame=True,
-                            ),
-                        ),
-                    ),
-                ),
-            )
+            self.dispatch_last_frame()
 
         await self.push_frame(frame, direction)
 
@@ -171,9 +188,28 @@ async def _process_completion(
             return
 
         # Build messages
+        system_prompt = event.system_prompt
+        pending_frames: list[Frame] = []
+        if event.enable_tools:
+            if _llm_supports_tools(llm_name):
+                combined_tools = await create_combined_tools(
+                    llm_service=llm_service,
+                    mcp_servers=None,
+                )
+                pending_frames.append(LLMSetToolsFrame(tools=combined_tools))
+                if system_prompt:
+                    system_prompt = f'{system_prompt}\n\n{DEFAULT_TOOLS_MESSAGE.strip()}'
+                else:
+                    system_prompt = f'{DEFAULT_SYSTEM_MESSAGE}\n{DEFAULT_TOOLS_MESSAGE}'
+            else:
+                logger.warning(
+                    'enable_tools requested but provider does not support tools',
+                    extra={'llm_provider': llm_name},
+                )
+
         messages: list[dict[str, str]] = []
-        if event.system_prompt:
-            messages.append({'role': 'system', 'content': event.system_prompt})
+        if system_prompt:
+            messages.append({'role': 'system', 'content': system_prompt})
         messages.append({'role': 'user', 'content': event.text})
 
         # Create output collector
@@ -192,11 +228,11 @@ async def _process_completion(
         runner = PipelineRunner(handle_sigint=False)
 
         # Queue the messages frame and end frame to the pipeline
-        await task.queue_frames(
-            [LLMMessagesFrame(messages=messages), EndFrame()],
-        )
+        pending_frames.extend([LLMMessagesFrame(messages=messages), EndFrame()])
+        await task.queue_frames(pending_frames)
 
         await runner.run(task)
+        collector.dispatch_last_frame()
 
     except Exception:
         logger.exception(
@@ -295,6 +331,11 @@ async def _create_llm_service(  # noqa: C901
         return None
 
     return None
+
+
+def _llm_supports_tools(llm_name: str) -> bool:
+    """Whether the provider supports tool-calling."""
+    return llm_name not in {'cerebras', 'ollama', 'ollama_onprem'}
 
 
 def _dispatch_error(

@@ -67,6 +67,36 @@ class _TTSOutputCollector(FrameProcessor):
         self._session_id = session_id
         self._assistance_id = assistance_id
         self._index = 0
+        self._sent_last_frame = False
+
+    @property
+    def sent_last_frame(self) -> bool:
+        """Whether an end-of-stream marker has been dispatched."""
+        return self._sent_last_frame
+
+    def dispatch_last_frame(self) -> None:
+        """Dispatch a final marker frame exactly once."""
+        if self._sent_last_frame:
+            return
+        self._client.dispatch(
+            action=Action(
+                assistant_report_action=AssistantReportAction(
+                    source_id='standalone_tts',
+                    data=AcceptableAssistanceFrame(
+                        assistance_text_frame=AssistanceTextFrame(
+                            text='',
+                            timestamp=self._client.event_loop.time(),
+                            id=self._assistance_id,
+                            index=self._index,
+                            source='tts_standalone',
+                            session_id=self._session_id,
+                            is_last_frame=True,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        self._sent_last_frame = True
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process output frames from the TTS service."""
@@ -97,24 +127,7 @@ class _TTSOutputCollector(FrameProcessor):
             self._index += 1
 
         elif isinstance(frame, TTSStoppedFrame):
-            self._client.dispatch(
-                action=Action(
-                    assistant_report_action=AssistantReportAction(
-                        source_id='standalone_tts',
-                        data=AcceptableAssistanceFrame(
-                            assistance_text_frame=AssistanceTextFrame(
-                                text='',
-                                timestamp=self._client.event_loop.time(),
-                                id=self._assistance_id,
-                                index=self._index,
-                                source='tts_standalone',
-                                session_id=self._session_id,
-                                is_last_frame=True,
-                            ),
-                        ),
-                    ),
-                ),
-            )
+            self.dispatch_last_frame()
 
         await self.push_frame(frame, direction)
 
@@ -196,6 +209,7 @@ async def _process_synthesis(
         )
 
         await runner.run(task)
+        collector.dispatch_last_frame()
 
     except Exception:
         logger.exception(

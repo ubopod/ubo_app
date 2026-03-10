@@ -2,7 +2,7 @@
 
 Usage::
 
-    python test_standalone_llm.py [--host HOST] [--port PORT] \
+    python tools/grpc/standalone/test_standalone_llm.py [--host HOST] [--port PORT] \
         [--provider PROVIDER] [--system "prompt"] "user message"
 
 Prerequisites: core running with gRPC enabled + assistant service running.
