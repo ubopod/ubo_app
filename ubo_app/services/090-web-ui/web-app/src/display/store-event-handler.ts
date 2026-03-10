@@ -9,6 +9,8 @@ import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
   AudioPlayAudioSampleEvent,
+  AudioPlayAudioSequenceEvent,
+  AudioSample,
   DisplayCompressedRenderEvent,
   Event,
   DisplayRedrawAction,
@@ -134,7 +136,82 @@ function createWavFile(
   return new Blob([wavBuffer], { type: "audio/wav" });
 }
 
-function subscribeToAudioEvents(store: StoreServiceClient) {
+function playAudioSample(
+  sample: AudioSample,
+  volume: number,
+): Promise<void> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const data = sample.getData_asU8();
+      const rate = sample.getRate();
+      const width = sample.getWidth();
+      const channels = sample.getChannels();
+
+      const audioBlob = createWavFile(data, rate, channels, width * 8);
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = volume;
+
+      source.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      source.onended = () => resolve();
+      source.start(audioContext.currentTime + 0.1);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+const sequenceState = new Map<
+  string,
+  {
+    nextIndex: number;
+    buffer: Map<number, { sample: AudioSample; volume: number }>;
+    playChain: Promise<void>;
+  }
+>();
+
+function playSequenceChunk(
+  id: string,
+  index: number,
+  sample: AudioSample,
+  volume: number,
+): void {
+  if (!sequenceState.has(id)) {
+    sequenceState.set(id, {
+      nextIndex: 0,
+      buffer: new Map(),
+      playChain: Promise.resolve(),
+    });
+  }
+  const seq = sequenceState.get(id)!;
+  seq.buffer.set(index, { sample, volume });
+
+  seq.playChain = seq.playChain.then(async () => {
+    while (seq.buffer.has(seq.nextIndex)) {
+      const chunk = seq.buffer.get(seq.nextIndex)!;
+      seq.buffer.delete(seq.nextIndex);
+      seq.nextIndex++;
+      await playAudioSample(chunk.sample, chunk.volume);
+    }
+
+    if (seq.buffer.size === 0) {
+      sequenceState.delete(id);
+    }
+  });
+}
+
+function subscribeToAudioSampleEvents(store: StoreServiceClient) {
   const event = new Event();
   event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent());
 
@@ -144,45 +221,44 @@ function subscribeToAudioEvents(store: StoreServiceClient) {
   const stream = store.subscribeEvent(subscribeEventRequest);
 
   stream.on("error", () =>
-    setTimeout(() => subscribeToAudioEvents(store), 1000),
+    setTimeout(() => subscribeToAudioSampleEvents(store), 1000),
   );
   stream.on("data", async (response: SubscribeEventResponse) => {
     const audioEvent = response.getEvent()?.getAudioPlayAudioSampleEvent();
+    if (!audioEvent) return;
 
-    if (!audioEvent) {
-      return;
-    }
+    const audioSample = audioEvent.getSample();
+    if (!audioSample) return;
 
-    const audioSample = audioEvent.setSample().getSample();
+    playAudioSample(audioSample, audioEvent.getVolume());
+  });
+}
 
-    if (!audioSample) {
-      return;
-    }
+function subscribeToAudioSequenceEvents(store: StoreServiceClient) {
+  const event = new Event();
+  event.setAudioPlayAudioSequenceEvent(new AudioPlayAudioSequenceEvent());
 
-    const data = audioSample.getData_asU8();
-    const rate = audioSample.getRate();
-    const width = audioSample.getWidth();
-    const channels = audioSample.getChannels();
-    const volume = audioEvent.getVolume();
+  const subscribeEventRequest = new SubscribeEventRequest();
+  subscribeEventRequest.setEvent(event);
 
-    const audioBlob = createWavFile(data, rate, channels, width * 8);
-    const arrayBuffer = await audioBlob.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const stream = store.subscribeEvent(subscribeEventRequest);
 
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
+  stream.on("error", () =>
+    setTimeout(() => subscribeToAudioSequenceEvents(store), 1000),
+  );
+  stream.on("data", async (response: SubscribeEventResponse) => {
+    const audioEvent = response.getEvent()?.getAudioPlayAudioSequenceEvent();
+    if (!audioEvent) return;
 
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = volume;
+    const audioSample = audioEvent.getSample();
+    if (!audioSample) return;
 
-    source.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    if (audioContext.state === "suspended") {
-      await audioContext.resume();
-    }
-
-    source.start(audioContext.currentTime + 0.1);
+    playSequenceChunk(
+      audioEvent.getId(),
+      audioEvent.getIndex(),
+      audioSample,
+      audioEvent.getVolume(),
+    );
   });
 }
 
@@ -191,5 +267,6 @@ export function subscribeToStoreEvents(
   canvas: HTMLCanvasElement | null,
 ) {
   subscribeToRenderEvents(store, canvas);
-  subscribeToAudioEvents(store);
+  subscribeToAudioSampleEvents(store);
+  subscribeToAudioSequenceEvents(store);
 }

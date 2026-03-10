@@ -136,7 +136,8 @@ export function AppShell({ store }: AppShellProps) {
 
   // Subscribe to audio events
   useEffect(() => {
-    subscribeToAudioEvents(store);
+    const unsubscribe = subscribeToAudioEvents(store);
+    return unsubscribe;
   }, [store]);
 
   return (

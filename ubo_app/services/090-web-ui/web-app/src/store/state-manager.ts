@@ -37,6 +37,14 @@ export class StateManager {
   };
 
   private listeners: Set<StateListener> = new Set();
+  private viewStream: ReturnType<StoreServiceClient["subscribeEvent"]> | null =
+    null;
+  private stackStream: ReturnType<
+    StoreServiceClient["subscribeEvent"]
+  > | null = null;
+  private metricsStream: ReturnType<
+    StoreServiceClient["subscribeStore"]
+  > | null = null;
 
   constructor(private store: StoreServiceClient) {
     this.subscribeToViewChanges();
@@ -65,6 +73,10 @@ export class StateManager {
   }
 
   private subscribeToViewChanges(): void {
+    if (this.viewStream) {
+      this.viewStream.cancel();
+    }
+
     const event = new Event();
     event.setViewChangedEvent(new ViewChangedEvent());
 
@@ -72,6 +84,7 @@ export class StateManager {
     request.setEvent(event);
 
     const stream = this.store.subscribeEvent(request);
+    this.viewStream = stream;
 
     stream.on("error", () => {
       this.update({ connected: false });
@@ -92,6 +105,10 @@ export class StateManager {
   }
 
   private subscribeToStackChanges(): void {
+    if (this.stackStream) {
+      this.stackStream.cancel();
+    }
+
     const event = new Event();
     event.setStackChangedEvent(new StackChangedEvent());
 
@@ -99,6 +116,7 @@ export class StateManager {
     request.setEvent(event);
 
     const stream = this.store.subscribeEvent(request);
+    this.stackStream = stream;
 
     stream.on("error", () => {
       setTimeout(() => this.subscribeToStackChanges(), 1000);
@@ -115,6 +133,10 @@ export class StateManager {
   }
 
   private subscribeToSystemMetrics(): void {
+    if (this.metricsStream) {
+      this.metricsStream.cancel();
+    }
+
     const request = new SubscribeStoreRequest();
     request.setSelectorsList([
       "state.system.cpu_percent",
@@ -122,6 +144,7 @@ export class StateManager {
     ]);
 
     const stream = this.store.subscribeStore(request);
+    this.metricsStream = stream;
 
     stream.on("error", () => {
       setTimeout(() => this.subscribeToSystemMetrics(), 1000);
