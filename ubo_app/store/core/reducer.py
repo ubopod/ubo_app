@@ -96,10 +96,10 @@ def reducer(
         if isinstance(action, KeypadAction):
             state = replace(
                 state,
-                recorded_sequence=[
+                recorded_sequence=(
                     *state.recorded_sequence,
                     action,
-                ],
+                ),
             )
 
     match action:
@@ -238,7 +238,7 @@ def reducer(
                 state=replace(
                     state,
                     is_recording=not state.is_recording,
-                    recorded_sequence=[],
+                    recorded_sequence=(),
                 ),
                 events=[
                     StoreRecordedSequenceEvent(

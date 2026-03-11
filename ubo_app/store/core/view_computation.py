@@ -34,6 +34,8 @@ from ubo_app.store.core.view_registry import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ubo_app.store.core.types import ViewData
     from ubo_app.store.main import RootState
 
@@ -54,26 +56,23 @@ __all__ = [
 # reducer registration burst).  When suppressed, autorun callbacks mark
 # dirty instead of computing immediately.  On release, a single
 # computation runs if dirty.
-# Container pattern avoids ``global`` statements.
-_view_autorun_state: dict[str, object] = {
-    'suppressed': False,
-    'dirty': False,
-    'dispatch_fn': None,
-}
+# Container pattern (list singletons) avoids ``global`` statements.
+_suppressed: list[bool] = [False]
+_dirty: list[bool] = [False]
+_dispatch_fn: list[Callable[[], None] | None] = [None]
 
 
 def suppress_view_autorun() -> None:
     """Suppress view autorun during startup (e.g. service registration)."""
-    _view_autorun_state['suppressed'] = True
+    _suppressed[0] = True
 
 
 def release_view_autorun() -> None:
     """Release the startup gate and run one deferred computation if needed."""
-    _view_autorun_state['suppressed'] = False
-    dispatch_fn = _view_autorun_state['dispatch_fn']
-    if _view_autorun_state['dirty'] and dispatch_fn is not None:
-        _view_autorun_state['dirty'] = False
-        dispatch_fn()  # type: ignore[operator]
+    _suppressed[0] = False
+    if _dirty[0] and _dispatch_fn[0] is not None:
+        _dirty[0] = False
+        _dispatch_fn[0]()
 
 
 
@@ -436,7 +435,7 @@ def setup_dynamic_view_autorun() -> None:
         _dispatch_status_bar_update(state)
 
     # Store reference so release_view_autorun() can trigger a computation
-    _view_autorun_state['dispatch_fn'] = _view_dispatch
+    _dispatch_fn[0] = _view_dispatch
 
     # -- View autorun (infrequent) ------------------------------------------
 
@@ -457,8 +456,8 @@ def setup_dynamic_view_autorun() -> None:
     )
     def _update_view_on_navigation_change(_: tuple | None) -> None:
         """Update current_view when stack, dynamic menus, etc. change."""
-        if _view_autorun_state['suppressed']:
-            _view_autorun_state['dirty'] = True
+        if _suppressed[0]:
+            _dirty[0] = True
             return
         _view_dispatch()  # type: ignore[call-arg]
 
@@ -473,6 +472,6 @@ def setup_dynamic_view_autorun() -> None:
     )
     def _update_status_bar_on_metrics_change(_: tuple | None) -> None:
         """Update status bar when metrics / clock / icons change."""
-        if _view_autorun_state['suppressed']:
+        if _suppressed[0]:
             return
         _status_bar_dispatch()  # type: ignore[call-arg]

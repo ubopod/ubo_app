@@ -140,7 +140,7 @@ class SnapshotEvent(MainEvent):
 class StoreRecordedSequenceEvent(MainEvent):
     """Event for storing a recorded sequence."""
 
-    recorded_sequence: list[KeypadAction]
+    recorded_sequence: tuple[KeypadAction, ...]
 
 
 class ExecuteMenuActionEvent(MainEvent):

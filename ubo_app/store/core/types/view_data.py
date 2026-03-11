@@ -8,7 +8,7 @@ This enables multi-client support (Apple Watch, Web UI, MCU).
 from __future__ import annotations
 
 from dataclasses import field
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from immutable import Immutable
 
@@ -40,7 +40,7 @@ class HomeViewData(Immutable):
     Home screen includes: menu items, CPU/RAM gauges, volume level.
     """
 
-    type: str = 'home'  # Literal discriminator
+    type: Literal['home'] = 'home'
     show_status_bar: bool = True
     menu_items: tuple[MenuItemData, ...] = ()  # Main, Notifications, Power
     cpu_percent: float = 0.0
@@ -55,7 +55,7 @@ class MenuViewData(Immutable):
     For HeadedMenu, includes heading and sub_heading.
     """
 
-    type: str = 'menu'  # Literal discriminator
+    type: Literal['menu'] = 'menu'
     show_status_bar: bool = True  # Based on page_index == 0
     title: str = ''
     heading: str | None = None  # Optional heading (for HeadedMenu)
@@ -72,7 +72,7 @@ class ApplicationViewData(Immutable):
     Applications are rendered by their own widget classes.
     """
 
-    type: str = 'application'  # Literal discriminator
+    type: Literal['application'] = 'application'
     show_status_bar: bool = False
     application_id: str = ''
     extra_data: Mapping[
@@ -84,7 +84,7 @@ class ApplicationViewData(Immutable):
 class NotificationViewData(Immutable):
     """Data for rendering a notification overlay view."""
 
-    type: str = 'notification'  # Literal discriminator
+    type: Literal['notification'] = 'notification'
     show_status_bar: bool = False
     notification_id: str = ''
     title: str = ''

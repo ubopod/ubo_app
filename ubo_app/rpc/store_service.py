@@ -160,6 +160,9 @@ class StoreService(StoreServiceBase):
                         },
                     )
 
+            # Pre-compute the snake_case event field name once per subscription
+            event_field_name = betterproto.casing.snake_case(event_class.__name__)
+
             unsubscribe = store.subscribe_event(
                 event_class,
                 queue_event,
@@ -193,9 +196,9 @@ class StoreService(StoreServiceBase):
                     yield SubscribeEventResponse(
                         event=Event(
                             **{
-                                betterproto.casing.snake_case(
-                                    type(event).__name__,
-                                ): cast('Any', build_message(event)),
+                                event_field_name: cast(
+                                    'Any', build_message(event),
+                                ),
                             },
                         ),
                     )

@@ -41,7 +41,7 @@ class MainState(Immutable):
     registered_apps: dict[str, RegisteredAppEntry] = field(default_factory=dict)
     is_recording: bool = False
     is_replaying: bool = False
-    recorded_sequence: list[KeypadAction] = field(default_factory=list)
+    recorded_sequence: tuple[KeypadAction, ...] = ()
     # New: Computed view data for dumb UI architecture
     current_view: ViewData | None = None
     status_bar: StatusBarData | None = None

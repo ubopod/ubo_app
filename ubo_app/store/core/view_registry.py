@@ -41,6 +41,11 @@ class ViewRegistry:
         tuple[int, Callable[[tuple[str, ...]], str | None]],
     ] = field(default_factory=dict)
 
+    # Cached sorted matchers list, invalidated on add/remove
+    sorted_matchers_cache: list[
+        tuple[int, Callable[[tuple[str, ...]], str | None]]
+    ] | None = field(default=None, repr=False)
+
     # Apps menu title (default: 'Apps')
     apps_menu_title: str = 'Apps'
 
@@ -251,9 +256,11 @@ def register_path_menu_matcher(
     """
     registry = _get_registry()
     registry.path_menu_matchers[matcher_id] = (priority, matcher)
+    registry.sorted_matchers_cache = None  # Invalidate cache
 
     def unregister() -> None:
         registry.path_menu_matchers.pop(matcher_id, None)
+        registry.sorted_matchers_cache = None  # Invalidate cache
 
     return unregister
 
@@ -272,13 +279,14 @@ def get_menu_id_for_path(path: tuple[str, ...]) -> str | None:
 
     """
     registry = _get_registry()
-    # Sort by priority descending
-    sorted_matchers = sorted(
-        registry.path_menu_matchers.values(),
-        key=lambda x: x[0],
-        reverse=True,
-    )
-    for _priority, matcher in sorted_matchers:
+    # Use cached sorted list; rebuild only when matchers change
+    if registry.sorted_matchers_cache is None:
+        registry.sorted_matchers_cache = sorted(
+            registry.path_menu_matchers.values(),
+            key=lambda x: x[0],
+            reverse=True,
+        )
+    for _priority, matcher in registry.sorted_matchers_cache:
         result = matcher(path)
         if result is not None:
             return result

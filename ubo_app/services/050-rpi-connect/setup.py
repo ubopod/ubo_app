@@ -157,10 +157,15 @@ def _compute_rpi_connect_sub_heading(state: RPiConnectState) -> str:
     return 'Not installed'
 
 
+_rpi_connect_actions_registered: list[bool] = [False]
+
+
 @store.autorun(lambda state: state.rpi_connect)
 def update_rpi_connect_dynamic_menu(state: RPiConnectState) -> None:
     """Update the dynamic menu for RPi Connect (dumb UI architecture)."""
-    _register_rpi_connect_action_handlers()
+    if not _rpi_connect_actions_registered[0]:
+        _register_rpi_connect_action_handlers()
+        _rpi_connect_actions_registered[0] = True
 
     items: list[MenuItemData] = []
 
