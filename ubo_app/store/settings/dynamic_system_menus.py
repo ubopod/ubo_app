@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from redux import AutorunOptions
 
 from ubo_app.colors import RUNNING_COLOR, STOPPED_COLOR, WARNING_COLOR
+from ubo_app.store.core.constants import MENU_NAVIGATE_PREFIX
 from ubo_app.store.core.types import (
     MenuItemData,
     StackPushMenuAction,
@@ -250,19 +251,19 @@ def get_system_submenu_items() -> tuple[MenuItemData, ...]:
             key='general',
             label='General',
             icon='\U000f0493',
-            action_id='menu:navigate:settings:System:general',
+            action_id=f'{MENU_NAVIGATE_PREFIX}settings:System:general',
         ),
         MenuItemData(
             key='services',
             label='Services',
             icon='\uf03a',
-            action_id='menu:navigate:settings:System:services',
+            action_id=f'{MENU_NAVIGATE_PREFIX}settings:System:services',
         ),
         MenuItemData(
             key='third_party',
             label='Third Party',
             icon='\uf08e',
-            action_id='menu:navigate:settings:System:third_party',
+            action_id=f'{MENU_NAVIGATE_PREFIX}settings:System:third_party',
         ),
     )
 
@@ -280,10 +281,16 @@ def _setup_system_category_items() -> None:
     def _navigate_to_third_party() -> None:
         store.dispatch(StackPushMenuAction(menu_key='third_party'))
 
-    register_action('menu:navigate:settings:System:general', _navigate_to_general)
-    register_action('menu:navigate:settings:System:services', _navigate_to_services)
     register_action(
-        'menu:navigate:settings:System:third_party',
+        f'{MENU_NAVIGATE_PREFIX}settings:System:general',
+        _navigate_to_general,
+    )
+    register_action(
+        f'{MENU_NAVIGATE_PREFIX}settings:System:services',
+        _navigate_to_services,
+    )
+    register_action(
+        f'{MENU_NAVIGATE_PREFIX}settings:System:third_party',
         _navigate_to_third_party,
     )
 

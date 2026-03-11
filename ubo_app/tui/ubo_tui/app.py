@@ -351,6 +351,8 @@ class UboTUI(App):
             )
             if action_id:
                 # Handle extra_info action locally - display the text
+                # Matches NOTIFICATION_EXTRA_INFO_PREFIX
+                # in ubo_app/store/core/constants.py
                 if action_id.startswith("notification:extra_info:"):
                     extra_info = view.get_extra_information()
                     if extra_info:

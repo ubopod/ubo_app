@@ -23,13 +23,14 @@ def _create_extra_info_handler(notification: Notification) -> None:
     """Register handler for showing notification extra info."""
     from ubo_app.logger import logger
     from ubo_app.store.core.action_registry import register_action
+    from ubo_app.store.core.constants import NOTIFICATION_EXTRA_INFO_PREFIX
     from ubo_app.store.main import store
     from ubo_app.store.services.speech_synthesis import SpeechSynthesisReadTextAction
 
     if notification.extra_information is None:
         return
 
-    action_id = f'notification:extra_info:{notification.id}'
+    action_id = f'{NOTIFICATION_EXTRA_INFO_PREFIX}{notification.id}'
     info = notification.extra_information
 
     def show_extra_info() -> None:
@@ -48,12 +49,13 @@ def _create_dismiss_handler(notification: Notification) -> None:
     """Register handler for dismissing a notification."""
     from ubo_app.logger import logger
     from ubo_app.store.core.action_registry import register_action
+    from ubo_app.store.core.constants import NOTIFICATION_DISMISS_PREFIX
     from ubo_app.store.core.types import StackPopAction
     from ubo_app.store.main import store
     from ubo_app.store.services.notifications import NotificationsClearAction
 
     notification_id = notification.id
-    action_id = f'notification:dismiss:{notification_id}'
+    action_id = f'{NOTIFICATION_DISMISS_PREFIX}{notification_id}'
 
     def dismiss() -> None:
         store.dispatch(StackPopAction())
@@ -152,7 +154,9 @@ def _create_action_handler(notification: Notification, action_index: int) -> Non
 
     action = notification.actions[action_index]
     notification_id = notification.id
-    action_id = f'notification:action:{notification_id}:{action_index}'
+    from ubo_app.store.core.constants import NOTIFICATION_ACTION_PREFIX
+
+    action_id = f'{NOTIFICATION_ACTION_PREFIX}{notification_id}:{action_index}'
 
     def execute_action() -> None:
         _dispatch_action_type(action)

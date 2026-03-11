@@ -11,6 +11,7 @@ import {
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { NotificationViewData } from "../bindings/ubo/v1/ubo_pb";
 import { dismissNotification, executeAction } from "../store/action-dispatcher";
+import { NOTIFICATION_DISMISS_PREFIX } from "../store/constants";
 import { unwrapItems } from "../store/helpers";
 import { stripColorMarkup } from "../utils/color-markup";
 
@@ -27,10 +28,10 @@ export function NotificationOverlay({
 
   // Separate dismiss actions from other actions (e.g. read-aloud)
   const actionItems = items.filter(
-    (item) => item.key !== "dismiss" && !item.actionId?.startsWith("notification:dismiss:"),
+    (item) => item.key !== "dismiss" && !item.actionId?.startsWith(NOTIFICATION_DISMISS_PREFIX),
   );
   const hasDismiss = items.some(
-    (item) => item.key === "dismiss" || item.actionId?.startsWith("notification:dismiss:"),
+    (item) => item.key === "dismiss" || item.actionId?.startsWith(NOTIFICATION_DISMISS_PREFIX),
   );
 
   return (

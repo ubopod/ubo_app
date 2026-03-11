@@ -41,6 +41,16 @@ SETTINGS_CATEGORY_ICONS: dict[SettingsCategory, str] = {
     SettingsCategory.ACCESSIBILITY: '󰙋',
 }
 
+# Action ID prefixes — single source of truth for stringly-typed prefixes
+# used across Python and TypeScript (web-app/src/store/constants.ts).
+NOTIFICATION_DISMISS_PREFIX = 'notification:dismiss:'
+NOTIFICATION_EXTRA_INFO_PREFIX = 'notification:extra_info:'
+NOTIFICATION_ACTION_PREFIX = 'notification:action:'
+NOTIFICATION_CUSTOM_PREFIX = 'notification:custom:'
+NOTIFICATION_DISPLAY_PREFIX = 'notification:display:'
+MENU_SELECT_PREFIX = 'menu:select:'
+MENU_NAVIGATE_PREFIX = 'menu:navigate:'
+
 # Note: Path-to-menu mappings and menu IDs are registered dynamically by
 # the application via register_path_menu_matcher() in view_registry.py.
 # This keeps the core generic and reusable across different applications.

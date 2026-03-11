@@ -8,7 +8,12 @@ from typing import TYPE_CHECKING
 from redux import AutorunOptions
 
 from ubo_app.logger import logger
-from ubo_app.store.core.constants import SETTINGS_CATEGORY_ICONS
+from ubo_app.store.core.constants import (
+    MENU_NAVIGATE_PREFIX,
+    MENU_SELECT_PREFIX,
+    NOTIFICATION_DISPLAY_PREFIX,
+    SETTINGS_CATEGORY_ICONS,
+)
 from ubo_app.store.core.types import (
     MenuItemData,
     PowerOffAction,
@@ -55,7 +60,7 @@ def update_notifications_dynamic_menu(
                 icon=notification.icon,
                 color='black',
                 background_color=notification.color,
-                action_id=f'notification:display:{notification.id}',
+                action_id=f'{NOTIFICATION_DISPLAY_PREFIX}{notification.id}',
             )
             for notification in notifications
             if notification.expiration_timestamp is None
@@ -93,13 +98,13 @@ def update_main_dynamic_menu() -> None:
                     key='apps',
                     label='Apps',
                     icon='\U000f003b',
-                    action_id='menu:navigate:apps',
+                    action_id=f'{MENU_NAVIGATE_PREFIX}apps',
                 ),
                 MenuItemData(
                     key='settings',
                     label='Settings',
                     icon='\ue690',
-                    action_id='menu:navigate:settings',
+                    action_id=f'{MENU_NAVIGATE_PREFIX}settings',
                 ),
                 MenuItemData(
                     key='about',
@@ -145,7 +150,7 @@ def update_settings_categories_dynamic_menu() -> None:
             key=category.value,
             label=category.value,
             icon=SETTINGS_CATEGORY_ICONS.get(category, ''),
-            action_id=f'menu:navigate:settings:{category.value}',
+            action_id=f'{MENU_NAVIGATE_PREFIX}settings:{category.value}',
         )
         for category in SettingsCategory
     )
@@ -202,21 +207,21 @@ def update_home_dynamic_menu() -> None:
                     label='',
                     icon='\U000f035c',
                     is_short=True,
-                    action_id='menu:navigate:main',
+                    action_id=f'{MENU_NAVIGATE_PREFIX}main',
                 ),
                 MenuItemData(
                     key='notifications',
                     label='',
                     icon='\ueaa2',
                     is_short=True,
-                    action_id='menu:navigate:notifications',
+                    action_id=f'{MENU_NAVIGATE_PREFIX}notifications',
                 ),
                 MenuItemData(
                     key='power',
                     label='',
                     icon='\U000f0425',
                     is_short=True,
-                    action_id='menu:navigate:power',
+                    action_id=f'{MENU_NAVIGATE_PREFIX}power',
                 ),
             ),
             placeholder='',
@@ -262,11 +267,11 @@ def _register_navigation_action_handlers() -> None:
     def _navigate_to_power() -> None:
         store.dispatch(StackPushMenuAction(menu_key='power'))
 
-    register_action('menu:navigate:apps', _navigate_to_apps)
-    register_action('menu:navigate:settings', _navigate_to_settings)
-    register_action('menu:navigate:main', _navigate_to_main)
-    register_action('menu:navigate:notifications', _navigate_to_notifications)
-    register_action('menu:navigate:power', _navigate_to_power)
+    register_action(f'{MENU_NAVIGATE_PREFIX}apps', _navigate_to_apps)
+    register_action(f'{MENU_NAVIGATE_PREFIX}settings', _navigate_to_settings)
+    register_action(f'{MENU_NAVIGATE_PREFIX}main', _navigate_to_main)
+    register_action(f'{MENU_NAVIGATE_PREFIX}notifications', _navigate_to_notifications)
+    register_action(f'{MENU_NAVIGATE_PREFIX}power', _navigate_to_power)
 
 
 def _make_category_handler(cat: SettingsCategory) -> Callable[[], None]:
@@ -283,7 +288,7 @@ def _register_settings_category_handlers() -> None:
 
     for category in SettingsCategory:
         register_action(
-            f'menu:navigate:settings:{category.value}',
+            f'{MENU_NAVIGATE_PREFIX}settings:{category.value}',
             _make_category_handler(category),
         )
 
@@ -432,7 +437,7 @@ def _setup_registered_apps_autoruns() -> None:
                 key=key,
                 label=entry.label,
                 icon=entry.icon,
-                action_id=entry.action_id or f'menu:select:{key}',
+                action_id=entry.action_id or f'{MENU_SELECT_PREFIX}{key}',
                 background_color=entry.background_color,
             )
             for key, entry in app_entries
@@ -492,7 +497,7 @@ def _setup_registered_apps_autoruns() -> None:
                     key=key,
                     label=entry.label,
                     icon=entry.icon,
-                    action_id=entry.action_id or f'menu:select:{key}',
+                    action_id=entry.action_id or f'{MENU_SELECT_PREFIX}{key}',
                     background_color=entry.background_color,
                 )
                 for key, entry in category_entries

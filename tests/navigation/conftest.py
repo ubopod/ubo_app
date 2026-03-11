@@ -16,7 +16,11 @@ from typing import TYPE_CHECKING
 import pytest
 from redux import CompleteReducerResult, InitAction
 
-from ubo_app.store.core.constants import compute_total_pages
+from ubo_app.store.core.constants import (
+    MENU_NAVIGATE_PREFIX,
+    MENU_SELECT_PREFIX,
+    compute_total_pages,
+)
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
@@ -48,11 +52,14 @@ TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
         title='Home',
         items=(
             MenuItemData(key='main', label='Main', icon='M', is_short=True,
-                         action_id='menu:navigate:main'),
-            MenuItemData(key='notifications', label='Notifications', icon='N',
-                         is_short=True, action_id='menu:navigate:notifications'),
+                         action_id=f'{MENU_NAVIGATE_PREFIX}main'),
+            MenuItemData(
+                key='notifications', label='Notifications', icon='N',
+                is_short=True,
+                action_id=f'{MENU_NAVIGATE_PREFIX}notifications',
+            ),
             MenuItemData(key='power', label='Power', icon='P', is_short=True,
-                         action_id='menu:navigate:power'),
+                         action_id=f'{MENU_NAVIGATE_PREFIX}power'),
         ),
     ),
     'main:menu': DynamicMenuData(
@@ -60,9 +67,9 @@ TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
         title='Main',
         items=(
             MenuItemData(key='apps', label='Apps', icon='A',
-                         action_id='menu:navigate:apps'),
+                         action_id=f'{MENU_NAVIGATE_PREFIX}apps'),
             MenuItemData(key='settings', label='Settings', icon='S',
-                         action_id='menu:navigate:settings'),
+                         action_id=f'{MENU_NAVIGATE_PREFIX}settings'),
         ),
     ),
     'apps:list': DynamicMenuData(
@@ -70,7 +77,7 @@ TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
         title='Apps',
         items=tuple(
             MenuItemData(key=f'app{i}', label=f'App {i}', icon=str(i),
-                         action_id=f'menu:select:app{i}')
+                         action_id=f'{MENU_SELECT_PREFIX}app{i}')
             for i in range(7)  # 7 items -> 3 pages (PAGE_SIZE=3)
         ),
     ),
@@ -79,9 +86,9 @@ TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
         title='Settings',
         items=(
             MenuItemData(key='network', label='Network', icon='N',
-                         action_id='menu:navigate:settings:network'),
+                         action_id=f'{MENU_NAVIGATE_PREFIX}settings:network'),
             MenuItemData(key='system', label='System', icon='S',
-                         action_id='menu:navigate:settings:system'),
+                         action_id=f'{MENU_NAVIGATE_PREFIX}settings:system'),
         ),
     ),
     'settings:network': DynamicMenuData(

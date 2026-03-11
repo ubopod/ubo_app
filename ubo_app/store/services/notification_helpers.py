@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from ubo_app.colors import SECONDARY_COLOR_LIGHT
 from ubo_app.store.core.action_registry import register_action
+from ubo_app.store.core.constants import NOTIFICATION_CUSTOM_PREFIX
 from ubo_app.store.services.notifications import Color, NotificationActionItem
 
 if TYPE_CHECKING:
@@ -31,7 +32,7 @@ def create_notification_action(  # noqa: PLR0913
     is accessible via the returned item's ``action_id`` attribute and can
     be used to unregister the action when the notification is cleared.
     """
-    action_id = f'notification:custom:{uuid4().hex}'
+    action_id = f'{NOTIFICATION_CUSTOM_PREFIX}{uuid4().hex}'
     register_action(action_id, action)
     return NotificationActionItem(
         key=key,

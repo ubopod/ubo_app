@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from ubo_app.store.core.constants import compute_total_pages
+from ubo_app.store.core.constants import MENU_NAVIGATE_PREFIX, compute_total_pages
 from ubo_app.store.core.stack_ops import create_root_stack_item, push_menu
 from ubo_app.store.core.types import (
     ApplicationStackItem,
@@ -32,15 +32,15 @@ TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
         items=(
             MenuItemData(
                 key='main', label='Main', icon='M', is_short=True,
-                action_id='menu:navigate:main',
+                action_id=f'{MENU_NAVIGATE_PREFIX}main',
             ),
             MenuItemData(
                 key='notifications', label='Notifications', icon='N',
-                is_short=True, action_id='menu:navigate:notifications',
+                is_short=True, action_id=f'{MENU_NAVIGATE_PREFIX}notifications',
             ),
             MenuItemData(
                 key='power', label='Power', icon='P', is_short=True,
-                action_id='menu:navigate:power',
+                action_id=f'{MENU_NAVIGATE_PREFIX}power',
             ),
         ),
     ),
@@ -50,19 +50,19 @@ TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
         items=(
             MenuItemData(
                 key='wifi', label='Wi-Fi', icon='W',
-                action_id='menu:navigate:wifi',
+                action_id=f'{MENU_NAVIGATE_PREFIX}wifi',
             ),
             MenuItemData(
                 key='bt', label='Bluetooth', icon='B',
-                action_id='menu:navigate:bt',
+                action_id=f'{MENU_NAVIGATE_PREFIX}bt',
             ),
             MenuItemData(
                 key='vpn', label='VPN', icon='V',
-                action_id='menu:navigate:vpn',
+                action_id=f'{MENU_NAVIGATE_PREFIX}vpn',
             ),
             MenuItemData(
                 key='extra', label='Extra', icon='E',
-                action_id='menu:navigate:extra',
+                action_id=f'{MENU_NAVIGATE_PREFIX}extra',
             ),
         ),
     ),

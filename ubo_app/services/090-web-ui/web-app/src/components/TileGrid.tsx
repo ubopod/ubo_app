@@ -5,6 +5,7 @@ import { Tile } from "./Tile";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { MenuItemData } from "../bindings/ubo/v1/ubo_pb";
 import { chooseByIndex, executeAction, navigateTo } from "../store/action-dispatcher";
+import { MENU_SELECT_PREFIX } from "../store/constants";
 import { parseColorMarkup, splitIconFromText, stripColorMarkup } from "../utils/color-markup";
 
 
@@ -47,8 +48,8 @@ export function TileGrid({
 
   const handleActivate = useCallback(
     (item: MenuItemData.AsObject, index: number) => {
-      if (item.actionId?.startsWith("menu:select:")) {
-        navigateTo(store, item.actionId.slice("menu:select:".length));
+      if (item.actionId?.startsWith(MENU_SELECT_PREFIX)) {
+        navigateTo(store, item.actionId.slice(MENU_SELECT_PREFIX.length));
       } else if (item.actionId) {
         executeAction(store, item.actionId, item.key || undefined);
       } else {

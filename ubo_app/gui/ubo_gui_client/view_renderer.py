@@ -560,6 +560,7 @@ class ViewRenderer:
             item_bg = getattr(item_data, 'background_color', None)
             item_is_short = getattr(item_data, 'is_short', False) or False
 
+            # Matches NOTIFICATION_EXTRA_INFO_PREFIX in ubo_app/store/core/constants.py
             if action_id.startswith('notification:extra_info:'):
                 def make_info_action(  # noqa: PLR0913
                     renderer: ViewRenderer,

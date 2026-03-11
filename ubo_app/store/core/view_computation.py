@@ -13,7 +13,13 @@ from typing import TYPE_CHECKING
 
 from ubo_app.constants import DEBUG_MENU
 from ubo_app.logger import logger
-from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
+from ubo_app.store.core.constants import (
+    NOTIFICATION_ACTION_PREFIX,
+    NOTIFICATION_DISMISS_PREFIX,
+    NOTIFICATION_EXTRA_INFO_PREFIX,
+    PAGE_SIZE,
+    compute_total_pages,
+)
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
@@ -112,7 +118,7 @@ def get_notification_view_data(
                     icon='\U000f02fc',  # info icon
                     color='#ffffff',
                     is_short=True,
-                    action_id=f'notification:extra_info:{notification_id}',
+                    action_id=f'{NOTIFICATION_EXTRA_INFO_PREFIX}{notification_id}',
                 ),
             )
 
@@ -132,7 +138,7 @@ def get_notification_view_data(
                     color=action.color,
                     is_short=True,
                     background_color=bg_color,
-                    action_id=f'notification:action:{notification_id}:{i}',
+                    action_id=f'{NOTIFICATION_ACTION_PREFIX}{notification_id}:{i}',
                 ),
             )
 
@@ -147,7 +153,7 @@ def get_notification_view_data(
                     color='#ffffff',
                     is_short=True,
                     background_color='#C0C0C0',
-                    action_id=f'notification:dismiss:{notification_id}',
+                    action_id=f'{NOTIFICATION_DISMISS_PREFIX}{notification_id}',
                 ),
             )
 

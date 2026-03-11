@@ -13,7 +13,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ubo_app.logger import logger
-from ubo_app.store.core.constants import PAGE_SIZE
+from ubo_app.store.core.constants import (
+    MENU_SELECT_PREFIX,
+    NOTIFICATION_DISMISS_PREFIX,
+    NOTIFICATION_DISPLAY_PREFIX,
+    NOTIFICATION_EXTRA_INFO_PREFIX,
+    PAGE_SIZE,
+)
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     CloseApplicationEvent,
@@ -103,11 +109,11 @@ def _handle_notification_choose_by_index(
         return False
 
     # Handle standard notification actions directly
-    if action_id.startswith('notification:dismiss:'):
+    if action_id.startswith(NOTIFICATION_DISMISS_PREFIX):
         _dismiss_notification(notification_id)
         return True
 
-    if action_id.startswith('notification:extra_info:'):
+    if action_id.startswith(NOTIFICATION_EXTRA_INFO_PREFIX):
         _show_extra_info(notification_id)
         return True
 
@@ -193,15 +199,15 @@ def _execute_view_item_action(item: MenuItemData) -> bool:
 
     # notification:display:* action_ids open a notification by pushing it
     # onto the stack.
-    if item.action_id.startswith('notification:display:'):
-        notification_id = item.action_id[len('notification:display:'):]
+    if item.action_id.startswith(NOTIFICATION_DISPLAY_PREFIX):
+        notification_id = item.action_id[len(NOTIFICATION_DISPLAY_PREFIX):]
         store.dispatch(StackPushNotificationAction(notification_id=notification_id))
         return True
 
     # menu:select:* action_ids are auto-generated for SubMenuItems.
     # These need StackPushMenuAction, not the action registry.
-    if item.action_id.startswith('menu:select:'):
-        menu_key = item.action_id[len('menu:select:'):]
+    if item.action_id.startswith(MENU_SELECT_PREFIX):
+        menu_key = item.action_id[len(MENU_SELECT_PREFIX):]
         logger.info(
             '[MenuHandler] choose_by_index: pushing menu key=%s '
             'for label=%s',
