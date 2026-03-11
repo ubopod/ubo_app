@@ -46,37 +46,37 @@ TEST_DYNAMIC_MENUS: dict[str, DynamicMenuData] = {
     ),
     'main:menu': DynamicMenuData(
         menu_id='main:menu',
-        title='Apps',
+        title='Main',
         items=(
             MenuItemData(
-                key='wifi', label='Wi-Fi', icon='W',
-                action_id=f'{MENU_NAVIGATE_PREFIX}wifi',
+                key='item_a', label='Item A', icon='A',
+                action_id=f'{MENU_NAVIGATE_PREFIX}item_a',
             ),
             MenuItemData(
-                key='bt', label='Bluetooth', icon='B',
-                action_id=f'{MENU_NAVIGATE_PREFIX}bt',
+                key='item_b', label='Item B', icon='B',
+                action_id=f'{MENU_NAVIGATE_PREFIX}item_b',
             ),
             MenuItemData(
-                key='vpn', label='VPN', icon='V',
-                action_id=f'{MENU_NAVIGATE_PREFIX}vpn',
+                key='item_c', label='Item C', icon='C',
+                action_id=f'{MENU_NAVIGATE_PREFIX}item_c',
             ),
             MenuItemData(
-                key='extra', label='Extra', icon='E',
-                action_id=f'{MENU_NAVIGATE_PREFIX}extra',
+                key='item_d', label='Item D', icon='D',
+                action_id=f'{MENU_NAVIGATE_PREFIX}item_d',
             ),
         ),
     ),
-    'wifi:list': DynamicMenuData(
-        menu_id='wifi:list',
-        title='Wi-Fi',
+    'sub:list': DynamicMenuData(
+        menu_id='sub:list',
+        title='Sub Menu',
         items=(),
-        placeholder='No networks',
+        placeholder='No items',
     ),
 }
 
 TEST_PATH_MAPPINGS: dict[tuple[str, ...], str] = {
     ('main',): 'main:menu',
-    ('main', 'wifi'): 'wifi:list',
+    ('main', 'item_a'): 'sub:list',
 }
 
 
@@ -219,7 +219,7 @@ class TestMenuView:
         state = push_menu(state, 'main')
         view = compute_view_from_dynamic_menus(state)
         assert isinstance(view, MenuViewData)
-        assert view.title == 'Apps'
+        assert view.title == 'Main'
 
     def test_menu_view_has_items(self) -> None:
         """Verify menu view contains all submenu items."""
@@ -270,10 +270,10 @@ class TestMenuView:
         """Verify deeply nested menu returns correct MenuViewData."""
         state = _make_state()
         state = push_menu(state, 'main')
-        state = push_menu(state, 'wifi')
+        state = push_menu(state, 'item_a')
         view = compute_view_from_dynamic_menus(state)
         assert isinstance(view, MenuViewData)
-        assert view.title == 'Wi-Fi'
+        assert view.title == 'Sub Menu'
 
     def test_no_menu_found_returns_home_view(self) -> None:
         """Verify nonexistent menu key falls back to HomeViewData."""
