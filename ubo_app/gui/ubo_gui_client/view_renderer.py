@@ -617,6 +617,28 @@ class ViewRenderer:
             padded_items = [None] * (PAGE_MAX_ITEMS - len(items)) + items
             widget.items = padded_items  # type: ignore[assignment]
 
+    @staticmethod
+    def _item_data_to_action_item(item_data: object) -> ActionItem:
+        """Convert a proto MenuItemData to a ubo_gui ActionItem."""
+        label = getattr(item_data, 'label', '') or ''
+        icon = getattr(item_data, 'icon', None)
+        color = getattr(item_data, 'color', None) or (1, 1, 1, 1)
+        background_color = getattr(item_data, 'background_color', None)
+        is_short = getattr(item_data, 'is_short', False) or False
+
+        kwargs: dict = {
+            'label': label,
+            'icon': icon,
+            'is_short': is_short,
+            'action': _noop,
+        }
+        if color:
+            kwargs['color'] = color
+        if background_color:
+            kwargs['background_color'] = background_color
+
+        return ActionItem(**kwargs)
+
     def _convert_view_items(self, view: MenuViewData) -> list[ActionItem]:
         """Convert MenuViewData items to ubo_gui ActionItem objects."""
         result: list[ActionItem] = []
@@ -624,59 +646,16 @@ class ViewRenderer:
         if items_wrapper is None:
             return result
 
-        raw_items = getattr(items_wrapper, 'items', []) or []
-
-        for wrapper_item in raw_items:
-            # Each MenuViewDataItemsItem has an 'items' field (MenuItemData)
+        for wrapper_item in getattr(items_wrapper, 'items', []) or []:
             item_data = getattr(wrapper_item, 'items', None)
-            if item_data is None:
-                continue
-
-            label = getattr(item_data, 'label', '') or ''
-            icon = getattr(item_data, 'icon', None)
-            color = getattr(item_data, 'color', None) or (1, 1, 1, 1)
-            background_color = getattr(item_data, 'background_color', None)
-            is_short = getattr(item_data, 'is_short', False) or False
-
-            kwargs: dict = {
-                'label': label,
-                'icon': icon,
-                'is_short': is_short,
-                'action': _noop,
-            }
-            if color:
-                kwargs['color'] = color
-            if background_color:
-                kwargs['background_color'] = background_color
-
-            result.append(ActionItem(**kwargs))
+            if item_data is not None:
+                result.append(self._item_data_to_action_item(item_data))
 
         return result
 
     def _convert_home_items(self, raw_items: list[object]) -> list[ActionItem]:
         """Convert HomeViewData MenuItemData items to ubo_gui ActionItem objects."""
-        result: list[ActionItem] = []
-        for item_data in raw_items:
-            label = getattr(item_data, 'label', '') or ''
-            icon = getattr(item_data, 'icon', None)
-            color = getattr(item_data, 'color', None) or (1, 1, 1, 1)
-            background_color = getattr(item_data, 'background_color', None)
-            is_short = getattr(item_data, 'is_short', False) or False
-
-            kwargs: dict = {
-                'label': label,
-                'icon': icon,
-                'is_short': is_short,
-                'action': _noop,
-            }
-            if color:
-                kwargs['color'] = color
-            if background_color:
-                kwargs['background_color'] = background_color
-
-            result.append(ActionItem(**kwargs))
-
-        return result
+        return [self._item_data_to_action_item(item) for item in raw_items]
 
     def _render_status_bar(self, status_bar: StatusBarData) -> None:
         """Render the status bar (header and footer) from StatusBarData."""

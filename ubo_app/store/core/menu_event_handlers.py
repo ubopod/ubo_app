@@ -51,7 +51,7 @@ from ubo_app.store.services.notifications import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from ubo_app.store.core.types import (
         HomeViewData,
@@ -60,6 +60,21 @@ if TYPE_CHECKING:
         StackItemType,
     )
     from ubo_app.utils.types import Subscriptions
+
+
+def _pop_stack_item(
+    predicate: Callable[[StackItemType], bool],
+) -> None:
+    """Pop the first stack item matching predicate."""
+
+    @store.with_state(lambda state: state.main.stack)
+    def _pop(stack: Sequence[StackItemType]) -> None:
+        for item in stack:
+            if predicate(item):
+                store.dispatch(StackPopItemAction(item_id=item.id))
+                return
+
+    _pop()
 
 
 def _handle_notification_choose_by_index(
@@ -129,23 +144,10 @@ def _dismiss_notification(notification_id: str) -> None:
         NotificationsClearAction,
     )
 
-    # Pop the specific notification stack item (not just the top)
-    @store.with_state(lambda state: state.main.stack)
-    def pop_notification_item(
-        stack: Sequence[StackItemType],
-    ) -> None:
-        for item in stack:
-            if (
-                isinstance(item, NotificationStackItem)
-                and item.notification_id == notification_id
-            ):
-                store.dispatch(StackPopItemAction(item_id=item.id))
-                return
-        # No matching item — notification was already dismissed (e.g.
-        # manual dismiss before FLASH auto-dismiss timer fired).  Do
-        # nothing to avoid popping an unrelated stack item.
-
-    pop_notification_item()
+    _pop_stack_item(
+        lambda item: isinstance(item, NotificationStackItem)
+        and item.notification_id == notification_id,
+    )
 
     @store.with_state(lambda state: state.notifications.notifications)
     def clear_notification(
@@ -354,32 +356,31 @@ def _get_current_view_items(
     return ()
 
 
-def _handle_choose_by_icon(event: MenuChooseByIconEvent) -> None:
-    """Handle menu item selection by icon."""
+def _handle_choose_by_field(
+    field: str,
+    value: str,
+) -> None:
+    """Handle menu item selection by a specific field (icon or label)."""
     state = store._state  # noqa: SLF001
     if state is None:
         return
 
     for item in _get_current_view_items(state.main.current_view):
-        if item is not None and item.icon == event.icon:
+        if item is not None and getattr(item, field) == value:
             _execute_view_item_action(item)
             return
 
-    logger.warning('No item with icon "%s"', event.icon)
+    logger.warning('No item with %s "%s"', field, value)
+
+
+def _handle_choose_by_icon(event: MenuChooseByIconEvent) -> None:
+    """Handle menu item selection by icon."""
+    _handle_choose_by_field('icon', event.icon)
 
 
 def _handle_choose_by_label(event: MenuChooseByLabelEvent) -> None:
     """Handle menu item selection by label."""
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return
-
-    for item in _get_current_view_items(state.main.current_view):
-        if item is not None and item.label == event.label:
-            _execute_view_item_action(item)
-            return
-
-    logger.warning('No item with label "%s"', event.label)
+    _handle_choose_by_field('label', event.label)
 
 
 def _handle_go_back(_: MenuGoBackEvent) -> None:
@@ -486,21 +487,10 @@ def _handle_notification_clear(event: NotificationsClearEvent) -> None:
     if not notification_id:
         return
 
-    @store.with_state(lambda state: state.main.stack)
-    def _pop_matching(stack: Sequence[StackItemType]) -> None:
-        for item in stack:
-            if (
-                isinstance(item, NotificationStackItem)
-                and item.notification_id == notification_id
-            ):
-                logger.debug(
-                    '[MenuHandler] notification_clear: popping notification %s',
-                    notification_id,
-                )
-                store.dispatch(StackPopItemAction(item_id=item.id))
-                return
-
-    _pop_matching()
+    _pop_stack_item(
+        lambda item: isinstance(item, NotificationStackItem)
+        and item.notification_id == notification_id,
+    )
 
 
 def _handle_open_application(event: OpenApplicationEvent) -> None:
@@ -516,18 +506,10 @@ def _handle_open_application(event: OpenApplicationEvent) -> None:
 
 def _handle_close_application(event: CloseApplicationEvent) -> None:
     """Handle close application event by popping the matching stack item."""
-
-    @store.with_state(lambda state: state.main.stack)
-    def _pop_matching(stack: Sequence[StackItemType]) -> None:
-        for item in stack:
-            if (
-                isinstance(item, ApplicationStackItem)
-                and item.id == event.application_instance_id
-            ):
-                store.dispatch(StackPopItemAction(item_id=item.id))
-                return
-
-    _pop_matching()
+    _pop_stack_item(
+        lambda item: isinstance(item, ApplicationStackItem)
+        and item.id == event.application_instance_id,
+    )
 
 
 def setup_menu_event_handlers() -> Subscriptions:
