@@ -44,8 +44,16 @@ function AppContent({ store }: { store: StoreServiceClient }) {
       const { text } = splitIconFromText(currentView.notificationViewData.title ?? "");
       return text;
     }
-    if (currentView.applicationViewData)
-      return currentView.applicationViewData.applicationId ?? "";
+    if (currentView.applicationViewData) {
+      const id = currentView.applicationViewData.applicationId ?? "";
+      // Format "camera:viewfinder" → "Viewfinder"
+      const parts = id.split(":").filter(Boolean);
+      const last = parts[parts.length - 1] || id;
+      return last
+        .split(/[-_]/)
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
     return "";
   })();
 

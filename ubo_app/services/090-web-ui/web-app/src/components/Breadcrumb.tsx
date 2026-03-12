@@ -13,20 +13,26 @@ interface BreadcrumbProps {
   store: StoreServiceClient;
 }
 
+function formatId(id: string): string {
+  // "camera:viewfinder" → "Viewfinder", "wifi:connection-page" → "Connection Page"
+  // Take the last non-empty segment after splitting on ":"
+  const parts = id.split(":").filter(Boolean);
+  const last = parts[parts.length - 1] || parts[0] || id;
+  return last
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function getStackItemLabel(item: StackItemType.AsObject): string {
   if (item.menuStackItem) {
-    // Use the menu key as a fallback label, formatted
     const key = item.menuStackItem.menuKey;
-    // Extract last segment and capitalize
-    const parts = key.split(":");
-    const last = parts[parts.length - 1];
-    return last
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
+    return key ? formatId(key) : "";
   }
   if (item.applicationStackItem) {
-    return item.applicationStackItem.applicationId || "Application";
+    return item.applicationStackItem.applicationId
+      ? formatId(item.applicationStackItem.applicationId)
+      : "Application";
   }
   if (item.notificationStackItem) {
     return "Notification";

@@ -7,6 +7,7 @@ import type {
   BasicTypeOptional,
 } from "../bindings/ubo/v1/ubo_pb";
 import { goBack } from "../store/action-dispatcher";
+import { pageRegistry } from "./pages/PageRegistry";
 
 /**
  * Extract the scalar value from a BasicTypeOptional oneof.
@@ -46,6 +47,14 @@ interface ApplicationViewProps {
 }
 
 export function ApplicationView({ data, store }: ApplicationViewProps) {
+  const SpecializedPage = data.applicationId
+    ? pageRegistry[data.applicationId]
+    : undefined;
+
+  if (SpecializedPage) {
+    return <SpecializedPage data={data} store={store} />;
+  }
+
   return (
     <Box sx={{ width: "100%", p: 2 }}>
       <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
