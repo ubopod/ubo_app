@@ -131,7 +131,7 @@ function playSequenceChunk(
   });
 }
 
-function subscribeToEvent(
+export function subscribeToEvent(
   store: StoreServiceClient,
   setupEvent: (event: Event) => void,
   handleResponse: (response: SubscribeEventResponse) => void,

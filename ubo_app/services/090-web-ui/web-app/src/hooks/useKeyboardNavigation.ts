@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
-import { goBack, goHome, scroll } from "../store/action-dispatcher";
+import { goBack, goHome, scroll, toggleMicMute } from "../store/action-dispatcher";
+import { startBrowserMic, stopBrowserMic } from "../store/audio-input";
 
 export function useKeyboardNavigation(store: StoreServiceClient): void {
   useEffect(() => {
+    let vKeyHeld = false;
+
     function handleKeyDown(e: KeyboardEvent) {
       // Don't capture events from input elements
       const target = e.target as HTMLElement;
@@ -39,10 +42,35 @@ export function useKeyboardNavigation(store: StoreServiceClient): void {
           e.preventDefault();
           scroll(store, "down");
           break;
+        case "m":
+        case "M":
+          e.preventDefault();
+          toggleMicMute(store);
+          break;
+        case "v":
+        case "V":
+          if (!vKeyHeld) {
+            vKeyHeld = true;
+            e.preventDefault();
+            startBrowserMic(store);
+          }
+          break;
+      }
+    }
+
+    function handleKeyUp(e: KeyboardEvent) {
+      if ((e.key === "v" || e.key === "V") && vKeyHeld) {
+        vKeyHeld = false;
+        e.preventDefault();
+        stopBrowserMic(store);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
   }, [store]);
 }

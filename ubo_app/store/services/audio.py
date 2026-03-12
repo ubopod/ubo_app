@@ -156,6 +156,22 @@ class AudioPlaybackDoneEvent(AudioEvent):
     id: str
 
 
+def _capture_mute_default() -> bool:
+    """Return the default capture mute state.
+
+    On non-RPi (e.g. macOS), always start with mic unmuted since there is no
+    hardware mute switch. On RPi, restore the persisted state.
+    """
+    from ubo_app.utils import IS_RPI
+
+    if not IS_RPI:
+        return False
+    return read_from_persistent_store(
+        'audio_state:is_capture_mute',
+        default=False,
+    )
+
+
 class AudioState(Immutable):
     """Audio state."""
 
@@ -178,10 +194,7 @@ class AudioState(Immutable):
         ),
     )
     is_capture_mute: bool = field(
-        default=read_from_persistent_store(
-            'audio_state:is_capture_mute',
-            default=False,
-        ),
+        default=_capture_mute_default(),
     )
 
     is_recording: bool = False

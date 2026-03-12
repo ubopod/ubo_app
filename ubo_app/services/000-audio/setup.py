@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ParamSpec
 
 from audio_manager import AudioManager
-from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.store.core.view_registry import (
@@ -18,12 +17,14 @@ from ubo_app.store.core.view_registry import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
+    AudioDevice,
     AudioInstallDriverEvent,
     AudioPlayAudioSampleAction,
     AudioPlayAudioSampleEvent,
     AudioPlayAudioSequenceEvent,
     AudioPlayChimeEvent,
     AudioSample,
+    AudioSetMuteStatusAction,
 )
 from ubo_app.store.services.notifications import (
     Chime,
@@ -31,10 +32,12 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.async_ import ToThreadOptions, to_thread
 from ubo_app.utils.error_handlers import loop_exception_handler
-from ubo_app.utils.persistent_store import register_persistent_store
+from ubo_app.utils.persistent_store import (
+    read_from_persistent_store,
+    register_persistent_store,
+)
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
@@ -126,11 +129,19 @@ def init_service() -> Subscriptions:
         lambda s: ('volume_level', s.audio.playback_volume),
     )
 
+    # On non-RPi (e.g. macOS) there is no hardware mic switch, so always
+    # start unmuted. On RPi, restore the persisted mute state.
+    from ubo_app.utils import IS_RPI
+
     store.dispatch(
-        StatusIconsRegisterAction(
-            icon='󰍭',
-            priority=AUDIO_MIC_STATE_ICON_PRIORITY,
-            id=AUDIO_MIC_STATE_ICON_ID,
+        AudioSetMuteStatusAction(
+            device=AudioDevice.INPUT,
+            is_mute=read_from_persistent_store(
+                'audio_state:is_capture_mute',
+                default=False,
+            )
+            if IS_RPI
+            else False,
         ),
     )
 

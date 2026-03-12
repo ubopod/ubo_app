@@ -1,5 +1,6 @@
 import {
   FiberManualRecord,
+  Mic,
   PowerSettingsNew,
   RestartAlt,
 } from "@mui/icons-material";
@@ -13,12 +14,17 @@ import {
   MenuItem,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { NotificationBell } from "./NotificationBell";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { StatusBarData } from "../bindings/ubo/v1/ubo_pb";
 import { powerOff, reboot } from "../store/action-dispatcher";
+import {
+  isBrowserMicActive,
+  startBrowserMic,
+  stopBrowserMic,
+} from "../store/audio-input";
 import { useAppState } from "../store/useAppState";
 import { parseColoredIcon } from "../utils/color-markup";
 
@@ -36,6 +42,16 @@ export function StatusBar({ data, store }: StatusBarProps) {
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
+  const [micActive, setMicActive] = useState(isBrowserMicActive());
+
+  const handleMicDown = useCallback(() => {
+    startBrowserMic(store).then(() => setMicActive(true));
+  }, [store]);
+
+  const handleMicUp = useCallback(() => {
+    stopBrowserMic(store);
+    setMicActive(false);
+  }, [store]);
 
   return (
     <Box
@@ -122,6 +138,19 @@ export function StatusBar({ data, store }: StatusBarProps) {
       >
         {clock}
       </Typography>
+
+      {/* Mic button (push-to-talk) */}
+      <IconButton
+        size="small"
+        onMouseDown={handleMicDown}
+        onMouseUp={handleMicUp}
+        onMouseLeave={micActive ? handleMicUp : undefined}
+        onTouchStart={handleMicDown}
+        onTouchEnd={handleMicUp}
+        sx={{ color: micActive ? "error.main" : "text.secondary" }}
+      >
+        <Mic fontSize="small" />
+      </IconButton>
 
       {/* Notification bell */}
       <NotificationBell />

@@ -2,6 +2,12 @@ import { DispatchActionRequest } from "../bindings/store/v1/store_pb";
 import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
+  AssistantStartListeningAction,
+  AssistantStopListeningAction,
+  AudioDevice,
+  AudioReportSampleAction,
+  AudioSetMuteStatusAction,
+  AudioToggleMuteStatusAction,
   ExecuteMenuActionAction,
   MenuChooseByIndexAction,
   MenuScrollAction,
@@ -14,10 +20,28 @@ import {
   StackPushMenuAction,
 } from "../bindings/ubo/v1/ubo_pb";
 
+// Browsers limit concurrent HTTP/1.1 connections per origin to 6.
+// gRPC-web streaming subscriptions (view, stack, metrics, audio×2) use 5 slots.
+// Page-specific streams (e.g. camera viewfinder) use the 6th slot, leaving none
+// for dispatch requests. Registering page streams here lets dispatch() cancel
+// them before sending, freeing a connection slot.
+const pageStreams = new Set<() => void>();
+
+export function registerPageStream(cancel: () => void): () => void {
+  pageStreams.add(cancel);
+  return () => pageStreams.delete(cancel);
+}
+
 function dispatch(store: StoreServiceClient, action: Action): void {
+  // Cancel page-specific streams to free connection slots for this request
+  for (const cancel of pageStreams) {
+    cancel();
+  }
+  pageStreams.clear();
+
   const request = new DispatchActionRequest();
   request.setAction(action);
-  store.dispatchAction(request);
+  store.dispatchAction(request, null);
 }
 
 export function chooseByIndex(
@@ -110,5 +134,52 @@ export function reboot(store: StoreServiceClient): void {
   const rebootAction = new RebootAction();
   const action = new Action();
   action.setRebootAction(rebootAction);
+  dispatch(store, action);
+}
+
+export function startListening(store: StoreServiceClient): void {
+  const startAction = new AssistantStartListeningAction();
+  const action = new Action();
+  action.setAssistantStartListeningAction(startAction);
+  dispatch(store, action);
+}
+
+export function stopListening(store: StoreServiceClient): void {
+  const stopAction = new AssistantStopListeningAction();
+  const action = new Action();
+  action.setAssistantStopListeningAction(stopAction);
+  dispatch(store, action);
+}
+
+export function reportAudioSample(
+  store: StoreServiceClient,
+  pcm16: Uint8Array,
+  timestamp: number,
+): void {
+  const reportAction = new AudioReportSampleAction();
+  reportAction.setSampleSpeechRecognition(pcm16);
+  reportAction.setTimestamp(timestamp);
+  const action = new Action();
+  action.setAudioReportSampleAction(reportAction);
+  dispatch(store, action);
+}
+
+export function setMicMute(
+  store: StoreServiceClient,
+  mute: boolean,
+): void {
+  const muteAction = new AudioSetMuteStatusAction();
+  muteAction.setDevice(AudioDevice.AUDIO_DEVICE_INPUT);
+  muteAction.setIsMute(mute);
+  const action = new Action();
+  action.setAudioSetMuteStatusAction(muteAction);
+  dispatch(store, action);
+}
+
+export function toggleMicMute(store: StoreServiceClient): void {
+  const toggleAction = new AudioToggleMuteStatusAction();
+  toggleAction.setDevice(AudioDevice.AUDIO_DEVICE_INPUT);
+  const action = new Action();
+  action.setAudioToggleMuteStatusAction(toggleAction);
   dispatch(store, action);
 }
