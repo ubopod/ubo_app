@@ -241,6 +241,9 @@ class _ProtoGenerator(ast.NodeVisitor):
                     msg = 'ClassVar is not supported'
                     raise TypeError(msg)
 
+                if value.value.id == 'Literal':
+                    return _BasicType(type='string')
+
                 msg = (
                     f'Unsupported subscript type: {value.value.id} '
                     f'- file: {self.module} - line: {value.lineno}'
