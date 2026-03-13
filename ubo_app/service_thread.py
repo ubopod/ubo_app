@@ -37,6 +37,7 @@ from ubo_app.constants import (
     PACKAGE_NAME,
     SERVICES_LOOP_GRACE_PERIOD,
     SERVICES_PATH,
+    SUBPROCESS_TERMINATE_GRACE_PERIOD,
 )
 from ubo_app.logger import ThreadLevelFilter, logger
 from ubo_app.store.settings.types import (
@@ -370,7 +371,7 @@ class UboServiceThread(threading.Thread):
                                 try:
                                     await asyncio.wait_for(
                                         process.wait(),
-                                        timeout=SERVICES_LOOP_GRACE_PERIOD,
+                                        timeout=SUBPROCESS_TERMINATE_GRACE_PERIOD,
                                     )
                                 except TimeoutError:
                                     os.killpg(process.pid, signal.SIGKILL)
@@ -499,7 +500,7 @@ class UboServiceThread(threading.Thread):
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(
                 asyncio.gather(*tasks, return_exceptions=True),
-                timeout=SERVICES_LOOP_GRACE_PERIOD,
+                timeout=SUBPROCESS_TERMINATE_GRACE_PERIOD,
             )
 
     async def _clean_remaining_tasks(self) -> None:

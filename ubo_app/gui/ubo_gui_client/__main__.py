@@ -126,10 +126,18 @@ def main() -> None:
     ubo_gui.setup()
 
     import asyncio
+    import signal as signal_module
 
     from ubo_gui_client.app import UboGUIApp
 
     app = UboGUIApp(host=args.host, port=args.port)
+
+    def _handle_sigterm(_signum: int, _frame: object) -> None:
+        _main_logger.info('SIGTERM received, stopping GUI app')
+        app.stop()
+
+    signal_module.signal(signal_module.SIGTERM, _handle_sigterm)
+
     asyncio.run(app.async_run(async_lib='asyncio'))
 
 

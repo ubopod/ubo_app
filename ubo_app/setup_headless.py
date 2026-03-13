@@ -185,16 +185,19 @@ def signal_handler(signum: int, _: object) -> None:
 
     logger.debug(get_all_thread_stacks_string())
 
-    _clear_signal_handlers()
-
     logger.info('Received signal %s', signum)
 
     if signum == signal.SIGINT:
-        logger.info('Exiting gracefully, sending the signal again will force exit!')
+        # Ignore further signals during graceful shutdown to prevent premature exit
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+        logger.info('Exiting gracefully, signal handlers set to ignore')
         from ubo_app.store.main import store
 
         store.dispatch(FinishAction())
     elif signum == signal.SIGTERM:
+        _clear_signal_handlers()
         logger.info(
             'Exiting forcefully, sending the signal again will not be caught!',
         )

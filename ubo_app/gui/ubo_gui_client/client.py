@@ -157,7 +157,6 @@ class GUIClient:
                         retry_count,
                         MAX_RETRIES,
                         delay,
-                        exc_info=True,
                     )
 
                     if on_disconnect:
