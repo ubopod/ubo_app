@@ -70,12 +70,17 @@ class WorkerThread(threading.Thread):
         )
 
     async def shutdown(self: WorkerThread) -> None:
+        import time
+
         from ubo_app.constants import MAIN_LOOP_GRACE_PERIOD
         from ubo_app.logger import logger
 
         logger.info('Stopping the worker thread')
 
-        while True:
+        max_shutdown_time = 10.0
+        deadline = time.monotonic() + max_shutdown_time
+
+        while time.monotonic() < deadline:
             tasks = [
                 task
                 for task in asyncio.all_tasks(self.loop)
@@ -101,6 +106,11 @@ class WorkerThread(threading.Thread):
                     timeout=MAIN_LOOP_GRACE_PERIOD,
                 )
             await asyncio.sleep(0.1)
+        else:
+            logger.warning(
+                'Worker thread shutdown timed out after %.1fs, forcing stop',
+                max_shutdown_time,
+            )
 
         logger.debug('Stopping event loop of the worker thread')
         self.loop.stop()

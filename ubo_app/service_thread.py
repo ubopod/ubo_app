@@ -504,15 +504,24 @@ class UboServiceThread(threading.Thread):
             )
 
     async def _clean_remaining_tasks(self) -> None:
+        import time
+
         if not self.loop.is_running():
             return
-        while tasks := [
-            task
-            for task in asyncio.all_tasks(self.loop)
-            if task is not asyncio.current_task(self.loop)
-            and task.cancelling() == 0
-            and not task.done()
-        ]:
+
+        max_cleanup_time = SUBPROCESS_TERMINATE_GRACE_PERIOD
+        deadline = time.monotonic() + max_cleanup_time
+
+        while time.monotonic() < deadline:
+            tasks = [
+                task
+                for task in asyncio.all_tasks(self.loop)
+                if task is not asyncio.current_task(self.loop)
+                and task.cancelling() == 0
+                and not task.done()
+            ]
+            if not tasks:
+                break
             logger.info(
                 'Waiting for tasks to finish',
                 extra={
@@ -531,6 +540,14 @@ class UboServiceThread(threading.Thread):
                     timeout=SERVICES_LOOP_GRACE_PERIOD,
                 )
             await asyncio.sleep(0.1)
+        else:
+            logger.warning(
+                'Service task cleanup timed out, forcing stop',
+                extra={
+                    'service_id': self.service_id,
+                    'service_label': self.label,
+                },
+            )
         self.loop.stop()
 
     def _unregister_reducer(self) -> None:

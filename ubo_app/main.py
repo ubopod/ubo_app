@@ -128,6 +128,16 @@ def _monitor_children(
     logger.info('ubo-core exited with code %d', core_proc.returncode)
 
 
+def _kill_process_group(proc: subprocess.Popen[bytes]) -> None:
+    """Send SIGKILL to the entire process group of a child."""
+    if proc.poll() is not None:
+        return
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        proc.kill()
+
+
 def _install_signal_handlers(
     core_proc: subprocess.Popen[bytes],
     gui_proc_holder: list[subprocess.Popen[bytes] | None],
@@ -137,11 +147,10 @@ def _install_signal_handlers(
 
     def _handle_sigint(_signum: int, _frame: object) -> None:
         if shutting_down[0]:
-            logger.warning('Second interrupt received, forcing shutdown')
-            if core_proc.poll() is None:
-                core_proc.terminate()
-            if gui_proc_holder[0] is not None and gui_proc_holder[0].poll() is None:
-                gui_proc_holder[0].terminate()
+            logger.warning('Second interrupt received, killing children')
+            _kill_process_group(core_proc)
+            if gui_proc_holder[0] is not None:
+                _kill_process_group(gui_proc_holder[0])
             return
 
         shutting_down[0] = True

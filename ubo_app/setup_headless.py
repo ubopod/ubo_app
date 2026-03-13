@@ -188,9 +188,10 @@ def signal_handler(signum: int, _: object) -> None:
     logger.info('Received signal %s', signum)
 
     if signum == signal.SIGINT:
-        # Ignore further signals during graceful shutdown to prevent premature exit
+        # Ignore further SIGINT during graceful shutdown to prevent premature exit.
+        # Keep SIGTERM as SIG_DFL so the supervisor can force-kill if needed.
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
         logger.info('Exiting gracefully, signal handlers set to ignore')
         from ubo_app.store.main import store
