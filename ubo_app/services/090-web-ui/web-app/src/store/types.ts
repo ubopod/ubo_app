@@ -16,6 +16,7 @@ export interface AppState {
   connected: boolean;
   cpuPercent: number;
   ramPercent: number;
+  volume: number;
 }
 
 export type {

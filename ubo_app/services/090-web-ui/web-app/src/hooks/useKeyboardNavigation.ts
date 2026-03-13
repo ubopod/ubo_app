@@ -34,14 +34,22 @@ export function useKeyboardNavigation(store: StoreServiceClient): void {
           goHome(store);
           break;
         }
-        case "PageUp":
+        case "ArrowUp":
+        case "PageUp": {
+          const hasPopover = document.querySelector(".MuiPopover-root");
+          if (hasPopover) break;
           e.preventDefault();
           scroll(store, "up");
           break;
-        case "PageDown":
+        }
+        case "ArrowDown":
+        case "PageDown": {
+          const hasPopover = document.querySelector(".MuiPopover-root");
+          if (hasPopover) break;
           e.preventDefault();
           scroll(store, "down");
           break;
+        }
         case "m":
         case "M":
           e.preventDefault();

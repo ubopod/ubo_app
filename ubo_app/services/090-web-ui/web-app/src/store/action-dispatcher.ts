@@ -4,9 +4,11 @@ import {
   Action,
   AssistantStartListeningAction,
   AssistantStopListeningAction,
+  AudioChangeVolumeAction,
   AudioDevice,
   AudioReportSampleAction,
   AudioSetMuteStatusAction,
+  AudioSetVolumeAction,
   AudioToggleMuteStatusAction,
   ExecuteMenuActionAction,
   MenuChooseByIndexAction,
@@ -181,5 +183,26 @@ export function toggleMicMute(store: StoreServiceClient): void {
   toggleAction.setDevice(AudioDevice.AUDIO_DEVICE_INPUT);
   const action = new Action();
   action.setAudioToggleMuteStatusAction(toggleAction);
+  dispatch(store, action);
+}
+
+export function changeVolume(
+  store: StoreServiceClient,
+  amount: number,
+): void {
+  const changeAction = new AudioChangeVolumeAction();
+  changeAction.setAmount(amount);
+  changeAction.setDevice(AudioDevice.AUDIO_DEVICE_OUTPUT);
+  const action = new Action();
+  action.setAudioChangeVolumeAction(changeAction);
+  dispatch(store, action);
+}
+
+export function setVolume(store: StoreServiceClient, volume: number): void {
+  const setAction = new AudioSetVolumeAction();
+  setAction.setVolume(volume);
+  setAction.setDevice(AudioDevice.AUDIO_DEVICE_OUTPUT);
+  const action = new Action();
+  action.setAudioSetVolumeAction(setAction);
   dispatch(store, action);
 }

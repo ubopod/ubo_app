@@ -17,6 +17,7 @@ import {
 import { useCallback, useState } from "react";
 
 import { NotificationBell } from "./NotificationBell";
+import { VolumeControl } from "./VolumeControl";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { StatusBarData } from "../bindings/ubo/v1/ubo_pb";
 import { powerOff, reboot } from "../store/action-dispatcher";
@@ -138,6 +139,9 @@ export function StatusBar({ data, store }: StatusBarProps) {
       >
         {clock}
       </Typography>
+
+      {/* Volume control */}
+      <VolumeControl store={store} />
 
       {/* Mic button (push-to-talk) */}
       <IconButton

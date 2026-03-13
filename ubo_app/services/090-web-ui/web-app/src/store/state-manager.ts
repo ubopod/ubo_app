@@ -34,6 +34,7 @@ export class StateManager {
     connected: false,
     cpuPercent: 0,
     ramPercent: 0,
+    volume: 0,
   };
 
   private listeners: Set<StateListener> = new Set();
@@ -141,6 +142,7 @@ export class StateManager {
     request.setSelectorsList([
       "state.system.cpu_percent",
       "state.system.ram_percent",
+      "state.audio.playback_volume",
     ]);
 
     const stream = this.store.subscribeStore(request);
@@ -152,13 +154,15 @@ export class StateManager {
 
     stream.on("data", (response: SubscribeStoreResponse) => {
       const results = response.getResultsList();
-      if (results.length < 2) return;
+      if (results.length < 3) return;
 
       const cpuAny = results[0];
       const ramAny = results[1];
+      const volumeAny = results[2];
 
       let cpuPercent = this.state.cpuPercent;
       let ramPercent = this.state.ramPercent;
+      let volume = this.state.volume;
 
       if (cpuAny.getTypeUrl().includes("DoubleValue")) {
         cpuPercent = decodeDoubleValue(cpuAny.getValue_asU8());
@@ -168,7 +172,11 @@ export class StateManager {
         ramPercent = decodeDoubleValue(ramAny.getValue_asU8());
       }
 
-      this.update({ cpuPercent, ramPercent });
+      if (volumeAny.getTypeUrl().includes("DoubleValue")) {
+        volume = decodeDoubleValue(volumeAny.getValue_asU8());
+      }
+
+      this.update({ cpuPercent, ramPercent, volume });
     });
   }
 }
