@@ -63,40 +63,57 @@ def _to_selector(selector: str) -> Callable[[RootState], Any]:
 
 def _pack_to_any(partial_state: GRPCSerializable) -> betterproto_protobuf.Any:
     """Convert a partial state to a betterproto.Message."""
-    message = build_message(partial_state)
-
-    if isinstance(message, str):
+    # Short-circuit primitives before calling build_message() — avoids a
+    # no-op round-trip through the full serialization machinery.
+    if isinstance(partial_state, str):
         return betterproto_protobuf.Any(
             type_url='type.googleapis.com/google.protobuf.StringValue',
-            value=betterproto_protobuf.StringValue(value=message).SerializeToString(),
+            value=betterproto_protobuf.StringValue(
+                value=partial_state,
+            ).SerializeToString(),
         )
-    if isinstance(message, bytes):
+    if isinstance(partial_state, bytes):
         return betterproto_protobuf.Any(
             type_url='type.googleapis.com/google.protobuf.BytesValue',
-            value=betterproto_protobuf.BytesValue(value=message).SerializeToString(),
+            value=betterproto_protobuf.BytesValue(
+                value=partial_state,
+            ).SerializeToString(),
         )
-    if isinstance(message, bool):
+    if isinstance(partial_state, bool):
         return betterproto_protobuf.Any(
             type_url='type.googleapis.com/google.protobuf.BoolValue',
-            value=betterproto_protobuf.BoolValue(value=message).SerializeToString(),
+            value=betterproto_protobuf.BoolValue(
+                value=partial_state,
+            ).SerializeToString(),
         )
-    if isinstance(message, int):
+    if isinstance(partial_state, int):
         return betterproto_protobuf.Any(
             type_url='type.googleapis.com/google.protobuf.Int64Value',
-            value=betterproto_protobuf.Int64Value(value=message).SerializeToString(),
+            value=betterproto_protobuf.Int64Value(
+                value=partial_state,
+            ).SerializeToString(),
         )
-    if isinstance(message, float):
+    if isinstance(partial_state, float):
         return betterproto_protobuf.Any(
             type_url='type.googleapis.com/google.protobuf.DoubleValue',
-            value=betterproto_protobuf.DoubleValue(value=message).SerializeToString(),
+            value=betterproto_protobuf.DoubleValue(
+                value=partial_state,
+            ).SerializeToString(),
         )
-    if message is None:
+    if partial_state is None:
         return betterproto_protobuf.Any(
             type_url='type.googleapis.com/google.protobuf.Empty',
             value=betterproto_protobuf.Empty().SerializeToString(),
         )
+
+    message = build_message(partial_state)
+
     if isinstance(message, Sequence):
         msg = 'Containers are not yet supported in the return type of a selector.'
+        raise TypeError(msg)
+
+    if not isinstance(message, betterproto.Message):
+        msg = f'Unexpected message type: {type(message)}'
         raise TypeError(msg)
 
     return betterproto_protobuf.Any(

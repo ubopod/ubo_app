@@ -158,6 +158,14 @@ class _OptionalType(_Type):
         *,
         current_package: str | None,
     ) -> str:
+        # When the inner type is a union (oneof), flatten: the oneof already
+        # handles None via "no field set", so the extra Optional wrapper
+        # message and indirection are unnecessary.
+        if isinstance(self.type, _UnionType):
+            return self.type.get_embedded_definitions(
+                name,
+                current_package=current_package,
+            )
         return f"""{
             self.type.get_embedded_definitions(
                 f'{betterproto.casing.pascal_case(name)}Optional',

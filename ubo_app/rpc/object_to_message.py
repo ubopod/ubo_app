@@ -1,6 +1,7 @@
 # ruff: noqa: SLF001, D100, D103
 from __future__ import annotations
 
+import functools
 from enum import Enum
 from typing import TYPE_CHECKING, Protocol, TypeAlias, TypeVar, cast, overload
 
@@ -24,19 +25,31 @@ ReturnType: TypeAlias = (
     | list['ReturnType']
 )
 
+# --- Caching for hot-path operations ---
+_msg_class_cache: dict[type, type[betterproto.Message]] = {}
+_enum_class_cache: dict[type, type[betterproto.Enum]] = {}
+_pascal_case = functools.lru_cache(maxsize=512)(betterproto.casing.pascal_case)
+_snake_case = functools.lru_cache(maxsize=512)(betterproto.casing.snake_case)
+
 
 def get_class(object_: Immutable) -> type[betterproto.Message]:
-    return getattr(
-        ubo_bindings.ubo.v1,
-        betterproto.casing.pascal_case(type(object_).__name__),
-    )
+    obj_type = type(object_)
+    cached = _msg_class_cache.get(obj_type)
+    if cached is not None:
+        return cached
+    result = getattr(ubo_bindings.ubo.v1, _pascal_case(obj_type.__name__))
+    _msg_class_cache[obj_type] = result
+    return result
 
 
 def get_enum(object_: Enum) -> type[betterproto.Enum]:
-    return getattr(
-        ubo_bindings.ubo.v1,
-        betterproto.casing.pascal_case(type(object_).__name__),
-    )
+    obj_type = type(object_)
+    cached = _enum_class_cache.get(obj_type)
+    if cached is not None:
+        return cached
+    result = getattr(ubo_bindings.ubo.v1, _pascal_case(obj_type.__name__))
+    _enum_class_cache[obj_type] = result
+    return result
 
 
 T = TypeVar('T', bound=betterproto.Message)
@@ -66,29 +79,27 @@ def _convert_basic_value(
 ) -> betterproto.Message:
     """Convert a Python value to a proto map-value message.
 
-    Handles the ``BasicType`` wrapping hierarchy used by ``extra_data`` maps:
-    ``value_cls(basic_type=BasicType(items=BasicTypeOptional(field=value)))``
+    Handles the ``BasicType`` wrapping used by ``extra_data`` maps:
+    ``value_cls(basic_type=BasicType(field=value))``
     for scalar values, and the ``list`` oneof arm for sequences.
     """
     from ubo_bindings.ubo import v1
 
     if isinstance(value, str | int | float | bool | bytes | None):
-        # Build BasicTypeOptional
         if value is None:
-            optional = v1.BasicTypeOptional()
+            basic_type = v1.BasicType()
         elif isinstance(value, str):
-            optional = v1.BasicTypeOptional(string=value)
+            basic_type = v1.BasicType(string=value)
         elif isinstance(value, bool):
             # bool before int since bool is subclass of int
-            optional = v1.BasicTypeOptional(bool=value)
+            basic_type = v1.BasicType(bool=value)
         elif isinstance(value, int):
-            optional = v1.BasicTypeOptional(int64=value)
+            basic_type = v1.BasicType(int64=value)
         elif isinstance(value, float):
-            optional = v1.BasicTypeOptional(float=value)
+            basic_type = v1.BasicType(float=value)
         else:
-            optional = v1.BasicTypeOptional(bytes=value)
+            basic_type = v1.BasicType(bytes=value)
 
-        basic_type = v1.BasicType(items=optional)
         return value_cls(basic_type=basic_type)  # type: ignore[call-arg]
 
     if isinstance(value, list | tuple):
@@ -278,7 +289,7 @@ def build_message(  # noqa: C901, PLR0912
             raise ValueError(msg)
 
     fields = {
-        betterproto.casing.snake_case(key): build_message(
+        _snake_case(key): build_message(
             getattr(object_, key),
             expected_type=message_class._betterproto.cls_by_field[key],
         )

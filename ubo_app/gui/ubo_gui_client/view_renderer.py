@@ -44,17 +44,14 @@ def _noop() -> None:
 def _unwrap_extra_data_value(value: object) -> object:
     """Unwrap a proto extra_data value to a Python primitive.
 
-    Proto map values are wrapped in BasicType → BasicTypeOptional.
-    This extracts the underlying Python value (str, int, float, bool, bytes).
+    Proto map values are wrapped in BasicType (oneof: string/int64/float/bool/bytes).
+    This extracts the underlying Python value.
     """
     basic_type = getattr(value, 'basic_type', None)
     if basic_type is None:
         return value
-    items = getattr(basic_type, 'items', None)
-    if items is None:
-        return value
-    # Use to_dict() to get the set oneof field
-    to_dict = getattr(items, 'to_dict', None)
+    # BasicType directly contains the oneof fields (no intermediate wrapper)
+    to_dict = getattr(basic_type, 'to_dict', None)
     if to_dict is not None:
         d = to_dict()
         if d:

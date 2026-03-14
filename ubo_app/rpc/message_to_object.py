@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import enum
+import functools
 import importlib
 from datetime import UTC, datetime
 from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin
@@ -34,9 +35,40 @@ MISSING = _MissingType()
 META_FIELD_PREFIX_PACKAGE_NAME = 'meta_field_package_name_'
 META_FIELD_PREFIX_PACKAGE_NAME_INDEX = 1000
 
+# --- Caching for hot-path operations ---
+_class_cache: dict[type, type | None] = {}
+_snake_case = functools.lru_cache(maxsize=512)(betterproto.casing.snake_case)
+
 
 def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:
+    msg_type = type(message)
+    cached = _class_cache.get(msg_type)
+    if cached is not None:
+        return cached
+    # Use sentinel to distinguish "cached as None" from "not cached"
+    if msg_type in _class_cache:
+        return None
+
+    result = _resolve_class(message)
+    _class_cache[msg_type] = result
+    return result
+
+
+def _resolve_class(message: betterproto.Message | betterproto.Enum) -> type | None:
     class_name = type(message).__name__
+
+    # Fast path: use the generated class registry (avoids importlib + dir())
+    try:
+        from ubo_app.rpc._class_registry import CLASS_REGISTRY
+
+        module_path = CLASS_REGISTRY.get(class_name)
+        if module_path is not None:
+            mod = importlib.import_module(module_path)
+            return getattr(mod, class_name, None)
+    except ImportError:
+        pass
+
+    # Fallback: extract module path from meta_field_ or enum member names
     if isinstance(message, betterproto.Enum):
         unspecified_member = next(iter(type(message).__members__.keys()))
         destination_module_path = (
@@ -140,7 +172,7 @@ def rebuild_object(  # noqa: C901
         raise NotImplementedError(msg)
 
     fields = {
-        betterproto.casing.snake_case(key): get_field_value(
+        _snake_case(key): get_field_value(
             destination_class,
             message,
             key,
