@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import time
 
+import betterproto
+
 from ubo_app.rpc.object_to_message import build_message
 from ubo_app.rpc.store_service import _pack_to_any
 from ubo_app.store.core.types.events import ViewChangedEvent
@@ -183,6 +185,7 @@ def _bench_class_lookup() -> None:
     )
 
     msg = build_message(_MENU_4)
+    assert isinstance(msg, betterproto.Message)
     get_class(msg)
     _bench('get_class inbound (cached)', get_class, msg)
 

@@ -137,9 +137,8 @@ class GUIClient:
                             )
                             # Unwrap BoolValue wrapper from gRPC
                             is_blanked: bool | None = (
-                                is_blanked_raw.value
+                                getattr(is_blanked_raw, 'value', None)
                                 if is_blanked_raw is not None
-                                and hasattr(is_blanked_raw, 'value')
                                 else None
                             )
                             logger.info(
