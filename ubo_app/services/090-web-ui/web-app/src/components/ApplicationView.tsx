@@ -4,16 +4,16 @@ import { Box, IconButton, Paper, Typography } from "@mui/material";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type {
   ApplicationViewData,
-  BasicTypeOptional,
+  BasicType,
 } from "../bindings/ubo/v1/ubo_pb";
 import { goBack } from "../store/action-dispatcher";
 import { pageRegistry } from "./pages/PageRegistry";
 
 /**
- * Extract the scalar value from a BasicTypeOptional oneof.
+ * Extract the scalar value from a BasicType oneof.
  */
-function extractBasicValue(
-  opt: BasicTypeOptional.AsObject | undefined,
+export function extractBasicValue(
+  opt: BasicType.AsObject | undefined,
 ): string {
   if (!opt) return "";
   if (opt.string) return opt.string;
@@ -27,15 +27,15 @@ function extractBasicValue(
 /**
  * Extract a display string from an ExtraDataValue.
  */
-function extractExtraDataValue(
+export function extractExtraDataValue(
   value: ApplicationViewData.ExtraDataValue.AsObject,
 ): string {
-  if (value.basicType?.items) {
-    return extractBasicValue(value.basicType.items);
+  if (value.basicType) {
+    return extractBasicValue(value.basicType);
   }
   if (value.list?.itemsList) {
     return value.list.itemsList
-      .map((item) => extractBasicValue(item.items))
+      .map((item) => extractBasicValue(item))
       .join(", ");
   }
   return "";
