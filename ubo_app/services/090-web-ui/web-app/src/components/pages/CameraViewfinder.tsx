@@ -1,11 +1,10 @@
-import { ArrowBack } from "@mui/icons-material";
-import { Box, IconButton, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { useEffect, useRef } from "react";
 
 import { CameraReportImageEvent, Event } from "../../bindings/ubo/v1/ubo_pb";
 import type { SubscribeEventResponse } from "../../bindings/store/v1/store_pb";
 import { subscribeToEvent } from "../../store/audio";
-import { goBack, registerPageStream } from "../../store/action-dispatcher";
+import { registerPageStream } from "../../store/action-dispatcher";
 import type { ApplicationPageProps } from "./types";
 
 export function CameraViewfinder({ store }: ApplicationPageProps) {
@@ -77,12 +76,6 @@ export function CameraViewfinder({ store }: ApplicationPageProps) {
 
   return (
     <Box sx={{ width: "100%", p: 2 }}>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
-        <IconButton size="small" onClick={() => goBack(store)}>
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h6">Camera Viewfinder</Typography>
-      </Box>
       <Box
         sx={{
           display: "flex",

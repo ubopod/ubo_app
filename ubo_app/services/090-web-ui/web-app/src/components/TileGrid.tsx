@@ -6,13 +6,12 @@ import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClient
 import type { MenuItemData } from "../bindings/ubo/v1/ubo_pb";
 import { chooseByIndex, executeAction, navigateTo } from "../store/action-dispatcher";
 import { MENU_SELECT_PREFIX } from "../store/constants";
-import { parseColorMarkup, splitIconFromText, stripColorMarkup } from "../utils/color-markup";
+import { parseColorMarkup, stripColorMarkup } from "../utils/color-markup";
 
 
 interface TileGridProps {
   items: MenuItemData.AsObject[];
   store: StoreServiceClient;
-  title?: string;
   heading?: string;
   subHeading?: string;
 }
@@ -20,7 +19,6 @@ interface TileGridProps {
 export function TileGrid({
   items,
   store,
-  title,
   heading,
   subHeading,
 }: TileGridProps) {
@@ -80,6 +78,14 @@ export function TileGrid({
           e.preventDefault();
           break;
         case "ArrowUp":
+          if (focusIndex < columns) {
+            const backBtn = document.querySelector<HTMLElement>("[data-back-button]");
+            if (backBtn) {
+              backBtn.focus();
+              e.preventDefault();
+              return;
+            }
+          }
           next = Math.max(focusIndex - columns, 0);
           e.preventDefault();
           break;
@@ -97,26 +103,13 @@ export function TileGrid({
 
   return (
     <Box sx={{ width: "100%" }}>
-      {(title || heading) && (
+      {(heading || subHeading) && (
         <Box sx={{ mb: 2 }}>
           {heading && (
             <Typography variant="overline" color="text.secondary">
               {stripColorMarkup(heading)}
             </Typography>
           )}
-          {title && (() => {
-            const { icon, text } = splitIconFromText(title);
-            return (
-              <Typography variant="h6" fontWeight={600}>
-                {icon && (
-                  <span style={{ fontFamily: "ArimoNerdFont", marginRight: 8 }}>
-                    {icon}
-                  </span>
-                )}
-                {text}
-              </Typography>
-            );
-          })()}
           {subHeading && (
             <Typography variant="body2" color="text.secondary" component="div">
               {parseColorMarkup(subHeading).map((seg, i) => (
@@ -135,6 +128,7 @@ export function TileGrid({
         </Box>
       )}
       <Box
+        data-tile-grid
         ref={gridRef}
         tabIndex={0}
         onKeyDown={handleKeyDown}

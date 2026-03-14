@@ -38,14 +38,24 @@ export function useKeyboardNavigation(store: StoreServiceClient): void {
         case "PageUp": {
           const hasPopover = document.querySelector(".MuiPopover-root");
           if (hasPopover) break;
-          e.preventDefault();
-          scroll(store, "up");
+          // TileGrid handles its own arrow keys — don't also scroll
+          if (document.querySelector("[data-tile-grid]")) break;
+          // On non-TileGrid pages, focus the back button if available
+          const backBtn = document.querySelector<HTMLElement>("[data-back-button]");
+          if (backBtn) {
+            e.preventDefault();
+            backBtn.focus();
+          } else {
+            e.preventDefault();
+            scroll(store, "up");
+          }
           break;
         }
         case "ArrowDown":
         case "PageDown": {
           const hasPopover = document.querySelector(".MuiPopover-root");
           if (hasPopover) break;
+          if (document.querySelector("[data-tile-grid]")) break;
           e.preventDefault();
           scroll(store, "down");
           break;

@@ -2,6 +2,7 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import { useEffect, useMemo } from "react";
 
 import { ApplicationView } from "./ApplicationView";
+import { BackButton } from "./BackButton";
 import { Breadcrumb } from "./Breadcrumb";
 import { NotificationOverlay } from "./NotificationOverlay";
 import { StatusBar } from "./StatusBar";
@@ -32,30 +33,32 @@ function AppContent({ store }: { store: StoreServiceClient }) {
     }
   }, [currentView, store]);
 
-  // Derive current title from view data
-  const currentTitle = (() => {
-    if (!currentView) return "";
-    if (currentView.homeViewData) return "Home";
+  // Derive current title (icon + text) from view data
+  const { currentTitle, currentTitleIcon, currentTitleText } = (() => {
+    if (!currentView) return { currentTitle: "", currentTitleIcon: "", currentTitleText: "" };
+    if (currentView.homeViewData) return { currentTitle: "Home", currentTitleIcon: "", currentTitleText: "Home" };
     if (currentView.menuViewData) {
       const { icon, text } = splitIconFromText(currentView.menuViewData.title ?? "");
-      return icon ? `${icon}${text}` : text;
+      return { currentTitle: icon ? `${icon}${text}` : text, currentTitleIcon: icon, currentTitleText: text };
     }
     if (currentView.notificationViewData) {
-      const { text } = splitIconFromText(currentView.notificationViewData.title ?? "");
-      return text;
+      const { icon, text } = splitIconFromText(currentView.notificationViewData.title ?? "");
+      return { currentTitle: icon ? `${icon}${text}` : text, currentTitleIcon: icon, currentTitleText: text };
     }
     if (currentView.applicationViewData) {
       const id = currentView.applicationViewData.applicationId ?? "";
-      // Format "camera:viewfinder" → "Viewfinder"
       const parts = id.split(":").filter(Boolean);
       const last = parts[parts.length - 1] || id;
-      return last
+      const text = last
         .split(/[-_]/)
         .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(" ");
+      return { currentTitle: text, currentTitleIcon: "", currentTitleText: text };
     }
-    return "";
+    return { currentTitle: "", currentTitleIcon: "", currentTitleText: "" };
   })();
+
+  const showBackButton = (stack?.length ?? 0) > 2;
 
   // Render content area based on view type
   const content = (() => {
@@ -87,7 +90,6 @@ function AppContent({ store }: { store: StoreServiceClient }) {
         <TileGrid
           items={unwrapItems(menu.items?.itemsList)}
           store={store}
-          title={menu.title}
           heading={menu.heading}
           subHeading={menu.subHeading}
         />
@@ -130,7 +132,24 @@ function AppContent({ store }: { store: StoreServiceClient }) {
     >
       <StatusBar data={statusBar} store={store} />
       <Breadcrumb stack={stack} currentTitle={currentTitle} store={store} />
-      <Box sx={{ flex: 1, p: 2, overflow: "auto" }}>{content}</Box>
+      <Box sx={{ flex: 1, p: 2, overflow: "auto" }}>
+        {(showBackButton || currentTitleText) && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+            {showBackButton && <BackButton store={store} />}
+            {currentTitleText && (
+              <Typography variant="h6" fontWeight={600}>
+                {currentTitleIcon && (
+                  <span style={{ fontFamily: "ArimoNerdFont", marginRight: 8 }}>
+                    {currentTitleIcon}
+                  </span>
+                )}
+                {currentTitleText}
+              </Typography>
+            )}
+          </Box>
+        )}
+        {content}
+      </Box>
     </Box>
   );
 }
