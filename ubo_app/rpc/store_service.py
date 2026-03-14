@@ -231,6 +231,11 @@ class StoreService(StoreServiceBase):
         def parent_selector(state: RootState) -> Sequence[GRPCSerializable]:
             return tuple(selector(state) for selector in selectors)
 
+        logger.debug(
+            'subscribe_store: setting up autorun for selectors: %s',
+            subscribe_store_request.selectors,
+        )
+
         @store.autorun(parent_selector)
         def queue_change(partial_state: Sequence[GRPCSerializable]) -> None:
             """Put the change in the queue."""

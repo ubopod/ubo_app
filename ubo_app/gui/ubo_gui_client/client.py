@@ -59,7 +59,7 @@ class GUIClient:
         if self._client:
             self._client.close()
 
-    def subscribe_view_changes(  # noqa: C901
+    def subscribe_view_changes(  # noqa: C901, PLR0915
         self,
         callback: Callable[[ViewData, StatusBarData | None, bool | None], None],
         *,
@@ -132,7 +132,27 @@ class GUIClient:
                             ]
                             current_view = results[0] if len(results) > 0 else None
                             status_bar_data = results[1] if len(results) > 1 else None
-                            is_blanked = results[2] if len(results) > 2 else None  # noqa: PLR2004
+                            is_blanked_raw = (
+                                results[2] if len(results) > 2 else None  # noqa: PLR2004
+                            )
+                            # Unwrap BoolValue wrapper from gRPC
+                            is_blanked: bool | None = (
+                                is_blanked_raw.value
+                                if is_blanked_raw is not None
+                                and hasattr(is_blanked_raw, 'value')
+                                else None
+                            )
+                            logger.info(
+                                '[GUIClient] Received state update: '
+                                'view=%s, status_bar=%s, blanked=%s',
+                                type(current_view).__name__
+                                if current_view is not None
+                                else 'None',
+                                type(status_bar_data).__name__
+                                if status_bar_data is not None
+                                else 'None',
+                                is_blanked,
+                            )
                             if current_view is not None:
                                 from typing import cast
 
