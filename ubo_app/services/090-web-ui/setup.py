@@ -67,23 +67,55 @@ _dist_js = Path(__file__).parent / 'web-app' / 'dist' / 'main.js'
 _cache_bust = str(int(_dist_js.stat().st_mtime)) if _dist_js.exists() else '0'
 
 
-async def _get_docker_status() -> str:
+# Status cache: maps key -> (timestamp, result)
+_status_cache: dict[str, tuple[float, str]] = {}
+_CACHE_TTL = 5.0
+
+
+_DOCKER_COMMAND_TIMEOUT = 5.0
+
+
+async def _run_docker_command(
+    *args: str,
+) -> tuple[int | None, str]:
+    """Run a docker command with timeout, killing the process on timeout."""
+    process = await asyncio.subprocess.create_subprocess_exec(
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
     try:
-        process = await asyncio.subprocess.create_subprocess_exec(
-            'docker',
-            'info',
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await asyncio.wait_for(process.wait(), timeout=2)
-        if process.returncode is None:
-            process.kill()
-        if process.stdout and process.returncode == 0:
-            output = await process.stdout.read()
-            return 'running' if 'Containers' in output.decode() else 'not ready'
+        await asyncio.wait_for(process.wait(), timeout=_DOCKER_COMMAND_TIMEOUT)
+    except TimeoutError:
+        process.kill()
+        await process.wait()
+        raise
+    output = ''
+    if process.stdout and process.returncode == 0:
+        output = (await process.stdout.read()).decode()
+    return process.returncode, output
+
+
+async def _get_docker_status() -> str:
+    cached = _status_cache.get('docker')
+    if cached and time.time() - cached[0] < _CACHE_TTL:
+        return cached[1]
+    result = await _get_docker_status_uncached()
+    _status_cache['docker'] = (time.time(), result)
+    return result
+
+
+async def _get_docker_status_uncached() -> str:
+    try:
+        returncode, output = await _run_docker_command('docker', 'info')
+        if returncode == 0:
+            return 'running' if 'Containers' in output else 'not ready'
     except FileNotFoundError:
         logger.warning('Docker is not installed')
         return 'not installed'
+    except TimeoutError:
+        logger.warning('Docker info timed out')
+        return 'failed'
     except Exception:
         logger.exception('Failed to check if docker is running')
         report_service_error()
@@ -94,44 +126,39 @@ async def _get_docker_status() -> str:
 
 
 async def _get_envoy_status() -> str:
+    cached = _status_cache.get('envoy')
+    if cached and time.time() - cached[0] < _CACHE_TTL:
+        return cached[1]
+    result = await _get_envoy_status_uncached()
+    _status_cache['envoy'] = (time.time(), result)
+    return result
+
+
+async def _get_envoy_status_uncached() -> str:
     try:
-        process = await asyncio.subprocess.create_subprocess_exec(
+        returncode, output = await _run_docker_command(
             'docker',
             'inspect',
             ENVOY_IMAGE_NAME,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
         )
-        await asyncio.wait_for(process.wait(), timeout=2)
-        if process.returncode is None:
-            process.kill()
-        if process.stdout and process.returncode == 0:
-            output = await process.stdout.read()
-            if ENVOY_IMAGE_NAME in output.decode():
-                process = await asyncio.subprocess.create_subprocess_exec(
-                    'docker',
-                    'ps',
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                await asyncio.wait_for(process.wait(), timeout=3)
-                if process.returncode is None:
-                    process.kill()
-                if process.stdout and process.returncode == 0:
-                    output = await process.stdout.read()
+        if returncode == 0:
+            if ENVOY_IMAGE_NAME in output:
+                ps_returncode, ps_output = await _run_docker_command('docker', 'ps')
+                if ps_returncode == 0:
                     return (
                         'running'
-                        if ENVOY_IMAGE_NAME in output.decode()
+                        if ENVOY_IMAGE_NAME in ps_output
                         else 'not running'
                     )
-
-                logger.warning('Docker process returned non-zero exit code')
+                logger.warning('Docker ps returned non-zero exit code')
                 return 'not running'
-
             return 'not running'
         else:  # noqa: RET505
-            logger.warning('Docker process returned non-zero exit code')
+            logger.warning('Docker inspect returned non-zero exit code')
             return 'not downloaded'
+    except TimeoutError:
+        logger.warning('Docker envoy check timed out')
+        return 'failed'
     except Exception:
         logger.exception('Failed to check if envoy is running')
         report_service_error()
