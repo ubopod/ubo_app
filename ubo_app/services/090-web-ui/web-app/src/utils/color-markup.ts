@@ -1,6 +1,10 @@
-/** Strip all [color=...][/color] tags, keeping inner text. */
+/** Strip all [color=...][/color] and [size=...][/size] tags, keeping inner text. */
 export function stripColorMarkup(text: string): string {
-  return text.replace(/\[color=[^\]]*\]/g, "").replace(/\[\/color\]/g, "");
+  return text
+    .replace(/\[color=[^\]]*\]/g, "")
+    .replace(/\[\/color\]/g, "")
+    .replace(/\[size=[^\]]*\]/g, "")
+    .replace(/\[\/size\]/g, "");
 }
 
 /** Parse a single colored icon: extract symbol + color from [color=#XXX]icon[/color]. */

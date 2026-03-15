@@ -1,6 +1,7 @@
 import { ArrowBack, Close, RecordVoiceOver } from "@mui/icons-material";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   IconButton,
@@ -11,9 +12,9 @@ import {
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { NotificationViewData } from "../bindings/ubo/v1/ubo_pb";
 import { dismissNotification, executeAction } from "../store/action-dispatcher";
-import { NOTIFICATION_DISMISS_PREFIX } from "../store/constants";
+import { NOTIFICATION_DISMISS_PREFIX, NOTIFICATION_EXTRA_INFO_PREFIX } from "../store/constants";
 import { unwrapItems } from "../store/helpers";
-import { stripColorMarkup } from "../utils/color-markup";
+import { parseColoredIcon, stripColorMarkup } from "../utils/color-markup";
 
 interface NotificationOverlayProps {
   data: NotificationViewData.AsObject;
@@ -26,9 +27,18 @@ export function NotificationOverlay({
 }: NotificationOverlayProps) {
   const items = unwrapItems(data.items?.itemsList);
 
-  // Separate dismiss actions from other actions (e.g. read-aloud)
+  // Separate extra_info item from real action items and dismiss
+  const extraInfoItem = items.find(
+    (item) =>
+      item.key === "extra_info" ||
+      item.actionId?.startsWith(NOTIFICATION_EXTRA_INFO_PREFIX),
+  );
   const actionItems = items.filter(
-    (item) => item.key !== "dismiss" && !item.actionId?.startsWith(NOTIFICATION_DISMISS_PREFIX),
+    (item) =>
+      item.key !== "dismiss" &&
+      item.key !== "extra_info" &&
+      !item.actionId?.startsWith(NOTIFICATION_DISMISS_PREFIX) &&
+      !item.actionId?.startsWith(NOTIFICATION_EXTRA_INFO_PREFIX),
   );
   const hasDismiss = items.some(
     (item) => item.key === "dismiss" || item.actionId?.startsWith(NOTIFICATION_DISMISS_PREFIX),
@@ -80,13 +90,11 @@ export function NotificationOverlay({
                   >
                     {data.extraInformation}
                   </Typography>
-                  {actionItems.length > 0 && (
+                  {extraInfoItem?.actionId && (
                     <IconButton
                       size="small"
                       onClick={() => {
-                        if (actionItems[0].actionId) {
-                          executeAction(store, actionItems[0].actionId);
-                        }
+                        executeAction(store, extraInfoItem.actionId!);
                       }}
                       sx={{
                         backgroundColor: "primary.main",
@@ -104,31 +112,55 @@ export function NotificationOverlay({
                   )}
                 </Stack>
               )}
-              {/* Show action buttons when there's no extra information to attach them to */}
-              {!data.extraInformation && actionItems.length > 0 && (
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  {actionItems.map((item, index) => (
-                    <IconButton
-                      key={`${item.key || "item"}-${index}`}
-                      size="small"
-                      onClick={() => {
-                        if (item.actionId) {
-                          executeAction(store, item.actionId);
+              {/* Render real action buttons (QR code, Web UI, etc.) */}
+              {actionItems.length > 0 && (
+                <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
+                  {actionItems.map((item, index) => {
+                    const parsedIcon = item.icon
+                      ? parseColoredIcon(item.icon)
+                      : null;
+                    const label = item.label
+                      ? stripColorMarkup(item.label)
+                      : null;
+                    return (
+                      <Button
+                        key={`${item.key || "action"}-${index}`}
+                        variant="contained"
+                        size="small"
+                        onClick={() => {
+                          if (item.actionId) {
+                            executeAction(store, item.actionId);
+                          }
+                        }}
+                        sx={{
+                          backgroundColor: "primary.main",
+                          color: "#fff",
+                          textTransform: "none",
+                          borderRadius: 1,
+                          px: 1.5,
+                          py: 0.5,
+                          minWidth: 0,
+                          "&:hover": {
+                            backgroundColor: "primary.dark",
+                          },
+                        }}
+                        startIcon={
+                          parsedIcon ? (
+                            <span
+                              style={{
+                                fontFamily: "ArimoNerdFont",
+                                fontSize: 16,
+                              }}
+                            >
+                              {parsedIcon.icon}
+                            </span>
+                          ) : undefined
                         }
-                      }}
-                      sx={{
-                        backgroundColor: "primary.main",
-                        color: "#fff",
-                        width: 28,
-                        height: 28,
-                        "&:hover": {
-                          backgroundColor: "primary.dark",
-                        },
-                      }}
-                    >
-                      <RecordVoiceOver sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  ))}
+                      >
+                        {label || parsedIcon?.icon || "?"}
+                      </Button>
+                    );
+                  })}
                 </Stack>
               )}
             </Box>
