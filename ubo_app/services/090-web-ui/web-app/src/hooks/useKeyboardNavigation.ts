@@ -40,6 +40,8 @@ export function useKeyboardNavigation(store: StoreServiceClient): void {
           if (hasPopover) break;
           // TileGrid handles its own arrow keys — don't also scroll
           if (document.querySelector("[data-tile-grid]")) break;
+          // NotificationOverlay handles its own arrow keys
+          if (document.querySelector("[data-notification-actions]")) break;
           // On non-TileGrid pages, focus the back button if available
           const backBtn = document.querySelector<HTMLElement>("[data-back-button]");
           if (backBtn) {
@@ -56,6 +58,7 @@ export function useKeyboardNavigation(store: StoreServiceClient): void {
           const hasPopover = document.querySelector(".MuiPopover-root");
           if (hasPopover) break;
           if (document.querySelector("[data-tile-grid]")) break;
+          if (document.querySelector("[data-notification-actions]")) break;
           e.preventDefault();
           scroll(store, "down");
           break;

@@ -23,6 +23,15 @@ export function BackButton({ store }: BackButtonProps) {
           if (grid) {
             const firstButton = grid.querySelector<HTMLElement>("button");
             (firstButton ?? grid).focus();
+            e.preventDefault();
+            break;
+          }
+          const notifActions = document.querySelector<HTMLElement>("[data-notification-actions]");
+          if (notifActions) {
+            const firstButton = notifActions.querySelector<HTMLElement>("button");
+            (firstButton ?? notifActions).focus();
+            e.preventDefault();
+            break;
           }
           e.preventDefault();
           break;

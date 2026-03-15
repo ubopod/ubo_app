@@ -1,4 +1,4 @@
-import { ArrowBack, Close, RecordVoiceOver } from "@mui/icons-material";
+import { Close, RecordVoiceOver } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -8,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { NotificationViewData } from "../bindings/ubo/v1/ubo_pb";
@@ -44,6 +45,58 @@ export function NotificationOverlay({
     (item) => item.key === "dismiss" || item.actionId?.startsWith(NOTIFICATION_DISMISS_PREFIX),
   );
 
+  const [focusIndex, setFocusIndex] = useState(-1);
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    containerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (focusIndex >= 0 && focusIndex < buttonRefs.current.length) {
+      buttonRefs.current[focusIndex]?.focus();
+    }
+  }, [focusIndex]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const total = actionItems.length;
+      if (total === 0) return;
+
+      switch (e.key) {
+        case "ArrowRight": {
+          e.preventDefault();
+          setFocusIndex((prev) => (prev + 1) % total);
+          break;
+        }
+        case "ArrowLeft": {
+          e.preventDefault();
+          setFocusIndex((prev) => (prev - 1 + total) % total);
+          break;
+        }
+        case "ArrowUp": {
+          e.preventDefault();
+          const backBtn = document.querySelector<HTMLElement>("[data-back-button]");
+          if (backBtn) {
+            setFocusIndex(-1);
+            backBtn.focus();
+          }
+          break;
+        }
+        case "Enter":
+        case " ": {
+          if (focusIndex >= 0 && focusIndex < total) {
+            e.preventDefault();
+            buttonRefs.current[focusIndex]?.click();
+          }
+          break;
+        }
+      }
+    },
+    [actionItems.length, focusIndex],
+  );
+
   return (
     <Box
       sx={{
@@ -65,17 +118,7 @@ export function NotificationOverlay({
       >
         <CardContent>
           <Stack direction="row" alignItems="flex-start" spacing={1}>
-            <IconButton
-              size="small"
-              onClick={() => dismissNotification(store, data.notificationId ?? "")}
-              sx={{ mt: -0.5 }}
-            >
-              <ArrowBack />
-            </IconButton>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" gutterBottom>
-                {stripColorMarkup(data.title ?? "")}
-              </Typography>
               {data.content && (
                 <Typography variant="body2" color="text.secondary">
                   {stripColorMarkup(data.content)}
@@ -114,7 +157,15 @@ export function NotificationOverlay({
               )}
               {/* Render real action buttons (QR code, Web UI, etc.) */}
               {actionItems.length > 0 && (
-                <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
+                <Stack
+                  data-notification-actions
+                  direction="row"
+                  spacing={1}
+                  sx={{ mt: 1, flexWrap: "wrap" }}
+                  tabIndex={0}
+                  ref={containerRef}
+                  onKeyDown={handleKeyDown}
+                >
                   {actionItems.map((item, index) => {
                     const parsedIcon = item.icon
                       ? parseColoredIcon(item.icon)
@@ -125,6 +176,7 @@ export function NotificationOverlay({
                     return (
                       <Button
                         key={`${item.key || "action"}-${index}`}
+                        ref={(el) => { buttonRefs.current[index] = el; }}
                         variant="contained"
                         size="small"
                         onClick={() => {
@@ -142,6 +194,11 @@ export function NotificationOverlay({
                           minWidth: 0,
                           "&:hover": {
                             backgroundColor: "primary.dark",
+                          },
+                          "&:focus-visible": {
+                            outline: "2px solid",
+                            outlineColor: "primary.main",
+                            outlineOffset: 2,
                           },
                         }}
                         startIcon={
