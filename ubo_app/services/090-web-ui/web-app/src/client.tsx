@@ -15,6 +15,7 @@ import { StoreServiceClient } from "./bindings/store/v1/StoreServiceClientPb";
 import { WebUIState } from "./bindings/ubo/v1/ubo_pb";
 import { Inputs } from "./inputs";
 import { MainView } from "./main-view";
+import { onPostDispatch } from "./store/action-dispatcher";
 import { StatusType } from "./types";
 
 export function Root({ state }: { state: string }) {
@@ -48,7 +49,12 @@ export function Root({ state }: { state: string }) {
     }
     checkStatus();
     const interval = setInterval(checkStatus, 5000);
-    return () => clearInterval(interval);
+    // Refresh status immediately after any action dispatch
+    const unsubscribe = onPostDispatch(() => checkStatus());
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, []);
 
   return (

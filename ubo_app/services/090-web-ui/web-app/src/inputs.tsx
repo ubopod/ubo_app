@@ -30,6 +30,7 @@ import {
   InputResult,
   WebUIInputDescription,
 } from "./bindings/ubo/v1/ubo_pb";
+import { triggerPostDispatch } from "./store/action-dispatcher";
 import { inputFieldTypes } from "./types";
 
 export function Inputs({
@@ -103,6 +104,7 @@ export function Inputs({
       dispatchActionRequest.setAction(action);
 
       await store.dispatchAction(dispatchActionRequest);
+      triggerPostDispatch();
     } else if (action === "cancel") {
       const inputCancelAction = new InputCancelAction();
       inputCancelAction.setId(id);
@@ -114,6 +116,7 @@ export function Inputs({
       dispatchActionRequest.setAction(action);
 
       await store.dispatchAction(dispatchActionRequest);
+      triggerPostDispatch();
     }
   }
 

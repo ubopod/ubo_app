@@ -34,6 +34,22 @@ export function registerPageStream(cancel: () => void): () => void {
   return () => pageStreams.delete(cancel);
 }
 
+// Post-dispatch listeners — called after every action dispatch so consumers
+// (e.g. status polling) can refresh immediately instead of waiting for the
+// next polling interval.
+const postDispatchListeners = new Set<() => void>();
+
+export function onPostDispatch(listener: () => void): () => void {
+  postDispatchListeners.add(listener);
+  return () => postDispatchListeners.delete(listener);
+}
+
+export function triggerPostDispatch(): void {
+  for (const listener of postDispatchListeners) {
+    listener();
+  }
+}
+
 function dispatch(store: StoreServiceClient, action: Action): void {
   // Cancel page-specific streams to free connection slots for this request
   for (const cancel of pageStreams) {
@@ -43,7 +59,7 @@ function dispatch(store: StoreServiceClient, action: Action): void {
 
   const request = new DispatchActionRequest();
   request.setAction(action);
-  store.dispatchAction(request, null);
+  store.dispatchAction(request, null).then(() => triggerPostDispatch());
 }
 
 export function chooseByIndex(
