@@ -32,21 +32,39 @@ class WiFiConnectionPage(UboPromptWidget):
     def first_option_callback(self) -> None:
         """Handle first option (connect/disconnect).
 
-        Dispatches WiFiUpdateRequestAction via gRPC and lets the core
-        handle the actual connect/disconnect operation.
+        Dispatches connect or disconnect action via gRPC.
         """
+        from ubo_bindings.ubo.v1 import Action, ExecuteMenuActionAction
+
         client = get_grpc_client()
-        client.dispatch_wifi_update_request(reset=True)
+        if self.state == ConnectionState.CONNECTED:
+            action_id = f'wifi:disconnect:{self.ssid}'
+        else:
+            action_id = f'wifi:connect:{self.ssid}'
+        client.dispatch_raw(
+            Action(
+                execute_menu_action_action=ExecuteMenuActionAction(
+                    action_id=action_id,
+                ),
+            ),
+        )
 
     def second_option_callback(self) -> None:
         """Handle second option (delete/forget).
 
-        Dispatches close + update via gRPC. The core handles the actual
-        forget operation.
+        Dispatches forget action and closes the page via gRPC.
         """
+        from ubo_bindings.ubo.v1 import Action, ExecuteMenuActionAction
+
         client = get_grpc_client()
+        client.dispatch_raw(
+            Action(
+                execute_menu_action_action=ExecuteMenuActionAction(
+                    action_id=f'wifi:forget:{self.ssid}',
+                ),
+            ),
+        )
         client.dispatch_close_application(self.id)
-        client.dispatch_wifi_update_request(reset=True)
 
     def update(self, *_: tuple[Any, ...]) -> None:
         """Update UI based on connection state."""

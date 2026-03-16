@@ -201,6 +201,20 @@ class StackSetPageIndexAction(StackAction):
     page_index: int
 
 
+class UpdateApplicationKwargsAction(StackAction):
+    """Update initialization_kwargs of a running ApplicationStackItem.
+
+    Finds the application by application_id in the stack and merges
+    the provided kwargs into its initialization_kwargs.
+    """
+
+    application_id: str
+    kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+
+
 # =============================================================================
 # Dynamic Menu Actions (Services update menu content via Redux)
 # =============================================================================

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import (
     MENU_SELECT_PREFIX,
+    NOTIFICATION_ACTION_PREFIX,
     NOTIFICATION_DISMISS_PREFIX,
     NOTIFICATION_DISPLAY_PREFIX,
     NOTIFICATION_EXTRA_INFO_PREFIX,
@@ -34,6 +35,7 @@ from ubo_app.store.core.types import (
     MenuScrollEvent,
     MenuStackItem,
     NotificationStackItem,
+    OpenApplicationAction,
     OpenApplicationEvent,
     StackPopAction,
     StackPopItemAction,
@@ -59,6 +61,7 @@ if TYPE_CHECKING:
         MenuViewData,
         StackItemType,
     )
+    from ubo_app.store.main import RootState
     from ubo_app.utils.types import Subscriptions
 
 
@@ -75,6 +78,83 @@ def _pop_stack_item(
                 return
 
     _pop()
+
+
+def _dispatch_original_notification_action(
+    state: RootState,
+    notification_id: str,
+    action_id: str,
+) -> bool:
+    """Look up the original notification action and dispatch it.
+
+    Handles NotificationDispatchItem (store_action) and
+    NotificationApplicationItem (application_id) by dispatching
+    the appropriate actions. Returns True if handled.
+    """
+    if not hasattr(state, 'notifications') or not action_id.startswith(
+        NOTIFICATION_ACTION_PREFIX,
+    ):
+        return False
+
+    notification = next(
+        (n for n in state.notifications.notifications if n.id == notification_id),
+        None,
+    )
+    if not notification:
+        return False
+
+    # Extract the action index from the action_id
+    suffix = action_id[len(NOTIFICATION_ACTION_PREFIX) + len(notification_id) + 1 :]
+    action_index = int(suffix) if suffix.isdigit() else -1
+    if action_index < 0 or action_index >= len(notification.actions):
+        return False
+
+    from ubo_app.store.services.notifications import (
+        NotificationApplicationItem,
+        NotificationDispatchItem,
+    )
+
+    original_action = notification.actions[action_index]
+
+    # Handle dismiss/close flags
+    if original_action.dismiss_notification:
+        _dismiss_notification(notification_id)
+    elif original_action.close_notification:
+        store.dispatch(StackPopAction())
+
+    # Handle NotificationDispatchItem (has store_action)
+    if (
+        isinstance(original_action, NotificationDispatchItem)
+        and original_action.store_action is not None
+    ):
+        actions = (
+            original_action.store_action
+            if isinstance(original_action.store_action, list)
+            else [original_action.store_action]
+        )
+        store.dispatch(*actions)
+        return True
+
+    # Handle NotificationApplicationItem (has application_id)
+    if isinstance(original_action, NotificationApplicationItem):
+        store.dispatch(
+            OpenApplicationAction(
+                application_id=original_action.application_id,
+                initialization_kwargs=dict(
+                    original_action.initialization_kwargs,
+                ),
+            ),
+        )
+        return True
+
+    # If the original action has a registered action_id, use it
+    if original_action.action_id:
+        store.dispatch(
+            ExecuteMenuActionAction(action_id=original_action.action_id),
+        )
+        return True
+
+    return False
 
 
 def _handle_notification_choose_by_index(
@@ -132,7 +212,11 @@ def _handle_notification_choose_by_index(
         _show_extra_info(notification_id)
         return True
 
-    # Custom notification actions go through the action registry
+    # Look up the original notification action for dispatch/application items
+    if _dispatch_original_notification_action(state, notification_id, action_id):
+        return True
+
+    # Fallback: custom notification actions go through the action registry
     store.dispatch(ExecuteMenuActionAction(action_id=action_id))
     return True
 
@@ -336,11 +420,31 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         _handle_home_view_index(current_view, event.index)
     elif isinstance(current_view, MenuViewData):
         _handle_menu_view_index(current_view, event.index)
+    elif isinstance(top, ApplicationStackItem):
+        _handle_application_view_index(top, event.index)
     else:
         logger.debug(
             '[MenuHandler] choose_by_index: unhandled view type %s',
             type(current_view).__name__ if current_view else 'None',
         )
+
+
+def _handle_application_view_index(
+    top: ApplicationStackItem,
+    index: int,
+) -> None:
+    """Handle button press on an application view.
+
+    Dispatches ``ExecuteMenuActionAction`` with action_id
+    ``app-button:{application_id}:{index}`` so services can register
+    handlers for their application pages.
+    """
+    action_id = f'app-button:{top.application_id}:{index}'
+    logger.debug(
+        '[MenuHandler] choose_by_index: application button action_id=%s',
+        action_id,
+    )
+    store.dispatch(ExecuteMenuActionAction(action_id=action_id))
 
 
 def _get_current_view_items(

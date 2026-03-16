@@ -38,7 +38,7 @@ from ubo_app.store.services.wifi import (
     WiFiUpdateAction,
     WiFiUpdateRequestEvent,
 )
-from ubo_app.utils import IS_RPI, IS_UBO_POD
+from ubo_app.utils import IS_UBO_POD
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.network import get_saved_wifi_ssids, has_gateway
 from ubo_app.utils.persistent_store import (
@@ -157,7 +157,9 @@ def init_service() -> Subscriptions:
         ),
     )
 
-    # Register path matcher for WiFi menu navigation
+    # Register path matchers for WiFi menu navigation
+    from constants import WIFI_CONNECTIONS_MENU_ID, WIFI_SETTINGS_MENU_ID
+
     from ubo_app.store.core.view_registry import (
         create_settings_path_matcher,
         register_path_menu_matcher,
@@ -165,25 +167,23 @@ def init_service() -> Subscriptions:
 
     register_path_menu_matcher(
         'wifi:settings',
-        create_settings_path_matcher('wifi:', 'wifi:connections'),
+        create_settings_path_matcher('wifi:', WIFI_SETTINGS_MENU_ID),
     )
 
-    # Register the dynamic menu for WiFi connections
-    if IS_RPI:
-        from pages import main as _pages_main  # noqa: F401
-    else:
-        from constants import WIFI_CONNECTIONS_MENU_ID
+    min_connections_path_length = 5
 
-        from ubo_app.store.core.types import UpdateDynamicMenuAction
+    register_path_menu_matcher(
+        'wifi:connections',
+        lambda path: WIFI_CONNECTIONS_MENU_ID
+        if len(path) >= min_connections_path_length
+        and path[3] == 'wifi:'
+        and path[4] == 'wifi:connections'
+        else None,
+        priority=1,
+    )
 
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id=WIFI_CONNECTIONS_MENU_ID,
-                title='Wi-Fi',
-                items=(),
-                placeholder='D-Bus unavailable on this platform',
-            ),
-        )
+    # Import pages/main to set up dynamic menus and action handlers
+    from pages import main as _pages_main  # noqa: F401
 
     create_task(_check_connection())
 

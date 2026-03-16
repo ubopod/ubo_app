@@ -18,6 +18,7 @@ from ubo_app.store.core.menu_registration import (
 )
 from ubo_app.store.core.stack_ops import (
     create_root_stack_item,
+    derive_path_from_stack,
     pop_item,
     pop_stack,
     pop_to_root,
@@ -27,6 +28,7 @@ from ubo_app.store.core.stack_ops import (
     set_page_index,
 )
 from ubo_app.store.core.types import (
+    ApplicationStackItem,
     CloseApplicationAction,
     CloseApplicationEvent,
     DeregisterRegularAppAction,
@@ -73,6 +75,7 @@ from ubo_app.store.core.types import (
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
+    UpdateApplicationKwargsAction,
     UpdateCurrentViewAction,
     ViewChangedEvent,
 )
@@ -209,6 +212,31 @@ def reducer(
                 events=[
                     StackPageIndexChangedEvent(page_index=action.page_index),
                 ],
+            )
+
+        case UpdateApplicationKwargsAction():
+            new_stack = tuple(
+                replace(
+                    item,
+                    initialization_kwargs={
+                        **item.initialization_kwargs,
+                        **action.kwargs,
+                    },
+                )
+                if isinstance(item, ApplicationStackItem)
+                and item.application_id == action.application_id
+                else item
+                for item in state.stack
+            )
+            if new_stack == state.stack:
+                return state
+            new_state = replace(state, stack=new_stack)
+            return CompleteReducerResult(
+                state=replace(
+                    new_state,
+                    path=derive_path_from_stack(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_state.stack)],
             )
 
         case OpenApplicationAction():

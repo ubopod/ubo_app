@@ -6,6 +6,7 @@ WIFI_STATE_ICON_PRIORITY = -12
 SIGNAL_ICONS = ['󰤯', '󰤟', '󰤢', '󰤥', '󰤨']
 
 # Dynamic menu IDs for dumb UI architecture
+WIFI_SETTINGS_MENU_ID = 'wifi:settings'
 WIFI_CONNECTIONS_MENU_ID = 'wifi:connections'
 
 

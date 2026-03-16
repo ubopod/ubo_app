@@ -391,6 +391,36 @@ class ViewRenderer:
             self.menu_widget.depth,
         )
 
+    def _try_update_application_in_place(
+        self,
+        app_class: type,
+        kwargs: dict[str, object],
+        application_id: str,
+    ) -> bool:
+        """Try to update existing application widget in-place.
+
+        Returns True if updated, False if a new widget must be created.
+        """
+        if self._current_view_type != 'application' or not self.menu_widget.stack:
+            return False
+
+        from ubo_gui.menu.stack_item import StackApplicationItem
+
+        top = self.menu_widget.stack[-1]
+        if not isinstance(top, StackApplicationItem):
+            return False
+        if not isinstance(top.application, app_class):
+            return False
+
+        for key, value in kwargs.items():
+            if hasattr(top.application, key):
+                setattr(top.application, key, value)
+        logger.info(
+            '[ViewRenderer] Application: updated in-place (id=%s)',
+            application_id,
+        )
+        return True
+
     def _render_application_view(self, view: ViewData) -> None:
         """Render an application view by opening the registered widget."""
         application_id = getattr(view, 'application_id', None)
@@ -418,6 +448,9 @@ class ViewRenderer:
                 kwargs = {
                     k: _unwrap_extra_data_value(v) for k, v in items_dict.items()
                 }
+
+        if self._try_update_application_in_place(app_class, kwargs, application_id):
+            return
 
         widget = app_class(**kwargs)
 

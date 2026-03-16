@@ -387,6 +387,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'ToggleRecordingAction': 'ubo_app.store.core.types.actions',
     'UboApplicationItem': 'ubo_app.store.ubo_actions',
     'UboDispatchItem': 'ubo_app.store.ubo_actions',
+    'UpdateApplicationKwargsAction': 'ubo_app.store.core.types.actions',
     'UpdateCurrentViewAction': 'ubo_app.store.core.types.actions',
     'UpdateDynamicMenuAction': 'ubo_app.store.core.types.actions',
     'UpdateLightDMState': 'ubo_app.store.core.types.actions',
