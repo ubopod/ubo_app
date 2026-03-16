@@ -197,22 +197,6 @@ def reducer(
                         AudioChangeVolumeAction(amount=-0.1, device=AudioDevice.OUTPUT),
                     ),
                     _register_intent(
-                        'speech:mute',
-                        'Mute Volume',
-                        AudioSetMuteStatusAction(
-                            is_mute=True,
-                            device=AudioDevice.OUTPUT,
-                        ),
-                    ),
-                    _register_intent(
-                        'speech:unmute',
-                        'Unmute Volume',
-                        AudioSetMuteStatusAction(
-                            is_mute=False,
-                            device=AudioDevice.OUTPUT,
-                        ),
-                    ),
-                    _register_intent(
                         'speech:button-one',
                         'Activate Button One',
                         MenuChooseByIndexAction(index=0),
