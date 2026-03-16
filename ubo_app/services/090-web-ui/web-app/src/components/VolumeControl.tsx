@@ -39,10 +39,20 @@ export function VolumeControl({ store }: VolumeControlProps) {
     setAnchorEl(null);
   }, []);
 
+  const [localPercent, setLocalPercent] = useState<number | null>(null);
+
   const handleSliderChange = useCallback(
     (_: Event, value: number | number[]) => {
+      setLocalPercent(value as number);
+    },
+    [],
+  );
+
+  const handleSliderCommit = useCallback(
+    (_: Event | React.SyntheticEvent, value: number | number[]) => {
       const v = (value as number) / 100;
       setVolume(store, v);
+      setLocalPercent(null);
     },
     [store],
   );
@@ -115,8 +125,9 @@ export function VolumeControl({ store }: VolumeControlProps) {
         >
           <Slider
             orientation="vertical"
-            value={percent}
+            value={localPercent ?? percent}
             onChange={handleSliderChange}
+            onChangeCommitted={handleSliderCommit}
             min={0}
             max={100}
             sx={{ height: "100%" }}

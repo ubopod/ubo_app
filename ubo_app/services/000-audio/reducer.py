@@ -58,7 +58,12 @@ def reducer(
             )
 
         case AudioSetVolumeAction(device=AudioDevice.OUTPUT):
-            return state(playback_volume=action.volume)
+            if action.volume == state.playback_volume:
+                return state
+            return CompleteReducerResult(
+                state=state(playback_volume=action.volume),
+                events=[AudioPlayChimeEvent(name=Chime.VOLUME_CHANGE)],
+            )
 
         case AudioSetVolumeAction(device=AudioDevice.INPUT):
             return state(capture_volume=action.volume)
@@ -75,7 +80,6 @@ def reducer(
                         ),
                     ),
                 ],
-                events=[AudioPlayChimeEvent(name=Chime.VOLUME_CHANGE)],
             )
 
         case AudioChangeVolumeAction(device=AudioDevice.INPUT):
