@@ -19,6 +19,8 @@ from ubo_app.store.core.types import (
     OpenApplicationAction,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPopAction,
+    UpdateApplicationKwargsAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
@@ -64,12 +66,13 @@ async def _perform_signin() -> None:
         if match:
             url = match.group('url')
             store.dispatch(
-                OpenApplicationAction(
+                UpdateApplicationKwargsAction(
                     application_id='rpi-connect:signin-page',
-                    initialization_kwargs={'stage': '1', 'url': url},
+                    kwargs={'stage': '1', 'url': url},
                 ),
             )
             await _signin_process.wait()
+            store.dispatch(StackPopAction())
         else:
             logger.error(
                 'RPi Connect: Failed to login: invalid output',

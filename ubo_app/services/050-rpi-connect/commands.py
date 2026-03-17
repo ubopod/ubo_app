@@ -62,22 +62,35 @@ async def _check_status() -> None:
         if process.stdout and process.returncode == 0:
             output = (await process.stdout.read()).decode()
 
-            data = re.search(
-                r"""Signed in: (yes|no)
-(?:Screen sharing: (allowed|unavailable)(?: \((\d+) sessions? active\))?
-Remote shell: (allowed|unavailable)(?: \((\d+) sessions? active\))?)?""",
+            logger.debug(
+                'RPi Connect raw status output',
+                extra={'output': output},
+            )
+            signed_in_match = re.search(r'Signed in: (yes|no)', output)
+            screen_match = re.search(
+                r'Screen sharing: (allowed|unavailable)'
+                r'(?: \((\d+) sessions? active\))?',
+                output,
+            )
+            shell_match = re.search(
+                r'Remote shell: (allowed|unavailable)'
+                r'(?: \((\d+) sessions? active\))?',
                 output,
             )
 
-            if data:
-                is_signed_in = data.group(1) == 'yes'
+            if signed_in_match:
+                is_signed_in = signed_in_match.group(1) == 'yes'
                 if is_signed_in:
                     status_data = {
-                        'screen_sharing_sessions': int(data.group(3) or '0')
-                        if data.group(2) == 'allowed'
+                        'screen_sharing_sessions': int(
+                            screen_match.group(2) or '0',
+                        )
+                        if screen_match and screen_match.group(1) == 'allowed'
                         else None,
-                        'remote_shell_sessions': int(data.group(5) or '0')
-                        if data.group(4) == 'allowed'
+                        'remote_shell_sessions': int(
+                            shell_match.group(2) or '0',
+                        )
+                        if shell_match and shell_match.group(1) == 'allowed'
                         else None,
                     }
     except (subprocess.CalledProcessError, TimeoutError):
