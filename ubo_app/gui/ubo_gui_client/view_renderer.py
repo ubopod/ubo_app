@@ -94,6 +94,9 @@ class ViewRenderer:
         # to push (home→menu) or replace (menu→menu).
         self._current_view_type: ViewType | None = None
         self._camera_unsubscribe: Callable[[], None] | None = None
+        # Track page index and stack depth for transition animation detection
+        self._last_menu_page_index: int | None = None
+        self._last_stack_depth: int | None = None
 
         # Ensure a root menu always exists so that non-home views arriving
         # first (e.g. on reconnect to a core already in a submenu) get
@@ -116,6 +119,8 @@ class ViewRenderer:
         self._last_is_blanked = None
         self._last_home_item_keys = ()
         self._current_view_type = None
+        self._last_menu_page_index = None
+        self._last_stack_depth = None
         self.menu_widget.reset_to_root()
         logger.info('[ViewRenderer] State reset for reconnection')
 
@@ -263,16 +268,23 @@ class ViewRenderer:
         Resets to root and sets the root menu items from the home view data.
         """
         logger.debug(
-            '[ViewRenderer] _render_home_view: resetting to root (depth=%d)',
+            '[ViewRenderer] _render_home_view: resetting to root (depth=%d, prev=%s)',
             self.menu_widget.depth,
+            self._current_view_type,
         )
-        did_reset = self.menu_widget.reset_to_root()
+        # Use animated go-home when navigating back from a non-home view
+        if self._current_view_type is not None and self._current_view_type != 'home':
+            did_reset = self.menu_widget.go_home_animated()
+        else:
+            did_reset = self.menu_widget.reset_to_root()
         logger.debug(
             '[ViewRenderer] _render_home_view: reset_to_root returned %s, depth now=%d',
             did_reset,
             self.menu_widget.depth,
         )
         self._current_view_type = 'home'
+        self._last_stack_depth = 1
+        self._last_menu_page_index = None
 
         # Restore hostname title from cached status bar when returning to home.
         # _render_status_bar skips duplicate data, so the title won't be re-set
@@ -298,6 +310,10 @@ class ViewRenderer:
                     self.menu_widget.set_root_menu(menu)
 
         # Update gauges on home page
+        self._update_home_gauges(view, len(raw_items) if menu_items_wrapper else 0)
+
+    def _update_home_gauges(self, view: HomeViewData, item_count: int) -> None:
+        """Update CPU, RAM, and volume gauges on the home page widget."""
         home_page = getattr(self.menu_widget, 'home_page', None)
         if home_page is None:
             return
@@ -320,7 +336,7 @@ class ViewRenderer:
             getattr(view, 'cpu_percent', 0.0) or 0.0,
             getattr(view, 'ram_percent', 0.0) or 0.0,
             f'{vol * 100:.0f}%' if vol is not None else 'N/A',
-            len(raw_items) if menu_items_wrapper else 0,
+            item_count,
         )
 
     def _render_menu_view(self, view: MenuViewData) -> None:
@@ -346,16 +362,48 @@ class ViewRenderer:
         else:
             menu = HeadlessMenu(title=title, items=items, placeholder=placeholder)
         page_index = getattr(view, 'page_index', None)
+        stack_depth = getattr(view, 'stack_depth', None)
 
         if self._current_view_type == 'menu':
-            # Already showing a menu — replace content in-place.
+            # Already showing a menu — detect scroll or push/pop for animation.
+            scroll_direction: str | None = None
+
+            # Detect page scroll (same depth, different page)
+            if (
+                page_index is not None
+                and self._last_menu_page_index is not None
+                and page_index != self._last_menu_page_index
+                and (
+                    stack_depth is None
+                    or stack_depth == self._last_stack_depth
+                )
+            ):
+                scroll_direction = (
+                    'up' if page_index > self._last_menu_page_index else 'down'
+                )
+            # Detect push/pop (different stack depth)
+            elif (
+                stack_depth is not None
+                and self._last_stack_depth is not None
+                and stack_depth != self._last_stack_depth
+            ):
+                scroll_direction = (
+                    'left' if stack_depth > self._last_stack_depth else 'right'
+                )
+
             logger.info(
-                '[ViewRenderer] Menu: replace in-place (depth=%d, title=%s, page=%s)',
+                '[ViewRenderer] Menu: replace in-place'
+                ' (depth=%d, title=%s, page=%s, scroll=%s)',
                 self.menu_widget.depth,
                 title,
                 page_index,
+                scroll_direction,
             )
-            self.menu_widget.replace_top_menu(menu, page_index=page_index)
+            self.menu_widget.replace_top_menu(
+                menu,
+                page_index=page_index,
+                scroll_direction=scroll_direction,
+            )
         elif self._current_view_type == 'home':
             # Coming from home — push with slide animation
             logger.info(
@@ -378,9 +426,11 @@ class ViewRenderer:
 
         self._current_view_type = 'menu'
 
-        # Update page index for push/root cases
+        # Update tracking for transition animation detection
         if page_index is not None:
-            self.menu_widget.page_index = page_index
+            self._last_menu_page_index = page_index
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
 
         logger.debug(
             '[ViewRenderer] Menu done: title=%s, page=%d/%d, items=%d, depth=%d',
@@ -460,8 +510,12 @@ class ViewRenderer:
             self.menu_widget.depth,
             application_id,
         )
-        self.menu_widget.replace_top_with_application(widget)
+        self.menu_widget.replace_top_with_application(widget, animated=True)
         self._current_view_type = 'application'
+        self._last_menu_page_index = None
+        stack_depth = getattr(view, 'stack_depth', None)
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
 
         # Start camera frame subscription for the viewfinder
         if application_id == 'camera:viewfinder':
@@ -515,6 +569,10 @@ class ViewRenderer:
                 )
                 self._apply_notification_data(top.application, view)
                 self._current_view_type = 'notification'
+                self._last_menu_page_index = None
+                stack_depth = getattr(view, 'stack_depth', None)
+                if stack_depth is not None:
+                    self._last_stack_depth = stack_depth
                 return
 
         # Build the notification widget
@@ -538,6 +596,10 @@ class ViewRenderer:
         )
         self.menu_widget.replace_top_with_application(notification_widget)
         self._current_view_type = 'notification'
+        self._last_menu_page_index = None
+        stack_depth = getattr(view, 'stack_depth', None)
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
         logger.info(
             '[ViewRenderer] Notification: opened widget for %s',
             notification_id,

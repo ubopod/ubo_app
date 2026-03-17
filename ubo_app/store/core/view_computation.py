@@ -85,12 +85,15 @@ def release_view_autorun() -> None:
 def get_notification_view_data(
     state: RootState,
     notification_id: str,
+    *,
+    stack_depth: int = 1,
 ) -> NotificationViewData:
     """Build NotificationViewData with full notification details from state.
 
     Args:
         state: The full Redux RootState.
         notification_id: The ID of the notification to look up.
+        stack_depth: Navigation stack depth for transition animation hints.
 
     Returns:
         NotificationViewData with title, content, icon, color, and items populated.
@@ -171,12 +174,14 @@ def get_notification_view_data(
             items=tuple(items),
             extra_information=extra_info_text,
             show_status_bar=False,
+            stack_depth=stack_depth,
         )
 
     # Fallback if notification not found (edge case)
     return NotificationViewData(
         notification_id=notification_id,
         show_status_bar=False,
+        stack_depth=stack_depth,
     )
 
 
@@ -279,11 +284,16 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
             application_id=top_item.application_id,
             show_status_bar=False,
             extra_data=dict(top_item.initialization_kwargs),
+            stack_depth=len(stack),
         )
 
     # Handle notification views
     if isinstance(top_item, NotificationStackItem):
-        return get_notification_view_data(state, top_item.notification_id)
+        return get_notification_view_data(
+            state,
+            top_item.notification_id,
+            stack_depth=len(stack),
+        )
 
     # Must be MenuStackItem
     if not isinstance(top_item, MenuStackItem):
@@ -344,6 +354,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
                 placeholder=dynamic_menu.placeholder or None,
                 page_index=page_index,
                 total_pages=total_pages,
+                stack_depth=len(stack),
             )
 
     # No dynamic menu found - return empty menu view
@@ -353,6 +364,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         items=(),
         page_index=0,
         total_pages=1,
+        stack_depth=len(stack),
     )
 
 

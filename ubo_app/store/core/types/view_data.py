@@ -64,6 +64,7 @@ class MenuViewData(Immutable):
     placeholder: str | None = None  # Text shown when items is empty
     page_index: int = 0
     total_pages: int = 1
+    stack_depth: int = 1  # Navigation stack depth (for push/pop animation)
 
 
 class ApplicationViewData(Immutable):
@@ -79,6 +80,7 @@ class ApplicationViewData(Immutable):
         str,
         BasicType | tuple[BasicType, ...] | list[BasicType],
     ] = field(default_factory=dict)
+    stack_depth: int = 1  # Navigation stack depth (for push/pop animation)
 
 
 class NotificationViewData(Immutable):
@@ -93,6 +95,7 @@ class NotificationViewData(Immutable):
     color: str = '#ffffff'
     items: tuple[MenuItemData | None, ...] = ()  # Action items (camera, web UI, etc.)
     extra_information: str = ''  # Additional info shown when "i" button is pressed
+    stack_depth: int = 1  # Navigation stack depth (for push/pop animation)
 
 
 # Union type for all view data types

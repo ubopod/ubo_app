@@ -251,10 +251,15 @@ def setup_keyboard(  # noqa: C901, PLR0915
         if modifier == [] and key in _select_keys:
             _try_local_select_action(key)
 
-        # For UP/DOWN, also scroll the local Kivy widget.
-        # MenuWidget.go_up()/go_down() delegates to current_application
-        # when one is on top (e.g. notification scroll).
-        if modifier == [] and menu_widget is not None:
+        # For UP/DOWN on application pages (e.g. notifications), scroll
+        # locally.  Menu scroll is handled remotely via ViewData updates
+        # from the core, so we only invoke go_up/go_down when an
+        # application is on top of the stack.
+        if (
+            modifier == []
+            and menu_widget is not None
+            and menu_widget.current_application is not None
+        ):
             if key in _scroll_up_keys:
                 menu_widget.go_up()
             elif key in _scroll_down_keys:

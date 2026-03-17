@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_SWAP_DURATION = 0.2
+
 
 def _noop() -> None:
     """No-op action for menu items; real selection goes via gRPC."""
@@ -78,6 +80,8 @@ def _convert_proto_menu_to_ubo(proto_menu: object) -> Menu | None:
 
 
 class MenuWidgetWithHomePage(MenuWidget):
+    _next_transition_override: tuple[TransitionBase, str | None] | None = None
+
     @cached_property
     def home_page(self: MenuWidgetWithHomePage) -> HomePage:
         return HomePage(
@@ -96,6 +100,38 @@ class MenuWidgetWithHomePage(MenuWidget):
             self.current_screen = self.home_page
             return self.home_page
         return super()._render_menu(menu)
+
+    def _switch_to(
+        self: MenuWidgetWithHomePage,
+        screen: object,
+        /,
+        *,
+        transition: TransitionBase,
+        duration: float | None = None,
+        direction: str | None = None,
+    ) -> None:
+        """Override to support transition overrides.
+
+        When ``_next_transition_override`` is set, it replaces the transition
+        and direction for one call.  This enables animated transitions from
+        ``_replace_menu`` which normally hard-codes ``_no_transition``.
+        """
+        if self._next_transition_override is not None:
+            override_transition, override_direction = self._next_transition_override
+            self._next_transition_override = None
+            super()._switch_to(
+                screen,
+                transition=override_transition,
+                duration=duration,
+                direction=override_direction,
+            )
+        else:
+            super()._switch_to(
+                screen,
+                transition=transition,
+                duration=duration,
+                direction=direction,
+            )
 
     def reset_to_root(self: MenuWidgetWithHomePage) -> bool:
         """Reset the navigation stack to root (depth 1) instantly.
@@ -148,19 +184,64 @@ class MenuWidgetWithHomePage(MenuWidget):
         Bound to ``screen_manager.current`` changes. Ensures the home page
         (or any other old screen) doesn't bleed through transparent areas
         of the new screen.
+
+        During animated transitions, the transition handlers manage opacity
+        via ``_handle_transition_progress``; we skip here to avoid a
+        one-frame flash where the old screen is hidden before the animation
+        begins.
         """
+        if self._running_transition_end_time is not None:
+            return
         current = self.screen_manager.current_screen
         for child in self.screen_manager.children:
             child.opacity = 1.0 if child is current else 0.0
 
+    def go_home_animated(self: MenuWidgetWithHomePage) -> bool:
+        """Reset the navigation stack to root with a rise-in animation.
+
+        Matches the original ``go_home()`` behaviour from the main branch.
+        Unlike ``reset_to_root()`` which uses instant transition, this
+        animates the return to home so the user sees visual feedback.
+
+        Returns ``True`` if a reset was performed, ``False`` if already at root.
+        """
+        if self.depth <= 1 and self.current_application is None:
+            return False
+        logger.info(
+            '[MenuWidget] go_home_animated: depth=%d, app=%s',
+            self.depth,
+            type(self.current_application).__name__
+            if self.current_application
+            else 'None',
+        )
+        from ubo_gui.menu.stack_item import StackApplicationItem
+
+        with self.stack_lock:
+            for item in self.stack[1:]:
+                item.clear_subscriptions()
+                if isinstance(item, StackApplicationItem):
+                    item.application.dispatch('on_close')
+            self.root.selection = None
+            self.stack = self.stack[:1]
+            self._switch_to(
+                self.current_screen,
+                transition=self._rise_in_transition,
+            )
+        return True
+
     def replace_top_with_application(
         self: MenuWidgetWithHomePage,
         application: object,
+        *,
+        animated: bool = False,
     ) -> None:
-        """Replace whatever is at the current depth with an application — instantly.
+        """Replace whatever is at the current depth with an application.
 
-        At any depth, this clears items above root and pushes the application
-        using ``_no_transition``, so the home page never flashes.
+        At any depth, this clears items above root and pushes the application.
+
+        When ``animated`` is True, uses a swap transition for visual feedback.
+        Otherwise uses instant (no) transition to prevent the home page from
+        flashing.
         """
         import uuid
 
@@ -172,8 +253,9 @@ class MenuWidgetWithHomePage(MenuWidget):
             raise TypeError(msg)
 
         logger.info(
-            '[MenuWidget] replace_top_with_application: depth=%d',
+            '[MenuWidget] replace_top_with_application: depth=%d, animated=%s',
             self.depth,
+            animated,
         )
         with self.stack_lock:
             # Clean up items above root
@@ -182,12 +264,13 @@ class MenuWidgetWithHomePage(MenuWidget):
                 if isinstance(item, StackApplicationItem):
                     item.application.dispatch('on_close')
             self.root.selection = None
-            # Hide old screen immediately — _switch_to is deferred by
-            # @mainthread so without this the old screen stays visible
-            # for one frame while NoTransition completes.
-            old = self.screen_manager.current_screen
-            if old is not None:
-                old.opacity = 0.0
+            if not animated:
+                # Hide old screen immediately — _switch_to is deferred by
+                # @mainthread so without this the old screen stays visible
+                # for one frame while NoTransition completes.
+                old = self.screen_manager.current_screen
+                if old is not None:
+                    old.opacity = 0.0
             # Set stack to root only
             self.stack = self.stack[:1]
             # Now push the application onto the stack
@@ -196,11 +279,18 @@ class MenuWidgetWithHomePage(MenuWidget):
             application.padding_top = self.padding_top
             new_top = StackApplicationItem(application=application, parent=None)
             self.stack = [*self.stack, new_top]
-            # Instant transition — no home page flash
-            self._switch_to(
-                self.current_screen,
-                transition=self._no_transition,
-            )
+            if animated:
+                self._switch_to(
+                    self.current_screen,
+                    transition=self._swap_transition,
+                    duration=_SWAP_DURATION,
+                    direction='left',
+                )
+            else:
+                self._switch_to(
+                    self.current_screen,
+                    transition=self._no_transition,
+                )
 
     def replace_top_with_menu(
         self: MenuWidgetWithHomePage,
@@ -262,27 +352,46 @@ class MenuWidgetWithHomePage(MenuWidget):
         menu: Menu,
         *,
         page_index: int | None = None,
+        scroll_direction: str | None = None,
     ) -> None:
         """Replace the top menu's content without changing the stack depth.
 
         If ``page_index`` is given, the page index of the current stack item is
         updated *before* the menu is replaced so that the rendered page matches
         the scroll-bar position from the first frame.
+
+        If ``scroll_direction`` is provided (``'up'``/``'down'`` for page
+        scroll, ``'left'``/``'right'`` for push/pop), a transition override is
+        set so that ``_replace_menu``'s hardcoded ``_no_transition`` is
+        replaced with a slide animation in the given direction.
         """
         if not self.stack:
             logger.warning('[MenuWidget] replace_top_menu: empty stack, skipping')
             return
         logger.debug(
-            '[MenuWidget] replace_top_menu: title=%s, page=%s (depth=%d)',
+            '[MenuWidget] replace_top_menu: title=%s, page=%s, scroll=%s (depth=%d)',
             menu.title,
             page_index,
+            scroll_direction,
             self.depth,
         )
         top = self.top
-        if page_index is not None and isinstance(top, StackMenuItem):
+        if not isinstance(top, StackMenuItem):
+            return
+
+        if page_index is not None:
             top.page_index = page_index
-        if isinstance(top, StackMenuItem):
+        if scroll_direction:
+            self._next_transition_override = (
+                self._slide_transition,
+                scroll_direction,
+            )
+        try:
             self._replace_menu(top, menu)
+        finally:
+            # Clear override if _replace_menu didn't reach _switch_to
+            # (e.g. new_item was not self.top in a recursive call).
+            self._next_transition_override = None
 
 
 def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
@@ -291,9 +400,13 @@ def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
     ubo_gui's ``TransitionsMixin._handle_transition_progress`` and
     ``_handle_transition_complete`` access ``transition.screen_out`` and
     ``transition.screen_in`` without null checks.  When screens are removed
-    during rapid view switching (e.g. reset_to_root → push_menu), Kivy may
+    during rapid view switching (e.g. reset_to_root -> push_menu), Kivy may
     clear these references, causing ``AttributeError: 'NoneType' object has
     no attribute 'screen_out'``.
+
+    Note: accesses private TransitionsMixin internals (transition_queue,
+    _transition_progress_lock, _running_transition_end_time, _perform_switch).
+    Review after ubo_gui upgrades.
 
     This monkey-patches the handlers with null-safe wrappers.
     """
