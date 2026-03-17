@@ -1,6 +1,7 @@
 # ruff: noqa: D100
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from constants import WIFI_CONNECTIONS_MENU_ID, WIFI_SETTINGS_MENU_ID, get_signal_icon
@@ -97,10 +98,39 @@ _WIFI_ACTION_PREFIXES = (
 )
 
 
+@dataclass
+class _WiFiMenuCache:
+    """Cache for WiFi menu state to avoid redundant updates."""
+
+    connection_fingerprint: set[tuple[str, str]] = field(default_factory=set)
+    menu_items: tuple[MenuItemData | None, ...] = ()
+    menu_placeholder: str = ''
+
+
+_cache = _WiFiMenuCache()
+
+
+def _connection_fingerprint(
+    connections: Sequence[WiFiConnection] | None,
+) -> set[tuple[str, str]]:
+    """Build a fingerprint set of (ssid, state) for change detection."""
+    if connections is None:
+        return set()
+    return {(c.ssid, c.state.value) for c in connections}
+
+
 def _register_wifi_action_handlers(
     connections: Sequence[WiFiConnection] | None,
 ) -> None:
-    """Register action handlers for WiFi connections."""
+    """Register action handlers for WiFi connections.
+
+    Skips re-registration if the connections haven't meaningfully changed.
+    """
+    fingerprint = _connection_fingerprint(connections)
+    if fingerprint == _cache.connection_fingerprint:
+        return
+    _cache.connection_fingerprint = fingerprint
+
     from ubo_app.store.core.action_registry import (
         get_registered_actions,
         register_action,
@@ -122,6 +152,11 @@ def _register_wifi_action_handlers(
         register_action(f'wifi:disconnect:{ssid}', _make_disconnect_handler())
         register_action(f'wifi:forget:{ssid}', _make_forget_handler(ssid))
 
+    logger.debug(
+        '[WiFi Service] Re-registered action handlers for %d connections',
+        len(connections),
+    )
+
 
 @store.autorun(lambda state: state.wifi.connections)
 def update_wifi_dynamic_menu(
@@ -130,8 +165,9 @@ def update_wifi_dynamic_menu(
     """Update the dynamic menu for WiFi connections (dumb UI architecture).
 
     This autorun dispatches UpdateDynamicMenuAction with serializable MenuItemData.
+    Skips dispatch if menu content hasn't changed.
     """
-    # Register action handlers for opening connection pages
+    # Register action handlers (internally skips if unchanged)
     _register_wifi_action_handlers(connections)
 
     if not IS_RPI:
@@ -151,6 +187,12 @@ def update_wifi_dynamic_menu(
             for connection in connections
         )
         placeholder = 'No Wi-Fi connections found' if not connections else ''
+
+    if items == _cache.menu_items and placeholder == _cache.menu_placeholder:
+        return
+
+    _cache.menu_items = items
+    _cache.menu_placeholder = placeholder
 
     logger.debug(
         '[WiFi Service] Updating dynamic menu: %d connections',
