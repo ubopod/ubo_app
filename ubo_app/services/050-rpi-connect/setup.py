@@ -139,7 +139,12 @@ def _register_rpi_connect_action_handlers() -> None:
 
     def _open_qrcode() -> None:
         store.dispatch(
-            OpenApplicationAction(application_id='rpi-connect:qrcode-page'),
+            OpenApplicationAction(
+                application_id='rpi-connect:qrcode-page',
+                initialization_kwargs={
+                    'url': 'https://connect.raspberrypi.com/devices',
+                },
+            ),
         )
 
     register_action('rpi-connect:show-url', _open_qrcode, allow_reregister=True)
