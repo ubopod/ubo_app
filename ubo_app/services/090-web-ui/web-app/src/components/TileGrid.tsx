@@ -44,8 +44,14 @@ export function TileGrid({
     tileRefs.current[focusIndex]?.focus();
   }, [focusIndex]);
 
+  const lastActivateRef = useRef(0);
+
   const handleActivate = useCallback(
     (item: MenuItemData.AsObject, index: number) => {
+      const now = Date.now();
+      if (now - lastActivateRef.current < 300) return;
+      lastActivateRef.current = now;
+
       if (item.actionId?.startsWith(MENU_SELECT_PREFIX)) {
         navigateTo(store, item.actionId.slice(MENU_SELECT_PREFIX.length));
       } else if (item.actionId) {

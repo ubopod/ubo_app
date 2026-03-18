@@ -52,9 +52,18 @@ def push_menu(state: MainState, menu_key: str) -> MainState:
         menu_key: Key of the SubMenuItem that was selected.
 
     Returns:
-        New state with the menu pushed onto the stack.
+        New state with the menu pushed onto the stack, or the same state
+        unchanged if the top of stack already has the same menu_key.
 
     """
+    # Prevent duplicate consecutive pushes of the same menu
+    if (
+        state.stack
+        and isinstance(state.stack[-1], MenuStackItem)
+        and state.stack[-1].menu_key == menu_key
+    ):
+        return state
+
     new_item = MenuStackItem(
         id=uuid.uuid4().hex,
         menu_key=menu_key,

@@ -148,6 +148,8 @@ def reducer(
 
         case StackPushMenuAction():
             new_state = push_menu(state, action.menu_key)
+            if new_state is state:
+                return state  # Duplicate push, no-op
             return CompleteReducerResult(
                 state=new_state,
                 events=[StackChangedEvent(stack=new_state.stack)],
