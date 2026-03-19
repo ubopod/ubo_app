@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 import signal
-import socket
 import subprocess
 import sys
 import time
@@ -18,8 +17,6 @@ logging.basicConfig(level=logging.INFO)
 _GRPC_HOST = os.environ.get('UBO_GRPC_LISTEN_ADDRESS', '127.0.0.1')
 _GRPC_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 
-_POLL_INTERVAL = 0.5  # seconds between gRPC readiness checks
-_POLL_TIMEOUT = 30.0  # max seconds to wait for gRPC server
 _CORE_SHUTDOWN_TIMEOUT = 30.0  # max seconds to wait for core graceful shutdown
 
 
@@ -37,18 +34,6 @@ def _find_executable(name: str) -> Path | None:
         return gui_venv
 
     return None
-
-
-def _wait_for_grpc(host: str, port: int, timeout: float) -> bool:
-    """Poll TCP connect until gRPC server is reachable or timeout expires."""
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            with socket.create_connection((host, port), timeout=1.0):
-                return True
-        except OSError:
-            time.sleep(_POLL_INTERVAL)
-    return False
 
 
 def _terminate_process(proc: subprocess.Popen[bytes], timeout: float = 5) -> None:
@@ -81,28 +66,6 @@ def _spawn_gui(
         [str(gui_exe), '--host', host, '--port', str(port)],
         start_new_session=True,
     )
-
-
-def _wait_for_core_grpc(
-    core_proc: subprocess.Popen[bytes],
-    host: str,
-    port: int,
-) -> None:
-    """Wait for the gRPC server to become reachable, or exit on failure."""
-    logger.info('Waiting for gRPC server at %s:%d...', host, port)
-    if _wait_for_grpc(host, port, _POLL_TIMEOUT):
-        return
-
-    if core_proc.poll() is not None:
-        logger.error(
-            'ubo-core exited during startup with code %d',
-            core_proc.returncode,
-        )
-        sys.exit(core_proc.returncode or 1)
-
-    logger.error('gRPC server not ready after %ss', _POLL_TIMEOUT)
-    _terminate_process(core_proc)
-    sys.exit(1)
 
 
 def _monitor_children(
@@ -204,9 +167,15 @@ def main() -> None:
     if headless_only:
         logger.warning('ubo-gui-client not found, running headless only')
 
-    core_proc = _spawn_core(core_exe)
     shutting_down: list[bool] = [False]
     gui_proc_holder: list[subprocess.Popen[bytes] | None] = [None]
+
+    # Spawn GUI first so its window starts initializing (showing splash)
+    # while core boots up
+    if not headless_only:
+        gui_proc_holder[0] = _spawn_gui(gui_exe, _GRPC_HOST, _GRPC_PORT)
+
+    core_proc = _spawn_core(core_exe)
 
     _install_signal_handlers(core_proc, gui_proc_holder, shutting_down)
 
@@ -215,11 +184,10 @@ def main() -> None:
             core_proc.wait()
             return
 
-        _wait_for_core_grpc(core_proc, _GRPC_HOST, _GRPC_PORT)
-
-        gui_proc_holder[0] = _spawn_gui(gui_exe, _GRPC_HOST, _GRPC_PORT)
-
-        _monitor_children(core_proc, gui_proc_holder[0], shutting_down)
+        gui_proc = gui_proc_holder[0]
+        if gui_proc is None:  # unreachable: headless_only check above
+            return
+        _monitor_children(core_proc, gui_proc, shutting_down)
 
     finally:
         _cleanup_children(core_proc, gui_proc_holder[0], shutting_down)

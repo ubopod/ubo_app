@@ -14,9 +14,11 @@ if TYPE_CHECKING:
     from ubo_bindings.ubo.v1 import Action, StatusBarData, ViewData
 
 # Reconnection parameters
-MAX_RETRIES = 50
-BASE_DELAY = 1.0
+INITIAL_DELAY = 0.2  # Fast polling for first attempts
+INITIAL_FAST_ATTEMPTS = 8  # ~1.6s of fast polling
+BASE_DELAY = 1.0  # Normal backoff after fast phase
 MAX_DELAY = 30.0
+MAX_RETRIES = 50
 
 
 class GUIClient:
@@ -29,6 +31,7 @@ class GUIClient:
         self._client = None
         self._subscription_task: asyncio.Task | None = None
         self._is_disconnecting: bool = False
+        self._has_ever_connected: bool = False
 
     def connect(self) -> None:
         """Establish gRPC connection."""
@@ -124,6 +127,8 @@ class GUIClient:
                             if on_connected:
                                 on_connected()
 
+                        self._has_ever_connected = True
+
                         # Reset retry count on successful message
                         retry_count = 0
                         if response.results:
@@ -169,7 +174,14 @@ class GUIClient:
                         return
                     retry_count += 1
                     was_disconnected = True
-                    delay = min(BASE_DELAY * (2 ** (retry_count - 1)), MAX_DELAY)
+                    if retry_count <= INITIAL_FAST_ATTEMPTS:
+                        delay = INITIAL_DELAY
+                    else:
+                        normal_attempt = retry_count - INITIAL_FAST_ATTEMPTS
+                        delay = min(
+                            BASE_DELAY * (2 ** (normal_attempt - 1)),
+                            MAX_DELAY,
+                        )
                     logger.warning(
                         '[GUIClient] Connection lost (attempt %d/%d). '
                         'Reconnecting in %.1fs...',
@@ -178,7 +190,7 @@ class GUIClient:
                         delay,
                     )
 
-                    if on_disconnect:
+                    if on_disconnect and self._has_ever_connected:
                         on_disconnect(delay, retry_count, MAX_RETRIES)
 
                     await asyncio.sleep(delay)

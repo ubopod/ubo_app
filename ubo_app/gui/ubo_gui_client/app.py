@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import math
+import time
+from typing import TYPE_CHECKING
 
 from kivy.clock import Clock, mainthread
 from kivy.graphics.context_instructions import Color
@@ -19,7 +21,12 @@ from ubo_gui_client.menu_central import MenuAppCentral
 from ubo_gui_client.menu_footer import MenuAppFooter
 from ubo_gui_client.menu_header import MenuAppHeader
 
+if TYPE_CHECKING:
+    from ubo_gui_client.splash import AnimatedSplashOverlay
+
 logger = logging.getLogger(__name__)
+
+SPLASH_MIN_DURATION = 6.3  # seconds to keep splash visible after app start
 
 
 class BlankOverlay(Widget):
@@ -34,23 +41,6 @@ class BlankOverlay(Widget):
         self.bind(size=self._update_rect, pos=self._update_rect)
 
     def _update_rect(self: BlankOverlay, *_args: object) -> None:
-        """Update rectangle size and position."""
-        self.rect.size = self.size
-        self.rect.pos = self.pos
-
-
-class LoadingOverlay(Widget):
-    """Full-screen black overlay shown until first meaningful gRPC data arrives."""
-
-    def __init__(self: LoadingOverlay, **kwargs: object) -> None:
-        """Initialize the loading overlay."""
-        super().__init__(**kwargs)
-        with self.canvas:
-            Color(0, 0, 0, 1)
-            self.rect = Rectangle(size=self.size, pos=self.pos)
-        self.bind(size=self._update_rect, pos=self._update_rect)
-
-    def _update_rect(self: LoadingOverlay, *_args: object) -> None:
         """Update rectangle size and position."""
         self.rect.size = self.size
         self.rect.pos = self.pos
@@ -150,9 +140,11 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         super().__init__(**kwargs)
         self.is_stopped = False
         self.blank_overlay: BlankOverlay | None = None
-        self.loading_overlay: LoadingOverlay | None = None
+        self.loading_overlay: AnimatedSplashOverlay | None = None
         self.disconnect_overlay: DisconnectOverlay | None = None
         self.saved_children: list[Widget] = []
+        self._splash_start_time: float = 0.0
+        self._hide_requested: bool = False
 
     @mainthread
     def handle_blank_state(self: UboGUIApp, is_blanked: bool) -> None:  # noqa: FBT001
@@ -181,49 +173,57 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         attempt: int,
         max_retries: int,
     ) -> None:
-        """Show the disconnect overlay with a countdown.
-
-        The overlay is added to the Window (not self.root) so it covers
-        the entire screen including header and footer.
-        """
-        from kivy.core.window import Window
-
+        """Show the disconnect overlay with a countdown."""
+        if self.root is None:
+            return
         if self.disconnect_overlay is None:
             self.disconnect_overlay = DisconnectOverlay(
-                size=Window.size,
+                size=self.root.size,
             )
-            Window.bind(size=self._sync_disconnect_overlay_size)
+            self.root.bind(size=self._sync_disconnect_overlay_size)
         if self.disconnect_overlay.parent is None:
-            Window.add_widget(self.disconnect_overlay)
+            self.root.add_widget(self.disconnect_overlay)
         self.disconnect_overlay.start_countdown(delay, attempt, max_retries)
 
     @mainthread
     def hide_disconnect_overlay(self: UboGUIApp) -> None:
         """Hide the disconnect overlay."""
-        from kivy.core.window import Window
-
         if self.disconnect_overlay is not None:
             self.disconnect_overlay.stop_countdown()
             if self.disconnect_overlay.parent is not None:
-                Window.remove_widget(self.disconnect_overlay)
+                self.disconnect_overlay.parent.remove_widget(self.disconnect_overlay)
 
     def _sync_disconnect_overlay_size(
         self: UboGUIApp,
-        _window: object,
+        _widget: object,
         size: tuple[int, int],
     ) -> None:
-        """Keep the disconnect overlay sized to the window."""
+        """Keep the disconnect overlay sized to the root widget."""
         if self.disconnect_overlay is not None:
             self.disconnect_overlay.size = size
 
+    def build(self: UboGUIApp) -> Widget | None:
+        """Build root widget, hidden until splash overlay covers it."""
+        root = super().build()
+
+        # Hide the root widget so no uninitialized GUI frames leak to the
+        # physical display before on_start adds the splash overlay on top.
+        if root is not None:
+            root.opacity = 0
+
+        return root
+
     def on_start(self: UboGUIApp) -> None:
         """Start the application and connect to gRPC."""
-        from kivy.core.window import Window
+        # Show animated splash, then reveal the root widget underneath
+        from ubo_gui_client.splash import AnimatedSplashOverlay
 
-        # Show loading overlay until first meaningful gRPC data arrives
-        self.loading_overlay = LoadingOverlay(size=Window.size)
-        Window.add_widget(self.loading_overlay)
-        Window.bind(size=self._sync_loading_overlay_size)
+        if self.root is not None:
+            self.loading_overlay = AnimatedSplashOverlay(size=self.root.size)
+            self.root.add_widget(self.loading_overlay)
+            self.root.bind(size=self._sync_loading_overlay_size)
+            self.root.opacity = 1
+            self._splash_start_time = time.monotonic()
 
         logger.info('[App] on_start: connecting to gRPC...')
         self.grpc_client.connect()
@@ -256,20 +256,40 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
 
     @mainthread
     def hide_loading_overlay(self: UboGUIApp) -> None:
-        """Hide the loading overlay (idempotent)."""
-        from kivy.core.window import Window
+        """Fade out and remove the splash overlay after minimum duration."""
+        if self.loading_overlay is None or self._hide_requested:
+            return
+        self._hide_requested = True
+        elapsed = time.monotonic() - self._splash_start_time
+        remaining = SPLASH_MIN_DURATION - elapsed
+        if remaining > 0:
+            Clock.schedule_once(
+                lambda _dt: self._do_hide_loading_overlay(),
+                remaining,
+            )
+        else:
+            self._do_hide_loading_overlay()
 
-        if self.loading_overlay is not None:
-            if self.loading_overlay.parent is not None:
-                Window.remove_widget(self.loading_overlay)
-            self.loading_overlay = None
+    def _do_hide_loading_overlay(self: UboGUIApp) -> None:
+        """Actually dismiss the splash overlay."""
+        if self.loading_overlay is None:
+            return
+        overlay = self.loading_overlay
+        self.loading_overlay = None
+        overlay.dismiss(
+            on_complete=lambda: (
+                overlay.parent.remove_widget(overlay)
+                if overlay.parent is not None
+                else None
+            ),
+        )
 
     def _sync_loading_overlay_size(
         self: UboGUIApp,
-        _window: object,
+        _widget: object,
         size: tuple[int, int],
     ) -> None:
-        """Keep the loading overlay sized to the window."""
+        """Keep the loading overlay sized to the root widget."""
         if self.loading_overlay is not None:
             self.loading_overlay.size = size
 
@@ -310,7 +330,9 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
     def stop(self, *largs: object) -> None:
         """Stop the application."""
         logger.info('[App] Stopping...')
-        self.hide_loading_overlay()
+        if self.loading_overlay is not None:
+            self.loading_overlay.stop_animation()
+            self.loading_overlay = None
         super().stop(*largs)
         self.is_stopped = True
         if hasattr(self, '_keyboard_cleanup'):

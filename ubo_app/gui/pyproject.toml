@@ -48,6 +48,7 @@ expression = "get_version()"
 
 [tool.hatch.build]
 packages = ["ubo_gui_client"]
+artifacts = ["ubo_gui_client/assets/*"]
 
 [tool.poe.tasks]
 lint = "ruff check ."
