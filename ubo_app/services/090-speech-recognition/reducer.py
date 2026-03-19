@@ -27,7 +27,6 @@ from ubo_app.store.services.assistant import (
 from ubo_app.store.services.audio import (
     AudioChangeVolumeAction,
     AudioDevice,
-    AudioSetMuteStatusAction,
 )
 from ubo_app.store.services.infrared import InfraredSendCodeAction
 from ubo_app.store.services.rgb_ring import (
