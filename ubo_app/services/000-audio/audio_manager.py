@@ -117,6 +117,10 @@ class AudioManager:
             with attempt:
                 # Get the card index of the audio device
                 cards = alsaaudio.cards()
+                logger.debug(
+                    'Audio - Available ALSA cards',
+                    extra={'cards': cards},
+                )
                 self.card_index = cards.index(
                     next(card for card in cards if 'wm8960' in card),
                 )
@@ -133,6 +137,13 @@ class AudioManager:
                 'Audio - Failed to find the card index after multiple trials',
             )
             return
+        logger.debug(
+            'Audio - Selected card index',
+            extra={
+                'card_index': self.card_index,
+                'card_name': alsaaudio.cards()[self.card_index],
+            },
+        )
         # In case they were set before the card was initialized
         self.set_playback_mute(mute=self.playback_mute)
         self.set_playback_volume(self.playback_volume)
@@ -151,6 +162,15 @@ class AudioManager:
         logger.info(
             'Audio - Opening audio file for playback',
             extra={'filename_': filename},
+        )
+        logger.debug(
+            'Audio - Playback state',
+            extra={
+                'card_index': self.card_index,
+                'has_speakers': self.has_speakers,
+                'playback_mute': self.playback_mute,
+                'playback_volume': self.playback_volume,
+            },
         )
         with wave.open(filename, 'rb') as wave_file:
             sample_rate = wave_file.getframerate()
@@ -182,6 +202,17 @@ class AudioManager:
         """
         if sample.data == b'':
             return
+        logger.debug(
+            'Audio - Playing sample',
+            extra={
+                'channels': sample.channels,
+                'rate': sample.rate,
+                'width': sample.width,
+                'data_length': len(sample.data),
+                'duration_seconds': len(sample.data)
+                / (sample.rate * sample.channels * sample.width),
+            },
+        )
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(3),
             wait=wait_fixed(1),
@@ -208,6 +239,10 @@ class AudioManager:
                     )
                     await send_command('audio', 'failure_report', has_output=True)
             else:
+                logger.debug(
+                    'Audio - Sample playback completed successfully',
+                    extra={'attempt': attempt.retry_state.attempt_number},
+                )
                 break
         else:
             logger.error(
@@ -237,6 +272,15 @@ class AudioManager:
             Index of the sample in the sequence
 
         """
+        logger.debug(
+            'Audio - play_sequence called',
+            extra={
+                'sequence_id': id,
+                'sample_index': index,
+                'has_sample': sample is not None,
+                'sample_data_length': len(sample.data) if sample else 0,
+            },
+        )
         with self.audio_buffers_lock:
             if not (already_playing := id in self.audio_buffers):
                 self.audio_buffers[id] = {}
@@ -251,6 +295,17 @@ class AudioManager:
         class NotProvided: ...
 
         not_provided = NotProvided()
+
+        logger.debug(
+            'Audio - Starting sequence playback',
+            extra={
+                'sequence_id': id,
+                'using_pyaudio': self.pa is not None,
+                'card_index': self.card_index,
+                'playback_mute': self.playback_mute,
+                'playback_volume': self.playback_volume,
+            },
+        )
 
         if self.pa:
             default_info = self.pa.get_default_output_device_info()
@@ -299,6 +354,10 @@ class AudioManager:
             del buffer[self.audio_heads[id]]
             self.audio_heads[id] += 1
 
+        logger.debug(
+            'Audio - Sequence playback finished',
+            extra={'sequence_id': id},
+        )
         with self.audio_buffers_lock:
             del self.audio_buffers[id]
             del self.audio_heads[id]
@@ -467,6 +526,10 @@ class AudioManager:
             Mute to set
 
         """
+        logger.debug(
+            'Audio - Setting playback mute',
+            extra={'mute': mute, 'card_index': self.card_index},
+        )
         self.playback_mute = mute
         try:
             # Assume pulseaudio is installed
@@ -503,6 +566,14 @@ class AudioManager:
         if volume < 0 or volume > 1:
             msg = 'Volume must be between 0 and 1'
             raise ValueError(msg)
+        logger.debug(
+            'Audio - Setting playback volume',
+            extra={
+                'volume_linear': volume,
+                'volume_log': _linear_to_logarithmic(volume),
+                'card_index': self.card_index,
+            },
+        )
         self.playback_volume = volume
         try:
             # Assume pulseaudio is installed
