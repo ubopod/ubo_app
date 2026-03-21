@@ -348,7 +348,7 @@ class ViewRenderer:
         items = self._convert_view_items(view)
         heading = getattr(view, 'heading', None)
         sub_heading = getattr(view, 'sub_heading', None)
-        placeholder = getattr(view, 'placeholder', None) or None
+        placeholder = getattr(view, 'placeholder', None)
         if heading:
             from ubo_gui.menu.types import HeadedMenu
 
@@ -423,6 +423,29 @@ class ViewRenderer:
                 title,
             )
             self.menu_widget.replace_top_with_menu(menu)
+
+            # Work around a Kivy AliasProperty cache staleness bug.
+            # ``is_scrollbar_visible`` binds only to ``pages``, but its
+            # getter also reads ``current_application``.  During the nested
+            # property dispatch triggered by ``replace_top_with_menu``
+            # (stack → current_menu → pages → is_scrollbar_visible), the
+            # cache can end up stale because ``current_application`` changes
+            # in the same dispatch cycle.  Deferring a ``current_menu_items``
+            # toggle to the next frame forces ``pages`` to re-dispatch after
+            # all caches have settled, which correctly updates
+            # ``is_scrollbar_visible``.
+            menu_items = items
+
+            def _fix_scrollbar(_: object) -> None:
+                mw = self.menu_widget
+                if menu_items and mw.get_is_scrollbar_visible() != \
+                        mw.is_scrollbar_visible:
+                    mw.current_menu_items = []
+                    mw.current_menu_items = menu_items
+
+            from kivy.clock import Clock
+
+            Clock.schedule_once(_fix_scrollbar, 0)
 
         self._current_view_type = 'menu'
 
@@ -738,7 +761,8 @@ class ViewRenderer:
         if items_wrapper is None:
             return result
 
-        for wrapper_item in getattr(items_wrapper, 'items', []) or []:
+        raw_items = getattr(items_wrapper, 'items', []) or []
+        for wrapper_item in raw_items:
             item_data = getattr(wrapper_item, 'items', None)
             if item_data is not None:
                 result.append(self._item_data_to_action_item(item_data))

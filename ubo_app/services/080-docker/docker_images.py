@@ -190,6 +190,10 @@ async def prepare_n8n() -> bool:
                 init_path.chmod(0o755)
 
         # Generate credentials
+        runners_auth_token = ''.join(
+            py_secrets.choice(string.ascii_letters + string.digits)
+            for _ in range(64)
+        )
         creds = {
             'N8N_DB_PASSWORD': ''.join(
                 py_secrets.choice(string.ascii_letters + string.digits)
@@ -224,6 +228,8 @@ async def prepare_n8n() -> bool:
             f"POSTGRES_NON_ROOT_USER={creds['N8N_DB_NON_ROOT_USER']}\n"
             f"POSTGRES_NON_ROOT_PASSWORD={creds['N8N_DB_NON_ROOT_PASSWORD']}\n"
             f"\n"
+            f"N8N_VERSION=latest\n"
+            f"RUNNERS_AUTH_TOKEN={runners_auth_token}\n"
             f"N8N_SECURE_COOKIE=false\n"
         )
         (composition_path / '.env').write_text(env_content)

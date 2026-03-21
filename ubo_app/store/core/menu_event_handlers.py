@@ -553,6 +553,11 @@ def _handle_notification_display(event: NotificationsDisplayEvent) -> None:
         logger.warning('NotificationsDisplayEvent with no notification ID')
         return
 
+    # BACKGROUND notifications only show in the header (progress bar) and
+    # should not take over the screen by pushing a stack item.
+    if notification.display_type is NotificationDisplayType.BACKGROUND:
+        return
+
     # Don't push a duplicate if this notification is already on the stack
     @store.with_state(lambda state: state.main.stack)
     def _push_if_needed(stack: Sequence[StackItemType]) -> None:

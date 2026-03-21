@@ -126,23 +126,49 @@ async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
         DockerImageSetStatusAction(image=id, status=DockerItemStatus.PROCESSING),
     )
 
+    # Tear down containers and volumes before removing the directory.
+    # The `-v` flag removes named volumes (e.g. postgres data) so that
+    # a fresh install doesn't reuse stale credentials/data.
+    composition_path = COMPOSITIONS_PATH / id
+    if composition_path.exists():
+        try:
+            down_process = await asyncio.subprocess.create_subprocess_exec(
+                'docker',
+                'compose',
+                'down',
+                '-v',
+                cwd=composition_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await down_process.wait()
+            store.dispatch(
+                await log_async_process(
+                    down_process,
+                    title='Docker Composition Error',
+                    message='Failed to tear down composition.',
+                ),
+            )
+        except OSError:
+            logger.exception(
+                'Failed to run docker compose down -v',
+                extra={'composition_id': id},
+            )
+
     # Remove composition directory
     # On Pi: use system manager with elevated privileges
     # (Docker creates root-owned directories)
     # On Mac/dev: use shutil.rmtree (no elevated privileges needed)
     try:
         if IS_RPI:
-            composition_path = COMPOSITIONS_PATH / id
             await send_command(
                 'docker',
                 'composition_delete',
                 str(composition_path),
             )
-        else:
-            # Development environment - use shutil directly
-            target_path = COMPOSITIONS_PATH / id
-            if target_path.exists():
-                shutil.rmtree(target_path)
+        # Development environment - use shutil directly
+        elif composition_path.exists():
+            shutil.rmtree(composition_path)
     except Exception:
         logger.exception(
             'Failed to remove composition directory',

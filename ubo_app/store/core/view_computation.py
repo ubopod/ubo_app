@@ -351,7 +351,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
                 heading=dynamic_menu.heading,
                 sub_heading=dynamic_menu.sub_heading,
                 items=items,
-                placeholder=dynamic_menu.placeholder or None,
+                placeholder=dynamic_menu.placeholder,
                 page_index=page_index,
                 total_pages=total_pages,
                 stack_depth=len(stack),
@@ -370,7 +370,11 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
 def _dispatch_view_update(state: RootState) -> None:
     """Compute view and status bar, then dispatch if changed."""
-    from ubo_app.store.core.types import UpdateCurrentViewAction
+    from ubo_app.store.core.types import (
+        MenuViewData,
+        StackSetPageIndexAction,
+        UpdateCurrentViewAction,
+    )
     from ubo_app.store.main import store
 
     computed_view = compute_view_from_root_state(state)
@@ -378,6 +382,18 @@ def _dispatch_view_update(state: RootState) -> None:
 
     view_changed = state.main.current_view != computed_view
     status_bar_changed = state.main.status_bar != computed_status_bar
+
+    # If the view clamped page_index, sync it back to the stack item to
+    # prevent stale page indices from resurfacing when items change later.
+    if (
+        isinstance(computed_view, MenuViewData)
+        and state.main.stack
+        and isinstance(state.main.stack[-1], MenuStackItem)
+        and computed_view.page_index != state.main.stack[-1].page_index
+    ):
+        store.dispatch(
+            StackSetPageIndexAction(page_index=computed_view.page_index),
+        )
 
     if view_changed or status_bar_changed:
         logger.debug(

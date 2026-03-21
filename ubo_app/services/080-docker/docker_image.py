@@ -157,8 +157,12 @@ def fetch_image(  # noqa: C901
             logger.info('Image pull completed', extra={'image': id})
             docker_client.close()
 
-            # Dispatch success notification
+            # Dispatch success status and notification
             store.dispatch(
+                DockerImageSetStatusAction(
+                    image=id,
+                    status=DockerItemStatus.AVAILABLE,
+                ),
                 NotificationsAddAction(
                     notification=replace(
                         base_notification,
