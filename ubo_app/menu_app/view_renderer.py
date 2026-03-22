@@ -1,15 +1,13 @@
 """View Renderer for the Dumb UI Architecture.
 
-This module provides the ViewRenderer class that subscribes to ViewChangedEvent
-and renders the UI based on the view data received. This is the core of the
-dumb UI architecture where the UI is a pure renderer with no internal state.
-
-It uses `compute_view_from_root_state` from `view_computation` which uses
-dynamic menus for all menu views.
+This module provides the ViewRenderer class that uses autoruns on
+``state.main.current_view`` and ``state.main.status_bar`` to reactively
+render the UI.  The state is already computed and stored by the autoruns
+in ``view_computation.py``; this class simply watches those slices and
+renders when they change.
 """
 from __future__ import annotations
 
-import contextlib
 import json
 from typing import TYPE_CHECKING
 
@@ -20,22 +18,11 @@ from ubo_app.logger import logger
 from ubo_app.store.core.constants import PAGE_SIZE
 from ubo_app.store.core.types import (
     ApplicationViewData,
-    DynamicMenuChangedEvent,
     HomeViewData,
     MenuItemData,
     MenuViewData,
     NotificationViewData,
     StatusBarData,
-    ViewChangedEvent,
-)
-from ubo_app.store.core.view_computation import (
-    compute_status_bar_data,
-)
-from ubo_app.store.core.view_computation import (
-    compute_view_from_root_state as _compute_view_from_root_state,
-)
-from ubo_app.store.core.view_helpers import (
-    get_dynamic_menu_id_for_stack as _get_dynamic_menu_id_for_stack,
 )
 from ubo_app.store.main import store
 
@@ -48,7 +35,6 @@ if TYPE_CHECKING:
     from ubo_app.menu_app.menu_central import MenuAppCentral
     from ubo_app.store.core.types import ViewData
     from ubo_app.store.core.types.status_bar import ProgressNotificationData
-    from ubo_app.store.main import RootState
     from ubo_app.store.services.notifications import Notification
 
 
@@ -160,80 +146,11 @@ def _menu_item_to_dict(item: MenuItemData) -> dict:
     }
 
 
-# =============================================================================
-# Helper functions using @store.with_state for ViewRenderer methods
-# =============================================================================
-
-
-@store.with_state(lambda state: state)
-def _compute_status_bar_from_state(state: RootState) -> StatusBarData:
-    """Compute status bar data from current state."""
-    return compute_status_bar_data(state)
-
-
-@store.with_state(lambda state: state)
-def _compute_view_and_status_bar(
-    state: RootState,
-) -> tuple[ViewData, StatusBarData]:
-    """Compute both view and status bar from current state."""
-    return _compute_view_from_root_state(state), compute_status_bar_data(state)
-
-
-@store.with_state(lambda state: state)
-def _get_dynamic_menu_state(
-    state: RootState,
-    event: DynamicMenuChangedEvent,
-) -> tuple[RootState, ViewData, str | None] | None:
-    """Get state info for dynamic menu change handling."""
-    if DEBUG_MENU and hasattr(state, 'dynamic_menus'):
-        menu_data = state.dynamic_menus.menus.get(event.menu_id)
-        if menu_data:
-            item_labels = [
-                item.label if item else '<empty>' for item in menu_data.items
-            ]
-            logger.info(
-                '[ViewRenderer] Dynamic menu updated: id=%s, title=%s, '
-                'items=%s',
-                event.menu_id,
-                menu_data.title,
-                item_labels,
-            )
-        else:
-            logger.info(
-                '[ViewRenderer] Dynamic menu cleared: id=%s',
-                event.menu_id,
-            )
-
-    # Check if this menu is currently visible
-    current_menu_id = _get_dynamic_menu_id_for_stack(state.main)
-    if current_menu_id != event.menu_id:
-        # Menu changed but it's not currently visible, no need to rerender
-        return None
-
-    # Recompute view using dynamic menu data
-    new_view = _compute_view_from_root_state(state)
-    return state, new_view, current_menu_id
-
-
-@store.with_state(lambda state: state)
-def _get_home_view_state(state: RootState) -> tuple[float, float, float | None]:
-    """Get system metrics for home view rendering."""
-    cpu = 0.0
-    ram = 0.0
-    vol: float | None = None
-    with contextlib.suppress(AttributeError, TypeError):
-        cpu = state.system.cpu_percent
-    with contextlib.suppress(AttributeError, TypeError):
-        ram = state.system.ram_percent
-    with contextlib.suppress(AttributeError, TypeError):
-        vol = state.audio.playback_volume * 100
-    return cpu, ram, vol
-
-
 class ViewRenderer:
     """Renders the UI based on ViewData from Redux state.
 
-    This class subscribes to ViewChangedEvent and updates the UI accordingly.
+    Uses autoruns on ``state.main.current_view`` and
+    ``state.main.status_bar`` to reactively update the UI when state changes.
     """
 
     def __init__(self, menu_widget: MenuWidget, app: MenuAppCentral) -> None:
@@ -246,199 +163,51 @@ class ViewRenderer:
         """
         self.menu_widget = menu_widget
         self.app = app
-        self._current_view_type: str | None = None
-        self._last_status_bar: StatusBarData | None = None
-        self._last_view: ViewData | None = None
         self._view_changed_count: int = 0
 
-        self._setup_subscription()
+        self._setup_autoruns()
         logger.info('[ViewRenderer] Initialized')
 
-        # Initial render after a short delay to let the app initialize
+        # Schedule a deferred re-render so the status bar is populated even if
+        # the first autorun fires before build() creates header/footer widgets.
         from kivy.clock import Clock
 
-        Clock.schedule_once(lambda _: self._initial_render(), 1.0)
+        Clock.schedule_once(lambda _: self._retry_initial_render(), 1.0)
 
-    def _initial_render(self, attempt: int = 1) -> None:
-        """Perform initial render of status bar after app startup.
-
-        Retries if icons_layout is not yet available.
-        """
-        status_bar = _compute_status_bar_from_state()
-        self._render_status_bar(status_bar)
-
-        # If icons_layout wasn't ready, retry after a short delay
-        if not hasattr(self.app, 'icons_layout') and attempt < 5:  # noqa: PLR2004
-            from kivy.clock import Clock
-
-            Clock.schedule_once(lambda _: self._initial_render(attempt + 1), 0.5)
-
-    def _setup_subscription(self) -> None:
-        """Subscribe to ViewChangedEvent and state changes for dynamic updates."""
-        store.subscribe_event(
-            ViewChangedEvent,
-            self._on_view_changed,
-            keep_ref=False,
-        )
-
-        # Subscribe to dynamic menu changes for logging/debugging
-        store.subscribe_event(
-            DynamicMenuChangedEvent,
-            self._on_dynamic_menu_changed,
-            keep_ref=False,
-        )
-
-        # Subscribe to state changes that affect the home view
-        # These autoruns ensure dynamic updates without navigation
+    def _setup_autoruns(self) -> None:
+        """Set up autoruns that watch computed state and render the UI."""
         from redux import AutorunOptions
 
+        # -- View autorun: watches state.main.current_view -----------------
         store.autorun(
-            lambda state: (
-                state.system.cpu_percent if hasattr(state, 'system') else 0.0,
-                state.system.ram_percent if hasattr(state, 'system') else 0.0,
-            ),
+            lambda state: state.main.current_view,
             options=AutorunOptions(keep_ref=False),
-        )(self._on_system_metrics_changed)
+        )(self._on_view_changed)
 
+        # -- Status bar autorun: watches state.main.status_bar -------------
         store.autorun(
-            lambda state: state.audio.playback_volume,
-            options=AutorunOptions(keep_ref=False),
-        )(self._on_volume_changed)
-
-        # Subscribe to status bar state changes
-        store.autorun(
-            lambda state: (
-                state.system.clock if hasattr(state, 'system') else '',
-                state.main.is_recording,
-                state.main.is_replaying,
-                state.audio.is_recording if hasattr(state, 'audio') else False,
-            ),
+            lambda state: state.main.status_bar,
             options=AutorunOptions(keep_ref=False),
         )(self._on_status_bar_changed)
 
-        # Subscribe to status icons changes
-        store.autorun(
-            lambda state: state.status_icons.icons,
-            options=AutorunOptions(keep_ref=False),
-        )(self._on_status_icons_changed)
+
+    def _retry_initial_render(self) -> None:
+        """Re-trigger status bar render after build() has created widgets."""
+
+        @store.with_state(lambda state: state.main.status_bar)
+        def _render_once(status_bar: StatusBarData | None) -> None:
+            if status_bar is not None:
+                self._render_status_bar(status_bar)
+
+        _render_once()
 
     @mainthread
-    def _on_system_metrics_changed(
-        self,
-        metrics: tuple[float, float],
-    ) -> None:
-        """Handle system metrics (CPU/RAM) state changes."""
-        cpu_percent, ram_percent = metrics
-
-        # Only update if we're on home page
-        home_page = getattr(self.menu_widget, 'home_page', None)
-        if home_page is None:
+    def _on_view_changed(self, view: ViewData | None) -> None:
+        """Handle current_view state changes."""
+        if view is None:
             return
 
-        # Check if home page is currently visible
-        if self.menu_widget.current_screen != home_page:
-            return
-
-        cpu_gauge = getattr(home_page, 'cpu_gauge', None)
-        if cpu_gauge is not None:
-            cpu_gauge.value = cpu_percent
-
-        ram_gauge = getattr(home_page, 'ram_gauge', None)
-        if ram_gauge is not None:
-            ram_gauge.value = ram_percent
-
-    @mainthread
-    def _on_volume_changed(self, volume: float) -> None:
-        """Handle volume state changes."""
-        # Only update if we're on home page
-        home_page = getattr(self.menu_widget, 'home_page', None)
-        if home_page is None:
-            return
-
-        # Check if home page is currently visible
-        if self.menu_widget.current_screen != home_page:
-            return
-
-        volume_widget = getattr(home_page, 'volume_widget', None)
-        if volume_widget is not None:
-            volume_widget.value = volume * 100
-
-    @mainthread
-    def _on_status_bar_changed(self, _: tuple[str, bool, bool, bool]) -> None:
-        """Handle status bar state changes."""
-        status_bar = _compute_status_bar_from_state()
-        self._render_status_bar(status_bar)
-
-    @mainthread
-    def _on_status_icons_changed(self, _: object) -> None:
-        """Handle status icons state changes."""
-        status_bar = _compute_status_bar_from_state()
-        self._render_status_bar(status_bar)
-
-    def _on_dynamic_menu_changed(self, event: DynamicMenuChangedEvent) -> None:
-        """Handle DynamicMenuChangedEvent by recomputing view if menu is visible.
-
-        When a dynamic menu changes, we check if it's the currently visible menu.
-        If so, we recompute the view using the new dynamic menu data.
-        """
-        result = _get_dynamic_menu_state(event)
-        if result is None:
-            return
-
-        _state, new_view, _menu_id = result
-
-        # Skip if view hasn't actually changed
-        if self._last_view == new_view:
-            return
-
-        if DEBUG_MENU:
-            logger.info(
-                '[ViewRenderer] Recomputing view due to dynamic menu change: %s',
-                event.menu_id,
-            )
-
-        # Render the new view directly (don't dispatch event to avoid loops)
-        self._on_view_changed_internal(new_view)
-
-    @mainthread
-    def _on_view_changed(self, _event: ViewChangedEvent) -> None:
-        """Handle ViewChangedEvent by rendering the appropriate view.
-
-        In dumb UI mode, we recompute the view from RootState to use dynamic
-        menus when available, rather than using the event's view which comes
-        from the legacy menu traversal.
-
-        Args:
-            event: The ViewChangedEvent containing the new view data.
-
-        """
-        # Recompute view using dynamic menus
-        result = _compute_view_and_status_bar()
-        view, _ = result
-        self._on_view_changed_internal(view)
-
-    @mainthread
-    def _on_view_changed_internal(self, view: ViewData) -> None:
-        """Render a view without requiring an event.
-
-        This is called both from ViewChangedEvent handling and from
-        dynamic menu change handling.
-
-        Args:
-            view: The ViewData to render.
-
-        """
         self._view_changed_count += 1
-
-        # Skip if view hasn't actually changed (de-duplication)
-        if self._last_view == view:
-            if DEBUG_MENU:
-                logger.debug(
-                    '[ViewRenderer] Skipping duplicate ViewChangedEvent #%d',
-                    self._view_changed_count,
-                )
-            return
-        self._last_view = view
 
         if DEBUG_MENU:
             # Log the full view data structure with looked-up details
@@ -451,8 +220,11 @@ class ViewRenderer:
 
         self._render_view(view)
 
-        # Compute and render status bar from full state
-        status_bar = _compute_status_bar_from_state()
+    @mainthread
+    def _on_status_bar_changed(self, status_bar: StatusBarData | None) -> None:
+        """Handle status_bar state changes."""
+        if status_bar is None:
+            return
         self._render_status_bar(status_bar)
 
     def _render_view(self, view: ViewData) -> None:
@@ -467,51 +239,17 @@ class ViewRenderer:
             self._render_notification_view(view)
 
     def _render_home_view(self, view: HomeViewData) -> None:
-        """Render the home view with CPU/RAM gauges and volume.
-
-        Menu items are set once during initialization in _setup_autoruns
-        and must not be updated here to avoid re-creating the home page widget.
-        """
-        _ = view  # View data not used directly; gauges read from state below
-
-        # Read values from full state using helper
-        cpu, ram, vol = _get_home_view_state()
-
-        # Get home page widget
-        home_page = getattr(self.menu_widget, 'home_page', None)
-        if home_page is None:
-            return
-
-        # Update CPU gauge
-        cpu_gauge = getattr(home_page, 'cpu_gauge', None)
-        if cpu_gauge is not None:
-            cpu_gauge.value = cpu
-
-        # Update RAM gauge
-        ram_gauge = getattr(home_page, 'ram_gauge', None)
-        if ram_gauge is not None:
-            ram_gauge.value = ram
-
-        # Update volume widget (only if audio state is available)
-        volume_widget = getattr(home_page, 'volume_widget', None)
-        if volume_widget is not None and vol is not None:
-            volume_widget.value = vol
-
+        """Render the home view (gauges/volume owned by HomePage autoruns)."""
         if DEBUG_MENU:
             logger.info(
-                '[ViewRenderer] Home view: cpu=%.1f, ram=%.1f, vol=%s',
-                cpu,
-                ram,
-                f'{vol:.1f}' if vol is not None else 'N/A',
+                '[ViewRenderer] Home view: cpu=%.1f, ram=%.1f, vol=%.1f',
+                view.cpu_percent,
+                view.ram_percent,
+                view.volume_level * 100,
             )
 
     def _render_menu_view(self, view: MenuViewData) -> None:
-        """Render a menu view with title, items, and pagination.
-
-        Currently validates and logs the menu state. The actual menu rendering
-        is still handled by MenuWidget's internal state. Full Redux → GUI
-        inversion would require MenuWidget changes.
-        """
+        """Render a menu view with title, items, and pagination."""
         if DEBUG_MENU:
             # Show items for current page
             start = view.page_index * PAGE_SIZE
@@ -547,11 +285,7 @@ class ViewRenderer:
             )
 
     def _render_application_view(self, view: ApplicationViewData) -> None:
-        """Render an application view.
-
-        Applications are rendered by their own widget classes. ViewRenderer
-        logs the application state for debugging and future integration.
-        """
+        """Render an application view."""
         if DEBUG_MENU:
             logger.info(
                 '[ViewRenderer] Application view: id=%s, extra_data=%s',
@@ -560,11 +294,7 @@ class ViewRenderer:
             )
 
     def _render_notification_view(self, view: NotificationViewData) -> None:
-        """Render a notification view.
-
-        Notifications are rendered by NotificationWidget. ViewRenderer
-        logs the notification state for debugging.
-        """
+        """Render a notification view."""
         if DEBUG_MENU:
             logger.info(
                 '[ViewRenderer] Notification view: id=%s, title=%s',
@@ -573,17 +303,7 @@ class ViewRenderer:
             )
 
     def _render_status_bar(self, status_bar: StatusBarData) -> None:
-        """Render the status bar (header and footer) from StatusBarData.
-
-        This updates the header and footer widgets based on the computed
-        StatusBarData. During the transition period (Checkpoint 1), this
-        coexists with the existing autoruns that also update these widgets.
-        """
-        # Skip if no change (simple optimization)
-        if self._last_status_bar == status_bar:
-            return
-        self._last_status_bar = status_bar
-
+        """Render the status bar (header and footer) from StatusBarData."""
         if DEBUG_MENU:
             logger.info(
                 '[ViewRenderer] Rendering StatusBar: clock=%s, icons=%d, progress=%d',

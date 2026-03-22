@@ -5,7 +5,7 @@ import pathlib
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from kivy.clock import Clock
+from kivy.clock import mainthread
 from kivy.lang.builder import Builder
 from ubo_gui.gauge import GaugeWidget
 from ubo_gui.menu.constants import PAGE_SIZE
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 class HomePage(MenuPageWidget):
     def __init__(
         self: HomePage,
-        items: Sequence[Item | None] = [],
+        items: Sequence[Item | None] = (),
         *args: object,
         **kwargs: object,
     ) -> None:
@@ -47,51 +47,60 @@ class HomePage(MenuPageWidget):
         self.volume_widget = VolumeWidget(value=initial_volume * 100)
         self.ids.right_column.add_widget(self.volume_widget)
 
-        def set_volume(_: float) -> None:
-            state = store._state  # noqa: SLF001
-            if state is None:
-                return
-            try:
-                vol = state.audio.playback_volume
-                self.volume_widget.value = vol * 100
-            except AttributeError:
-                pass
+        self._setup_autoruns()
 
-        Clock.schedule_interval(set_volume, 1)
+    def _setup_autoruns(self: HomePage) -> None:
+        """Set up autoruns that sync gauges and volume with store state."""
+        from redux import AutorunOptions
+
+        store.autorun(
+            lambda state: state.audio.playback_volume
+            if hasattr(state, 'audio')
+            else 0.0,
+            options=AutorunOptions(keep_ref=False),
+        )(self._on_volume_changed)
+
+        store.autorun(
+            lambda state: state.system.cpu_percent
+            if hasattr(state, 'system')
+            else 0.0,
+            options=AutorunOptions(keep_ref=False),
+        )(self._on_cpu_changed)
+
+        store.autorun(
+            lambda state: state.system.ram_percent
+            if hasattr(state, 'system')
+            else 0.0,
+            options=AutorunOptions(keep_ref=False),
+        )(self._on_ram_changed)
+
+    @mainthread
+    def _on_volume_changed(self: HomePage, volume: float) -> None:
+        self.volume_widget.value = volume * 100
+
+    @mainthread
+    def _on_cpu_changed(self: HomePage, cpu_percent: float) -> None:
+        self.cpu_gauge.value = cpu_percent
+
+    @mainthread
+    def _on_ram_changed(self: HomePage, ram_percent: float) -> None:
+        self.ram_gauge.value = ram_percent
 
     @cached_property
     def cpu_gauge(self: HomePage) -> GaugeWidget:
-        import psutil
-
-        gauge = GaugeWidget(
-            value=psutil.cpu_percent(percpu=False),
+        return GaugeWidget(
+            value=0.0,
             fill_color='#24D636',
             label='CPU',
         )
 
-        def set_value(_: float) -> None:
-            gauge.value = psutil.cpu_percent(percpu=False)
-
-        Clock.schedule_interval(set_value, 1)
-
-        return gauge
-
     @cached_property
     def ram_gauge(self: HomePage) -> GaugeWidget:
-        import psutil
-
-        gauge = GaugeWidget(
-            value=psutil.virtual_memory().percent,
+        return GaugeWidget(
+            value=0.0,
             fill_color='#D68F24',
             label='RAM',
         )
-
-        def set_value(_: float) -> None:
-            gauge.value = psutil.virtual_memory().percent
-
-        Clock.schedule_interval(set_value, 1)
-
-        return gauge
 
 
 Builder.load_file(

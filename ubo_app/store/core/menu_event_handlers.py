@@ -1,11 +1,11 @@
 """Menu event handlers for the headless core.
 
-In the headless (dumb UI) architecture, the core emits MenuChooseByIndexEvent,
-MenuGoBackEvent, MenuGoHomeEvent, and MenuScrollEvent from the keypad reducer.
-These events were previously handled by the Kivy GUI's MenuAppCentral.
+In the headless (dumb UI) architecture, the core emits MenuChooseByIndexEvent
+from the keypad reducer. This module subscribes to those events and dispatches
+the appropriate stack actions so that the Redux state updates correctly.
 
-This module subscribes to those events and dispatches the appropriate stack
-actions so that the Redux state updates correctly.
+Navigation events (go back, go home, scroll, open/close application) are now
+handled directly by the reducer — no event round-trip needed.
 """
 
 from __future__ import annotations
@@ -22,28 +22,16 @@ from ubo_app.store.core.constants import (
     PAGE_SIZE,
 )
 from ubo_app.store.core.types import (
-    ApplicationStackItem,
-    CloseApplicationEvent,
     ExecuteMenuActionAction,
     ExecuteMenuActionEvent,
     MenuChooseByIconEvent,
     MenuChooseByIndexEvent,
     MenuChooseByLabelEvent,
-    MenuGoBackEvent,
-    MenuGoHomeEvent,
-    MenuScrollDirection,
-    MenuScrollEvent,
-    MenuStackItem,
     NotificationStackItem,
-    OpenApplicationAction,
-    OpenApplicationEvent,
     StackPopAction,
     StackPopItemAction,
-    StackPopToRootAction,
-    StackPushApplicationAction,
     StackPushMenuAction,
     StackPushNotificationAction,
-    StackSetPageIndexAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -56,6 +44,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from ubo_app.store.core.types import (
+        ApplicationStackItem,
         HomeViewData,
         MenuItemData,
         MenuViewData,
@@ -137,6 +126,8 @@ def _dispatch_original_notification_action(
 
     # Handle NotificationApplicationItem (has application_id)
     if isinstance(original_action, NotificationApplicationItem):
+        from ubo_app.store.core.types import OpenApplicationAction
+
         store.dispatch(
             OpenApplicationAction(
                 application_id=original_action.application_id,
@@ -170,7 +161,12 @@ def _handle_notification_choose_by_index(
 
     Returns True if the event was handled, False otherwise.
     """
-    state = store._state  # noqa: SLF001
+
+    @store.with_state(lambda state: state)
+    def _get_state(state: RootState) -> RootState:
+        return state
+
+    state = _get_state()
     if state is None:
         return False
 
@@ -394,9 +390,17 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
 
     Routes to a view-type-specific handler based on the current view.
     """
-    from ubo_app.store.core.types import HomeViewData, MenuViewData
+    from ubo_app.store.core.types import (
+        ApplicationStackItem,
+        HomeViewData,
+        MenuViewData,
+    )
 
-    state = store._state  # noqa: SLF001
+    @store.with_state(lambda state: state)
+    def _get_state(state: RootState) -> RootState:
+        return state
+
+    state = _get_state()
     if state is None:
         logger.warning('[MenuHandler] choose_by_index: state is None')
         return
@@ -465,16 +469,17 @@ def _handle_choose_by_field(
     value: str,
 ) -> None:
     """Handle menu item selection by a specific field (icon or label)."""
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return
 
-    for item in _get_current_view_items(state.main.current_view):
-        if item is not None and getattr(item, field) == value:
-            _execute_view_item_action(item)
-            return
+    @store.with_state(lambda state: state.main.current_view)
+    def _find_and_execute(current_view: object) -> None:
+        for item in _get_current_view_items(current_view):
+            if item is not None and getattr(item, field) == value:
+                _execute_view_item_action(item)
+                return
 
-    logger.warning('No item with %s "%s"', field, value)
+        logger.warning('No item with %s "%s"', field, value)
+
+    _find_and_execute()
 
 
 def _handle_choose_by_icon(event: MenuChooseByIconEvent) -> None:
@@ -485,49 +490,6 @@ def _handle_choose_by_icon(event: MenuChooseByIconEvent) -> None:
 def _handle_choose_by_label(event: MenuChooseByLabelEvent) -> None:
     """Handle menu item selection by label."""
     _handle_choose_by_field('label', event.label)
-
-
-def _handle_go_back(_: MenuGoBackEvent) -> None:
-    """Handle go back event."""
-    store.dispatch(StackPopAction())
-
-
-def _handle_go_home(_: MenuGoHomeEvent) -> None:
-    """Handle go home event."""
-    store.dispatch(StackPopToRootAction())
-
-
-def _handle_scroll(event: MenuScrollEvent) -> None:
-    """Handle menu scroll event."""
-    from ubo_app.store.core.types import MenuViewData
-
-    state = store._state  # noqa: SLF001
-    if state is None:
-        return
-
-    stack = state.main.stack
-    if not stack:
-        return
-
-    top = stack[-1]
-    if not isinstance(top, MenuStackItem):
-        return
-
-    # Use pre-computed current_view for total_pages
-    current_view = state.main.current_view
-    if not isinstance(current_view, MenuViewData) or current_view.total_pages <= 0:
-        return
-
-    total_pages = current_view.total_pages
-    page_index = top.page_index
-
-    if event.direction == MenuScrollDirection.UP:
-        new_page = (page_index - 1) % total_pages
-    else:
-        new_page = (page_index + 1) % total_pages
-
-    if new_page != page_index:
-        store.dispatch(StackSetPageIndexAction(page_index=new_page))
 
 
 def _handle_execute_menu_action(event: ExecuteMenuActionEvent) -> None:
@@ -602,34 +564,12 @@ def _handle_notification_clear(event: NotificationsClearEvent) -> None:
     )
 
 
-def _handle_open_application(event: OpenApplicationEvent) -> None:
-    """Handle open application event by pushing an ApplicationStackItem."""
-    store.dispatch(
-        StackPushApplicationAction(
-            application_id=event.application_id,
-            initialization_args=event.initialization_args,
-            initialization_kwargs=event.initialization_kwargs,
-        ),
-    )
-
-
-def _handle_close_application(event: CloseApplicationEvent) -> None:
-    """Handle close application event by popping the matching stack item."""
-    _pop_stack_item(
-        lambda item: isinstance(item, ApplicationStackItem)
-        and item.id == event.application_instance_id,
-    )
-
-
 def setup_menu_event_handlers() -> Subscriptions:
     """Subscribe to menu events and wire them to stack actions."""
     return [
         store.subscribe_event(MenuChooseByIndexEvent, _handle_choose_by_index),
         store.subscribe_event(MenuChooseByIconEvent, _handle_choose_by_icon),
         store.subscribe_event(MenuChooseByLabelEvent, _handle_choose_by_label),
-        store.subscribe_event(MenuGoBackEvent, _handle_go_back),
-        store.subscribe_event(MenuGoHomeEvent, _handle_go_home),
-        store.subscribe_event(MenuScrollEvent, _handle_scroll),
         store.subscribe_event(
             ExecuteMenuActionEvent,
             _handle_execute_menu_action,
@@ -642,6 +582,4 @@ def setup_menu_event_handlers() -> Subscriptions:
             NotificationsDisplayEvent,
             _handle_notification_display,
         ),
-        store.subscribe_event(OpenApplicationEvent, _handle_open_application),
-        store.subscribe_event(CloseApplicationEvent, _handle_close_application),
     ]

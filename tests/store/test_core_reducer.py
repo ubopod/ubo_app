@@ -18,8 +18,8 @@ import pytest
 from redux import CompleteReducerResult, InitAction, InitializationActionError
 
 from ubo_app.store.core.types import (
+    ApplicationStackItem,
     CloseApplicationAction,
-    CloseApplicationEvent,
     MainAction,
     MainState,
     MenuChooseByIconAction,
@@ -27,11 +27,8 @@ from ubo_app.store.core.types import (
     MenuChooseByLabelAction,
     MenuChooseByLabelEvent,
     MenuGoBackAction,
-    MenuGoBackEvent,
     MenuGoHomeAction,
-    MenuGoHomeEvent,
     OpenApplicationAction,
-    OpenApplicationEvent,
     PowerOffAction,
     PowerOffEvent,
     RebootAction,
@@ -133,29 +130,46 @@ class TestInitAction:
 
 
 class TestMenuActions:
-    """Tests for menu navigation actions that emit events without state change."""
+    """Tests for menu navigation actions handled directly by the reducer."""
 
-    def test_go_back_emits_event(self) -> None:
-        """Verify MenuGoBackAction emits a MenuGoBackEvent."""
+    def test_go_back_pops_stack(self) -> None:
+        """Verify MenuGoBackAction pops the stack when not at root."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
+        assert len(state.stack) == 2
+        result = reducer(state, MenuGoBackAction())
+        new_state = _get_state(result)
+        assert len(new_state.stack) == 1
+        events = _get_events(result)
+        assert any(isinstance(e, StackChangedEvent) for e in events)
+
+    def test_go_back_at_root_is_noop(self) -> None:
+        """Verify MenuGoBackAction at root returns unchanged state."""
         state = _init_state()
         result = reducer(state, MenuGoBackAction())
-        events = _get_events(result)
-        assert len(events) == 1
-        assert isinstance(events[0], MenuGoBackEvent)
-
-    def test_go_back_does_not_change_state(self) -> None:
-        """Verify MenuGoBackAction does not modify the stack."""
-        state = _init_state()
-        new_state = _get_state(reducer(state, MenuGoBackAction()))
+        new_state = _get_state(result)
         assert new_state.stack == state.stack
+        assert _get_events(result) == []
 
-    def test_go_home_emits_event(self) -> None:
-        """Verify MenuGoHomeAction emits a MenuGoHomeEvent."""
+    def test_go_home_pops_to_root(self) -> None:
+        """Verify MenuGoHomeAction pops to root."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='apps')))
+        assert len(state.stack) == 3
+        result = reducer(state, MenuGoHomeAction())
+        new_state = _get_state(result)
+        assert len(new_state.stack) == 1
+        events = _get_events(result)
+        assert any(isinstance(e, StackChangedEvent) for e in events)
+
+    def test_go_home_at_root_is_noop(self) -> None:
+        """Verify MenuGoHomeAction at root returns unchanged state."""
         state = _init_state()
         result = reducer(state, MenuGoHomeAction())
-        events = _get_events(result)
-        assert len(events) == 1
-        assert isinstance(events[0], MenuGoHomeEvent)
+        new_state = _get_state(result)
+        assert new_state.stack == state.stack
+        assert _get_events(result) == []
 
     def test_choose_by_icon_emits_event(self) -> None:
         """Verify MenuChooseByIconAction emits the correct event."""
@@ -312,29 +326,47 @@ class TestSetPageIndex:
 class TestOpenCloseApplication:
     """Tests for OpenApplicationAction and CloseApplicationAction."""
 
-    def test_open_application_emits_event(self) -> None:
-        """Verify OpenApplicationAction emits an OpenApplicationEvent."""
+    def test_open_application_pushes_stack(self) -> None:
+        """Verify OpenApplicationAction pushes an ApplicationStackItem."""
         state = _init_state()
         result = reducer(state, OpenApplicationAction(
             application_id='test:app',
             initialization_args=('a',),
         ))
+        new_state = _get_state(result)
+        assert len(new_state.stack) == 2
+        top = new_state.stack[-1]
+        assert isinstance(top, ApplicationStackItem)
+        assert top.application_id == 'test:app'
+        assert top.initialization_args == ('a',)
         events = _get_events(result)
-        assert len(events) == 1
-        assert isinstance(events[0], OpenApplicationEvent)
-        assert events[0].application_id == 'test:app'
-        assert events[0].initialization_args == ('a',)
+        assert any(isinstance(e, StackChangedEvent) for e in events)
 
-    def test_close_application_emits_event(self) -> None:
-        """Verify CloseApplicationAction emits a CloseApplicationEvent."""
+    def test_close_application_pops_matching_item(self) -> None:
+        """Verify CloseApplicationAction removes the matching stack item."""
+        state = _init_state()
+        state = _get_state(reducer(state, OpenApplicationAction(
+            application_id='test:app',
+        )))
+        assert len(state.stack) == 2
+        app_item_id = state.stack[-1].id
+        result = reducer(state, CloseApplicationAction(
+            application_instance_id=app_item_id,
+        ))
+        new_state = _get_state(result)
+        assert len(new_state.stack) == 1
+        events = _get_events(result)
+        assert any(isinstance(e, StackChangedEvent) for e in events)
+
+    def test_close_application_not_found_is_noop(self) -> None:
+        """Verify CloseApplicationAction with unknown id is a no-op."""
         state = _init_state()
         result = reducer(state, CloseApplicationAction(
-            application_instance_id='inst-1',
+            application_instance_id='nonexistent',
         ))
-        events = _get_events(result)
-        assert len(events) == 1
-        assert isinstance(events[0], CloseApplicationEvent)
-        assert events[0].application_instance_id == 'inst-1'
+        new_state = _get_state(result)
+        assert new_state.stack == state.stack
+        assert _get_events(result) == []
 
 
 class TestToggleRecording:

@@ -18,10 +18,10 @@ from ubo_app.store.core.types import (
     MainEvent,
     MenuChooseByIndexEvent,
     MenuEvent,
-    MenuGoBackEvent,
-    MenuGoHomeEvent,
+    MenuGoBackAction,
+    MenuGoHomeAction,
+    MenuScrollAction,
     MenuScrollDirection,
-    MenuScrollEvent,
     MenuStackItem,
     NotificationStackItem,
     ReplayRecordedSequenceAction,
@@ -125,7 +125,10 @@ def reducer(
         | ReplayRecordedSequenceAction
         | AssistantAction
         | DisplayUnblankAction
-        | DisplayUpdateActivityAction,
+        | DisplayUpdateActivityAction
+        | MenuGoBackAction
+        | MenuGoHomeAction
+        | MenuScrollAction,
         FinishEvent | MenuEvent | MainEvent,
     ]
     | None
@@ -270,16 +273,20 @@ def reducer(
         ):
             return CompleteReducerResult(
                 state=state,
-                actions=[DisplayUpdateActivityAction()],
-                events=[MenuScrollEvent(direction=MenuScrollDirection.UP)],
+                actions=[
+                    DisplayUpdateActivityAction(),
+                    MenuScrollAction(direction=MenuScrollDirection.UP),
+                ],
             )
         case KeypadKeyPressAction(key=Key.DOWN) if (
             set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(
                 state=state,
-                actions=[DisplayUpdateActivityAction()],
-                events=[MenuScrollEvent(direction=MenuScrollDirection.DOWN)],
+                actions=[
+                    DisplayUpdateActivityAction(),
+                    MenuScrollAction(direction=MenuScrollDirection.DOWN),
+                ],
             )
         case KeypadKeyPressAction(key=Key.L1) if set(action.pressed_keys) == {
             Key.HOME,
@@ -405,13 +412,12 @@ def reducer(
         case KeypadKeyReleaseAction(pressed_keys=(), key=Key.BACK):
             return CompleteReducerResult(
                 state=state,
-                events=[MenuGoBackEvent()],
+                actions=[MenuGoBackAction()],
             )
         case KeypadKeyReleaseAction(pressed_keys=(), key=Key.HOME):
             return CompleteReducerResult(
                 state=state,
-                actions=[AssistantStopListeningAction()],
-                events=[MenuGoHomeEvent()],
+                actions=[AssistantStopListeningAction(), MenuGoHomeAction()],
             )
 
         case _:

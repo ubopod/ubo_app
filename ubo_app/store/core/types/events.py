@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import field
 from typing import TYPE_CHECKING
 
 from redux import BaseEvent
 
 if TYPE_CHECKING:
-    from ubo_app.store.core.types.enums import MenuScrollDirection
     from ubo_app.store.core.types.stack_items import StackItemType
     from ubo_app.store.core.types.status_bar import StatusBarData
     from ubo_app.store.core.types.view_data import ViewData
     from ubo_app.store.services.keypad import KeypadAction
-    from ubo_app.store.ubo_actions import BasicType
 
 
 class MainEvent(BaseEvent):
@@ -26,14 +23,6 @@ class InitEvent(MainEvent):
 
 class MenuEvent(MainEvent):
     """Base class for menu events."""
-
-
-class MenuGoBackEvent(MenuEvent):
-    """Event emitted when navigating back."""
-
-
-class MenuGoHomeEvent(MenuEvent):
-    """Event emitted when navigating home."""
 
 
 class MenuChooseByIconEvent(MenuEvent):
@@ -52,12 +41,6 @@ class MenuChooseByIndexEvent(MenuEvent):
     """Event emitted when choosing by index."""
 
     index: int
-
-
-class MenuScrollEvent(MenuEvent):
-    """Event emitted when scrolling the menu."""
-
-    direction: MenuScrollDirection
 
 
 # =============================================================================
@@ -98,23 +81,6 @@ class DynamicMenuChangedEvent(MainEvent):
     """
 
     menu_id: str
-
-
-class OpenApplicationEvent(MainEvent):
-    """Event emitted when opening an application."""
-
-    application_id: str
-    initialization_args: tuple[BasicType, ...] = ()
-    initialization_kwargs: dict[
-        str,
-        BasicType | tuple[BasicType, ...] | list[BasicType],
-    ] = field(default_factory=dict)
-
-
-class CloseApplicationEvent(MainEvent):
-    """Event emitted when closing an application."""
-
-    application_instance_id: str
 
 
 class PowerEvent(MainEvent):

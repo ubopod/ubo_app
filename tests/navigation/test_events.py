@@ -6,6 +6,10 @@ NOTE: ViewChangedEvent is no longer emitted inline by the reducer.
 It is now emitted by the view autorun in view_computation.py when
 it dispatches UpdateCurrentViewAction. Stack operations only emit
 StackChangedEvent (and StackPageIndexChangedEvent for page changes).
+
+MenuGoBackAction, MenuGoHomeAction, MenuScrollAction, OpenApplicationAction,
+and CloseApplicationAction now perform state changes directly in the reducer
+instead of emitting intermediate events.
 """
 
 from __future__ import annotations
@@ -16,7 +20,7 @@ from ubo_app.store.core.types import (
     MenuChooseByIconAction,
     MenuChooseByIconEvent,
     MenuGoBackAction,
-    MenuGoBackEvent,
+    MenuGoHomeAction,
     StackChangedEvent,
     StackPageIndexChangedEvent,
     StackPopAction,
@@ -116,15 +120,36 @@ class TestPageIndexEvents:
 
 
 class TestMenuActionEvents:
-    """Tests for menu action events (passthrough, no state change)."""
+    """Tests for menu actions that now change state directly."""
 
-    def test_go_back_emits_event(
+    def test_go_back_emits_stack_changed(
         self, nav: ReducerRunner, events: EventCapture,
     ) -> None:
-        """Verify MenuGoBackAction emits a MenuGoBackEvent."""
+        """Verify MenuGoBackAction emits StackChangedEvent when not at root."""
+        nav.dispatch(StackPushMenuAction(menu_key='main'))
+        nav.clear_events()
         nav.dispatch(MenuGoBackAction())
-        back_events = events.capture_from(nav, MenuGoBackEvent)
-        assert len(back_events) == 1
+        stack_events = events.capture_from(nav, StackChangedEvent)
+        assert len(stack_events) == 1
+
+    def test_go_back_at_root_no_events(
+        self, nav: ReducerRunner, events: EventCapture,
+    ) -> None:
+        """Verify MenuGoBackAction at root emits no events."""
+        nav.dispatch(MenuGoBackAction())
+        stack_events = events.capture_from(nav, StackChangedEvent)
+        assert len(stack_events) == 0
+
+    def test_go_home_emits_stack_changed(
+        self, nav: ReducerRunner, events: EventCapture,
+    ) -> None:
+        """Verify MenuGoHomeAction emits StackChangedEvent."""
+        nav.dispatch(StackPushMenuAction(menu_key='main'))
+        nav.dispatch(StackPushMenuAction(menu_key='settings'))
+        nav.clear_events()
+        nav.dispatch(MenuGoHomeAction())
+        stack_events = events.capture_from(nav, StackChangedEvent)
+        assert len(stack_events) == 1
 
     def test_choose_by_icon_emits_event(
         self, nav: ReducerRunner, events: EventCapture,

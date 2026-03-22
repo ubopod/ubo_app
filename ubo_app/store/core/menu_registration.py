@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from ubo_app.store.core.stack_ops import pop_stack
 from ubo_app.store.core.types.state import RegisteredAppEntry
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
         MainState,
         RegisterRegularAppAction,
         RegisterSettingAppAction,
+        StackChangedEvent,
     )
     from ubo_app.store.settings.types import SettingsServiceSetStatusAction
 
@@ -129,7 +131,7 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
 def deregister_regular_app(
     state: MainState,
     action: DeregisterRegularAppAction,
-) -> tuple[MainState, list]:
+) -> tuple[MainState, list[StackChangedEvent]]:
     """Deregister a regular app from the Apps menu.
 
     Args:
@@ -137,10 +139,10 @@ def deregister_regular_app(
         action: The deregistration action.
 
     Returns:
-        Tuple of (new state, list of MenuGoBackEvent to emit).
+        Tuple of (new state, list of StackChangedEvent to emit).
 
     """
-    from ubo_app.store.core.types import MenuGoBackEvent
+    from ubo_app.store.core.types import StackChangedEvent
 
     if action.service is None:
         return state, []
@@ -149,12 +151,16 @@ def deregister_regular_app(
     if action.key is not None:
         key += action.key
 
-    events: list[MenuGoBackEvent] = []
+    original_stack = state.stack
 
-    # Use reactive path from state (computed by reducer)
+    # Pop stack if we're inside the app's menu
     path = state.path
     if path[:3] == ('main', 'apps', key):
-        events = [MenuGoBackEvent()] * (len(path) - 2)
+        n_pops = len(path) - 2
+        for _ in range(n_pops):
+            result = pop_stack(state)
+            if result is not None:
+                state = result
 
     # Remove from registered_apps
     new_registered_apps = {
@@ -166,13 +172,17 @@ def deregister_regular_app(
         registered_apps=new_registered_apps,
     )
 
+    events: list[StackChangedEvent] = []
+    if new_state.stack != original_stack:
+        events = [StackChangedEvent(stack=new_state.stack)]
+
     return new_state, events
 
 
 def update_service_status(
     state: MainState,
     action: SettingsServiceSetStatusAction,
-) -> tuple[MainState, list]:
+) -> tuple[MainState, list[StackChangedEvent]]:
     """Update menu state when a service's status changes to inactive.
 
     Removes apps and settings registered by the deactivated service.
@@ -182,28 +192,34 @@ def update_service_status(
         action: The service status change action.
 
     Returns:
-        Tuple of (new state, list of MenuGoBackEvent to emit).
+        Tuple of (new state, list of StackChangedEvent to emit).
 
     """
-    from ubo_app.store.core.types import MenuGoBackEvent
+    from ubo_app.store.core.types import StackChangedEvent
 
-    events: list[MenuGoBackEvent] = []
+    original_stack = state.stack
 
     # Use reactive path from state (computed by reducer)
     path = state.path
+    n_pops = 0
     # Exit open menus of the deregistered app
     if (
         path[:2] == ('main', 'apps')
         and len(path) > 2  # noqa: PLR2004
         and path[2].startswith(f'{action.service_id}:')
     ):
-        events = [MenuGoBackEvent()] * (len(path) - 2)
+        n_pops = len(path) - 2
     if (
         path[:2] == ('main', 'settings')
         and len(path) > 3  # noqa: PLR2004
         and path[3].startswith(f'{action.service_id}:')
     ):
-        events = [MenuGoBackEvent()] * (len(path) - 3)
+        n_pops = len(path) - 3
+
+    for _ in range(n_pops):
+        result = pop_stack(state)
+        if result is not None:
+            state = result
 
     # Remove from registered_apps
     new_registered_apps = {
@@ -216,5 +232,9 @@ def update_service_status(
         state,
         registered_apps=new_registered_apps,
     )
+
+    events: list[StackChangedEvent] = []
+    if new_state.stack != original_stack:
+        events = [StackChangedEvent(stack=new_state.stack)]
 
     return new_state, events

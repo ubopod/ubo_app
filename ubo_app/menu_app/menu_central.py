@@ -14,16 +14,11 @@ from ubo_app.logger import logger
 from ubo_app.menu_app.home_page import HomePage
 from ubo_app.menu_app.menu_notification_handler import MenuNotificationHandler
 from ubo_app.store.core.types import (
-    CloseApplicationEvent,
+    ApplicationStackItem,
     MenuChooseByIconEvent,
     MenuChooseByIndexEvent,
     MenuChooseByLabelEvent,
-    MenuGoBackEvent,
-    MenuGoHomeEvent,
-    MenuScrollDirection,
-    MenuScrollEvent,
     MenuStackItem,
-    OpenApplicationEvent,
     SetAreEnclosuresVisibleAction,
     StackPopAction,
     StackPopToRootAction,
@@ -35,21 +30,12 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import NotificationsDisplayEvent
 from ubo_app.store.ubo_actions import get_registered_application
-from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Item, Menu
 
     from ubo_app.store.core.types import StackItemType
-
-
-@store.with_state(lambda state: state.main.stack)
-def _get_stack_state(
-    stack_state: tuple[StackItemType, ...],
-) -> tuple[StackItemType, ...]:
-    """Get the current Redux stack."""
-    return stack_state
 
 
 class MenuWidgetWithHomePage(MenuWidget):
@@ -76,7 +62,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         self._last_page_index: int | None = None  # Track to avoid redundant dispatches
 
         self._setup_bindings()
-        self._setup_autoruns()
 
     def _setup_bindings(self) -> None:
         """Set up Kivy property bindings."""
@@ -96,13 +81,6 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         if DEBUG_MENU:
             menu_representation = 'Menu:\n' + repr(self.menu_widget)
             self.menu_widget.bind(stack=lambda *_: logger.info(menu_representation))
-
-    def _setup_autoruns(self) -> None:
-        """Set up Redux store autoruns.
-
-        Note: set_root_menu is called in build() after padding is set, so that
-        the HomePage widget is created with the correct padding values.
-        """
 
     def _get_home_menu_items(self) -> list:
         """Read home menu items from the HOME_MENU_ID dynamic menu.
@@ -208,15 +186,16 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         """
         self._sync_stack_state_with_gui(gui_stack)
 
+    @store.with_state(lambda state: state.main.stack)
     def _sync_stack_state_with_gui(
         self: MenuAppCentral,
+        stack_state: tuple[StackItemType, ...],
         gui_stack: list[StackItem],
     ) -> None:
         """Sync the Redux stack state with the GUI stack.
 
         Dispatches Redux actions to keep the stack in sync with GUI navigation.
         """
-        stack_state = _get_stack_state()
         gui_len = len(gui_stack)
         redux_len = len(stack_state)
 
@@ -293,6 +272,8 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
     @cached_property
     def central(self: MenuAppCentral) -> Widget | None:
         """Build the main menu and initiate it."""
+        from redux import AutorunOptions
+
         self.root.title = self.menu_widget.title
 
         store.subscribe_event(
@@ -301,26 +282,23 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             keep_ref=False,
         )
 
-        store.subscribe_event(
-            OpenApplicationEvent,
-            self.open_application,
-            keep_ref=False,
-        )
-        store.subscribe_event(
-            CloseApplicationEvent,
-            self.close_application,
-            keep_ref=False,
-        )
-        store.subscribe_event(
-            MenuGoHomeEvent,
-            self.go_home,
-            keep_ref=False,
-        )
-        store.subscribe_event(
-            MenuGoBackEvent,
-            self.go_back,
-            keep_ref=False,
-        )
+        # Autorun on stack changes (replaces StackChangedEvent subscription)
+        store.autorun(
+            lambda state: state.main.stack,
+            options=AutorunOptions(keep_ref=False),
+        )(self._on_stack_changed)
+
+        # Autorun on page index of top stack item
+        store.autorun(
+            lambda state: (
+                state.main.stack[-1].page_index
+                if state.main.stack
+                and isinstance(state.main.stack[-1], MenuStackItem)
+                else 0
+            ),
+            options=AutorunOptions(keep_ref=False),
+        )(self._on_page_index_changed)
+
         store.subscribe_event(
             MenuChooseByIconEvent,
             self.select_by_icon,
@@ -336,37 +314,107 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
             self.select_by_index,
             keep_ref=False,
         )
-        store.subscribe_event(
-            MenuScrollEvent,
-            self.scroll,
-            keep_ref=False,
-        )
 
         return self.menu_widget
 
     @mainthread_if_needed
-    def open_application(self: MenuAppCentral, event: OpenApplicationEvent) -> None:
-        application = get_registered_application(event.application_id)
-        self.menu_widget.open_application(
-            application(*event.initialization_args, **event.initialization_kwargs),
-        )
+    def _on_stack_changed(
+        self: MenuAppCentral,
+        new_stack: tuple[StackItemType, ...],
+    ) -> None:
+        """Sync the Kivy widget with Redux stack changes."""
+        gui_depth = self.menu_widget.depth
+        new_depth = len(new_stack)
 
-    def close_application(self: MenuAppCentral, event: CloseApplicationEvent) -> None:
-        for item in self.menu_widget.stack:
-            if (
-                event.application_instance_id
-                and isinstance(item, StackApplicationItem)
-                and hasattr(item.application, 'id')
-                and isinstance(item.application, UboPageWidget)
-                and item.application.id == event.application_instance_id
-            ):
-                self.menu_widget.close_application(item.application)
+        if new_depth < gui_depth:
+            # Pop: navigate back or home
+            if new_depth <= 1:
+                self.menu_widget.go_home()
+            else:
+                for _ in range(gui_depth - new_depth):
+                    self.menu_widget.go_back()
+        elif new_depth > gui_depth:
+            # Push each new item in order (handles multi-step pushes).
+            # Note: NotificationStackItem is handled via
+            # NotificationsDisplayEvent, not here.
+            for i in range(gui_depth, new_depth):
+                new_item = new_stack[i]
+                if isinstance(new_item, ApplicationStackItem):
+                    application = get_registered_application(
+                        new_item.application_id,
+                    )
+                    self.menu_widget.open_application(
+                        application(
+                            *new_item.initialization_args,
+                            **new_item.initialization_kwargs,
+                        ),
+                    )
+                elif isinstance(new_item, MenuStackItem):
+                    menu = self._build_menu_for_stack(
+                        new_stack[: i + 1],
+                    )
+                    if menu:
+                        self.menu_widget._push(  # noqa: SLF001
+                            menu,
+                            transition=self.menu_widget._slide_transition,  # noqa: SLF001
+                            direction='left',
+                        )
 
-    def go_home(self: MenuAppCentral, _: MenuGoHomeEvent) -> None:
-        self.menu_widget.go_home()
+    @mainthread_if_needed
+    def _on_page_index_changed(
+        self: MenuAppCentral,
+        page_index: int,
+    ) -> None:
+        """Sync the Kivy widget with Redux page index changes."""
+        current_page = self.menu_widget.page_index
+        if current_page < page_index:
+            for _ in range(page_index - current_page):
+                self.menu_widget.go_down()
+        elif current_page > page_index:
+            for _ in range(current_page - page_index):
+                self.menu_widget.go_up()
 
-    def go_back(self: MenuAppCentral, _: MenuGoBackEvent) -> None:
-        self.menu_widget.go_back()
+    @store.with_state(lambda state: state.dynamic_menus)
+    def _build_menu_for_stack(
+        self: MenuAppCentral,
+        dynamic_menus_state: object,
+        new_stack: tuple[StackItemType, ...],
+    ) -> Menu | None:
+        """Build a HeadlessMenu for a MenuStackItem push.
+
+        Resolves the stack's path to a dynamic menu ID via path matchers,
+        then converts the dynamic menu items to ActionItems.
+        """
+        from ubo_gui.menu.types import ActionItem, HeadlessMenu
+
+        from ubo_app.store.core.stack_ops import derive_path_from_stack
+        from ubo_app.store.core.view_registry import get_menu_id_for_path
+
+        path = derive_path_from_stack(new_stack)
+        menu_id = get_menu_id_for_path(path)
+        if not menu_id:
+            return None
+
+        dynamic_menu = dynamic_menus_state.menus.get(menu_id)  # type: ignore[union-attr]
+        if not dynamic_menu:
+            return None
+
+        items: list[ActionItem] = []
+        for item_data in dynamic_menu.items:
+            if item_data:
+                kwargs: dict = {
+                    'label': item_data.label,
+                    'icon': item_data.icon,
+                    'is_short': item_data.is_short,
+                    'action': lambda: None,
+                }
+                if item_data.color:
+                    kwargs['color'] = item_data.color
+                if item_data.background_color:
+                    kwargs['background_color'] = item_data.background_color
+                items.append(ActionItem(**kwargs))
+
+        return HeadlessMenu(title=dynamic_menu.title, items=items)
 
     def _get_selectable_items(self: MenuAppCentral) -> list[Item]:
         """Get items available for selection.
@@ -418,9 +466,3 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
         event: MenuChooseByIndexEvent,
     ) -> None:
         self.menu_widget.select(event.index)
-
-    def scroll(self: MenuAppCentral, event: MenuScrollEvent) -> None:
-        if event.direction == MenuScrollDirection.UP:
-            self.menu_widget.go_up()
-        elif event.direction == MenuScrollDirection.DOWN:
-            self.menu_widget.go_down()

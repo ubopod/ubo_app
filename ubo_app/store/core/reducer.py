@@ -30,7 +30,6 @@ from ubo_app.store.core.stack_ops import (
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     CloseApplicationAction,
-    CloseApplicationEvent,
     DeregisterRegularAppAction,
     ExecuteMenuActionAction,
     ExecuteMenuActionEvent,
@@ -45,13 +44,12 @@ from ubo_app.store.core.types import (
     MenuChooseByLabelAction,
     MenuChooseByLabelEvent,
     MenuGoBackAction,
-    MenuGoBackEvent,
     MenuGoHomeAction,
-    MenuGoHomeEvent,
     MenuScrollAction,
-    MenuScrollEvent,
+    MenuScrollDirection,
+    MenuStackItem,
+    MenuViewData,
     OpenApplicationAction,
-    OpenApplicationEvent,
     PowerOffAction,
     PowerOffEvent,
     RebootAction,
@@ -107,15 +105,21 @@ def reducer(
 
     match action:
         case MenuGoBackAction():
+            result = pop_stack(state)
+            if result is None:
+                return state
             return CompleteReducerResult(
-                state=state,
-                events=[MenuGoBackEvent()],
+                state=result,
+                events=[StackChangedEvent(stack=result.stack)],
             )
 
         case MenuGoHomeAction():
+            result = pop_to_root(state)
+            if result is None:
+                return state
             return CompleteReducerResult(
-                state=state,
-                events=[MenuGoHomeEvent()],
+                state=result,
+                events=[StackChangedEvent(stack=result.stack)],
             )
 
         case MenuChooseByIconAction():
@@ -137,9 +141,27 @@ def reducer(
             )
 
         case MenuScrollAction():
+            current_view = state.current_view
+            if (
+                not isinstance(current_view, MenuViewData)
+                or current_view.total_pages <= 0
+            ):
+                return state
+            top = state.stack[-1] if state.stack else None
+            if not isinstance(top, MenuStackItem):
+                return state
+            if action.direction == MenuScrollDirection.UP:
+                new_page = (top.page_index - 1) % current_view.total_pages
+            else:
+                new_page = (top.page_index + 1) % current_view.total_pages
+            if new_page == top.page_index:
+                return state
+            page_result = set_page_index(state, new_page)
+            if page_result is None:
+                return state
             return CompleteReducerResult(
-                state=state,
-                events=[MenuScrollEvent(direction=action.direction)],
+                state=page_result,
+                events=[StackPageIndexChangedEvent(page_index=new_page)],
             )
 
         # =====================================================================
@@ -242,25 +264,35 @@ def reducer(
             )
 
         case OpenApplicationAction():
+            new_state = push_application(
+                state,
+                action.application_id,
+                action.initialization_args,
+                action.initialization_kwargs,
+            )
             return CompleteReducerResult(
-                state=state,
-                events=[
-                    OpenApplicationEvent(
-                        application_id=action.application_id,
-                        initialization_args=action.initialization_args,
-                        initialization_kwargs=action.initialization_kwargs,
-                    ),
-                ],
+                state=new_state,
+                events=[StackChangedEvent(stack=new_state.stack)],
             )
 
         case CloseApplicationAction():
+            item = next(
+                (
+                    i
+                    for i in state.stack
+                    if isinstance(i, ApplicationStackItem)
+                    and i.id == action.application_instance_id
+                ),
+                None,
+            )
+            if item is None:
+                return state
+            close_result = pop_item(state, item.id)
+            if close_result is None:
+                return state
             return CompleteReducerResult(
-                state=state,
-                events=[
-                    CloseApplicationEvent(
-                        application_instance_id=action.application_instance_id,
-                    ),
-                ],
+                state=close_result,
+                events=[StackChangedEvent(stack=close_result.stack)],
             )
 
         case ToggleRecordingAction() if not state.is_replaying:

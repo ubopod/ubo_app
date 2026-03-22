@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 from asyncio import Queue, QueueFull
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 import betterproto
@@ -122,6 +122,41 @@ def _pack_to_any(partial_state: GRPCSerializable) -> betterproto_protobuf.Any:
     )
 
 
+def _send_initial_state(
+    event_class: type[UboEvent],
+    queue_event: Callable[[UboEvent], None],
+) -> None:
+    """Send initial state for newly subscribed event types."""
+    if event_class is CoreViewChangedEvent:
+
+        @store.with_state(lambda state: state.main)
+        def _send_initial_view(main: object) -> None:
+            current_view = getattr(main, 'current_view', None)
+            status_bar = getattr(main, 'status_bar', None)
+            if current_view:
+                queue_event(
+                    CoreViewChangedEvent(
+                        view=current_view,
+                        status_bar=status_bar,
+                    ),
+                )
+
+        _send_initial_view()
+
+    if event_class is CoreStackChangedEvent:
+
+        @store.with_state(lambda state: state.main.stack)
+        def _send_initial_stack(
+            stack: tuple[object, ...],
+        ) -> None:
+            if stack:
+                queue_event(
+                    CoreStackChangedEvent(stack=stack),  # type: ignore[arg-type]
+                )
+
+        _send_initial_stack()
+
+
 class StoreService(StoreServiceBase):
     """gRPC service class that implements the Store service."""
 
@@ -186,26 +221,7 @@ class StoreService(StoreServiceBase):
                 keep_ref=False,
             )
 
-            # For ViewChangedEvent, immediately send the current view state
-            # so clients don't have to wait for the next navigation change
-            if event_class is CoreViewChangedEvent:
-                state = store._state  # noqa: SLF001
-                if state and state.main.current_view:
-                    queue_event(
-                        CoreViewChangedEvent(
-                            view=state.main.current_view,
-                            status_bar=state.main.status_bar,
-                        ),
-                    )
-
-            # For StackChangedEvent, immediately send the current stack
-            # so clients have the breadcrumb on initial load
-            if event_class is CoreStackChangedEvent:
-                state = store._state  # noqa: SLF001
-                if state and state.main.stack:
-                    queue_event(
-                        CoreStackChangedEvent(stack=state.main.stack),
-                    )
+            _send_initial_state(event_class, queue_event)
 
             try:
                 while True:
