@@ -43,6 +43,7 @@ BARCODE_PATTERN = (
 HOTSPOT_GRACE_TIME = 5
 INPUT_DESCRIPTIONS: Sequence[AvailableInputDescription] = [
     QRCodeInputDescription(
+        id='wifi:qr-input',
         pattern=BARCODE_PATTERN,
         instructions=ReadableInformation(
             text='Go to your phone settings, choose QR code and hold it in '
@@ -52,6 +53,7 @@ INPUT_DESCRIPTIONS: Sequence[AvailableInputDescription] = [
         ),
     ),
     WebUIInputDescription(
+        id='wifi:web-ui-input',
         fields=[
             InputFieldDescription(
                 name='SSID',

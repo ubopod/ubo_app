@@ -187,7 +187,13 @@ def reducer(
             return replace(
                 state,
                 services={
-                    key: replace(value, errors=[*value.errors, action.error])
+                    key: replace(
+                        value,
+                        errors=sorted(
+                            [*value.errors, action.error],
+                            key=lambda e: e.message,
+                        ),
+                    )
                     if key == action.service_id
                     else value
                     for key, value in state.services.items()

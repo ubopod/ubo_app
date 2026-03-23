@@ -289,7 +289,7 @@ def _monitor_events(  # noqa: C901, PLR0912
                     'path': path,
                 },
             )
-            if action == 'pull' and event.get('id', '') in path:
+            if action == 'pull' and str(event.get('id', '')) in path:
                 try:
                     image = docker_client.images.get(path)
                     store.dispatch(
@@ -449,7 +449,6 @@ def check_container(*, image_id: str) -> None:
                     status=DockerItemStatus.NOT_AVAILABLE,
                 ),
             )
-            raise
         except docker.errors.DockerException:
             store.dispatch(
                 DockerImageSetStatusAction(

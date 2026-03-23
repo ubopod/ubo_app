@@ -172,13 +172,16 @@ class UboServiceThread(threading.Thread):
         self.has_reducer = False
 
         self._reducer_barrier = None
+        self._release_once: threading.Event | None = None
         self.subscriptions: Subscriptions = []
 
     def set_reducer_barrier(
         self,
         reducer_barrier: threading.Barrier,
+        release_once: threading.Event,
     ) -> None:
         self._reducer_barrier = reducer_barrier
+        self._release_once = release_once
 
     def register_reducer(self, reducer: ReducerType) -> None:
         if self.has_reducer:
@@ -209,8 +212,19 @@ class UboServiceThread(threading.Thread):
 
     def _wait_for_reducers(self) -> None:
         if self._reducer_barrier:
-            with contextlib.suppress(threading.BrokenBarrierError):
+            try:
                 self._reducer_barrier.wait()
+            except threading.BrokenBarrierError:
+                # Barrier timed out — ensure view autorun is released anyway.
+                # The Event guarantees this runs exactly once across all
+                # threads that hit the BrokenBarrierError.
+                if self._release_once and not self._release_once.is_set():
+                    self._release_once.set()
+                    from ubo_app.store.core.view_computation import (
+                        release_view_autorun,
+                    )
+
+                    release_view_autorun()
 
     def register(  # noqa: PLR0913
         self,
@@ -657,6 +671,39 @@ def stop_services(
         service.stop()
 
 
+def _setup_reducer_barrier(to_run_services: list[UboServiceThread]) -> None:
+    """Suppress view autorun and set up a barrier for reducer registration.
+
+    The barrier's ``action`` callback releases the view autorun once all
+    services have registered their reducers.  If the barrier times out
+    (``BrokenBarrierError``), the first thread to catch it will release
+    the autorun via a ``threading.Event`` guard in ``_wait_for_reducers``.
+    """
+    if not to_run_services:
+        return
+
+    from ubo_app.store.core.view_computation import suppress_view_autorun
+
+    suppress_view_autorun()
+
+    release_once = threading.Event()
+
+    def _on_barrier_done() -> None:
+        """Release view autorun exactly once."""
+        if not release_once.is_set():
+            release_once.set()
+            _report_successful_reducer_registration(to_run_services)
+
+    reducer_barrier = threading.Barrier(
+        len(to_run_services),
+        action=_on_barrier_done,
+        timeout=30,
+    )
+
+    for service in to_run_services:
+        service.set_reducer_barrier(reducer_barrier, release_once)
+
+
 def load_services(
     service_ids: Sequence[str] | None = None,
     gap_duration: float = 0,
@@ -718,21 +765,7 @@ def load_services(
         if service.is_enabled and (not service_ids or service.service_id in service_ids)
     ]
 
-    # Suppress redundant view autorun computations during the reducer
-    # registration burst.  Released in _report_successful_reducer_registration.
-    if to_run_services:
-        from ubo_app.store.core.view_computation import suppress_view_autorun
-
-        suppress_view_autorun()
-
-    reducer_barrier = threading.Barrier(
-        len(to_run_services),
-        action=lambda: _report_successful_reducer_registration(to_run_services),
-        timeout=10,
-    )
-
-    for service in to_run_services:
-        service.set_reducer_barrier(reducer_barrier)
+    _setup_reducer_barrier(to_run_services)
 
     store.dispatch(
         SettingsSetServicesAction(services=services, gap_duration=gap_duration),
