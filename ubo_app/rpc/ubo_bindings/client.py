@@ -97,7 +97,12 @@ class UboRPCClient:
             async for response in self.store_service.subscribe_event(
                 SubscribeEventRequest(event=event_type),
             ):
-                callback(response.event)
+                try:
+                    callback(response.event)
+                except Exception:
+                    logging.getLogger(__name__).exception(
+                        'Error in event subscription callback',
+                    )
 
         task = self.event_loop.create_task(iterator())
 

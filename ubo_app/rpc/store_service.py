@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from asyncio import Queue, QueueFull
+from asyncio import Queue, QueueFull, get_running_loop
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
@@ -197,20 +197,28 @@ class StoreService(StoreServiceBase):
         )
         event_class = get_class(reduce_group(subscribe_event_request.event))
         queue: Queue[UboEvent] = Queue(30)
+        loop = get_running_loop()
         if event_class:
 
             def queue_event(event: UboEvent) -> None:
-                """Put the event in the queue."""
+                """Put the event in the queue (thread-safe)."""
+
+                def _put() -> None:
+                    try:
+                        queue.put_nowait(event)
+                    except QueueFull:
+                        logger.verbose(
+                            'Subscription event queue is full, dropping event',
+                            extra={
+                                'event': event,
+                                'queue_size': queue.qsize(),
+                            },
+                        )
+
                 try:
-                    queue.put_nowait(event)
-                except QueueFull:
-                    logger.verbose(
-                        'Subscription event queue is full, dropping event',
-                        extra={
-                            'event': event,
-                            'queue_size': queue.qsize(),
-                        },
-                    )
+                    loop.call_soon_threadsafe(_put)
+                except RuntimeError:
+                    pass  # Event loop is closed
 
             # Pre-compute the snake_case event field name once per subscription
             event_field_name = betterproto.casing.snake_case(event_class.__name__)
@@ -256,13 +264,25 @@ class StoreService(StoreServiceBase):
     ) -> AsyncIterator[SubscribeStoreResponse]:
         """Subscribe to the changes of selected parts of the store."""
         queue: Queue[Sequence[GRPCSerializable]] = Queue(30)
+        loop = get_running_loop()
 
         selectors = [
             _to_selector(selector) for selector in subscribe_store_request.selectors
         ]
 
         def parent_selector(state: RootState) -> Sequence[GRPCSerializable]:
-            return tuple(selector(state) for selector in selectors)
+            results: list[GRPCSerializable] = []
+            for i, selector in enumerate(selectors):
+                try:
+                    results.append(selector(state))
+                except AttributeError:
+                    logger.warning(
+                        'Selector %s raised AttributeError, returning None',
+                        subscribe_store_request.selectors[i],
+                        exc_info=True,
+                    )
+                    results.append(None)
+            return tuple(results)
 
         logger.debug(
             'subscribe_store: setting up autorun for selectors: %s',
@@ -271,17 +291,24 @@ class StoreService(StoreServiceBase):
 
         @store.autorun(parent_selector)
         def queue_change(partial_state: Sequence[GRPCSerializable]) -> None:
-            """Put the change in the queue."""
+            """Put the change in the queue (thread-safe)."""
+
+            def _put() -> None:
+                try:
+                    queue.put_nowait(partial_state)
+                except QueueFull:
+                    logger.debug(
+                        'Subscription store queue is full, dropping change',
+                        extra={
+                            'partial_state': partial_state,
+                            'queue_size': queue.qsize(),
+                        },
+                    )
+
             try:
-                queue.put_nowait(partial_state)
-            except QueueFull:
-                logger.debug(
-                    'Subscription store queue is full, dropping change',
-                    extra={
-                        'partial_state': partial_state,
-                        'queue_size': queue.qsize(),
-                    },
-                )
+                loop.call_soon_threadsafe(_put)
+            except RuntimeError:
+                pass  # Event loop is closed
 
         try:
             while True:
