@@ -48,11 +48,12 @@ async def test_subscribe_event_runs_handler_in_service_thread(
 
     from ubo_app.store.main import store
 
-    result: asyncio.Future[bool] = asyncio.Future()
+    loop = asyncio.get_event_loop()
+    result: asyncio.Future[bool] = loop.create_future()
 
     def check() -> None:
         thread = current_thread()
-        result.set_result(thread is service_thread)
+        loop.call_soon_threadsafe(result.set_result, thread is service_thread)
 
     def reducer(
         state: DummyState | None,

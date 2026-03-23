@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
-import contextlib
 import gc
+import subprocess
 import sys
-import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -15,13 +13,10 @@ import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
 
-from ubo_app.constants import TEST_INVESTIGATION_MODE
 from ubo_app.logger import logger
 
 modules_snapshot = set(sys.modules).union(
     {
-        'kivy.cache',
-        'numpy',
         # This need to persist because sdbus interfaces can't be unloaded
         'ubo_app.utils.dbus_interfaces',
     },
@@ -34,39 +29,135 @@ if TYPE_CHECKING:
 
     from _pytest.fixtures import SubRequest  # pyright: ignore[reportPrivateImportUsage]
 
-    from ubo_app.menu_app.menu import MenuApp
-    from ubo_app.utils.garbage_collection import ClosureTracker
-
 
 class AppContext:
-    """Context object for tests running a menu application."""
+    """Context object for tests running core in-process with GUI as subprocess."""
 
     def __init__(
         self: AppContext,
         request: SubRequest,
-        tracker: ClosureTracker | None = None,
     ) -> None:
         """Initialize the context."""
         self.request = request
         self._cleanup_is_called = False
-        self.tracker = tracker
+        self.gui_process: subprocess.Popen[bytes] | None = None
+        self._subscriptions: list[Any] = []
 
-    def set_app(self: AppContext, app: MenuApp | None = None) -> None:
-        """Set the application."""
-        from ubo_app.menu_app.menu import MenuApp
+    def set_app(self: AppContext) -> None:
+        """Start core in-process and GUI client as subprocess."""
+        from ubo_app.constants import GRPC_LISTEN_PORT
 
-        if app is None:
-            app = MenuApp()
+        # Start gRPC server on the worker thread
+        from ubo_app.rpc.server import serve as grpc_serve
+        from ubo_app.service import worker_thread
 
-        self.app = app
-        self.loop = asyncio.get_event_loop()
-        self.task = self.loop.create_task(self.app.async_run(async_lib='asyncio'))
+        worker_thread.run_coroutine(grpc_serve())
+
+        # Set up side effects and menu event handlers
+        from ubo_app.side_effects import setup_side_effects
+
+        self._subscriptions.extend(setup_side_effects())
+
+        from ubo_app.store.core.menu_event_handlers import setup_menu_event_handlers
+
+        self._subscriptions.extend(setup_menu_event_handlers())
+
+        # Find and spawn the GUI client subprocess
+        gui_exe = self._find_gui_executable()
+        if gui_exe is not None:
+            import os
+
+            env = os.environ.copy()
+            env['HEADLESS_KIVY_DEBUG'] = 'true'
+            env['KIVY_NO_ARGS'] = '1'
+            env['KIVY_NO_CONFIG'] = '1'
+            env['KIVY_NO_FILELOG'] = '1'
+            env['KIVY_NO_CONSOLELOG'] = '1'
+            env['UBO_TEST_ENV'] = 'true'
+            # Remove venv vars so the GUI subprocess uses its own venv
+            env.pop('VIRTUAL_ENV', None)
+            env.pop('UV_PROJECT_ENVIRONMENT', None)
+            # Pass verbose flag to see GUI client logs
+            gui_args = ['--verbose']
+
+            logger.info('Starting GUI client: %s', gui_exe)
+            try:
+                self.gui_process = subprocess.Popen(  # noqa: S603
+                    [
+                        str(gui_exe),
+                        '--host',
+                        'localhost',
+                        '--port',
+                        str(GRPC_LISTEN_PORT),
+                        *gui_args,
+                    ],
+                    env=env,
+                )
+                logger.info(
+                    'GUI client started (pid=%d)',
+                    self.gui_process.pid,
+                )
+            except FileNotFoundError:
+                logger.warning(
+                    'Failed to start ubo-gui-client at %s, running without GUI',
+                    gui_exe,
+                )
+                self.gui_process = None
+
+    @staticmethod
+    def _find_gui_executable() -> Path | None:
+        """Find the ubo-gui-client executable."""
+        # Check the GUI subpackage's venv
+        gui_venv = (
+            Path(__file__).parent.parent.parent
+            / 'ubo_app'
+            / 'gui'
+            / '.venv'
+            / 'bin'
+            / 'ubo-gui-client'
+        )
+        if gui_venv.is_file():
+            return gui_venv
+
+        # Check the main venv
+        import os
+
+        bin_dir = Path(sys.executable).parent
+        candidate = bin_dir / 'ubo-gui-client'
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+
+        logger.warning('ubo-gui-client executable not found, running without GUI')
+        return None
 
     async def _cleanup(self: AppContext) -> None:
         """Clean up the application."""
         if self._cleanup_is_called:
             return
         self._cleanup_is_called = True
+
+        # Close the gRPC server first to release the port before shutdown.
+        # Wait on an explicit completion signal instead of a fixed sleep so
+        # that shutdown is deterministic and avoids port-reuse flakes.
+        import threading
+
+        import ubo_app.service
+        from ubo_app.rpc.server import close_server
+
+        server_closed = threading.Event()
+
+        async def _close_and_signal() -> None:
+            try:
+                await close_server()
+            finally:
+                server_closed.set()
+
+        ubo_app.service.worker_thread.run_coroutine(_close_and_signal())
+
+        # Wait up to 5s for the server to actually close
+        if not server_closed.wait(timeout=5):
+            logger.warning('gRPC server did not close within 5s')
+
         from redux import FinishAction
 
         from ubo_app.store.main import scheduler, store
@@ -74,83 +165,26 @@ class AppContext:
         store.dispatch(FinishAction())
         store.wait_for_event_handlers()
 
-        import ubo_app.service
-
-        assert hasattr(self, 'task'), 'App not set for test'
-
         scheduler.join()
 
-        from kivy.clock import Clock
+        # Clean up subscriptions
+        for cleanup in self._subscriptions:
+            cleanup()
+        self._subscriptions.clear()
 
-        while events := Clock.get_events():
-            for event in list(events):
-                event.cancel()
-
-        self.app.root.clear_widgets()
-        if not self.app.is_stopped:
-            self.app.stop()
-
-        await self.task
-
-        app_ref = weakref.ref(self.app)
+        # Terminate GUI subprocess
+        if self.gui_process is not None:
+            self.gui_process.terminate()
+            try:
+                self.gui_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.gui_process.kill()
+                self.gui_process.wait()
+            self.gui_process = None
 
         ubo_app.service.worker_thread.is_finished.wait()
 
-        del self.app
-        del self.task
-
-        await asyncio.sleep(1)
         gc.collect()
-
-        if app_ref() is not None and self.request.session.testsfailed == 0:
-            logger.info(
-                'Memory leak: failed to release app for test.',
-                extra={
-                    'refcount': sys.getrefcount(app_ref()),
-                    'referrers': gc.get_referrers(app_ref()),
-                    'ref': app_ref,
-                },
-            )
-            gc.collect()
-
-            if TEST_INVESTIGATION_MODE and self.tracker:
-                logger.info(
-                    'Cells info',
-                    extra={
-                        'cells': [
-                            self.tracker.get_cell_info(cell)
-                            for cell in gc.get_referrers(app_ref())
-                            if type(cell).__name__ == 'cell'
-                        ],
-                    },
-                )
-                with contextlib.suppress(ImportError):
-                    import objgraph
-
-                    objgraph.show_refs(
-                        [app_ref()],
-                        filename='/tmp/app_referrers.png',  # noqa: S108
-                    )
-
-                with contextlib.suppress(ImportError):
-                    import ipdb  # noqa: T100
-
-                    ipdb.set_trace()  # noqa: T100
-
-            for cell in gc.get_referrers(app_ref()):
-                if type(cell).__name__ == 'cell':
-                    from ubo_app.utils.garbage_collection import examine
-
-                    logger.debug(
-                        'CELL EXAMINATION',
-                        extra={'cell': cell},
-                    )
-                    examine(cell, depth_limit=2)
-            assert app_ref() is None, 'Memory leak: failed to release app for test'
-
-        from kivy.core.window import Window
-
-        Window.close()
 
 
 class ConditionalFSWrapper:
@@ -176,16 +210,17 @@ class ConditionalFSWrapper:
                 ]
             else:
                 picamera_skip_modules = []
-            import headless_kivy_pytest.fixtures.snapshot
             import pyzbar.pyzbar
             import redux_pytest.fixtures.snapshot
+
+            import tests.fixtures.snapshot
 
             self.patcher = Patcher(
                 additional_skip_names=[
                     coverage,
                     pytest,
                     pyzbar.pyzbar,
-                    headless_kivy_pytest.fixtures.snapshot,
+                    tests.fixtures.snapshot,
                     redux_pytest.fixtures.snapshot,
                     *picamera_skip_modules,
                 ],
@@ -234,62 +269,6 @@ class ConditionalFSWrapper:
         return None
 
 
-def _setup_kivy() -> None:
-    import os
-
-    os.environ['KIVY_NO_FILELOG'] = '1'
-    os.environ['KIVY_NO_CONSOLELOG'] = '1'
-    os.environ['KIVY_METRICS_DENSITY'] = '1'
-    if sys.platform == 'darwin':
-        # Some dirty patches to make Kivy generate the same window size on macOS
-        from kivy.config import Config
-
-        os.environ['KIVY_DPI'] = '96'
-        original_config_set = Config.set
-
-        def patched_config_set(section: str, option: str, value: str) -> None:
-            if section == 'graphics':
-                if option == 'width':
-                    value = str(int(value) // 2)
-                if option == 'height':
-                    value = str(int(value) // 2)
-            original_config_set(section, option, value)
-
-        Config.set = patched_config_set
-
-    from ubo_app.utils import IS_RPI
-
-    if not IS_RPI:
-        from kivy.config import Config
-
-        Config.set(
-            'graphics',
-            'window_state',
-            'visible' if TEST_INVESTIGATION_MODE else 'hidden',
-        )
-        Config.set('graphics', 'fbo', 'force-hardware')
-        Config.set('graphics', 'fullscreen', '0')
-        Config.set('graphics', 'multisamples', '1')
-        Config.set('graphics', 'vsync', '0')
-
-
-def _setup_headless_kivy() -> None:
-    import headless_kivy.config
-
-    from ubo_app.constants import HEIGHT, WIDTH
-    from ubo_app.display import render_on_display
-
-    headless_kivy.config.setup_headless_kivy(
-        headless_kivy.config.SetupHeadlessConfig(
-            callback=render_on_display,
-            flip_vertical=True,
-            is_debug_mode=True,
-            width=WIDTH,
-            height=HEIGHT,
-        ),
-    )
-
-
 @pytest.fixture
 async def app_context(
     request: SubRequest,
@@ -298,12 +277,10 @@ async def app_context(
     """Create the application."""
     _ = mock_environment
 
-    from ubo_app.setup import setup
+    from ubo_app.setup_headless import setup_headless
 
     dotenv.load_dotenv(Path(__file__).parent / '.env')
-    _setup_kivy()
-    setup()
-    _setup_headless_kivy()
+    setup_headless()
 
     import os
 
@@ -323,16 +300,9 @@ async def app_context(
         is True
     )
 
-    tracker = None
-    if TEST_INVESTIGATION_MODE:
-        from ubo_app.utils.garbage_collection import ClosureTracker
-
-        tracker = ClosureTracker()
-        tracker.start_tracking()
-
     try:
         with ConditionalFSWrapper(use_fake_fs=should_use_fake_fs) as patcher:
-            context = AppContext(request, tracker)
+            context = AppContext(request)
 
             yield context
 
@@ -342,7 +312,9 @@ async def app_context(
 
         del patcher
 
-        assert not hasattr(context, 'app'), 'App not cleaned up'
+        assert not hasattr(context, 'gui_process') or context.gui_process is None, (
+            'GUI process not cleaned up'
+        )
 
         del context
 
@@ -352,5 +324,4 @@ async def app_context(
 
         gc.collect()
     finally:
-        if TEST_INVESTIGATION_MODE and tracker:
-            tracker.stop_tracking()
+        pass

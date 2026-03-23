@@ -6,18 +6,15 @@ import asyncio
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
-from headless_kivy_pytest.fixtures.snapshot import write_image
 from tenacity import RetryError, stop_after_attempt, wait_fixed
+
+from tests.fixtures.snapshot import WindowSnapshot, write_png
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-    from headless_kivy_pytest.fixtures import WindowSnapshot
-    from numpy._typing import NDArray  # pyright: ignore[reportPrivateImportUsage]
     from redux_pytest.fixtures import StoreSnapshot
     from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
-
-    from tests.fixtures.app import AppContext
 
 
 class Stability(Protocol):
@@ -25,7 +22,7 @@ class Stability(Protocol):
 
     async def __call__(
         self: Stability,
-        initial_wait: float = 0.2,
+        initial_wait: float = 1,
         attempts: int = 2,
         wait: float = 2,
     ) -> AsyncWaiter:
@@ -42,7 +39,7 @@ async def _run(
     store_snapshot: StoreSnapshot,
     window_snapshot: WindowSnapshot,
     store_snapshots: list[str],
-    window_snapshots: list[NDArray],
+    window_snapshots: list[bytes],
 ) -> None:
     await asyncio.sleep(initial_wait)
     for _ in range(attempts):
@@ -65,7 +62,7 @@ async def _run(
                 / f'store-unstability_snapshot_{i}.mismatch.jsonc'
             ).write_text(snapshot)
         for i, snapshot in enumerate(window_snapshots):
-            write_image(
+            write_png(
                 window_snapshot.results_dir
                 / f'window-unstability_snapshot_{i}.mismatch.png',
                 snapshot,
@@ -78,20 +75,19 @@ async def stability(
     store_snapshot: StoreSnapshot,
     window_snapshot: WindowSnapshot,
     wait_for: WaitFor,
-    app_context: AppContext,
 ) -> AsyncWaiter:
     """Wait for the screen and store to stabilize."""
 
     async def wrapper(
-        initial_wait: float = 0.2,
+        initial_wait: float = 1,
         attempts: int = 2,
         wait: float = 1,
     ) -> None:
         latest_window_hash = None
         latest_store_snapshot = None
 
-        store_snapshots = []
-        window_snapshots = []
+        store_snapshots: list[str] = []
+        window_snapshots: list[bytes] = []
 
         @wait_for(
             run_async=True,
@@ -101,9 +97,10 @@ async def stability(
         def check() -> None:
             nonlocal latest_window_hash, latest_store_snapshot
 
-            assert app_context.app.menu_widget._running_transition_end_time is None  # noqa: SLF001
-
             new_hash = window_snapshot.hash
+            assert new_hash, (
+                'Window snapshot returned an empty hash — GUI is not responding'
+            )
             new_snapshot = store_snapshot.json_snapshot()
 
             is_window_stable = latest_window_hash == new_hash
@@ -112,10 +109,8 @@ async def stability(
             latest_window_hash = new_hash
             latest_store_snapshot = new_snapshot
 
-            if not is_window_stable:
-                from headless_kivy import HeadlessWidget
-
-                window_snapshots.append(HeadlessWidget.raw_data.copy())
+            if not is_window_stable and window_snapshot._latest_data is not None:  # noqa: SLF001
+                window_snapshots.append(window_snapshot._latest_data)  # noqa: SLF001
 
             if not is_store_stable:
                 store_snapshots.append(store_snapshot.json_snapshot())

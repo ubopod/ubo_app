@@ -27,16 +27,18 @@ from tests.fixtures import (  # noqa: E402, I001
     MockCamera,
     Stability,
     WaitForEmptyMenu,
+    WindowSnapshot,
     app_context,
     camera,
     load_services,
     mock_environment,
+    snapshot_prefix,
     stability,
     store,
     wait_for_empty_menu,
     wait_for_menu_item,
+    window_snapshot,
 )
-from headless_kivy_pytest.fixtures import WindowSnapshot, window_snapshot  # noqa: E402
 from redux_pytest.fixtures import (  # noqa: E402
     StoreMonitor,
     Waiter,
@@ -70,6 +72,7 @@ fixtures = (
     load_services,
     camera,
     mock_environment,
+    snapshot_prefix,
     stability,
     store,
     store_monitor,
@@ -84,17 +87,13 @@ fixtures = (
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add options to the pytest command line."""
     parser.addoption('--use-fakefs', action='store_true')
-
-
-@pytest.fixture
-def snapshot_prefix() -> str:
-    """Return the prefix for the snapshots."""
-    from ubo_app.utils import IS_RPI
-
-    if IS_RPI:
-        return 'rpi'
-
-    return 'desktop'
+    # --override-window-snapshots and --make-screenshots are registered by
+    # headless_kivy_pytest plugin. If it's not installed, register them here.
+    try:
+        import headless_kivy_pytest.plugin  # noqa: F401
+    except ImportError:
+        parser.addoption('--override-window-snapshots', action='store_true')
+        parser.addoption('--make-screenshots', action='store_true')
 
 
 @pytest.fixture(autouse=True)

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tenacity import stop_after_attempt
+from tenacity import stop_after_attempt, wait_fixed
 
 if TYPE_CHECKING:
-    from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot, WaitFor
 
     from tests.fixtures import AppContext
+    from tests.fixtures.snapshot import WindowSnapshot
     from tests.fixtures.stability import Stability
 
 
@@ -24,13 +24,17 @@ async def test_app_runs_and_exits(
     """Test the application starts, runs and quits."""
     app_context.set_app()
 
-    @wait_for(run_async=True, stop=stop_after_attempt(5))
+    @wait_for(run_async=True, stop=stop_after_attempt(5), wait=wait_fixed(1))
     def stack_is_loaded() -> None:
-        assert len(app_context.app.menu_widget.stack) > 0, 'Menu stack not loaded yet'
+        from ubo_app.store.main import store
+
+        state = store._state  # noqa: SLF001
+        assert state is not None
+        assert len(state.main.stack) > 0, 'Menu stack not loaded yet'
 
     await stack_is_loaded()
 
-    await stability()
+    await stability(initial_wait=30)
 
     from tests.conftest import exclude_dynamic_menus
 

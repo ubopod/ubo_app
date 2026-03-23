@@ -4,20 +4,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 if TYPE_CHECKING:
-    from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot, WaitFor
     from ubo_handle import (  # pyright: ignore [reportMissingModuleSource]
         ReducerRegistrar,
     )
 
     from tests.fixtures import AppContext, LoadServices, Stability
+    from tests.fixtures.snapshot import WindowSnapshot
     from ubo_app.store.main import UboStore
 
 MAX_EXPECTED_LISTENERS = 600
 MAX_EXPECTED_EVENT_HANDLERS = 70
 
 
+@pytest.mark.timeout(300)
 async def test_all_services_register(
     app_context: AppContext,
     window_snapshot: WindowSnapshot,
@@ -62,6 +65,8 @@ async def test_all_services_register(
 
     assert len(store._listeners) < MAX_EXPECTED_LISTENERS  # noqa: SLF001
     assert len(store._event_handlers) < MAX_EXPECTED_EVENT_HANDLERS  # noqa: SLF001
+
+    await stability(initial_wait=10, attempts=5, wait=2)
 
     from tests.conftest import exclude_dynamic_menus
 

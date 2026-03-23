@@ -9,7 +9,6 @@ import pytest
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
-    from headless_kivy_pytest.fixtures import WindowSnapshot
     from redux_pytest.fixtures import StoreSnapshot, WaitFor
 
     from tests.fixtures import (
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
         Stability,
     )
     from tests.fixtures.menu import WaitForEmptyMenu, WaitForMenuItem
+    from tests.fixtures.snapshot import WindowSnapshot
     from ubo_app.store.main import RootState
     from ubo_app.store.services.wifi import WiFiState
 
