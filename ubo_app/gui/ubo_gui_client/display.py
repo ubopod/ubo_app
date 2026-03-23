@@ -7,7 +7,6 @@ import time
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
-from adafruit_rgb_display.st7789 import ST7789
 from fake import Fake
 
 from ubo_gui_client.constants import (
@@ -20,6 +19,7 @@ from ubo_gui_client.constants import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from adafruit_rgb_display.st7789 import ST7789
     from headless_kivy.config import Region
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,8 @@ class Display:
         self.spi = None
         self.display = None
         if IS_RPI:
+            from adafruit_rgb_display.st7789 import ST7789
+
             from ubo_gui_client.eeprom import get_eeprom_data
 
             eeprom_data = get_eeprom_data()
@@ -135,7 +137,7 @@ class Display:
         data_bytes: bytes,
     ) -> None:
         """Render a block on the display."""
-        if self.display is not None:
+        if IS_RPI and self.display is not None:
             self.display._block(*rectangle, data_bytes)  # noqa: SLF001
 
 

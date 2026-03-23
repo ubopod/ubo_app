@@ -16,6 +16,7 @@ dependencies = [
     "ubo-app-raw-bindings",
     "numpy",
     "adafruit-circuitpython-rgb-display>=3.14.0",
+    "pillow>=11.3.0",
     "pypng>=0.20220715.0",
     "python-fake>=0.2.0",
     "platformdirs",

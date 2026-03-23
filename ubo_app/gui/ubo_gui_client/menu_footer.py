@@ -46,9 +46,10 @@ class MenuAppFooter(UboApp):
         )
 
         icon = Label(
-            text='\uf2c9',
+            text='',
             color='#ffffff',
             font_size=dp(16),
+            font_features='fill=0',
             size_hint=(None, 1),
             width=dp(12),
         )
@@ -92,7 +93,9 @@ class MenuAppFooter(UboApp):
         def now() -> datetime.datetime:
             return datetime.datetime.now(local_timzone)
 
-        initial_time = now().strftime('%H:%M')
+        from ubo_gui_client.constants import IS_TEST_ENV
+
+        initial_time = '00:00' if IS_TEST_ENV else now().strftime('%H:%M')
         clock = Label(
             text=initial_time,
             font_size=dp(20),
@@ -115,7 +118,8 @@ class MenuAppFooter(UboApp):
                 60 - now_.second - now_.microsecond / 1_000_000 + 0.05,
             )
 
-        Clock.schedule_once(update, 0)
+        if not IS_TEST_ENV:
+            Clock.schedule_once(update, 0)
 
         return clock
 

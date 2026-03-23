@@ -204,26 +204,34 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
 
     def build(self: UboGUIApp) -> Widget | None:
         """Build root widget, hidden until splash overlay covers it."""
+        from ubo_gui_client.constants import IS_TEST_ENV
+
         root = super().build()
 
         # Hide the root widget so no uninitialized GUI frames leak to the
         # physical display before on_start adds the splash overlay on top.
-        if root is not None:
+        # In test mode, skip this since there's no splash overlay.
+        if root is not None and not IS_TEST_ENV:
             root.opacity = 0
 
         return root
 
     def on_start(self: UboGUIApp) -> None:
         """Start the application and connect to gRPC."""
-        # Show animated splash, then reveal the root widget underneath
-        from ubo_gui_client.splash import AnimatedSplashOverlay
+        from ubo_gui_client.constants import IS_TEST_ENV
 
-        if self.root is not None:
-            self.loading_overlay = AnimatedSplashOverlay(size=self.root.size)
-            self.root.add_widget(self.loading_overlay)
-            self.root.bind(size=self._sync_loading_overlay_size)
+        if not IS_TEST_ENV:
+            # Show animated splash, then reveal the root widget underneath
+            from ubo_gui_client.splash import AnimatedSplashOverlay
+
+            if self.root is not None:
+                self.loading_overlay = AnimatedSplashOverlay(size=self.root.size)
+                self.root.add_widget(self.loading_overlay)
+                self.root.bind(size=self._sync_loading_overlay_size)
+                self.root.opacity = 1
+                self._splash_start_time = time.monotonic()
+        elif self.root is not None:
             self.root.opacity = 1
-            self._splash_start_time = time.monotonic()
 
         logger.info('[App] on_start: connecting to gRPC...')
         self.grpc_client.connect()
@@ -298,14 +306,16 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         import hashlib
         import io
 
-        import numpy as np
         import png
         from headless_kivy import HeadlessWidget
 
-        raw = HeadlessWidget.raw_data
-        hash_value = hashlib.sha256(raw.tobytes()).hexdigest()
+        array = HeadlessWidget.raw_data
+        # Hash on transformed data to match the old in-process snapshot system
+        from headless_kivy.utils import transform_data
 
-        array = np.flipud(raw)
+        transformed = transform_data(array.copy())
+        hash_value = hashlib.sha256(transformed.tobytes()).hexdigest()
+        # Write PNG from the untransformed raw_data
         output = io.BytesIO()
         png.Writer(
             alpha=True,
@@ -313,7 +323,7 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
             height=array.shape[1],
             greyscale=False,  # pyright: ignore [reportArgumentType]
             bitdepth=8,
-        ).write(output, array.reshape(-1, array.shape[1] * 4).tolist())
+        ).write(output, array.reshape(-1, array.shape[0] * 4).tolist())
         png_bytes = output.getvalue()
 
         from ubo_bindings.ubo.v1 import Action, ScreenshotDataAction

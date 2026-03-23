@@ -238,6 +238,17 @@ class GUIClient:
             )
             self._client.dispatch(action=action)
 
+    def select_by_icon(self, icon: str) -> None:
+        """Select menu item by icon."""
+        from ubo_bindings.ubo.v1 import Action, MenuChooseByIconAction
+
+        if self._client:
+            logger.debug('[GUIClient] select_by_icon: icon=%s', icon)
+            action = Action(
+                menu_choose_by_icon_action=MenuChooseByIconAction(icon=icon),
+            )
+            self._client.dispatch(action=action)
+
     def scroll(self, direction: str) -> None:
         """Scroll menu up or down."""
         from ubo_bindings.ubo.v1 import Action, MenuScrollAction, MenuScrollDirection

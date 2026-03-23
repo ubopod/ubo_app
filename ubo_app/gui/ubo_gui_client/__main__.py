@@ -76,12 +76,15 @@ def main() -> None:
     def _excepthook(
         exc_type: type[BaseException],
         exc_value: BaseException,
-        _exc_tb: object,
+        exc_tb: object,
     ) -> None:
+        import traceback as tb_module
+
         _main_logger.critical(
-            'Unhandled exception: %s: %s',
+            'Unhandled exception: %s: %s\n%s',
             exc_type.__name__,
             exc_value,
+            ''.join(tb_module.format_exception(exc_type, exc_value, exc_tb)),
         )
 
     def _threading_excepthook(hook_args: threading.ExceptHookArgs) -> None:
