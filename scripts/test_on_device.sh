@@ -78,7 +78,7 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
   cmd_list+=("uv python pin python3.11 &&")
 
   if [ "$deps" == "True" ]; then
-    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv run poe proto:generate:raw proto:compile:raw && uv sync --frozen &&')
+    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv run poe proto:generate:raw proto:compile:raw && uv sync --frozen && (cd ubo_app/gui && UV_PROJECT_ENVIRONMENT=.venv uv venv --system-site-packages .venv && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen) &&')
   fi
 
   if [ "$run" == "True" ]; then
