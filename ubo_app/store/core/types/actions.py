@@ -320,6 +320,10 @@ class ReportReplayingDoneAction(MainAction):
     """Action for reporting that replaying is done."""
 
 
+class TakeScreenshotAction(MainAction):
+    """Action to request a screenshot from the GUI client."""
+
+
 class ScreenshotDataAction(MainAction):
     """Action dispatched by GUI client with captured screenshot data."""
 

@@ -94,13 +94,27 @@ def _write_image(image_path: Path, array: NDArray) -> None:
 
 
 def _take_screenshot() -> None:
-    """Take a screenshot of the screen."""
+    """Take a screenshot of the screen.
+
+    Only works when Kivy is running in-process (HeadlessWidget.raw_data available).
+    When Kivy runs in a GUI subprocess, screenshots are handled via gRPC round-trip
+    (ScreenshotEvent → GUI client → ScreenshotDataAction → ScreenshotDataEvent).
+    """
     try:
         from headless_kivy import HeadlessWidget
     except ImportError:
         from ubo_app.logger import logger
 
         logger.warning('Cannot take screenshot: headless_kivy not available')
+        return
+
+    if not hasattr(HeadlessWidget, 'raw_data') or HeadlessWidget.raw_data is None:
+        from ubo_app.logger import logger
+
+        logger.debug(
+            'Skipping in-process screenshot: HeadlessWidget.raw_data not available'
+            ' (Kivy may be running in a subprocess)',
+        )
         return
 
     counter = 0
@@ -141,7 +155,15 @@ def _store_recorded_sequence(event: StoreRecordedSequenceEvent) -> None:
 
 
 def _save_screenshot_data(event: ScreenshotDataEvent) -> None:
-    """Save screenshot data received from GUI client to disk."""
+    """Save screenshot data received from GUI client to disk.
+
+    Skipped in test environments to avoid filesystem churn from stability
+    polling screenshots.
+    """
+    from ubo_app.utils import IS_TEST_ENV
+
+    if IS_TEST_ENV:
+        return
     counter = 0
     while (path := Path(f'screenshots/ubo-screenshot-{counter:03d}.png')).exists():
         counter += 1

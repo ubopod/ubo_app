@@ -113,6 +113,7 @@ CORE_SERVICE_IDS = [
     'speech_recognition',
     'speech_synthesis',
     'ssh',
+    'system',
     'users',
     'vscode',
     'web_ui',

@@ -379,6 +379,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'SystemEvent': 'ubo_app.store.services.system',
     'SystemMetricsUpdateAction': 'ubo_app.store.services.system',
     'SystemState': 'ubo_app.store.services.system',
+    'TakeScreenshotAction': 'ubo_app.store.core.types.actions',
     'ToggleRecordingAction': 'ubo_app.store.core.types.actions',
     'UboApplicationItem': 'ubo_app.store.ubo_actions',
     'UboDispatchItem': 'ubo_app.store.ubo_actions',

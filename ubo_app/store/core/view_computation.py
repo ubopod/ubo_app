@@ -65,7 +65,9 @@ __all__ = [
 # Container pattern (list singletons) avoids ``global`` statements.
 _suppressed: list[bool] = [False]
 _dirty: list[bool] = [False]
+_status_bar_dirty: list[bool] = [False]
 _dispatch_fn: list[Callable[[], None] | None] = [None]
+_status_bar_dispatch_fn: list[Callable[[], None] | None] = [None]
 
 
 def suppress_view_autorun() -> None:
@@ -79,7 +81,9 @@ def release_view_autorun() -> None:
     if _dirty[0] and _dispatch_fn[0] is not None:
         _dirty[0] = False
         _dispatch_fn[0]()
-
+    if _status_bar_dirty[0] and _status_bar_dispatch_fn[0] is not None:
+        _status_bar_dirty[0] = False
+        _status_bar_dispatch_fn[0]()
 
 
 def get_notification_view_data(
@@ -468,8 +472,9 @@ def setup_dynamic_view_autorun() -> None:
     def _status_bar_dispatch(state: RootState) -> None:
         _dispatch_status_bar_update(state)
 
-    # Store reference so release_view_autorun() can trigger a computation
-    _dispatch_fn[0] = _view_dispatch
+    # Store references so release_view_autorun() can trigger deferred computations
+    _dispatch_fn[0] = _view_dispatch  # type: ignore[assignment]
+    _status_bar_dispatch_fn[0] = _status_bar_dispatch  # type: ignore[assignment]
 
     # -- View autorun (infrequent) ------------------------------------------
 
@@ -507,5 +512,6 @@ def setup_dynamic_view_autorun() -> None:
     def _update_status_bar_on_metrics_change(_: tuple | None) -> None:
         """Update status bar when metrics / clock / icons change."""
         if _suppressed[0]:
+            _status_bar_dirty[0] = True
             return
         _status_bar_dispatch()  # type: ignore[call-arg]

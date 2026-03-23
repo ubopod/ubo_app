@@ -61,6 +61,7 @@ from ubo_app.store.core.types import (
     ReportReplayingDoneAction,
     ScreenshotDataAction,
     ScreenshotDataEvent,
+    ScreenshotEvent,
     SetAreEnclosuresVisibleAction,
     StackChangedEvent,
     StackPageIndexChangedEvent,
@@ -72,6 +73,7 @@ from ubo_app.store.core.types import (
     StackPushNotificationAction,
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
+    TakeScreenshotAction,
     ToggleRecordingAction,
     UpdateApplicationKwargsAction,
     UpdateCurrentViewAction,
@@ -377,6 +379,12 @@ def reducer(
                         status_bar=action.status_bar,
                     ),
                 ],
+            )
+
+        case TakeScreenshotAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[ScreenshotEvent()],
             )
 
         case ScreenshotDataAction():

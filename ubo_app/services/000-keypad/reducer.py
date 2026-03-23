@@ -25,8 +25,8 @@ from ubo_app.store.core.types import (
     MenuStackItem,
     NotificationStackItem,
     ReplayRecordedSequenceAction,
-    ScreenshotEvent,
     SnapshotEvent,
+    TakeScreenshotAction,
     ToggleRecordingAction,
 )
 from ubo_app.store.services.assistant import (
@@ -126,6 +126,7 @@ def reducer(
         | AssistantAction
         | DisplayUnblankAction
         | DisplayUpdateActivityAction
+        | TakeScreenshotAction
         | MenuGoBackAction
         | MenuGoHomeAction
         | MenuScrollAction,
@@ -294,8 +295,7 @@ def reducer(
         }:
             return CompleteReducerResult(
                 state=state,
-                actions=[DisplayUpdateActivityAction()],
-                events=[ScreenshotEvent()],
+                actions=[DisplayUpdateActivityAction(), TakeScreenshotAction()],
             )
         case KeypadKeyPressAction(key=Key.L2) if set(action.pressed_keys) == {
             Key.HOME,
