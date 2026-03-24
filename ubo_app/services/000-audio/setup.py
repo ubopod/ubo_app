@@ -129,8 +129,8 @@ def init_service() -> Subscriptions:
         lambda s: ('volume_level', s.audio.playback_volume),
     )
 
-    # On non-RPi (e.g. macOS) there is no hardware mic switch, so always
-    # start unmuted. On RPi, restore the persisted mute state.
+    # Restore persisted mic mute state on RPi; default to muted everywhere
+    # for safety/privacy.
     from ubo_app.utils import IS_RPI
 
     store.dispatch(
@@ -138,10 +138,10 @@ def init_service() -> Subscriptions:
             device=AudioDevice.INPUT,
             is_mute=read_from_persistent_store(
                 'audio_state:is_capture_mute',
-                default=False,
+                default=True,
             )
             if IS_RPI
-            else False,
+            else True,
         ),
     )
 

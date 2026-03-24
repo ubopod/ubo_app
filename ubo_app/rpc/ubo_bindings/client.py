@@ -27,12 +27,16 @@ if TYPE_CHECKING:
     from ubo_bindings.ubo.v1 import Action, Event
 
 
-def _unpack_from_any(message: betterproto_protobuf.Any) -> Message:
+def _unpack_from_any(message: betterproto_protobuf.Any) -> Message | None:
     if not message.type_url.startswith('type.googleapis.com/'):
         msg = f'Unsupported type URL: {message.type_url}'
         raise ValueError(msg)
 
     type_name = message.type_url[len('type.googleapis.com/') :]
+
+    # Empty was used to encode None on the server side
+    if type_name == 'google.protobuf.Empty':
+        return None
 
     if type_name.startswith('google.protobuf.'):
         type_name = type_name[len('google.protobuf.') :]

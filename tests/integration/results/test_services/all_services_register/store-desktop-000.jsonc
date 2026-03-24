@@ -9,7 +9,7 @@
     },
     "is_active": false,
     "is_listening": false,
-    "is_microphone_mute": false,
+    "is_microphone_mute": true,
     "mcp_servers": {},
     "provider_setup_status": {
       "assemblyai": false,
@@ -42,7 +42,7 @@
   "audio": {
     "_type": "AudioState",
     "capture_volume": 0.5,
-    "is_capture_mute": false,
+    "is_capture_mute": true,
     "is_playback_mute": false,
     "is_recording": false,
     "playback_volume": 0.15,
@@ -106,6 +106,16 @@
       "ports": [],
       "status": "not_available"
     },
+    "n8n": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "n8n",
+      "instructions": null,
+      "label": "n8n",
+      "ports": [],
+      "status": "not_available"
+    },
     "ngrok": {
       "_type": "ImageState",
       "container_ip": null,
@@ -160,6 +170,16 @@
       "_type": "DockerServiceState",
       "status": "running",
       "usernames": {}
+    },
+    "twingate": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "twingate",
+      "instructions": null,
+      "label": "Twingate",
+      "ports": [],
+      "status": "not_available"
     }
   },
   "file_system": {
@@ -205,16 +225,18 @@
       "docker:home_assistant": null,
       "docker:home_bridge": null,
       "docker:immich": null,
+      "docker:n8n": null,
       "docker:ngrok": null,
       "docker:ollama": null,
       "docker:open_webui": null,
       "docker:pi_hole": null,
       "docker:portainer": null,
+      "docker:twingate": null,
       "file_system:file-system": null
     },
     "current_view": {
       "_type": "HomeViewData",
-      "cpu_percent": 0.0,
+      "cpu_percent": 50,
       "menu_items": [
         {
           "_type": "MenuItemData",
@@ -247,7 +269,7 @@
           "label": ""
         }
       ],
-      "ram_percent": 0.0,
+      "ram_percent": 50,
       "show_status_bar": true,
       "type": "home",
       "volume_level": 0.15
@@ -389,6 +411,16 @@
         "label": "Immich",
         "priority": null
       },
+      "docker:n8n": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:n8n",
+        "background_color": null,
+        "category": null,
+        "icon": "󱂚",
+        "key": "docker:n8n",
+        "label": "n8n",
+        "priority": null
+      },
       "docker:ngrok": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:ngrok",
@@ -458,6 +490,16 @@
         "key": "docker:service",
         "label": "Service",
         "priority": 1
+      },
+      "docker:twingate": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:twingate",
+        "background_color": null,
+        "category": null,
+        "icon": "󰒄",
+        "key": "docker:twingate",
+        "label": "Twingate",
+        "priority": null
       },
       "file_system:file-system": {
         "_type": "RegisteredAppEntry",
@@ -613,7 +655,7 @@
     ],
     "status_bar": {
       "_type": "StatusBarData",
-      "clock": "",
+      "clock": "00:00",
       "icons": [
         {
           "_type": "StatusIconData",
@@ -721,48 +763,7 @@
       },
       "docker": {
         "_type": "ServiceState",
-        "errors": [
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/homeassistant/home-assistant:stable\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1604' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/homebridge/homebridge:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1611' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/portainer/portainer-ce:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1612' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/pihole/pihole:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1613' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/ollama/ollama:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1631' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: ghcr.io/open-webui/open-webui:main\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1632' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/thegrandpkizzle/envoy:1.26.1\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1635' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 419, in act\n    raise docker.errors.ImageNotFound(path)  # noqa: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ndocker.errors.ImageNotFound: docker.io/ngrok/ngrok:latest\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 476, in act\n    _monitor_events(image_id, get_docker_id)\n  File \"/ubo-app/ubo_app/services/080-docker/docker_container.py\", line 292, in _monitor_events\n    if action == 'pull' and event.get('id', '') in path:\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'in <string>' requires string as left operand, not Fake\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] 'in <string>' requires string as left operand, not Fake\n\n[b]future:[/b] <Task finished name='Task-1633' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.14-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=TypeError(\"'in <string>' requires string as left operand, not Fake\")>",
-            "timestamp": 1672531200.0
-          }
-        ],
+        "errors": [],
         "id": "docker",
         "is_active": true,
         "is_enabled": true,
@@ -907,6 +908,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "SSH",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
+      "system": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "system",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "System Metrics",
         "log_level": 20,
         "should_auto_restart": false
       },
@@ -1064,16 +1075,6 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:mute",
-        "phrase": "Mute Volume"
-      },
-      {
-        "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:unmute",
-        "phrase": "Unmute Volume"
-      },
-      {
-        "_type": "SpeechRecognitionIntent",
         "action_id": "speech:button-one",
         "phrase": "Activate Button One"
       },
@@ -1171,6 +1172,12 @@
         "symbol": "󰖟"
       }
     ]
+  },
+  "system": {
+    "_type": "SystemState",
+    "clock": "00:00",
+    "cpu_percent": 50,
+    "ram_percent": 50
   },
   "update_manager": {
     "_type": "UpdateManagerState",

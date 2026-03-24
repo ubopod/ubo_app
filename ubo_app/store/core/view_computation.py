@@ -68,6 +68,9 @@ _dirty: list[bool] = [False]
 _status_bar_dirty: list[bool] = [False]
 _dispatch_fn: list[Callable[[], None] | None] = [None]
 _status_bar_dispatch_fn: list[Callable[[], None] | None] = [None]
+# Strong references to autorun objects so they aren't garbage collected
+# (redux stores the wrapped function as a weak reference).
+_autoruns: list[object] = []
 
 
 def suppress_view_autorun() -> None:
@@ -238,9 +241,10 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     # Get system metrics (clock)
     clock = getattr(getattr(state, 'system', None), 'clock', '') or ''
 
-    # Get recording states (main is always present)
-    is_recording = state.main.is_recording
-    is_replaying = state.main.is_replaying
+    # Get recording states
+    main = getattr(state, 'main', None)
+    is_recording = getattr(main, 'is_recording', False)
+    is_replaying = getattr(main, 'is_replaying', False)
     is_recording_audio = getattr(
         getattr(state, 'audio', None), 'is_recording', False,
     )
@@ -308,8 +312,8 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
     if depth <= 1:
         # Home view - get items from the HOME_MENU_ID dynamic menu
         home_data = get_home_view_data(state)
-        cpu_percent = home_data.get('cpu_percent', 0.0)
-        ram_percent = home_data.get('ram_percent', 0.0)
+        cpu_percent = home_data.get('cpu_percent', 50.0)
+        ram_percent = home_data.get('ram_percent', 50.0)
         volume_level = home_data.get('volume_level', 0.0)
 
         from ubo_app.store.core.types import MenuItemData
@@ -374,6 +378,8 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
 
 def _dispatch_view_update(state: RootState) -> None:
     """Compute view and status bar, then dispatch if changed."""
+    if not hasattr(state, 'main'):
+        return
     from ubo_app.store.core.types import (
         MenuViewData,
         StackSetPageIndexAction,
@@ -416,6 +422,8 @@ def _dispatch_view_update(state: RootState) -> None:
 
 def _dispatch_status_bar_update(state: RootState) -> None:
     """Compute status bar (and home view if visible), dispatch if changed."""
+    if not hasattr(state, 'main'):
+        return
     from ubo_app.store.core.types import UpdateCurrentViewAction
     from ubo_app.store.main import store
 
@@ -487,7 +495,11 @@ def setup_dynamic_view_autorun() -> None:
             tuple(state.main.registered_apps.keys()),
             tuple(
                 (n.id, n.title, n.content, n.icon, n.color, n.progress)
-                for n in state.notifications.notifications
+                for n in (
+                    state.notifications.notifications
+                    if hasattr(state, 'notifications')
+                    else ()
+                )
             ),
             get_registered_dependencies(state),
         ),
@@ -515,3 +527,10 @@ def setup_dynamic_view_autorun() -> None:
             _status_bar_dirty[0] = True
             return
         _status_bar_dispatch()  # type: ignore[call-arg]
+
+    # Keep strong references so the autoruns (and their wrapped functions)
+    # survive after this function returns.
+    _autoruns.extend([
+        _update_view_on_navigation_change,
+        _update_status_bar_on_metrics_change,
+    ])

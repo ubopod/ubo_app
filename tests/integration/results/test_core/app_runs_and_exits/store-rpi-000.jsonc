@@ -1,23 +1,18 @@
 // store-rpi-000
 {
-  "_type": "RootState",
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
-  "dynamic_menus": {
-    "_type": "DynamicMenusState",
-    "menus": {}
-  },
   "input": null,
   "main": {
     "_type": "MainState",
     "apps_items_priorities": {},
     "current_view": {
       "_type": "HomeViewData",
-      "cpu_percent": 0.0,
+      "cpu_percent": 50.0,
       "menu_items": [
         {
           "_type": "MenuItemData",
-          "action_id": "menu:select:main",
-          "background_color": "#68B7FF",
+          "action_id": "menu:navigate:main",
+          "background_color": null,
           "color": "#ffffff",
           "icon": "󰍜",
           "is_short": true,
@@ -26,8 +21,8 @@
         },
         {
           "_type": "MenuItemData",
-          "action_id": "menu:select:notifications",
-          "background_color": "#68B7FF",
+          "action_id": "menu:navigate:notifications",
+          "background_color": null,
           "color": "#ffffff",
           "icon": "",
           "is_short": true,
@@ -36,8 +31,8 @@
         },
         {
           "_type": "MenuItemData",
-          "action_id": "menu:select:power",
-          "background_color": "#68B7FF",
+          "action_id": "menu:navigate:power",
+          "background_color": null,
           "color": "#ffffff",
           "icon": "󰐥",
           "is_short": true,
@@ -45,7 +40,7 @@
           "label": ""
         }
       ],
-      "ram_percent": 0.0,
+      "ram_percent": 50.0,
       "show_status_bar": true,
       "type": "home",
       "volume_level": 0.0
@@ -54,549 +49,9 @@
     "is_header_visible": true,
     "is_recording": false,
     "is_replaying": false,
-    "menu": {
-      "_type": "HeadlessMenu",
-      "items": [
-        {
-          "_type": "SubMenuItem",
-          "background_color": "#68B7FF",
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "icon": "󰍜",
-          "is_short": true,
-          "key": "main",
-          "label": "",
-          "opacity": null,
-          "progress": null,
-          "sub_menu": {
-            "_type": "HeadlessMenu",
-            "items": [
-              {
-                "_type": "SubMenuItem",
-                "background_color": "#68B7FF",
-                "color": [
-                  1,
-                  1,
-                  1,
-                  1
-                ],
-                "icon": "󰀻",
-                "is_short": false,
-                "key": "apps",
-                "label": "Apps",
-                "opacity": null,
-                "progress": null,
-                "sub_menu": {
-                  "_type": "HeadlessMenu",
-                  "items": [],
-                  "placeholder": "No apps",
-                  "title": "󰀻Docker Apps"
-                }
-              },
-              {
-                "_type": "SubMenuItem",
-                "background_color": "#68B7FF",
-                "color": [
-                  1,
-                  1,
-                  1,
-                  1
-                ],
-                "icon": "",
-                "is_short": false,
-                "key": "settings",
-                "label": "Settings",
-                "opacity": null,
-                "progress": null,
-                "sub_menu": {
-                  "_type": "HeadlessMenu",
-                  "items": [
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰛳",
-                      "is_short": false,
-                      "key": "Network",
-                      "label": "Network",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "󰛳Network"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰑔",
-                      "is_short": false,
-                      "key": "Remote",
-                      "label": "Remote",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "󰑔Remote"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰒔",
-                      "is_short": false,
-                      "key": "System",
-                      "label": "System",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [
-                          {
-                            "_type": "SubMenuItem",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "󰒓",
-                            "is_short": false,
-                            "key": "general",
-                            "label": "General",
-                            "opacity": null,
-                            "progress": null,
-                            "sub_menu": {
-                              "_type": "HeadlessMenu",
-                              "items": [
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰄱",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "PDB Signal",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "SettingsTogglePdbSignalAction"
-                                  }
-                                },
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰄱",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Visual Debug",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "SettingsToggleVisualDebugAction"
-                                  }
-                                },
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰄱",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Beta Versions",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "SettingsToggleBetaVersionsAction"
-                                  }
-                                }
-                              ],
-                              "placeholder": null,
-                              "title": "󰒓General"
-                            }
-                          },
-                          {
-                            "_type": "SubMenuItem",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "",
-                            "is_short": false,
-                            "key": "services",
-                            "label": "Services",
-                            "opacity": null,
-                            "progress": null,
-                            "sub_menu": {
-                              "_type": "HeadlessMenu",
-                              "items": [],
-                              "placeholder": null,
-                              "title": "Services"
-                            }
-                          },
-                          {
-                            "_type": "SubMenuItem",
-                            "background_color": "#68B7FF",
-                            "color": [
-                              1,
-                              1,
-                              1,
-                              1
-                            ],
-                            "icon": "",
-                            "is_short": false,
-                            "key": "third_party",
-                            "label": "Third Party",
-                            "opacity": null,
-                            "progress": null,
-                            "sub_menu": {
-                              "_type": "HeadlessMenu",
-                              "items": [
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Re/Install Audio",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "AudioInstallDriverAction"
-                                  }
-                                },
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰽎",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Arducam IMX519 AF",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "CameraInstallDriverAction",
-                                    "make": "arducam",
-                                    "model": "imx519",
-                                    "variant": "autofocus"
-                                  }
-                                },
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰋱",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Arducam IMX519 FF",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "CameraInstallDriverAction",
-                                    "make": "arducam",
-                                    "model": "imx519",
-                                    "variant": "fixed-focus"
-                                  }
-                                },
-                                {
-                                  "_type": "UboDispatchItem",
-                                  "action": "<function:action>",
-                                  "background_color": "#68B7FF",
-                                  "color": [
-                                    1,
-                                    1,
-                                    1,
-                                    1
-                                  ],
-                                  "icon": "󰄀",
-                                  "is_short": false,
-                                  "key": null,
-                                  "label": "Default Camera",
-                                  "opacity": null,
-                                  "progress": null,
-                                  "store_action": {
-                                    "_type": "CameraRestoreDefaultAction"
-                                  }
-                                }
-                              ],
-                              "placeholder": null,
-                              "title": "Third Party Tools"
-                            }
-                          }
-                        ],
-                        "placeholder": "No settings in this category",
-                        "title": "󰒔System"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "",
-                      "is_short": false,
-                      "key": "Hardware",
-                      "label": "Hardware",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "Hardware"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰚩",
-                      "is_short": false,
-                      "key": "Assistant",
-                      "label": "Assistant",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "󰚩Assistant"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰡨",
-                      "is_short": false,
-                      "key": "Docker",
-                      "label": "Docker",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "󰡨Docker"
-                      }
-                    },
-                    {
-                      "_type": "SubMenuItem",
-                      "background_color": "#68B7FF",
-                      "color": [
-                        1,
-                        1,
-                        1,
-                        1
-                      ],
-                      "icon": "󰙋",
-                      "is_short": false,
-                      "key": "Accessibility",
-                      "label": "Accessibility",
-                      "opacity": null,
-                      "progress": null,
-                      "sub_menu": {
-                        "_type": "HeadlessMenu",
-                        "items": [],
-                        "placeholder": "No settings in this category",
-                        "title": "󰙋Accessibility"
-                      }
-                    }
-                  ],
-                  "placeholder": null,
-                  "title": "Settings"
-                }
-              },
-              {
-                "_type": "ActionItem",
-                "action": "<function:open_about_menu>",
-                "background_color": "#68B7FF",
-                "color": [
-                  1,
-                  1,
-                  1,
-                  1
-                ],
-                "icon": "",
-                "is_short": false,
-                "key": "about",
-                "label": "About",
-                "opacity": null,
-                "progress": null
-              }
-            ],
-            "placeholder": null,
-            "title": "󰍜Main"
-          }
-        },
-        {
-          "_type": "SubMenuItem",
-          "background_color": "#68B7FF",
-          "color": "white",
-          "icon": "",
-          "is_short": true,
-          "key": "notifications",
-          "label": "",
-          "opacity": null,
-          "progress": null,
-          "sub_menu": {
-            "_type": "HeadlessMenu",
-            "items": [],
-            "placeholder": "No notifications",
-            "title": "Notifications (not loaded)"
-          }
-        },
-        {
-          "_type": "SubMenuItem",
-          "background_color": "#68B7FF",
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "icon": "󰐥",
-          "is_short": true,
-          "key": "power",
-          "label": "",
-          "opacity": null,
-          "progress": null,
-          "sub_menu": {
-            "_type": "HeadlessMenu",
-            "items": [
-              {
-                "_type": "UboDispatchItem",
-                "action": "<function:action>",
-                "background_color": "#68B7FF",
-                "color": [
-                  1,
-                  1,
-                  1,
-                  1
-                ],
-                "icon": "󰜉",
-                "is_short": false,
-                "key": null,
-                "label": "Reboot",
-                "opacity": null,
-                "progress": null,
-                "store_action": {
-                  "_type": "RebootAction"
-                }
-              },
-              {
-                "_type": "UboDispatchItem",
-                "action": "<function:action>",
-                "background_color": "#68B7FF",
-                "color": [
-                  1,
-                  1,
-                  1,
-                  1
-                ],
-                "icon": "󰐥",
-                "is_short": false,
-                "key": null,
-                "label": "Power off",
-                "opacity": null,
-                "progress": null,
-                "store_action": {
-                  "_type": "PowerOffAction"
-                }
-              }
-            ],
-            "placeholder": null,
-            "title": "󰐥Power"
-          }
-        }
-      ],
-      "placeholder": null,
-      "title": "󰋜test-hostname.local"
-    },
     "path": [],
     "recorded_sequence": [],
+    "registered_apps": {},
     "settings_items_priorities": {},
     "stack": [
       {
@@ -606,7 +61,18 @@
         "page_index": 0
       }
     ],
-    "status_bar": null
+    "status_bar": {
+      "_type": "StatusBarData",
+      "clock": "",
+      "icons": [],
+      "is_recording": false,
+      "is_recording_audio": false,
+      "is_replaying": false,
+      "light_level": null,
+      "progress_notifications": [],
+      "temperature": null,
+      "title": "󰋜test-hostname.local"
+    }
   },
   "settings": {
     "_type": "SettingsState",

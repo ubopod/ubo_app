@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import types
 
 
 def _setup_logging(*, verbose: bool = False) -> None:
@@ -76,7 +77,7 @@ def main() -> None:
     def _excepthook(
         exc_type: type[BaseException],
         exc_value: BaseException,
-        exc_tb: object,
+        exc_tb: types.TracebackType | None,
     ) -> None:
         import traceback as tb_module
 

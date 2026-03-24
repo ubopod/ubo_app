@@ -172,7 +172,7 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 "device:deploy:complete" = "poe deploy-to-device --bootstrap --restart"
 "device:deploy:env" = "poe deploy-to-device --env"
 
-"device:test" = "poe test-on-device --copy --run --results"
+"device:test" = "poe test-on-device --copy --run --results --pytest-args='--override-store-snapshots --override-window-snapshots --make-screenshots'"
 "device:test:deps" = "poe test-on-device --deps"
 "device:test:copy" = "poe test-on-device --copy"
 "device:test:run" = "poe test-on-device --run"

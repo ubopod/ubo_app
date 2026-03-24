@@ -121,8 +121,8 @@ def compute_view_from_dynamic_menus(
         return HomeViewData(
             show_status_bar=True,
             menu_items=tuple(item for item in home_items if item is not None),
-            cpu_percent=0.0,
-            ram_percent=0.0,
+            cpu_percent=50.0,
+            ram_percent=50.0,
             volume_level=0.0,
         )
 
@@ -194,12 +194,12 @@ class TestEmptyAndRootStack:
         assert view.show_status_bar is True
 
     def test_home_view_default_gauges(self) -> None:
-        """Verify home view initializes gauges to zero."""
+        """Verify home view initializes gauges to 50% when no providers registered."""
         state = _make_state()
         view = compute_view_from_dynamic_menus(state)
         assert isinstance(view, HomeViewData)
-        assert view.cpu_percent == 0.0
-        assert view.ram_percent == 0.0
+        assert view.cpu_percent == 50.0
+        assert view.ram_percent == 50.0
         assert view.volume_level == 0.0
 
 

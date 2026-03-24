@@ -43,8 +43,8 @@ class HomeViewData(Immutable):
     type: Literal['home'] = 'home'
     show_status_bar: bool = True
     menu_items: tuple[MenuItemData, ...] = ()  # Main, Notifications, Power
-    cpu_percent: float = 0.0
-    ram_percent: float = 0.0
+    cpu_percent: float = 50.0
+    ram_percent: float = 50.0
     volume_level: float = 0.0  # 0.0-1.0
 
 

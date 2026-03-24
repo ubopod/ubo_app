@@ -310,11 +310,10 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         from headless_kivy import HeadlessWidget
 
         array = HeadlessWidget.raw_data
-        # Hash on transformed data to match the old in-process snapshot system
-        from headless_kivy.utils import transform_data
-
-        transformed = transform_data(array.copy())
-        hash_value = hashlib.sha256(transformed.tobytes()).hexdigest()
+        # Hash on raw_data directly to match headless_kivy_pytest's
+        # WindowSnapshot.hash (which uses raw_data.tobytes() without
+        # transform_data).
+        hash_value = hashlib.sha256(array.tobytes()).hexdigest()
         # Write PNG from the untransformed raw_data
         output = io.BytesIO()
         png.Writer(

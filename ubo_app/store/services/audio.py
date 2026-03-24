@@ -168,7 +168,7 @@ def _capture_mute_default() -> bool:
         return False
     return read_from_persistent_store(
         'audio_state:is_capture_mute',
-        default=False,
+        default=True,
     )
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import contextlib
 from asyncio import Queue, QueueFull, get_running_loop
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, cast
@@ -215,10 +216,8 @@ class StoreService(StoreServiceBase):
                             },
                         )
 
-                try:
+                with contextlib.suppress(RuntimeError):
                     loop.call_soon_threadsafe(_put)
-                except RuntimeError:
-                    pass  # Event loop is closed
 
             # Pre-compute the snake_case event field name once per subscription
             event_field_name = betterproto.casing.snake_case(event_class.__name__)
@@ -305,10 +304,8 @@ class StoreService(StoreServiceBase):
                         },
                     )
 
-            try:
+            with contextlib.suppress(RuntimeError):
                 loop.call_soon_threadsafe(_put)
-            except RuntimeError:
-                pass  # Event loop is closed
 
         try:
             while True:

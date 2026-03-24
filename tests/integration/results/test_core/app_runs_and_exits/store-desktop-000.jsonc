@@ -5,7 +5,46 @@
   "main": {
     "_type": "MainState",
     "apps_items_priorities": {},
-    "current_view": null,
+    "current_view": {
+      "_type": "HomeViewData",
+      "cpu_percent": 50.0,
+      "menu_items": [
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:navigate:main",
+          "background_color": null,
+          "color": "#ffffff",
+          "icon": "󰍜",
+          "is_short": true,
+          "key": "main",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:navigate:notifications",
+          "background_color": null,
+          "color": "#ffffff",
+          "icon": "",
+          "is_short": true,
+          "key": "notifications",
+          "label": ""
+        },
+        {
+          "_type": "MenuItemData",
+          "action_id": "menu:navigate:power",
+          "background_color": null,
+          "color": "#ffffff",
+          "icon": "󰐥",
+          "is_short": true,
+          "key": "power",
+          "label": ""
+        }
+      ],
+      "ram_percent": 50.0,
+      "show_status_bar": true,
+      "type": "home",
+      "volume_level": 0.0
+    },
     "is_footer_visible": true,
     "is_header_visible": true,
     "is_recording": false,
@@ -22,7 +61,18 @@
         "page_index": 0
       }
     ],
-    "status_bar": null
+    "status_bar": {
+      "_type": "StatusBarData",
+      "clock": "",
+      "icons": [],
+      "is_recording": false,
+      "is_recording_audio": false,
+      "is_replaying": false,
+      "light_level": null,
+      "progress_notifications": [],
+      "temperature": null,
+      "title": "󰋜test-hostname.local"
+    }
   },
   "settings": {
     "_type": "SettingsState",
