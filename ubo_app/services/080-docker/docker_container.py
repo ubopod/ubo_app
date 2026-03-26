@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import ipaddress
+import threading
 from asyncio import iscoroutine
 from typing import TYPE_CHECKING, Any, overload
 
@@ -34,6 +35,20 @@ from ubo_app.utils.async_ import to_thread
 
 # Track which event monitors are already running to prevent duplicates
 _active_monitors: set[str] = set()
+
+
+def _start_event_monitor(image_id: str, get_docker_id: Callable[[], str]) -> None:
+    """Run the long-lived docker event monitor outside the shared thread pool."""
+    thread = threading.Thread(
+        target=_monitor_events,
+        kwargs={
+            'image_id': image_id,
+            'get_docker_id': get_docker_id,
+        },
+        name=f'docker-monitor:{image_id}',
+        daemon=True,
+    )
+    thread.start()
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -472,7 +487,7 @@ def check_container(*, image_id: str) -> None:
                 def get_docker_id(docker_id: str) -> str:
                     return docker_id
 
-                _monitor_events(image_id, get_docker_id)
+                _start_event_monitor(image_id, get_docker_id)
             else:
                 logger.debug(
                     'Event monitor already running, skipping',
