@@ -273,7 +273,6 @@ class MenuWidgetWithHomePage(MenuWidget):
                     old.opacity = 0.0
             # Set stack to root only
             self.stack = self.stack[:1]
-            # Now push the application onto the stack
             application.name = uuid.uuid4().hex
             application.padding_bottom = self.padding_bottom
             application.padding_top = self.padding_top

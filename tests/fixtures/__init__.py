@@ -1,6 +1,7 @@
 """Utility fixtures for testing ubo_app."""
 
 from .app import AppContext, app_context
+from .dispatch import Dispatcher, dispatcher
 from .load_services import LoadServices, load_services
 from .menu import WaitForEmptyMenu, wait_for_empty_menu, wait_for_menu_item
 from .mock_camera import MockCamera, camera
@@ -11,6 +12,7 @@ from .store import store
 
 __all__ = (
     'AppContext',
+    'Dispatcher',
     'LoadServices',
     'MockCamera',
     'Stability',
@@ -18,6 +20,7 @@ __all__ = (
     'WindowSnapshot',
     'app_context',
     'camera',
+    'dispatcher',
     'load_services',
     'mock_environment',
     'snapshot_prefix',

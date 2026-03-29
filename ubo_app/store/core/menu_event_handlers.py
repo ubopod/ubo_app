@@ -455,11 +455,16 @@ def _get_current_view_items(
     current_view: object,
 ) -> tuple[MenuItemData | None, ...]:
     """Extract menu items from any view type that has them."""
-    from ubo_app.store.core.types import HomeViewData, MenuViewData
+    from ubo_app.store.core.types import (
+        HomeViewData,
+        MenuViewData,
+        NotificationViewData,
+    )
 
     if isinstance(current_view, HomeViewData) and current_view.menu_items:
         return current_view.menu_items
-    if isinstance(current_view, MenuViewData) and current_view.items:
+    if isinstance(current_view, MenuViewData | NotificationViewData) \
+                and current_view.items:
         return current_view.items
     return ()
 

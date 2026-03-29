@@ -10,6 +10,7 @@ from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.types import (
     ApplicationStackItem,
+    CloseApplicationAction,
     MenuItemData,
     OpenApplicationAction,
     UpdateApplicationKwargsAction,
@@ -85,7 +86,7 @@ def _make_forget_handler(ssid: str) -> Callable[[], None]:
         from wifi_manager import forget_wireless_connection
 
         create_task(forget_wireless_connection(ssid))
-        store.dispatch(WiFiUpdateRequestAction(reset=True))
+        store.dispatch(WiFiUpdateRequestAction())
 
     return _handler
 
@@ -202,7 +203,7 @@ def update_wifi_dynamic_menu(
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=WIFI_CONNECTIONS_MENU_ID,
-            title='Wi-Fi Connections',
+            title='Wi-Fi',
             items=items,
             placeholder=placeholder,
         ),
@@ -250,6 +251,7 @@ def _select_connections() -> bool:
 register_action('wifi:select-connections', _select_connections)
 
 
+
 # --- Application button handlers for wifi:connection-page ---
 # These handle physical button presses (RPi) on the WiFi connection page.
 # L1 (index 0) = connect/disconnect, L2 (index 1) = forget/delete
@@ -285,7 +287,6 @@ def _connection_page_first_button() -> None:
 def _connection_page_second_button() -> None:
     """Handle forget/delete button on the WiFi connection page."""
     from ubo_app.store.core.action_registry import execute_action
-    from ubo_app.store.core.types import CloseApplicationAction
 
     @store.with_state(lambda state: state.main.stack)
     def _handle(stack: tuple) -> None:
@@ -293,8 +294,8 @@ def _connection_page_second_button() -> None:
         if not isinstance(top, ApplicationStackItem):
             return
         ssid = top.initialization_kwargs.get('ssid', '')
-        execute_action(f'wifi:forget:{ssid}')
         store.dispatch(CloseApplicationAction(application_instance_id=top.id))
+        execute_action(f'wifi:forget:{ssid}')
 
     _handle()
 

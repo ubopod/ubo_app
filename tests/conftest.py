@@ -23,6 +23,7 @@ pytest.register_assert_rewrite('tests.fixtures')
 
 from tests.fixtures import (  # noqa: E402, I001
     AppContext,
+    Dispatcher,
     LoadServices,
     MockCamera,
     Stability,
@@ -30,6 +31,7 @@ from tests.fixtures import (  # noqa: E402, I001
     WindowSnapshot,
     app_context,
     camera,
+    dispatcher,
     load_services,
     mock_environment,
     snapshot_prefix,
@@ -60,6 +62,7 @@ def exclude_dynamic_menus(state: RootState) -> dict[str, Any]:
 
 fixtures = (
     AppContext,
+    Dispatcher,
     LoadServices,
     MockCamera,
     Stability,
@@ -69,6 +72,7 @@ fixtures = (
     WindowSnapshot,
     StoreMonitor,
     app_context,
+    dispatcher,
     load_services,
     camera,
     mock_environment,

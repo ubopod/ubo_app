@@ -52,7 +52,7 @@ class WiFiConnectionPage(UboPromptWidget):
     def second_option_callback(self) -> None:
         """Handle second option (delete/forget).
 
-        Dispatches forget action and closes the page via gRPC.
+        Dispatches the app-button action which closes the page and forgets.
         """
         from ubo_bindings.ubo.v1 import Action, ExecuteMenuActionAction
 
@@ -60,11 +60,10 @@ class WiFiConnectionPage(UboPromptWidget):
         client.dispatch_raw(
             Action(
                 execute_menu_action_action=ExecuteMenuActionAction(
-                    action_id=f'wifi:forget:{self.ssid}',
+                    action_id='app-button:wifi:connection-page:2',
                 ),
             ),
         )
-        client.dispatch_close_application(self.id)
 
     def update(self, *_: tuple[Any, ...]) -> None:
         """Update UI based on connection state."""

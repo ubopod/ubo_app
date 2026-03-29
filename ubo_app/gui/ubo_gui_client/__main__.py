@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import argparse
 import os
-import types
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import types
 
 
 def _setup_logging(*, verbose: bool = False) -> None:

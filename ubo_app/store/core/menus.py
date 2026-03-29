@@ -158,7 +158,7 @@ def update_settings_categories_dynamic_menu() -> None:
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=SETTINGS_MENU_ID,
-            title='Settings',
+            title='\ue690Settings',
             items=items,
             placeholder='No settings categories',
         ),

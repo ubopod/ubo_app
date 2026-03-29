@@ -195,10 +195,10 @@ def build_message(  # noqa: C901, PLR0912
     object_: GRPCSerializable,
     expected_type: type[T] | None = None,
 ) -> ReturnType | T:
-    if (expected_type and issubclass(expected_type, betterproto.Enum)) or isinstance(
-        object_,
-        Enum,
-    ):
+    if (
+        (expected_type and issubclass(expected_type, betterproto.Enum))
+        or isinstance(object_, Enum)
+    ) and not isinstance(object_, list | tuple):
         if not isinstance(object_, Enum):
             msg = f'Expected an Enum, got {type(object_)}'
             raise ValueError(msg)
@@ -222,7 +222,8 @@ def build_message(  # noqa: C901, PLR0912
                 expected_type,
                 '_betterproto',
             ) and expected_type._betterproto.sorted_field_names == ('items',):
-                fields = {
+                msg_cls = cast('type[betterproto.Message]', expected_type)
+                wrapper_fields = {
                     'items': [
                         build_message(
                             item,
@@ -233,7 +234,7 @@ def build_message(  # noqa: C901, PLR0912
                         for item in object_
                     ],
                 }
-                return expected_type(**fields)
+                return cast('T', msg_cls(**wrapper_fields))
             return [
                 build_message(item, expected_type=expected_type) for item in object_
             ]

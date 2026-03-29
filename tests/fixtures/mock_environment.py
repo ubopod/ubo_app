@@ -36,7 +36,7 @@ def _monkeypatch_socket(monkeypatch: pytest.MonkeyPatch) -> None:
         socket,
         'socket',
         lambda *args, **kwargs: Fake(args, kwargs)
-        if args[0] == SERVER_SOCKET_PATH
+        if args and args[0] == SERVER_SOCKET_PATH
         else original_socket_socket(*args, **kwargs),
     )
 

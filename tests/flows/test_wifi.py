@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import cycle
 from typing import TYPE_CHECKING
 
 import pytest
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
     from tests.fixtures import (
         AppContext,
+        Dispatcher,
         LoadServices,
         MockCamera,
         Stability,
@@ -21,6 +23,8 @@ if TYPE_CHECKING:
     from tests.fixtures.snapshot import WindowSnapshot
     from ubo_app.store.main import RootState
     from ubo_app.store.services.wifi import WiFiState
+
+from tests.fixtures.dispatch import DIRECT, GRPC_KEYPAD, GRPC_MENU
 
 
 @pytest.mark.timeout(200)
@@ -36,6 +40,7 @@ async def test_setup_flow(
     wait_for_menu_item: WaitForMenuItem,
     wait_for_empty_menu: WaitForEmptyMenu,
     monkeypatch: pytest.MonkeyPatch,
+    dispatcher: Dispatcher,
 ) -> None:
     """Test the wireless flow."""
     from sdbus_async.networkmanager import (  # pyright: ignore [reportMissingModuleSource]
@@ -52,11 +57,6 @@ async def test_setup_flow(
         property(lambda self: (self, strength())[1]),
     )
 
-    from ubo_app.store.core.types import (
-        MenuChooseByIconAction,
-        MenuChooseByLabelAction,
-        MenuGoBackAction,
-    )
     from ubo_app.store.main import store
 
     def store_snapshot_selector(state: RootState) -> WiFiState:
@@ -64,7 +64,7 @@ async def test_setup_flow(
 
     app_context.set_app()
     unload_waiter = await load_services(
-        ['camera', 'display', 'notifications', 'wifi'],
+        ['camera', 'display', 'keypad', 'notifications', 'wifi'],
         run_async=True,
     )
 
@@ -82,38 +82,58 @@ async def test_setup_flow(
         assert icon is not None, 'wifi icon not registered'
         assert icon.symbol == expected_icon
 
+    @wait_for(wait=wait_fixed(1), run_async=True)
+    def check_connection_page(expected_state: str) -> None:
+        from ubo_app.store.core.types import ApplicationViewData
+
+        state = store._state  # noqa: SLF001
+        assert state is not None
+
+        current_view = state.main.current_view
+        assert isinstance(current_view, ApplicationViewData)
+        assert current_view.application_id == 'wifi:connection-page'
+        assert current_view.extra_data.get('ssid') == 'ubo-test-ssid'
+        assert current_view.extra_data.get('state') == expected_state
+
     await check_icon('󰖪')
 
-    await stability()
+    await stability(initial_wait=10, attempts=2, wait=2)
+
     store_snapshot.take(selector=store_snapshot_selector)
 
+    # Round-robin through all three dispatch modes
+    via = cycle([DIRECT, GRPC_MENU, GRPC_KEYPAD])
+
     # Select the main menu
-    store.dispatch(MenuChooseByIconAction(icon='󰍜'))
-    await stability()
+    await dispatcher.choose_by_icon('󰍜', via=next(via))  # direct
+    await wait_for_menu_item(label='Settings')
 
     # Select the settings menu
-    store.dispatch(MenuChooseByLabelAction(label='Settings'))
-    await stability()
+    await dispatcher.choose_by_label('Settings', via=next(via))  # grpc_menu
+    await wait_for_menu_item(label='Network')
 
     # Go to network category
-    store.dispatch(MenuChooseByLabelAction(label='Network'))
-    await stability()
+    await dispatcher.choose_by_label('Network', via=next(via))  # grpc_keypad
+    await wait_for_menu_item(label='WiFi')
 
     # Open the wireless menu
-    store.dispatch(MenuChooseByLabelAction(label='WiFi'))
+    await dispatcher.choose_by_label('WiFi', via=next(via))  # direct
+    await wait_for_menu_item(label='Select')
     await stability()
     window_snapshot.take()
 
     # Select "Select" to open the wireless connection list
-    store.dispatch(MenuChooseByLabelAction(label='Select'))
+    await dispatcher.choose_by_label('Select', via=next(via))  # grpc_menu
     await stability()
 
     # Back to the wireless menu
-    store.dispatch(MenuGoBackAction())
+    await dispatcher.go_back(via=next(via))  # grpc_keypad
+    await wait_for_menu_item(label='Select')
     await stability()
 
     # Select "Add" to add a new connection
-    store.dispatch(MenuChooseByLabelAction(label='Add'))
+    await dispatcher.choose_by_label('Add', via=next(via))  # direct
+    await wait_for_menu_item(icon='󰄀')
     await stability()
 
     # Input method selection should be shown
@@ -122,28 +142,28 @@ async def test_setup_flow(
     # Set QR Code image of the WiFi credentials before camera is started
     camera.set_image('qrcode/wifi')
 
-    # Select "QR code" input method
-    store.dispatch(MenuChooseByIconAction(icon='󰄀'))
+    # Select "QR code" input method (triggers camera service notification
+    # as an intermediate step, so use stability() instead of wait_for_menu_item)
+    await dispatcher.choose_by_icon('󰄀', via=next(via))  # grpc_menu
     await stability()
 
     # QR code instructions should be shown
     window_snapshot.take()
 
     # Select "QR code" to scan a QR code for credentials
-    store.dispatch(MenuChooseByIconAction(icon='󰄀'))
-    await stability(initial_wait=3, wait=3)
+    await dispatcher.choose_by_icon('󰄀', via=next(via))  # grpc_keypad
 
-    # Success notification should be shown
-    window_snapshot.take()
-
-    # Dismiss the notification informing the user that the connection was added
-    await check_icon('󰤨')
+    # The QR flow emits the "Added" flash notification as soon as the
+    # connection profile is created. Activation can lag behind that on hidden
+    # networks, so wait for the notification first instead of the connected
+    # status icon.
     await wait_for_menu_item(label='', icon='')
-    store.dispatch(MenuChooseByIconAction(icon=''))
+    window_snapshot.take()
+    await dispatcher.choose_by_icon('', via=next(via))  # direct
     await stability()
 
     # Select "Select" to open the wireless connection list and see the new connection
-    store.dispatch(MenuChooseByLabelAction(label='Select'))
+    await dispatcher.choose_by_label('Select', via=next(via))  # grpc_menu
 
     @wait_for(wait=wait_fixed(1), run_async=True)
     def check_connections() -> None:
@@ -158,28 +178,27 @@ async def test_setup_flow(
     window_snapshot.take()
 
     # Select the connection
-    store.dispatch(MenuChooseByLabelAction(label='ubo-test-ssid'))
+    await dispatcher.choose_by_label('ubo-test-ssid', via=next(via))  # grpc_keypad
 
-    # Wait for the "Disconnect" item to show up
-    await wait_for_menu_item(label='Disconnect')
+    # WiFi connection details open as an application view, not a menu.
+    await check_connection_page('Connected')
     await stability()
     window_snapshot.take()
-    store.dispatch(MenuChooseByLabelAction(label='Disconnect'))
+    await dispatcher.app_button(1, via=next(via))  # direct
 
-    # Wait for the "Connect" item to show up
-    await wait_for_menu_item(label='Connect')
+    await check_connection_page('Disconnected')
     await check_icon('󰖪')
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
-    store.dispatch(MenuChooseByLabelAction(label='Connect'))
+    await dispatcher.app_button(1, via=next(via))  # grpc_menu
 
-    await wait_for_menu_item(label='Disconnect')
+    await check_connection_page('Connected')
     await check_icon('󰤨')
     await stability()
     store_snapshot.take(selector=store_snapshot_selector)
     window_snapshot.take()
-    store.dispatch(MenuChooseByLabelAction(label='Delete'))
+    await dispatcher.app_button(2, via=next(via))  # grpc_keypad
 
     @wait_for(wait=wait_fixed(1), run_async=True)
     def check_no_connections() -> None:
@@ -194,7 +213,7 @@ async def test_setup_flow(
     # Dismiss the notification informing the user that the connection was deleted
     await wait_for_menu_item(label='', icon='')
     window_snapshot.take()
-    store.dispatch(MenuChooseByIconAction(icon=''))
+    await dispatcher.choose_by_icon('', via=next(via))  # direct
 
     await wait_for_empty_menu(placeholder='No Wi-Fi connections found')
     window_snapshot.take()

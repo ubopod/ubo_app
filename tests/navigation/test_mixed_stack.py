@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from ubo_app.store.core.types import (
     ApplicationViewData,
+    CloseApplicationAction,
     HomeViewData,
     MenuViewData,
     NotificationViewData,
@@ -139,3 +140,52 @@ class TestPopSpecificItem:
         original_stack = nav.state.stack
         nav.dispatch(StackPopItemAction(item_id='does-not-exist'))
         assert nav.state.stack == original_stack
+
+
+class TestCloseAppThenFlashNotification:
+    """Verify stack transitions for: close app -> flash notification -> dismiss.
+
+    This models the WiFi delete flow where:
+    1. User is on a connection detail page (ApplicationStackItem)
+    2. User presses delete -> app is closed, async forget starts
+    3. FLASH notification appears (pushed by async completion)
+    4. Notification auto-dismisses
+    5. User should see the connections list menu (not the stale app)
+    """
+
+    def test_close_app_then_notification_returns_to_menu(
+        self,
+        nav: ReducerRunner,
+    ) -> None:
+        """Verify full cycle: menu -> app -> close app -> notif -> dismiss -> menu."""
+        # Navigate to a menu (simulating wifi connections list)
+        nav.dispatch(StackPushMenuAction(menu_key='main'))
+        nav.dispatch(StackPushMenuAction(menu_key='settings'))
+        assert isinstance(nav.view, MenuViewData)
+        menu_stack_depth = len(nav.state.stack)
+        path_before = nav.state.path
+
+        # Push an application (simulating wifi:connection-page)
+        nav.dispatch(
+            StackPushApplicationAction(application_id='wifi:connection-page'),
+        )
+        assert isinstance(nav.view, ApplicationViewData)
+        app_instance_id = nav.state.stack[-1].id
+
+        # Close the application (simulating the delete button)
+        nav.dispatch(
+            CloseApplicationAction(application_instance_id=app_instance_id),
+        )
+        assert isinstance(nav.view, MenuViewData)
+        assert len(nav.state.stack) == menu_stack_depth
+        assert nav.state.path == path_before
+
+        # FLASH notification arrives (async, from forget_wireless_connection)
+        nav.dispatch(StackPushNotificationAction(notification_id='wifi-deleted'))
+        assert isinstance(nav.view, NotificationViewData)
+
+        # Notification auto-dismissed (popped from stack)
+        nav.dispatch(StackPopAction())
+        assert isinstance(nav.view, MenuViewData)
+        assert len(nav.state.stack) == menu_stack_depth
+        assert nav.state.path == path_before
