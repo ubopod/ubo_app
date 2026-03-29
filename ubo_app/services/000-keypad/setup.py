@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from adafruit_bus_device import i2c_device
     from adafruit_register.i2c_struct import UnaryStruct
 
+    from ubo_app.utils.types import Subscriptions
+
 INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
 
 ButtonStatus = Literal['pressed', 'released']
@@ -127,7 +129,8 @@ class Keypad:
 
         i2c = board.I2C()
         # Set this to the GPIO of the interrupt:
-        button = Button(INT_EXPANDER)
+        self.button = Button(INT_EXPANDER)
+        button = self.button
 
         try:
             self.aw, new_i2c = self._initialize_i2c(i2c)
@@ -309,13 +312,20 @@ class Keypad:
         )
 
 
-def init_service() -> None:
+def init_service() -> Subscriptions:
     if not IS_RPI:
         logger.debug('Not a Raspberry Pi.')
-        return
+        return []
     eeprom_data = get_eeprom_data()
     if (keypad := eeprom_data.get('keypad')) and keypad.get('model') == 'aw9523':
         logger.debug('Physical keypad found.')
-        Keypad()
-    else:
-        logger.debug('Physical keypad not found.')
+        keypad_instance = Keypad()
+
+        def cleanup() -> None:
+            if hasattr(keypad_instance, 'button'):
+                keypad_instance.button.close()
+
+        return [cleanup]
+
+    logger.debug('Physical keypad not found.')
+    return []
