@@ -137,6 +137,10 @@ jobs:
         run: |
           uv sync --frozen
 
+      - name: Install GUI client
+        run: |
+          cd ubo_app/gui && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen
+
       - name: Build protobuf files and gRPC bindings
         run: |
           uv run --frozen poe proto:generate:raw
