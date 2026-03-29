@@ -16,10 +16,11 @@ from ubo_gui_client.home_page import HomePage
 from ubo_gui_client.menu_notification_handler import MenuNotificationHandler
 
 if TYPE_CHECKING:
-    from kivy.uix.screenmanager import TransitionBase
+    from kivy.uix.screenmanager import Screen, TransitionBase
     from kivy.uix.widget import Widget
     from ubo_gui.menu.types import Menu
 
+    from ubo_gui_client.app import UboGUIApp
     from ubo_gui_client.client import GUIClient
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ class MenuWidgetWithHomePage(MenuWidget):
 
     def _switch_to(
         self: MenuWidgetWithHomePage,
-        screen: object,
+        screen: Screen | None,
         /,
         *,
         transition: TransitionBase,
@@ -498,7 +499,7 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 stack=lambda *_: logger.info(menu_representation),
             )
 
-    def setup_view_renderer(self) -> None:
+    def setup_view_renderer(self: UboGUIApp) -> None:
         """Initialize ViewRenderer after gRPC connection is established."""
         from ubo_gui_client.view_renderer import ViewRenderer
 
