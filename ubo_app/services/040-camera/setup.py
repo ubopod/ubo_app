@@ -20,7 +20,6 @@ from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
-    StackPopAction,
     StackPushApplicationAction,
     UpdateDynamicMenuAction,
 )
@@ -37,7 +36,6 @@ from ubo_app.store.services.camera import (
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
-    CameraStopViewfinderEvent,
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
@@ -129,7 +127,7 @@ class _ViewfinderSession:
                 return
             feed_viewfinder(self.camera)
 
-    def cleanup(self, timer: _RepeatingTimer, *, pop_stack: bool = False) -> None:
+    def cleanup(self, timer: _RepeatingTimer) -> None:
         """Shut down the viewfinder session and release the camera."""
         self._event_unsubscribe()
         self._stack_unsubscribe()
@@ -138,8 +136,6 @@ class _ViewfinderSession:
                 return
             self.is_running = False
             timer.cancel()
-            if pop_stack:
-                store.dispatch(StackPopAction())
             if self.camera:
                 self.camera.stop()
                 self.camera.close()
@@ -155,7 +151,6 @@ def _is_viewfinder_on_stack(
         and item.application_id == 'camera:viewfinder'
         for item in stack
     )
-
 
 def start_camera_viewfinder_session() -> None:
     """Start a camera viewfinder session (replaces CameraApplication widget)."""
@@ -179,10 +174,6 @@ def start_camera_viewfinder_session() -> None:
     session._stack_unsubscribe = store.subscribe_event(  # noqa: SLF001
         StackChangedEvent,
         _handle_stack_changed,
-    )
-    session._event_unsubscribe = store.subscribe_event(  # noqa: SLF001
-        CameraStopViewfinderEvent,
-        lambda _: session.cleanup(timer, pop_stack=True),
     )
 
 
@@ -248,6 +239,7 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
 
     qrcode_path = Path('/tmp/qrcode_input.png')  # noqa: S108
     if qrcode_path.exists():
+        logger.info('[camera] found mock PNG %s', qrcode_path)
         with qrcode_path.open('rb') as file:
             reader = png.Reader(file)
             width, height, data, _ = reader.read()
@@ -262,8 +254,15 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
         from pyzbar.pyzbar import decode
 
         barcodes = decode(data)
+        decoded_codes = [barcode.data.decode() for barcode in barcodes]
+        logger.info(
+            '[camera] pyzbar decoded %d barcode(s): %r (data shape=%s)',
+            len(decoded_codes),
+            decoded_codes,
+            getattr(data, 'shape', 'N/A'),
+        )
         create_task(
-            check_codes(codes=[barcode.data.decode() for barcode in barcodes]),
+            check_codes(codes=decoded_codes),
         )
 
         data = resize_image(data, new_size=(width, height))

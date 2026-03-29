@@ -13,6 +13,7 @@ from redux import (
 )
 
 from ubo_app.store.core.callback_registry import register_auto_callback
+from ubo_app.store.core.types import StackPopAction
 from ubo_app.store.input.types import (
     InputAction,
     InputCancelAction,
@@ -40,7 +41,6 @@ from ubo_app.store.services.camera import (
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
-    CameraStopViewfinderEvent,
     CameraType,
 )
 from ubo_app.store.services.keypad import KeypadKeyPressAction
@@ -55,7 +55,10 @@ from ubo_app.utils.persistent_store import read_from_persistent_store
 
 Action = InitAction | CameraAction | InputAction | KeypadKeyPressAction
 DispatchAction = (
-    NotificationsAddAction | NotificationsClearByIdAction | InputResolveAction
+    NotificationsAddAction
+    | NotificationsClearByIdAction
+    | InputResolveAction
+    | StackPopAction
 )
 
 
@@ -105,13 +108,14 @@ def pop_queue(
     if len(state.queue) == 0:
         msg = 'Cannot pop from an empty queue in CameraState.'
         raise ValueError(msg)
+
     actions = actions or []
     events = events or []
-    events.append(CameraStopViewfinderEvent())
 
     actions.append(
         NotificationsClearByIdAction(id=f'camera:qrcode:{state.queue[0].id}'),
     )
+    actions.append(StackPopAction())
     _, *queue = state.queue
     if queue:
         actions.append(prompt_notification(queue[0]))
@@ -253,6 +257,9 @@ def reducer(
                         ),
                     ],
                 )
+            return state
+
+        case CameraReportBarcodeAction(codes=codes):
             return state
 
         case _:
