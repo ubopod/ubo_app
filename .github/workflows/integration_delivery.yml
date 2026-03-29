@@ -139,7 +139,9 @@ jobs:
 
       - name: Install GUI client
         run: |
-          cd ubo_app/gui && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen
+          cd ubo_app/gui
+          UV_PROJECT_ENVIRONMENT=.venv uv venv --system-site-packages .venv
+          UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen
 
       - name: Build protobuf files and gRPC bindings
         run: |
