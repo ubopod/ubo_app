@@ -499,13 +499,16 @@ class MenuAppCentral(MenuNotificationHandler, UboApp):
                 stack=lambda *_: logger.info(menu_representation),
             )
 
-    def setup_view_renderer(self: UboGUIApp) -> None:
+    def setup_view_renderer(self: MenuAppCentral) -> None:
         """Initialize ViewRenderer after gRPC connection is established."""
+        from typing import cast
+
         from ubo_gui_client.view_renderer import ViewRenderer
 
+        app = cast('UboGUIApp', self)
         self.view_renderer = ViewRenderer(
             self.menu_widget,
-            self,
+            app,
             self.grpc_client,
         )
 
