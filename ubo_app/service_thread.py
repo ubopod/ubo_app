@@ -84,8 +84,8 @@ class UboModuleLoader(SourceFileLoader):
     def _cache_id(self: UboModuleLoader) -> str:
         return f'{self.path}:{self.name}'
 
-    def get_filename(self, name: str | None = None) -> str:
-        return super().get_filename(name.split(':')[-1] if name else name)
+    def get_filename(self, fullname: str | None = None) -> str:
+        return super().get_filename(fullname.split(':')[-1] if fullname else fullname)
 
     def create_module(self, spec: ModuleSpec) -> ModuleType | None:
         if self._cache_id in self.cache:
