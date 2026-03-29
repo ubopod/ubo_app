@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [tool.uv]
-dev-dependencies = ["poethepoet>=0.36.0", "pyright>=1.1.402", "ruff>=0.12.1"]
+dev-dependencies = ["poethepoet>=0.36.0", "pyright>=1.1.408", "ruff>=0.12.1"]
 
 [tool.uv.sources]
 ubo-app-raw-bindings = { path = "../../../rpc", editable = true }

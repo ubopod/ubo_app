@@ -20,7 +20,7 @@ keywords = [
 dependencies = ["betterproto [compiler]==2.0.0b7"]
 
 [tool.uv]
-dev-dependencies = ["poethepoet>=0.36.0", "pyright>=1.1.402", "ruff>=0.12.1"]
+dev-dependencies = ["poethepoet>=0.36.0", "pyright>=1.1.408", "ruff>=0.12.1"]
 
 [build-system]
 requires = ["hatchling"]
