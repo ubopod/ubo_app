@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import logging
 import time
 from typing import TYPE_CHECKING, cast
@@ -142,8 +143,6 @@ class Display:
 
 
 display = Display()
-
-import atexit
 
 atexit.register(display.turn_off)
 
