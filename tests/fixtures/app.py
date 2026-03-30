@@ -326,7 +326,7 @@ async def app_context(
         sys.stderr = sys.__stderr__
 
         for module_name in set(sys.modules) - modules_snapshot:
-            if not module_name.startswith('sdbus'):
+            if not module_name.startswith(('sdbus', 'gpiozero', 'lgpio')):
                 del sys.modules[module_name]
 
         gc.collect()

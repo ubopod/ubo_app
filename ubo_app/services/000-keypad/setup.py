@@ -323,7 +323,13 @@ def init_service() -> Subscriptions:
 
         def cleanup() -> None:
             if hasattr(keypad_instance, 'button'):
-                keypad_instance.button.close()
+                logger.info('Releasing keypad GPIO resources')
+                try:
+                    keypad_instance.button.when_pressed = None
+                    keypad_instance.button.close()
+                except Exception:
+                    logger.exception('Error closing keypad button')
+                logger.info('Keypad GPIO resources released')
 
         return [cleanup]
 

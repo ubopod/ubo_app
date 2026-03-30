@@ -735,33 +735,7 @@
       },
       "audio": {
         "_type": "ServiceState",
-        "errors": [
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 125, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 125, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 125, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 125, in find_card_index\n    next(card for card in cards if 'wm8960' in card),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/utils/async_.py\", line 39, in wrapper\n    await task\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 112, in find_card_index\n    async for attempt in AsyncRetrying(\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 166, in __anext__\n    do = await self.iter(retry_state=self._retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 153, in iter\n    result = await action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/_utils.py\", line 99, in inner\n    return call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 421, in exc_check\n    raise retry_exc from fut.exception()\ntenacity.RetryError: RetryError[<Future at 0x7f9c6ee0d0 state=finished raised StopIteration>]\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] RetryError[<Future at 0x7f9c6ee0d0 state=finished raised StopIteration>]\n\n[b]future:[/b] <Task finished name='Task-1277' coro=<task_wrapper_coroutine:AudioManager.find_card_index() done, defined at /home/ubo/test-runner/ubo_app/utils/async_.py:37> exception=RetryError(<Future at 0x7f9c6ee0d0 state=finished raised StopIteration>)>",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/utils/async_.py\", line 39, in wrapper\n    await task\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 469, in stream_mic\n    read_audio_chunk = await self._initialize_input_reader()\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 414, in _initialize_input_reader\n    async for attempt in AsyncRetrying(\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 166, in __anext__\n    do = await self.iter(retry_state=self._retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py\", line 153, in iter\n    result = await action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/_utils.py\", line 99, in inner\n    return call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 420, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/tenacity/__init__.py\", line 187, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/concurrent/futures/_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/concurrent/futures/_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/audio_manager.py\", line 422, in _initialize_input_reader\n    raise RuntimeError(msg)\nRuntimeError: Card index is not set\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] Card index is not set\n\n[b]future:[/b] <Task finished name='Task-1278' coro=<task_wrapper_coroutine:AudioManager.stream_mic() done, defined at /home/ubo/test-runner/ubo_app/utils/async_.py:37> exception=RuntimeError('Card index is not set')>",
-            "timestamp": 1672531200.0
-          }
-        ],
+        "errors": [],
         "id": "audio",
         "is_active": true,
         "is_enabled": true,
@@ -791,48 +765,7 @@
       },
       "docker": {
         "_type": "ServiceState",
-        "errors": [
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          },
-          {
-            "_type": "ErrorReport",
-            "message": "[b]exception:[/b] RuntimeError: Autorun call timed out after 30 seconds\n",
-            "timestamp": 1672531200.0
-          }
-        ],
+        "errors": [],
         "id": "docker",
         "is_active": true,
         "is_enabled": true,
