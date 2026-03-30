@@ -158,6 +158,7 @@ async def test_setup_flow(
     # networks, so wait for the notification first instead of the connected
     # status icon.
     await wait_for_menu_item(label='', icon='')
+    await check_icon('󰤨')
     window_snapshot.take()
     await dispatcher.choose_by_icon('', via=next(via))  # direct
     await stability()
