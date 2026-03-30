@@ -318,6 +318,13 @@ async def app_context(
 
         del context
 
+        # Restore stdio before module cleanup.  Kivy replaces sys.stderr/
+        # sys.stdout with LoggerStderr/LoggerStdout wrappers.  After module
+        # cleanup the old wrappers reference stale Logger objects, causing
+        # infinite recursion when Kivy is re-imported by the next test.
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+
         for module_name in set(sys.modules) - modules_snapshot:
             if not module_name.startswith('sdbus'):
                 del sys.modules[module_name]

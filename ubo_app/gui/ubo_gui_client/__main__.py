@@ -141,6 +141,9 @@ def main() -> None:
 
     def _handle_sigterm(_signum: int, _frame: object) -> None:
         _main_logger.info('SIGTERM received, stopping GUI app')
+        from ubo_gui_client.display import display
+
+        display.turn_off()
         app.stop()
 
     signal_module.signal(signal_module.SIGTERM, _handle_sigterm)

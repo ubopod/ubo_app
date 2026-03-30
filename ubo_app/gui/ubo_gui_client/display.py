@@ -143,6 +143,10 @@ class Display:
 
 display = Display()
 
+import atexit
+
+atexit.register(display.turn_off)
+
 
 def render_on_display(*, regions: list[Region]) -> None:
     """Transfer data to the display via SPI controller."""
