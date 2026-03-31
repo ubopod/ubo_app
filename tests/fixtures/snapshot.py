@@ -75,9 +75,11 @@ class WindowSnapshot:
         from ubo_app.store.core.types import ScreenshotDataEvent, TakeScreenshotAction
         from ubo_app.store.main import store
 
-        # Retry schedule: short timeout after first success, longer with retries
-        # for initial captures on slow hardware
-        timeouts = [3] if self._latest_data is not None else [30, 30]
+        # Retry schedule: longer timeouts for initial captures on slow hardware
+        # (e.g., Pi 4 where gRPC round-trip can take 30+ seconds on first attempt).
+        # Subsequent captures also need generous timeouts since Pi 4 gRPC
+        # round-trips can exceed 3s under load.
+        timeouts = [10, 10] if self._latest_data is not None else [30, 30]
 
         for attempt, timeout in enumerate(timeouts):
             capture_event = threading.Event()
