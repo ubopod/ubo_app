@@ -301,8 +301,16 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         if self.loading_overlay is not None:
             self.loading_overlay.size = size
 
+    @mainthread
     def _handle_screenshot_event(self: UboGUIApp) -> None:
-        """Capture window screenshot and send back to core via gRPC."""
+        """Capture window screenshot and send back to core via gRPC.
+
+        Decorated with @mainthread so it runs on the Kivy thread instead of
+        blocking the async gRPC event loop.  This prevents a deadlock when
+        camera frames are streaming at high frequency: the async loop stays
+        free to process state updates and camera events while the screenshot
+        is captured on the main thread.
+        """
         import hashlib
         import io
 
