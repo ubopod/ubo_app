@@ -34,7 +34,7 @@ async def test_all_services_register(
     from ubo_app.constants import CORE_SERVICE_IDS
 
     app_context.set_app()
-    unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=50, run_async=True)
+    unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=90, run_async=True)
 
     await stability(initial_wait=6, attempts=5, wait=2)
 

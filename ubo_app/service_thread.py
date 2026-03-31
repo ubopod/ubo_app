@@ -342,11 +342,23 @@ class UboServiceThread(threading.Thread):
             try:
                 result = None
                 if len(inspect.signature(self.setup).parameters) == 0:
+                    logger.debug(
+                        'Waiting for reducer barrier',
+                        extra={'service_id': self.service_id},
+                    )
                     self._wait_for_reducers()
+                    logger.debug(
+                        'Reducer barrier passed, calling setup',
+                        extra={'service_id': self.service_id},
+                    )
                     result = cast(
                         'Callable[[], SetupFunctionReturnType]',
                         self.setup,
                     )()
+                    logger.debug(
+                        'Setup function returned',
+                        extra={'service_id': self.service_id},
+                    )
                 elif len(inspect.signature(self.setup).parameters) == 1:
                     result = cast(
                         'Callable[[ReducerRegistrar], SetupFunctionReturnType]',

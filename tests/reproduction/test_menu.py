@@ -45,11 +45,11 @@ async def test_root_menu_bad_state(
     logger.info('Loading services')
     unload_waiter = await load_services(
         CORE_SERVICE_IDS,
-        timeout=40,
+        timeout=90,
         run_async=True,
     )
     logger.info('Services loaded, waiting for stability')
-    await stability()
+    await stability(initial_wait=6)
 
     logger.info('Navigating to the first menu item')
     store.dispatch(MenuChooseByIconAction(icon='󰍜'))

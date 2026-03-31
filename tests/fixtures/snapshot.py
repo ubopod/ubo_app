@@ -68,32 +68,46 @@ class WindowSnapshot:
         Uses a short timeout to avoid blocking when GUI is not available,
         but does not permanently cache the result since the GUI may connect
         after an initial delay (e.g., splash screen).
+
+        Retries with increasing timeouts on slow hardware (e.g., Pi 4) where
+        the GUI subprocess may take longer to become responsive via gRPC.
         """
         from ubo_app.store.core.types import ScreenshotDataEvent, TakeScreenshotAction
         from ubo_app.store.main import store
 
-        event = threading.Event()
+        # Retry schedule: short timeout after first success, longer with retries
+        # for initial captures on slow hardware
+        timeouts = [3] if self._latest_data is not None else [30, 30]
 
-        def _on_screenshot_data(screenshot_event: ScreenshotDataEvent) -> None:
-            self._latest_hash = screenshot_event.hash
-            self._latest_data = screenshot_event.data
-            event.set()
+        for attempt, timeout in enumerate(timeouts):
+            capture_event = threading.Event()
 
-        unsubscribe = store.subscribe_event(
-            ScreenshotDataEvent,
-            _on_screenshot_data,
-        )
+            def _on_screenshot_data(
+                screenshot_event: ScreenshotDataEvent,
+                _event: threading.Event = capture_event,
+            ) -> None:
+                self._latest_hash = screenshot_event.hash
+                self._latest_data = screenshot_event.data
+                _event.set()
 
-        store.dispatch(TakeScreenshotAction())
+            unsubscribe = store.subscribe_event(
+                ScreenshotDataEvent,
+                _on_screenshot_data,
+            )
 
-        # Use a shorter timeout after the first successful capture
-        timeout = 3 if self._latest_data is not None else 15
-        event.wait(timeout=timeout)
-        unsubscribe()
+            store.dispatch(TakeScreenshotAction())
+            capture_event.wait(timeout=timeout)
+            unsubscribe()
 
-        if not event.is_set():
+            if capture_event.is_set():
+                return
+
+            if attempt < len(timeouts) - 1:
+                continue
+
             msg = (
-                f'Screenshot capture timed out after {timeout}s'
+                f'Screenshot capture timed out after {len(timeouts)} attempts'
+                f' (last timeout: {timeout}s)'
                 ' - GUI is not responding. Check that the GUI'
                 ' subprocess is running and connected via gRPC.'
             )
