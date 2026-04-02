@@ -98,7 +98,49 @@ class NotificationViewData(Immutable):
     stack_depth: int = 1  # Navigation stack depth (for push/pop animation)
 
 
+class InstructionViewData(Immutable):
+    """Data for rendering an instruction/waiting view.
+
+    Shows instructions to the user and waits for an external event
+    (e.g., IR signal received, QR code scanned). Has optional timeout.
+    Reusable across services — not specific to any one feature.
+    """
+
+    type: Literal['instruction'] = 'instruction'
+    show_status_bar: bool = False
+    title: str = ''
+    instruction: str = ''
+    icon: str = ''
+    spinner: bool = False
+    timeout_seconds: int = 0
+    progress_text: str = ''
+    footer_text: str = ''
+    stack_depth: int = 1
+
+
+class PromptViewData(Immutable):
+    """Data for rendering a confirmation/prompt view.
+
+    Shows a prompt with action buttons. Generalizes the 2-button
+    confirmation pattern (Yes/Cancel, Connect/Delete, etc.).
+    Reusable across services — not specific to any one feature.
+    """
+
+    type: Literal['prompt'] = 'prompt'
+    show_status_bar: bool = False
+    title: str = ''
+    prompt: str = ''
+    icon: str = ''
+    items: tuple[MenuItemData, ...] = ()
+    stack_depth: int = 1
+
+
 # Union type for all view data types
 ViewData: TypeAlias = (
-    HomeViewData | MenuViewData | ApplicationViewData | NotificationViewData
+    HomeViewData
+    | MenuViewData
+    | ApplicationViewData
+    | NotificationViewData
+    | InstructionViewData
+    | PromptViewData
 )

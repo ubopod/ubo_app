@@ -301,6 +301,39 @@ class CloseApplicationAction(MainAction):
     application_instance_id: str
 
 
+class StackPushInstructionAction(MainAction):
+    """Push an instruction/waiting view onto the stack."""
+
+    title: str = ''
+    instruction: str = ''
+    icon: str = ''
+    spinner: bool = False
+    timeout_seconds: int = 0
+    footer_text: str = ''
+
+
+class CloseInstructionAction(MainAction):
+    """Close an instruction view by its stack item ID."""
+
+    instruction_id: str
+
+
+class UpdateInstructionProgressAction(MainAction):
+    """Update the progress text of an instruction view."""
+
+    instruction_id: str
+    progress_text: str = ''
+
+
+class StackPushPromptAction(MainAction):
+    """Push a prompt/confirmation view onto the stack."""
+
+    title: str = ''
+    prompt: str = ''
+    icon: str = ''
+    items: tuple[MenuItemData, ...] = ()
+
+
 class UpdateCurrentViewAction(MainAction):
     """Update current_view with a computed view (used by dynamic menu system)."""
 

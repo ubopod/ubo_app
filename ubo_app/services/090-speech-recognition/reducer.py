@@ -28,7 +28,10 @@ from ubo_app.store.services.audio import (
     AudioChangeVolumeAction,
     AudioDevice,
 )
-from ubo_app.store.services.infrared import InfraredSendCodeAction
+from ubo_app.store.services.infrared import (
+    InfraredSendCodeAction,
+    InfraredSetShouldReceiveAction,
+)
 from ubo_app.store.services.rgb_ring import (
     RgbRingBlankAction,
     RgbRingCommandAction,
@@ -229,6 +232,26 @@ def reducer(
                         'speech:scroll-down',
                         ['Activate Down Button', 'Scroll Down'],
                         MenuScrollAction(direction=MenuScrollDirection.DOWN),
+                    ),
+                    _register_intent(
+                        'speech:ir-receive-on',
+                        [
+                            'Enable Receive Keys',
+                            'Turn on Receive Keys',
+                            'Start Receiving IR',
+                            'Enable IR Receiver',
+                        ],
+                        InfraredSetShouldReceiveAction(should_receive=True),
+                    ),
+                    _register_intent(
+                        'speech:ir-receive-off',
+                        [
+                            'Disable Receive Keys',
+                            'Turn off Receive Keys',
+                            'Stop Receiving IR',
+                            'Disable IR Receiver',
+                        ],
+                        InfraredSetShouldReceiveAction(should_receive=False),
                     ),
                 ],
             )

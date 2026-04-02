@@ -12,12 +12,14 @@ from typing import TYPE_CHECKING
 
 from ubo_app.store.core.types import (
     ApplicationStackItem,
+    InstructionStackItem,
     MenuStackItem,
     NotificationStackItem,
+    PromptStackItem,
 )
 
 if TYPE_CHECKING:
-    from ubo_app.store.core.types import MainState, StackItemType
+    from ubo_app.store.core.types import MainState, MenuItemData, StackItemType
     from ubo_app.store.ubo_actions import BasicType
 
 
@@ -125,6 +127,52 @@ def push_notification(state: MainState, notification_id: str) -> MainState:
     )
     new_stack = (*state.stack, new_item)
     # Path unchanged - notifications don't contribute to path
+    return replace(state, stack=new_stack)
+
+
+def push_instruction(  # noqa: PLR0913
+    state: MainState,
+    *,
+    title: str = '',
+    instruction: str = '',
+    icon: str = '',
+    spinner: bool = False,
+    timeout_seconds: int = 0,
+    footer_text: str = '',
+) -> MainState:
+    """Push an instruction/waiting view onto the navigation stack."""
+    new_item = InstructionStackItem(
+        id=uuid.uuid4().hex,
+        title=title,
+        instruction=instruction,
+        icon=icon,
+        spinner=spinner,
+        timeout_seconds=timeout_seconds,
+        footer_text=footer_text,
+    )
+    new_stack = (*state.stack, new_item)
+    # Path unchanged - instructions don't contribute to path
+    return replace(state, stack=new_stack)
+
+
+def push_prompt(
+    state: MainState,
+    *,
+    title: str = '',
+    prompt: str = '',
+    icon: str = '',
+    items: tuple[MenuItemData, ...] = (),
+) -> MainState:
+    """Push a prompt/confirmation view onto the navigation stack."""
+    new_item = PromptStackItem(
+        id=uuid.uuid4().hex,
+        title=title,
+        prompt=prompt,
+        icon=icon,
+        items=items,
+    )
+    new_stack = (*state.stack, new_item)
+    # Path unchanged - prompts don't contribute to path
     return replace(state, stack=new_stack)
 
 

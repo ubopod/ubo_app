@@ -10,6 +10,7 @@ from __future__ import annotations
 from ubo_app.store.core.types.actions import (
     ClearDynamicMenuAction,
     CloseApplicationAction,
+    CloseInstructionAction,
     DeregisterRegularAppAction,
     DynamicMenuAction,
     ExecuteMenuActionAction,
@@ -37,14 +38,17 @@ from ubo_app.store.core.types.actions import (
     StackPopItemAction,
     StackPopToRootAction,
     StackPushApplicationAction,
+    StackPushInstructionAction,
     StackPushMenuAction,
     StackPushNotificationAction,
+    StackPushPromptAction,
     StackSetPageIndexAction,
     TakeScreenshotAction,
     ToggleRecordingAction,
     UpdateApplicationKwargsAction,
     UpdateCurrentViewAction,
     UpdateDynamicMenuAction,
+    UpdateInstructionProgressAction,
     UpdateLightDMState,
     service_default_factory,
 )
@@ -87,8 +91,10 @@ from ubo_app.store.core.types.events import (
 # Stack items
 from ubo_app.store.core.types.stack_items import (
     ApplicationStackItem,
+    InstructionStackItem,
     MenuStackItem,
     NotificationStackItem,
+    PromptStackItem,
     StackItemType,
 )
 
@@ -106,9 +112,11 @@ from ubo_app.store.core.types.status_bar import (
 from ubo_app.store.core.types.view_data import (
     ApplicationViewData,
     HomeViewData,
+    InstructionViewData,
     MenuItemData,
     MenuViewData,
     NotificationViewData,
+    PromptViewData,
     ViewData,
 )
 
@@ -117,6 +125,7 @@ __all__ = [
     'ApplicationViewData',
     'ClearDynamicMenuAction',
     'CloseApplicationAction',
+    'CloseInstructionAction',
     'DeregisterRegularAppAction',
     'DynamicMenuAction',
     'DynamicMenuChangedEvent',
@@ -126,6 +135,8 @@ __all__ = [
     'ExecuteMenuActionEvent',
     'HomeViewData',
     'InitEvent',
+    'InstructionStackItem',
+    'InstructionViewData',
     'MainAction',
     'MainEvent',
     'MainState',
@@ -152,6 +163,8 @@ __all__ = [
     'PowerOffAction',
     'PowerOffEvent',
     'ProgressNotificationData',
+    'PromptStackItem',
+    'PromptViewData',
     'RebootAction',
     'RebootEvent',
     'RegisterAppAction',
@@ -175,8 +188,10 @@ __all__ = [
     'StackPopItemAction',
     'StackPopToRootAction',
     'StackPushApplicationAction',
+    'StackPushInstructionAction',
     'StackPushMenuAction',
     'StackPushNotificationAction',
+    'StackPushPromptAction',
     'StackSetPageIndexAction',
     'StatusBarData',
     'StatusIconData',
@@ -186,6 +201,7 @@ __all__ = [
     'UpdateApplicationKwargsAction',
     'UpdateCurrentViewAction',
     'UpdateDynamicMenuAction',
+    'UpdateInstructionProgressAction',
     'UpdateLightDMState',
     'ViewChangedEvent',
     'ViewData',

@@ -17,9 +17,16 @@ from ubo_app.store.services.assistant import (
 )
 from ubo_app.store.services.infrared import (
     InfraredAction,
+    InfraredAddDeviceAction,
+    InfraredDevice,
+    InfraredDeviceRegistrationCompleteEvent,
+    InfraredDeviceRegistrationStartedEvent,
     InfraredHandleReceivedCodeAction,
+    InfraredRegisterDeviceAction,
+    InfraredRemoveDeviceAction,
     InfraredSendCodeAction,
     InfraredSendCodeEvent,
+    InfraredSetIsRegisteringDeviceAction,
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
     InfraredState,
@@ -30,6 +37,9 @@ from ubo_app.store.services.keypad import (
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
 )
+from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingBlinkAction
+
+REGISTRATION_REPEAT_COUNT = 5
 
 KeyActionType = type[KeypadKeyPressAction] | type[KeypadKeyReleaseAction]
 
@@ -72,8 +82,14 @@ def reducer(
     action: InfraredAction | KeypadAction,
 ) -> ReducerResult[
     InfraredState,
-    InfraredAction | KeypadKeyPressAction | KeypadKeyReleaseAction,
-    InfraredSendCodeEvent,
+    InfraredAction
+    | KeypadKeyPressAction
+    | KeypadKeyReleaseAction
+    | RgbRingBlinkAction
+    | RgbRingBlankAction,
+    InfraredSendCodeEvent
+    | InfraredDeviceRegistrationStartedEvent
+    | InfraredDeviceRegistrationCompleteEvent,
 ]:
     """Reducer for infrared actions."""
     if state is None:
@@ -84,8 +100,22 @@ def reducer(
 
     match action:
         case InfraredSendCodeAction():
+            logger.info(
+                'Sending infrared code',
+                extra={
+                    'protocol': action.protocol,
+                    'scancode': action.scancode,
+                },
+            )
             return CompleteReducerResult(
                 state=state,
+                actions=[
+                    RgbRingBlinkAction(
+                        color=(0, 255, 0),
+                        repetitions=1,
+                        wait=200,
+                    ),
+                ],
                 events=[
                     InfraredSendCodeEvent(
                         protocol=action.protocol,
@@ -102,6 +132,186 @@ def reducer(
 
         case InfraredSetShouldReceiveAction():
             return replace(state, should_receive_keypad_actions=action.should_receive)
+
+        case InfraredRegisterDeviceAction():
+            extra_actions: list[
+                InfraredAction
+                | KeypadKeyPressAction
+                | KeypadKeyReleaseAction
+                | RgbRingBlinkAction
+                | RgbRingBlankAction
+            ] = [
+                RgbRingBlinkAction(
+                    color=(0, 255, 0),
+                    repetitions=1000,
+                    wait=400,
+                ),
+            ]
+            original_state = state.should_receive_keypad_actions
+            if not state.should_receive_keypad_actions:
+                extra_actions.append(
+                    InfraredSetShouldReceiveAction(should_receive=True),
+                )
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    is_registering_device=True,
+                    registration_signal_counts={},
+                    original_should_receive_keypad_actions=original_state,
+                ),
+                actions=extra_actions,
+                events=[InfraredDeviceRegistrationStartedEvent()],
+            )
+
+        case InfraredSetIsRegisteringDeviceAction():
+            restore_action = []
+            if not action.is_registering and state.is_registering_device:
+                original_state = state.original_should_receive_keypad_actions
+                if original_state is not None:
+                    restore_action = [
+                        InfraredSetShouldReceiveAction(
+                            should_receive=original_state,
+                        ),
+                    ]
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    is_registering_device=action.is_registering,
+                    registration_signal_counts=(
+                        {}
+                        if not action.is_registering
+                        else state.registration_signal_counts
+                    ),
+                    original_should_receive_keypad_actions=(
+                        None
+                        if not action.is_registering
+                        else state.original_should_receive_keypad_actions
+                    ),
+                ),
+                actions=restore_action,
+            )
+
+        case InfraredAddDeviceAction():
+            device_key = (action.protocol, action.scancode)
+            existing_device = next(
+                (
+                    device
+                    for device in state.registered_devices
+                    if (device.protocol, device.scancode) == device_key
+                ),
+                None,
+            )
+            if existing_device:
+                new_devices = [
+                    InfraredDevice(
+                        name=action.name,
+                        protocol=action.protocol,
+                        scancode=action.scancode,
+                    )
+                    if (device.protocol, device.scancode) == device_key
+                    else device
+                    for device in state.registered_devices
+                ]
+            else:
+                new_devices = [
+                    *state.registered_devices,
+                    InfraredDevice(
+                        name=action.name,
+                        protocol=action.protocol,
+                        scancode=action.scancode,
+                    ),
+                ]
+            return replace(
+                state,
+                registered_devices=new_devices,
+            )
+
+        case InfraredRemoveDeviceAction():
+            device_key = (action.protocol, action.scancode)
+            new_devices = [
+                device
+                for device in state.registered_devices
+                if (device.protocol, device.scancode) != device_key
+            ]
+            return replace(
+                state,
+                registered_devices=new_devices,
+            )
+
+        case InfraredHandleReceivedCodeAction() if state.is_registering_device:
+            ir_code_key = f'{action.protocol}:{action.scancode}'
+            current_count = state.registration_signal_counts.get(ir_code_key, 0)
+            new_count = current_count + 1
+
+            new_counts = {**state.registration_signal_counts, ir_code_key: new_count}
+
+            logger.info(
+                'Device registration: Signal received',
+                extra={
+                    'protocol': action.protocol,
+                    'scancode': action.scancode,
+                    'repetition_count': new_count,
+                },
+            )
+
+            if new_count >= REGISTRATION_REPEAT_COUNT:
+                logger.info(
+                    'Device registration complete',
+                    extra={
+                        'protocol': action.protocol,
+                        'scancode': action.scancode,
+                        'repetition_count': new_count,
+                    },
+                )
+                original_state = state.original_should_receive_keypad_actions
+                restore_action = (
+                    [InfraredSetShouldReceiveAction(should_receive=original_state)]
+                    if original_state is not None
+                    else []
+                )
+                return CompleteReducerResult(
+                    state=replace(
+                        state,
+                        is_registering_device=False,
+                        registration_signal_counts={},
+                        original_should_receive_keypad_actions=None,
+                    ),
+                    actions=[
+                        RgbRingBlankAction(),
+                        *restore_action,
+                    ],
+                    events=[
+                        InfraredDeviceRegistrationCompleteEvent(
+                            protocol=action.protocol,
+                            scancode=action.scancode,
+                        ),
+                    ],
+                )
+
+            return replace(
+                state,
+                registration_signal_counts=new_counts,
+            )
+
+        case KeypadKeyReleaseAction(key=Key.BACK) if state.is_registering_device:
+            logger.info('Device registration: Cancelled by BACK key')
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    RgbRingBlankAction(),
+                    InfraredSetIsRegisteringDeviceAction(is_registering=False),
+                ],
+            )
+
+        case KeypadKeyReleaseAction(key=Key.HOME) if state.is_registering_device:
+            logger.info('Device registration: Cancelled by HOME key')
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    RgbRingBlankAction(),
+                    InfraredSetIsRegisteringDeviceAction(is_registering=False),
+                ],
+            )
 
         case KeypadKeyPressAction() | KeypadKeyReleaseAction() if (
             state.should_propagate_keypad_actions

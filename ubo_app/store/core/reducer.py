@@ -23,17 +23,21 @@ from ubo_app.store.core.stack_ops import (
     pop_stack,
     pop_to_root,
     push_application,
+    push_instruction,
     push_menu,
     push_notification,
+    push_prompt,
     set_page_index,
 )
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     CloseApplicationAction,
+    CloseInstructionAction,
     DeregisterRegularAppAction,
     ExecuteMenuActionAction,
     ExecuteMenuActionEvent,
     InitEvent,
+    InstructionStackItem,
     MainAction,
     MainEvent,
     MainState,
@@ -69,14 +73,17 @@ from ubo_app.store.core.types import (
     StackPopItemAction,
     StackPopToRootAction,
     StackPushApplicationAction,
+    StackPushInstructionAction,
     StackPushMenuAction,
     StackPushNotificationAction,
+    StackPushPromptAction,
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     TakeScreenshotAction,
     ToggleRecordingAction,
     UpdateApplicationKwargsAction,
     UpdateCurrentViewAction,
+    UpdateInstructionProgressAction,
     ViewChangedEvent,
 )
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
@@ -197,6 +204,62 @@ def reducer(
                 state=new_state,
                 events=[StackChangedEvent(stack=new_state.stack)],
             )
+
+        case StackPushInstructionAction():
+            new_state = push_instruction(
+                state,
+                title=action.title,
+                instruction=action.instruction,
+                icon=action.icon,
+                spinner=action.spinner,
+                timeout_seconds=action.timeout_seconds,
+                footer_text=action.footer_text,
+            )
+            return CompleteReducerResult(
+                state=new_state,
+                events=[StackChangedEvent(stack=new_state.stack)],
+            )
+
+        case StackPushPromptAction():
+            new_state = push_prompt(
+                state,
+                title=action.title,
+                prompt=action.prompt,
+                icon=action.icon,
+                items=action.items,
+            )
+            return CompleteReducerResult(
+                state=new_state,
+                events=[StackChangedEvent(stack=new_state.stack)],
+            )
+
+        case CloseInstructionAction():
+            new_stack = tuple(
+                item
+                for item in state.stack
+                if not (
+                    isinstance(item, InstructionStackItem)
+                    and item.id == action.instruction_id
+                )
+            )
+            if new_stack == state.stack:
+                return state
+            new_path = derive_path_from_stack(new_stack)
+            new_state = replace(state, stack=new_stack, path=new_path)
+            return CompleteReducerResult(
+                state=new_state,
+                events=[StackChangedEvent(stack=new_state.stack)],
+            )
+
+        case UpdateInstructionProgressAction():
+            new_stack = tuple(
+                replace(item, progress_text=action.progress_text)
+                if isinstance(item, InstructionStackItem)
+                and item.id == action.instruction_id
+                else item
+                for item in state.stack
+            )
+            return replace(state, stack=new_stack)
 
         case StackPopAction():
             result = pop_stack(state, action.count)

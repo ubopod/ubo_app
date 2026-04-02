@@ -26,12 +26,16 @@ from ubo_app.store.core.types import (
     ApplicationViewData,
     DynamicMenuData,
     HomeViewData,
+    InstructionStackItem,
+    InstructionViewData,
     MainState,
     MenuItemData,
     MenuStackItem,
     MenuViewData,
     NotificationStackItem,
     NotificationViewData,
+    PromptStackItem,
+    PromptViewData,
     ViewData,
 )
 
@@ -218,6 +222,27 @@ def compute_view_from_dynamic_menus(
         return NotificationViewData(
             notification_id=top_item.notification_id,
             show_status_bar=False,
+        )
+
+    if isinstance(top_item, InstructionStackItem):
+        return InstructionViewData(
+            title=top_item.title,
+            instruction=top_item.instruction,
+            icon=top_item.icon,
+            spinner=top_item.spinner,
+            timeout_seconds=top_item.timeout_seconds,
+            progress_text=top_item.progress_text,
+            footer_text=top_item.footer_text,
+            stack_depth=len(stack),
+        )
+
+    if isinstance(top_item, PromptStackItem):
+        return PromptViewData(
+            title=top_item.title,
+            prompt=top_item.prompt,
+            icon=top_item.icon,
+            items=top_item.items,
+            stack_depth=len(stack),
         )
 
     if not isinstance(top_item, MenuStackItem):

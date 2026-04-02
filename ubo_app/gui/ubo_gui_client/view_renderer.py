@@ -34,7 +34,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-ViewType = Literal['home', 'menu', 'notification', 'application']
+ViewType = Literal[
+    'home', 'menu', 'notification', 'application', 'instruction', 'prompt',
+]
 
 
 def _noop() -> None:
@@ -229,10 +231,16 @@ class ViewRenderer:
             HomeViewData as ProtoHomeViewData,
         )
         from ubo_bindings.ubo.v1 import (
+            InstructionViewData as ProtoInstructionViewData,
+        )
+        from ubo_bindings.ubo.v1 import (
             MenuViewData as ProtoMenuViewData,
         )
         from ubo_bindings.ubo.v1 import (
             NotificationViewData as ProtoNotificationViewData,
+        )
+        from ubo_bindings.ubo.v1 import (
+            PromptViewData as ProtoPromptViewData,
         )
 
         view_type = type(view).__name__
@@ -255,6 +263,10 @@ class ViewRenderer:
             self._render_application_view(view)
         elif isinstance(view, ProtoNotificationViewData):
             self._render_notification_view(view)
+        elif isinstance(view, ProtoInstructionViewData):
+            self._render_instruction_view(view)
+        elif isinstance(view, ProtoPromptViewData):
+            self._render_prompt_view(view)
         else:
             logger.warning(
                 '[ViewRenderer] Unknown view type: %s (#%d)',
@@ -731,6 +743,96 @@ class ViewRenderer:
         if items and hasattr(widget, 'items'):
             padded_items = [None] * (PAGE_MAX_ITEMS - len(items)) + items
             widget.items = padded_items  # type: ignore[assignment]
+
+    def _render_instruction_view(self, view: object) -> None:
+        """Render an instruction/waiting view using a simple page widget."""
+        title = getattr(view, 'title', '') or ''
+        instruction = getattr(view, 'instruction', '') or ''
+        progress_text = getattr(view, 'progress_text', '') or ''
+        footer_text = getattr(view, 'footer_text', '') or ''
+        spinner = getattr(view, 'spinner', False) or False
+
+        # Build display text
+        lines = []
+        if instruction:
+            lines.append(instruction)
+        if progress_text:
+            lines.append(f'\n{progress_text}')
+        if footer_text:
+            lines.append(f'\n{footer_text}')
+        display_text = '\n'.join(lines)
+
+        # Use RawTextViewer for rendering
+        from ubo_gui_client.gui_utils import RawTextViewer
+
+        widget = RawTextViewer(text=display_text)
+
+        logger.info(
+            '[ViewRenderer] Instruction: title=%s, spinner=%s',
+            title,
+            spinner,
+        )
+        self.menu_widget.replace_top_with_application(widget, animated=True)
+        self._current_view_type = 'instruction'
+        self._last_menu_page_index = None
+        stack_depth = getattr(view, 'stack_depth', None)
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
+
+    def _render_prompt_view(self, view: object) -> None:
+        """Render a prompt/confirmation view using UboPromptWidget."""
+        from ubo_gui_client.gui_utils import UboPromptWidget
+
+        class _GenericPrompt(UboPromptWidget):
+            """Concrete prompt — button presses handled by core via keypad."""
+
+            def first_option_callback(self) -> None:
+                pass
+
+            def second_option_callback(self) -> None:
+                pass
+
+        prompt_text = getattr(view, 'prompt', '') or ''
+        title = getattr(view, 'title', '') or ''
+
+        # Extract items from the proto view
+        items_wrapper = getattr(view, 'items', None)
+        raw_items: list[object] = []
+        if items_wrapper is not None:
+            raw_items = getattr(items_wrapper, 'items', []) or []
+
+        widget = _GenericPrompt()
+        widget.prompt = prompt_text
+        widget.title = None  # type: ignore[assignment]
+
+        # Map first two items to first/second option
+        if len(raw_items) > 0:
+            first = raw_items[0]
+            widget.first_option_label = getattr(first, 'label', '') or ''
+            widget.first_option_icon = getattr(first, 'icon', '') or ''
+            widget.first_option_is_short = (
+                getattr(first, 'is_short', False) or False
+            )
+        if len(raw_items) > 1:
+            second = raw_items[1]
+            widget.second_option_label = getattr(second, 'label', '') or ''
+            widget.second_option_icon = getattr(second, 'icon', '') or ''
+            widget.second_option_is_short = (
+                getattr(second, 'is_short', False) or False
+            )
+
+        logger.info(
+            '[ViewRenderer] Prompt: title=%s, prompt=%s, items=%d',
+            title,
+            prompt_text,
+            len(raw_items),
+        )
+        self.menu_widget.replace_top_with_application(widget, animated=True)
+        self._current_view_type = 'prompt'
+        self._last_menu_page_index = None
+        stack_depth = getattr(view, 'stack_depth', None)
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
 
     @staticmethod
     def _item_data_to_action_item(item_data: object) -> ActionItem:

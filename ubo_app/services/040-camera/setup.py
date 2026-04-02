@@ -255,7 +255,7 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
 
         barcodes = decode(data)
         decoded_codes = [barcode.data.decode() for barcode in barcodes]
-        logger.info(
+        logger.debug(
             '[camera] pyzbar decoded %d barcode(s): %r (data shape=%s)',
             len(decoded_codes),
             decoded_codes,

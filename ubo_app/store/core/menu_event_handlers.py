@@ -48,6 +48,7 @@ if TYPE_CHECKING:
         HomeViewData,
         MenuItemData,
         MenuViewData,
+        PromptStackItem,
         StackItemType,
     )
     from ubo_app.store.main import RootState
@@ -394,6 +395,7 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         ApplicationStackItem,
         HomeViewData,
         MenuViewData,
+        PromptStackItem,
     )
 
     @store.with_state(lambda state: state)
@@ -426,6 +428,8 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         _handle_menu_view_index(current_view, event.index)
     elif isinstance(top, ApplicationStackItem):
         _handle_application_view_index(top, event.index)
+    elif isinstance(top, PromptStackItem):
+        _handle_prompt_view_index(top, event.index)
     else:
         logger.debug(
             '[MenuHandler] choose_by_index: unhandled view type %s',
@@ -449,6 +453,41 @@ def _handle_application_view_index(
         action_id,
     )
     store.dispatch(ExecuteMenuActionAction(action_id=action_id))
+
+
+def _handle_prompt_view_index(
+    top: PromptStackItem,
+    index: int,
+) -> None:
+    """Handle button press on a prompt view.
+
+    Maps the button index to the prompt's items and executes the action_id.
+    Prompt items are bottom-aligned (like notification items), so index 1
+    maps to the first item, index 2 to the second, etc.
+    """
+    from ubo_app.store.core.constants import PAGE_SIZE
+
+    items = top.items
+    if not items:
+        return
+
+    # Items are bottom-aligned: index maps from PAGE_SIZE - len(items)
+    item_index = index - (PAGE_SIZE - len(items))
+    if item_index < 0 or item_index >= len(items):
+        logger.debug(
+            '[MenuHandler] choose_by_index: prompt index %d out of range',
+            index,
+        )
+        return
+
+    item = items[item_index]
+    if item and item.action_id:
+        logger.info(
+            '[MenuHandler] choose_by_index: prompt action_id=%s for label=%s',
+            item.action_id,
+            item.label,
+        )
+        store.dispatch(ExecuteMenuActionAction(action_id=item.action_id))
 
 
 def _get_current_view_items(

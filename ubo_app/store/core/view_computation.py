@@ -24,11 +24,15 @@ from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
     HomeViewData,
+    InstructionStackItem,
+    InstructionViewData,
     MenuStackItem,
     MenuViewData,
     NotificationStackItem,
     NotificationViewData,
     ProgressNotificationData,
+    PromptStackItem,
+    PromptViewData,
     StatusBarData,
     StatusIconData,
 )
@@ -262,7 +266,7 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     )
 
 
-def compute_view_from_root_state(state: RootState) -> ViewData:
+def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901
     """Compute ViewData from the full RootState, using dynamic menus.
 
     This is the dumb UI architecture's view computation function. It uses
@@ -300,6 +304,29 @@ def compute_view_from_root_state(state: RootState) -> ViewData:
         return get_notification_view_data(
             state,
             top_item.notification_id,
+            stack_depth=len(stack),
+        )
+
+    # Handle instruction views
+    if isinstance(top_item, InstructionStackItem):
+        return InstructionViewData(
+            title=top_item.title,
+            instruction=top_item.instruction,
+            icon=top_item.icon,
+            spinner=top_item.spinner,
+            timeout_seconds=top_item.timeout_seconds,
+            progress_text=top_item.progress_text,
+            footer_text=top_item.footer_text,
+            stack_depth=len(stack),
+        )
+
+    # Handle prompt views
+    if isinstance(top_item, PromptStackItem):
+        return PromptViewData(
+            title=top_item.title,
+            prompt=top_item.prompt,
+            icon=top_item.icon,
+            items=top_item.items,
             stack_depth=len(stack),
         )
 

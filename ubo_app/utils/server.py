@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING, Literal, overload
 
 from ubo_app.constants import SERVER_SOCKET_PATH
@@ -10,7 +11,7 @@ from ubo_app.logger import logger
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
 
 @overload
@@ -24,12 +25,12 @@ async def send_command(
 async def send_command(
     *command: str,
     has_output_stream: Literal[True],
-) -> AsyncIterator[str]: ...
-async def send_command(
+) -> AsyncGenerator[str]: ...
+async def send_command(  # noqa: C901
     *command_: str,
     has_output: bool = False,
     has_output_stream: bool = False,
-) -> AsyncIterator[str] | str | None:
+) -> AsyncGenerator[str] | str | None:
     """Send a command to the system manager socket."""
     if not IS_RPI:
         return None
@@ -54,18 +55,36 @@ async def send_command(
 
         if has_output_stream:
 
-            async def generator() -> AsyncIterator[str]:
-                while datagram := (await reader.readuntil(b'\0'))[:-1]:
-                    yield datagram.decode('utf-8')
-                    logger.debug(
-                        'Server response:',
-                        extra={
-                            'command': command,
-                            'response': datagram.decode('utf-8'),
-                        },
-                    )
-
-                writer.close()
+            async def generator() -> AsyncGenerator[str]:
+                try:
+                    while True:
+                        try:
+                            datagram = await reader.readuntil(b'\0')
+                            datagram = datagram[:-1]  # Remove null terminator
+                            if not datagram:
+                                break
+                            yield datagram.decode('utf-8')
+                            logger.debug(
+                                'Server response:',
+                                extra={
+                                    'command': command,
+                                    'response': datagram.decode('utf-8'),
+                                },
+                            )
+                        except asyncio.CancelledError:
+                            if not writer.is_closing():
+                                writer.close()
+                            with contextlib.suppress(
+                                OSError,
+                                RuntimeError,
+                            ):
+                                await writer.wait_closed()
+                            raise
+                finally:
+                    if not writer.is_closing():
+                        writer.close()
+                    with contextlib.suppress(OSError, RuntimeError):
+                        await writer.wait_closed()
 
             return generator()
 

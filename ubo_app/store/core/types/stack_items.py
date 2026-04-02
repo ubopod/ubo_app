@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, TypeAlias
 from immutable import Immutable
 
 if TYPE_CHECKING:
+    from ubo_app.store.core.types.view_data import MenuItemData
     from ubo_app.store.ubo_actions import BasicType
 
 
@@ -77,5 +78,40 @@ class NotificationStackItem(Immutable):
     notification_id: str  # ID of the notification
 
 
+class InstructionStackItem(Immutable):
+    """Redux representation of an instruction/waiting view in the navigation stack.
+
+    Shows instructions and waits for an external event (e.g., IR registration).
+    """
+
+    id: str
+    title: str = ''
+    instruction: str = ''
+    icon: str = ''
+    spinner: bool = False
+    timeout_seconds: int = 0
+    progress_text: str = ''
+    footer_text: str = ''
+
+
+class PromptStackItem(Immutable):
+    """Redux representation of a prompt/confirmation view in the navigation stack.
+
+    Shows a prompt with action buttons (e.g., Yes/Cancel).
+    """
+
+    id: str
+    title: str = ''
+    prompt: str = ''
+    icon: str = ''
+    items: tuple[MenuItemData, ...] = ()
+
+
 # Type alias for any stack item
-StackItemType: TypeAlias = MenuStackItem | ApplicationStackItem | NotificationStackItem
+StackItemType: TypeAlias = (
+    MenuStackItem
+    | ApplicationStackItem
+    | NotificationStackItem
+    | InstructionStackItem
+    | PromptStackItem
+)
