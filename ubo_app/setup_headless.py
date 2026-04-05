@@ -141,13 +141,17 @@ def setup_headless() -> None:
         from ubo_app.store.services.ethernet import NetState
         from ubo_app.utils import server
 
-        server.send_command = lambda command, *_, has_output=False: Fake(
-            _Fake__await_value={
-                'connection': Fake(items=[NetState.CONNECTED]),
-                'users': Fake(items=['username:password']),
-            }.get(command, 'done')
-            if has_output
-            else 0,  # python-fake will ignore `await_value` if it is `None`
+        server.send_command = (
+            lambda command, *_, has_output=False, has_output_stream=False: Fake(
+                _Fake__await_value={
+                    'connection': Fake(items=[NetState.CONNECTED]),
+                    'users': Fake(items=['username:password']),
+                }.get(command, 'done')
+                if has_output
+                else None
+                if has_output_stream
+                else 0,  # python-fake will ignore `await_value` if it is `None`
+            )
         )
 
         from ubo_app.utils import network
