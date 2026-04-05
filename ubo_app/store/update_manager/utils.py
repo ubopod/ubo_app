@@ -166,6 +166,19 @@ Once the download is complete, ubo app will quit and the new version will run.""
 )
 
 
+async def _get_pypi_sdist_url(version: str | None) -> str:
+    """Fetch the sdist download URL from the PyPI JSON API."""
+    api_url = f'https://pypi.org/pypi/ubo-app/{version}/json'
+    async with aiohttp.ClientSession() as session, session.get(api_url) as response:
+        response.raise_for_status()
+        data = await response.json()
+    for url_info in data.get('urls', []):
+        if url_info.get('packagetype') == 'sdist':
+            return url_info['url']
+    msg = f'No sdist found on PyPI for ubo-app=={version}'
+    raise RuntimeError(msg)
+
+
 async def _update(target_version: str | None) -> None:
     store.dispatch(NotificationsAddAction(notification=UPDATE_PROGRESS_NOTIFICATION))
 
@@ -180,8 +193,10 @@ async def _update(target_version: str | None) -> None:
         packages_count = 112
     counter = 0
 
+    sdist_url = await _get_pypi_sdist_url(target_version)
+
     async for report in download_file(
-        url=f'https://files.pythonhosted.org/packages/source/u/ubo_app/ubo_app-{target_version}.tar.gz',
+        url=sdist_url,
         path=UPDATE_ASSETS_PATH / 'package.tar.gz',
     ):
         store.dispatch(
