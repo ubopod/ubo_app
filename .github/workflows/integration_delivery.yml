@@ -445,7 +445,7 @@ jobs:
           if [ "$MATRIX_SUFFIX" = "lite" ]; then
             IMAGE_SIZE_GB=6.5
           elif [ "$MATRIX_SUFFIX" = "" ]; then
-            IMAGE_SIZE_GB=8
+            IMAGE_SIZE_GB=10
           else
             IMAGE_SIZE_GB=13
           fi
