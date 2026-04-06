@@ -247,33 +247,44 @@ def _prepare(
         raise
 
 
+def _setup_single_service(ubo_service_path: Path) -> None:
+    """Set up a single ubo service with its own virtual env."""
+    setup_script_path = ubo_service_path / 'ubo-setup.sh'
+    if not setup_script_path.exists():
+        return
+
+    stdout.write(f'Setting up ubo service {ubo_service_path}\n')
+    stdout.flush()
+
+    service_installation_path = ubo_service_path / 'ubo-service'
+    shutil.rmtree(service_installation_path, ignore_errors=True)
+    service_installation_path.mkdir()
+    os.chown(service_installation_path, USER_UID, USER_GID)
+
+    subprocess.run(  # noqa: S602
+        f'source {service_installation_path / "bin" / "activate"} && '
+        f'{setup_script_path.absolute()}',
+        preexec_fn=functools.partial(
+            _prepare,
+            service_installation_path,
+        ),
+        cwd=service_installation_path,
+        executable='/bin/bash',
+        shell=True,
+        check=True,
+    )
+
+
 def setup_ubo_services() -> None:
     """Install dependencies of ubo services that run in their own virtual envs."""
     ubo_services_search_path = Path(__file__).parent.parent / 'services'
 
     for ubo_service_path in ubo_services_search_path.iterdir():
-        setup_script_path = ubo_service_path / 'ubo-setup.sh'
-        if setup_script_path.exists():
-            stdout.write(f'Setting up ubo service {ubo_service_path}')
-            stdout.flush()
+        _setup_single_service(ubo_service_path)
 
-            service_installation_path = ubo_service_path / 'ubo-service'
-            shutil.rmtree(service_installation_path, ignore_errors=True)
-            service_installation_path.mkdir()
-            os.chown(service_installation_path, USER_UID, USER_GID)
-
-            subprocess.run(  # noqa: S602
-                f'source {service_installation_path / "bin" / "activate"} && '
-                f'{setup_script_path.absolute()}',
-                preexec_fn=functools.partial(
-                    _prepare,
-                    service_installation_path,
-                ),
-                cwd=service_installation_path,
-                executable='/bin/bash',
-                shell=True,
-                check=True,
-            )
+    # Also set up the GUI client (same pattern, different location)
+    gui_path = Path(__file__).parent.parent / 'gui'
+    _setup_single_service(gui_path)
 
 
 def bootstrap(*, in_packer: bool = False) -> None:

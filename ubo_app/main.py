@@ -28,8 +28,8 @@ def _find_executable(name: str) -> Path | None:
     if candidate.is_file() and os.access(candidate, os.X_OK):
         return candidate
 
-    # Also check the GUI subpackage's venv (ubo_app/gui/.venv/bin/)
-    gui_venv = Path(__file__).parent / 'gui' / '.venv' / 'bin' / name
+    # Also check the GUI subpackage's venv (ubo_app/gui/ubo-service/bin/)
+    gui_venv = Path(__file__).parent / 'gui' / 'ubo-service' / 'bin' / name
     if gui_venv.is_file() and os.access(gui_venv, os.X_OK):
         return gui_venv
 
