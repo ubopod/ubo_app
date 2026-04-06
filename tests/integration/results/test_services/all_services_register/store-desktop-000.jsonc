@@ -189,6 +189,10 @@
   },
   "infrared": {
     "_type": "InfraredState",
+    "is_registering_device": false,
+    "original_should_receive_keypad_actions": null,
+    "registered_devices": [],
+    "registration_signal_counts": {},
     "should_propagate_keypad_actions": false,
     "should_receive_keypad_actions": false
   },
@@ -1118,6 +1122,26 @@
         "phrase": [
           "Activate Down Button",
           "Scroll Down"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_id": "speech:ir-receive-on",
+        "phrase": [
+          "Enable Receive Keys",
+          "Turn on Receive Keys",
+          "Start Receiving IR",
+          "Enable IR Receiver"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_id": "speech:ir-receive-off",
+        "phrase": [
+          "Disable Receive Keys",
+          "Turn off Receive Keys",
+          "Stop Receiving IR",
+          "Disable IR Receiver"
         ]
       }
     ],
