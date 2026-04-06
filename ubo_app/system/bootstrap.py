@@ -282,10 +282,6 @@ def setup_ubo_services() -> None:
     for ubo_service_path in ubo_services_search_path.iterdir():
         _setup_single_service(ubo_service_path)
 
-    # Also set up the GUI client (same pattern, different location)
-    gui_path = Path(__file__).parent.parent / 'gui'
-    _setup_single_service(gui_path)
-
 
 def bootstrap(*, in_packer: bool = False) -> None:
     """Create the service files and enable the services."""

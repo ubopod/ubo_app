@@ -188,6 +188,19 @@ $VERSION_ENVIRONMENT/bin/python -m pip install${WHEELS_DIRECTORY:+ --pre --find-
 
 echo "${SOURCE} installed successfully in $VERSION_ENVIRONMENT."
 
+# Install GUI client in its own isolated venv to avoid dependency conflicts
+GUI_ENVIRONMENT="$INSTALLATION_PATH/gui-client"
+GUI_SOURCE="ubo-gui-client${TARGET_VERSION:+==$TARGET_VERSION}"
+echo "Installing ${GUI_SOURCE} in $GUI_ENVIRONMENT..."
+rm -rf "$GUI_ENVIRONMENT"
+if virtualenv --system-site-packages "$GUI_ENVIRONMENT" && \
+   $GUI_ENVIRONMENT/bin/python -m pip install${WHEELS_DIRECTORY:+ --pre --find-links="$WHEELS_DIRECTORY"} "$GUI_SOURCE" --force-reinstall; then
+  echo "ubo-gui-client installed successfully in $GUI_ENVIRONMENT."
+else
+  echo "WARNING: Failed to install ubo-gui-client. GUI may not be available."
+  rm -rf "$GUI_ENVIRONMENT"
+fi
+
 UBO_APP_DIR=$($VERSION_ENVIRONMENT/bin/python -c 'import ubo_app; print(ubo_app.__path__[0])')
 
 if [ -z "$WITHOUT_WM8960" ]; then
