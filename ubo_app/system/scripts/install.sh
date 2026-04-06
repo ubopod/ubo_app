@@ -89,6 +89,14 @@ if [ -z "$TARGET_VERSION" ]; then
   fi
 fi
 
+# Enable --pre for dev versions so pip resolves internal packages correctly
+PRE_FLAG=""
+if [[ "$TARGET_VERSION" == *"dev"* ]]; then
+  PRE_FLAG="--pre"
+fi
+export PRE_FLAG
+export TARGET_VERSION
+
 echo "----------------------------------------------"
 echo "Parameters:"
 echo "USERNAME: \"$USERNAME\""
@@ -183,8 +191,9 @@ fi
 setup_virtualenv
 
 SOURCE="ubo-app${TARGET_VERSION:+==$TARGET_VERSION}"
-echo "Installing ${SOURCE} in $VERSION_ENVIRONMENT..."
-$VERSION_ENVIRONMENT/bin/python -m pip install${WHEELS_DIRECTORY:+ --pre --find-links="$WHEELS_DIRECTORY"} "$SOURCE" --force-reinstall | tee >(grep -c '^Collecting ' >"$INSTALLATION_PATH/.packages-count")
+BINDINGS_SOURCE="ubo-app-raw-bindings${TARGET_VERSION:+==$TARGET_VERSION}"
+echo "Installing ${SOURCE} and ${BINDINGS_SOURCE} in $VERSION_ENVIRONMENT..."
+$VERSION_ENVIRONMENT/bin/python -m pip install $PRE_FLAG${WHEELS_DIRECTORY:+ --find-links="$WHEELS_DIRECTORY"} "$SOURCE" "$BINDINGS_SOURCE" --force-reinstall | tee >(grep -c '^Collecting ' >"$INSTALLATION_PATH/.packages-count")
 
 echo "${SOURCE} installed successfully in $VERSION_ENVIRONMENT."
 
@@ -194,7 +203,7 @@ GUI_SOURCE="ubo-gui-client${TARGET_VERSION:+==$TARGET_VERSION}"
 echo "Installing ${GUI_SOURCE} in $GUI_ENVIRONMENT..."
 rm -rf "$GUI_ENVIRONMENT"
 if virtualenv --system-site-packages "$GUI_ENVIRONMENT" && \
-   $GUI_ENVIRONMENT/bin/python -m pip install${WHEELS_DIRECTORY:+ --pre --find-links="$WHEELS_DIRECTORY"} "$GUI_SOURCE" --force-reinstall; then
+   $GUI_ENVIRONMENT/bin/python -m pip install $PRE_FLAG${WHEELS_DIRECTORY:+ --find-links="$WHEELS_DIRECTORY"} "$GUI_SOURCE" "$BINDINGS_SOURCE" --force-reinstall; then
   echo "ubo-gui-client installed successfully in $GUI_ENVIRONMENT."
 else
   echo "WARNING: Failed to install ubo-gui-client. GUI may not be available."
