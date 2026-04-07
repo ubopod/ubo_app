@@ -30,7 +30,7 @@ function run_on_pod() {
     return 1
   fi
   if [ $# -eq 1 ]; then
-    ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/env/bin/activate && $1'"
+    ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && source /opt/ubo/gui-client/bin/activate && $1'"
     return 0
   fi
   return 1
@@ -47,6 +47,12 @@ function run_on_pod_as_root() {
   fi
   return 1
 }
+
+# Ensure the gui-client venv exists on the device (backward compat with older installs)
+run_on_pod_as_root "if [ ! -d /opt/ubo/gui-client ]; then
+  virtualenv --system-site-packages /opt/ubo/gui-client &&
+  chown -R ubo:ubo /opt/ubo/gui-client
+fi"
 
 run_on_pod_as_root "rm /tmp/ubo_gui_client*.whl || true"
 scp dist/$LATEST_WHEEL ubo-development-pod-$index:/tmp/
