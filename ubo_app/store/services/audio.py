@@ -100,6 +100,10 @@ class AudioStartRecordingAction(AudioAction):
     """Start recording action."""
 
 
+class AudioStopPlaybackAction(AudioAction):
+    """Stop all audio playback."""
+
+
 class AudioStopRecordingAction(AudioAction):
     """Stop recording action."""
 
@@ -148,6 +152,10 @@ class AudioPlayAudioSequenceEvent(AudioEvent):
     sample: AudioSample | None
     id: str
     index: int
+
+
+class AudioStopPlaybackEvent(AudioEvent):
+    """Stop all audio playback event."""
 
 
 class AudioPlaybackDoneEvent(AudioEvent):

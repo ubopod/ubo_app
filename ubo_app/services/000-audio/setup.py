@@ -25,6 +25,7 @@ from ubo_app.store.services.audio import (
     AudioPlayChimeEvent,
     AudioSample,
     AudioSetMuteStatusAction,
+    AudioStopPlaybackEvent,
 )
 from ubo_app.store.services.notifications import (
     Chime,
@@ -215,12 +216,18 @@ def init_service() -> Subscriptions:
         lambda state: state.audio.is_capture_mute,
     )
 
+    def stop_playback(_: AudioStopPlaybackEvent) -> None:
+        import simpleaudio
+
+        simpleaudio.stop_all()
+
     return [
         audio_manager.close,
         store.subscribe_event(AudioInstallDriverEvent, _install_driver),
         store.subscribe_event(AudioPlayChimeEvent, play_chime),
         store.subscribe_event(AudioPlayAudioSampleEvent, play_audio),
         store.subscribe_event(AudioPlayAudioSequenceEvent, play_audio),
+        store.subscribe_event(AudioStopPlaybackEvent, stop_playback),
         unregister_volume,
         unregister_recording,
         unregister_volume_data,

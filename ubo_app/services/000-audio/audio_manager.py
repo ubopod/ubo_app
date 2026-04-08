@@ -61,6 +61,12 @@ class AudioManager:
 
     def __init__(self) -> None:
         """Initialize the audio manager."""
+        import atexit
+
+        # Ensure native audio threads are stopped on process exit,
+        # even if close() is not called (e.g. SIGTERM, Ctrl+C).
+        atexit.register(simpleaudio.stop_all)
+
         # create an audio object
         self.has_speakers = False
         self.has_microphones = False
@@ -99,6 +105,8 @@ class AudioManager:
 
     def close(self) -> None:
         """Close the audio manager."""
+        # Stop any in-progress playback so native threads don't outlive the process
+        simpleaudio.stop_all()
         # Close the audio buffers
         with self.audio_buffers_lock:
             self.audio_buffers.clear()

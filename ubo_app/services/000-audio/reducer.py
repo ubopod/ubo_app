@@ -31,6 +31,8 @@ from ubo_app.store.services.audio import (
     AudioSetVolumeAction,
     AudioStartRecordingAction,
     AudioState,
+    AudioStopPlaybackAction,
+    AudioStopPlaybackEvent,
     AudioStopRecordingAction,
     AudioToggleMuteStatusAction,
     AudioToggleRecordingAction,
@@ -137,6 +139,12 @@ def reducer(
                         index=action.index,
                     ),
                 ],
+            )
+
+        case AudioStopPlaybackAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AudioStopPlaybackEvent()],
             )
 
         case AudioPlayAudioSampleAction():
