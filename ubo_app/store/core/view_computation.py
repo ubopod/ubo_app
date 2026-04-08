@@ -98,6 +98,7 @@ def get_notification_view_data(
     notification_id: str,
     *,
     stack_depth: int = 1,
+    page_index: int = 0,
 ) -> NotificationViewData:
     """Build NotificationViewData with full notification details from state.
 
@@ -105,6 +106,7 @@ def get_notification_view_data(
         state: The full Redux RootState.
         notification_id: The ID of the notification to look up.
         stack_depth: Navigation stack depth for transition animation hints.
+        page_index: Current page index for paginated actions.
 
     Returns:
         NotificationViewData with title, content, icon, color, and items populated.
@@ -171,6 +173,12 @@ def get_notification_view_data(
                 ),
             )
 
+        # Compute pagination metadata — the full item list is sent to the
+        # GUI which handles per-page slicing and half-item peek rendering,
+        # just like MenuViewData.
+        total_pages = compute_total_pages(len(items))
+        page_index = min(page_index, max(total_pages - 1, 0))
+
         # Extract extra information text if available
         extra_info_text = ''
         if notification.extra_information:
@@ -184,6 +192,8 @@ def get_notification_view_data(
             color=notification.color,
             items=tuple(items),
             extra_information=extra_info_text,
+            page_index=page_index,
+            total_pages=total_pages,
             show_status_bar=False,
             stack_depth=stack_depth,
         )
@@ -305,6 +315,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901
             state,
             top_item.notification_id,
             stack_depth=len(stack),
+            page_index=top_item.page_index,
         )
 
     # Handle instruction views
@@ -360,37 +371,43 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901
             volume_level=volume_level,
         )
 
-    # Try to find a dynamic menu for the current position
-    dynamic_match = find_dynamic_menu_for_position(
-        main_state,
-        dynamic_menus_state,
-        stack,
-    )
+    # First, try direct lookup: the top stack item's menu_key may itself
+    # be a registered dynamic menu ID (e.g. filesystem directories use
+    # 'file-system:dir:/path' as both the menu_key and the dynamic menu ID).
+    direct_menu = dynamic_menus_state.menus.get(top_item.menu_key)
+    if direct_menu is None:
+        # Fall back to path-based matching for services where menu_key
+        # differs from the dynamic menu ID.
+        dynamic_match = find_dynamic_menu_for_position(
+            main_state,
+            dynamic_menus_state,
+            stack,
+        )
+        if dynamic_match is not None:
+            menu_id, _ = dynamic_match
+            direct_menu = dynamic_menus_state.menus.get(menu_id)
 
-    if dynamic_match is not None:
-        menu_id, title = dynamic_match
-        dynamic_menu = dynamic_menus_state.menus.get(menu_id)
-        if dynamic_menu:
-            items = dynamic_menu.items
-            total_pages = compute_total_pages(
-                len(items),
-                is_headed=dynamic_menu.heading is not None,
-            )
-            # Clamp page_index to valid range in case dynamic menu
-            # items changed and the old page_index is now out of bounds.
-            page_index = min(top_item.page_index, max(total_pages - 1, 0))
+    if direct_menu is not None:
+        items = direct_menu.items
+        total_pages = compute_total_pages(
+            len(items),
+            is_headed=direct_menu.heading is not None,
+        )
+        # Clamp page_index to valid range in case dynamic menu
+        # items changed and the old page_index is now out of bounds.
+        page_index = min(top_item.page_index, max(total_pages - 1, 0))
 
-            return MenuViewData(
-                show_status_bar=page_index == 0,
-                title=title,
-                heading=dynamic_menu.heading,
-                sub_heading=dynamic_menu.sub_heading,
-                items=items,
-                placeholder=dynamic_menu.placeholder,
-                page_index=page_index,
-                total_pages=total_pages,
-                stack_depth=len(stack),
-            )
+        return MenuViewData(
+            show_status_bar=page_index == 0,
+            title=direct_menu.title,
+            heading=direct_menu.heading,
+            sub_heading=direct_menu.sub_heading,
+            items=items,
+            placeholder=direct_menu.placeholder,
+            page_index=page_index,
+            total_pages=total_pages,
+            stack_depth=len(stack),
+        )
 
     # No dynamic menu found - return empty menu view
     return MenuViewData(
@@ -408,7 +425,10 @@ def _dispatch_view_update(state: RootState) -> None:
     if not hasattr(state, 'main'):
         return
     from ubo_app.store.core.types import (
+        MenuStackItem,
         MenuViewData,
+        NotificationStackItem,
+        NotificationViewData,
         StackSetPageIndexAction,
         UpdateCurrentViewAction,
     )
@@ -422,15 +442,16 @@ def _dispatch_view_update(state: RootState) -> None:
 
     # If the view clamped page_index, sync it back to the stack item to
     # prevent stale page indices from resurfacing when items change later.
-    if (
-        isinstance(computed_view, MenuViewData)
-        and state.main.stack
-        and isinstance(state.main.stack[-1], MenuStackItem)
-        and computed_view.page_index != state.main.stack[-1].page_index
-    ):
-        store.dispatch(
-            StackSetPageIndexAction(page_index=computed_view.page_index),
-        )
+    if state.main.stack:
+        top = state.main.stack[-1]
+        if (
+            isinstance(computed_view, (MenuViewData, NotificationViewData))
+            and isinstance(top, (MenuStackItem, NotificationStackItem))
+            and computed_view.page_index != top.page_index
+        ):
+            store.dispatch(
+                StackSetPageIndexAction(page_index=computed_view.page_index),
+            )
 
     if view_changed or status_bar_changed:
         logger.debug(

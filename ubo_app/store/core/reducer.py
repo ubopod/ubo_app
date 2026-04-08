@@ -53,6 +53,8 @@ from ubo_app.store.core.types import (
     MenuScrollDirection,
     MenuStackItem,
     MenuViewData,
+    NotificationStackItem,
+    NotificationViewData,
     OpenApplicationAction,
     PowerOffAction,
     PowerOffEvent,
@@ -151,18 +153,20 @@ def reducer(
 
         case MenuScrollAction():
             current_view = state.current_view
-            if (
-                not isinstance(current_view, MenuViewData)
-                or current_view.total_pages <= 0
-            ):
+            total_pages = 1
+            if isinstance(current_view, (MenuViewData, NotificationViewData)):
+                total_pages = current_view.total_pages
+            else:
+                return state
+            if total_pages <= 1:
                 return state
             top = state.stack[-1] if state.stack else None
-            if not isinstance(top, MenuStackItem):
+            if not isinstance(top, (MenuStackItem, NotificationStackItem)):
                 return state
             if action.direction == MenuScrollDirection.UP:
-                new_page = (top.page_index - 1) % current_view.total_pages
+                new_page = (top.page_index - 1) % total_pages
             else:
-                new_page = (top.page_index + 1) % current_view.total_pages
+                new_page = (top.page_index + 1) % total_pages
             if new_page == top.page_index:
                 return state
             page_result = set_page_index(state, new_page)

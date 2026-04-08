@@ -71,17 +71,37 @@ def _get_visible_items() -> tuple[MenuItemData | None, ...]:
     if isinstance(current_view, HomeViewData):
         return current_view.menu_items
     if isinstance(current_view, MenuViewData):
-        return current_view.items
-    if isinstance(current_view, NotificationViewData):
-        # Notification items are bottom-aligned in PAGE_SIZE=3 slots.
-        # Pad with None at the start so that the index matches what
-        # _handle_notification_choose_by_index expects.
-        from ubo_app.store.core.constants import PAGE_SIZE
+        # Slice to the current page, accounting for headed menus where
+        # heading + sub_heading occupy visual slots on page 0.
+        from ubo_app.store.core.constants import HEADED_MENU_HEADER_SLOTS, PAGE_SIZE
 
-        items = current_view.items
-        real_items = [i for i in items if i is not None]
-        pad = PAGE_SIZE - len(real_items)
-        return (None,) * pad + tuple(real_items)
+        items = [i for i in current_view.items if i is not None]
+        header_offset = (
+            HEADED_MENU_HEADER_SLOTS if current_view.heading is not None else 0
+        )
+        if current_view.page_index == 0:
+            page_start = 0
+            page_end = PAGE_SIZE - header_offset
+        else:
+            page_start = current_view.page_index * PAGE_SIZE - header_offset
+            page_end = page_start + PAGE_SIZE
+        visible = items[page_start:page_end]
+        if current_view.page_index == 0 and header_offset:
+            return (None,) * header_offset + tuple(visible)
+        return tuple(visible)
+    if isinstance(current_view, NotificationViewData):
+        # Slice to the current page. Single-page → bottom-aligned,
+        # multi-page → top-aligned (matches core handler + GUI renderer).
+        from ubo_app.store.core.constants import PAGE_SIZE, compute_total_pages
+
+        real_items = [i for i in current_view.items if i is not None]
+        total_pages = compute_total_pages(len(real_items))
+        page_start = current_view.page_index * PAGE_SIZE
+        page_items = real_items[page_start : page_start + PAGE_SIZE]
+        if total_pages <= 1:
+            pad = max(PAGE_SIZE - len(page_items), 0)
+            return (None,) * pad + tuple(page_items)
+        return tuple(page_items)
     msg = f'Unsupported view type: {type(current_view)}'
     raise TypeError(msg)
 

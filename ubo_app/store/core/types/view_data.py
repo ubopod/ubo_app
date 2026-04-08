@@ -60,7 +60,8 @@ class MenuViewData(Immutable):
     title: str = ''
     heading: str | None = None  # Optional heading (for HeadedMenu)
     sub_heading: str | None = None  # Optional sub-heading (for HeadedMenu)
-    items: tuple[MenuItemData | None, ...] = ()  # Items for current page
+    # All menu items (GUI handles per-page slicing)
+    items: tuple[MenuItemData | None, ...] = ()
     placeholder: str | None = None  # Text shown when items is empty
     page_index: int = 0
     total_pages: int = 1
@@ -93,8 +94,11 @@ class NotificationViewData(Immutable):
     content: str = ''
     icon: str = ''
     color: str = '#ffffff'
-    items: tuple[MenuItemData | None, ...] = ()  # Action items (camera, web UI, etc.)
+    # All notification action items (pagination handled by renderer)
+    items: tuple[MenuItemData | None, ...] = ()
     extra_information: str = ''  # Additional info shown when "i" button is pressed
+    page_index: int = 0
+    total_pages: int = 1
     stack_depth: int = 1  # Navigation stack depth (for push/pop animation)
 
 

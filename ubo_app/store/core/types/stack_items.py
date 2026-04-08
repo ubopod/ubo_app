@@ -76,6 +76,7 @@ class NotificationStackItem(Immutable):
 
     id: str  # Unique stack item ID
     notification_id: str  # ID of the notification
+    page_index: int = 0
 
 
 class InstructionStackItem(Immutable):

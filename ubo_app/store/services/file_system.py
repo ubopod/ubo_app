@@ -33,6 +33,10 @@ class FileSystemReportSelectionAction(FileSystemAction):
     path: str
 
 
+class FileSystemSelectorPushedAction(FileSystemAction):
+    """Track when a menu is pushed during selector navigation."""
+
+
 class FileSystemCopyAction(FileSystemAction):
     """Copy files or directories to a new location."""
 
@@ -83,8 +87,16 @@ class FileSystemRemoveEvent(FileSystemEvent):
     paths: Sequence[str]
 
 
+class FileSystemSelectorCleanupEvent(FileSystemEvent):
+    """Event emitted when selector mode ends (success or cancel).
+
+    Subscribers should restore browse-mode menus and clean up selector state.
+    """
+
+
 class FileSystemState(Immutable):
     """State for the file system service."""
 
     current_input: PathInputDescription | None = None
     queue: list[PathInputDescription]
+    selector_depth: int = 0

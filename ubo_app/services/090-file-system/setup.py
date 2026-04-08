@@ -5,7 +5,11 @@ from __future__ import annotations
 import functools
 
 from constants import SELECTOR_APPLICATION_ID
-from file_application import open_path
+from file_application import (
+    _cleanup_selector_autoruns,
+    _file_info_notification_id,
+    open_path,
+)
 
 from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.core.types import RegisterRegularAppAction
@@ -16,18 +20,26 @@ from ubo_app.store.services.file_system import (
     FileSystemMoveEvent,
     FileSystemRemoveEvent,
     FileSystemSelectEvent,
+    FileSystemSelectorCleanupEvent,
 )
 from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
+    NotificationsClearByIdAction,
 )
+from ubo_app.utils.async_ import create_task
+
+
+async def _deferred_selector_cleanup() -> None:
+    """Run selector cleanup outside the dispatch cycle."""
+    _cleanup_selector_autoruns()
 
 
 def _file_system_path_matcher(path: tuple[str, ...]) -> str | None:
     """Match file system navigation paths to dynamic menu IDs."""
-    for element in path:
+    for element in reversed(path):
         if element.startswith('file-system:dir:'):
             return element
     return None
@@ -88,34 +100,91 @@ def init_service() -> None:
         from shutil import copyfile, copytree
 
         destination = Path(event.destination)
+        names = []
         for source_str in event.sources:
             source = Path(source_str)
+            names.append(source.name)
             if source.is_dir():
                 copytree(source, destination / source.name)
             else:
                 copyfile(source, destination / source.name)
 
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Copied',
+                    content=f'{", ".join(names)} copied to'
+                    f' {destination.as_posix()}',
+                    icon='󰆏',
+                    display_type=NotificationDisplayType.FLASH,
+                    dismiss_on_close=True,
+                ),
+            ),
+        )
     def handle_move_event(event: FileSystemMoveEvent) -> None:
         from pathlib import Path
         from shutil import move
 
         destination = Path(event.destination)
+        names = []
         for source_str in event.sources:
             source = Path(source_str)
+            names.append(source.name)
             move(source, destination / source.name)
+            store.dispatch(
+                NotificationsClearByIdAction(
+                    id=_file_info_notification_id(source),
+                ),
+            )
+
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Moved',
+                    content=f'{", ".join(names)} moved to'
+                    f' {destination.as_posix()}',
+                    icon='󰉒',
+                    display_type=NotificationDisplayType.FLASH,
+                    dismiss_on_close=True,
+                ),
+            ),
+        )
 
     def handle_remove_event(event: FileSystemRemoveEvent) -> None:
         from pathlib import Path
         from shutil import rmtree
 
+        names = []
         for path_str in event.paths:
             source = Path(path_str)
+            names.append(source.name)
             if source.is_dir():
                 rmtree(source)
             else:
                 source.unlink(missing_ok=True)
+            store.dispatch(
+                NotificationsClearByIdAction(
+                    id=_file_info_notification_id(source),
+                ),
+            )
+
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Removed',
+                    content=f'{", ".join(names)} removed',
+                    icon='󰆴',
+                    display_type=NotificationDisplayType.FLASH,
+                    dismiss_on_close=True,
+                ),
+            ),
+        )
 
     store.subscribe_event(FileSystemSelectEvent, handle_open_path_event)
     store.subscribe_event(FileSystemCopyEvent, handle_copy_event)
     store.subscribe_event(FileSystemMoveEvent, handle_move_event)
     store.subscribe_event(FileSystemRemoveEvent, handle_remove_event)
+    store.subscribe_event(
+        FileSystemSelectorCleanupEvent,
+        lambda _: create_task(_deferred_selector_cleanup()),
+    )

@@ -1,0 +1,15 @@
+// store-desktop-003
+{
+  "file_system": {
+    "_type": "FileSystemState",
+    "current_input": null,
+    "queue": [],
+    "selector_depth": 0
+  },
+  "notifications": [
+    {
+      "content": "test_file.txt moved to <TEST>/dir_b",
+      "title": "Moved"
+    }
+  ]
+}

@@ -245,8 +245,8 @@ def set_page_index(state: MainState, page_index: int) -> MainState | None:
     if not state.stack:
         return None
     top = state.stack[-1]
-    if not isinstance(top, MenuStackItem):
-        return None  # Can only set page index for menu items
+    if not isinstance(top, (MenuStackItem, NotificationStackItem)):
+        return None  # Can only set page index for menus and notifications
     new_top = replace(top, page_index=page_index)
     new_stack = (*state.stack[:-1], new_top)
     return replace(state, stack=new_stack)

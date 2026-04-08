@@ -39,6 +39,31 @@ ViewType = Literal[
 ]
 
 
+def _paginate_notification_items(
+    items: list[object],
+    page_index: int,
+    page_size: int,
+) -> list[object | None]:
+    """Slice notification items to the current page.
+
+    Single-page notifications are bottom-aligned (padding at top).
+    Multi-page notifications are top-aligned (padding at bottom).
+    Always returns exactly ``page_size`` elements — the Kivy KV template
+    hardcodes ``root.items[0]``, ``root.items[1]``, ``root.items[2]``.
+    """
+    import math
+
+    total_pages = max(1, math.ceil(len(items) / page_size))
+    start = page_index * page_size
+    page = items[start : start + page_size]
+    pad = max(page_size - len(page), 0)
+    if total_pages <= 1:
+        # Bottom-align: padding at top
+        return [None] * pad + page
+    # Top-align: padding at bottom
+    return page + [None] * pad
+
+
 def _noop() -> None:
     """No-op action for menu items; real selection goes via gRPC."""
 
@@ -98,6 +123,7 @@ class ViewRenderer:
         self._camera_unsubscribe: Callable[[], None] | None = None
         # Track page index and stack depth for transition animation detection
         self._last_menu_page_index: int | None = None
+        self._last_notification_page_index: int | None = None
         self._last_stack_depth: int | None = None
 
         # Ensure a root menu always exists so that non-home views arriving
@@ -122,6 +148,7 @@ class ViewRenderer:
         self._last_home_item_keys = ()
         self._current_view_type = None
         self._last_menu_page_index = None
+        self._last_notification_page_index = None
         self._last_stack_depth = None
         self.menu_widget.reset_to_root()
         logger.info('[ViewRenderer] State reset for reconnection')
@@ -590,6 +617,8 @@ class ViewRenderer:
         # Check if this notification is already displayed at top of stack
         from ubo_gui.menu.stack_item import StackApplicationItem
 
+        page_index = getattr(view, 'page_index', 0) or 0
+
         if self.menu_widget.stack:
             top = self.menu_widget.stack[-1]
             if (
@@ -597,18 +626,35 @@ class ViewRenderer:
                 and isinstance(top.application, UboNotificationWidget)
                 and top.application.notification_id == notification_id
             ):
-                # Already displayed, just update it
-                logger.debug(
-                    '[ViewRenderer] Notification: updating existing widget for %s',
-                    notification_id,
-                )
-                self._apply_notification_data(top.application, view)
-                self._current_view_type = 'notification'
-                self._last_menu_page_index = None
-                stack_depth = getattr(view, 'stack_depth', None)
-                if stack_depth is not None:
-                    self._last_stack_depth = stack_depth
-                return
+                # Same notification — check if page changed (scroll)
+                if (
+                    self._last_notification_page_index is not None
+                    and page_index != self._last_notification_page_index
+                ):
+                    # Page changed — rebuild widget with scroll transition
+                    logger.info(
+                        '[ViewRenderer] Notification: scroll page %d→%d for %s',
+                        self._last_notification_page_index,
+                        page_index,
+                        notification_id,
+                    )
+                    self._last_notification_page_index = page_index
+                    # Fall through to build a new notification widget below
+                else:
+                    # Same page — just update items in place
+                    logger.debug(
+                        '[ViewRenderer] Notification: updating existing '
+                        'widget for %s',
+                        notification_id,
+                    )
+                    self._apply_notification_data(top.application, view)
+                    self._current_view_type = 'notification'
+                    self._last_menu_page_index = None
+                    self._last_notification_page_index = page_index
+                    stack_depth = getattr(view, 'stack_depth', None)
+                    if stack_depth is not None:
+                        self._last_stack_depth = stack_depth
+                    return
 
         # Build the notification widget
         notification_widget = UboNotificationWidget(
@@ -629,9 +675,13 @@ class ViewRenderer:
             self._current_view_type,
             self.menu_widget.depth,
         )
-        self.menu_widget.replace_top_with_application(notification_widget)
+        self.menu_widget.replace_top_with_application(
+            notification_widget,
+            animated=self._last_notification_page_index is not None,
+        )
         self._current_view_type = 'notification'
         self._last_menu_page_index = None
+        self._last_notification_page_index = page_index
         stack_depth = getattr(view, 'stack_depth', None)
         if stack_depth is not None:
             self._last_stack_depth = stack_depth
@@ -741,8 +791,9 @@ class ViewRenderer:
                 items.append(ActionItem(**action_kwargs))
 
         if items and hasattr(widget, 'items'):
-            padded_items = [None] * (PAGE_MAX_ITEMS - len(items)) + items
-            widget.items = padded_items  # type: ignore[assignment]
+            widget.items = _paginate_notification_items(  # type: ignore[assignment]
+                items, getattr(view, 'page_index', 0) or 0, PAGE_MAX_ITEMS,
+            )
 
     def _render_instruction_view(self, view: object) -> None:
         """Render an instruction/waiting view using a simple page widget."""

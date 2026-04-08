@@ -12,6 +12,7 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.core.types import StackPopAction
 from ubo_app.store.input.types import (
     InputAction,
     InputDemandAction,
@@ -32,11 +33,13 @@ from ubo_app.store.services.file_system import (
     FileSystemRemoveEvent,
     FileSystemReportSelectionAction,
     FileSystemSelectEvent,
+    FileSystemSelectorCleanupEvent,
+    FileSystemSelectorPushedAction,
     FileSystemState,
 )
 from ubo_app.store.services.notifications import NotificationsClearByIdAction
 
-DispatchAction = NotificationsClearByIdAction | InputProvideAction
+DispatchAction = NotificationsClearByIdAction | InputProvideAction | StackPopAction
 
 
 def pop_queue(
@@ -52,17 +55,22 @@ def pop_queue(
     actions = actions or []
     events = events or []
 
-    actions += [
-        NotificationsClearByIdAction(
-            id=SELECTOR_APPLICATION_ID.format(id=state.queue[0].id),
-        ),
-    ]
+    if state.queue:
+        actions += [
+            NotificationsClearByIdAction(
+                id=SELECTOR_APPLICATION_ID.format(id=state.queue[0].id),
+            ),
+        ]
+
+    if state.selector_depth > 0:
+        actions.append(StackPopAction(count=state.selector_depth))
+        events.append(FileSystemSelectorCleanupEvent())
 
     _, *queue = state.queue
     if queue:
         events.append(FileSystemSelectEvent(description=queue[0]))
     return CompleteReducerResult(
-        state=replace(state, queue=queue),
+        state=replace(state, queue=queue, selector_depth=0),
         actions=actions,
         events=events,
     )
@@ -111,12 +119,19 @@ def reducer(
                 events=[FileSystemRemoveEvent(paths=action.paths)],
             )
 
+        case FileSystemSelectorPushedAction():
+            return replace(state, selector_depth=state.selector_depth + 1)
+
         case InputDemandAction() if isinstance(
             action.description,
             PathInputDescription,
         ):
             return CompleteReducerResult(
-                state=replace(state, queue=[*state.queue, action.description]),
+                state=replace(
+                    state,
+                    queue=[*state.queue, action.description],
+                    selector_depth=0,
+                ),
                 events=[]
                 if state.queue
                 else [FileSystemSelectEvent(description=action.description)],
@@ -135,19 +150,28 @@ def reducer(
             )
 
         case FileSystemReportSelectionAction():
-            return CompleteReducerResult(
-                state=state,
-                actions=[
-                    InputProvideAction(
-                        id=state.queue[0].id,
-                        value=action.path,
-                        result=InputResult(
-                            data={'path': action.path},
-                            files={},
-                            method=InputMethod.PATH_SELECTOR,
-                        ),
+            if not state.queue:
+                return state
+            actions: list[DispatchAction] = [
+                InputProvideAction(
+                    id=state.queue[0].id,
+                    value=action.path,
+                    result=InputResult(
+                        data={'path': action.path},
+                        files={},
+                        method=InputMethod.PATH_SELECTOR,
                     ),
-                ],
+                ),
+            ]
+            selection_events: list[FileSystemEvent] = [
+                FileSystemSelectorCleanupEvent(),
+            ]
+            if state.selector_depth > 0:
+                actions.append(StackPopAction(count=state.selector_depth))
+            return CompleteReducerResult(
+                state=replace(state, selector_depth=0),
+                actions=actions,
+                events=selection_events,
             )
 
         case _:

@@ -20,6 +20,7 @@ from ubo_app.store.core.constants import (
     NOTIFICATION_DISPLAY_PREFIX,
     NOTIFICATION_EXTRA_INFO_PREFIX,
     PAGE_SIZE,
+    compute_total_pages,
 )
 from ubo_app.store.core.types import (
     ExecuteMenuActionAction,
@@ -173,33 +174,61 @@ def _handle_notification_choose_by_index(
 
     from ubo_app.store.core.view_computation import get_notification_view_data
 
-    view_data = get_notification_view_data(state, notification_id)
-    items = view_data.items
-    if not items:
+    # Get page_index from the notification stack item
+    top = state.main.stack[-1] if state.main.stack else None
+    notif_page_index = (
+        top.page_index
+        if isinstance(top, NotificationStackItem)
+        else 0
+    )
+
+    view_data = get_notification_view_data(
+        state, notification_id, page_index=notif_page_index,
+    )
+    all_items = [item for item in view_data.items if item is not None]
+    if not all_items:
         return False
 
-    # The notification widget pads items to PAGE_SIZE (3) with None at the
-    # start so that items are bottom-aligned.  Index 0 = top button,
-    # 1 = middle, 2 = bottom.  real_index = index - (PAGE_SIZE - len).
-    real_items = [item for item in items if item is not None]
-    pad = PAGE_SIZE - len(real_items)
-    real_index = index - pad
-    if real_index < 0 or real_index >= len(real_items):
+    # Slice to the current page's items (same logic the GUI uses).
+    total_pages = compute_total_pages(len(all_items))
+    page_start = notif_page_index * PAGE_SIZE
+    page_items = all_items[page_start : page_start + PAGE_SIZE]
+    if not page_items:
+        return False
+
+    # Single-page notifications are bottom-aligned (pad at top).
+    # Multi-page notifications are top-aligned (like regular menus).
+    if total_pages <= 1:
+        pad = PAGE_SIZE - len(page_items)
+        real_index = index - pad
+    else:
+        pad = 0
+        real_index = index
+    if real_index < 0 or real_index >= len(page_items):
         logger.debug(
             'Notification choose_by_index: index=%d has no item '
-            '(real_index=%d, real_items=%d, pad=%d)',
+            '(real_index=%d, page_items=%d, pad=%d, page=%d)',
             index,
             real_index,
-            len(real_items),
+            len(page_items),
             pad,
+            notif_page_index,
         )
         return False
 
-    item = real_items[real_index]
+    item = page_items[real_index]
     action_id = getattr(item, 'action_id', None)
     if not action_id:
         return False
 
+    return _dispatch_notification_item_action(notification_id, action_id)
+
+
+def _dispatch_notification_item_action(
+    notification_id: str,
+    action_id: str,
+) -> bool:
+    """Dispatch the action for a notification item by action_id."""
     # Handle standard notification actions directly
     if action_id.startswith(NOTIFICATION_DISMISS_PREFIX):
         _dismiss_notification(notification_id)
@@ -209,12 +238,12 @@ def _handle_notification_choose_by_index(
         _show_extra_info(notification_id)
         return True
 
-    # Look up the original notification action for dispatch/application items
-    if _dispatch_original_notification_action(state, notification_id, action_id):
-        return True
+    # Dispatch via the action registry. The 010-notifications service registers
+    # handlers for notification:action:{id}:{index} that call the correct
+    # handler (_dispatch_action_type → handle close/dismiss).
+    from ubo_app.store.core.action_registry import execute_action
 
-    # Fallback: custom notification actions go through the action registry
-    store.dispatch(ExecuteMenuActionAction(action_id=action_id))
+    execute_action(action_id)
     return True
 
 

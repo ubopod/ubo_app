@@ -9,8 +9,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from redux import AutorunOptions
-
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -25,6 +23,7 @@ from ubo_app.store.services.file_system import (
     FileSystemMoveAction,
     FileSystemRemoveAction,
     FileSystemReportSelectionAction,
+    FileSystemSelectorPushedAction,
     PathSelectorConfig,
 )
 from ubo_app.store.services.notification_helpers import create_notification_action
@@ -50,6 +49,13 @@ FILE_VIEWER_SIZE_LIMIT = 2**11  # 2 KiB
 
 # Module-level tracking for file browser action IDs
 _file_browser_action_ids: dict[str, list[str]] = {}
+
+# Track event unsubscribers for each menu_id. When a new _items_generator
+# is created for a path that already has one, the old is cleaned up first.
+_menu_unsubscribers: dict[str, Callable[[], None]] = {}
+
+# Track which menu_ids were created in selector mode (for cleanup on select).
+_selector_menu_ids: list[str] = []
 
 
 def _file_info(path: Path) -> str:
@@ -191,11 +197,17 @@ def _remove(path: Path) -> None:
     )
 
 
+def _file_info_notification_id(path: Path) -> str:
+    """Predictable notification ID for file/directory info overlays."""
+    return f'file-system:info:{path.as_posix()}'
+
+
 def _show_directory(path: Path) -> None:
     """Show the path in a notification."""
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
+                id=_file_info_notification_id(path),
                 title=escape_markup(path.name),
                 content=_file_info(path),
                 icon='󰉋',
@@ -266,6 +278,7 @@ def _show_file(path: Path) -> None:
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
+                id=_file_info_notification_id(path),
                 title=escape_markup(path.name),
                 content=_file_info(path),
                 icon='󰈔',
@@ -302,7 +315,26 @@ def _show_file(path: Path) -> None:
     )
 
 
+def _cleanup_selector_autoruns() -> None:
+    """Unsubscribe selector-mode autoruns and restore browse-mode content.
+
+    For each path that was opened in selector mode, unsubscribe the event
+    listener and re-run _items_generator in browse mode to restore "Info" items.
+    """
+    affected_menu_ids = list(_selector_menu_ids)
+    _selector_menu_ids.clear()
+
+    for menu_id in affected_menu_ids:
+        if menu_id in _menu_unsubscribers:
+            _menu_unsubscribers[menu_id]()
+            del _menu_unsubscribers[menu_id]
+        # Re-create in browse mode (no accepts_* flags = "Info" button)
+        path_str = menu_id.removeprefix('file-system:dir:')
+        _items_generator(PathSelectorConfig(initial_path=path_str))
+
+
 def _select(path: Path) -> None:
+    _cleanup_selector_autoruns()
     store.dispatch(FileSystemReportSelectionAction(path=path.as_posix()))
 
 
@@ -331,6 +363,7 @@ def _build_entry_item(
                 open_path,
                 config=replace(config, initial_path=entry.as_posix()),
             ),
+            allow_reregister=True,
         )
         return MenuItemData(
             key=entry_key,
@@ -349,6 +382,7 @@ def _build_entry_item(
         register_action(
             action_id,
             functools.partial(select_file, entry),
+            allow_reregister=True,
         )
         return MenuItemData(
             key=entry_key,
@@ -366,24 +400,38 @@ def _build_entry_item(
     )
 
 
-def _items_generator(config: PathSelectorConfig) -> None:
+def _resolve_select_handlers(
+    config: PathSelectorConfig,
+) -> tuple[_SelectFn | None, _SelectFn | None]:
+    """Determine the select/show handlers based on config mode."""
+    if config.accepts_directories and config.accepts_files:
+        return _select, _select
+    if config.accepts_directories:
+        return _select, None
+    if config.accepts_files:
+        return None, _select
+    return _show_directory, _show_file
+
+
+def _items_generator(config: PathSelectorConfig) -> None:  # noqa: C901
     path = Path(config.initial_path) if config.initial_path else Path('/')
     menu_id = _get_menu_id_for_path(path)
+    select_directory, select_file = _resolve_select_handlers(config)
 
-    if config.accepts_directories and config.accepts_files:
-        select_directory = select_file = _select
-    elif config.accepts_directories:
-        select_directory = _select
-        select_file = None
-    elif config.accepts_files:
-        select_directory = None
-        select_file = _select
-    else:
-        select_directory = _show_directory
-        select_file = _show_file
+    # Clean up existing autorun for this menu_id to avoid competing autoruns
+    if menu_id in _menu_unsubscribers:
+        _menu_unsubscribers[menu_id]()
+        del _menu_unsubscribers[menu_id]
 
-    @store.autorun(lambda _: None, options=AutorunOptions(memoization=False))
-    def items(_: None) -> None:
+    def _dir_mtime() -> float:
+        """Return directory mtime — cheap single syscall for change detection."""
+        try:
+            return path.stat().st_mtime
+        except OSError:
+            return 0.0
+
+    @store.autorun(lambda _: _dir_mtime())
+    def items(_: float) -> None:
         # Clean up old actions
         for action_id in _file_browser_action_ids.get(menu_id, []):
             unregister_action(action_id)
@@ -398,6 +446,7 @@ def _items_generator(config: PathSelectorConfig) -> None:
             register_action(
                 select_action_id,
                 functools.partial(select_directory, path),
+                allow_reregister=True,
             )
             menu_items.append(
                 MenuItemData(
@@ -442,7 +491,21 @@ def _items_generator(config: PathSelectorConfig) -> None:
         )
 
     items()
-    store.subscribe_event(FileSystemEvent, items)
+    # Subscribe to FileSystemEvent for immediate refresh on in-app operations
+    event_unsub = store.subscribe_event(FileSystemEvent, items)
+    # Chain autorun unsubscriber + event unsubscriber
+    autorun_unsub = items.unsubscribe
+
+    def _combined_unsub() -> None:
+        autorun_unsub()
+        event_unsub()
+
+    _menu_unsubscribers[menu_id] = _combined_unsub
+
+    # Track selector-mode menu_ids so they can be cleaned up on select
+    is_selector_mode = bool(config.accepts_directories or config.accepts_files)
+    if is_selector_mode and menu_id not in _selector_menu_ids:
+        _selector_menu_ids.append(menu_id)
 
 
 def open_path(*, config: PathSelectorConfig | None = None) -> None:
@@ -455,6 +518,8 @@ def open_path(*, config: PathSelectorConfig | None = None) -> None:
         if path.is_dir():
             _items_generator(config)
             store.dispatch(StackPushMenuAction(menu_key=menu_id))
+            if config.accepts_directories or config.accepts_files:
+                store.dispatch(FileSystemSelectorPushedAction())
             return
     except PermissionError:
         store.dispatch(

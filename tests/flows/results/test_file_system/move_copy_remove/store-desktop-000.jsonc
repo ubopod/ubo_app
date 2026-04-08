@@ -1,0 +1,10 @@
+// store-desktop-000
+{
+  "file_system": {
+    "_type": "FileSystemState",
+    "current_input": null,
+    "queue": [],
+    "selector_depth": 0
+  },
+  "notifications": []
+}

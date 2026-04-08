@@ -395,14 +395,17 @@ class MenuWidgetWithHomePage(MenuWidget):
 
 
 def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
-    """Patch transition handlers to guard against None screen_out/screen_in.
+    """Patch transition handlers to guard against race conditions.
 
-    ubo_gui's ``TransitionsMixin._handle_transition_progress`` and
-    ``_handle_transition_complete`` access ``transition.screen_out`` and
-    ``transition.screen_in`` without null checks.  When screens are removed
-    during rapid view switching (e.g. reset_to_root -> push_menu), Kivy may
-    clear these references, causing ``AttributeError: 'NoneType' object has
-    no attribute 'screen_out'``.
+    Patches two classes of bugs in ubo_gui's ``TransitionsMixin``:
+
+    1. ``_handle_transition_progress`` and ``_handle_transition_complete``
+       access ``transition.screen_out`` / ``screen_in`` without null checks.
+       Rapid view switching can clear these references.
+
+    2. ``_switch_to`` schedules a lambda that accesses ``transition_queue[0]``
+       without checking if the queue is still non-empty.  Rapid scrolling can
+       drain the queue before the scheduled lambda fires, causing IndexError.
 
     Note: accesses private TransitionsMixin internals (transition_queue,
     _transition_progress_lock, _running_transition_end_time, _perform_switch).
@@ -463,6 +466,72 @@ def _patch_transition_handlers(widget: MenuWidgetWithHomePage) -> None:
 
     widget._handle_transition_progress = _safe_progress  # noqa: SLF001
     widget._handle_transition_complete = _safe_complete  # noqa: SLF001
+
+
+def _patch_switch_to_on_class() -> None:
+    """Patch ``TransitionsMixin._switch_to`` at class level.
+
+    ``MenuWidgetWithHomePage._switch_to`` delegates to
+    ``super()._switch_to()`` (i.e. ``TransitionsMixin._switch_to``),
+    so instance-level patches are bypassed.  We patch the class method
+    directly to guard the scheduled lambda against empty ``transition_queue``.
+    """
+    from ubo_gui.menu._transitions import TransitionsMixin
+
+    def _safe_switch_to(
+        self: TransitionsMixin,
+        screen: Screen | None,
+        /,
+        *,
+        transition: TransitionBase,
+        duration: float | None = None,
+        direction: str | None = None,
+    ) -> None:
+        import time
+
+        from kivy.clock import Clock
+
+        if screen is self.screen_manager.current_screen:
+            return
+        if duration is None:
+            duration = (
+                0 if transition is self._no_transition else 0.3
+            )
+        with self._transition_progress_lock:
+            if self._running_transition_end_time is not None:
+                self.transition_queue.append(
+                    (screen, transition, direction, duration),
+                )
+                if self._running_transition_end_time < time.time():
+
+                    def _guarded_complete(
+                        _: object,
+                        _self: TransitionsMixin = self,
+                    ) -> None:
+                        if _self.transition_queue:
+                            _self._handle_transition_complete(  # noqa: SLF001
+                                _self.transition_queue[0][1],
+                            )
+
+                    Clock.schedule_once(_guarded_complete)
+            else:
+                self._running_transition_end_time = (
+                    time.time() + duration + 2
+                    if transition is not self._no_transition
+                    else None
+                )
+                self._is_preparation_in_progress = True
+                self._perform_switch(
+                    screen,
+                    transition=transition,
+                    duration=duration,
+                    direction=direction,
+                )
+
+    TransitionsMixin._switch_to = _safe_switch_to  # type: ignore[assignment]  # noqa: SLF001
+
+
+_patch_switch_to_on_class()
 
 
 class MenuAppCentral(MenuNotificationHandler, UboApp):

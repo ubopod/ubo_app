@@ -165,6 +165,8 @@ CLASS_REGISTRY: dict[str, str] = {
     'FileSystemRemoveEvent': 'ubo_app.store.services.file_system',
     'FileSystemReportSelectionAction': 'ubo_app.store.services.file_system',
     'FileSystemSelectEvent': 'ubo_app.store.services.file_system',
+    'FileSystemSelectorCleanupEvent': 'ubo_app.store.services.file_system',
+    'FileSystemSelectorPushedAction': 'ubo_app.store.services.file_system',
     'FileSystemState': 'ubo_app.store.services.file_system',
     'HeadedMenu': 'ubo_gui.menu.types',
     'HeadlessMenu': 'ubo_gui.menu.types',

@@ -348,16 +348,6 @@ def _monitor_events(  # noqa: C901, PLR0912
             event_image = event.get('from') or (
                 event.get('Actor', {}).get('Attributes', {}).get('image')
             )
-            logger.debug(
-                'Container event received',
-                extra={
-                    'image_id': image_id,
-                    'status': status,
-                    'event_image': event_image,
-                    'path': path,
-                    'matches_path': event_image == path,
-                },
-            )
             if status is None:
                 logger.warning(
                     'Container event missing Action/status key',
@@ -365,9 +355,21 @@ def _monitor_events(  # noqa: C901, PLR0912
                 )
                 continue
 
-            if (
-                status == 'start' or status.startswith(('exec_create', 'exec_start'))
-            ) and event_image == path:
+            if event_image != path:
+                continue
+
+            logger.debug(
+                'Container event received',
+                extra={
+                    'image_id': image_id,
+                    'status': status,
+                    'event_image': event_image,
+                },
+            )
+
+            if status == 'start' or status.startswith(
+                ('exec_create', 'exec_start'),
+            ):
                 container = find_container(
                     docker_client,
                     image_path=IMAGES[image_id].path,
@@ -379,7 +381,7 @@ def _monitor_events(  # noqa: C901, PLR0912
                         '_monitor_events: Container not found after start event',
                         extra={'image_id': image_id, 'image_path': path},
                     )
-            elif status == 'die' and event_image == path:
+            elif status == 'die':
                 logger.info(
                     'Container die event detected - setting status to CREATED',
                     extra={'image_id': image_id, 'event_image': event_image},
@@ -394,7 +396,7 @@ def _monitor_events(  # noqa: C901, PLR0912
                     'Status updated to CREATED',
                     extra={'image_id': image_id},
                 )
-            elif status == 'destroy' and event_image == path:
+            elif status == 'destroy':
                 logger.info(
                     'Container destroy event detected - setting status to AVAILABLE',
                     extra={'image_id': image_id, 'event_image': event_image},
@@ -409,8 +411,7 @@ def _monitor_events(  # noqa: C901, PLR0912
                     'Status updated to AVAILABLE',
                     extra={'image_id': image_id},
                 )
-            # Log unhandled container events for this image
-            elif event_image == path:
+            else:
                 logger.debug(
                     'Unhandled container event for this image',
                     extra={
