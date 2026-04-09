@@ -295,10 +295,77 @@ def _show_directory(path: Path) -> None:
                         action=functools.partial(_remove, path),
                         close_notification=False,
                     ),
+                    create_notification_action(
+                        key='upload',
+                        label='Upload File',
+                        icon='󰅧',
+                        action=functools.partial(_upload, path),
+                        close_notification=False,
+                    ),
                 ],
             ),
         ),
     )
+
+
+def _upload(path: Path) -> None:
+    """Upload a file to the given directory via the web UI."""
+    from ubo_app.store.input.types import (
+        InputFieldDescription,
+        InputFieldType,
+        WebUIInputDescription,
+    )
+
+    async def _do_upload() -> None:
+        from ubo_app.utils.file_upload import await_completed_upload
+
+        _, result = await ubo_input(
+            title='Upload File',
+            prompt='Select a file to upload to'
+            f' {escape_markup(path.name)}',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name='file',
+                            type=InputFieldType.FILE,
+                            label='Choose File',
+                            required=True,
+                        ),
+                    ],
+                ),
+            ],
+        )
+        if result is None:
+            return
+
+        upload_id = result.data.get('file_upload_id')
+        filename = result.data.get('file_name', 'uploaded_file')
+        safe_name = Path(filename).name or 'uploaded_file'
+        destination = path / safe_name
+
+        if upload_id:
+            file_data = await await_completed_upload(upload_id)
+            destination.write_bytes(file_data)
+        elif result.files.get('file'):
+            destination.write_bytes(result.files['file'])
+        else:
+            return
+
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Upload Complete',
+                    content=f'{safe_name} uploaded to'
+                    f' {escape_markup(path.as_posix())}',
+                    icon='󰄬',
+                    display_type=NotificationDisplayType.FLASH,
+                    dismiss_on_close=True,
+                ),
+            ),
+        )
+
+    create_task(_do_upload())
 
 
 def _show_file(path: Path) -> None:

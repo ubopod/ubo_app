@@ -37,6 +37,15 @@ from ubo_app.store.services.file_system import (
     FileSystemSelectorPushedAction,
     FileSystemState,
 )
+from ubo_app.store.services.file_upload import (
+    FileUploadAction,
+    FileUploadChunkAction,
+    FileUploadChunkEvent,
+    FileUploadCompleteAction,
+    FileUploadCompleteEvent,
+    FileUploadStartAction,
+    FileUploadStartEvent,
+)
 from ubo_app.store.services.notifications import NotificationsClearByIdAction
 
 DispatchAction = NotificationsClearByIdAction | InputProvideAction | StackPopAction
@@ -78,11 +87,14 @@ def pop_queue(
 
 def reducer(
     state: FileSystemState | None,
-    action: FileSystemAction | InputAction,
+    action: FileSystemAction | InputAction | FileUploadAction,
 ) -> ReducerResult[
     FileSystemState,
     DispatchAction,
-    FileSystemEvent,
+    FileSystemEvent
+    | FileUploadStartEvent
+    | FileUploadChunkEvent
+    | FileUploadCompleteEvent,
 ]:
     if state is None:
         if isinstance(action, InitAction):
@@ -146,6 +158,41 @@ def reducer(
                     description
                     for description in state.queue
                     if description.id != action.id
+                ],
+            )
+
+        case FileUploadStartAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    FileUploadStartEvent(
+                        upload_id=action.upload_id,
+                        target_directory=action.target_directory,
+                        filename=action.filename,
+                        total_size=action.total_size,
+                        total_chunks=action.total_chunks,
+                        chunk_size=action.chunk_size,
+                    ),
+                ],
+            )
+
+        case FileUploadChunkAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    FileUploadChunkEvent(
+                        upload_id=action.upload_id,
+                        chunk_index=action.chunk_index,
+                        data=action.data,
+                    ),
+                ],
+            )
+
+        case FileUploadCompleteAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    FileUploadCompleteEvent(upload_id=action.upload_id),
                 ],
             )
 

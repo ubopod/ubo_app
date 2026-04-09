@@ -23,6 +23,9 @@ import { DispatchActionRequest } from "./bindings/store/v1/store_pb";
 import { StoreServiceClient } from "./bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
+  FileUploadChunkAction,
+  FileUploadCompleteAction,
+  FileUploadStartAction,
   InputCancelAction,
   InputFieldType,
   InputMethod,
@@ -32,6 +35,81 @@ import {
 } from "./bindings/ubo/v1/ubo_pb";
 import { triggerPostDispatch } from "./store/action-dispatcher";
 import { inputFieldTypes } from "./types";
+
+const CHUNK_SIZE = 512 * 1024; // 512 KB (gRPC-web base64 inflates ~33%)
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+
+function dispatchActionAsync(
+  store: StoreServiceClient,
+  action: Action,
+): Promise<void> {
+  const request = new DispatchActionRequest();
+  request.setAction(action);
+  return new Promise((resolve, reject) => {
+    store.dispatchAction(request, null, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+async function chunkedUpload(
+  store: StoreServiceClient,
+  uploadId: string,
+  file: File,
+): Promise<void> {
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+  // 1. Send start
+  const startAction = new FileUploadStartAction();
+  startAction.setUploadId(uploadId);
+  startAction.setFilename(file.name);
+  startAction.setTotalSize(file.size);
+  startAction.setTotalChunks(totalChunks);
+  startAction.setChunkSize(CHUNK_SIZE);
+
+  const startAct = new Action();
+  startAct.setFileUploadStartAction(startAction);
+  await dispatchActionAsync(store, startAct);
+
+  // 2. Fire all chunks concurrently with retry
+  const sendChunk = async (index: number): Promise<void> => {
+    const blob = file.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE);
+    const buffer = new Uint8Array(await blob.arrayBuffer());
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const chunkAction = new FileUploadChunkAction();
+        chunkAction.setUploadId(uploadId);
+        chunkAction.setChunkIndex(index);
+        chunkAction.setData(buffer);
+
+        const act = new Action();
+        act.setFileUploadChunkAction(chunkAction);
+        await dispatchActionAsync(store, act);
+        return;
+      } catch {
+        if (attempt === MAX_RETRIES) {
+          throw new Error(`Chunk ${index} failed after ${MAX_RETRIES} retries`);
+        }
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (attempt + 1)));
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: totalChunks }, (_, i) => sendChunk(i)),
+  );
+
+  // 3. Send complete
+  const completeAction = new FileUploadCompleteAction();
+  completeAction.setUploadId(uploadId);
+
+  const completeAct = new Action();
+  completeAct.setFileUploadCompleteAction(completeAction);
+  await dispatchActionAsync(store, completeAct);
+}
 
 export function Inputs({
   inputs,
@@ -45,6 +123,8 @@ export function Inputs({
   const [files, setFiles] = useState<Record<string, Record<string, File>>>({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
     const form = event.currentTarget;
     const formData = new FormData(form);
     const id = formData.get("id") as string;
@@ -59,32 +139,40 @@ export function Inputs({
 
     if (!action) {
       alert("Error: Could not determine form action. Please try again.");
-      event.preventDefault();
       return;
     }
 
     // Only validate fields when providing (not cancelling)
     if (action === "provide" && input?.fields) {
       for (const field of input.fields.itemsList) {
+        // Skip validation for file fields (handled by onChange)
+        if (field.type === InputFieldType.INPUT_FIELD_TYPE_FILE) {
+          const fileValue = formData.get(field.name);
+          if (
+            field.required &&
+            (!(fileValue instanceof File) || fileValue.size === 0)
+          ) {
+            alert(`"${field.label}" is required!`);
+            return;
+          }
+          continue;
+        }
+
         const fieldValue = formData.get(field.name) as string;
 
         // Check required fields
         if (field.required && (!fieldValue || fieldValue.trim() === "")) {
           alert(`"${field.label}" is required!`);
-          event.preventDefault();
           return;
         }
 
         // Check pattern validation
         if (field.pattern) {
-          if (field.type !== InputFieldType.INPUT_FIELD_TYPE_FILE) {
-            if (fieldValue && !new RegExp(`^${field.pattern}$`).test(fieldValue)) {
-              alert(
-                `The value for "${field.label}" does not match the required pattern!`,
-              );
-              event.preventDefault();
-              return;
-            }
+          if (fieldValue && !new RegExp(`^${field.pattern}$`).test(fieldValue)) {
+            alert(
+              `The value for "${field.label}" does not match the required pattern!`,
+            );
+            return;
           }
         }
       }
@@ -98,19 +186,26 @@ export function Inputs({
       alert("gRPC not connected. Please wait for connection.");
       return;
     }
-    event.preventDefault();
-    // Extract value: if fields are defined, use the first field's value;
-    // otherwise use the "value" field
+    // Extract value: if fields are defined, use the first non-file field's
+    // value; otherwise use the "value" field
     let value = "";
     if (input?.fields && input.fields.itemsList.length > 0) {
-      const firstField = input.fields.itemsList[0];
-      value = (formData.get(firstField.name) as string) || "";
-      if (!value || value.trim() === "") {
-        const inputElement = form.querySelector(
-          `[name="${firstField.name}"]`,
-        ) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
-        if (inputElement) {
-          value = inputElement.value || "";
+      const firstField = input.fields.itemsList.find(
+        (f) => f.type !== InputFieldType.INPUT_FIELD_TYPE_FILE,
+      );
+      if (firstField) {
+        value = (formData.get(firstField.name) as string) || "";
+        if (!value || value.trim() === "") {
+          const inputElement = form.querySelector(
+            `[name="${firstField.name}"]`,
+          ) as
+            | HTMLInputElement
+            | HTMLTextAreaElement
+            | HTMLSelectElement
+            | null;
+          if (inputElement) {
+            value = inputElement.value || "";
+          }
         }
       }
     } else {
@@ -131,17 +226,23 @@ export function Inputs({
         inputResult.setMethod(InputMethod.INPUT_METHOD_WEB_DASHBOARD);
 
         const dataMap = inputResult.getDataMap();
-        const fileMap = inputResult.getFilesMap();
+        // Collect file uploads to start in background after dialog closes
+        const pendingUploads: Array<{ uploadId: string; file: File }> = [];
+
         for (const [name, value] of formData.entries()) {
           if (!["id", "value", "action"].includes(name)) {
             if (value instanceof File) {
-              fileMap.set(name, await value.arrayBuffer());
+              const uploadId = crypto.randomUUID();
+              dataMap.set(`${name}_upload_id`, uploadId);
+              dataMap.set(`${name}_name`, value.name);
+              pendingUploads.push({ uploadId, file: value });
             } else {
               dataMap.set(name, value as string);
             }
           }
         }
 
+        // Dispatch InputProvideAction first to close the dialog
         const inputProvideAction = new InputProvideAction();
         inputProvideAction.setId(id);
         inputProvideAction.setValue(value);
@@ -154,9 +255,18 @@ export function Inputs({
         dispatchActionRequest.setAction(provideAction);
 
         await store.dispatchAction(dispatchActionRequest);
+
+        // Start chunked uploads in background (dialog already closed)
+        for (const { uploadId, file } of pendingUploads) {
+          chunkedUpload(store, uploadId, file).catch((err) =>
+            console.error("Chunked upload failed:", err),
+          );
+        }
       } catch (error) {
         console.error("Error dispatching InputProvideAction:", error);
-        alert(`Error submitting form: ${error instanceof Error ? error.message : String(error)}`);
+        alert(
+          `Error submitting form: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     } else if (action === "cancel") {
       try {
@@ -195,8 +305,6 @@ export function Inputs({
           <Stack
             component="form"
             autoComplete="off"
-            method="POST"
-            encType="multipart/form-data"
             gap={2}
             onSubmit={handleSubmit}
           >

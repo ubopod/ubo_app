@@ -256,6 +256,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
         .absolute()
         .as_posix(),
     )
+    app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB
     app.debug = WEB_UI_DEBUG_MODE
     shutdown_event: asyncio.Event = asyncio.Event()
 
@@ -269,10 +270,58 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
     async def inputs_form() -> str:
         if request.method == 'POST':
             data: dict[str, str] = dict(await request.form)
-            files = {
-                key: cast('FileStorage', value).stream.read()
-                for key, value in (await request.files).items()
-            }
+            request_files = await request.files
+
+            # Upload files via chunked transfer (same path as gRPC)
+            for key, value in request_files.items():
+                fs = cast('FileStorage', value)
+                file_bytes = fs.stream.read()
+                if fs.filename:
+                    data[f'{key}_name'] = fs.filename
+                if file_bytes:
+                    from uuid import uuid4
+
+                    from upload_handler import (
+                        handle_upload_chunk,
+                        handle_upload_complete,
+                        handle_upload_start,
+                    )
+
+                    from ubo_app.store.services.file_upload import (
+                        FileUploadChunkEvent,
+                        FileUploadCompleteEvent,
+                        FileUploadStartEvent,
+                    )
+
+                    chunk_size = 1024 * 1024
+                    upload_id = uuid4().hex
+                    total_chunks = (
+                        len(file_bytes) + chunk_size - 1
+                    ) // chunk_size
+                    handle_upload_start(
+                        FileUploadStartEvent(
+                            upload_id=upload_id,
+                            filename=fs.filename or key,
+                            total_size=len(file_bytes),
+                            total_chunks=total_chunks,
+                            chunk_size=chunk_size,
+                        ),
+                    )
+                    for i in range(total_chunks):
+                        chunk = file_bytes[
+                            i * chunk_size : (i + 1) * chunk_size
+                        ]
+                        handle_upload_chunk(
+                            FileUploadChunkEvent(
+                                upload_id=upload_id,
+                                chunk_index=i,
+                                data=chunk,
+                            ),
+                        )
+                    handle_upload_complete(
+                        FileUploadCompleteEvent(upload_id=upload_id),
+                    )
+                    data[f'{key}_upload_id'] = upload_id
 
             if data['action'] == 'cancel':
                 store.dispatch(InputCancelAction(id=data['id']))
@@ -285,7 +334,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                         value=value,
                         result=InputResult(
                             data=data,
-                            files=files,
+                            files={},
                             method=InputMethod.WEB_DASHBOARD,
                         ),
                     ),

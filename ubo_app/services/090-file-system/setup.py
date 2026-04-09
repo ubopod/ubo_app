@@ -22,6 +22,11 @@ from ubo_app.store.services.file_system import (
     FileSystemSelectEvent,
     FileSystemSelectorCleanupEvent,
 )
+from ubo_app.store.services.file_upload import (
+    FileUploadChunkEvent,
+    FileUploadCompleteEvent,
+    FileUploadStartEvent,
+)
 from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
@@ -45,7 +50,7 @@ def _file_system_path_matcher(path: tuple[str, ...]) -> str | None:
     return None
 
 
-def init_service() -> None:
+def init_service() -> None:  # noqa: PLR0915
     """Initialize the service by registering the File System application."""
     from ubo_app.store.core.action_registry import register_action
     from ubo_app.store.core.view_registry import register_path_menu_matcher
@@ -180,6 +185,11 @@ def init_service() -> None:
             ),
         )
 
+    from upload_handler import (
+        handle_upload_chunk,
+        handle_upload_complete,
+        handle_upload_start,
+    )
     from video_streamer import register_video_stream_cleanup
 
     store.subscribe_event(FileSystemSelectEvent, handle_open_path_event)
@@ -190,4 +200,7 @@ def init_service() -> None:
         FileSystemSelectorCleanupEvent,
         lambda _: create_task(_deferred_selector_cleanup()),
     )
+    store.subscribe_event(FileUploadStartEvent, handle_upload_start)
+    store.subscribe_event(FileUploadChunkEvent, handle_upload_chunk)
+    store.subscribe_event(FileUploadCompleteEvent, handle_upload_complete)
     register_video_stream_cleanup()

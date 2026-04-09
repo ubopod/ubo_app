@@ -90,7 +90,16 @@ class GoogleCloudEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                 ),
             ],
         )
+        upload_id = result.data.get('service_account_key_upload_id')
+        if upload_id:
+            from ubo_app.utils.file_upload import (
+                await_completed_upload,
+            )
+
+            file_content = await await_completed_upload(upload_id)
+        else:
+            file_content = result.files['service_account_key']
         secrets.write_secret(
             key=GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
-            value=result.files['service_account_key'].decode('utf-8'),
+            value=file_content.decode('utf-8'),
         )

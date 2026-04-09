@@ -1,6 +1,7 @@
 static_resources:
   listeners:
     - name: grpc_listener
+      per_connection_buffer_limit_bytes: 10485760 # 10 MB
       address:
         socket_address:
           address: 0.0.0.0

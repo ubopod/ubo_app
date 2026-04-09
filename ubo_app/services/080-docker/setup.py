@@ -563,7 +563,13 @@ supported""",
                 data.pop('yaml-config')
                 file.write(json.dumps(data))
 
-            directory_content = result.files.pop('content', None)
+            content_upload_id = result.data.get('content_upload_id')
+            if content_upload_id:
+                from ubo_app.utils.file_upload import read_completed_upload
+
+                directory_content = read_completed_upload(content_upload_id)
+            else:
+                directory_content = result.files.pop('content', None)
             # uncompress content
             if directory_content:
                 header = directory_content[:6]
