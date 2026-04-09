@@ -83,7 +83,7 @@ def register_all_pages() -> None:
         application=CameraViewfinderPage,
     )
 
-    from ubo_gui_client.gui_utils import RawImageViewer, RawTextViewer
+    from ubo_gui_client.gui_utils import RawImageViewer, RawTextViewer, VideoViewer
 
     register_application(
         application_id='ubo:raw-text-viewer',
@@ -92,4 +92,8 @@ def register_all_pages() -> None:
     register_application(
         application_id='ubo:raw-image-viewer',
         application=RawImageViewer,
+    )
+    register_application(
+        application_id='ubo:video-viewer',
+        application=VideoViewer,
     )

@@ -1196,6 +1196,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
+version = "1.7.1.dev260329103575649575"
 source = { editable = "../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },

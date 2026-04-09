@@ -402,6 +402,36 @@ class GUIClient:
             ),
         )
 
+    def subscribe_video_frames(
+        self,
+        callback: Callable[[bytes, int, int], None],
+    ) -> Callable[[], None]:
+        """Subscribe to video frame events from the core.
+
+        Args:
+            callback: Called with (data, width, height) for each frame.
+
+        Returns:
+            Unsubscribe callable to stop receiving frames.
+
+        """
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+
+        from ubo_bindings.ubo.v1 import Event, FileSystemVideoFrameEvent
+
+        return self._client.subscribe_event(
+            event_type=Event(
+                file_system_video_frame_event=FileSystemVideoFrameEvent(),
+            ),
+            callback=lambda event: callback(
+                event.file_system_video_frame_event.data,
+                event.file_system_video_frame_event.width,
+                event.file_system_video_frame_event.height,
+            ),
+        )
+
     def subscribe_screenshot_events(
         self,
         callback: Callable[[], None],

@@ -180,6 +180,8 @@ def init_service() -> None:
             ),
         )
 
+    from video_streamer import register_video_stream_cleanup
+
     store.subscribe_event(FileSystemSelectEvent, handle_open_path_event)
     store.subscribe_event(FileSystemCopyEvent, handle_copy_event)
     store.subscribe_event(FileSystemMoveEvent, handle_move_event)
@@ -188,3 +190,4 @@ def init_service() -> None:
         FileSystemSelectorCleanupEvent,
         lambda _: create_task(_deferred_selector_cleanup()),
     )
+    register_video_stream_cleanup()

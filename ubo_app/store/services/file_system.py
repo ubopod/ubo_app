@@ -87,6 +87,14 @@ class FileSystemRemoveEvent(FileSystemEvent):
     paths: Sequence[str]
 
 
+class FileSystemVideoFrameEvent(FileSystemEvent):
+    """Event for streaming video preview frames (like CameraReportImageEvent)."""
+
+    data: bytes
+    width: int
+    height: int
+
+
 class FileSystemSelectorCleanupEvent(FileSystemEvent):
     """Event emitted when selector mode ends (success or cancel).
 

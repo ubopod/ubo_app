@@ -210,7 +210,7 @@ class AudioManager:
         """
         if sample.data == b'':
             return
-        logger.debug(
+        logger.verbose(
             'Audio - Playing sample',
             extra={
                 'channels': sample.channels,
@@ -247,7 +247,7 @@ class AudioManager:
                     )
                     await send_command('audio', 'failure_report', has_output=True)
             else:
-                logger.debug(
+                logger.verbose(
                     'Audio - Sample playback completed successfully',
                     extra={'attempt': attempt.retry_state.attempt_number},
                 )

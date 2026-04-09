@@ -73,16 +73,17 @@ def _unwrap_extra_data_value(value: object) -> object:
 
     Proto map values are wrapped in BasicType (oneof: string/int64/float/bool/bytes).
     This extracts the underlying Python value.
+    Uses betterproto.which_one_of instead of to_dict() to preserve bytes as bytes
+    (to_dict base64-encodes bytes fields).
     """
     basic_type = getattr(value, 'basic_type', None)
     if basic_type is None:
         return value
-    # BasicType directly contains the oneof fields (no intermediate wrapper)
-    to_dict = getattr(basic_type, 'to_dict', None)
-    if to_dict is not None:
-        d = to_dict()
-        if d:
-            return next(iter(d.values()))
+    import betterproto
+
+    field_name, field_value = betterproto.which_one_of(basic_type, 'basic_type')
+    if field_name:
+        return field_value
     return value
 
 
@@ -121,6 +122,7 @@ class ViewRenderer:
         # to push (home→menu) or replace (menu→menu).
         self._current_view_type: ViewType | None = None
         self._camera_unsubscribe: Callable[[], None] | None = None
+        self._video_unsubscribe: Callable[[], None] | None = None
         # Track page index and stack depth for transition animation detection
         self._last_menu_page_index: int | None = None
         self._last_notification_page_index: int | None = None
@@ -142,6 +144,7 @@ class ViewRenderer:
         Called on gRPC reconnection so the GUI fully resyncs with the core.
         """
         self._cleanup_camera_subscription()
+        self._cleanup_video_subscription()
         self._last_view = None
         self._last_status_bar = None
         self._last_is_blanked = None
@@ -248,9 +251,17 @@ class ViewRenderer:
             self._camera_unsubscribe = None
             logger.info('[ViewRenderer] Camera subscription cleaned up')
 
+    def _cleanup_video_subscription(self) -> None:
+        """Clean up any active video frame subscription."""
+        if self._video_unsubscribe is not None:
+            self._video_unsubscribe()
+            self._video_unsubscribe = None
+            logger.info('[ViewRenderer] Video subscription cleaned up')
+
     def _render_view(self, view: ViewData) -> None:
         """Dispatch to the appropriate render method based on view type."""
         self._cleanup_camera_subscription()
+        self._cleanup_video_subscription()
         from ubo_bindings.ubo.v1 import (
             ApplicationViewData as ProtoApplicationViewData,
         )
@@ -594,6 +605,34 @@ class ViewRenderer:
                 self._camera_unsubscribe = self.client.subscribe_camera_frames(
                     _on_frame,
                 )
+
+        self._start_video_subscription(application_id, widget)
+
+    def _start_video_subscription(
+        self,
+        application_id: str,
+        widget: object,
+    ) -> None:
+        """Start video frame subscription if the widget is a VideoViewer."""
+        if application_id != 'ubo:video-viewer':
+            return
+
+        from ubo_gui_client.gui_utils import VideoViewer
+
+        if not isinstance(widget, VideoViewer):
+            return
+
+        @mainthread
+        def _on_video_frame(
+            data: bytes,
+            width: int,
+            height: int,
+        ) -> None:
+            widget.update_frame(data, width, height)
+
+        self._video_unsubscribe = self.client.subscribe_video_frames(
+            _on_video_frame,
+        )
 
     def _render_notification_view(self, view: NotificationViewData) -> None:
         """Render a notification view by opening a NotificationWidget."""

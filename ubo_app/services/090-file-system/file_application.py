@@ -12,11 +12,17 @@ from typing import TYPE_CHECKING
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
+    StackPushApplicationAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.input.types import PathInputDescription
 from ubo_app.store.main import store
+from ubo_app.store.services.audio import (
+    AudioPlayAudioSampleAction,
+    AudioSample,
+    AudioStopPlaybackAction,
+)
 from ubo_app.store.services.file_system import (
     FileSystemCopyAction,
     FileSystemEvent,
@@ -56,6 +62,9 @@ _menu_unsubscribers: dict[str, Callable[[], None]] = {}
 
 # Track which menu_ids were created in selector mode (for cleanup on select).
 _selector_menu_ids: list[str] = []
+
+# Track currently playing audio file path (None = not playing).
+_audio_playing: list[Path | None] = [None]
 
 
 def _file_info(path: Path) -> str:
@@ -111,6 +120,57 @@ def _get_file_content(path: Path) -> str:
                 '\t',
                 '[color=#666][/color]',
             )
+        )
+
+
+def _open_video(path: Path) -> None:
+    """Open the video viewer and start streaming frames."""
+    from video_streamer import start_video_stream
+
+    store.dispatch(
+        StackPushApplicationAction(application_id='ubo:video-viewer'),
+    )
+    start_video_stream(path.as_posix())
+
+
+def _toggle_audio(path: Path) -> None:
+    """Toggle audio playback for a file."""
+    if _audio_playing[0] == path:
+        # Stop playback
+        store.dispatch(AudioStopPlaybackAction())
+        _audio_playing[0] = None
+        _show_file(path)
+        return
+
+    # Stop any other playback first
+    if _audio_playing[0] is not None:
+        store.dispatch(AudioStopPlaybackAction())
+
+    import wave
+
+    try:
+        with wave.open(path.as_posix(), 'rb') as wf:
+            sample = AudioSample(
+                data=wf.readframes(wf.getnframes()),
+                channels=wf.getnchannels(),
+                rate=wf.getframerate(),
+                width=wf.getsampwidth(),
+            )
+        store.dispatch(AudioPlayAudioSampleAction(sample=sample))
+        _audio_playing[0] = path
+        _show_file(path)
+    except wave.Error:
+        _audio_playing[0] = None
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Unsupported Format',
+                    content=f'Cannot play {escape_markup(path.name)}.'
+                    ' Only WAV files are supported.',
+                    icon='󰈔',
+                    display_type=NotificationDisplayType.FLASH,
+                ),
+            ),
         )
 
 
@@ -261,6 +321,23 @@ def _show_file(path: Path) -> None:
                     'width': width,
                     'height': height,
                 },
+                close_notification=False,
+            )
+        case str(type_) if type_.startswith('audio/'):
+            is_playing = _audio_playing[0] == path
+            view_action = create_notification_action(
+                key='play',
+                label='Stop Audio' if is_playing else 'Play Audio',
+                icon='󰓛' if is_playing else '󰐊',
+                action=functools.partial(_toggle_audio, path),
+                close_notification=False,
+            )
+        case str(type_) if type_.startswith('video/'):
+            view_action = create_notification_action(
+                key='view',
+                label='Play Video',
+                icon='󰐊',
+                action=functools.partial(_open_video, path),
                 close_notification=False,
             )
         case _:
