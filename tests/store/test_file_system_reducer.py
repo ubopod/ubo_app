@@ -107,8 +107,8 @@ class TestSelectorDepthTracking:
         expected_depth = 4
         assert state.selector_depth == expected_depth
 
-    def test_input_demand_resets_depth(self) -> None:
-        """InputDemandAction with PathInputDescription resets selector_depth to 0."""
+    def test_input_demand_preserves_depth(self) -> None:
+        """InputDemandAction with PathInputDescription preserves selector_depth."""
         state = _init_state()
         state = replace(state, selector_depth=3)
         result = reducer(
@@ -116,7 +116,7 @@ class TestSelectorDepthTracking:
             InputDemandAction(description=_make_description()),
         )
         assert isinstance(result, CompleteReducerResult)
-        assert result.state.selector_depth == 0
+        assert result.state.selector_depth == 3
 
 
 class TestSelectionCleanup:

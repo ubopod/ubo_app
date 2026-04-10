@@ -142,7 +142,6 @@ def reducer(
                 state=replace(
                     state,
                     queue=[*state.queue, action.description],
-                    selector_depth=0,
                 ),
                 events=[]
                 if state.queue

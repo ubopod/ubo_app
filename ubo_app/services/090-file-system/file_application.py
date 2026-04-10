@@ -63,6 +63,9 @@ _menu_unsubscribers: dict[str, Callable[[], None]] = {}
 # Track which menu_ids were created in selector mode (for cleanup on select).
 _selector_menu_ids: list[str] = []
 
+# Track the original PathSelectorConfig per selector menu_id for cleanup.
+_selector_configs: dict[str, PathSelectorConfig] = {}
+
 # Track currently playing audio file path (None = not playing).
 _audio_playing: list[Path | None] = [None]
 
@@ -375,7 +378,7 @@ def _show_file(path: Path) -> None:
         case str(type_) if type_.startswith('image/'):
             from PIL import Image
 
-            image = Image.open(path)
+            image = Image.open(path).convert('RGB')
             width, height = image.size
             image_bytes = image.tobytes()
             view_action = NotificationApplicationItem(
@@ -472,9 +475,20 @@ def _cleanup_selector_autoruns() -> None:
         if menu_id in _menu_unsubscribers:
             _menu_unsubscribers[menu_id]()
             del _menu_unsubscribers[menu_id]
-        # Re-create in browse mode (no accepts_* flags = "Info" button)
+        # Re-create in browse mode, preserving display flags from original config
         path_str = menu_id.removeprefix('file-system:dir:')
-        _items_generator(PathSelectorConfig(initial_path=path_str))
+        original_config = _selector_configs.pop(menu_id, None)
+        browse_config = (
+            replace(
+                original_config,
+                initial_path=path_str,
+                accepts_files=None,
+                accepts_directories=None,
+            )
+            if original_config
+            else PathSelectorConfig(initial_path=path_str)
+        )
+        _items_generator(browse_config)
 
 
 def _select(path: Path) -> None:
@@ -650,6 +664,7 @@ def _items_generator(config: PathSelectorConfig) -> None:  # noqa: C901
     is_selector_mode = bool(config.accepts_directories or config.accepts_files)
     if is_selector_mode and menu_id not in _selector_menu_ids:
         _selector_menu_ids.append(menu_id)
+        _selector_configs[menu_id] = config
 
 
 def open_path(*, config: PathSelectorConfig | None = None) -> None:
