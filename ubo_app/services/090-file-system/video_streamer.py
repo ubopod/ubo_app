@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
-    AudioPlayAudioSampleAction,
+    AudioPlayAudioSequenceAction,
     AudioSample,
     AudioStopPlaybackAction,
 )
@@ -25,7 +25,7 @@ FRAME_INTERVAL = 1 / 15  # 15 fps for preview
 AUDIO_RATE = 22050
 AUDIO_CHANNELS = 1
 AUDIO_WIDTH = 2  # 16-bit PCM
-AUDIO_CHUNK_SECONDS = 2  # Send audio in 2-second chunks to avoid flooding
+AUDIO_CHUNK_SECONDS = 1  # Send audio in 1-second chunks for smoother streaming
 
 # Track the active streaming session so it can be stopped.
 _active_session: list[_VideoSession | None] = [None]
@@ -95,6 +95,8 @@ class _VideoSession:
 
         # Send audio in larger chunks to avoid flooding the store/logs
         chunk_size = AUDIO_RATE * AUDIO_CHANNELS * AUDIO_WIDTH * AUDIO_CHUNK_SECONDS
+        sequence_id = f'video-audio:{id(self)}'
+        chunk_index = 0
 
         import time
 
@@ -104,28 +106,40 @@ class _VideoSession:
                 if not data:
                     break
                 store.dispatch(
-                    AudioPlayAudioSampleAction(
+                    AudioPlayAudioSequenceAction(
                         sample=AudioSample(
                             data=data,
                             channels=AUDIO_CHANNELS,
                             rate=AUDIO_RATE,
                             width=AUDIO_WIDTH,
                         ),
+                        id=sequence_id,
+                        index=chunk_index,
                     ),
                 )
-                # Wait for the chunk duration before reading the next one
-                # so we don't flood the store with queued-up audio
-                time.sleep(
-                    len(data) / (AUDIO_RATE * AUDIO_CHANNELS * AUDIO_WIDTH),
+                chunk_index += 1
+                # Sleep slightly less than chunk duration to keep the buffer
+                # ahead and avoid gaps between chunks during playback
+                chunk_duration = len(data) / (
+                    AUDIO_RATE * AUDIO_CHANNELS * AUDIO_WIDTH
                 )
+                time.sleep(chunk_duration * 0.8)
         finally:
+            # Signal end-of-stream so play_sequence closes the audio device
+            store.dispatch(
+                AudioPlayAudioSequenceAction(
+                    sample=None,
+                    id=sequence_id,
+                    index=chunk_index,
+                ),
+            )
             stdout.close()
             self._audio_process.terminate()
             self._audio_process.wait()
             self._audio_process = None
 
     def _stream_frames(self) -> None:
-        """Decode and stream video frames."""
+        """Decode and stream video frames at the video's native speed."""
         import time
 
         import cv2
@@ -139,11 +153,30 @@ class _VideoSession:
             )
             return
 
+        video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        # Skip frames to match our target display rate
+        frame_skip = max(1, round(video_fps / (1 / FRAME_INTERVAL)))
+        # Real-time interval between displayed frames
+        display_interval = frame_skip / video_fps
+
         try:
+            frame_index = 0
+            display_count = 0
+            start_time = time.monotonic()
+
             while self.is_running:
+                # Use grab() for skipped frames (no decode), read() for
+                # displayed frames
+                if frame_index % frame_skip != 0:
+                    if not cap.grab():
+                        break
+                    frame_index += 1
+                    continue
+
                 ret, frame = cap.read()
                 if not ret:
                     break
+                frame_index += 1
 
                 # Resize to preview resolution
                 h, w = frame.shape[:2]
@@ -168,7 +201,13 @@ class _VideoSession:
                     ],
                 )
 
-                time.sleep(FRAME_INTERVAL)
+                display_count += 1
+                # Sleep based on wall-clock time to maintain real-time speed
+                # regardless of processing overhead
+                target_time = start_time + display_count * display_interval
+                sleep_time = target_time - time.monotonic()
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
         finally:
             cap.release()
 

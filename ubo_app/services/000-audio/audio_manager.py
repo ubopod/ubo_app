@@ -344,31 +344,33 @@ class AudioManager:
                 channels=sample.channels,
                 rate=sample.rate,
                 format=alsaaudio.PCM_FORMAT_S16_LE,
-                periodsize=len(sample.data) // (2 * sample.width),
+                periodsize=len(sample.data) // (sample.channels * sample.width),
             )
 
             async def play(sample: AudioSample) -> None:
                 stream.write(sample.data)
 
-        while (
-            id in self.audio_heads
-            and (head_sample := buffer.get(self.audio_heads[id], not_provided))
-            is not None
-        ):
+        while id in self.audio_heads:
+            head_sample = buffer.get(self.audio_heads.get(id, -1), not_provided)
+            if head_sample is None:
+                # None signals end-of-stream
+                break
             if isinstance(head_sample, NotProvided):
                 await asyncio.sleep(0.05)
                 continue
+            head_index = self.audio_heads[id]
             await play(head_sample)
-            del buffer[self.audio_heads[id]]
-            self.audio_heads[id] += 1
+            buffer.pop(head_index, None)
+            if id in self.audio_heads:
+                self.audio_heads[id] += 1
 
         logger.debug(
             'Audio - Sequence playback finished',
             extra={'sequence_id': id},
         )
         with self.audio_buffers_lock:
-            del self.audio_buffers[id]
-            del self.audio_heads[id]
+            self.audio_buffers.pop(id, None)
+            self.audio_heads.pop(id, None)
             store.dispatch(AudioPlaybackDoneAction(id=id))
 
         if self.pa:

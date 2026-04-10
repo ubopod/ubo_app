@@ -88,14 +88,59 @@ function playAudioSample(
   });
 }
 
-// Sequence playback: buffer chunks by id, play in index order
-// Each sequence has its own playback chain to ensure serial playback.
+// Schedule a sequence chunk at a precise time to avoid gaps between chunks.
+// Returns a promise that resolves when the chunk finishes, and the scheduled
+// end time so the next chunk can be scheduled seamlessly.
+function scheduleAudioChunk(
+  sample: AudioSample,
+  volume: number,
+  startTime: number,
+): { endTime: number; done: Promise<void> } {
+  const data = sample.getData_asU8();
+  const rate = sample.getRate();
+  const width = sample.getWidth();
+  const channels = sample.getChannels();
+
+  const duration = data.length / (rate * channels * (width));
+
+  const done = new Promise<void>(async (resolve, reject) => {
+    try {
+      const audioBlob = createWavFile(data, rate, channels, width * 8);
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = volume;
+
+      source.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      source.onended = () => resolve();
+      source.start(startTime);
+    } catch (err) {
+      reject(err);
+    }
+  });
+
+  return { endTime: startTime + duration, done };
+}
+
+// Sequence playback: buffer chunks by id, play in index order.
+// Uses precise Web Audio API scheduling to avoid gaps between chunks.
 const sequenceState = new Map<
   string,
   {
     nextIndex: number;
     buffer: Map<number, { sample: AudioSample; volume: number }>;
     playChain: Promise<void>;
+    nextStartTime: number;
   }
 >();
 
@@ -110,6 +155,7 @@ function playSequenceChunk(
       nextIndex: 0,
       buffer: new Map(),
       playChain: Promise.resolve(),
+      nextStartTime: audioContext.currentTime + 0.1,
     });
   }
   const seq = sequenceState.get(id)!;
@@ -121,7 +167,19 @@ function playSequenceChunk(
       const chunk = seq.buffer.get(seq.nextIndex)!;
       seq.buffer.delete(seq.nextIndex);
       seq.nextIndex++;
-      await playAudioSample(chunk.sample, chunk.volume);
+
+      // If we've fallen behind, jump to now + small offset
+      if (seq.nextStartTime < audioContext.currentTime) {
+        seq.nextStartTime = audioContext.currentTime + 0.05;
+      }
+
+      const { endTime, done } = scheduleAudioChunk(
+        chunk.sample,
+        chunk.volume,
+        seq.nextStartTime,
+      );
+      seq.nextStartTime = endTime;
+      await done;
     }
 
     // Clean up completed sequences

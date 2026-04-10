@@ -220,6 +220,10 @@ def init_service() -> Subscriptions:
         import simpleaudio
 
         simpleaudio.stop_all()
+        # Also stop any active play_sequence streams by clearing their buffers
+        with audio_manager.audio_buffers_lock:
+            audio_manager.audio_buffers.clear()
+            audio_manager.audio_heads.clear()
 
     return [
         audio_manager.close,
