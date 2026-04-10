@@ -23,6 +23,7 @@ from ubo_app.store.services.audio import (
     AudioSample,
     AudioStopPlaybackAction,
 )
+from ubo_app.store.services.file_download import FileDownloadRequestAction
 from ubo_app.store.services.file_system import (
     FileSystemCopyAction,
     FileSystemEvent,
@@ -265,6 +266,11 @@ def _file_info_notification_id(path: Path) -> str:
     return f'file-system:info:{path.as_posix()}'
 
 
+def _download(path: Path) -> None:
+    """Trigger a file/directory download via the web UI."""
+    store.dispatch(FileDownloadRequestAction(path=path.as_posix()))
+
+
 def _show_directory(path: Path) -> None:
     """Show the path in a notification."""
     store.dispatch(
@@ -303,6 +309,13 @@ def _show_directory(path: Path) -> None:
                         label='Upload File',
                         icon='󰅧',
                         action=functools.partial(_upload, path),
+                        close_notification=False,
+                    ),
+                    create_notification_action(
+                        key='download',
+                        label='Download as ZIP',
+                        icon='󰇚',
+                        action=functools.partial(_download, path),
                         close_notification=False,
                     ),
                 ],
@@ -452,6 +465,13 @@ def _show_file(path: Path) -> None:
                         label='Remove File',
                         icon='󰮘',
                         action=functools.partial(_remove, path),
+                        close_notification=False,
+                    ),
+                    create_notification_action(
+                        key='download',
+                        label='Download File',
+                        icon='󰇚',
+                        action=functools.partial(_download, path),
                         close_notification=False,
                     ),
                 ]

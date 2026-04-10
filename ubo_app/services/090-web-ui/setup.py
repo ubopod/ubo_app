@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
-from quart import Quart, Response, render_template, request
+from quart import Quart, Response, render_template, request, send_file
 from ubo_bindings.ubo.v1 import WebUiState as GRPCWebUIState
 
 from ubo_app.constants import (
@@ -281,7 +281,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                 if file_bytes:
                     from uuid import uuid4
 
-                    from upload_handler import (
+                    from upload_handler import (  # pyright: ignore[reportMissingImports]
                         handle_upload_chunk,
                         handle_upload_complete,
                         handle_upload_start,
@@ -350,21 +350,59 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
 
     @app.route('/status')
     async def status() -> Response:
+        from ubo_app.utils.file_download import get_pending_downloads
+
         statuses = await asyncio.gather(
             _get_docker_status(),
             _get_envoy_status(),
         )
+        pending_downloads = get_pending_downloads()
+        response_data: dict[str, object] = {
+            'status': 'ok',
+            'docker': statuses[0],
+            'envoy': statuses[1],
+            'state': state(),
+        }
+        if pending_downloads:
+            response_data['pending_downloads'] = pending_downloads
         return Response(
-            json.dumps(
-                {
-                    'status': 'ok',
-                    'docker': statuses[0],
-                    'envoy': statuses[1],
-                    'state': state(),
-                },
-            ),
+            json.dumps(response_data),
             content_type='application/json',
         )
+
+    @app.route('/download/<token>')
+    async def download_file(token: str) -> Response:
+        from ubo_app.utils.file_download import consume_download
+
+        session = consume_download(token)
+        if not session:
+            return Response('Download not found or expired', status=404)
+
+        file_path = Path(session.file_path)
+        if not file_path.exists():
+            return Response('File not found', status=404)
+
+        response = await send_file(
+            file_path,
+            as_attachment=True,
+            attachment_filename=session.filename,
+        )
+
+        if session.is_temp:
+
+            async def _cleanup_temp() -> None:
+                # Wait briefly for download to complete before cleanup
+                await asyncio.sleep(60)
+                file_path.unlink(missing_ok=True)
+                if file_path.parent.name.startswith('ubo_download_'):
+                    import contextlib
+
+                    with contextlib.suppress(OSError):
+                        file_path.parent.rmdir()
+
+            create_task(_cleanup_temp())
+
+        return response
 
     @app.route('/action/', methods=['POST'])
     async def action() -> Response:

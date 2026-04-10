@@ -34,4 +34,5 @@ export interface StatusType {
   | "failed";
   envoy: "running" | "not downloaded" | "not running" | "unknown" | "failed";
   state: string;
+  pending_downloads?: { token: string; filename: string }[];
 }

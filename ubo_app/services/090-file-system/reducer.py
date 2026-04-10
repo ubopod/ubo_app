@@ -22,6 +22,12 @@ from ubo_app.store.input.types import (
     InputResult,
     PathInputDescription,
 )
+from ubo_app.store.services.file_download import (
+    FileDownloadReadyAction,
+    FileDownloadReadyEvent,
+    FileDownloadRequestAction,
+    FileDownloadRequestEvent,
+)
 from ubo_app.store.services.file_system import (
     FileSystemAction,
     FileSystemCopyAction,
@@ -94,7 +100,9 @@ def reducer(
     FileSystemEvent
     | FileUploadStartEvent
     | FileUploadChunkEvent
-    | FileUploadCompleteEvent,
+    | FileUploadCompleteEvent
+    | FileDownloadRequestEvent
+    | FileDownloadReadyEvent,
 ]:
     if state is None:
         if isinstance(action, InitAction):
@@ -192,6 +200,23 @@ def reducer(
                 state=state,
                 events=[
                     FileUploadCompleteEvent(upload_id=action.upload_id),
+                ],
+            )
+
+        case FileDownloadRequestAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[FileDownloadRequestEvent(path=action.path)],
+            )
+
+        case FileDownloadReadyAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    FileDownloadReadyEvent(
+                        download_token=action.download_token,
+                        filename=action.filename,
+                    ),
                 ],
             )
 

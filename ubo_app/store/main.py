@@ -94,6 +94,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
     from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
     from ubo_app.store.services.docker import DockerAction, DockerState
+    from ubo_app.store.services.file_system import FileSystemEvent
     from ubo_app.store.services.infrared import (
         InfraredAction,
         InfraredEvent,
@@ -174,6 +175,7 @@ UboEvent: TypeAlias = Union[
     'AudioEvent',
     'CameraEvent',
     'DisplayEvent',
+    'FileSystemEvent',
     'InfraredEvent',
     'IpEvent',
     'NotificationsEvent',

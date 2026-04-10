@@ -18,6 +18,19 @@ import { MainView } from "./main-view";
 import { onPostDispatch } from "./store/action-dispatcher";
 import { StatusType } from "./types";
 
+function triggerDownloads(
+  downloads: { token: string; filename: string }[],
+): void {
+  for (const { token, filename } of downloads) {
+    const a = document.createElement("a");
+    a.href = `/download/${token}`;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+}
+
 export function Root({ state }: { state: string }) {
   const [status, setStatus] = useState<StatusType | undefined>();
   const inputDescriptions = WebUIState.deserializeBinary(
@@ -43,6 +56,10 @@ export function Root({ state }: { state: string }) {
         const response = await fetch("/status");
         const data: StatusType = await response.json();
         setStatus(data);
+        // Trigger browser downloads for any pending files
+        if (data.pending_downloads?.length) {
+          triggerDownloads(data.pending_downloads);
+        }
       } catch {
         setStatus(undefined);
       }

@@ -15,6 +15,7 @@ from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.core.types import RegisterRegularAppAction
 from ubo_app.store.input.types import InputCancelAction
 from ubo_app.store.main import store
+from ubo_app.store.services.file_download import FileDownloadRequestEvent
 from ubo_app.store.services.file_system import (
     FileSystemCopyEvent,
     FileSystemMoveEvent,
@@ -203,4 +204,8 @@ def init_service() -> None:  # noqa: PLR0915
     store.subscribe_event(FileUploadStartEvent, handle_upload_start)
     store.subscribe_event(FileUploadChunkEvent, handle_upload_chunk)
     store.subscribe_event(FileUploadCompleteEvent, handle_upload_complete)
+
+    from download_handler import handle_download_request
+
+    store.subscribe_event(FileDownloadRequestEvent, handle_download_request)
     register_video_stream_cleanup()
