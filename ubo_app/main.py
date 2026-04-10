@@ -22,17 +22,17 @@ _CORE_SHUTDOWN_TIMEOUT = 30.0  # max seconds to wait for core graceful shutdown
 
 def _find_executable(name: str) -> Path | None:
     """Find an executable in the venv or the GUI subpackage's venv."""
-    # First check the main venv bin directory
-    bin_dir = Path(sys.executable).parent
-    candidate = bin_dir / name
-    if candidate.is_file() and os.access(candidate, os.X_OK):
-        return candidate
-
-    # Check the GUI client's isolated venv at INSTALLATION_PATH/gui-client/bin/
+    # Prefer the GUI client's isolated venv at INSTALLATION_PATH/gui-client/bin/
     installation_path = os.environ.get('UBO_INSTALLATION_PATH', '/opt/ubo')
     gui_installed = Path(installation_path) / 'gui-client' / 'bin' / name
     if gui_installed.is_file() and os.access(gui_installed, os.X_OK):
         return gui_installed
+
+    # Then check the main venv bin directory
+    bin_dir = Path(sys.executable).parent
+    candidate = bin_dir / name
+    if candidate.is_file() and os.access(candidate, os.X_OK):
+        return candidate
 
     # Fallback: check the GUI subpackage's dev venv (ubo_app/gui/.venv/bin/)
     gui_venv = Path(__file__).parent / 'gui' / '.venv' / 'bin' / name
