@@ -164,6 +164,48 @@ class ViewRenderer:
             on_disconnect=self._on_disconnect,
             on_connected=self._on_connected,
         )
+        self.client.subscribe_menu_choose_by_index(
+            self._on_menu_choose_by_index,
+        )
+        self.client.subscribe_application_scroll(
+            self._on_application_scroll,
+        )
+
+    @mainthread
+    def _on_menu_choose_by_index(self, index: int) -> None:
+        """Handle button press events from the core.
+
+        When the current view is an application, invoke the local widget
+        action (e.g. image viewer mode switch) directly on the Kivy widget.
+        """
+        app = self.menu_widget.current_application
+        if app is None:
+            return
+        item = app.get_item(index)
+        if item is not None and hasattr(item, 'action'):
+            action = getattr(item, 'action', None)
+            if callable(action):
+                logger.info(
+                    '[ViewRenderer] Application button press: index=%d on %s',
+                    index,
+                    type(app).__name__,
+                )
+                action()
+
+    @mainthread
+    def _on_application_scroll(self, direction: str) -> None:
+        """Handle scroll events on application views from the core.
+
+        Invokes go_up/go_down on the current application widget (e.g.
+        image viewer scroll/zoom).
+        """
+        app = self.menu_widget.current_application
+        if app is None:
+            return
+        if direction == 'up':
+            app.go_up()
+        elif direction == 'down':
+            app.go_down()
 
     def _on_disconnect(self, delay: float, attempt: int, max_retries: int) -> None:
         """Show the disconnect overlay when the connection drops."""

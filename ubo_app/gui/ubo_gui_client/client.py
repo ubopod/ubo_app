@@ -453,6 +453,67 @@ class GUIClient:
             callback=lambda _event: callback(),
         )
 
+    def subscribe_menu_choose_by_index(
+        self,
+        callback: Callable[[int], None],
+    ) -> Callable[[], None]:
+        """Subscribe to menu choose-by-index events from the core.
+
+        Used by the GUI client to invoke local application button actions
+        (e.g. image viewer mode switching) when buttons are pressed on the
+        physical keypad.
+
+        Returns:
+            Unsubscribe callable to stop receiving events.
+
+        """
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+
+        from ubo_bindings.ubo.v1 import Event, MenuChooseByIndexEvent
+
+        return self._client.subscribe_event(
+            event_type=Event(
+                menu_choose_by_index_event=MenuChooseByIndexEvent(),
+            ),
+            callback=lambda event: callback(
+                event.menu_choose_by_index_event.index,
+            ),
+        )
+
+    def subscribe_application_scroll(
+        self,
+        callback: Callable[[str], None],
+    ) -> Callable[[], None]:
+        """Subscribe to application scroll events from the core.
+
+        Used by the GUI client to invoke local go_up/go_down on application
+        widgets (e.g. image viewer scroll/zoom) when UP/DOWN are pressed on
+        the physical keypad.
+
+        Args:
+            callback: Called with direction ('up' or 'down').
+
+        Returns:
+            Unsubscribe callable to stop receiving events.
+
+        """
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+
+        from ubo_bindings.ubo.v1 import ApplicationScrollEvent, Event
+
+        return self._client.subscribe_event(
+            event_type=Event(
+                application_scroll_event=ApplicationScrollEvent(),
+            ),
+            callback=lambda event: callback(
+                event.application_scroll_event.direction,
+            ),
+        )
+
     def dispatch_wifi_update_request(self, *, reset: bool = False) -> None:
         """Request a WiFi state update from the core."""
         from ubo_bindings.ubo.v1 import Action, WiFiUpdateRequestAction

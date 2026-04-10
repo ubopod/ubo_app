@@ -125,6 +125,16 @@ class ReplayRecordedSequenceEvent(MainEvent):
     """Event for replaying a recorded sequence."""
 
 
+class ApplicationScrollEvent(MainEvent):
+    """Event emitted when scrolling on an application view.
+
+    The GUI client subscribes to this event to invoke local go_up/go_down
+    on the current application widget (e.g. image viewer zoom/scroll).
+    """
+
+    direction: str  # 'up' or 'down'
+
+
 class ScreenshotDataEvent(MainEvent):
     """Event emitted when screenshot data is received from GUI client."""
 

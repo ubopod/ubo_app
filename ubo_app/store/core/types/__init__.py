@@ -67,6 +67,7 @@ from ubo_app.store.core.types.enums import (
 
 # Events
 from ubo_app.store.core.types.events import (
+    ApplicationScrollEvent,
     DynamicMenuChangedEvent,
     ExecuteMenuActionEvent,
     InitEvent,
@@ -121,6 +122,7 @@ from ubo_app.store.core.types.view_data import (
 )
 
 __all__ = [
+    'ApplicationScrollEvent',
     'ApplicationStackItem',
     'ApplicationViewData',
     'ClearDynamicMenuAction',

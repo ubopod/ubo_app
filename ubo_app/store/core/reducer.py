@@ -30,7 +30,9 @@ from ubo_app.store.core.stack_ops import (
     set_page_index,
 )
 from ubo_app.store.core.types import (
+    ApplicationScrollEvent,
     ApplicationStackItem,
+    ApplicationViewData,
     CloseApplicationAction,
     CloseInstructionAction,
     DeregisterRegularAppAction,
@@ -154,6 +156,16 @@ def reducer(
         case MenuScrollAction():
             current_view = state.current_view
             total_pages = 1
+            if isinstance(current_view, ApplicationViewData):
+                direction = (
+                    'up'
+                    if action.direction == MenuScrollDirection.UP
+                    else 'down'
+                )
+                return CompleteReducerResult(
+                    state=state,
+                    events=[ApplicationScrollEvent(direction=direction)],
+                )
             if isinstance(current_view, (MenuViewData, NotificationViewData)):
                 total_pages = current_view.total_pages
             else:

@@ -247,19 +247,16 @@ def setup_keyboard(  # noqa: C901, PLR0915
             )
             client.dispatch_raw(action)
 
-        # For L1/L2/L3, invoke local actions on notification pages
-        if modifier == [] and key in _select_keys:
+        # For L1/L2/L3, invoke local actions on LOCAL-ONLY pages only.
+        # Non-local application pages get their actions via the
+        # MenuChooseByIndexEvent subscription in view_renderer.py.
+        if modifier == [] and key in _select_keys and _is_local_only_page():
             _try_local_select_action(key)
 
-        # For UP/DOWN on application pages (e.g. notifications), scroll
-        # locally.  Menu scroll is handled remotely via ViewData updates
-        # from the core, so we only invoke go_up/go_down when an
-        # application is on top of the stack.
-        if (
-            modifier == []
-            and menu_widget is not None
-            and menu_widget.current_application is not None
-        ):
+        # For UP/DOWN, scroll LOCAL-ONLY application pages only.
+        # Non-local application pages get scrolled via the
+        # ApplicationScrollEvent subscription in view_renderer.py.
+        if modifier == [] and menu_widget is not None and _is_local_only_page():
             if key in _scroll_up_keys:
                 menu_widget.go_up()
             elif key in _scroll_down_keys:
