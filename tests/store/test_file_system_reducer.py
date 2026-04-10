@@ -42,7 +42,7 @@ _SERVICE_DIR = str(
 if _SERVICE_DIR not in sys.path:
     sys.path.insert(0, _SERVICE_DIR)
 
-from reducer import (  # noqa: E402
+from reducer import (  # noqa: E402  # pyright: ignore[reportMissingImports]
     pop_queue,
     reducer,
 )
@@ -202,6 +202,7 @@ class TestPopQueueResetsDepth:
         )
         result = pop_queue(state)
         assert isinstance(result, CompleteReducerResult)
+        assert result.actions is not None
         pop_actions = [a for a in result.actions if isinstance(a, StackPopAction)]
         assert len(pop_actions) == 1
         expected_count = 4
@@ -215,6 +216,7 @@ class TestPopQueueResetsDepth:
         )
         result = pop_queue(state)
         assert isinstance(result, CompleteReducerResult)
+        assert result.actions is not None
         pop_actions = [a for a in result.actions if isinstance(a, StackPopAction)]
         assert len(pop_actions) == 0
 
@@ -226,6 +228,7 @@ class TestPopQueueResetsDepth:
         )
         result = pop_queue(state)
         assert isinstance(result, CompleteReducerResult)
+        assert result.events is not None
         cleanup_events = [
             e for e in result.events if isinstance(e, FileSystemSelectorCleanupEvent)
         ]
@@ -239,6 +242,7 @@ class TestPopQueueResetsDepth:
         )
         result = pop_queue(state)
         assert isinstance(result, CompleteReducerResult)
+        assert result.events is not None
         cleanup_events = [
             e for e in result.events if isinstance(e, FileSystemSelectorCleanupEvent)
         ]
@@ -279,6 +283,7 @@ class TestSelectionInputProvide:
             FileSystemReportSelectionAction(path='/tmp/dest'),  # noqa: S108
         )
         assert isinstance(result, CompleteReducerResult)
+        assert result.events is not None
         cleanup_events = [
             e for e in result.events if isinstance(e, FileSystemSelectorCleanupEvent)
         ]
@@ -294,6 +299,7 @@ class TestCancelCleanup:
         state = replace(state, selector_depth=3)
         result = reducer(state, InputResolveAction(id='test-input'))
         assert isinstance(result, CompleteReducerResult)
+        assert result.actions is not None
         pop_actions = [a for a in result.actions if isinstance(a, StackPopAction)]
         assert len(pop_actions) == 1
         expected_count = 3
@@ -305,6 +311,7 @@ class TestCancelCleanup:
         state = replace(state, selector_depth=2)
         result = reducer(state, InputResolveAction(id='test-input'))
         assert isinstance(result, CompleteReducerResult)
+        assert result.events is not None
         cleanup_events = [
             e for e in result.events if isinstance(e, FileSystemSelectorCleanupEvent)
         ]
@@ -316,6 +323,7 @@ class TestCancelCleanup:
         assert state.selector_depth == 0
         result = reducer(state, InputResolveAction(id='test-input'))
         assert isinstance(result, CompleteReducerResult)
+        assert result.actions is not None
         pop_actions = [a for a in result.actions if isinstance(a, StackPopAction)]
         assert len(pop_actions) == 0
 
@@ -325,6 +333,7 @@ class TestCancelCleanup:
         assert state.selector_depth == 0
         result = reducer(state, InputResolveAction(id='test-input'))
         assert isinstance(result, CompleteReducerResult)
+        assert result.events is not None
         cleanup_events = [
             e for e in result.events if isinstance(e, FileSystemSelectorCleanupEvent)
         ]

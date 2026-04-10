@@ -43,7 +43,7 @@ def _snapshot_selector(state: RootState) -> dict:
         ]
     fs_state: object = None
     if hasattr(state, 'file_system'):
-        fs_state = state.file_system
+        fs_state = state.file_system  # pyright: ignore[reportAttributeAccessIssue]
     return {
         'file_system': fs_state,
         'notifications': notifications,
@@ -90,7 +90,7 @@ async def test_move_copy_remove(  # noqa: C901
             view = state.main.current_view
             assert view is not None
             assert any(
-                i is not None and i.label == label for i in view.items
+                i is not None and i.label == label for i in getattr(view, 'items', ())
             ), f'{label!r} not found in current view items'
 
         await _check()
@@ -104,7 +104,7 @@ async def test_move_copy_remove(  # noqa: C901
             assert state is not None
             view = state.main.current_view
             assert view is not None
-            for item in view.items:
+            for item in getattr(view, 'items', ()):
                 if item is not None:
                     assert item.label != '[b]Select[/b]', (
                         'Found "Select" in view — selector mode should be gone'
@@ -217,7 +217,7 @@ async def test_move_copy_remove(  # noqa: C901
         view = state.main.current_view
         assert view is not None
         assert view.type == 'notification'
-        real = [i for i in view.items if i is not None]
+        real = [i for i in getattr(view, 'items', ()) if i is not None]
         expected = 4
         assert len(real) == expected
 
@@ -383,7 +383,7 @@ async def test_move_copy_remove(  # noqa: C901
         assert state is not None
         view = state.main.current_view
         assert view is not None
-        assert view.page_index == 1
+        assert getattr(view, 'page_index', 0) == 1
 
     await check_scrolled()
 
@@ -424,7 +424,7 @@ async def test_move_copy_remove(  # noqa: C901
             view = state.main.current_view
             if view is not None and any(
                 i is not None and i.label == 'File System'
-                for i in view.items
+                for i in getattr(view, 'items', ())
             ):
                 break
         await press(Key.BACK)

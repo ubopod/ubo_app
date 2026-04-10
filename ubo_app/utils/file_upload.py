@@ -21,7 +21,7 @@ def register_completed_upload(upload_id: str, temp_path: str) -> None:
         waiter = _upload_waiters.pop(upload_id, None)
     if waiter:
         loop, future = waiter
-        loop.call_soon_threadsafe(future.set_result, True)
+        loop.call_soon_threadsafe(future.set_result, True)  # noqa: FBT003
 
 
 def get_completed_upload(upload_id: str) -> str | None:

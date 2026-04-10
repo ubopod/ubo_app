@@ -36,7 +36,7 @@ _SERVICE_DIR = str(
 if _SERVICE_DIR not in sys.path:
     sys.path.insert(0, _SERVICE_DIR)
 
-from reducer import reducer  # noqa: E402
+from reducer import reducer  # noqa: E402  # pyright: ignore[reportMissingImports]
 
 
 def _init_state() -> FileSystemState:
@@ -140,7 +140,7 @@ class TestUploadHandlerAssembly:
         """Chunks out of order assemble to match source hash."""
         from unittest.mock import patch
 
-        from upload_handler import (
+        from upload_handler import (  # pyright: ignore[reportMissingImports]
             _sessions,
             handle_upload_chunk,
             handle_upload_complete,
@@ -206,7 +206,7 @@ class TestUploadHandlerAssembly:
         """File with a partial last chunk is assembled correctly."""
         from unittest.mock import patch
 
-        from upload_handler import (
+        from upload_handler import (  # pyright: ignore[reportMissingImports]
             _sessions,
             handle_upload_chunk,
             handle_upload_complete,
@@ -269,7 +269,7 @@ class TestUploadHandlerAssembly:
         """Filename with path traversal components uses only the basename."""
         from unittest.mock import patch
 
-        from upload_handler import (
+        from upload_handler import (  # pyright: ignore[reportMissingImports]
             _sessions,
             handle_upload_chunk,
             handle_upload_complete,
@@ -329,7 +329,7 @@ class TestUploadHandlerAssembly:
         """Complete with missing chunks dispatches error notification."""
         from unittest.mock import patch
 
-        from upload_handler import (
+        from upload_handler import (  # pyright: ignore[reportMissingImports]
             _sessions,
             handle_upload_chunk,
             handle_upload_complete,
@@ -385,12 +385,13 @@ class TestUploadHandlerAssembly:
         """Start with non-existent target directory dispatches error notification."""
         from unittest.mock import patch
 
-        from upload_handler import _sessions
+        from upload_handler import (  # pyright: ignore[reportMissingImports]
+            _sessions,
+            handle_upload_start,
+        )
 
         upload_id = 'test-bad-dir'
         with patch('upload_handler.store') as mock_store:
-            from upload_handler import handle_upload_start
-
             handle_upload_start(
                 FileUploadStartEvent(
                     upload_id=upload_id,
@@ -411,6 +412,6 @@ class TestUploadHandlerAssembly:
     @pytest.fixture(autouse=True)
     def _cleanup_sessions(self) -> None:
         """Ensure no leftover sessions between tests."""
-        from upload_handler import _sessions
+        from upload_handler import _sessions  # pyright: ignore[reportMissingImports]
 
         _sessions.clear()

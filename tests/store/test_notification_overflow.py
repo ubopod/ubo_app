@@ -7,7 +7,7 @@ correct total_pages, and that the full item list is sent to the GUI
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
@@ -19,6 +19,7 @@ from ubo_app.store.core.constants import (
 
 if TYPE_CHECKING:
     from ubo_app.store.core.types import MenuItemData
+    from ubo_app.store.main import RootState
 
 
 def _make_notification(
@@ -65,13 +66,13 @@ def _make_notification(
 
 def _make_state_with_notification(
     notification: object,
-) -> object:
+) -> RootState:
     """Create a minimal RootState-like object for view computation."""
     from unittest.mock import MagicMock
 
     state = MagicMock()
     state.notifications.notifications = [notification]
-    return state
+    return cast('RootState', state)
 
 
 def _get_real_items(
@@ -206,6 +207,7 @@ class TestNotificationWithDismiss:
         # 2 actions + 1 dismiss = 3
         assert len(real) == PAGE_SIZE
         assert view.total_pages == 1
+        assert real[-1].action_id is not None
         assert real[-1].action_id.startswith(NOTIFICATION_DISMISS_PREFIX)
 
     def test_dismiss_with_pagination(self) -> None:
@@ -223,6 +225,7 @@ class TestNotificationWithDismiss:
         assert len(view.items) == expected_items
         # Last item is dismiss
         real = _get_real_items(view.items)
+        assert real[-1].action_id is not None
         assert real[-1].action_id.startswith(NOTIFICATION_DISMISS_PREFIX)
 
 
