@@ -232,7 +232,16 @@ export function Inputs({
         for (const [name, value] of formData.entries()) {
           if (!["id", "value", "action"].includes(name)) {
             if (value instanceof File) {
-              const uploadId = crypto.randomUUID();
+              const uploadId =
+                typeof crypto.randomUUID === "function"
+                  ? crypto.randomUUID()
+                  : Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                      .map((b) => b.toString(16).padStart(2, "0"))
+                      .join("")
+                      .replace(
+                        /(.{8})(.{4})(.{4})(.{4})(.{12})/,
+                        "$1-$2-$3-$4-$5",
+                      );
               dataMap.set(`${name}_upload_id`, uploadId);
               dataMap.set(`${name}_name`, value.name);
               pendingUploads.push({ uploadId, file: value });
