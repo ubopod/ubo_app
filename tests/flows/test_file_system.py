@@ -6,6 +6,7 @@ navigation between operations done via BACK presses (no teleporting).
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,7 +38,11 @@ def _snapshot_selector(state: RootState) -> dict:
         notifications = [
             {
                 'title': n.title,
-                'content': n.content.replace(TEST_DIR.as_posix(), '<TEST>'),
+                'content': re.sub(
+                    r'(\[b\](?:Owner|Group):\[/b\] )\S+',
+                    r'\1<USER>',
+                    n.content.replace(TEST_DIR.as_posix(), '<TEST>'),
+                ),
             }
             for n in state.notifications.notifications
         ]
