@@ -157,11 +157,14 @@ export function NotificationOverlay({
               )}
               {/* Render real action buttons (QR code, Web UI, etc.) */}
               {actionItems.length > 0 && (
-                <Stack
+                <Box
                   data-notification-actions
-                  direction="row"
-                  spacing={1}
-                  sx={{ mt: 1, flexWrap: "wrap" }}
+                  sx={{
+                    mt: 1,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: 1,
+                  }}
                   tabIndex={0}
                   ref={containerRef}
                   onKeyDown={handleKeyDown}
@@ -218,7 +221,7 @@ export function NotificationOverlay({
                       </Button>
                     );
                   })}
-                </Stack>
+                </Box>
               )}
             </Box>
             {hasDismiss && (
