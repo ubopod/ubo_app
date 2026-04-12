@@ -1,5 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMediaQuery, useTheme } from "@mui/material";
 
 import { Tile } from "./Tile";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
@@ -25,7 +26,10 @@ export function TileGrid({
   const [focusIndex, setFocusIndex] = useState(0);
   const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const gridRef = useRef<HTMLDivElement>(null);
-  const columns = items.length <= 2 ? items.length : items.length <= 4 ? 2 : 3;
+  const theme = useTheme();
+  const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
+  const maxColumns = items.length <= 2 ? items.length : items.length <= 4 ? 2 : 3;
+  const columns = isSmall ? Math.min(maxColumns, 2) : maxColumns;
 
   // Stable identity key derived from item keys — only changes when
   // the actual menu items change, not on every status-bar poll.
