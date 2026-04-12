@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     _SelectFn = Callable[[Path], None]
 
 FILE_VIEWER_SIZE_LIMIT = 2**11  # 2 KiB
+IMAGE_VIEWER_PIXEL_LIMIT = 1024 * 1024
 
 
 @dataclass
@@ -70,6 +71,15 @@ _browser_state = _FileBrowserState()
 
 
 def _file_info(path: Path) -> str:
+    try:
+        size = '-' if path.is_dir() else human_readable_size(path.stat().st_size)
+        owner = path.owner()
+        group = path.group()
+        permissions = stat.filemode(path.stat().st_mode)
+    except (OSError, KeyError):
+        return f"""[b]Path:[/b] {escape_markup(path.as_posix())}
+[i][File metadata is unavailable.][/i]"""
+
     return f"""[b]Type:[/b] {
         'Directory'
         if path.is_dir()
@@ -86,10 +96,24 @@ def _file_info(path: Path) -> str:
         else 'File'
     }
 [b]Path:[/b] {escape_markup(path.as_posix())}
-[b]Size:[/b] {'-' if path.is_dir() else human_readable_size(path.stat().st_size)}
-[b]Owner:[/b] {path.owner()}
-[b]Group:[/b] {path.group()}
-[b]Permissions:[/b] {stat.filemode(path.stat().st_mode)}"""
+[b]Size:[/b] {size}
+[b]Owner:[/b] {owner}
+[b]Group:[/b] {group}
+[b]Permissions:[/b] {permissions}"""
+
+
+def _show_access_error(path: Path) -> None:
+    """Show a recoverable error for paths that changed or cannot be read."""
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title='Cannot Open Path',
+                content=f'Cannot access {escape_markup(path.as_posix())}.',
+                icon='󰍛',
+                display_type=NotificationDisplayType.FLASH,
+            ),
+        ),
+    )
 
 
 def _get_file_content(path: Path) -> str:
@@ -199,6 +223,9 @@ def _toggle_audio(path: Path) -> None:
                 ),
             ),
         )
+    except OSError:
+        _browser_state.audio_playing = None
+        _show_access_error(path)
 
 
 def _choose_destination_and_dispatch(
@@ -379,10 +406,18 @@ def _upload(path: Path) -> None:
         destination = path / safe_name
 
         if upload_id:
-            file_data = await await_completed_upload(upload_id)
-            destination.write_bytes(file_data)
+            try:
+                file_data = await await_completed_upload(upload_id)
+                destination.write_bytes(file_data)
+            except (OSError, RuntimeError):
+                _show_access_error(destination)
+                return
         elif result.files.get('file'):
-            destination.write_bytes(result.files['file'])
+            try:
+                destination.write_bytes(result.files['file'])
+            except OSError:
+                _show_access_error(destination)
+                return
         else:
             return
 
@@ -409,21 +444,46 @@ def _show_file(path: Path) -> None:
         case str(type_) if type_.startswith('image/'):
             from PIL import Image
 
-            image = Image.open(path).convert('RGB')
-            width, height = image.size
-            image_bytes = image.tobytes()
-            view_action = NotificationApplicationItem(
-                key='view',
-                label='Open Image',
-                icon='󰋩',
-                application_id='ubo:raw-image-viewer',
-                initialization_kwargs={
-                    'image': image_bytes,
-                    'width': width,
-                    'height': height,
-                },
-                close_notification=False,
-            )
+            try:
+                with Image.open(path) as image:
+                    width, height = image.size
+                    if width * height > IMAGE_VIEWER_PIXEL_LIMIT:
+                        view_action = NotificationApplicationItem(
+                            key='view',
+                            label='View File Content',
+                            icon='󰦪',
+                            application_id='ubo:raw-text-viewer',
+                            initialization_kwargs={
+                                'text': '[i][Image is too large to preview.][/i]',
+                            },
+                            close_notification=False,
+                        )
+                    else:
+                        image_rgb = image.convert('RGB')
+                        image_bytes = image_rgb.tobytes()
+                        view_action = NotificationApplicationItem(
+                            key='view',
+                            label='Open Image',
+                            icon='󰋩',
+                            application_id='ubo:raw-image-viewer',
+                            initialization_kwargs={
+                                'image': image_bytes,
+                                'width': width,
+                                'height': height,
+                            },
+                            close_notification=False,
+                        )
+            except (OSError, ValueError):
+                view_action = NotificationApplicationItem(
+                    key='view',
+                    label='View File Content',
+                    icon='󰦪',
+                    application_id='ubo:raw-text-viewer',
+                    initialization_kwargs={
+                        'text': '[i][Image preview is unavailable.][/i]',
+                    },
+                    close_notification=False,
+                )
         case str(type_) if type_.startswith('audio/'):
             is_playing = _browser_state.audio_playing == path
             view_action = create_notification_action(
@@ -539,6 +599,13 @@ def _get_menu_id_for_path(path: Path) -> str:
     return f'file-system:dir:{path.as_posix()}'
 
 
+def _is_acceptable_file(entry: Path, config: PathSelectorConfig) -> bool:
+    """Return whether the file can be selected by the current config."""
+    return not config.acceptable_suffixes or any(
+        suffix in config.acceptable_suffixes for suffix in entry.suffixes
+    )
+
+
 def _build_entry_item(
     entry: Path,
     *,
@@ -570,21 +637,20 @@ def _build_entry_item(
         )
 
     if select_file:
-        is_grayed = config.acceptable_suffixes and not any(
-            suffix in config.acceptable_suffixes for suffix in entry.suffixes
-        )
-        action_id = f'file-system:file:{entry_key}'
-        _browser_state.action_ids[menu_id].append(action_id)
-        register_action(
-            action_id,
-            functools.partial(select_file, entry),
-            allow_reregister=True,
-        )
+        is_acceptable = _is_acceptable_file(entry, config)
+        action_id = f'file-system:file:{entry_key}' if is_acceptable else None
+        if action_id is not None:
+            _browser_state.action_ids[menu_id].append(action_id)
+            register_action(
+                action_id,
+                functools.partial(select_file, entry),
+                allow_reregister=True,
+            )
         return MenuItemData(
             key=entry_key,
             label=escape_markup(entry.name),
             icon='󰈔',
-            background_color='#303030' if is_grayed else None,
+            background_color=None if is_acceptable else '#303030',
             action_id=action_id,
         )
 

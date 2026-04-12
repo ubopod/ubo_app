@@ -51,9 +51,67 @@ class _UploadSession:
 _sessions: dict[str, _UploadSession] = {}
 
 
+def _fail_upload(upload_id: str, content: str) -> None:
+    """Notify the user and any waiter that an upload cannot complete."""
+    from ubo_app.utils.file_upload import register_failed_upload
+
+    register_failed_upload(upload_id, content)
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id=_upload_notification_id(upload_id),
+                title='Upload Failed',
+                content=content,
+                icon='󰅙',
+                display_type=NotificationDisplayType.FLASH,
+                dismiss_on_close=True,
+            ),
+        ),
+    )
+
+
+def _close_and_remove_session(session: _UploadSession) -> None:
+    """Close a session and remove its temporary file."""
+    with contextlib.suppress(OSError):
+        session.file_handle.close()
+    with contextlib.suppress(OSError):
+        Path(session.temp_path).unlink()
+
+
+def _validate_upload_start(event: FileUploadStartEvent) -> str | None:
+    if not event.upload_id:
+        return 'Missing upload id'
+    if event.total_size < 0:
+        return 'Upload size cannot be negative'
+    if event.total_size > 0 and event.chunk_size <= 0:
+        return 'Upload chunk size must be positive'
+    expected_chunks = (
+        math.ceil(event.total_size / event.chunk_size)
+        if event.total_size > 0
+        else 0
+    )
+    if event.total_chunks != expected_chunks:
+        return 'Upload metadata is invalid'
+    return None
+
+
 def handle_upload_start(event: FileUploadStartEvent) -> None:
     """Create a new upload session with a temp file."""
     _cleanup_stale_sessions()
+
+    validation_error = _validate_upload_start(event)
+    if validation_error:
+        logger.error(
+            'Invalid upload metadata',
+            extra={
+                'upload_id': event.upload_id,
+                'total_size': event.total_size,
+                'total_chunks': event.total_chunks,
+                'chunk_size': event.chunk_size,
+            },
+        )
+        _fail_upload(event.upload_id, validation_error)
+        return
 
     if event.target_directory:
         target = Path(event.target_directory)
@@ -62,18 +120,9 @@ def handle_upload_start(event: FileUploadStartEvent) -> None:
                 'Upload target directory does not exist',
                 extra={'target_directory': event.target_directory},
             )
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        id=_upload_notification_id(event.upload_id),
-                        title='Upload Failed',
-                        content='Directory does not exist:'
-                        f' {event.target_directory}',
-                        icon='󰅙',
-                        display_type=NotificationDisplayType.FLASH,
-                        dismiss_on_close=True,
-                    ),
-                ),
+            _fail_upload(
+                event.upload_id,
+                f'Directory does not exist: {event.target_directory}',
             )
             return
 
@@ -132,6 +181,32 @@ def handle_upload_chunk(event: FileUploadChunkEvent) -> None:
         )
         return
 
+    expected_size = (
+        session.total_size - (session.total_chunks - 1) * session.chunk_size
+        if event.chunk_index == session.total_chunks - 1
+        else session.chunk_size
+    )
+    if (
+        event.chunk_index < 0
+        or event.chunk_index >= session.total_chunks
+        or event.chunk_index in session.received_chunks
+        or len(event.data) != expected_size
+    ):
+        logger.error(
+            'Invalid upload chunk',
+            extra={
+                'upload_id': event.upload_id,
+                'chunk_index': event.chunk_index,
+                'chunk_size': len(event.data),
+                'expected_size': expected_size,
+                'total_chunks': session.total_chunks,
+            },
+        )
+        _sessions.pop(event.upload_id, None)
+        _close_and_remove_session(session)
+        _fail_upload(event.upload_id, 'Upload chunk metadata is invalid')
+        return
+
     offset = event.chunk_index * session.chunk_size
     session.file_handle.seek(offset)
     session.file_handle.write(event.data)
@@ -171,8 +246,9 @@ def handle_upload_complete(event: FileUploadCompleteEvent) -> None:
 
     safe_filename = Path(session.filename).name or 'uploaded_file'
 
-    if len(session.received_chunks) < session.total_chunks:
-        missing = session.total_chunks - len(session.received_chunks)
+    expected_chunks = set(range(session.total_chunks))
+    if session.received_chunks != expected_chunks:
+        missing = len(expected_chunks - session.received_chunks)
         logger.error(
             'Upload incomplete: missing chunks',
             extra={
@@ -180,19 +256,11 @@ def handle_upload_complete(event: FileUploadCompleteEvent) -> None:
                 'missing_chunks': missing,
             },
         )
-        Path(session.temp_path).unlink()
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id=_upload_notification_id(event.upload_id),
-                    title='Upload Failed',
-                    content=f'Missing {missing}'
-                    f' of {session.total_chunks} chunks',
-                    icon='󰅙',
-                    display_type=NotificationDisplayType.FLASH,
-                    dismiss_on_close=True,
-                ),
-            ),
+        with contextlib.suppress(OSError):
+            Path(session.temp_path).unlink()
+        _fail_upload(
+            event.upload_id,
+            f'Missing {missing} of {session.total_chunks} chunks',
         )
         return
 

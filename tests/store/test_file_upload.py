@@ -414,6 +414,89 @@ class TestUploadHandlerAssembly:
             shutil.rmtree(target_dir, ignore_errors=True)
             _sessions.pop(upload_id, None)
 
+    def test_out_of_range_chunk_fails_upload(self) -> None:
+        """A chunk index outside the announced range fails the session."""
+        from unittest.mock import patch
+
+        from upload_handler import (  # pyright: ignore[reportMissingImports]
+            _sessions,
+            handle_upload_chunk,
+            handle_upload_start,
+        )
+
+        target_dir = tempfile.mkdtemp()
+        upload_id = 'test-out-of-range'
+
+        try:
+            with patch('upload_handler.store') as mock_store:
+                handle_upload_start(
+                    FileUploadStartEvent(
+                        upload_id=upload_id,
+                        target_directory=target_dir,
+                        filename='invalid.bin',
+                        total_size=1024,
+                        total_chunks=1,
+                        chunk_size=1024,
+                    ),
+                )
+
+                handle_upload_chunk(
+                    FileUploadChunkEvent(
+                        upload_id=upload_id,
+                        chunk_index=1,
+                        data=b'\x00' * 1024,
+                    ),
+                )
+
+                assert upload_id not in _sessions
+                action = mock_store.dispatch.call_args[0][0]
+                assert action.notification.title == 'Upload Failed'
+                assert 'chunk metadata' in action.notification.content
+        finally:
+            import shutil
+
+            shutil.rmtree(target_dir, ignore_errors=True)
+            _sessions.pop(upload_id, None)
+
+    def test_invalid_start_metadata_fails_upload(self) -> None:
+        """Start metadata must match the announced chunking scheme."""
+        from unittest.mock import patch
+
+        from upload_handler import (  # pyright: ignore[reportMissingImports]
+            _sessions,
+            handle_upload_start,
+        )
+
+        upload_id = 'test-invalid-metadata'
+        with patch('upload_handler.store') as mock_store:
+            handle_upload_start(
+                FileUploadStartEvent(
+                    upload_id=upload_id,
+                    filename='invalid.bin',
+                    total_size=1024,
+                    total_chunks=2,
+                    chunk_size=1024,
+                ),
+            )
+
+            assert upload_id not in _sessions
+            action = mock_store.dispatch.call_args[0][0]
+            assert action.notification.title == 'Upload Failed'
+            assert 'metadata' in action.notification.content
+
+    async def test_await_completed_upload_raises_on_failure(self) -> None:
+        """Waiters are rejected when an upload fails."""
+        from ubo_app.utils.file_upload import (
+            await_completed_upload,
+            register_failed_upload,
+        )
+
+        upload_id = 'test-await-failure'
+        register_failed_upload(upload_id, 'boom')
+
+        with pytest.raises(RuntimeError, match='boom'):
+            await await_completed_upload(upload_id)
+
     def test_invalid_target_directory(self) -> None:
         """Start with non-existent target directory dispatches error notification."""
         from unittest.mock import patch
@@ -447,4 +530,9 @@ class TestUploadHandlerAssembly:
         """Ensure no leftover sessions between tests."""
         from upload_handler import _sessions  # pyright: ignore[reportMissingImports]
 
+        from ubo_app.utils import file_upload
+
         _sessions.clear()
+        file_upload._completed_uploads.clear()  # noqa: SLF001
+        file_upload._failed_uploads.clear()  # noqa: SLF001
+        file_upload._upload_waiters.clear()  # noqa: SLF001

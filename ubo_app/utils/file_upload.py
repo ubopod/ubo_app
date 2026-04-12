@@ -8,6 +8,7 @@ from pathlib import Path
 
 # Completed uploads: upload_id -> temp file path (for caller retrieval)
 _completed_uploads: dict[str, str] = {}
+_failed_uploads: dict[str, str] = {}
 
 # Waiters: upload_id -> (loop, future) for coroutines awaiting completion
 _upload_waiters: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Future[bool]]] = {}
@@ -18,10 +19,33 @@ def register_completed_upload(upload_id: str, temp_path: str) -> None:
     """Register a completed upload's temp file for later retrieval."""
     with _lock:
         _completed_uploads[upload_id] = temp_path
+        _failed_uploads.pop(upload_id, None)
         waiter = _upload_waiters.pop(upload_id, None)
     if waiter:
         loop, future = waiter
-        loop.call_soon_threadsafe(future.set_result, True)  # noqa: FBT003
+        loop.call_soon_threadsafe(_resolve_future, future)
+
+
+def register_failed_upload(upload_id: str, reason: str) -> None:
+    """Register an upload failure and wake any coroutine awaiting it."""
+    with _lock:
+        _failed_uploads[upload_id] = reason
+        waiter = _upload_waiters.pop(upload_id, None)
+    if waiter:
+        loop, future = waiter
+        loop.call_soon_threadsafe(_set_future_exception, future, RuntimeError(reason))
+
+
+def _resolve_future(future: asyncio.Future[bool]) -> None:
+    """Resolve a future if it has not already been cancelled."""
+    if not future.done():
+        future.set_result(True)
+
+
+def _set_future_exception(future: asyncio.Future[bool], exception: Exception) -> None:
+    """Reject a future if it has not already been cancelled."""
+    if not future.done():
+        future.set_exception(exception)
 
 
 def get_completed_upload(upload_id: str) -> str | None:
@@ -42,6 +66,9 @@ async def await_completed_upload(upload_id: str) -> bytes:
             data = Path(temp_path).read_bytes()
             Path(temp_path).unlink(missing_ok=True)
             return data
+        failure_reason = _failed_uploads.pop(upload_id, None)
+        if failure_reason:
+            raise RuntimeError(failure_reason)
         _upload_waiters[upload_id] = (loop, done)
 
     try:
