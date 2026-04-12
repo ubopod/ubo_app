@@ -199,7 +199,7 @@ class Dispatcher:
         else:
             from ubo_app.store.services.keypad import Key
 
-            await self._keypad_send_key(Key.BACK)
+            await self.send_key(Key.BACK)
 
     async def app_button(
         self: Dispatcher,
@@ -232,7 +232,7 @@ class Dispatcher:
             from ubo_app.store.services.keypad import Key
 
             key_map = {0: Key.L1, 1: Key.L2, 2: Key.L3}
-            await self._keypad_send_key(key_map[index])
+            await self.send_key(key_map[index])
 
     @property
     def _stub(self: Dispatcher) -> StoreServiceStub:
@@ -260,12 +260,12 @@ class Dispatcher:
             items = _get_visible_items()
             idx = _find_item_index(items, label=label, icon=icon)
             if idx is not None:
-                await self._keypad_send_key(key_map[idx])
+                await self.send_key(key_map[idx])
                 return
 
             # Item not found on current page — scroll down and retry
             if attempt < max_scroll_attempts - 1:
-                await self._keypad_send_key(Key.DOWN)
+                await self.send_key(Key.DOWN)
                 await asyncio.sleep(0.2)
 
         match_desc = f'label={label!r}' if label else f'icon={icon!r}'
@@ -275,7 +275,7 @@ class Dispatcher:
         )
         raise LookupError(msg)
 
-    async def _keypad_send_key(self: Dispatcher, key: str) -> None:
+    async def send_key(self: Dispatcher, key: str) -> None:
         """Send a keypad key press + release action via gRPC.
 
         The keypad reducer handles some keys on press (L1/L2/L3) and others

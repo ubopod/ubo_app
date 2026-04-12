@@ -105,6 +105,5 @@ class FileSystemSelectorCleanupEvent(FileSystemEvent):
 class FileSystemState(Immutable):
     """State for the file system service."""
 
-    current_input: PathInputDescription | None = None
     queue: list[PathInputDescription]
     selector_depth: int = 0

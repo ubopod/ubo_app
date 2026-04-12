@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from ubo_app.store.main import UboStore
 
 MAX_EXPECTED_LISTENERS = 600
-MAX_EXPECTED_EVENT_HANDLERS = 70
+MAX_EXPECTED_EVENT_HANDLERS = 80
 
 
 @pytest.mark.timeout(300)

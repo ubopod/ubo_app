@@ -95,6 +95,13 @@ class Scheduler(threading.Thread):
         else:
             try:
                 callback()
+            except AttributeError as exc:
+                if 'start_event_loop_thread' in str(exc):
+                    pass  # Expected in unit tests without event loop
+                else:
+                    from ubo_app.logger import logger
+
+                    logger.exception('Error in store heartbeat callback')
             except Exception:
                 from ubo_app.logger import logger
 

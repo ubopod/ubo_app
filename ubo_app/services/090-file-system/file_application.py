@@ -5,7 +5,7 @@ from __future__ import annotations
 import functools
 import mimetypes
 import stat
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -54,21 +54,19 @@ if TYPE_CHECKING:
 
 FILE_VIEWER_SIZE_LIMIT = 2**11  # 2 KiB
 
-# Module-level tracking for file browser action IDs
-_file_browser_action_ids: dict[str, list[str]] = {}
 
-# Track event unsubscribers for each menu_id. When a new _items_generator
-# is created for a path that already has one, the old is cleaned up first.
-_menu_unsubscribers: dict[str, Callable[[], None]] = {}
+@dataclass
+class _FileBrowserState:
+    """Mutable runtime state for the file browser UI."""
 
-# Track which menu_ids were created in selector mode (for cleanup on select).
-_selector_menu_ids: list[str] = []
+    action_ids: dict[str, list[str]] = field(default_factory=dict)
+    menu_unsubscribers: dict[str, Callable[[], None]] = field(default_factory=dict)
+    selector_menu_ids: list[str] = field(default_factory=list)
+    selector_configs: dict[str, PathSelectorConfig] = field(default_factory=dict)
+    audio_playing: Path | None = None
 
-# Track the original PathSelectorConfig per selector menu_id for cleanup.
-_selector_configs: dict[str, PathSelectorConfig] = {}
 
-# Track currently playing audio file path (None = not playing).
-_audio_playing: list[Path | None] = [None]
+_browser_state = _FileBrowserState()
 
 
 def _file_info(path: Path) -> str:
@@ -139,15 +137,15 @@ def _open_video(path: Path) -> None:
 
 def _toggle_audio(path: Path) -> None:
     """Toggle audio playback for a file."""
-    if _audio_playing[0] == path:
+    if _browser_state.audio_playing == path:
         # Stop playback
         store.dispatch(AudioStopPlaybackAction())
-        _audio_playing[0] = None
+        _browser_state.audio_playing = None
         _show_file(path)
         return
 
     # Stop any other playback first
-    if _audio_playing[0] is not None:
+    if _browser_state.audio_playing is not None:
         store.dispatch(AudioStopPlaybackAction())
 
     import wave
@@ -161,10 +159,10 @@ def _toggle_audio(path: Path) -> None:
                 width=wf.getsampwidth(),
             )
         store.dispatch(AudioPlayAudioSampleAction(sample=sample))
-        _audio_playing[0] = path
+        _browser_state.audio_playing = path
         _show_file(path)
     except wave.Error:
-        _audio_playing[0] = None
+        _browser_state.audio_playing = None
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
@@ -178,13 +176,18 @@ def _toggle_audio(path: Path) -> None:
         )
 
 
-def _copy(path: Path) -> None:
-    """Copy the path to the clipboard."""
+def _choose_destination_and_dispatch(
+    path: Path,
+    *,
+    title: str,
+    action_type: type[FileSystemCopyAction | FileSystemMoveAction],
+) -> None:
+    """Prompt the user to select a destination and dispatch a copy/move action."""
 
     async def act() -> None:
         destination, _ = await ubo_input(
-            title='Copy Destination',
-            prompt='Select the destination directory.]\n'
+            title=title,
+            prompt='Select the destination directory.\n'
             f'[b]Source:[/b] {escape_markup(path.as_posix())}',
             descriptions=[
                 PathInputDescription(
@@ -197,41 +200,31 @@ def _copy(path: Path) -> None:
         )
 
         store.dispatch(
-            FileSystemCopyAction(
+            action_type(
                 sources=[path.as_posix()],
                 destination=destination,
             ),
         )
 
     create_task(act())
+
+
+def _copy(path: Path) -> None:
+    """Copy the path to a chosen destination."""
+    _choose_destination_and_dispatch(
+        path,
+        title='Copy Destination',
+        action_type=FileSystemCopyAction,
+    )
 
 
 def _move(path: Path) -> None:
-    """Move the path to the clipboard."""
-
-    async def act() -> None:
-        destination, _ = await ubo_input(
-            title='Move Destination',
-            prompt='Select the destination directory.]\n'
-            f'[b]Source:[/b] {escape_markup(path.as_posix())}',
-            descriptions=[
-                PathInputDescription(
-                    selector_config=PathSelectorConfig(
-                        accepts_directories=True,
-                        accepts_files=False,
-                    ),
-                ),
-            ],
-        )
-
-        store.dispatch(
-            FileSystemMoveAction(
-                sources=[path.as_posix()],
-                destination=destination,
-            ),
-        )
-
-    create_task(act())
+    """Move the path to a chosen destination."""
+    _choose_destination_and_dispatch(
+        path,
+        title='Move Destination',
+        action_type=FileSystemMoveAction,
+    )
 
 
 def _remove(path: Path) -> None:
@@ -407,7 +400,7 @@ def _show_file(path: Path) -> None:
                 close_notification=False,
             )
         case str(type_) if type_.startswith('audio/'):
-            is_playing = _audio_playing[0] == path
+            is_playing = _browser_state.audio_playing == path
             view_action = create_notification_action(
                 key='play',
                 label='Stop Audio' if is_playing else 'Play Audio',
@@ -488,16 +481,16 @@ def _cleanup_selector_autoruns() -> None:
     For each path that was opened in selector mode, unsubscribe the event
     listener and re-run _items_generator in browse mode to restore "Info" items.
     """
-    affected_menu_ids = list(_selector_menu_ids)
-    _selector_menu_ids.clear()
+    affected_menu_ids = list(_browser_state.selector_menu_ids)
+    _browser_state.selector_menu_ids.clear()
 
     for menu_id in affected_menu_ids:
-        if menu_id in _menu_unsubscribers:
-            _menu_unsubscribers[menu_id]()
-            del _menu_unsubscribers[menu_id]
+        if menu_id in _browser_state.menu_unsubscribers:
+            _browser_state.menu_unsubscribers[menu_id]()
+            del _browser_state.menu_unsubscribers[menu_id]
         # Re-create in browse mode, preserving display flags from original config
         path_str = menu_id.removeprefix('file-system:dir:')
-        original_config = _selector_configs.pop(menu_id, None)
+        original_config = _browser_state.selector_configs.pop(menu_id, None)
         browse_config = (
             replace(
                 original_config,
@@ -534,7 +527,7 @@ def _build_entry_item(
 
     if entry.is_dir():
         action_id = f'file-system:open:{entry_key}'
-        _file_browser_action_ids[menu_id].append(action_id)
+        _browser_state.action_ids[menu_id].append(action_id)
         register_action(
             action_id,
             functools.partial(
@@ -556,7 +549,7 @@ def _build_entry_item(
             suffix in config.acceptable_suffixes for suffix in entry.suffixes
         )
         action_id = f'file-system:file:{entry_key}'
-        _file_browser_action_ids[menu_id].append(action_id)
+        _browser_state.action_ids[menu_id].append(action_id)
         register_action(
             action_id,
             functools.partial(select_file, entry),
@@ -597,9 +590,9 @@ def _items_generator(config: PathSelectorConfig) -> None:  # noqa: C901
     select_directory, select_file = _resolve_select_handlers(config)
 
     # Clean up existing autorun for this menu_id to avoid competing autoruns
-    if menu_id in _menu_unsubscribers:
-        _menu_unsubscribers[menu_id]()
-        del _menu_unsubscribers[menu_id]
+    if menu_id in _browser_state.menu_unsubscribers:
+        _browser_state.menu_unsubscribers[menu_id]()
+        del _browser_state.menu_unsubscribers[menu_id]
 
     def _dir_mtime() -> float:
         """Return directory mtime — cheap single syscall for change detection."""
@@ -611,16 +604,16 @@ def _items_generator(config: PathSelectorConfig) -> None:  # noqa: C901
     @store.autorun(lambda _: _dir_mtime())
     def items(_: float) -> None:
         # Clean up old actions
-        for action_id in _file_browser_action_ids.get(menu_id, []):
+        for action_id in _browser_state.action_ids.get(menu_id, []):
             unregister_action(action_id)
-        _file_browser_action_ids[menu_id] = []
+        _browser_state.action_ids[menu_id] = []
 
         menu_items: list[MenuItemData] = []
 
         # "Select" or "Info" button for current directory
         if select_directory:
             select_action_id = f'file-system:select:{path.as_posix()}'
-            _file_browser_action_ids[menu_id].append(select_action_id)
+            _browser_state.action_ids[menu_id].append(select_action_id)
             register_action(
                 select_action_id,
                 functools.partial(select_directory, path),
@@ -678,13 +671,13 @@ def _items_generator(config: PathSelectorConfig) -> None:  # noqa: C901
         autorun_unsub()
         event_unsub()
 
-    _menu_unsubscribers[menu_id] = _combined_unsub
+    _browser_state.menu_unsubscribers[menu_id] = _combined_unsub
 
     # Track selector-mode menu_ids so they can be cleaned up on select
     is_selector_mode = bool(config.accepts_directories or config.accepts_files)
-    if is_selector_mode and menu_id not in _selector_menu_ids:
-        _selector_menu_ids.append(menu_id)
-        _selector_configs[menu_id] = config
+    if is_selector_mode and menu_id not in _browser_state.selector_menu_ids:
+        _browser_state.selector_menu_ids.append(menu_id)
+        _browser_state.selector_configs[menu_id] = config
 
 
 def open_path(*, config: PathSelectorConfig | None = None) -> None:

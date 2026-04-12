@@ -17,35 +17,81 @@ from pathlib import Path
 import pytest
 from redux import CompleteReducerResult, InitAction
 
-from ubo_app.store.core.types import StackPopAction
-from ubo_app.store.input.types import (
+
+def _import_store_types_and_reducer() -> tuple:
+    """Import store types and the file system reducer.
+
+    Records sys.modules before import and cleans up ALL newly loaded modules
+    afterwards so that integration/flow tests that rely on fresh store
+    initialization are not affected by leftover module state.
+    """
+    modules_before = set(sys.modules)
+
+    from ubo_app.store.core.types import StackPopAction
+    from ubo_app.store.input.types import (
+        InputDemandAction,
+        InputMethod,
+        InputProvideAction,
+        InputResolveAction,
+        PathInputDescription,
+    )
+    from ubo_app.store.services.file_system import (
+        FileSystemReportSelectionAction,
+        FileSystemSelectorCleanupEvent,
+        FileSystemSelectorPushedAction,
+        FileSystemState,
+        PathSelectorConfig,
+    )
+
+    # Add the service directory to sys.path so relative imports work
+    service_dir = str(
+        Path(__file__).resolve().parents[2]
+        / 'ubo_app'
+        / 'services'
+        / '090-file-system',
+    )
+    if service_dir not in sys.path:
+        sys.path.insert(0, service_dir)
+
+    from reducer import pop_queue, reducer  # pyright: ignore[reportMissingImports]
+
+    # Clean up ALL modules loaded during this import so they don't
+    # interfere with integration/flow tests that need fresh modules
+    for mod in set(sys.modules) - modules_before:
+        del sys.modules[mod]
+
+    return (
+        StackPopAction,
+        InputDemandAction,
+        InputMethod,
+        InputProvideAction,
+        InputResolveAction,
+        PathInputDescription,
+        FileSystemReportSelectionAction,
+        FileSystemSelectorCleanupEvent,
+        FileSystemSelectorPushedAction,
+        FileSystemState,
+        PathSelectorConfig,
+        pop_queue,
+        reducer,
+    )
+
+
+(
+    StackPopAction,
     InputDemandAction,
     InputMethod,
+    InputProvideAction,
     InputResolveAction,
     PathInputDescription,
-)
-from ubo_app.store.services.file_system import (
     FileSystemReportSelectionAction,
     FileSystemSelectorCleanupEvent,
     FileSystemSelectorPushedAction,
     FileSystemState,
     PathSelectorConfig,
-)
-
-# Add the service directory to sys.path so relative imports work
-_SERVICE_DIR = str(
-    Path(__file__).resolve().parents[2]
-    / 'ubo_app'
-    / 'services'
-    / '090-file-system',
-)
-if _SERVICE_DIR not in sys.path:
-    sys.path.insert(0, _SERVICE_DIR)
-
-from reducer import (  # noqa: E402  # pyright: ignore[reportMissingImports]
     pop_queue,
     reducer,
-)
+) = _import_store_types_and_reducer()
 
 
 def _init_state() -> FileSystemState:
@@ -254,8 +300,6 @@ class TestSelectionInputProvide:
 
     def test_selection_returns_input_provide(self) -> None:
         """Selection returns InputProvideAction with correct id and value."""
-        from ubo_app.store.input.types import InputProvideAction
-
         state = _demand_state()
         result = reducer(
             state,

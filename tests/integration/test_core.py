@@ -34,7 +34,7 @@ async def test_app_runs_and_exits(
 
     await stack_is_loaded()
 
-    await stability(initial_wait=40)
+    await stability(initial_wait=6)
 
     from tests.conftest import exclude_dynamic_menus
 

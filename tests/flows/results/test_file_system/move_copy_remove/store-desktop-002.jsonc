@@ -2,13 +2,12 @@
 {
   "file_system": {
     "_type": "FileSystemState",
-    "current_input": null,
     "queue": [
       {
         "_type": "PathInputDescription",
-        "id": "12e0c8b2bad640fb19488dec4f65d4d9",
+        "id": "5487ce1eaf19922ad9b8a714e61a441c",
         "input_method": "path_selector",
-        "prompt": "Select the destination directory.]\n[b]Source:[/b] /tmp/aaa_ubo_e2e_test/dir_a/test_file.txt",
+        "prompt": "Select the destination directory.\n[b]Source:[/b] /tmp/aaa_ubo_e2e_test/dir_a/test_file.txt",
         "selector_config": {
           "_type": "PathSelectorConfig",
           "acceptable_suffixes": null,
@@ -24,11 +23,11 @@
   },
   "notifications": [
     {
-      "content": "Select the destination directory.]\n[b]Source:[/b] <TEST>/dir_a/test_file.txt",
+      "content": "Select the destination directory.\n[b]Source:[/b] <TEST>/dir_a/test_file.txt",
       "title": "Move Destination"
     },
     {
-      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_a/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] martin\n[b]Group:[/b] wheel\n[b]Permissions:[/b] -rw-r--r--",
+      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_a/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] root\n[b]Group:[/b] root\n[b]Permissions:[/b] -rw-r--r--",
       "title": "test_file.txt"
     }
   ]

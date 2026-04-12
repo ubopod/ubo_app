@@ -51,7 +51,7 @@ def _file_system_path_matcher(path: tuple[str, ...]) -> str | None:
     return None
 
 
-def init_service() -> None:  # noqa: PLR0915
+def init_service() -> None:  # noqa: C901, PLR0915
     """Initialize the service by registering the File System application."""
     from ubo_app.store.core.action_registry import register_action
     from ubo_app.store.core.view_registry import register_path_menu_matcher
@@ -105,15 +105,57 @@ def init_service() -> None:  # noqa: PLR0915
         from pathlib import Path
         from shutil import copyfile, copytree
 
+        from ubo_app.logger import logger
+
         destination = Path(event.destination)
+        if not destination.is_dir():
+            logger.error(
+                'Copy destination does not exist',
+                extra={'destination': event.destination},
+            )
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Copy Failed',
+                        content=f'Destination does not exist:'
+                        f' {destination.as_posix()}',
+                        icon='󰅙',
+                        display_type=NotificationDisplayType.FLASH,
+                        dismiss_on_close=True,
+                    ),
+                ),
+            )
+            return
+
         names = []
         for source_str in event.sources:
             source = Path(source_str)
+            try:
+                if source.is_dir():
+                    copytree(source, destination / source.name)
+                else:
+                    copyfile(source, destination / source.name)
+            except Exception:
+                logger.exception(
+                    'Failed to copy',
+                    extra={
+                        'source': source_str,
+                        'destination': event.destination,
+                    },
+                )
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='Copy Failed',
+                            content=f'Failed to copy {source.name}',
+                            icon='󰅙',
+                            display_type=NotificationDisplayType.FLASH,
+                            dismiss_on_close=True,
+                        ),
+                    ),
+                )
+                return
             names.append(source.name)
-            if source.is_dir():
-                copytree(source, destination / source.name)
-            else:
-                copyfile(source, destination / source.name)
 
         store.dispatch(
             NotificationsAddAction(
@@ -131,12 +173,54 @@ def init_service() -> None:  # noqa: PLR0915
         from pathlib import Path
         from shutil import move
 
+        from ubo_app.logger import logger
+
         destination = Path(event.destination)
+        if not destination.is_dir():
+            logger.error(
+                'Move destination does not exist',
+                extra={'destination': event.destination},
+            )
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        title='Move Failed',
+                        content=f'Destination does not exist:'
+                        f' {destination.as_posix()}',
+                        icon='󰅙',
+                        display_type=NotificationDisplayType.FLASH,
+                        dismiss_on_close=True,
+                    ),
+                ),
+            )
+            return
+
         names = []
         for source_str in event.sources:
             source = Path(source_str)
+            try:
+                move(source, destination / source.name)
+            except Exception:
+                logger.exception(
+                    'Failed to move',
+                    extra={
+                        'source': source_str,
+                        'destination': event.destination,
+                    },
+                )
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='Move Failed',
+                            content=f'Failed to move {source.name}',
+                            icon='󰅙',
+                            display_type=NotificationDisplayType.FLASH,
+                            dismiss_on_close=True,
+                        ),
+                    ),
+                )
+                return
             names.append(source.name)
-            move(source, destination / source.name)
             store.dispatch(
                 NotificationsClearByIdAction(
                     id=_file_info_notification_id(source),
@@ -160,14 +244,34 @@ def init_service() -> None:  # noqa: PLR0915
         from pathlib import Path
         from shutil import rmtree
 
+        from ubo_app.logger import logger
+
         names = []
         for path_str in event.paths:
             source = Path(path_str)
+            try:
+                if source.is_dir():
+                    rmtree(source)
+                else:
+                    source.unlink(missing_ok=True)
+            except Exception:
+                logger.exception(
+                    'Failed to remove',
+                    extra={'path': path_str},
+                )
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            title='Remove Failed',
+                            content=f'Failed to remove {source.name}',
+                            icon='󰅙',
+                            display_type=NotificationDisplayType.FLASH,
+                            dismiss_on_close=True,
+                        ),
+                    ),
+                )
+                return
             names.append(source.name)
-            if source.is_dir():
-                rmtree(source)
-            else:
-                source.unlink(missing_ok=True)
             store.dispatch(
                 NotificationsClearByIdAction(
                     id=_file_info_notification_id(source),

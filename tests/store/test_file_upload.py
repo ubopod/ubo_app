@@ -16,27 +16,63 @@ from pathlib import Path
 import pytest
 from redux import CompleteReducerResult, InitAction
 
-from ubo_app.store.services.file_system import FileSystemState
-from ubo_app.store.services.file_upload import (
+
+def _import_store_types_and_reducer() -> tuple:
+    """Import store types and the file system reducer.
+
+    Records sys.modules before import and cleans up ALL newly loaded modules
+    afterwards so that integration/flow tests that rely on fresh store
+    initialization are not affected by leftover module state.
+    """
+    modules_before = set(sys.modules)
+
+    from ubo_app.store.services.file_system import FileSystemState
+    from ubo_app.store.services.file_upload import (
+        FileUploadChunkAction,
+        FileUploadChunkEvent,
+        FileUploadCompleteAction,
+        FileUploadCompleteEvent,
+        FileUploadStartAction,
+        FileUploadStartEvent,
+    )
+
+    # Add the service directory to sys.path so relative imports work
+    service_dir = str(
+        Path(__file__).resolve().parents[2]
+        / 'ubo_app'
+        / 'services'
+        / '090-file-system',
+    )
+    if service_dir not in sys.path:
+        sys.path.insert(0, service_dir)
+
+    from reducer import reducer  # pyright: ignore[reportMissingImports]
+
+    for mod in set(sys.modules) - modules_before:
+        del sys.modules[mod]
+
+    return (
+        FileSystemState,
+        FileUploadChunkAction,
+        FileUploadChunkEvent,
+        FileUploadCompleteAction,
+        FileUploadCompleteEvent,
+        FileUploadStartAction,
+        FileUploadStartEvent,
+        reducer,
+    )
+
+
+(
+    FileSystemState,
     FileUploadChunkAction,
     FileUploadChunkEvent,
     FileUploadCompleteAction,
     FileUploadCompleteEvent,
     FileUploadStartAction,
     FileUploadStartEvent,
-)
-
-# Add the service directory to sys.path so relative imports work
-_SERVICE_DIR = str(
-    Path(__file__).resolve().parents[2]
-    / 'ubo_app'
-    / 'services'
-    / '090-file-system',
-)
-if _SERVICE_DIR not in sys.path:
-    sys.path.insert(0, _SERVICE_DIR)
-
-from reducer import reducer  # noqa: E402  # pyright: ignore[reportMissingImports]
+    reducer,
+) = _import_store_types_and_reducer()
 
 
 def _init_state() -> FileSystemState:
@@ -313,12 +349,10 @@ class TestUploadHandlerAssembly:
             assert safe_file.exists()
             assert safe_file.read_bytes() == data
 
-            # Should NOT exist at traversal path
-            traversal = Path(target_dir) / '..' / '..' / 'etc' / 'passwd'
-            assert (
-                not traversal.exists()
-                or traversal.resolve() == safe_file.resolve()
-            )
+            # The traversal path should NOT have been created by the upload
+            # (on Linux /etc/passwd pre-exists, so we verify the upload wrote
+            # only to the safe location inside target_dir)
+            assert safe_file.resolve().parent == Path(target_dir).resolve()
         finally:
             import shutil
 

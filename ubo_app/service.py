@@ -50,6 +50,14 @@ class WorkerThread(threading.Thread):
         callback: TaskCreatorCallback | None = None,
         name: str | None = None,
     ) -> Handle:
+        if not hasattr(self, 'loop'):
+            coroutine.close()
+            msg = (
+                'WorkerThread.loop is not set — '
+                'start_event_loop_thread() was not called'
+            )
+            raise AttributeError(msg)
+
         from ubo_app.constants import DEBUG_TASKS
 
         def task_wrapper(stack: str) -> None:

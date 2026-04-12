@@ -69,6 +69,7 @@ async def test_move_copy_remove(  # noqa: C901
 
     from tenacity import stop_after_delay, wait_fixed
 
+    from ubo_app.store.core.action_registry import get_action
     from ubo_app.store.main import store
     from ubo_app.store.services.file_system import PathSelectorConfig
     from ubo_app.store.services.keypad import Key
@@ -77,7 +78,7 @@ async def test_move_copy_remove(  # noqa: C901
 
     async def press(key: Key) -> None:
         """Send a key press + release via gRPC."""
-        await dispatcher._keypad_send_key(key)  # noqa: SLF001
+        await dispatcher.send_key(key)
         await asyncio.sleep(0.5)
 
     async def wait_for_view_item(label: str) -> None:
@@ -192,9 +193,7 @@ async def test_move_copy_remove(  # noqa: C901
     await wait_for_menu_item(label='File System')
 
     # Open file browser at TEST_DIR (only direct call — simulates app open)
-    from ubo_app.store.core.action_registry import _registry
-
-    open_handler = _registry.get('file-system:open')
+    open_handler = get_action('file-system:open')
     assert open_handler is not None
     open_handler(config=PathSelectorConfig(initial_path=TEST_DIR.as_posix()))
 
@@ -218,7 +217,7 @@ async def test_move_copy_remove(  # noqa: C901
         assert view is not None
         assert view.type == 'notification'
         real = [i for i in getattr(view, 'items', ()) if i is not None]
-        expected = 4
+        expected = 5
         assert len(real) == expected
 
     await check_file_notification()
