@@ -186,7 +186,8 @@
   },
   "file_system": {
     "_type": "FileSystemState",
-    "queue": []
+    "queue": [],
+    "selector_depth": 0
   },
   "infrared": {
     "_type": "InfraredState",

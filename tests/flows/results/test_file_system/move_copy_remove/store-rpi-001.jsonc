@@ -1,0 +1,14 @@
+// store-rpi-001
+{
+  "file_system": {
+    "_type": "FileSystemState",
+    "queue": [],
+    "selector_depth": 0
+  },
+  "notifications": [
+    {
+      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_a/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] ubo\n[b]Group:[/b] ubo\n[b]Permissions:[/b] -rw-r--r--",
+      "title": "test_file.txt"
+    }
+  ]
+}

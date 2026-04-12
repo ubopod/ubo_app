@@ -1,0 +1,34 @@
+// store-rpi-002
+{
+  "file_system": {
+    "_type": "FileSystemState",
+    "queue": [
+      {
+        "_type": "PathInputDescription",
+        "id": "5487ce1eaf19922ad9b8a714e61a441c",
+        "input_method": "path_selector",
+        "prompt": "Select the destination directory.\n[b]Source:[/b] /tmp/aaa_ubo_e2e_test/dir_a/test_file.txt",
+        "selector_config": {
+          "_type": "PathSelectorConfig",
+          "acceptable_suffixes": null,
+          "accepts_directories": true,
+          "accepts_files": false,
+          "initial_path": null,
+          "show_hidden": false
+        },
+        "title": "Move Destination"
+      }
+    ],
+    "selector_depth": 0
+  },
+  "notifications": [
+    {
+      "content": "Select the destination directory.\n[b]Source:[/b] <TEST>/dir_a/test_file.txt",
+      "title": "Move Destination"
+    },
+    {
+      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_a/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] ubo\n[b]Group:[/b] ubo\n[b]Permissions:[/b] -rw-r--r--",
+      "title": "test_file.txt"
+    }
+  ]
+}

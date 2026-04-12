@@ -1,0 +1,9 @@
+// store-rpi-004
+{
+  "file_system": {
+    "_type": "FileSystemState",
+    "queue": [],
+    "selector_depth": 0
+  },
+  "notifications": []
+}
