@@ -1,7 +1,6 @@
 import { createContext, useContext } from "react";
 
 import type { AppState } from "./types";
-import { stopAllAudio } from "./audio";
 import {
   SubscribeEventRequest,
   SubscribeEventResponse,
@@ -39,10 +38,7 @@ export class StateManager {
   };
 
   private listeners: Set<StateListener> = new Set();
-  private lastStopCountKey: string = "";
-  private viewStream: ReturnType<StoreServiceClient["subscribeEvent"]> | null =
-    null;
-  private stackStream: ReturnType<
+  private viewStackStream: ReturnType<
     StoreServiceClient["subscribeEvent"]
   > | null = null;
   private metricsStream: ReturnType<
@@ -50,8 +46,7 @@ export class StateManager {
   > | null = null;
 
   constructor(private store: StoreServiceClient) {
-    this.subscribeToViewChanges();
-    this.subscribeToStackChanges();
+    this.subscribeToViewAndStackChanges();
     this.subscribeToSystemMetrics();
   }
 
@@ -75,63 +70,48 @@ export class StateManager {
     this.notify();
   }
 
-  private subscribeToViewChanges(): void {
-    if (this.viewStream) {
-      this.viewStream.cancel();
+  private subscribeToViewAndStackChanges(): void {
+    if (this.viewStackStream) {
+      this.viewStackStream.cancel();
     }
 
-    const event = new Event();
-    event.setViewChangedEvent(new ViewChangedEvent());
-
     const request = new SubscribeEventRequest();
-    request.setEvent(event);
+    const viewEvent = new Event();
+    viewEvent.setViewChangedEvent(new ViewChangedEvent());
+    request.addEvents(viewEvent);
+    const stackEvent = new Event();
+    stackEvent.setStackChangedEvent(new StackChangedEvent());
+    request.addEvents(stackEvent);
 
     const stream = this.store.subscribeEvent(request);
-    this.viewStream = stream;
+    this.viewStackStream = stream;
 
     stream.on("error", () => {
       this.update({ connected: false });
-      setTimeout(() => this.subscribeToViewChanges(), 1000);
+      setTimeout(() => this.subscribeToViewAndStackChanges(), 1000);
     });
 
     stream.on("data", (response: SubscribeEventResponse) => {
-      const viewEvent = response.getEvent()?.getViewChangedEvent();
-      if (!viewEvent) return;
+      const evt = response.getEvent();
+      if (!evt) return;
 
-      const newStatusBar = viewEvent.getStatusBar()?.toObject();
-      this.update({
-        currentView: viewEvent.getView()?.toObject() ?? null,
-        ...(newStatusBar ? { statusBar: newStatusBar } : {}),
-        connected: true,
-      });
-    });
-  }
+      const viewChangedEvent = evt.getViewChangedEvent();
+      if (viewChangedEvent) {
+        const newStatusBar = viewChangedEvent.getStatusBar()?.toObject();
+        this.update({
+          currentView: viewChangedEvent.getView()?.toObject() ?? null,
+          ...(newStatusBar ? { statusBar: newStatusBar } : {}),
+          connected: true,
+        });
+        return;
+      }
 
-  private subscribeToStackChanges(): void {
-    if (this.stackStream) {
-      this.stackStream.cancel();
-    }
-
-    const event = new Event();
-    event.setStackChangedEvent(new StackChangedEvent());
-
-    const request = new SubscribeEventRequest();
-    request.setEvent(event);
-
-    const stream = this.store.subscribeEvent(request);
-    this.stackStream = stream;
-
-    stream.on("error", () => {
-      setTimeout(() => this.subscribeToStackChanges(), 1000);
-    });
-
-    stream.on("data", (response: SubscribeEventResponse) => {
-      const stackEvent = response.getEvent()?.getStackChangedEvent();
-      if (!stackEvent) return;
-
-      this.update({
-        stack: stackEvent.toObject().stackList,
-      });
+      const stackChangedEvent = evt.getStackChangedEvent();
+      if (stackChangedEvent) {
+        this.update({
+          stack: stackChangedEvent.toObject().stackList,
+        });
+      }
     });
   }
 
@@ -145,7 +125,6 @@ export class StateManager {
       "state.system.cpu_percent",
       "state.system.ram_percent",
       "state.audio.playback_volume",
-      "state.audio.playback_stop_count",
     ]);
 
     const stream = this.store.subscribeStore(request);
@@ -157,12 +136,11 @@ export class StateManager {
 
     stream.on("data", (response: SubscribeStoreResponse) => {
       const results = response.getResultsList();
-      if (results.length < 4) return;
+      if (results.length < 3) return;
 
       const cpuAny = results[0];
       const ramAny = results[1];
       const volumeAny = results[2];
-      const stopCountAny = results[3];
 
       let cpuPercent = this.state.cpuPercent;
       let ramPercent = this.state.ramPercent;
@@ -178,17 +156,6 @@ export class StateManager {
 
       if (volumeAny.getTypeUrl().includes("DoubleValue")) {
         volume = decodeDoubleValue(volumeAny.getValue_asU8());
-      }
-
-      // Detect playback stop by watching the raw serialized bytes change
-      const stopCountBytes = stopCountAny.getValue_asU8();
-      const stopCountKey = String.fromCharCode(...stopCountBytes);
-      if (stopCountKey !== this.lastStopCountKey) {
-        const wasInitialized = this.lastStopCountKey !== "";
-        this.lastStopCountKey = stopCountKey;
-        if (wasInitialized) {
-          stopAllAudio();
-        }
       }
 
       this.update({ cpuPercent, ramPercent, volume });

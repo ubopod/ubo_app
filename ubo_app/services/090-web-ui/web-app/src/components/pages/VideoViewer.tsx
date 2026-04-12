@@ -6,7 +6,7 @@ import {
   FileSystemVideoFrameEvent,
 } from "../../bindings/ubo/v1/ubo_pb";
 import type { SubscribeEventResponse } from "../../bindings/store/v1/store_pb";
-import { subscribeToEvent } from "../../store/audio";
+import { subscribeToEvents } from "../../store/audio";
 import { registerPageStream } from "../../store/action-dispatcher";
 import type { ApplicationPageProps } from "./types";
 
@@ -18,10 +18,10 @@ export function VideoViewer({ store }: ApplicationPageProps) {
     let pendingFrame: { data: Uint8Array; width: number; height: number } | null =
       null;
 
-    const unsubscribe = subscribeToEvent(
+    const unsubscribe = subscribeToEvents(
       store,
-      (event: Event) =>
-        event.setFileSystemVideoFrameEvent(new FileSystemVideoFrameEvent()),
+      [(event: Event) =>
+        event.setFileSystemVideoFrameEvent(new FileSystemVideoFrameEvent())],
       (response: SubscribeEventResponse) => {
         const videoEvent = response
           .getEvent()

@@ -17,7 +17,7 @@ message DispatchActionResponse {}
 message DispatchEventResponse {}
 
 message SubscribeEventRequest {
-  ubo.v1.Event event = 1;
+  repeated ubo.v1.Event events = 2;
 }
 
 message SubscribeEventResponse {

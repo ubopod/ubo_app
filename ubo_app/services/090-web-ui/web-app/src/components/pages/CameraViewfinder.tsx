@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 
 import { CameraReportImageEvent, Event } from "../../bindings/ubo/v1/ubo_pb";
 import type { SubscribeEventResponse } from "../../bindings/store/v1/store_pb";
-import { subscribeToEvent } from "../../store/audio";
+import { subscribeToEvents } from "../../store/audio";
 import { registerPageStream } from "../../store/action-dispatcher";
 import type { ApplicationPageProps } from "./types";
 
@@ -14,10 +14,10 @@ export function CameraViewfinder({ store }: ApplicationPageProps) {
     let frameId: number | null = null;
     let pendingFrame: { data: Uint8Array; width: number; height: number } | null = null;
 
-    const unsubscribe = subscribeToEvent(
+    const unsubscribe = subscribeToEvents(
       store,
-      (event: Event) =>
-        event.setCameraReportImageEvent(new CameraReportImageEvent()),
+      [(event: Event) =>
+        event.setCameraReportImageEvent(new CameraReportImageEvent())],
       (response: SubscribeEventResponse) => {
         const cameraEvent = response
           .getEvent()

@@ -7,6 +7,7 @@ import {
   AudioPlayAudioSampleEvent,
   AudioPlayAudioSequenceEvent,
   AudioSample,
+  AudioStopPlaybackEvent,
   Event,
 } from "../bindings/ubo/v1/ubo_pb";
 
@@ -204,16 +205,17 @@ function playSequenceChunk(
   flushSequenceBuffer(id);
 }
 
-export function subscribeToEvent(
+export function subscribeToEvents(
   store: StoreServiceClient,
-  setupEvent: (event: Event) => void,
+  setupEvents: Array<(event: Event) => void>,
   handleResponse: (response: SubscribeEventResponse) => void,
 ): () => void {
-  const event = new Event();
-  setupEvent(event);
-
   const request = new SubscribeEventRequest();
-  request.setEvent(event);
+  for (const setup of setupEvents) {
+    const event = new Event();
+    setup(event);
+    request.addEvents(event);
+  }
 
   const stream = store.subscribeEvent(request);
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -222,7 +224,7 @@ export function subscribeToEvent(
   stream.on("error", () => {
     if (!cancelled) {
       reconnectTimer = setTimeout(
-        () => subscribeToEvent(store, setupEvent, handleResponse),
+        () => subscribeToEvents(store, setupEvents, handleResponse),
         1000,
       );
     }
@@ -252,47 +254,48 @@ export function stopAllAudio(): void {
 export function subscribeToAudioEvents(
   store: StoreServiceClient,
 ): () => void {
-  const unsubSample = subscribeToEvent(
+  return subscribeToEvents(
     store,
-    (event) =>
-      event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent()),
+    [
+      (event) =>
+        event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent()),
+      (event) =>
+        event.setAudioPlayAudioSequenceEvent(
+          new AudioPlayAudioSequenceEvent(),
+        ),
+      (event) =>
+        event.setAudioStopPlaybackEvent(new AudioStopPlaybackEvent()),
+    ],
     (response: SubscribeEventResponse) => {
-      const audioEvent = response.getEvent()?.getAudioPlayAudioSampleEvent();
-      if (!audioEvent) return;
+      const evt = response.getEvent();
+      if (!evt) return;
 
-      const audioSample = audioEvent.getSample();
-      if (!audioSample) return;
+      const sampleEvent = evt.getAudioPlayAudioSampleEvent();
+      if (sampleEvent) {
+        const audioSample = sampleEvent.getSample();
+        if (audioSample) {
+          playAudioSample(audioSample, sampleEvent.getVolume());
+        }
+        return;
+      }
 
-      playAudioSample(audioSample, audioEvent.getVolume());
+      const sequenceEvent = evt.getAudioPlayAudioSequenceEvent();
+      if (sequenceEvent) {
+        const audioSample = sequenceEvent.getSample();
+        if (audioSample) {
+          playSequenceChunk(
+            sequenceEvent.getId(),
+            sequenceEvent.getIndex(),
+            audioSample,
+            sequenceEvent.getVolume(),
+          );
+        }
+        return;
+      }
+
+      if (evt.getAudioStopPlaybackEvent()) {
+        stopAllAudio();
+      }
     },
   );
-
-  const unsubSequence = subscribeToEvent(
-    store,
-    (event) =>
-      event.setAudioPlayAudioSequenceEvent(
-        new AudioPlayAudioSequenceEvent(),
-      ),
-    (response: SubscribeEventResponse) => {
-      const audioEvent = response
-        .getEvent()
-        ?.getAudioPlayAudioSequenceEvent();
-      if (!audioEvent) return;
-
-      const audioSample = audioEvent.getSample();
-      if (!audioSample) return;
-
-      playSequenceChunk(
-        audioEvent.getId(),
-        audioEvent.getIndex(),
-        audioSample,
-        audioEvent.getVolume(),
-      );
-    },
-  );
-
-  return () => {
-    unsubSample();
-    unsubSequence();
-  };
 }

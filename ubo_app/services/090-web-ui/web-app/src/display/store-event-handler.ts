@@ -36,7 +36,7 @@ function subscribeToRenderEvents(
   event.setDisplayCompressedRenderEvent(new DisplayCompressedRenderEvent());
 
   const subscribeEventRequest = new SubscribeEventRequest();
-  subscribeEventRequest.setEvent(event);
+  subscribeEventRequest.addEvents(event);
 
   const stream = store.subscribeEvent(subscribeEventRequest);
 
@@ -216,7 +216,7 @@ function subscribeToAudioSampleEvents(store: StoreServiceClient) {
   event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent());
 
   const subscribeEventRequest = new SubscribeEventRequest();
-  subscribeEventRequest.setEvent(event);
+  subscribeEventRequest.addEvents(event);
 
   const stream = store.subscribeEvent(subscribeEventRequest);
 
@@ -239,7 +239,7 @@ function subscribeToAudioSequenceEvents(store: StoreServiceClient) {
   event.setAudioPlayAudioSequenceEvent(new AudioPlayAudioSequenceEvent());
 
   const subscribeEventRequest = new SubscribeEventRequest();
-  subscribeEventRequest.setEvent(event);
+  subscribeEventRequest.addEvents(event);
 
   const stream = store.subscribeEvent(subscribeEventRequest);
 

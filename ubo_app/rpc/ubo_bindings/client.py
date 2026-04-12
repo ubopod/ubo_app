@@ -99,7 +99,7 @@ class UboRPCClient:
 
         async def iterator() -> None:
             async for response in self.store_service.subscribe_event(
-                SubscribeEventRequest(event=event_type),
+                SubscribeEventRequest(events=[event_type]),
             ):
                 try:
                     callback(response.event)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import contextlib
-from asyncio import Queue, QueueFull, get_running_loop
+from asyncio import AbstractEventLoop, Queue, QueueFull, get_running_loop
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
@@ -158,6 +158,57 @@ def _send_initial_state(
         _send_initial_stack()
 
 
+def _make_queue_event(
+    queue: Queue[UboEvent],
+    loop: AbstractEventLoop,
+) -> Callable[[UboEvent], None]:
+    """Create a thread-safe callback that puts events into an async queue."""
+
+    def queue_event(event: UboEvent) -> None:
+        def _put() -> None:
+            try:
+                queue.put_nowait(event)
+            except QueueFull:
+                logger.verbose(
+                    'Subscription event queue is full, dropping event',
+                    extra={
+                        'event': event,
+                        'queue_size': queue.qsize(),
+                    },
+                )
+
+        with contextlib.suppress(RuntimeError):
+            loop.call_soon_threadsafe(_put)
+
+    return queue_event
+
+
+def _setup_event_subscriptions(
+    event_protos: Sequence[Event],
+    queue_event: Callable[[UboEvent], None],
+) -> tuple[dict[type, str], list[Callable[[], None]]]:
+    """Resolve event types and subscribe to each, returning field name mapping."""
+    event_field_names: dict[type, str] = {}
+    unsubscribes: list[Callable[[], None]] = []
+
+    for event_proto in event_protos:
+        event_class = get_class(reduce_group(event_proto))
+        if event_class:
+            event_field_names[event_class] = betterproto.casing.snake_case(
+                event_class.__name__,
+            )
+            unsubscribes.append(
+                store.subscribe_event(
+                    event_class,
+                    queue_event,
+                    keep_ref=False,
+                ),
+            )
+            _send_initial_state(event_class, queue_event)
+
+    return event_field_names, unsubscribes
+
+
 class StoreService(StoreServiceBase):
     """gRPC service class that implements the Store service."""
 
@@ -191,48 +242,26 @@ class StoreService(StoreServiceBase):
         self,
         subscribe_event_request: SubscribeEventRequest,
     ) -> AsyncIterator[SubscribeEventResponse]:
-        """Subscribe to an event from the store."""
+        """Subscribe to one or more event types from the store."""
         logger.info(
             'Received event subscription over gRPC',
             extra={'request': subscribe_event_request},
         )
-        event_class = get_class(reduce_group(subscribe_event_request.event))
         queue: Queue[UboEvent] = Queue(30)
-        loop = get_running_loop()
-        if event_class:
+        queue_event = _make_queue_event(queue, get_running_loop())
 
-            def queue_event(event: UboEvent) -> None:
-                """Put the event in the queue (thread-safe)."""
+        event_field_names, unsubscribes = _setup_event_subscriptions(
+            subscribe_event_request.events,
+            queue_event,
+        )
 
-                def _put() -> None:
-                    try:
-                        queue.put_nowait(event)
-                    except QueueFull:
-                        logger.verbose(
-                            'Subscription event queue is full, dropping event',
-                            extra={
-                                'event': event,
-                                'queue_size': queue.qsize(),
-                            },
-                        )
-
-                with contextlib.suppress(RuntimeError):
-                    loop.call_soon_threadsafe(_put)
-
-            # Pre-compute the snake_case event field name once per subscription
-            event_field_name = betterproto.casing.snake_case(event_class.__name__)
-
-            unsubscribe = store.subscribe_event(
-                event_class,
-                queue_event,
-                keep_ref=False,
-            )
-
-            _send_initial_state(event_class, queue_event)
-
+        if unsubscribes:
             try:
                 while True:
                     event = await queue.get()
+                    event_field_name = event_field_names.get(type(event))
+                    if event_field_name is None:
+                        continue
                     yield SubscribeEventResponse(
                         event=Event(
                             **{
@@ -246,7 +275,7 @@ class StoreService(StoreServiceBase):
                 logger.exception(
                     'Exception in event subscription',
                     extra={
-                        'event_type': subscribe_event_request.event,
+                        'request': subscribe_event_request,
                     },
                 )
                 report_service_error()
@@ -255,7 +284,8 @@ class StoreService(StoreServiceBase):
                     'Unsubscribing from event subscription over gRPC',
                     extra={'request': subscribe_event_request},
                 )
-                unsubscribe()
+                for unsub in unsubscribes:
+                    unsub()
 
     async def subscribe_store(
         self,
