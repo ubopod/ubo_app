@@ -1,6 +1,8 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
+from dataclasses import replace
+
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 from redux import (
     CompleteReducerResult,
@@ -143,7 +145,7 @@ def reducer(
 
         case AudioStopPlaybackAction():
             return CompleteReducerResult(
-                state=state,
+                state=replace(state, playback_stop_count=state.playback_stop_count + 1),
                 events=[AudioStopPlaybackEvent()],
             )
 

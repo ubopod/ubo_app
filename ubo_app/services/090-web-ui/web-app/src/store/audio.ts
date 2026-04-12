@@ -12,6 +12,9 @@ import {
 
 const audioContext = new AudioContext();
 
+// Track all active audio sources so they can be stopped
+const activeSources = new Set<AudioBufferSourceNode>();
+
 function createWavFile(
   samples: Uint8Array,
   sampleRate: number,
@@ -80,7 +83,11 @@ function playAudioSample(
         await audioContext.resume();
       }
 
-      source.onended = () => resolve();
+      activeSources.add(source);
+      source.onended = () => {
+        activeSources.delete(source);
+        resolve();
+      };
       source.start(audioContext.currentTime + 0.1);
     } catch (err) {
       reject(err);
@@ -122,7 +129,11 @@ function scheduleAudioChunk(
         await audioContext.resume();
       }
 
-      source.onended = () => resolve();
+      activeSources.add(source);
+      source.onended = () => {
+        activeSources.delete(source);
+        resolve();
+      };
       source.start(startTime);
     } catch (err) {
       reject(err);
@@ -133,16 +144,45 @@ function scheduleAudioChunk(
 }
 
 // Sequence playback: buffer chunks by id, play in index order.
-// Uses precise Web Audio API scheduling to avoid gaps between chunks.
+// Pre-schedules all available chunks using precise Web Audio API timing
+// so there are no gaps between chunks.
 const sequenceState = new Map<
   string,
   {
     nextIndex: number;
     buffer: Map<number, { sample: AudioSample; volume: number }>;
-    playChain: Promise<void>;
     nextStartTime: number;
+    scheduling: boolean;
   }
 >();
+
+function flushSequenceBuffer(id: string): void {
+  const seq = sequenceState.get(id);
+  if (!seq || seq.scheduling) return;
+
+  seq.scheduling = true;
+  try {
+    while (seq.buffer.has(seq.nextIndex)) {
+      const chunk = seq.buffer.get(seq.nextIndex)!;
+      seq.buffer.delete(seq.nextIndex);
+      seq.nextIndex++;
+
+      // If we've fallen behind, jump to now + small offset
+      if (seq.nextStartTime < audioContext.currentTime) {
+        seq.nextStartTime = audioContext.currentTime + 0.05;
+      }
+
+      const { endTime } = scheduleAudioChunk(
+        chunk.sample,
+        chunk.volume,
+        seq.nextStartTime,
+      );
+      seq.nextStartTime = endTime;
+    }
+  } finally {
+    seq.scheduling = false;
+  }
+}
 
 function playSequenceChunk(
   id: string,
@@ -154,39 +194,14 @@ function playSequenceChunk(
     sequenceState.set(id, {
       nextIndex: 0,
       buffer: new Map(),
-      playChain: Promise.resolve(),
       nextStartTime: audioContext.currentTime + 0.1,
+      scheduling: false,
     });
   }
   const seq = sequenceState.get(id)!;
   seq.buffer.set(index, { sample, volume });
 
-  // Chain playback of all consecutive ready chunks onto the existing chain
-  seq.playChain = seq.playChain.then(async () => {
-    while (seq.buffer.has(seq.nextIndex)) {
-      const chunk = seq.buffer.get(seq.nextIndex)!;
-      seq.buffer.delete(seq.nextIndex);
-      seq.nextIndex++;
-
-      // If we've fallen behind, jump to now + small offset
-      if (seq.nextStartTime < audioContext.currentTime) {
-        seq.nextStartTime = audioContext.currentTime + 0.05;
-      }
-
-      const { endTime, done } = scheduleAudioChunk(
-        chunk.sample,
-        chunk.volume,
-        seq.nextStartTime,
-      );
-      seq.nextStartTime = endTime;
-      await done;
-    }
-
-    // Clean up completed sequences
-    if (seq.buffer.size === 0) {
-      sequenceState.delete(id);
-    }
-  });
+  flushSequenceBuffer(id);
 }
 
 export function subscribeToEvent(
@@ -220,6 +235,18 @@ export function subscribeToEvent(
     if (reconnectTimer) clearTimeout(reconnectTimer);
     stream.cancel();
   };
+}
+
+export function stopAllAudio(): void {
+  for (const source of activeSources) {
+    try {
+      source.stop();
+    } catch {
+      // Already stopped
+    }
+  }
+  activeSources.clear();
+  sequenceState.clear();
 }
 
 export function subscribeToAudioEvents(

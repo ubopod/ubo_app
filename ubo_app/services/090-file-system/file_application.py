@@ -19,7 +19,7 @@ from ubo_app.store.core.types import (
 from ubo_app.store.input.types import PathInputDescription
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
-    AudioPlayAudioSampleAction,
+    AudioPlayAudioSequenceAction,
     AudioSample,
     AudioStopPlaybackAction,
 )
@@ -148,17 +148,42 @@ def _toggle_audio(path: Path) -> None:
     if _browser_state.audio_playing is not None:
         store.dispatch(AudioStopPlaybackAction())
 
+    import uuid
     import wave
 
     try:
+        sequence_id = uuid.uuid4().hex
         with wave.open(path.as_posix(), 'rb') as wf:
-            sample = AudioSample(
-                data=wf.readframes(wf.getnframes()),
-                channels=wf.getnchannels(),
-                rate=wf.getframerate(),
-                width=wf.getsampwidth(),
+            channels = wf.getnchannels()
+            rate = wf.getframerate()
+            width = wf.getsampwidth()
+            chunk_frames = rate  # ~1 second per chunk
+            index = 0
+            while True:
+                frames = wf.readframes(chunk_frames)
+                if not frames:
+                    break
+                store.dispatch(
+                    AudioPlayAudioSequenceAction(
+                        sample=AudioSample(
+                            data=frames,
+                            channels=channels,
+                            rate=rate,
+                            width=width,
+                        ),
+                        id=sequence_id,
+                        index=index,
+                    ),
+                )
+                index += 1
+            # Signal end-of-stream
+            store.dispatch(
+                AudioPlayAudioSequenceAction(
+                    sample=None,
+                    id=sequence_id,
+                    index=index,
+                ),
             )
-        store.dispatch(AudioPlayAudioSampleAction(sample=sample))
         _browser_state.audio_playing = path
         _show_file(path)
     except wave.Error:

@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 
 import type { AppState } from "./types";
+import { stopAllAudio } from "./audio";
 import {
   SubscribeEventRequest,
   SubscribeEventResponse,
@@ -38,6 +39,7 @@ export class StateManager {
   };
 
   private listeners: Set<StateListener> = new Set();
+  private lastStopCountKey: string = "";
   private viewStream: ReturnType<StoreServiceClient["subscribeEvent"]> | null =
     null;
   private stackStream: ReturnType<
@@ -143,6 +145,7 @@ export class StateManager {
       "state.system.cpu_percent",
       "state.system.ram_percent",
       "state.audio.playback_volume",
+      "state.audio.playback_stop_count",
     ]);
 
     const stream = this.store.subscribeStore(request);
@@ -154,11 +157,12 @@ export class StateManager {
 
     stream.on("data", (response: SubscribeStoreResponse) => {
       const results = response.getResultsList();
-      if (results.length < 3) return;
+      if (results.length < 4) return;
 
       const cpuAny = results[0];
       const ramAny = results[1];
       const volumeAny = results[2];
+      const stopCountAny = results[3];
 
       let cpuPercent = this.state.cpuPercent;
       let ramPercent = this.state.ramPercent;
@@ -174,6 +178,17 @@ export class StateManager {
 
       if (volumeAny.getTypeUrl().includes("DoubleValue")) {
         volume = decodeDoubleValue(volumeAny.getValue_asU8());
+      }
+
+      // Detect playback stop by watching the raw serialized bytes change
+      const stopCountBytes = stopCountAny.getValue_asU8();
+      const stopCountKey = String.fromCharCode(...stopCountBytes);
+      if (stopCountKey !== this.lastStopCountKey) {
+        const wasInitialized = this.lastStopCountKey !== "";
+        this.lastStopCountKey = stopCountKey;
+        if (wasInitialized) {
+          stopAllAudio();
+        }
       }
 
       this.update({ cpuPercent, ramPercent, volume });

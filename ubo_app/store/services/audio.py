@@ -207,3 +207,4 @@ class AudioState(Immutable):
 
     is_recording: bool = False
     recording: AudioSample | None = None
+    playback_stop_count: int = 0
