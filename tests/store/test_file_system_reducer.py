@@ -17,6 +17,9 @@ from pathlib import Path
 import pytest
 from redux import CompleteReducerResult, InitAction
 
+from ubo_app.store.input.types import PathInputDescription
+from ubo_app.store.services.file_system import FileSystemState
+
 
 def _import_store_types_and_reducer() -> tuple:
     """Import store types and the file system reducer.
@@ -33,13 +36,11 @@ def _import_store_types_and_reducer() -> tuple:
         InputMethod,
         InputProvideAction,
         InputResolveAction,
-        PathInputDescription,
     )
     from ubo_app.store.services.file_system import (
         FileSystemReportSelectionAction,
         FileSystemSelectorCleanupEvent,
         FileSystemSelectorPushedAction,
-        FileSystemState,
         PathSelectorConfig,
     )
 
@@ -66,11 +67,9 @@ def _import_store_types_and_reducer() -> tuple:
         InputMethod,
         InputProvideAction,
         InputResolveAction,
-        PathInputDescription,
         FileSystemReportSelectionAction,
         FileSystemSelectorCleanupEvent,
         FileSystemSelectorPushedAction,
-        FileSystemState,
         PathSelectorConfig,
         pop_queue,
         reducer,
@@ -83,11 +82,9 @@ def _import_store_types_and_reducer() -> tuple:
     InputMethod,
     InputProvideAction,
     InputResolveAction,
-    PathInputDescription,
     FileSystemReportSelectionAction,
     FileSystemSelectorCleanupEvent,
     FileSystemSelectorPushedAction,
-    FileSystemState,
     PathSelectorConfig,
     pop_queue,
     reducer,

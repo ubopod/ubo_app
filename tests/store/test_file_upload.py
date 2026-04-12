@@ -16,6 +16,8 @@ from pathlib import Path
 import pytest
 from redux import CompleteReducerResult, InitAction
 
+from ubo_app.store.services.file_system import FileSystemState
+
 
 def _import_store_types_and_reducer() -> tuple:
     """Import store types and the file system reducer.
@@ -26,7 +28,6 @@ def _import_store_types_and_reducer() -> tuple:
     """
     modules_before = set(sys.modules)
 
-    from ubo_app.store.services.file_system import FileSystemState
     from ubo_app.store.services.file_upload import (
         FileUploadChunkAction,
         FileUploadChunkEvent,
@@ -52,7 +53,6 @@ def _import_store_types_and_reducer() -> tuple:
         del sys.modules[mod]
 
     return (
-        FileSystemState,
         FileUploadChunkAction,
         FileUploadChunkEvent,
         FileUploadCompleteAction,
@@ -64,7 +64,6 @@ def _import_store_types_and_reducer() -> tuple:
 
 
 (
-    FileSystemState,
     FileUploadChunkAction,
     FileUploadChunkEvent,
     FileUploadCompleteAction,
