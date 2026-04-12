@@ -11,11 +11,11 @@
       "title": "Confirm Removal"
     },
     {
-      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_a/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] ubo\n[b]Group:[/b] ubo\n[b]Permissions:[/b] -rw-r--r--",
+      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_a/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] <USER>\n[b]Group:[/b] <USER>\n[b]Permissions:[/b] -rw-r--r--",
       "title": "test_file.txt"
     },
     {
-      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_b/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] ubo\n[b]Group:[/b] ubo\n[b]Permissions:[/b] -rw-r--r--",
+      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_b/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] <USER>\n[b]Group:[/b] <USER>\n[b]Permissions:[/b] -rw-r--r--",
       "title": "test_file.txt"
     }
   ]
