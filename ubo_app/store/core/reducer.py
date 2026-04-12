@@ -119,21 +119,11 @@ def reducer(
     match action:
         case MenuGoBackAction():
             result = pop_stack(state)
-            if result is None:
-                return state
-            return CompleteReducerResult(
-                state=result,
-                events=[StackChangedEvent(stack=result.stack)],
-            )
+            return _complete_stack_result(result, fallback=state)
 
         case MenuGoHomeAction():
             result = pop_to_root(state)
-            if result is None:
-                return state
-            return CompleteReducerResult(
-                state=result,
-                events=[StackChangedEvent(stack=result.stack)],
-            )
+            return _complete_stack_result(result, fallback=state)
 
         case MenuChooseByIconAction():
             return CompleteReducerResult(
@@ -209,17 +199,11 @@ def reducer(
                 action.initialization_args,
                 action.initialization_kwargs,
             )
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(new_state, fallback=state)
 
         case StackPushNotificationAction():
             new_state = push_notification(state, action.notification_id)
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(new_state, fallback=state)
 
         case StackPushInstructionAction():
             new_state = push_instruction(
@@ -231,10 +215,7 @@ def reducer(
                 timeout_seconds=action.timeout_seconds,
                 footer_text=action.footer_text,
             )
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(new_state, fallback=state)
 
         case StackPushPromptAction():
             new_state = push_prompt(
@@ -244,10 +225,7 @@ def reducer(
                 icon=action.icon,
                 items=action.items,
             )
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(new_state, fallback=state)
 
         case CloseInstructionAction():
             new_stack = tuple(
@@ -279,33 +257,15 @@ def reducer(
 
         case StackPopAction():
             result = pop_stack(state, action.count)
-            if result is None:
-                return state  # Can't pop root
-            new_state = result
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(result, fallback=state)
 
         case StackPopToRootAction():
             result = pop_to_root(state)
-            if result is None:
-                return state  # Already at root
-            new_state = result
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(result, fallback=state)
 
         case StackPopItemAction():
             result = pop_item(state, action.item_id)
-            if result is None:
-                return state  # Item not found, no change
-            new_state = result
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(result, fallback=state)
 
         case StackSetPageIndexAction():
             result = set_page_index(state, action.page_index)
@@ -351,10 +311,7 @@ def reducer(
                 action.initialization_args,
                 action.initialization_kwargs,
             )
-            return CompleteReducerResult(
-                state=new_state,
-                events=[StackChangedEvent(stack=new_state.stack)],
-            )
+            return _complete_stack_result(new_state, fallback=state)
 
         case CloseApplicationAction():
             item = next(
@@ -369,12 +326,7 @@ def reducer(
             if item is None:
                 return state
             close_result = pop_item(state, item.id)
-            if close_result is None:
-                return state
-            return CompleteReducerResult(
-                state=close_result,
-                events=[StackChangedEvent(stack=close_result.stack)],
-            )
+            return _complete_stack_result(close_result, fallback=state)
 
         case ToggleRecordingAction() if not state.is_replaying:
             return CompleteReducerResult(
@@ -488,3 +440,17 @@ def reducer(
 
         case _:
             return state
+
+
+def _complete_stack_result(
+    state: MainState | None,
+    *,
+    fallback: MainState,
+) -> MainState | CompleteReducerResult[MainState, None, MainEvent]:
+    """Return a standard stack-change reducer result."""
+    if state is None:
+        return fallback
+    return CompleteReducerResult(
+        state=state,
+        events=[StackChangedEvent(stack=state.stack)],
+    )

@@ -276,6 +276,35 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     )
 
 
+def _notification_view_dependency(notification: object) -> tuple[object, ...]:
+    """Return notification fields that affect NotificationViewData."""
+    extra_information = getattr(notification, 'extra_information', None)
+    actions = getattr(notification, 'actions', ()) or ()
+    return (
+        getattr(notification, 'id', None),
+        getattr(notification, 'title', ''),
+        getattr(notification, 'content', ''),
+        getattr(notification, 'icon', ''),
+        getattr(notification, 'color', ''),
+        getattr(notification, 'progress', None),
+        getattr(notification, 'show_dismiss_action', True),
+        getattr(extra_information, 'text', None),
+        tuple(
+            (
+                getattr(action, 'key', None),
+                getattr(action, 'label', ''),
+                getattr(action, 'icon', ''),
+                getattr(action, 'color', ''),
+                getattr(action, 'background_color', None),
+                getattr(action, 'action_id', None),
+                getattr(action, 'close_notification', False),
+                getattr(action, 'dismiss_notification', False),
+            )
+            for action in actions
+        ),
+    )
+
+
 def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901
     """Compute ViewData from the full RootState, using dynamic menus.
 
@@ -542,7 +571,7 @@ def setup_dynamic_view_autorun() -> None:
             state.main.is_replaying,
             tuple(state.main.registered_apps.keys()),
             tuple(
-                (n.id, n.title, n.content, n.icon, n.color, n.progress)
+                _notification_view_dependency(n)
                 for n in (
                     state.notifications.notifications
                     if hasattr(state, 'notifications')

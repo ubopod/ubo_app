@@ -113,6 +113,28 @@ class TestNotificationSinglePage:
         assert all(i is not None for i in view.items)
         assert view.total_pages == 1
 
+    def test_notification_dependency_tracks_action_changes(self) -> None:
+        """Notification view dependencies include fields used to render actions."""
+        from ubo_app.store.core.view_computation import _notification_view_dependency
+
+        first = _make_notification(num_actions=1)
+        second = _make_notification(num_actions=2)
+
+        assert _notification_view_dependency(first) != _notification_view_dependency(
+            second,
+        )
+
+    def test_notification_dependency_tracks_dismiss_changes(self) -> None:
+        """Notification view dependencies include dismiss-button visibility."""
+        from ubo_app.store.core.view_computation import _notification_view_dependency
+
+        first = _make_notification(num_actions=1, show_dismiss=False)
+        second = _make_notification(num_actions=1, show_dismiss=True)
+
+        assert _notification_view_dependency(first) != _notification_view_dependency(
+            second,
+        )
+
 
 class TestNotificationPagination:
     """Tests for notifications with more actions than PAGE_SIZE."""

@@ -18,7 +18,9 @@ import pytest
 from redux import CompleteReducerResult, InitAction, InitializationActionError
 
 from ubo_app.store.core.types import (
+    ApplicationScrollEvent,
     ApplicationStackItem,
+    ApplicationViewData,
     CloseApplicationAction,
     MainAction,
     MainState,
@@ -28,6 +30,13 @@ from ubo_app.store.core.types import (
     MenuChooseByLabelEvent,
     MenuGoBackAction,
     MenuGoHomeAction,
+    MenuItemData,
+    MenuScrollAction,
+    MenuScrollDirection,
+    MenuStackItem,
+    MenuViewData,
+    NotificationStackItem,
+    NotificationViewData,
     OpenApplicationAction,
     PowerOffAction,
     PowerOffEvent,
@@ -48,6 +57,8 @@ from ubo_app.store.core.types import (
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
+    UpdateCurrentViewAction,
+    ViewChangedEvent,
 )
 
 if TYPE_CHECKING:
@@ -323,6 +334,133 @@ class TestSetPageIndex:
         assert _get_events(result) == []
 
 
+class TestMenuScroll:
+    """Tests for MenuScrollAction reducer behavior."""
+
+    def test_scroll_menu_view_advances_page(self) -> None:
+        """Verify scrolling a paginated menu advances the stack page index."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
+        state = replace(
+            state,
+            current_view=MenuViewData(
+                items=(
+                    MenuItemData(key='1', label='One', icon='1'),
+                    MenuItemData(key='2', label='Two', icon='2'),
+                    MenuItemData(key='3', label='Three', icon='3'),
+                    MenuItemData(key='4', label='Four', icon='4'),
+                ),
+                page_index=0,
+                total_pages=2,
+            ),
+        )
+
+        result = reducer(
+            state,
+            MenuScrollAction(direction=MenuScrollDirection.DOWN),
+        )
+        new_state = _get_state(result)
+        top = new_state.stack[-1]
+
+        assert isinstance(top, MenuStackItem)
+        assert top.page_index == 1
+        assert any(
+            isinstance(event, StackPageIndexChangedEvent)
+            for event in _get_events(result)
+        )
+
+    def test_scroll_wraps_menu_view(self) -> None:
+        """Verify scrolling down from the last menu page wraps to page zero."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
+        state = _get_state(reducer(state, StackSetPageIndexAction(page_index=1)))
+        state = replace(
+            state,
+            current_view=MenuViewData(page_index=1, total_pages=2),
+        )
+
+        new_state = _get_state(
+            reducer(state, MenuScrollAction(direction=MenuScrollDirection.DOWN)),
+        )
+        top = new_state.stack[-1]
+
+        assert isinstance(top, MenuStackItem)
+        assert top.page_index == 0
+
+    def test_scroll_single_page_menu_is_noop(self) -> None:
+        """Verify scrolling a single-page menu leaves state unchanged."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
+        state = replace(state, current_view=MenuViewData(total_pages=1))
+
+        result = reducer(
+            state,
+            MenuScrollAction(direction=MenuScrollDirection.DOWN),
+        )
+
+        assert _get_state(result) is state
+        assert _get_events(result) == []
+
+    def test_scroll_without_current_view_is_noop(self) -> None:
+        """Document that reducer scrolling requires computed current_view."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
+
+        result = reducer(
+            state,
+            MenuScrollAction(direction=MenuScrollDirection.DOWN),
+        )
+
+        assert _get_state(result) is state
+        assert _get_events(result) == []
+
+    def test_scroll_notification_view_advances_page(self) -> None:
+        """Verify notification pages use the same reducer scroll path."""
+        state = _init_state()
+        state = _get_state(
+            reducer(state, StackPushNotificationAction(notification_id='n1')),
+        )
+        state = replace(
+            state,
+            current_view=NotificationViewData(
+                notification_id='n1',
+                page_index=0,
+                total_pages=2,
+            ),
+        )
+
+        new_state = _get_state(
+            reducer(state, MenuScrollAction(direction=MenuScrollDirection.DOWN)),
+        )
+        top = new_state.stack[-1]
+
+        assert isinstance(top, NotificationStackItem)
+        assert top.page_index == 1
+
+    def test_scroll_application_emits_scroll_event(self) -> None:
+        """Verify application scrolling emits an ApplicationScrollEvent."""
+        state = _init_state()
+        state = _get_state(
+            reducer(state, StackPushApplicationAction(application_id='test:app')),
+        )
+        state = replace(
+            state,
+            current_view=ApplicationViewData(application_id='test:app'),
+        )
+
+        result = reducer(
+            state,
+            MenuScrollAction(direction=MenuScrollDirection.UP),
+        )
+        events = _get_events(result)
+
+        assert _get_state(result) is state
+        assert any(
+            isinstance(event, ApplicationScrollEvent) and event.direction == 'up'
+            for event in events
+        )
+
+
 class TestOpenCloseApplication:
     """Tests for OpenApplicationAction and CloseApplicationAction."""
 
@@ -366,6 +504,31 @@ class TestOpenCloseApplication:
         ))
         new_state = _get_state(result)
         assert new_state.stack == state.stack
+        assert _get_events(result) == []
+
+
+class TestUpdateCurrentView:
+    """Tests for UpdateCurrentViewAction."""
+
+    def test_update_current_view_emits_view_changed(self) -> None:
+        """Verify current_view updates emit a ViewChangedEvent."""
+        state = _init_state()
+        view = MenuViewData(title='Main', total_pages=1)
+        result = reducer(state, UpdateCurrentViewAction(view=view))
+        new_state = _get_state(result)
+        events = _get_events(result)
+
+        assert new_state.current_view == view
+        assert any(isinstance(event, ViewChangedEvent) for event in events)
+
+    def test_identical_current_view_update_is_noop(self) -> None:
+        """Verify identical view/status updates do not emit events."""
+        view = MenuViewData(title='Main', total_pages=1)
+        state = replace(_init_state(), current_view=view, status_bar=None)
+
+        result = reducer(state, UpdateCurrentViewAction(view=view, status_bar=None))
+
+        assert _get_state(result) is state
         assert _get_events(result) == []
 
 

@@ -146,6 +146,22 @@ class TestUpdateDynamicMenuAction:
         assert isinstance(menu, DynamicMenuData)
         assert menu.menu_id == 'test'
 
+    def test_identical_update_is_noop(self) -> None:
+        """Verify identical updates don't bump the version or emit events."""
+        state = _init_state()
+        action = UpdateDynamicMenuAction(
+            menu_id='test',
+            title='Test',
+            items=(MenuItemData(key='item', label='Item', icon='I'),),
+        )
+        state = _get_state(reducer(state, action))
+        result = reducer(state, action)
+        new_state = _get_state(result)
+
+        assert new_state is state
+        assert new_state.version == state.version
+        assert _get_events(result) == []
+
 
 class TestClearDynamicMenuAction:
     """Tests for clearing dynamic menus."""

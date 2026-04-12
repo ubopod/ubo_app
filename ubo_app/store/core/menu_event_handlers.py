@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from ubo_app.store.core.types import (
         ApplicationStackItem,
         HomeViewData,
+        MainAction,
         MenuItemData,
         MenuViewData,
         PromptStackItem,
@@ -301,20 +302,28 @@ def _execute_view_item_action(item: MenuItemData) -> bool:
 
     Returns True if the item was handled, False otherwise.
     """
+    action = _resolve_view_item_action(item)
+    if action is None:
+        return False
+    store.dispatch(action)
+    return True
+
+
+def _resolve_view_item_action(item: MenuItemData) -> MainAction | None:
+    """Map a selected view item to the reducer action that handles it."""
     if not item.action_id:
         logger.info(
             '[MenuHandler] choose_by_index: current_view item label=%s '
             'has no action_id',
             item.label,
         )
-        return False
+        return None
 
     # notification:display:* action_ids open a notification by pushing it
     # onto the stack.
     if item.action_id.startswith(NOTIFICATION_DISPLAY_PREFIX):
         notification_id = item.action_id[len(NOTIFICATION_DISPLAY_PREFIX):]
-        store.dispatch(StackPushNotificationAction(notification_id=notification_id))
-        return True
+        return StackPushNotificationAction(notification_id=notification_id)
 
     # menu:select:* action_ids are auto-generated for SubMenuItems.
     # These need StackPushMenuAction, not the action registry.
@@ -326,8 +335,7 @@ def _execute_view_item_action(item: MenuItemData) -> bool:
             menu_key,
             item.label,
         )
-        store.dispatch(StackPushMenuAction(menu_key=menu_key))
-        return True
+        return StackPushMenuAction(menu_key=menu_key)
 
     logger.info(
         '[MenuHandler] choose_by_index: using current_view, '
@@ -335,20 +343,7 @@ def _execute_view_item_action(item: MenuItemData) -> bool:
         item.action_id,
         item.label,
     )
-    # Call execute_action directly (not via dispatch) so we can
-    # handle return values -- handlers returning a Menu signal
-    # that a sub-menu should be pushed onto the stack.
-    from ubo_app.store.core.action_registry import execute_action
-
-    result = execute_action(item.action_id)
-    if result is not None and item.key:
-        logger.info(
-            '[MenuHandler] choose_by_index: action returned '
-            'result, pushing key=%s',
-            item.key,
-        )
-        store.dispatch(StackPushMenuAction(menu_key=item.key))
-    return True
+    return ExecuteMenuActionAction(action_id=item.action_id, menu_key=item.key)
 
 
 def _handle_home_view_index(

@@ -39,6 +39,8 @@ def reducer(
                 items=action.items,
                 placeholder=action.placeholder,
             )
+            if state.menus.get(action.menu_id) == menu_data:
+                return state
 
             # Update the menus dict
             new_menus = {**state.menus, action.menu_id: menu_data}
