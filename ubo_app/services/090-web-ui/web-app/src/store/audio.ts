@@ -15,6 +15,8 @@ const audioContext = new AudioContext();
 
 // Track all active audio sources so they can be stopped
 const activeSources = new Set<AudioBufferSourceNode>();
+// Generation counter to cancel in-flight async decodes after stop
+let audioGeneration = 0;
 
 function createWavFile(
   samples: Uint8Array,
@@ -60,6 +62,7 @@ function playAudioSample(
   sample: AudioSample,
   volume: number,
 ): Promise<void> {
+  const gen = audioGeneration;
   return new Promise(async (resolve, reject) => {
     try {
       const data = sample.getData_asU8();
@@ -70,6 +73,8 @@ function playAudioSample(
       const audioBlob = createWavFile(data, rate, channels, width * 8);
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      if (gen !== audioGeneration) { resolve(); return; }
 
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
@@ -104,6 +109,7 @@ function scheduleAudioChunk(
   volume: number,
   startTime: number,
 ): { endTime: number; done: Promise<void> } {
+  const gen = audioGeneration;
   const data = sample.getData_asU8();
   const rate = sample.getRate();
   const width = sample.getWidth();
@@ -116,6 +122,8 @@ function scheduleAudioChunk(
       const audioBlob = createWavFile(data, rate, channels, width * 8);
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      if (gen !== audioGeneration) { resolve(); return; }
 
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
@@ -240,6 +248,7 @@ export function subscribeToEvents(
 }
 
 export function stopAllAudio(): void {
+  audioGeneration++;
   for (const source of activeSources) {
     try {
       source.stop();
