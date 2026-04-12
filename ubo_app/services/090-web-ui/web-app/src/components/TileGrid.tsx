@@ -37,11 +37,11 @@ export function TileGrid({
   useEffect(() => {
     setFocusIndex(0);
     // Auto-focus the grid when items change so keyboard events are captured
-    gridRef.current?.focus();
+    gridRef.current?.focus({ preventScroll: true });
   }, [itemsKey]);
 
   useEffect(() => {
-    tileRefs.current[focusIndex]?.focus();
+    tileRefs.current[focusIndex]?.focus({ preventScroll: true });
   }, [focusIndex]);
 
   const lastActivateRef = useRef(0);

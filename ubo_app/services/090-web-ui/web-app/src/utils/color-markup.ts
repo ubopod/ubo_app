@@ -1,10 +1,11 @@
-/** Strip all [color=...][/color] and [size=...][/size] tags, keeping inner text. */
+/** Strip all BBCode-style tags ([color=...], [size=...], [b], [i], [u], etc.), keeping inner text. */
 export function stripColorMarkup(text: string): string {
   return text
     .replace(/\[color=[^\]]*\]/g, "")
     .replace(/\[\/color\]/g, "")
     .replace(/\[size=[^\]]*\]/g, "")
-    .replace(/\[\/size\]/g, "");
+    .replace(/\[\/size\]/g, "")
+    .replace(/\[\/?(b|i|u)\]/g, "");
 }
 
 /** Parse a single colored icon: extract symbol + color from [color=#XXX]icon[/color]. */

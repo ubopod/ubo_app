@@ -2,7 +2,7 @@ import { ButtonBase, Paper, Typography } from "@mui/material";
 import { forwardRef } from "react";
 
 import type { MenuItemData } from "../bindings/ubo/v1/ubo_pb";
-import { parseColoredIcon } from "../utils/color-markup";
+import { parseColoredIcon, stripColorMarkup } from "../utils/color-markup";
 
 interface TileProps {
   item: MenuItemData.AsObject;
@@ -19,7 +19,7 @@ function deriveLabel(key: string): string {
 
 export const Tile = forwardRef<HTMLButtonElement, TileProps>(
   function Tile({ item, focused, onActivate }, ref) {
-    const displayLabel = item.label || deriveLabel(item.key);
+    const displayLabel = stripColorMarkup(item.label || deriveLabel(item.key));
     const parsedIcon = item.icon ? parseColoredIcon(item.icon) : null;
 
     return (

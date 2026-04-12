@@ -144,7 +144,7 @@ function AppContent({ store }: { store: StoreServiceClient }) {
       sx={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "100vh",
+        height: "100dvh",
         backgroundColor: "background.default",
       }}
     >
