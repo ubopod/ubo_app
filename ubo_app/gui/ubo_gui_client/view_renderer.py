@@ -962,12 +962,47 @@ class ViewRenderer:
         if items_wrapper is not None:
             raw_items = getattr(items_wrapper, 'items', []) or []
 
+        # If already showing a prompt, update in-place (no transition)
+        existing = self.menu_widget.current_application
+        if (
+            self._current_view_type == 'prompt'
+            and isinstance(existing, UboPromptWidget)
+        ):
+            existing.prompt = prompt_text
+            existing.icon = icon
+            self._apply_prompt_items(existing, raw_items)
+            logger.info(
+                '[ViewRenderer] Prompt updated in-place: prompt=%s, items=%d',
+                prompt_text,
+                len(raw_items),
+            )
+            return
+
         widget = _GenericPrompt()
         widget.prompt = prompt_text
         widget.title = None  # type: ignore[assignment]
         widget.icon = icon
+        self._apply_prompt_items(widget, raw_items)
 
-        # Map first two items to first/second option
+        logger.info(
+            '[ViewRenderer] Prompt: title=%s, prompt=%s, items=%d',
+            title,
+            prompt_text,
+            len(raw_items),
+        )
+        self.menu_widget.replace_top_with_application(widget, animated=True)
+        self._current_view_type = 'prompt'
+        self._last_menu_page_index = None
+        stack_depth = getattr(view, 'stack_depth', None)
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
+
+    @staticmethod
+    def _apply_prompt_items(
+        widget: object,
+        raw_items: list[object],
+    ) -> None:
+        """Apply prompt item data to widget option fields."""
         if len(raw_items) > 0:
             first = raw_items[0]
             widget.first_option_label = getattr(first, 'label', '') or ''
@@ -982,19 +1017,6 @@ class ViewRenderer:
             widget.second_option_is_short = (
                 getattr(second, 'is_short', False) or False
             )
-
-        logger.info(
-            '[ViewRenderer] Prompt: title=%s, prompt=%s, items=%d',
-            title,
-            prompt_text,
-            len(raw_items),
-        )
-        self.menu_widget.replace_top_with_application(widget, animated=True)
-        self._current_view_type = 'prompt'
-        self._last_menu_page_index = None
-        stack_depth = getattr(view, 'stack_depth', None)
-        if stack_depth is not None:
-            self._last_stack_depth = stack_depth
 
     @staticmethod
     def _item_data_to_action_item(item_data: object) -> ActionItem:
