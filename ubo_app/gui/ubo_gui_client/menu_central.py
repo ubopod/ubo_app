@@ -12,8 +12,8 @@ from ubo_gui.menu.stack_item import StackMenuItem
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
 
 from ubo_gui_client.constants import DEBUG_MENU
-from ubo_gui_client.home_page import HomePage
 from ubo_gui_client.menu_notification_handler import MenuNotificationHandler
+from ubo_gui_client.widgets.home_page import HomePage
 
 if TYPE_CHECKING:
     from kivy.uix.screenmanager import Screen, TransitionBase

@@ -18,9 +18,8 @@ from ubo_app.store.core.types import (
     MenuGoHomeAction,
     MenuScrollAction,
     MenuScrollDirection,
-    OpenApplicationAction,
+    OpenRenderAction,
 )
-from ubo_app.store.input.types import InputMethod
 from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
 )
@@ -104,10 +103,14 @@ def reducer(
                             'Create WiFi Connection using Camera',
                             'Create WiFi Connection using QR Code',
                         ],
-                        OpenApplicationAction(
-                            application_id='wifi:create-connection-page',
-                            initialization_kwargs={
-                                'input_methods': (InputMethod.CAMERA,),
+                        OpenRenderAction(
+                            kind='status',
+                            title='Creating WiFi Connection',
+                            props={
+                                'icon': '󱛃',
+                                'text': 'Creating Scanned WiFi Connection',
+                                'icon_size': 56,
+                                'text_font_size': 19,
                             },
                         ),
                     ),
@@ -121,10 +124,14 @@ def reducer(
                             'Create WiFi Connection using Web UI',
                             'Create WiFi Connection using Web',
                         ],
-                        OpenApplicationAction(
-                            application_id='wifi:create-connection-page',
-                            initialization_kwargs={
-                                'input_methods': (InputMethod.WEB_DASHBOARD,),
+                        OpenRenderAction(
+                            kind='status',
+                            title='Creating WiFi Connection',
+                            props={
+                                'icon': '󱛃',
+                                'text': 'Creating WiFi Connection via Web',
+                                'icon_size': 56,
+                                'text_font_size': 19,
                             },
                         ),
                     ),

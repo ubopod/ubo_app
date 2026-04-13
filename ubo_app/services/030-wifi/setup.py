@@ -16,7 +16,7 @@ from wifi_manager import (
 from ubo_app.colors import INFO_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
-    OpenApplicationAction,
+    OpenRenderAction,
     RegisterSettingAppAction,
     SettingsCategory,
 )
@@ -100,8 +100,15 @@ async def _check_connection() -> None:
         display_type=NotificationDisplayType.STICKY,
         actions=[
             NotificationDispatchItem(
-                store_action=OpenApplicationAction(
-                    application_id='wifi:create-connection-page',
+                store_action=OpenRenderAction(
+                    kind='status',
+                    title='Creating WiFi Connection',
+                    props={
+                        'icon': '󱛃',
+                        'text': 'Creating Scanned WiFi Connection',
+                        'icon_size': 56,
+                        'text_font_size': 19,
+                    },
                 ),
                 icon='󱚾',
                 background_color=INFO_COLOR,

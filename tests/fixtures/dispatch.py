@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from immutable import Immutable
     from ubo_bindings.store.v1 import StoreServiceStub
 
-    from ubo_app.store.core.types.stack_items import ApplicationStackItem
     from ubo_app.store.core.types.view_data import MenuItemData
 
 
@@ -123,9 +122,13 @@ def _find_item_index(
     return None
 
 
-def _get_top_application() -> ApplicationStackItem:
-    """Return the top application stack item."""
-    from ubo_app.store.core.types import ApplicationStackItem
+def _get_top_app_button_action_id(index: int) -> str:
+    """Return the action_id for a button press on the top stack item.
+
+    For ApplicationStackItem: uses the 'app-button:{app_id}:{index}' convention.
+    For PromptStackItem: uses the action_id from the item at position index-1.
+    """
+    from ubo_app.store.core.types import ApplicationStackItem, PromptStackItem
     from ubo_app.store.main import store
 
     state = store._state  # noqa: SLF001
@@ -134,10 +137,18 @@ def _get_top_application() -> ApplicationStackItem:
         raise RuntimeError(msg)
 
     top = state.main.stack[-1]
-    if not isinstance(top, ApplicationStackItem):
-        msg = f'Top of stack is not an application: {type(top)}'
-        raise TypeError(msg)
-    return top
+    if isinstance(top, ApplicationStackItem):
+        return f'app-button:{top.application_id}:{index}'
+    if isinstance(top, PromptStackItem):
+        item_index = index - 1
+        if item_index < len(top.items):
+            action_id = top.items[item_index].action_id
+            if action_id:
+                return action_id
+        msg = f'Prompt item at index {item_index} has no action_id'
+        raise ValueError(msg)
+    msg = f'Top of stack is not an application or prompt: {type(top)}'
+    raise TypeError(msg)
 
 
 class Dispatcher:
@@ -212,21 +223,17 @@ class Dispatcher:
             from ubo_app.store.core.types import ExecuteMenuActionAction
             from ubo_app.store.main import store
 
-            top = _get_top_application()
+            action_id = _get_top_app_button_action_id(index)
             store.dispatch(
-                ExecuteMenuActionAction(
-                    action_id=f'app-button:{top.application_id}:{index}',
-                ),
+                ExecuteMenuActionAction(action_id=action_id),
             )
         elif via == DispatchMethod.GRPC_MENU:
             from ubo_app.store.core.types import ExecuteMenuActionAction
 
-            top = _get_top_application()
+            action_id = _get_top_app_button_action_id(index)
             await _dispatch_via_grpc(
                 self._stub,
-                ExecuteMenuActionAction(
-                    action_id=f'app-button:{top.application_id}:{index}',
-                ),
+                ExecuteMenuActionAction(action_id=action_id),
             )
         else:
             from ubo_app.store.services.keypad import Key

@@ -1,4 +1,6 @@
-# ruff: noqa: D100, D101, D102, D107
+"""Home page widget."""
+
+# ruff: noqa: D101, D102, D107
 from __future__ import annotations
 
 import pathlib

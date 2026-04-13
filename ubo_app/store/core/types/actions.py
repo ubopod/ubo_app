@@ -241,6 +241,15 @@ class UpdateRenderPropsAction(StackAction):
     ] = field(default_factory=dict)
 
 
+class UpdatePromptAction(StackAction):
+    """Update an open prompt view's icon, prompt text, or action items."""
+
+    title: str = ''
+    prompt: str = ''
+    icon: str = ''
+    items: tuple[MenuItemData, ...] | None = None
+
+
 # =============================================================================
 # Dynamic Menu Actions (Services update menu content via Redux)
 # =============================================================================

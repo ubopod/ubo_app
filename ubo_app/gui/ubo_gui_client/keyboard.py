@@ -149,7 +149,7 @@ def setup_keyboard(  # noqa: C901, PLR0915
         current_app = menu_widget.current_application
         if current_app is None:
             return False
-        from ubo_gui_client.notification_info import NotificationInfo
+        from ubo_gui_client.widgets.notification_info import NotificationInfo
 
         return isinstance(current_app, NotificationInfo)
 

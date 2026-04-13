@@ -62,6 +62,7 @@ from ubo_app.store.core.types import (
     OpenRenderAction,
     PowerOffAction,
     PowerOffEvent,
+    PromptStackItem,
     RebootAction,
     RebootEvent,
     RegisterRegularAppAction,
@@ -93,6 +94,7 @@ from ubo_app.store.core.types import (
     UpdateApplicationKwargsAction,
     UpdateCurrentViewAction,
     UpdateInstructionProgressAction,
+    UpdatePromptAction,
     UpdateRenderPropsAction,
     ViewChangedEvent,
 )
@@ -337,6 +339,30 @@ def reducer(
                     (action.stream_id and item.stream_id == action.stream_id)
                     or (action.kind and item.kind == action.kind)
                 )
+                else item
+                for item in state.stack
+            )
+            if new_stack == state.stack:
+                return state
+            new_state = replace(state, stack=new_stack)
+            return CompleteReducerResult(
+                state=replace(
+                    new_state,
+                    path=derive_path_from_stack(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_state.stack)],
+            )
+
+        case UpdatePromptAction():
+            new_stack = tuple(
+                replace(
+                    item,
+                    title=action.title or item.title,
+                    prompt=action.prompt or item.prompt,
+                    icon=action.icon or item.icon,
+                    items=action.items if action.items is not None else item.items,
+                )
+                if isinstance(item, PromptStackItem)
                 else item
                 for item in state.stack
             )

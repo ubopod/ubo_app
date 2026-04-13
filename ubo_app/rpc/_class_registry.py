@@ -436,6 +436,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'UpdateManagerSetVersionsAction': 'ubo_app.store.update_manager.types',
     'UpdateManagerState': 'ubo_app.store.update_manager.types',
     'UpdateManagerUpdateEvent': 'ubo_app.store.update_manager.types',
+    'UpdatePromptAction': 'ubo_app.store.core.types.actions',
     'UpdateRenderPropsAction': 'ubo_app.store.core.types.actions',
     'UpdateStatus': 'ubo_app.store.update_manager.types',
     'UserState': 'ubo_app.store.services.users',

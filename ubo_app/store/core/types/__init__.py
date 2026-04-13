@@ -52,6 +52,7 @@ from ubo_app.store.core.types.actions import (
     UpdateDynamicMenuAction,
     UpdateInstructionProgressAction,
     UpdateLightDMState,
+    UpdatePromptAction,
     UpdateRenderPropsAction,
     service_default_factory,
 )
@@ -216,6 +217,7 @@ __all__ = [
     'UpdateDynamicMenuAction',
     'UpdateInstructionProgressAction',
     'UpdateLightDMState',
+    'UpdatePromptAction',
     'UpdateRenderPropsAction',
     'ViewChangedEvent',
     'ViewData',

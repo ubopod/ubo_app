@@ -9,12 +9,12 @@ from constants import WIFI_CONNECTIONS_MENU_ID, WIFI_SETTINGS_MENU_ID, get_signa
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.types import (
-    ApplicationStackItem,
-    CloseApplicationAction,
     MenuItemData,
-    OpenApplicationAction,
-    UpdateApplicationKwargsAction,
+    PromptStackItem,
+    StackPopAction,
+    StackPushPromptAction,
     UpdateDynamicMenuAction,
+    UpdatePromptAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.wifi import (
@@ -45,13 +45,67 @@ def _get_connection_icon(connection: WiFiConnection) -> str:
     return _CONNECTION_STATE_ICONS[connection.state]
 
 
+def _build_prompt_items(
+    ssid: str,
+    state: str,
+) -> tuple[MenuItemData, ...]:
+    """Build prompt action items based on WiFi connection state."""
+    if state == ConnectionState.CONNECTED.value:
+        first = MenuItemData(
+            key='connect-disconnect',
+            label='Disconnect',
+            icon='󰖪',
+            action_id=f'wifi:disconnect:{ssid}',
+        )
+    elif state == ConnectionState.CONNECTING.value:
+        first = MenuItemData(
+            key='connect-disconnect',
+            label='Connecting...',
+            icon='',
+            background_color='black',
+        )
+    elif state == ConnectionState.DISCONNECTED.value:
+        first = MenuItemData(
+            key='connect-disconnect',
+            label='Connect',
+            icon='󰖩',
+            action_id=f'wifi:connect:{ssid}',
+        )
+    else:
+        first = MenuItemData(
+            key='connect-disconnect',
+            label='',
+            icon='',
+            background_color='black',
+        )
+    return (
+        first,
+        MenuItemData(
+            key='forget',
+            label='Delete',
+            icon='󰆴',
+            action_id=f'wifi:forget:{ssid}',
+        ),
+    )
+
+
+def _get_prompt_icon(state: str) -> str:
+    """Get the prompt icon based on WiFi connection state."""
+    if state == ConnectionState.CONNECTED.value:
+        return '󰖩'
+    if state == ConnectionState.DISCONNECTED.value:
+        return '󰖪'
+    return ''
+
+
 def _make_open_handler(ssid: str, state: str) -> Callable[[], None]:
     """Create handler for opening a WiFi connection page."""
     def _handler() -> None:
         store.dispatch(
-            OpenApplicationAction(
-                application_id='wifi:connection-page',
-                initialization_kwargs={'ssid': ssid, 'state': state},
+            StackPushPromptAction(
+                prompt=f'SSID: {ssid}',
+                icon=_get_prompt_icon(state),
+                items=_build_prompt_items(ssid, state),
             ),
         )
 
@@ -85,6 +139,7 @@ def _make_forget_handler(ssid: str) -> Callable[[], None]:
     def _handler() -> None:
         from wifi_manager import forget_wireless_connection
 
+        store.dispatch(StackPopAction())
         create_task(forget_wireless_connection(ssid))
         store.dispatch(WiFiUpdateRequestAction())
 
@@ -252,66 +307,14 @@ register_action('wifi:select-connections', _select_connections)
 
 
 
-# --- Application button handlers for wifi:connection-page ---
-# These handle physical button presses (RPi) on the WiFi connection page.
-# L1 (index 0) = connect/disconnect, L2 (index 1) = forget/delete
-
-def _connection_page_first_button() -> None:
-    """Handle connect/disconnect button on the WiFi connection page."""
-    from ubo_app.store.core.action_registry import execute_action
-
-    @store.with_state(lambda state: state.main.stack)
-    def _handle(stack: tuple) -> None:
-        top = stack[-1] if stack else None
-        if not isinstance(top, ApplicationStackItem):
-            return
-        ssid = top.initialization_kwargs.get('ssid', '')
-        current_state = top.initialization_kwargs.get('state', '')
-        if current_state == ConnectionState.CONNECTED.value:
-            execute_action(f'wifi:disconnect:{ssid}')
-            new_state = ConnectionState.DISCONNECTED.value
-        else:
-            execute_action(f'wifi:connect:{ssid}')
-            new_state = ConnectionState.CONNECTING.value
-
-        store.dispatch(
-            UpdateApplicationKwargsAction(
-                application_id='wifi:connection-page',
-                kwargs={'state': new_state},
-            ),
-        )
-
-    _handle()
-
-
-def _connection_page_second_button() -> None:
-    """Handle forget/delete button on the WiFi connection page."""
-    from ubo_app.store.core.action_registry import execute_action
-
-    @store.with_state(lambda state: state.main.stack)
-    def _handle(stack: tuple) -> None:
-        top = stack[-1] if stack else None
-        if not isinstance(top, ApplicationStackItem):
-            return
-        ssid = top.initialization_kwargs.get('ssid', '')
-        store.dispatch(CloseApplicationAction(application_instance_id=top.id))
-        execute_action(f'wifi:forget:{ssid}')
-
-    _handle()
-
-
-register_action('app-button:wifi:connection-page:1', _connection_page_first_button)
-register_action('app-button:wifi:connection-page:2', _connection_page_second_button)
-
-
-# --- Reactive state updates for the WiFi connection page ---
+# --- Reactive state updates for the WiFi connection prompt ---
 
 
 @store.autorun(lambda state: state.wifi.connections)
-def _update_connection_page_state(
+def _update_connection_prompt_state(
     connections: Sequence[WiFiConnection] | None,
 ) -> None:
-    """Reactively update the WiFi connection page when connection state changes."""
+    """Reactively update the WiFi connection prompt when state changes."""
     if connections is None:
         return
 
@@ -320,18 +323,18 @@ def _update_connection_page_state(
     @store.with_state(lambda state: state.main.stack)
     def _check_stack(stack: tuple) -> None:
         top = stack[-1] if stack else None
-        if not isinstance(top, ApplicationStackItem):
+        if not isinstance(top, PromptStackItem):
             return
-        if top.application_id != 'wifi:connection-page':
+        prompt = top.prompt
+        if not prompt.startswith('SSID: '):
             return
-        ssid = str(top.initialization_kwargs.get('ssid', ''))
-        current_state = str(top.initialization_kwargs.get('state', ''))
+        ssid = prompt[len('SSID: '):]
         new_state = connection_states.get(ssid)
-        if new_state is not None and new_state != current_state:
+        if new_state is not None:
             store.dispatch(
-                UpdateApplicationKwargsAction(
-                    application_id='wifi:connection-page',
-                    kwargs={'state': new_state},
+                UpdatePromptAction(
+                    icon=_get_prompt_icon(new_state),
+                    items=_build_prompt_items(ssid, new_state),
                 ),
             )
 

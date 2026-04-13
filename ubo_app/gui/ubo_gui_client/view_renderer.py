@@ -649,7 +649,7 @@ class ViewRenderer:
         title = getattr(view, 'title', '') or ''
         stream_id = getattr(view, 'stream_id', '') or ''
 
-        from ubo_gui_client.generic_render import GENERIC_RENDER_WIDGETS
+        from ubo_gui_client.widgets import GENERIC_RENDER_WIDGETS
 
         widget_class = GENERIC_RENDER_WIDGETS.get(kind)
         if widget_class is None:
@@ -657,7 +657,7 @@ class ViewRenderer:
                 '[ViewRenderer] No generic widget for render kind=%s',
                 kind,
             )
-            from ubo_gui_client.gui_utils import RawTextViewer
+            from ubo_gui_client.widgets.text_viewer import RawTextViewer
 
             widget = RawTextViewer(text=f'Render view: {kind}\n{title}')
         else:
@@ -686,7 +686,7 @@ class ViewRenderer:
             self._last_stack_depth = stack_depth
 
         if kind == 'frame_stream' and stream_id:
-            from ubo_gui_client.generic_render import FrameStreamRenderPage
+            from ubo_gui_client.widgets.frame_stream import FrameStreamRenderPage
 
             if isinstance(widget, FrameStreamRenderPage):
 
@@ -809,7 +809,7 @@ class ViewRenderer:
         from ubo_gui.page import PAGE_MAX_ITEMS
 
         from ubo_gui_client.constants import INFO_COLOR
-        from ubo_gui_client.notification_info import NotificationInfo
+        from ubo_gui_client.widgets.notification_info import NotificationInfo
 
         title = getattr(view, 'title', '') or ''
         content = getattr(view, 'content', '') or ''
@@ -923,7 +923,7 @@ class ViewRenderer:
         display_text = '\n'.join(lines)
 
         # Use RawTextViewer for rendering
-        from ubo_gui_client.gui_utils import RawTextViewer
+        from ubo_gui_client.widgets.text_viewer import RawTextViewer
 
         widget = RawTextViewer(text=display_text)
 
@@ -954,6 +954,7 @@ class ViewRenderer:
 
         prompt_text = getattr(view, 'prompt', '') or ''
         title = getattr(view, 'title', '') or ''
+        icon = getattr(view, 'icon', '') or ''
 
         # Extract items from the proto view
         items_wrapper = getattr(view, 'items', None)
@@ -964,6 +965,7 @@ class ViewRenderer:
         widget = _GenericPrompt()
         widget.prompt = prompt_text
         widget.title = None  # type: ignore[assignment]
+        widget.icon = icon
 
         # Map first two items to first/second option
         if len(raw_items) > 0:

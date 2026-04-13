@@ -1,4 +1,6 @@
-# ruff: noqa: D100, D101
+"""Notification info widget."""
+
+# ruff: noqa: D101
 from __future__ import annotations
 
 import pathlib
@@ -23,5 +25,8 @@ class NotificationInfo(UboPageWidget):
 
 
 Builder.load_file(
-    pathlib.Path(__file__).parent.joinpath('notification_info.kv').resolve().as_posix(),
+    pathlib.Path(__file__)
+    .parent.joinpath('notification_info.kv')
+    .resolve()
+    .as_posix(),
 )

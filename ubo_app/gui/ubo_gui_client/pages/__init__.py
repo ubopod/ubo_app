@@ -42,15 +42,10 @@ def get_grpc_client() -> GUIClient:
         raise RuntimeError(msg)
     return app.grpc_client
 
-def register_all_pages() -> None:
-    """Register all page widgets in the application registry."""
-    from .wifi_pages import WiFiConnectionPage, WiFiCreateConnectionPage
 
-    register_application(
-        application_id='wifi:connection-page',
-        application=WiFiConnectionPage,
-    )
-    register_application(
-        application_id='wifi:create-connection-page',
-        application=WiFiCreateConnectionPage,
-    )
+def register_all_pages() -> None:
+    """Register all page widgets in the application registry.
+
+    No pages currently registered — all views use generic render widgets.
+    This function remains as a hook for future custom page registrations.
+    """

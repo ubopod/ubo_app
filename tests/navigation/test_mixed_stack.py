@@ -165,9 +165,9 @@ class TestCloseAppThenFlashNotification:
         menu_stack_depth = len(nav.state.stack)
         path_before = nav.state.path
 
-        # Push an application (simulating wifi:connection-page)
+        # Push an application
         nav.dispatch(
-            StackPushApplicationAction(application_id='wifi:connection-page'),
+            StackPushApplicationAction(application_id='test:app'),
         )
         assert isinstance(nav.view, ApplicationViewData)
         app_instance_id = nav.state.stack[-1].id

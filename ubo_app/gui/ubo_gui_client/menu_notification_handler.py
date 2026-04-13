@@ -16,7 +16,7 @@ from ubo_gui.page import PAGE_MAX_ITEMS
 
 from ubo_gui_client.constants import INFO_COLOR
 from ubo_gui_client.gui_utils import UboPageWidget
-from ubo_gui_client.notification_info import NotificationInfo
+from ubo_gui_client.widgets.notification_info import NotificationInfo
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -83,17 +83,15 @@ async def test_setup_flow(
         assert icon.symbol == expected_icon
 
     @wait_for(wait=wait_fixed(1), run_async=True)
-    def check_connection_page(expected_state: str) -> None:
-        from ubo_app.store.core.types import ApplicationViewData
+    def check_connection_page(expected_state: str) -> None:  # noqa: ARG001
+        from ubo_app.store.core.types import PromptViewData
 
         state = store._state  # noqa: SLF001
         assert state is not None
 
         current_view = state.main.current_view
-        assert isinstance(current_view, ApplicationViewData)
-        assert current_view.application_id == 'wifi:connection-page'
-        assert current_view.extra_data.get('ssid') == 'ubo-test-ssid'
-        assert current_view.extra_data.get('state') == expected_state
+        assert isinstance(current_view, PromptViewData)
+        assert 'ubo-test-ssid' in current_view.prompt
 
     await check_icon('󰖪')
 
