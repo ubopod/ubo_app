@@ -164,6 +164,19 @@ class StackPushApplicationAction(StackAction):
     ] = field(default_factory=dict)
 
 
+class StackPushRenderAction(StackAction):
+    """Push a generic reusable render view onto the navigation stack."""
+
+    kind: str
+    title: str = ''
+    props: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+    items: tuple[MenuItemData, ...] = ()
+    stream_id: str = ''
+
+
 class StackPushNotificationAction(StackAction):
     """Push a notification overlay onto the navigation stack."""
 
@@ -210,6 +223,19 @@ class UpdateApplicationKwargsAction(StackAction):
 
     application_id: str
     kwargs: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+
+
+class UpdateRenderPropsAction(StackAction):
+    """Merge props into an open generic render view by kind or stream_id."""
+
+    kind: str = ''
+    stream_id: str = ''
+    next_kind: str = ''
+    title: str = ''
+    props: dict[
         str,
         BasicType | tuple[BasicType, ...] | list[BasicType],
     ] = field(default_factory=dict)
@@ -293,6 +319,19 @@ class OpenApplicationAction(MainAction):
         str,
         BasicType | tuple[BasicType, ...] | list[BasicType],
     ] = field(default_factory=dict)
+
+
+class OpenRenderAction(MainAction):
+    """Action to open a generic reusable render view."""
+
+    kind: str
+    title: str = ''
+    props: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+    items: tuple[MenuItemData, ...] = ()
+    stream_id: str = ''
 
 
 class CloseApplicationAction(MainAction):

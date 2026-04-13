@@ -19,7 +19,7 @@ from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, STOPPED_COLOR, WARNING_C
 from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.types import (
     MenuItemData,
-    StackPushApplicationAction,
+    OpenRenderAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
@@ -383,9 +383,9 @@ class ServiceMenuController:
             register_action(
                 error_action_id,
                 lambda _msg=error.message: store.dispatch(
-                    StackPushApplicationAction(
-                        application_id='ubo:raw-text-viewer',
-                        initialization_kwargs={'text': _msg},
+                    OpenRenderAction(
+                        kind='text_viewer',
+                        props={'text': _msg},
                     ),
                 ),
                 allow_reregister=True,

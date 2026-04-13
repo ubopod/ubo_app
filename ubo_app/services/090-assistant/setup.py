@@ -36,6 +36,7 @@ from ubo_app.store.core.action_registry import register_action, unregister_actio
 from ubo_app.store.core.types import (
     MenuGoBackAction,
     MenuItemData,
+    OpenRenderAction,
     RegisterSettingAppAction,
     SettingsCategory,
     StackPushMenuAction,
@@ -239,12 +240,10 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
                 )
 
         case AssistanceImageFrame() as image:
-            from ubo_app.store.core.types import OpenApplicationAction
-
             store.dispatch(
-                OpenApplicationAction(
-                    application_id='ubo:raw-image-viewer',
-                    initialization_kwargs={
+                OpenRenderAction(
+                    kind='image_viewer',
+                    props={
                         'image': image.image,
                         'width': image.width,
                         'height': image.height,

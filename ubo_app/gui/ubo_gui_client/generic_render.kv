@@ -1,0 +1,107 @@
+#:kivy 2.3.0
+#:import re re
+
+<QRCodeRenderPage>:
+  BoxLayout:
+    id: pager
+    orientation: 'vertical'
+    padding: dp(5), dp(5), dp(5), root.padding_bottom
+    spacing: dp(2)
+
+    BoxLayout:
+      orientation: 'vertical'
+      spacing: dp(2)
+
+      QRCodeWidget:
+        content: root.value
+        size_hint: 1, 1
+        height: self.width
+        pos_hint: {'left': 0.5, 'top': 1}
+
+      Label:
+        text: '\n'.join([i.strip() for i in re.split(r'(.{15}(?:.{0,10}\s|.{10}))', root.label) if i])
+        size_hint: 1, None
+        height: self.texture_size[1] if root.label else 0
+        opacity: 1 if root.label else 0
+        font_size: dp(18)
+        halign: 'center'
+        valign: 'center'
+
+<QRCodeCarouselRenderPage>:
+  BoxLayout:
+    orientation: 'horizontal'
+    padding: dp(5), dp(5), dp(5), root.padding_bottom
+
+    BoxLayout:
+      orientation: 'vertical'
+      spacing: dp(2)
+      size_hint: 1, 1
+
+      QRCodeWidget:
+        content: root.values[root.index] if root.values else ''
+        size_hint: 1, 1
+        height: self.width
+        pos_hint: {'left': 0.5, 'top': 1}
+
+      Label:
+        text: root.labels[root.index] if root.labels and root.index < len(root.labels) else ''
+        size_hint: 1, None
+        height: self.texture_size[1]
+        font_size: dp(18)
+        halign: 'center'
+        valign: 'center'
+
+    AnimatedSlider:
+      id: slider
+      min: 0
+      max: len(root.values) - 1
+      animated_value: self.max
+      orientation: 'vertical'
+      size_hint: (None, 1) if len(root.values) > 1 else (None, None)
+      width: dp(30) if len(root.values) > 1 else 0
+      height: root.height
+      opacity: 1 if len(root.values) > 1 else 0
+      disabled: len(root.values) <= 1
+
+<StatusRenderPage>:
+  AnchorLayout:
+    padding: 0, root.padding_top, 0, root.padding_bottom
+
+    BoxLayout:
+      anchor: 'center', 'top'
+      orientation: 'vertical'
+      padding: dp(50)
+      spacing: dp(10)
+
+      BoxLayout:
+        orientation: 'horizontal'
+        size_hint: 1, 1 if root.icon else None
+        height: self.minimum_height if root.icon else 0
+        opacity: 1 if root.icon else 0
+        Label:
+          text: root.icon
+          size_hint: 1, None
+          text_width: self.width
+          height: self.texture_size[1]
+          font_size: dp(root.icon_size)
+          halign: 'center'
+
+      Label:
+        text: root.text
+        text_size: self.width, None
+        font_size: dp(root.text_font_size)
+        halign: 'center'
+        valign: 'middle'
+        height: self.texture_size[1]
+        size_hint: 1, 1
+
+<FrameStreamRenderPage>:
+  BoxLayout:
+    orientation: 'vertical'
+    padding: 0, 0, 0, root.padding_bottom
+
+    Image:
+      texture: root.texture
+      allow_stretch: True
+      keep_ratio: True
+      size_hint: 1, 1

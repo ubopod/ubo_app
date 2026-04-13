@@ -21,6 +21,8 @@ from ubo_app.store.core.types import (
     MenuViewData,
     NotificationStackItem,
     NotificationViewData,
+    RenderStackItem,
+    RenderViewData,
     ViewData,
 )
 
@@ -80,7 +82,7 @@ TEST_PATH_MAPPINGS: dict[tuple[str, ...], str] = {
 }
 
 
-def compute_view_from_dynamic_menus(
+def compute_view_from_dynamic_menus(  # noqa: C901
     state: MainState,
     dynamic_menus: dict[str, DynamicMenuData] | None = None,
     path_mappings: dict[tuple[str, ...], str] | None = None,
@@ -103,6 +105,17 @@ def compute_view_from_dynamic_menus(
             application_id=top_item.application_id,
             show_status_bar=False,
             extra_data=dict(top_item.initialization_kwargs),
+        )
+
+    if isinstance(top_item, RenderStackItem):
+        return RenderViewData(
+            kind=top_item.kind,
+            title=top_item.title,
+            show_status_bar=False,
+            props=dict(top_item.props),
+            items=top_item.items,
+            stream_id=top_item.stream_id,
+            stack_depth=len(stack),
         )
 
     if isinstance(top_item, NotificationStackItem):
@@ -291,7 +304,7 @@ class TestApplicationView:
         state = _make_state()
         stack = (
             *state.stack,
-            ApplicationStackItem(id='a1', application_id='camera:viewfinder'),
+            ApplicationStackItem(id='a1', application_id='test:custom-widget'),
         )
         state = MainState(stack=stack)
         view = compute_view_from_dynamic_menus(state)
@@ -302,12 +315,12 @@ class TestApplicationView:
         state = _make_state()
         stack = (
             *state.stack,
-            ApplicationStackItem(id='a1', application_id='camera:viewfinder'),
+            ApplicationStackItem(id='a1', application_id='test:custom-widget'),
         )
         state = MainState(stack=stack)
         view = compute_view_from_dynamic_menus(state)
         assert isinstance(view, ApplicationViewData)
-        assert view.application_id == 'camera:viewfinder'
+        assert view.application_id == 'test:custom-widget'
 
     def test_application_view_hides_status_bar(self) -> None:
         """Verify application view hides the status bar."""
@@ -336,6 +349,79 @@ class TestApplicationView:
         view = compute_view_from_dynamic_menus(state)
         assert isinstance(view, ApplicationViewData)
         assert view.extra_data == {'text': 'hello'}
+
+
+class TestRenderView:
+    """Tests for render stack items."""
+
+    def test_render_returns_render_view(self) -> None:
+        """Verify render item produces RenderViewData."""
+        state = _make_state()
+        stack = (
+            *state.stack,
+            RenderStackItem(id='r1', kind='qr_code'),
+        )
+        state = MainState(stack=stack)
+        view = compute_view_from_dynamic_menus(state)
+        assert isinstance(view, RenderViewData)
+
+    def test_render_view_has_correct_kind(self) -> None:
+        """Verify render view carries the correct kind."""
+        state = _make_state()
+        stack = (
+            *state.stack,
+            RenderStackItem(id='r1', kind='text_viewer', title='My Text'),
+        )
+        state = MainState(stack=stack)
+        view = compute_view_from_dynamic_menus(state)
+        assert isinstance(view, RenderViewData)
+        assert view.kind == 'text_viewer'
+        assert view.title == 'My Text'
+
+    def test_render_view_hides_status_bar(self) -> None:
+        """Verify render view hides the status bar."""
+        state = _make_state()
+        stack = (
+            *state.stack,
+            RenderStackItem(id='r1', kind='status'),
+        )
+        state = MainState(stack=stack)
+        view = compute_view_from_dynamic_menus(state)
+        assert isinstance(view, RenderViewData)
+        assert view.show_status_bar is False
+
+    def test_render_view_preserves_props(self) -> None:
+        """Verify render view carries props from stack item."""
+        state = _make_state()
+        stack = (
+            *state.stack,
+            RenderStackItem(
+                id='r1',
+                kind='qr_code',
+                props={'value': 'https://example.com', 'label': 'Example'},
+            ),
+        )
+        state = MainState(stack=stack)
+        view = compute_view_from_dynamic_menus(state)
+        assert isinstance(view, RenderViewData)
+        assert view.props['value'] == 'https://example.com'
+        assert view.props['label'] == 'Example'
+
+    def test_render_view_preserves_stream_id(self) -> None:
+        """Verify render view carries stream_id from stack item."""
+        state = _make_state()
+        stack = (
+            *state.stack,
+            RenderStackItem(
+                id='r1',
+                kind='frame_stream',
+                stream_id='camera:viewfinder',
+            ),
+        )
+        state = MainState(stack=stack)
+        view = compute_view_from_dynamic_menus(state)
+        assert isinstance(view, RenderViewData)
+        assert view.stream_id == 'camera:viewfinder'
 
 
 class TestNotificationView:

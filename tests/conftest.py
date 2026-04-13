@@ -156,3 +156,37 @@ def _setup_script(request: pytest.FixtureRequest) -> None:
 
 
 _ = fixtures, _logger, _setup_script
+
+
+_exit_status = 0
+
+
+def pytest_sessionfinish(
+    session: pytest.Session,  # noqa: ARG001
+    exitstatus: int,
+) -> None:
+    """Capture exit status for use in pytest_unconfigure."""
+    global _exit_status  # noqa: PLW0603
+    _exit_status = exitstatus
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:  # noqa: ARG001
+    """Force-stop dangling threads after pytest has printed all output."""
+    import sys
+    import threading
+
+    if 'ubo_app.store.main' in sys.modules:
+        from ubo_app.store.main import scheduler
+
+        scheduler.stop()
+        scheduler.join(timeout=5)
+
+    alive = [
+        t
+        for t in threading.enumerate()
+        if t is not threading.main_thread() and not t.daemon
+    ]
+    if alive:
+        import os
+
+        os._exit(_exit_status)

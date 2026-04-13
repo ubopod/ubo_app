@@ -84,6 +84,28 @@ class ApplicationViewData(Immutable):
     stack_depth: int = 1  # Navigation stack depth (for push/pop animation)
 
 
+class RenderViewData(Immutable):
+    """Data for rendering a generic reusable view.
+
+    This is the preferred path for UI that can be expressed with shared
+    widgets such as QR codes, text/image viewers, status pages, or streams.
+    ApplicationViewData remains available for custom views that do not fit a
+    generic widget yet.
+    """
+
+    type: Literal['render'] = 'render'
+    show_status_bar: bool = False
+    kind: str = ''
+    title: str = ''
+    props: Mapping[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+    items: tuple[MenuItemData, ...] = ()
+    stream_id: str = ''
+    stack_depth: int = 1
+
+
 class NotificationViewData(Immutable):
     """Data for rendering a notification overlay view."""
 
@@ -147,4 +169,5 @@ ViewData: TypeAlias = (
     | NotificationViewData
     | InstructionViewData
     | PromptViewData
+    | RenderViewData
 )

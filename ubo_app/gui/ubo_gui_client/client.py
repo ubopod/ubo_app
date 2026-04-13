@@ -372,64 +372,33 @@ class GUIClient:
             logger.info('[GUIClient] dispatch_raw: action=%s', type(action).__name__)
             self._client.dispatch(action=action)
 
-    def subscribe_camera_frames(
+    def subscribe_frame_stream(
         self,
+        stream_id: str,
         callback: Callable[[bytes, int, int], None],
     ) -> Callable[[], None]:
-        """Subscribe to camera frame events from the core.
-
-        Args:
-            callback: Called with (data, width, height) for each frame.
-
-        Returns:
-            Unsubscribe callable to stop receiving frames.
-
-        """
+        """Subscribe to generic frame stream events from the core."""
         if not self._client:
             msg = 'Client not connected'
             raise RuntimeError(msg)
 
-        from ubo_bindings.ubo.v1 import CameraReportImageEvent, Event
+        from ubo_bindings.ubo.v1 import Event, FrameStreamDataEvent
+
+        def _callback(event: Event) -> None:
+            stream_event = event.frame_stream_data_event
+            if stream_event.stream_id != stream_id:
+                return
+            callback(
+                stream_event.data,
+                stream_event.width,
+                stream_event.height,
+            )
 
         return self._client.subscribe_event(
             event_type=Event(
-                camera_report_image_event=CameraReportImageEvent(),
+                frame_stream_data_event=FrameStreamDataEvent(),
             ),
-            callback=lambda event: callback(
-                event.camera_report_image_event.data,
-                event.camera_report_image_event.width,
-                event.camera_report_image_event.height,
-            ),
-        )
-
-    def subscribe_video_frames(
-        self,
-        callback: Callable[[bytes, int, int], None],
-    ) -> Callable[[], None]:
-        """Subscribe to video frame events from the core.
-
-        Args:
-            callback: Called with (data, width, height) for each frame.
-
-        Returns:
-            Unsubscribe callable to stop receiving frames.
-
-        """
-        if not self._client:
-            msg = 'Client not connected'
-            raise RuntimeError(msg)
-
-        from ubo_bindings.ubo.v1 import Event, FileSystemVideoFrameEvent
-
-        return self._client.subscribe_event(
-            event_type=Event(
-                file_system_video_frame_event=FileSystemVideoFrameEvent(),
-            ),
-            callback=lambda event: callback(
-                event.file_system_video_frame_event.data,
-                event.file_system_video_frame_event.width,
-                event.file_system_video_frame_event.height,
-            ),
+            callback=_callback,
         )
 
     def subscribe_screenshot_events(

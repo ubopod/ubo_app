@@ -135,6 +135,15 @@ class ApplicationScrollEvent(MainEvent):
     direction: str  # 'up' or 'down'
 
 
+class FrameStreamDataEvent(MainEvent):
+    """Generic RGB frame event for reusable stream render views."""
+
+    stream_id: str
+    data: bytes
+    width: int
+    height: int
+
+
 class ScreenshotDataEvent(MainEvent):
     """Event emitted when screenshot data is received from GUI client."""
 

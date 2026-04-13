@@ -78,6 +78,22 @@ def _unwrap_extra_data_value(value: object) -> object:
     """
     basic_type = getattr(value, 'basic_type', None)
     if basic_type is None:
+        if type(value).__name__ == 'BasicType':
+            import betterproto
+
+            field_name, field_value = betterproto.which_one_of(
+                value,  # type: ignore[arg-type]
+                'basic_type',
+            )
+            if field_name:
+                return field_value
+            return None
+        list_value = getattr(value, 'list', None)
+        if list_value is not None:
+            return [
+                _unwrap_extra_data_value(item)
+                for item in (getattr(list_value, 'items', None) or [])
+            ]
         return value
     import betterproto
 
@@ -121,7 +137,6 @@ class ViewRenderer:
         # Track the current view type so _render_menu_view knows whether
         # to push (home→menu) or replace (menu→menu).
         self._current_view_type: ViewType | None = None
-        self._camera_unsubscribe: Callable[[], None] | None = None
         self._video_unsubscribe: Callable[[], None] | None = None
         # Track page index and stack depth for transition animation detection
         self._last_menu_page_index: int | None = None
@@ -143,7 +158,6 @@ class ViewRenderer:
 
         Called on gRPC reconnection so the GUI fully resyncs with the core.
         """
-        self._cleanup_camera_subscription()
         self._cleanup_video_subscription()
         self._last_view = None
         self._last_status_bar = None
@@ -286,15 +300,8 @@ class ViewRenderer:
                     self._view_changed_count,
                 )
 
-    def _cleanup_camera_subscription(self) -> None:
-        """Clean up any active camera frame subscription."""
-        if self._camera_unsubscribe is not None:
-            self._camera_unsubscribe()
-            self._camera_unsubscribe = None
-            logger.info('[ViewRenderer] Camera subscription cleaned up')
-
     def _cleanup_video_subscription(self) -> None:
-        """Clean up any active video frame subscription."""
+        """Clean up any active video/frame stream subscription."""
         if self._video_unsubscribe is not None:
             self._video_unsubscribe()
             self._video_unsubscribe = None
@@ -302,7 +309,6 @@ class ViewRenderer:
 
     def _render_view(self, view: ViewData) -> None:
         """Dispatch to the appropriate render method based on view type."""
-        self._cleanup_camera_subscription()
         self._cleanup_video_subscription()
         from ubo_bindings.ubo.v1 import (
             ApplicationViewData as ProtoApplicationViewData,
@@ -321,6 +327,9 @@ class ViewRenderer:
         )
         from ubo_bindings.ubo.v1 import (
             PromptViewData as ProtoPromptViewData,
+        )
+        from ubo_bindings.ubo.v1 import (
+            RenderViewData as ProtoRenderViewData,
         )
 
         view_type = type(view).__name__
@@ -347,6 +356,8 @@ class ViewRenderer:
             self._render_instruction_view(view)
         elif isinstance(view, ProtoPromptViewData):
             self._render_prompt_view(view)
+        elif isinstance(view, ProtoRenderViewData):
+            self._render_render_view(view)
         else:
             logger.warning(
                 '[ViewRenderer] Unknown view type: %s (#%d)',
@@ -632,49 +643,66 @@ class ViewRenderer:
         if stack_depth is not None:
             self._last_stack_depth = stack_depth
 
-        # Start camera frame subscription for the viewfinder
-        if application_id == 'camera:viewfinder':
-            from ubo_gui_client.pages.camera_viewfinder import (
-                CameraViewfinderPage,
-            )
+    def _render_render_view(self, view: object) -> None:
+        """Render a generic reusable widget."""
+        kind = getattr(view, 'kind', '') or ''
+        title = getattr(view, 'title', '') or ''
+        stream_id = getattr(view, 'stream_id', '') or ''
 
-            if isinstance(widget, CameraViewfinderPage):
+        from ubo_gui_client.generic_render import GENERIC_RENDER_WIDGETS
+
+        widget_class = GENERIC_RENDER_WIDGETS.get(kind)
+        if widget_class is None:
+            logger.warning(
+                '[ViewRenderer] No generic widget for render kind=%s',
+                kind,
+            )
+            from ubo_gui_client.gui_utils import RawTextViewer
+
+            widget = RawTextViewer(text=f'Render view: {kind}\n{title}')
+        else:
+            props_obj = getattr(view, 'props', None)
+            kwargs: dict[str, object] = {}
+            if props_obj is not None:
+                items_dict = getattr(props_obj, 'items', None)
+                if isinstance(items_dict, dict):
+                    kwargs = {
+                        k: _unwrap_extra_data_value(v)
+                        for k, v in items_dict.items()
+                    }
+            widget = widget_class(**kwargs)
+
+        logger.info(
+            '[ViewRenderer] Render: from %s (depth=%d, kind=%s)',
+            self._current_view_type,
+            self.menu_widget.depth,
+            kind,
+        )
+        self.menu_widget.replace_top_with_application(widget, animated=True)
+        self._current_view_type = 'application'
+        self._last_menu_page_index = None
+        stack_depth = getattr(view, 'stack_depth', None)
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
+
+        if kind == 'frame_stream' and stream_id:
+            from ubo_gui_client.generic_render import FrameStreamRenderPage
+
+            if isinstance(widget, FrameStreamRenderPage):
 
                 @mainthread
-                def _on_frame(data: bytes, width: int, height: int) -> None:
+                def _on_frame(
+                    data: bytes,
+                    width: int,
+                    height: int,
+                ) -> None:
                     widget.update_frame(data, width, height)
 
-                self._camera_unsubscribe = self.client.subscribe_camera_frames(
+                self._video_unsubscribe = self.client.subscribe_frame_stream(
+                    stream_id,
                     _on_frame,
                 )
 
-        self._start_video_subscription(application_id, widget)
-
-    def _start_video_subscription(
-        self,
-        application_id: str,
-        widget: object,
-    ) -> None:
-        """Start video frame subscription if the widget is a VideoViewer."""
-        if application_id != 'ubo:video-viewer':
-            return
-
-        from ubo_gui_client.gui_utils import VideoViewer
-
-        if not isinstance(widget, VideoViewer):
-            return
-
-        @mainthread
-        def _on_video_frame(
-            data: bytes,
-            width: int,
-            height: int,
-        ) -> None:
-            widget.update_frame(data, width, height)
-
-        self._video_unsubscribe = self.client.subscribe_video_frames(
-            _on_video_frame,
-        )
 
     def _render_notification_view(self, view: NotificationViewData) -> None:
         """Render a notification view by opening a NotificationWidget."""

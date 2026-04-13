@@ -44,32 +44,8 @@ def get_grpc_client() -> GUIClient:
 
 def register_all_pages() -> None:
     """Register all page widgets in the application registry."""
-    from .camera_viewfinder import CameraViewfinderPage
-    from .docker_qrcode_page import DockerQRCodePage
-    from .rpi_connect_pages import RPiConnectQRCodePage, RPiConnectSignInPage
-    from .vscode_pages import VSCodeLoginPage, VSCodeQRCodePage
     from .wifi_pages import WiFiConnectionPage, WiFiCreateConnectionPage
 
-    register_application(
-        application_id='vscode:qrcode-page',
-        application=VSCodeQRCodePage,
-    )
-    register_application(
-        application_id='vscode:login-page',
-        application=VSCodeLoginPage,
-    )
-    register_application(
-        application_id='rpi-connect:qrcode-page',
-        application=RPiConnectQRCodePage,
-    )
-    register_application(
-        application_id='rpi-connect:signin-page',
-        application=RPiConnectSignInPage,
-    )
-    register_application(
-        application_id='docker:qrcode-page',
-        application=DockerQRCodePage,
-    )
     register_application(
         application_id='wifi:connection-page',
         application=WiFiConnectionPage,
@@ -77,23 +53,4 @@ def register_all_pages() -> None:
     register_application(
         application_id='wifi:create-connection-page',
         application=WiFiCreateConnectionPage,
-    )
-    register_application(
-        application_id='camera:viewfinder',
-        application=CameraViewfinderPage,
-    )
-
-    from ubo_gui_client.gui_utils import RawImageViewer, RawTextViewer, VideoViewer
-
-    register_application(
-        application_id='ubo:raw-text-viewer',
-        application=RawTextViewer,
-    )
-    register_application(
-        application_id='ubo:raw-image-viewer',
-        application=RawImageViewer,
-    )
-    register_application(
-        application_id='ubo:video-viewer',
-        application=VideoViewer,
     )

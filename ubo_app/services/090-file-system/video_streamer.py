@@ -7,6 +7,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from ubo_app.logger import logger
+from ubo_app.store.core.types import FrameStreamDataEvent
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioPlayAudioSequenceAction,
@@ -198,6 +199,12 @@ class _VideoSession:
                             width=new_w,
                             height=new_h,
                         ),
+                        FrameStreamDataEvent(
+                            stream_id='file-system:video',
+                            data=frame.tobytes(),
+                            width=new_w,
+                            height=new_h,
+                        ),
                     ],
                 )
 
@@ -234,11 +241,11 @@ def register_video_stream_cleanup() -> Callable[[], None]:
     from ubo_app.store.core.types import StackChangedEvent
 
     def _handle_stack_changed(event: StackChangedEvent) -> None:
-        from ubo_app.store.core.types.stack_items import ApplicationStackItem
+        from ubo_app.store.core.types.stack_items import RenderStackItem
 
         has_viewer = any(
-            isinstance(item, ApplicationStackItem)
-            and item.application_id == 'ubo:video-viewer'
+            isinstance(item, RenderStackItem)
+            and item.stream_id == 'file-system:video'
             for item in event.stack
         )
         if not has_viewer:

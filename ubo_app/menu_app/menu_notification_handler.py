@@ -23,7 +23,6 @@ from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationActionItem,
-    NotificationApplicationItem,
     NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsClearAction,
@@ -229,14 +228,6 @@ class MenuNotificationHandler(UboApp):
                         store.dispatch(*sa)
                     else:
                         store.dispatch(sa)
-                # Handle application items
-                elif (
-                    isinstance(action, NotificationApplicationItem)
-                    and action.application_id
-                ):
-                    from ubo_app.store.ubo_actions import get_registered_application
-
-                    return get_registered_application(action.application_id)
                 # Handle action_id (registered callable)
                 elif action.action_id:
                     handler = get_action(action.action_id)

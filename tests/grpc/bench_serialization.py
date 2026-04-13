@@ -108,7 +108,7 @@ _HOME = ViewChangedEvent(
 )
 _APP = ViewChangedEvent(
     view=ApplicationViewData(
-        application_id='camera:viewfinder',
+        application_id='test:custom-widget',
         extra_data={
             'width': 320,
             'height': 240,

@@ -17,10 +17,11 @@ from debouncer import DebounceOptions, debounce
 from ubo_app.constants import HEIGHT, WIDTH
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
+    FrameStreamDataEvent,
     MenuItemData,
+    OpenRenderAction,
     RegisterSettingAppAction,
     SettingsCategory,
-    StackPushApplicationAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
@@ -144,11 +145,11 @@ class _ViewfinderSession:
 def _is_viewfinder_on_stack(
     stack: tuple[object, ...],
 ) -> bool:
-    from ubo_app.store.core.types.stack_items import ApplicationStackItem
+    from ubo_app.store.core.types.stack_items import RenderStackItem
 
     return any(
-        isinstance(item, ApplicationStackItem)
-        and item.application_id == 'camera:viewfinder'
+        isinstance(item, RenderStackItem)
+        and item.stream_id == 'camera:viewfinder'
         for item in stack
     )
 
@@ -165,7 +166,12 @@ def start_camera_viewfinder_session() -> None:
     timer = _RepeatingTimer(VIEWFINDER_INTERVAL, session.feed_locked)
     timer.start()
 
-    store.dispatch(StackPushApplicationAction(application_id='camera:viewfinder'))
+    store.dispatch(
+        OpenRenderAction(
+            kind='frame_stream',
+            stream_id='camera:viewfinder',
+        ),
+    )
 
     def _handle_stack_changed(event: StackChangedEvent) -> None:
         if session.is_running and not _is_viewfinder_on_stack(event.stack):
@@ -274,6 +280,12 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
             [
                 CameraReportImageEvent(
                     timestamp=time.time(),
+                    data=data.tobytes(),
+                    width=width,
+                    height=height,
+                ),
+                FrameStreamDataEvent(
+                    stream_id='camera:viewfinder',
                     data=data.tobytes(),
                     width=width,
                     height=height,

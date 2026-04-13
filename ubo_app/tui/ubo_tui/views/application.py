@@ -39,7 +39,14 @@ class ApplicationView(BaseView):
         self._app_id: str = "unknown"
 
         if view_data:
-            self._app_id = getattr(view_data, "application_id", "unknown") or "unknown"
+            self._app_id = (
+                getattr(
+                    view_data,
+                    "application_id",
+                    getattr(view_data, "kind", "unknown"),
+                )
+                or "unknown"
+            )
 
     def compose(self) -> ComposeResult:
         """Show application ID."""

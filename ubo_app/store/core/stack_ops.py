@@ -16,6 +16,7 @@ from ubo_app.store.core.types import (
     MenuStackItem,
     NotificationStackItem,
     PromptStackItem,
+    RenderStackItem,
 )
 
 if TYPE_CHECKING:
@@ -107,6 +108,33 @@ def push_application(
     )
     new_stack = (*state.stack, new_item)
     # Path unchanged - applications don't contribute to path
+    return replace(state, stack=new_stack)
+
+
+def push_render(  # noqa: PLR0913
+    state: MainState,
+    kind: str,
+    *,
+    title: str = '',
+    props: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] | None = None,
+    items: tuple[MenuItemData, ...] = (),
+    stream_id: str = '',
+) -> MainState:
+    """Push a generic reusable render view onto the navigation stack."""
+    if props is None:
+        props = {}
+    new_item = RenderStackItem(
+        id=uuid.uuid4().hex,
+        kind=kind,
+        title=title,
+        props=props,
+        items=items,
+        stream_id=stream_id,
+    )
+    new_stack = (*state.stack, new_item)
     return replace(state, stack=new_stack)
 
 

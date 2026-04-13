@@ -183,10 +183,16 @@ class UboTUI(App):
         elif (
             class_name == "ApplicationViewData"
             or getattr(view_data, "type", "") == "application"
+            or class_name == "RenderViewData"
+            or getattr(view_data, "type", "") == "render"
         ):
             view_type = "application"
             self._is_home = False
-            app_id = getattr(actual_view, "application_id", "?")
+            app_id = getattr(
+                actual_view,
+                "application_id",
+                getattr(actual_view, "kind", "?"),
+            )
             logger.info("Detected APPLICATION view: %s", app_id)
         elif (
             class_name == "NotificationViewData"

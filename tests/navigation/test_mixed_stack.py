@@ -31,7 +31,7 @@ class TestAppOverMenu:
     def test_app_on_top_shows_app_view(self, nav: ReducerRunner) -> None:
         """Verify an application pushed over a menu shows ApplicationViewData."""
         nav.dispatch(StackPushMenuAction(menu_key='main'))
-        nav.dispatch(StackPushApplicationAction(application_id='camera:viewfinder'))
+        nav.dispatch(StackPushApplicationAction(application_id='test:app'))
         assert isinstance(nav.view, ApplicationViewData)
 
     def test_pop_app_reveals_menu(self, nav: ReducerRunner) -> None:

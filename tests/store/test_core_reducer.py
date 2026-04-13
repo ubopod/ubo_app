@@ -38,10 +38,12 @@ from ubo_app.store.core.types import (
     NotificationStackItem,
     NotificationViewData,
     OpenApplicationAction,
+    OpenRenderAction,
     PowerOffAction,
     PowerOffEvent,
     RebootAction,
     RebootEvent,
+    RenderStackItem,
     ReplayRecordedSequenceAction,
     ReplayRecordedSequenceEvent,
     ReportReplayingDoneAction,
@@ -54,10 +56,12 @@ from ubo_app.store.core.types import (
     StackPushApplicationAction,
     StackPushMenuAction,
     StackPushNotificationAction,
+    StackPushRenderAction,
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     ToggleRecordingAction,
     UpdateCurrentViewAction,
+    UpdateRenderPropsAction,
     ViewChangedEvent,
 )
 
@@ -222,7 +226,7 @@ class TestStackPushActions:
         """Verify pushing an application emits the expected events."""
         state = _init_state()
         result = reducer(state, StackPushApplicationAction(
-            application_id='camera:viewfinder',
+            application_id='test:app',
         ))
         events = _get_events(result)
         event_types = [type(e) for e in events]
@@ -243,6 +247,123 @@ class TestStackPushActions:
             notification_id='notif-1',
         )))
         assert len(new_state.stack) == 2
+
+
+class TestRenderActions:
+    """Tests for render view actions."""
+
+    def test_stack_push_render_grows_stack(self) -> None:
+        """Verify StackPushRenderAction grows the stack."""
+        state = _init_state()
+        new_state = _get_state(reducer(state, StackPushRenderAction(
+            kind='qr_code',
+            props={'value': 'https://example.com'},
+        )))
+        assert len(new_state.stack) == 2
+        assert isinstance(new_state.stack[-1], RenderStackItem)
+        assert new_state.stack[-1].kind == 'qr_code'
+
+    def test_stack_push_render_emits_events(self) -> None:
+        """Verify StackPushRenderAction emits StackChangedEvent."""
+        state = _init_state()
+        result = reducer(state, StackPushRenderAction(kind='status'))
+        events = _get_events(result)
+        event_types = [type(e) for e in events]
+        assert StackChangedEvent in event_types
+
+    def test_open_render_action(self) -> None:
+        """Verify OpenRenderAction pushes a render view."""
+        state = _init_state()
+        new_state = _get_state(reducer(state, OpenRenderAction(
+            kind='text_viewer',
+            props={'text': 'Hello'},
+        )))
+        assert len(new_state.stack) == 2
+        assert isinstance(new_state.stack[-1], RenderStackItem)
+        assert new_state.stack[-1].kind == 'text_viewer'
+
+    def test_open_render_with_stream_id(self) -> None:
+        """Verify OpenRenderAction preserves stream_id."""
+        state = _init_state()
+        new_state = _get_state(reducer(state, OpenRenderAction(
+            kind='frame_stream',
+            stream_id='camera:viewfinder',
+        )))
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.stream_id == 'camera:viewfinder'
+
+    def test_update_render_props_merges(self) -> None:
+        """Verify UpdateRenderPropsAction merges props."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushRenderAction(
+            kind='status',
+            props={'text': 'Loading...'},
+        )))
+        new_state = _get_state(reducer(state, UpdateRenderPropsAction(
+            kind='status',
+            props={'text': 'Done!', 'icon': ''},
+        )))
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.props['text'] == 'Done!'
+        assert item.props['icon'] == ''
+
+    def test_update_render_props_next_kind(self) -> None:
+        """Verify UpdateRenderPropsAction supports kind transition."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushRenderAction(
+            kind='status',
+            props={'text': 'Logging in...'},
+        )))
+        new_state = _get_state(reducer(state, UpdateRenderPropsAction(
+            kind='status',
+            next_kind='qr_code',
+            props={'value': 'https://example.com'},
+        )))
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.kind == 'qr_code'
+        assert item.props['value'] == 'https://example.com'
+
+    def test_update_render_props_by_stream_id(self) -> None:
+        """Verify UpdateRenderPropsAction matches by stream_id."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushRenderAction(
+            kind='frame_stream',
+            stream_id='camera:viewfinder',
+        )))
+        new_state = _get_state(reducer(state, UpdateRenderPropsAction(
+            stream_id='camera:viewfinder',
+            props={'resolution': '1080p'},
+        )))
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.props['resolution'] == '1080p'
+
+    def test_update_render_props_no_match(self) -> None:
+        """Verify UpdateRenderPropsAction returns same state when no match."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushRenderAction(kind='status')))
+        result = reducer(state, UpdateRenderPropsAction(
+            kind='qr_code',
+            props={'value': 'test'},
+        ))
+        assert _get_state(result) is state
+
+    def test_render_stack_item_has_correct_fields(self) -> None:
+        """Verify render stack item has correct kind, title, and props."""
+        state = _init_state()
+        new_state = _get_state(reducer(state, StackPushRenderAction(
+            kind='qr_code',
+            title='My QR',
+            props={'value': 'test'},
+        )))
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.kind == 'qr_code'
+        assert item.title == 'My QR'
+        assert item.props == {'value': 'test'}
 
 
 class TestStackPopActions:

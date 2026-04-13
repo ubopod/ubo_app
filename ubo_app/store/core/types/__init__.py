@@ -23,6 +23,7 @@ from ubo_app.store.core.types.actions import (
     MenuGoHomeAction,
     MenuScrollAction,
     OpenApplicationAction,
+    OpenRenderAction,
     PowerAction,
     PowerOffAction,
     RebootAction,
@@ -42,6 +43,7 @@ from ubo_app.store.core.types.actions import (
     StackPushMenuAction,
     StackPushNotificationAction,
     StackPushPromptAction,
+    StackPushRenderAction,
     StackSetPageIndexAction,
     TakeScreenshotAction,
     ToggleRecordingAction,
@@ -50,6 +52,7 @@ from ubo_app.store.core.types.actions import (
     UpdateDynamicMenuAction,
     UpdateInstructionProgressAction,
     UpdateLightDMState,
+    UpdateRenderPropsAction,
     service_default_factory,
 )
 
@@ -70,6 +73,7 @@ from ubo_app.store.core.types.events import (
     ApplicationScrollEvent,
     DynamicMenuChangedEvent,
     ExecuteMenuActionEvent,
+    FrameStreamDataEvent,
     InitEvent,
     MainEvent,
     MenuChooseByIconEvent,
@@ -96,6 +100,7 @@ from ubo_app.store.core.types.stack_items import (
     MenuStackItem,
     NotificationStackItem,
     PromptStackItem,
+    RenderStackItem,
     StackItemType,
 )
 
@@ -118,6 +123,7 @@ from ubo_app.store.core.types.view_data import (
     MenuViewData,
     NotificationViewData,
     PromptViewData,
+    RenderViewData,
     ViewData,
 )
 
@@ -135,6 +141,7 @@ __all__ = [
     'DynamicMenusState',
     'ExecuteMenuActionAction',
     'ExecuteMenuActionEvent',
+    'FrameStreamDataEvent',
     'HomeViewData',
     'InitEvent',
     'InstructionStackItem',
@@ -160,6 +167,7 @@ __all__ = [
     'NotificationStackItem',
     'NotificationViewData',
     'OpenApplicationAction',
+    'OpenRenderAction',
     'PowerAction',
     'PowerEvent',
     'PowerOffAction',
@@ -173,6 +181,8 @@ __all__ = [
     'RegisterRegularAppAction',
     'RegisterSettingAppAction',
     'RegisteredAppEntry',
+    'RenderStackItem',
+    'RenderViewData',
     'ReplayRecordedSequenceAction',
     'ReplayRecordedSequenceEvent',
     'ReportReplayingDoneAction',
@@ -194,6 +204,7 @@ __all__ = [
     'StackPushMenuAction',
     'StackPushNotificationAction',
     'StackPushPromptAction',
+    'StackPushRenderAction',
     'StackSetPageIndexAction',
     'StatusBarData',
     'StatusIconData',
@@ -205,6 +216,7 @@ __all__ = [
     'UpdateDynamicMenuAction',
     'UpdateInstructionProgressAction',
     'UpdateLightDMState',
+    'UpdateRenderPropsAction',
     'ViewChangedEvent',
     'ViewData',
     'service_default_factory',

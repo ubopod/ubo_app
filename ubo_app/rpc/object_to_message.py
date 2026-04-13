@@ -100,14 +100,18 @@ def _convert_basic_value(
         else:
             basic_type = v1.BasicType(bytes=value)
 
+        if value_cls is v1.BasicType:
+            return basic_type
         return value_cls(basic_type=basic_type)  # type: ignore[call-arg]
 
     if isinstance(value, list | tuple):
         # For list/tuple values, check if value_cls has a 'list' oneof arm
         list_cls = value_cls._betterproto.cls_by_field.get('list')
         if list_cls is not None:
+            item_cls = list_cls._betterproto.cls_by_field.get('items')
             converted_items = [
-                _convert_basic_value(item, value_cls) for item in value
+                _convert_basic_value(item, item_cls or value_cls)
+                for item in value
             ]
             return value_cls(list=list_cls(items=converted_items))  # type: ignore[call-arg]
 
@@ -134,12 +138,18 @@ def _try_wrap_oneof(
     if not oneof_groups or len(set(oneof_groups.values())) != 1:
         return None
 
-    # Find which field corresponds to message_class
+    # Find which field corresponds to message_class (direct match)
     for field_name, field_cls in cls_by_field.items():
         if field_cls == message_class:
-            # Build the inner message and wrap it
             inner_message = build_message(object_)
             return expected_type(**{field_name: inner_message})
+
+    # Try recursive wrapping: the object may need to be wrapped in an
+    # intermediate oneof first (e.g. OpenRenderAction -> UboAction -> wrapper)
+    for field_name, field_cls in cls_by_field.items():
+        nested = _try_wrap_oneof(object_, message_class, field_cls)
+        if nested is not None:
+            return expected_type(**{field_name: nested})
 
     return None
 

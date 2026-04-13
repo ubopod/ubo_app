@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from docker_composition import check_composition
@@ -15,7 +14,7 @@ from ubo_app.constants import SECRETS_PATH
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
-    OpenApplicationAction,
+    OpenRenderAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
@@ -324,11 +323,16 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
                     register_action(
                         port_action_id,
                         lambda _port=port_number, _ips=ip_addresses: store.dispatch(
-                            OpenApplicationAction(
-                                application_id='docker:qrcode-page',
-                                initialization_kwargs={
-                                    'ips': json.dumps(_ips),
-                                    'port': _port,
+                            OpenRenderAction(
+                                kind='qr_code_carousel',
+                                title='Docker Port',
+                                props={
+                                    'values': tuple(
+                                        f'http://{ip}:{_port}/' for ip in _ips
+                                    ),
+                                    'labels': tuple(
+                                        f'{ip}:{_port}' for ip in _ips
+                                    ),
                                 },
                             ),
                         ),

@@ -21,15 +21,3 @@ def setup() -> None:
     import ubo_app.display as _  # noqa: F401
 
     setup_ubo_gui()
-
-    from ubo_app.store.ubo_actions import register_application
-    from ubo_app.utils.gui import RawImageViewer, RawTextViewer
-
-    register_application(
-        application=RawTextViewer,
-        application_id='ubo:raw-text-viewer',
-    )
-    register_application(
-        application=RawImageViewer,
-        application_id='ubo:raw-image-viewer',
-    )

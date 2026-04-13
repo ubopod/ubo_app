@@ -86,7 +86,6 @@ def _dispatch_action_type(action: NotificationActionItem) -> None:
     """Dispatch store actions for dispatch/application notification items."""
     from ubo_app.store.main import store
     from ubo_app.store.services.notifications import (
-        NotificationApplicationItem,
         NotificationDispatchItem,
     )
 
@@ -96,15 +95,6 @@ def _dispatch_action_type(action: NotificationActionItem) -> None:
             store.dispatch(*sa)
         else:
             store.dispatch(sa)
-    elif isinstance(action, NotificationApplicationItem) and action.application_id:
-        from ubo_app.store.core.types import OpenApplicationAction
-
-        store.dispatch(
-            OpenApplicationAction(
-                application_id=action.application_id,
-                initialization_kwargs=action.initialization_kwargs,
-            ),
-        )
     elif action.action_id:
         from ubo_app.logger import logger
         from ubo_app.store.core.action_registry import get_action

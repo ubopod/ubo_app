@@ -33,6 +33,8 @@ from ubo_app.store.core.types import (
     ProgressNotificationData,
     PromptStackItem,
     PromptViewData,
+    RenderStackItem,
+    RenderViewData,
     StatusBarData,
     StatusIconData,
 )
@@ -335,6 +337,17 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901
             application_id=top_item.application_id,
             show_status_bar=False,
             extra_data=dict(top_item.initialization_kwargs),
+            stack_depth=len(stack),
+        )
+
+    if isinstance(top_item, RenderStackItem):
+        return RenderViewData(
+            kind=top_item.kind,
+            title=top_item.title,
+            show_status_bar=False,
+            props=dict(top_item.props),
+            items=top_item.items,
+            stream_id=top_item.stream_id,
             stack_depth=len(stack),
         )
 

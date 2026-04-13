@@ -62,6 +62,20 @@ class ApplicationStackItem(Immutable):
     ] = field(default_factory=dict)
 
 
+class RenderStackItem(Immutable):
+    """Redux representation of a generic reusable render view."""
+
+    id: str
+    kind: str
+    title: str = ''
+    props: dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ] = field(default_factory=dict)
+    items: tuple[MenuItemData, ...] = ()
+    stream_id: str = ''
+
+
 class NotificationStackItem(Immutable):
     """Redux representation of a notification overlay in the navigation stack.
 
@@ -112,6 +126,7 @@ class PromptStackItem(Immutable):
 StackItemType: TypeAlias = (
     MenuStackItem
     | ApplicationStackItem
+    | RenderStackItem
     | NotificationStackItem
     | InstructionStackItem
     | PromptStackItem

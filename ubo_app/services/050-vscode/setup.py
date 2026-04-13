@@ -12,7 +12,7 @@ from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
-    OpenApplicationAction,
+    OpenRenderAction,
     RegisterSettingAppAction,
     SettingsCategory,
     UpdateDynamicMenuAction,
@@ -79,9 +79,10 @@ async def _perform_login() -> None:
             url = match.group('url')
             code = match.group('code')
             store.dispatch(
-                OpenApplicationAction(
-                    application_id='vscode:login-page',
-                    initialization_kwargs={'stage': '1', 'url': url, 'code': code},
+                OpenRenderAction(
+                    kind='qr_code',
+                    title='VSCode Login',
+                    props={'value': url, 'label': code},
                 ),
             )
             await _login_process.wait()
@@ -126,9 +127,10 @@ async def _perform_login() -> None:
 def start_login() -> None:
     """Start the login process and open the login page."""
     store.dispatch(
-        OpenApplicationAction(
-            application_id='vscode:login-page',
-            initialization_kwargs={'stage': '0'},
+        OpenRenderAction(
+            kind='status',
+            title='VSCode Login',
+            props={'text': 'Logging in...', 'text_font_size': 32},
         ),
     )
     create_task(_perform_login())
@@ -351,10 +353,12 @@ def update_vscode_dynamic_menu(state: VSCodeState) -> None:
         def _make_show_url_handler(name: str) -> Callable[[], None]:
             def _handler() -> None:
                 store.dispatch(
-                    OpenApplicationAction(
-                        application_id='vscode:qrcode-page',
-                        initialization_kwargs={
-                            'url': f'{CODE_TUNNEL_URL_PREFIX}{name}',
+                    OpenRenderAction(
+                        kind='qr_code',
+                        title='VSCode Remote',
+                        props={
+                            'value': f'{CODE_TUNNEL_URL_PREFIX}{name}',
+                            'label': f'{CODE_TUNNEL_URL_PREFIX}{name}',
                         },
                     ),
                 )

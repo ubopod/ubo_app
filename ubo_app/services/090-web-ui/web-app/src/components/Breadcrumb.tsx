@@ -34,6 +34,9 @@ function getStackItemLabel(item: StackItemType.AsObject): string {
       ? formatId(item.applicationStackItem.applicationId)
       : "Application";
   }
+  if (item.renderStackItem) {
+    return item.renderStackItem.title || item.renderStackItem.kind || "View";
+  }
   if (item.notificationStackItem) {
     return "Notification";
   }

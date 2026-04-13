@@ -6,10 +6,11 @@ import type { StoreServiceClient } from "../../bindings/store/v1/StoreServiceCli
 interface QRCodePageProps {
   title: string;
   url: string;
+  label?: string;
   store: StoreServiceClient;
 }
 
-export function QRCodePage({ title, url, store }: QRCodePageProps) {
+export function QRCodePage({ title, url, label, store }: QRCodePageProps) {
   return (
     <Box sx={{ width: "100%", p: 2 }}>
       <Paper
@@ -33,7 +34,7 @@ export function QRCodePage({ title, url, store }: QRCodePageProps) {
           <QRCode value={url} size={200} />
         </Box>
         <Link href={url} target="_blank" rel="noopener noreferrer">
-          {url}
+          {label ?? url}
         </Link>
       </Paper>
     </Box>

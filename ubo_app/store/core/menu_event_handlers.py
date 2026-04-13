@@ -79,8 +79,7 @@ def _dispatch_original_notification_action(
 ) -> bool:
     """Look up the original notification action and dispatch it.
 
-    Handles NotificationDispatchItem (store_action) and
-    NotificationApplicationItem (application_id) by dispatching
+    Handles NotificationDispatchItem (store_action) by dispatching
     the appropriate actions. Returns True if handled.
     """
     if not hasattr(state, 'notifications') or not action_id.startswith(
@@ -102,7 +101,6 @@ def _dispatch_original_notification_action(
         return False
 
     from ubo_app.store.services.notifications import (
-        NotificationApplicationItem,
         NotificationDispatchItem,
     )
 
@@ -125,20 +123,6 @@ def _dispatch_original_notification_action(
             else [original_action.store_action]
         )
         store.dispatch(*actions)
-        return True
-
-    # Handle NotificationApplicationItem (has application_id)
-    if isinstance(original_action, NotificationApplicationItem):
-        from ubo_app.store.core.types import OpenApplicationAction
-
-        store.dispatch(
-            OpenApplicationAction(
-                application_id=original_action.application_id,
-                initialization_kwargs=dict(
-                    original_action.initialization_kwargs,
-                ),
-            ),
-        )
         return True
 
     # If the original action has a registered action_id, use it

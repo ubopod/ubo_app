@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
-    StackPushApplicationAction,
+    OpenRenderAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
@@ -36,7 +36,6 @@ from ubo_app.store.services.file_system import (
 from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Notification,
-    NotificationApplicationItem,
     NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
@@ -154,7 +153,10 @@ def _open_video(path: Path) -> None:
     from video_streamer import start_video_stream
 
     store.dispatch(
-        StackPushApplicationAction(application_id='ubo:video-viewer'),
+        OpenRenderAction(
+            kind='frame_stream',
+            stream_id='file-system:video',
+        ),
     )
     start_video_stream(path.as_posix())
 
@@ -448,40 +450,46 @@ def _show_file(path: Path) -> None:
                 with Image.open(path) as image:
                     width, height = image.size
                     if width * height > IMAGE_VIEWER_PIXEL_LIMIT:
-                        view_action = NotificationApplicationItem(
+                        view_action = NotificationDispatchItem(
                             key='view',
                             label='View File Content',
                             icon='󰦪',
-                            application_id='ubo:raw-text-viewer',
-                            initialization_kwargs={
-                                'text': '[i][Image is too large to preview.][/i]',
-                            },
+                            store_action=OpenRenderAction(
+                                kind='text_viewer',
+                                props={
+                                    'text': '[i][Image is too large to preview.][/i]',
+                                },
+                            ),
                             close_notification=False,
                         )
                     else:
                         image_rgb = image.convert('RGB')
                         image_bytes = image_rgb.tobytes()
-                        view_action = NotificationApplicationItem(
+                        view_action = NotificationDispatchItem(
                             key='view',
                             label='Open Image',
                             icon='󰋩',
-                            application_id='ubo:raw-image-viewer',
-                            initialization_kwargs={
-                                'image': image_bytes,
-                                'width': width,
-                                'height': height,
-                            },
+                            store_action=OpenRenderAction(
+                                kind='image_viewer',
+                                props={
+                                    'image': image_bytes,
+                                    'width': width,
+                                    'height': height,
+                                },
+                            ),
                             close_notification=False,
                         )
             except (OSError, ValueError):
-                view_action = NotificationApplicationItem(
+                view_action = NotificationDispatchItem(
                     key='view',
                     label='View File Content',
                     icon='󰦪',
-                    application_id='ubo:raw-text-viewer',
-                    initialization_kwargs={
-                        'text': '[i][Image preview is unavailable.][/i]',
-                    },
+                    store_action=OpenRenderAction(
+                        kind='text_viewer',
+                        props={
+                            'text': '[i][Image preview is unavailable.][/i]',
+                        },
+                    ),
                     close_notification=False,
                 )
         case str(type_) if type_.startswith('audio/'):
@@ -502,14 +510,16 @@ def _show_file(path: Path) -> None:
                 close_notification=False,
             )
         case _:
-            view_action = NotificationApplicationItem(
+            view_action = NotificationDispatchItem(
                 key='view',
                 label='View File Content',
                 icon='󰦪',
-                application_id='ubo:raw-text-viewer',
-                initialization_kwargs={
-                    'text': _get_file_content(path),
-                },
+                store_action=OpenRenderAction(
+                    kind='text_viewer',
+                    props={
+                        'text': _get_file_content(path),
+                    },
+                ),
                 close_notification=False,
             )
 

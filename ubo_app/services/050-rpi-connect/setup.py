@@ -16,12 +16,12 @@ from commands import (
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
-    OpenApplicationAction,
+    OpenRenderAction,
     RegisterSettingAppAction,
     SettingsCategory,
     StackPopAction,
-    UpdateApplicationKwargsAction,
     UpdateDynamicMenuAction,
+    UpdateRenderPropsAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
@@ -66,9 +66,14 @@ async def _perform_signin() -> None:
         if match:
             url = match.group('url')
             store.dispatch(
-                UpdateApplicationKwargsAction(
-                    application_id='rpi-connect:signin-page',
-                    kwargs={'stage': '1', 'url': url},
+                UpdateRenderPropsAction(
+                    kind='status',
+                    next_kind='qr_code',
+                    title='RPi Connect Sign In',
+                    props={
+                        'value': url,
+                        'label': '',
+                    },
                 ),
             )
             await _signin_process.wait()
@@ -112,9 +117,10 @@ async def _perform_signin() -> None:
 def start_signin() -> None:
     """Start the sign-in process and open the sign-in page."""
     store.dispatch(
-        OpenApplicationAction(
-            application_id='rpi-connect:signin-page',
-            initialization_kwargs={'stage': '0'},
+        OpenRenderAction(
+            kind='status',
+            title='RPi Connect Sign In',
+            props={'text': 'Logging in...', 'text_font_size': 32},
         ),
     )
     create_task(_perform_signin())
@@ -139,10 +145,12 @@ def _register_rpi_connect_action_handlers() -> None:
 
     def _open_qrcode() -> None:
         store.dispatch(
-            OpenApplicationAction(
-                application_id='rpi-connect:qrcode-page',
-                initialization_kwargs={
-                    'url': 'https://connect.raspberrypi.com/devices',
+            OpenRenderAction(
+                kind='qr_code',
+                title='RPi Connect',
+                props={
+                    'value': 'https://connect.raspberrypi.com/devices',
+                    'label': 'https://connect.raspberrypi.com/devices',
                 },
             ),
         )

@@ -11,6 +11,7 @@ from ubo_app.store.core.types import (
     ApplicationStackItem,
     MenuStackItem,
     NotificationStackItem,
+    RenderStackItem,
     StackItemType,
 )
 
@@ -43,12 +44,12 @@ class TestStackTypes:
         """Verify ApplicationStackItem can be created with required fields."""
         item = ApplicationStackItem(
             id='test-id',
-            application_id='camera:viewfinder',
+            application_id='test:custom-widget',
             initialization_args=('arg1', 'arg2'),
             initialization_kwargs={'key': 'value'},
         )
         assert item.id == 'test-id'
-        assert item.application_id == 'camera:viewfinder'
+        assert item.application_id == 'test:custom-widget'
         assert item.initialization_args == ('arg1', 'arg2')
         assert item.initialization_kwargs == {'key': 'value'}
 
@@ -57,6 +58,28 @@ class TestStackTypes:
         item = ApplicationStackItem(id='test-id', application_id='test:app')
         assert item.initialization_args == ()
         assert item.initialization_kwargs == {}
+
+    def test_render_stack_item_creation(self) -> None:
+        """Verify RenderStackItem can be created with required fields."""
+        item = RenderStackItem(
+            id='test-id',
+            kind='qr_code',
+            title='My QR',
+            props={'value': 'https://example.com'},
+            stream_id='',
+        )
+        assert item.id == 'test-id'
+        assert item.kind == 'qr_code'
+        assert item.title == 'My QR'
+        assert item.props == {'value': 'https://example.com'}
+
+    def test_render_stack_item_defaults(self) -> None:
+        """Verify RenderStackItem has default empty props/items/stream_id."""
+        item = RenderStackItem(id='test-id', kind='status')
+        assert item.props == {}
+        assert item.items == ()
+        assert item.stream_id == ''
+        assert item.title == ''
 
     def test_notification_stack_item_creation(self) -> None:
         """Verify NotificationStackItem can be created with required fields."""

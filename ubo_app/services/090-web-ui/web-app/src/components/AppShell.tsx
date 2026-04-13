@@ -7,6 +7,7 @@ import { Breadcrumb } from "./Breadcrumb";
 import { InstructionView } from "./InstructionView";
 import { NotificationOverlay } from "./NotificationOverlay";
 import { PromptView } from "./PromptView";
+import { RenderView } from "./RenderView";
 import { StatusBar } from "./StatusBar";
 import { TileGrid } from "./TileGrid";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
@@ -55,6 +56,10 @@ function AppContent({ store }: { store: StoreServiceClient }) {
         .split(/[-_]/)
         .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(" ");
+      return { currentTitle: text, currentTitleIcon: "", currentTitleText: text };
+    }
+    if (currentView.renderViewData) {
+      const text = currentView.renderViewData.title || currentView.renderViewData.kind || "View";
       return { currentTitle: text, currentTitleIcon: "", currentTitleText: text };
     }
     if (currentView.instructionViewData) {
@@ -119,6 +124,15 @@ function AppContent({ store }: { store: StoreServiceClient }) {
       return (
         <ApplicationView
           data={currentView.applicationViewData}
+          store={store}
+        />
+      );
+    }
+
+    if (currentView.renderViewData) {
+      return (
+        <RenderView
+          data={currentView.renderViewData}
           store={store}
         />
       );

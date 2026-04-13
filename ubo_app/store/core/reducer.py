@@ -27,6 +27,7 @@ from ubo_app.store.core.stack_ops import (
     push_menu,
     push_notification,
     push_prompt,
+    push_render,
     set_page_index,
 )
 from ubo_app.store.core.types import (
@@ -58,12 +59,15 @@ from ubo_app.store.core.types import (
     NotificationStackItem,
     NotificationViewData,
     OpenApplicationAction,
+    OpenRenderAction,
     PowerOffAction,
     PowerOffEvent,
     RebootAction,
     RebootEvent,
     RegisterRegularAppAction,
     RegisterSettingAppAction,
+    RenderStackItem,
+    RenderViewData,
     ReplayRecordedSequenceAction,
     ReplayRecordedSequenceEvent,
     ReportReplayingDoneAction,
@@ -81,6 +85,7 @@ from ubo_app.store.core.types import (
     StackPushMenuAction,
     StackPushNotificationAction,
     StackPushPromptAction,
+    StackPushRenderAction,
     StackSetPageIndexAction,
     StoreRecordedSequenceEvent,
     TakeScreenshotAction,
@@ -88,6 +93,7 @@ from ubo_app.store.core.types import (
     UpdateApplicationKwargsAction,
     UpdateCurrentViewAction,
     UpdateInstructionProgressAction,
+    UpdateRenderPropsAction,
     ViewChangedEvent,
 )
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
@@ -146,7 +152,7 @@ def reducer(
         case MenuScrollAction():
             current_view = state.current_view
             total_pages = 1
-            if isinstance(current_view, ApplicationViewData):
+            if isinstance(current_view, (ApplicationViewData, RenderViewData)):
                 direction = (
                     'up'
                     if action.direction == MenuScrollDirection.UP
@@ -198,6 +204,17 @@ def reducer(
                 action.application_id,
                 action.initialization_args,
                 action.initialization_kwargs,
+            )
+            return _complete_stack_result(new_state, fallback=state)
+
+        case StackPushRenderAction():
+            new_state = push_render(
+                state,
+                action.kind,
+                title=action.title,
+                props=action.props,
+                items=action.items,
+                stream_id=action.stream_id,
             )
             return _complete_stack_result(new_state, fallback=state)
 
@@ -304,12 +321,53 @@ def reducer(
                 events=[StackChangedEvent(stack=new_state.stack)],
             )
 
+        case UpdateRenderPropsAction():
+            new_stack = tuple(
+                replace(
+                    item,
+                    kind=action.next_kind or item.kind,
+                    title=action.title or item.title,
+                    props={
+                        **item.props,
+                        **action.props,
+                    },
+                )
+                if isinstance(item, RenderStackItem)
+                and (
+                    (action.stream_id and item.stream_id == action.stream_id)
+                    or (action.kind and item.kind == action.kind)
+                )
+                else item
+                for item in state.stack
+            )
+            if new_stack == state.stack:
+                return state
+            new_state = replace(state, stack=new_stack)
+            return CompleteReducerResult(
+                state=replace(
+                    new_state,
+                    path=derive_path_from_stack(new_stack),
+                ),
+                events=[StackChangedEvent(stack=new_state.stack)],
+            )
+
         case OpenApplicationAction():
             new_state = push_application(
                 state,
                 action.application_id,
                 action.initialization_args,
                 action.initialization_kwargs,
+            )
+            return _complete_stack_result(new_state, fallback=state)
+
+        case OpenRenderAction():
+            new_state = push_render(
+                state,
+                action.kind,
+                title=action.title,
+                props=action.props,
+                items=action.items,
+                stream_id=action.stream_id,
             )
             return _complete_stack_result(new_state, fallback=state)
 

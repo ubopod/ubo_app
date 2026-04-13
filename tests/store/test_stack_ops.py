@@ -15,6 +15,7 @@ from ubo_app.store.core.stack_ops import (
     push_application,
     push_menu,
     push_notification,
+    push_render,
     set_page_index,
 )
 from ubo_app.store.core.types import (
@@ -22,6 +23,7 @@ from ubo_app.store.core.types import (
     MainState,
     MenuStackItem,
     NotificationStackItem,
+    RenderStackItem,
 )
 
 
@@ -184,10 +186,10 @@ class TestPushApplication:
     def test_appends_application_stack_item(self) -> None:
         """Verify push_application appends an ApplicationStackItem."""
         state = _make_state()
-        new_state = push_application(state, 'camera:viewfinder')
+        new_state = push_application(state, 'test:custom-widget')
         assert len(new_state.stack) == 2
         assert isinstance(new_state.stack[-1], ApplicationStackItem)
-        assert new_state.stack[-1].application_id == 'camera:viewfinder'
+        assert new_state.stack[-1].application_id == 'test:custom-widget'
 
     def test_path_unchanged(self) -> None:
         """Verify push_application does not change the path."""
@@ -227,6 +229,61 @@ class TestPushApplication:
         item = new_state.stack[-1]
         assert isinstance(item, ApplicationStackItem)
         assert item.initialization_kwargs == {}
+
+
+class TestPushRender:
+    """Tests for push_render."""
+
+    def test_appends_render_stack_item(self) -> None:
+        """Verify push_render appends a RenderStackItem."""
+        state = _make_state()
+        new_state = push_render(state, 'qr_code')
+        assert len(new_state.stack) == 2
+        assert isinstance(new_state.stack[-1], RenderStackItem)
+        assert new_state.stack[-1].kind == 'qr_code'
+
+    def test_preserves_props(self) -> None:
+        """Verify push_render preserves props."""
+        state = _make_state()
+        new_state = push_render(
+            state,
+            'qr_code',
+            props={'value': 'https://example.com', 'label': 'Example'},
+        )
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.props == {'value': 'https://example.com', 'label': 'Example'}
+
+    def test_preserves_stream_id(self) -> None:
+        """Verify push_render preserves stream_id."""
+        state = _make_state()
+        new_state = push_render(
+            state,
+            'frame_stream',
+            stream_id='camera:viewfinder',
+        )
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.stream_id == 'camera:viewfinder'
+
+    def test_path_unchanged(self) -> None:
+        """Verify push_render does not change the path."""
+        state = _make_state()
+        state = push_menu(state, 'main')
+        original_path = state.path
+        new_state = push_render(state, 'status')
+        assert new_state.path == original_path
+
+    def test_default_props_are_empty(self) -> None:
+        """Verify default props, items, and stream_id are empty."""
+        state = _make_state()
+        new_state = push_render(state, 'text_viewer')
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.props == {}
+        assert item.items == ()
+        assert item.stream_id == ''
+        assert item.title == ''
 
 
 class TestPushNotification:

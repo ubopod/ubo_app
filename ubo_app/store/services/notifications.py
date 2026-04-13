@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 
     from ubo_app.store.main import UboAction
     from ubo_app.store.services.speech_synthesis import ReadableInformation
-    from ubo_app.store.ubo_actions import BasicType
 
 
 class Importance(StrEnum):
@@ -77,14 +76,6 @@ class NotificationDispatchItem(NotificationActionItem):
     store_action: UboAction | list[UboAction] | None = None
 
 
-class NotificationApplicationItem(NotificationActionItem):
-    application_id: str = ''
-    initialization_kwargs: dict[
-        str,
-        BasicType | tuple[BasicType, ...] | list[BasicType],
-    ] = field(default_factory=dict)
-
-
 class Notification(Immutable):
     id: str = field(default_factory=lambda: uuid4().hex)
     title: str
@@ -96,7 +87,7 @@ class Notification(Immutable):
     is_read: bool = False
     sender: str | None = None
     actions: Sequence[
-        NotificationActionItem | NotificationDispatchItem | NotificationApplicationItem
+        NotificationActionItem | NotificationDispatchItem
     ] = field(
         default_factory=list,
     )
