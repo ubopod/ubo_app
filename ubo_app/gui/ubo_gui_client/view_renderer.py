@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
     from ubo_gui_client.app import UboGUIApp
     from ubo_gui_client.client import GUIClient
+    from ubo_gui_client.gui_utils import UboPromptWidget
     from ubo_gui_client.menu_central import MenuWidgetWithHomePage
     from ubo_gui_client.menu_notification_handler import UboNotificationWidget
 
@@ -999,7 +1000,7 @@ class ViewRenderer:
 
     @staticmethod
     def _apply_prompt_items(
-        widget: object,
+        widget: UboPromptWidget,
         raw_items: list[object],
     ) -> None:
         """Apply prompt item data to widget option fields."""
