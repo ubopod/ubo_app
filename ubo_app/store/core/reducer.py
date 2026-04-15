@@ -164,7 +164,21 @@ def reducer(
                     state=state,
                     events=[ApplicationScrollEvent(direction=direction)],
                 )
-            if isinstance(current_view, (MenuViewData, NotificationViewData)):
+            if isinstance(current_view, NotificationViewData):
+                if current_view.total_pages <= 1:
+                    # Single-page notification — text may overflow; emit scroll
+                    # event so the GUI can adjust the slider-based text scroll.
+                    direction = (
+                        'up'
+                        if action.direction == MenuScrollDirection.UP
+                        else 'down'
+                    )
+                    return CompleteReducerResult(
+                        state=state,
+                        events=[ApplicationScrollEvent(direction=direction)],
+                    )
+                total_pages = current_view.total_pages
+            elif isinstance(current_view, MenuViewData):
                 total_pages = current_view.total_pages
             else:
                 return state

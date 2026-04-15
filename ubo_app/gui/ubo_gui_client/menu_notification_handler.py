@@ -51,6 +51,22 @@ class UboNotificationWidget(NotificationWidget, UboPageWidget):
         """Scroll down the notification content."""
         self.ids.slider.animated_value -= dp(100)
 
+    def scroll_to_page(
+        self: UboNotificationWidget,
+        page_index: int,
+        total_pages: int,
+    ) -> None:
+        """Set text scroll position proportionally based on current page.
+
+        Page 0 → slider at max (top of text).
+        Last page → slider at 0 (bottom of text / end of content).
+        """
+        slider = self.ids.slider
+        if total_pages <= 1 or slider.max <= 0:
+            return
+        fraction = page_index / (total_pages - 1)
+        slider.animated_value = slider.max * (1 - fraction)
+
 
 class MenuNotificationHandler(UboApp):
     menu_widget: MenuWidget

@@ -1,0 +1,105 @@
+// store-desktop-000
+{
+  "_type": "NotificationsState",
+  "notifications": [
+    {
+      "_type": "Notification",
+      "actions": [
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀀",
+          "is_short": true,
+          "key": "action_0",
+          "label": "Action 0"
+        },
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀁",
+          "is_short": true,
+          "key": "action_1",
+          "label": "Action 1"
+        },
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀂",
+          "is_short": true,
+          "key": "action_2",
+          "label": "Action 2"
+        },
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀃",
+          "is_short": true,
+          "key": "action_3",
+          "label": "Action 3"
+        },
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀄",
+          "is_short": true,
+          "key": "action_4",
+          "label": "Action 4"
+        },
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀅",
+          "is_short": true,
+          "key": "action_5",
+          "label": "Action 5"
+        }
+      ],
+      "blink": true,
+      "chime": null,
+      "color": "#2196F3",
+      "content": "This is a very long notification content that should exceed the visible area of the notification view. It contains multiple lines of text to test that text overflow and scrolling work correctly within the notification widget. The text continues across pages so the user can read the full message while also seeing the remaining action items on subsequent pages.",
+      "dismiss_on_close": false,
+      "display_type": "sticky",
+      "expiration_timestamp": null,
+      "extra_information": null,
+      "flash_time": 1000,
+      "icon": "󰌶",
+      "id": "test-scroll-notification",
+      "importance": "low",
+      "is_read": false,
+      "on_close_id": null,
+      "progress": null,
+      "progress_weight": 1,
+      "sender": null,
+      "show_dismiss_action": true,
+      "timestamp": 1776230629.2337801,
+      "title": "Scroll Test"
+    }
+  ],
+  "progress": null,
+  "unread_count": 1
+}

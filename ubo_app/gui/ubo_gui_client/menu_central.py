@@ -235,12 +235,16 @@ class MenuWidgetWithHomePage(MenuWidget):
         application: object,
         *,
         animated: bool = False,
+        scroll_direction: str | None = None,
     ) -> None:
         """Replace whatever is at the current depth with an application.
 
         At any depth, this clears items above root and pushes the application.
 
-        When ``animated`` is True, uses a swap transition for visual feedback.
+        When ``scroll_direction`` is provided (``'up'``/``'down'``), uses a
+        slide transition in the given direction for page-scroll animation.
+        When ``animated`` is True without a scroll direction, uses a swap
+        transition for visual feedback.
         Otherwise uses instant (no) transition to prevent the home page from
         flashing.
         """
@@ -279,7 +283,13 @@ class MenuWidgetWithHomePage(MenuWidget):
             application.padding_top = self.padding_top
             new_top = StackApplicationItem(application=application, parent=None)
             self.stack = [*self.stack, new_top]
-            if animated:
+            if scroll_direction:
+                self._switch_to(
+                    self.current_screen,
+                    transition=self._slide_transition,
+                    direction=scroll_direction,
+                )
+            elif animated:
                 self._switch_to(
                     self.current_screen,
                     transition=self._swap_transition,

@@ -736,35 +736,37 @@ class ViewRenderer:
                 and isinstance(top.application, UboNotificationWidget)
                 and top.application.notification_id == notification_id
             ):
-                # Same notification — check if page changed (scroll)
-                if (
+                # Same notification — update in place (items + text scroll)
+                page_changed = (
                     self._last_notification_page_index is not None
                     and page_index != self._last_notification_page_index
-                ):
-                    # Page changed — rebuild widget with scroll transition
+                )
+                if page_changed:
                     logger.info(
                         '[ViewRenderer] Notification: scroll page %d→%d for %s',
                         self._last_notification_page_index,
                         page_index,
                         notification_id,
                     )
-                    self._last_notification_page_index = page_index
-                    # Fall through to build a new notification widget below
                 else:
-                    # Same page — just update items in place
                     logger.debug(
                         '[ViewRenderer] Notification: updating existing '
                         'widget for %s',
                         notification_id,
                     )
-                    self._apply_notification_data(top.application, view)
-                    self._current_view_type = 'notification'
-                    self._last_menu_page_index = None
-                    self._last_notification_page_index = page_index
-                    stack_depth = getattr(view, 'stack_depth', None)
-                    if stack_depth is not None:
-                        self._last_stack_depth = stack_depth
-                    return
+                self._apply_notification_data(top.application, view)
+                if page_changed:
+                    # Scroll text proportionally so the scrollbar
+                    # reaches the end on the last page.
+                    total_pages = getattr(view, 'total_pages', 1) or 1
+                    top.application.scroll_to_page(page_index, total_pages)
+                self._current_view_type = 'notification'
+                self._last_menu_page_index = None
+                self._last_notification_page_index = page_index
+                stack_depth = getattr(view, 'stack_depth', None)
+                if stack_depth is not None:
+                    self._last_stack_depth = stack_depth
+                return
 
         # Build the notification widget
         notification_widget = UboNotificationWidget(
