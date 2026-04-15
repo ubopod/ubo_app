@@ -6,7 +6,8 @@ and single-page notifications with text overflow slider scrolling.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import replace
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -21,7 +22,20 @@ if TYPE_CHECKING:
     )
     from tests.fixtures.snapshot import WindowSnapshot
     from ubo_app.store.main import RootState
-    from ubo_app.store.services.notifications import NotificationsState
+
+
+def _normalize_notifications(state: RootState) -> dict[str, Any]:
+    """Select notification state with timestamps normalized for snapshots."""
+    notifications_state = state.notifications
+    normalized = [
+        replace(n, timestamp=0, expiration_timestamp=None)
+        for n in notifications_state.notifications
+    ]
+    return {
+        'notifications': normalized,
+        'unread_count': notifications_state.unread_count,
+        'progress': notifications_state.progress,
+    }
 
 
 @pytest.mark.timeout(200)
@@ -44,9 +58,6 @@ async def test_multi_page_notification_scroll(
         NotificationDisplayType,
         NotificationsAddAction,
     )
-
-    def store_snapshot_selector(state: RootState) -> NotificationsState:
-        return state.notifications
 
     app_context.set_app()
     unload_waiter = await load_services(
@@ -101,7 +112,7 @@ async def test_multi_page_notification_scroll(
 
     # Page 1: text at top + first 3 items, scrollbar at top
     window_snapshot.take(title='page1')
-    store_snapshot.take(selector=store_snapshot_selector)
+    store_snapshot.take(selector=_normalize_notifications)
 
     # Scroll down to page 2
     await dispatcher.send_key(Key.DOWN)
@@ -109,7 +120,7 @@ async def test_multi_page_notification_scroll(
 
     # Page 2: text continued + items 4-6, scrollbar at middle
     window_snapshot.take(title='page2')
-    store_snapshot.take(selector=store_snapshot_selector)
+    store_snapshot.take(selector=_normalize_notifications)
 
     # Scroll down to page 3
     await dispatcher.send_key(Key.DOWN)
@@ -117,7 +128,7 @@ async def test_multi_page_notification_scroll(
 
     # Page 3: remaining text + dismiss only, scrollbar at bottom (end)
     window_snapshot.take(title='page3')
-    store_snapshot.take(selector=store_snapshot_selector)
+    store_snapshot.take(selector=_normalize_notifications)
 
     await unload_waiter()
 
@@ -142,9 +153,6 @@ async def test_single_page_notification_text_scroll(
         NotificationDisplayType,
         NotificationsAddAction,
     )
-
-    def store_snapshot_selector(state: RootState) -> NotificationsState:
-        return state.notifications
 
     app_context.set_app()
     unload_waiter = await load_services(
@@ -194,7 +202,7 @@ async def test_single_page_notification_text_scroll(
 
     # Initial view: text visible with slider
     window_snapshot.take(title='initial')
-    store_snapshot.take(selector=store_snapshot_selector)
+    store_snapshot.take(selector=_normalize_notifications)
 
     # Scroll down to move text
     from ubo_app.store.services.keypad import Key
@@ -204,6 +212,6 @@ async def test_single_page_notification_text_scroll(
 
     # Text should have scrolled down
     window_snapshot.take(title='scrolled')
-    store_snapshot.take(selector=store_snapshot_selector)
+    store_snapshot.take(selector=_normalize_notifications)
 
     await unload_waiter()

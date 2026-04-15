@@ -1,6 +1,5 @@
 // store-desktop-000
 {
-  "_type": "NotificationsState",
   "notifications": [
     {
       "_type": "Notification",
@@ -48,7 +47,7 @@
       "progress_weight": 1,
       "sender": null,
       "show_dismiss_action": true,
-      "timestamp": 1776230686.4804182,
+      "timestamp": 0,
       "title": "Text Scroll Test Notification"
     }
   ],
