@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any, overload
 
 import docker
 import docker.errors
+from apps import IMAGES
 from docker.models.containers import Container
 from docker.models.images import Image
-from docker_images import IMAGES
 from redux import FinishEvent
 
 from ubo_app.logger import logger
@@ -242,7 +242,7 @@ def update_container(*, image_id: str, container: Container) -> None:
         store.dispatch(
             DockerImageSetStatusAction(
                 image=image_id,
-                status=DockerItemStatus.RUNNING,
+                status=DockerItemStatus.STARTING,
                 ports=[
                     f'{i["HostIp"]}:{i["HostPort"]}'
                     for i in container.ports.values()

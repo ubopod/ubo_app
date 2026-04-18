@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from apps import IMAGES
 from docker_composition import check_composition
 from docker_container import check_container
-from docker_images import IMAGES, configure_twingate, is_twingate_configured
 from redux import AutorunOptions
 
 from ubo_app.colors import DANGER_COLOR
@@ -25,6 +25,7 @@ from ubo_app.store.services.docker import (
     DockerImageRemoveAction,
     DockerImageRemoveContainerAction,
     DockerImageRunAction,
+    DockerImageSetStatusAction,
     DockerImageStopAction,
     DockerItemStatus,
     ImageState,
@@ -47,11 +48,6 @@ if TYPE_CHECKING:
 def _secrets_modification_time() -> float:
     """Return the modification time of the secrets file."""
     return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
-
-
-def _open_twingate_configure() -> None:
-    """Open the Twingate configuration dialog."""
-    create_task(configure_twingate())
 
 
 def get_docker_image_menu_id(image_id: str) -> str:
@@ -140,18 +136,9 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             ),
         )
 
-        if image.id == 'twingate' and is_twingate_configured():
-            reconfigure_id = f'docker:reconfigure:{image.id}'
-            _image_action_ids[menu_id].append(reconfigure_id)
-            register_action(reconfigure_id, _open_twingate_configure)
-            items.append(
-                MenuItemData(
-                    key='reconfigure',
-                    label='Reconfigure',
-                    icon='󰒓',
-                    action_id=reconfigure_id,
-                ),
-            )
+        # App-specific menu actions (e.g., Reconfigure, Show token)
+        if (hook := IMAGES.get(image.id, None)) and hook.menu_actions:
+            hook.menu_actions(menu_id, items, _image_action_ids)
 
         if is_composition:
             delete_id = f'docker:delete:{image.id}'
@@ -203,18 +190,8 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             ),
         )
 
-        if image.id == 'twingate' and is_twingate_configured():
-            reconfigure_id = f'docker:reconfigure:{image.id}'
-            _image_action_ids[menu_id].append(reconfigure_id)
-            register_action(reconfigure_id, _open_twingate_configure)
-            items.append(
-                MenuItemData(
-                    key='reconfigure',
-                    label='Reconfigure',
-                    icon='󰒓',
-                    action_id=reconfigure_id,
-                ),
-            )
+        if (hook := IMAGES.get(image.id, None)) and hook.menu_actions:
+            hook.menu_actions(menu_id, items, _image_action_ids)
 
         release_id = f'docker:release:{image.id}'
         _image_action_ids[menu_id].append(release_id)
@@ -249,7 +226,7 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
                     action_id=release_id,
                 ),
             )
-    elif image.status == DockerItemStatus.RUNNING:
+    elif image.status in (DockerItemStatus.STARTING, DockerItemStatus.RUNNING):
         stop_id = f'docker:stop:{image.id}'
         _image_action_ids[menu_id].append(stop_id)
         register_action(
@@ -264,6 +241,9 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
                 action_id=stop_id,
             ),
         )
+
+        if (hook := IMAGES.get(image.id, None)) and hook.menu_actions:
+            hook.menu_actions(menu_id, items, _image_action_ids)
 
         if is_composition:
             if image.instructions:
@@ -373,6 +353,7 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             DockerItemStatus.AVAILABLE: 'Images are ready but composition is not '
             'running',
             DockerItemStatus.CREATED: 'Composition is created but not running',
+            DockerItemStatus.STARTING: 'Application is starting...',
             DockerItemStatus.RUNNING: 'Composition is running',
             DockerItemStatus.ERROR: 'We have an error, please check the logs',
             DockerItemStatus.PROCESSING: 'Waiting...',
@@ -388,6 +369,7 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             DockerItemStatus.FETCHING: 'Image is being fetched',
             DockerItemStatus.AVAILABLE: 'Image is ready but container is not running',
             DockerItemStatus.CREATED: 'Container is created but not running',
+            DockerItemStatus.STARTING: 'Application is starting...',
             DockerItemStatus.RUNNING: running_message or 'Container is running',
             DockerItemStatus.ERROR: 'We have an error, please check the logs',
             DockerItemStatus.PROCESSING: 'Waiting...',
@@ -441,9 +423,35 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
 
         _update_docker_image_menu(image, _get_interfaces())
 
+        if (
+            image.status == DockerItemStatus.STARTING
+            and image_id in IMAGES
+            and IMAGES[image_id].ports
+        ):
+            from port_monitor import _first_host_port, monitor_app_port
+
+            host_port = _first_host_port(IMAGES[image_id].ports)
+            if host_port:
+                create_task(monitor_app_port(image_id, host_port))
+            else:
+                store.dispatch(
+                    DockerImageSetStatusAction(
+                        image=image_id,
+                        status=DockerItemStatus.RUNNING,
+                    ),
+                )
+        elif (
+            image.status == DockerItemStatus.STARTING
+            and (image_id not in IMAGES or not IMAGES[image_id].ports)
+        ):
+            store.dispatch(
+                DockerImageSetStatusAction(
+                    image=image_id,
+                    status=DockerItemStatus.RUNNING,
+                ),
+            )
+
 
 def docker_item_menu(image_id: str) -> None:
     """Navigate to the Docker image menu."""
-    # menu_key uses 'docker:<image_id>' format to match the path matcher,
-    # which maps it to the dynamic menu ID 'docker:image:<image_id>'
     store.dispatch(StackPushMenuAction(menu_key=f'docker:{image_id}'))

@@ -48,3 +48,8 @@ def clear_secret(key: str) -> None:
         dotenv_path=SECRETS_PATH,
         key_to_unset=key,
     )
+
+
+def list_secrets() -> list[str]:
+    """Return the names of every secret currently stored."""
+    return [key for key in dotenv.dotenv_values(SECRETS_PATH) if key]

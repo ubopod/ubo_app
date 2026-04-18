@@ -30,6 +30,7 @@ class DockerItemStatus(StrEnum):
     FETCHING = auto()
     AVAILABLE = auto()
     CREATED = auto()
+    STARTING = auto()
     RUNNING = auto()
     ERROR = auto()
     PROCESSING = auto()
@@ -217,7 +218,11 @@ class ImageState(Immutable):
     @property
     def is_available(self: ImageState) -> bool:
         """Check if image is available."""
-        return self.status in [DockerItemStatus.AVAILABLE, DockerItemStatus.RUNNING]
+        return self.status in [
+            DockerItemStatus.AVAILABLE,
+            DockerItemStatus.STARTING,
+            DockerItemStatus.RUNNING,
+        ]
 
     @property
     def is_running(self: ImageState) -> bool:

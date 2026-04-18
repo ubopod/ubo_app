@@ -6,8 +6,8 @@ from dataclasses import replace
 
 import docker
 import docker.errors
+from apps import IMAGES
 from calculate_progress import LayerProgressTracker
-from docker_images import IMAGES
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID

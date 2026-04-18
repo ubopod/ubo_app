@@ -6,14 +6,14 @@ import json
 from inspect import iscoroutine
 from typing import TYPE_CHECKING
 
-from docker_composition import COMPOSITIONS_PATH
+from apps._registry import COMPOSITIONS_PATH
 
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import DockerImageUpdateMetadataAction
 
 if TYPE_CHECKING:
-    from docker_images import ContainerEntry
+    from apps._registry import ContainerEntry
 
 
 async def prepare_app(container: ContainerEntry) -> bool:

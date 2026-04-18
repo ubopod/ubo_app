@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 import docker
 import docker.errors
+from apps import IMAGES, ContainerEntry
 from docker.models.containers import Container
 from docker.models.images import Image
 from docker_composition import (
@@ -26,7 +27,6 @@ from docker_composition import (
 )
 from docker_container import remove_container, run_container, stop_container
 from docker_image import fetch_image, remove_image
-from docker_images import IMAGES, ContainerEntry
 from menus import docker_item_menu, setup_docker_image_dynamic_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction

@@ -8,12 +8,12 @@ import re
 import shutil
 from dataclasses import replace
 
+from apps import IMAGES, PREDEFINED_IMAGE_IDS
 from calculate_progress import (
     LayerProgressTracker,
     ServiceTrackers,
     calculate_composition_progress,
 )
-from docker_images import IMAGES, PREDEFINED_IMAGE_IDS
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import CONFIG_PATH
@@ -475,6 +475,12 @@ async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
     # Prepare the composition (download files, generate credentials, update metadata)
     if not await prepare_app(container):
         logger.error('prepare_app returned False, exiting', extra={'image': id})
+        store.dispatch(
+            DockerImageSetStatusAction(
+                image=id,
+                status=DockerItemStatus.NOT_AVAILABLE,
+            ),
+        )
         return
 
     composition_label = await get_composition_label(id)
@@ -674,7 +680,7 @@ async def check_composition(*, id: str) -> None:
     ps_running_output = await ps_running.stdout.read() if ps_running.stdout else b''
     if ps_running_output:
         store.dispatch(
-            DockerImageSetStatusAction(image=id, status=DockerItemStatus.RUNNING),
+            DockerImageSetStatusAction(image=id, status=DockerItemStatus.STARTING),
         )
         return
 

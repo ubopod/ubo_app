@@ -141,9 +141,15 @@ def image_reducer(
 
     match action:
         case DockerImageSetStatusAction():
+            new_status = action.status
+            if (
+                new_status == DockerItemStatus.STARTING
+                and state.status == DockerItemStatus.RUNNING
+            ):
+                new_status = DockerItemStatus.RUNNING
             return replace(
                 state,
-                status=action.status,
+                status=new_status,
                 ports=action.ports if action.ports else state.ports,
                 container_ip=action.ip,
             )
@@ -160,7 +166,7 @@ def image_reducer(
             )
 
         case DockerImageFetchAction():
-            from docker_images import IMAGES
+            from apps import IMAGES
 
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
@@ -173,7 +179,7 @@ def image_reducer(
             )
 
         case DockerImageRemoveAction():
-            from docker_images import IMAGES
+            from apps import IMAGES
 
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
@@ -186,7 +192,7 @@ def image_reducer(
             )
 
         case DockerImageRunAction():
-            from docker_images import IMAGES
+            from apps import IMAGES
 
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
@@ -199,7 +205,7 @@ def image_reducer(
             )
 
         case DockerImageStopAction():
-            from docker_images import IMAGES
+            from apps import IMAGES
 
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(

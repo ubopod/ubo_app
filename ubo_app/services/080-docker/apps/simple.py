@@ -1,0 +1,79 @@
+"""Simple Docker apps that need no prepare function or custom menu actions."""
+
+from __future__ import annotations
+
+from apps._registry import ContainerEntry
+from ubo_app.constants import DEBUG_DOCKER
+
+ENTRIES: list[ContainerEntry] = [
+    ContainerEntry(
+        id='home_assistant',
+        label='Home Assistant',
+        icon='󰟐',
+        path='homeassistant/home-assistant:stable',
+        registry='docker.io',
+        ports={'8123/tcp': 8123},
+    ),
+    ContainerEntry(
+        id='home_bridge',
+        label='Home Bridge',
+        icon='󰘘',
+        path='homebridge/homebridge:latest',
+        registry='docker.io',
+    ),
+    ContainerEntry(
+        id='portainer',
+        label='Portainer',
+        icon='',
+        path='portainer/portainer-ce:latest',
+        registry='docker.io',
+        volumes=['/var/run/docker.sock:/var/run/docker.sock'],
+    ),
+    ContainerEntry(
+        id='pi_hole',
+        label='Pi-hole',
+        icon='󰇖',
+        hostname='pi.hole',
+        note='Password: admin',
+        path='pihole/pihole:latest',
+        ports={
+            '53/tcp': 53,
+            '53/udp': 53,
+            '80/tcp': 80,
+            '443/tcp': 443,
+        },
+        dns=['127.0.0.1', '1.1.1.1'],
+        registry='docker.io',
+    ),
+    ContainerEntry(
+        id='ollama',
+        label='Ollama',
+        icon='󰳆',
+        path='ollama/ollama:latest',
+        registry='docker.io',
+        ports={'11434/tcp': 11434},
+    ),
+    ContainerEntry(
+        id='open_webui',
+        label='Open WebUI',
+        icon='󰾔',
+        path='open-webui/open-webui:main',
+        registry='ghcr.io',
+        dependencies=['ollama'],
+        ports={'8080/tcp': 8080},
+        hosts={'host.docker.internal': 'host-gateway'},
+    ),
+    *(
+        [
+            ContainerEntry(
+                id='alpine',
+                label='Alpine',
+                icon='',
+                path='alpine:latest',
+                registry='docker.io',
+            ),
+        ]
+        if DEBUG_DOCKER
+        else []
+    ),
+]
