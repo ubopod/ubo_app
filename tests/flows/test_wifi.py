@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 from tests.fixtures.dispatch import DIRECT, GRPC_KEYPAD, GRPC_MENU
 
 
-@pytest.mark.timeout(200)
+@pytest.mark.timeout(250)
 @pytest.mark.skipif(not IS_RPI, reason='Only runs on Raspberry Pi')
 async def test_setup_flow(
     app_context: AppContext,

@@ -1,0 +1,56 @@
+// store-rpi-001
+{
+  "notifications": [
+    {
+      "_type": "Notification",
+      "actions": [
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀀",
+          "is_short": true,
+          "key": "action_0",
+          "label": "Action 0"
+        },
+        {
+          "_type": "NotificationActionItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": true,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰀁",
+          "is_short": true,
+          "key": "action_1",
+          "label": "Action 1"
+        }
+      ],
+      "blink": true,
+      "chime": null,
+      "color": "#2196F3",
+      "content": "This notification has a single page of items but the text content is long enough to exceed the visible area. The slider should appear on the right side and pressing UP/DOWN should scroll the text. This tests the ApplicationScrollEvent path in the reducer which triggers go_up/go_down on the notification widget to adjust the animated slider value for smooth text scrolling within the view.",
+      "dismiss_on_close": false,
+      "display_type": "sticky",
+      "expiration_timestamp": null,
+      "extra_information": null,
+      "flash_time": 1000,
+      "icon": "󰌶",
+      "id": "test-text-scroll",
+      "importance": "low",
+      "is_read": false,
+      "on_close_id": null,
+      "progress": null,
+      "progress_weight": 1,
+      "sender": null,
+      "show_dismiss_action": true,
+      "timestamp": 0,
+      "title": "Text Scroll Test Notification"
+    }
+  ],
+  "progress": null,
+  "unread_count": 1
+}
