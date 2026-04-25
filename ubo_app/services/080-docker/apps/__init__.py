@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from apps._registry import ContainerEntry
 from apps.envoy import ENTRY as ENVOY_ENTRY
+from apps.hermes import ENTRY as HERMES_ENTRY
 from apps.immich import ENTRY as IMMICH_ENTRY
 from apps.n8n import ENTRY as N8N_ENTRY
 from apps.ngrok import ENTRY as NGROK_ENTRY
@@ -21,6 +22,7 @@ IMAGES: dict[str, ContainerEntry] = {
         IMMICH_ENTRY,
         N8N_ENTRY,
         OPENCLAW_ENTRY,
+        HERMES_ENTRY,
         TWINGATE_ENTRY,
         ENVOY_ENTRY,
     ]
