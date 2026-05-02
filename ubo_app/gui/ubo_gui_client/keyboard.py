@@ -130,6 +130,7 @@ def setup_keyboard(  # noqa: C901, PLR0915
     )
 
     no_mod_map, ctrl_map, shift_map = _build_key_maps()
+    v_key_held = False
 
     # Map key codes to select() indices for L1/L2/L3
     _select_keys: dict[int, int] = {_1: 0, _2: 1, _3: 2}
@@ -270,8 +271,11 @@ def setup_keyboard(  # noqa: C901, PLR0915
         modifier: list[Modifier],
     ) -> None:
         """Handle key down events."""
+        nonlocal v_key_held
+
         _ = window, scancode, codepoint
-        if modifier == [] and key == _V:
+        if modifier == [] and key == _V and not v_key_held:
+            v_key_held = True
             client.dispatch_raw(
                 Action(
                     assistant_start_listening_action=AssistantStartListeningAction(),
@@ -284,8 +288,11 @@ def setup_keyboard(  # noqa: C901, PLR0915
         scancode: int,
     ) -> None:
         """Handle key up events."""
+        nonlocal v_key_held
+
         _ = window, scancode
-        if key == _V:
+        if key == _V and v_key_held:
+            v_key_held = False
             client.dispatch_raw(
                 Action(
                     assistant_stop_listening_action=AssistantStopListeningAction(),
