@@ -123,6 +123,11 @@ def _pack_to_any(partial_state: GRPCSerializable) -> betterproto_protobuf.Any:
     )
 
 
+def _should_log_dispatched_action(action: object) -> bool:
+    """Return whether generic gRPC dispatch logs should include an action."""
+    return type(action).__name__ != 'AssistantReportAction'
+
+
 def _send_initial_state(
     event_class: type[UboEvent],
     queue_event: Callable[[UboEvent], None],
@@ -227,15 +232,19 @@ class StoreService(StoreServiceBase):
                 },
             )
         else:
-            logger.info(
-                'Dispatching action coming from gRPC: %s',
-                type(action).__name__,
-            )
+            action_type = type(action).__name__
+            should_log_action = _should_log_dispatched_action(action)
+            if should_log_action:
+                logger.info(
+                    'Dispatching action coming from gRPC: %s',
+                    action_type,
+                )
             store.dispatch(cast('UboAction', action))
-            logger.info(
-                'Dispatched action via gRPC completed: %s',
-                type(action).__name__,
-            )
+            if should_log_action:
+                logger.info(
+                    'Dispatched action via gRPC completed: %s',
+                    action_type,
+                )
         return DispatchActionResponse()
 
     async def subscribe_event(

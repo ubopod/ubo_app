@@ -6,6 +6,7 @@ from loguru import logger
 from pipecat.frames.frames import (
     Frame,
     InterimTranscriptionFrame,
+    TranscriptionFrame,
     UserStartedSpeakingFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
@@ -72,6 +73,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
         self._assistance_index = 0
+        self._last_logged_transcription = ''
 
         # Initialize Segmented Google STT
         self.segmented_google_stt = self._initialize_service(
@@ -170,6 +172,13 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         _ = audio
         yield None
 
+    def _log_transcription(self, text: str) -> None:
+        """Log newly transcribed text for assistant debugging."""
+        if text == self._last_logged_transcription:
+            return
+        self._last_logged_transcription = text
+        logger.info('STT transcript: {text}', text=text)
+
     async def push_frame(
         self,
         frame: Frame,
@@ -180,8 +189,10 @@ class UboSTTService(UboSwitchService[STTService], STTService):
 
         if isinstance(frame, UserStartedSpeakingFrame):
             self._reset_assistance()
+            self._last_logged_transcription = ''
 
         if isinstance(frame, InterimTranscriptionFrame):
+            self._log_transcription(frame.text)
             self._report_assistance_frame(
                 AcceptableAssistanceFrame(
                     assistance_text_frame=AssistanceTextFrame(
@@ -192,3 +203,5 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                     ),
                 ),
             )
+        elif isinstance(frame, TranscriptionFrame):
+            self._log_transcription(frame.text)
