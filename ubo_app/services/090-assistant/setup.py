@@ -24,6 +24,9 @@ from ubo_app.constants.assistant import (
     DEEPGRAM_API_KEY_SECRET_ID,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
+    GENERIC_LLM_API_KEY_SECRET_ID,
+    GENERIC_LLM_BASE_URL_SECRET_ID,
+    GENERIC_LLM_MODEL_SECRET_ID,
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
     GROK_API_KEY_SECRET_ID,
     OPENAI_API_KEY_SECRET_ID,
@@ -271,6 +274,10 @@ def _register_persistent_stores() -> None:
         lambda state: state.assistant.selected_image_generator,
     )
     register_persistent_store(
+        'assistant:selected_llm_model',
+        lambda state: json.dumps(state.assistant.selected_models),
+    )
+    register_persistent_store(
         'assistant:enabled_mcp_servers',
         lambda state: json.dumps(list(state.assistant.enabled_mcp_servers)),
     )
@@ -309,6 +316,11 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             'elevenlabs_key': secrets.read_secret(ELEVENLABS_API_KEY_SECRET_ID),
             'elevenlabs_voice': secrets.read_secret(ELEVENLABS_VOICE_ID),
             'cerebras': secrets.read_secret(CEREBRAS_API_KEY_SECRET_ID),
+            'generic_llm_base_url': secrets.read_secret(
+                GENERIC_LLM_BASE_URL_SECRET_ID,
+            ),
+            'generic_llm_api_key': secrets.read_secret(GENERIC_LLM_API_KEY_SECRET_ID),
+            'generic_llm_model': secrets.read_secret(GENERIC_LLM_MODEL_SECRET_ID),
             'deepgram': secrets.read_secret(DEEPGRAM_API_KEY_SECRET_ID),
             'assemblyai': secrets.read_secret(ASSEMBLYAI_API_KEY_SECRET_ID),
             'rime': secrets.read_secret(RIME_API_KEY_SECRET_ID),

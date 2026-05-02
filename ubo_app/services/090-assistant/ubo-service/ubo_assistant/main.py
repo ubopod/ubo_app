@@ -20,6 +20,7 @@ from pipecat.processors.aggregators.llm_context import (
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
 )
+from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.consumer_processor import ConsumerProcessor
 from pipecat.processors.producer_processor import ProducerProcessor
 from pipecat.transports.base_transport import TransportParams
@@ -43,7 +44,9 @@ class Assistant:
         self.client.channel.close()
 
     async def run(self) -> None:
-        vad_analyzer = SileroVADAnalyzer(sample_rate=16000)
+        vad_processor = VADProcessor(
+            vad_analyzer=SileroVADAnalyzer(sample_rate=16000),
+        )
 
         ubo_input_transport = UboInputTransport(
             params=TransportParams(
@@ -51,7 +54,6 @@ class Assistant:
                 audio_in_channels=1,
                 audio_in_sample_rate=16000,
                 video_in_enabled=True,
-                vad_analyzer=vad_analyzer,
             ),
             client=self.client,
         )
@@ -115,6 +117,18 @@ class Assistant:
             os.environ['OLLAMA_ONPREM_URL_SECRET_ID'],
         )
 
+        generic_llm_base_url = await self.client.query_secret(
+            os.environ['GENERIC_LLM_BASE_URL_SECRET_ID'],
+        )
+
+        generic_llm_api_key = await self.client.query_secret(
+            os.environ['GENERIC_LLM_API_KEY_SECRET_ID'],
+        )
+
+        generic_llm_model = await self.client.query_secret(
+            os.environ['GENERIC_LLM_MODEL_SECRET_ID'],
+        )
+
         ubo_stt_service = UboSTTService(
             client=self.client,
             google_credentials=google_credentials,
@@ -132,6 +146,9 @@ class Assistant:
                 grok_api_key=grok_api_key,
                 cerebras_api_key=cerebras_api_key,
                 ollama_onprem_url=ollama_onprem_url,
+                generic_llm_base_url=generic_llm_base_url,
+                generic_llm_api_key=generic_llm_api_key,
+                generic_llm_model=generic_llm_model,
             ),
             selector='state.assistant.selected_llm',
         )
@@ -198,6 +215,7 @@ class Assistant:
                 ubo_input_transport,
                 ParallelPipeline(
                     [
+                        vad_processor,
                         ubo_stt_service,
                         context_aggregator.user(),
                         ubo_llm_service,

@@ -32,6 +32,10 @@ DEFAULT_LLM_OLLAMA_ONPREM_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_OLLAMA_ONPREM_MODEL',
     'granite3.3:8b',
 )
+DEFAULT_LLM_GENERIC_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_GENERIC_LLM_MODEL',
+    'gpt-4.1',
+)
 
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
 GOOGLE_API_KEY_PATTERN = '^AIza[0-9A-Za-z\\-_]{35}$'
@@ -77,6 +81,12 @@ OLLAMA_SETUP_NOTIFICATION_ID = 'assistant:ollama:setup'
 OLLAMA_ONPREM_URL_SECRET_ID = 'ollama_onprem_url'  # noqa: S105
 OLLAMA_ONPREM_URL_PATTERN = r'^https?://[a-zA-Z0-9.-]+(:[0-9]+)?/?$'
 OLLAMA_ONPREM_SETUP_NOTIFICATION_ID = 'assistant:ollama_onprem:setup'
+
+GENERIC_LLM_BASE_URL_SECRET_ID = 'generic_llm_base_url'  # noqa: S105
+GENERIC_LLM_API_KEY_SECRET_ID = 'generic_llm_api_key'  # noqa: S105
+GENERIC_LLM_MODEL_SECRET_ID = 'generic_llm_model'  # noqa: S105
+GENERIC_LLM_BASE_URL_PATTERN = r'^https?://\S+$'
+GENERIC_LLM_SETUP_NOTIFICATION_ID = 'assistant:generic_llm:setup'
 
 PIPER_MODEL = 'en/en_US/kristin/medium/en_US-kristin-medium'
 PIPER_MODEL_URL = (

@@ -28,8 +28,7 @@ class SegmentedGoogleSTTService(SegmentedSTTService):
         credentials_path: str | None = None,
         location: str = 'global',
         sample_rate: int | None = None,
-        params: GoogleSTTService.InputParams | None = None,
-        **kwargs: object,
+        settings: GoogleSTTService.Settings | None = None,
     ) -> None:
         """Initialize the segmented Google STT service."""
         self._google = GoogleSTTService(
@@ -37,8 +36,7 @@ class SegmentedGoogleSTTService(SegmentedSTTService):
             credentials_path=credentials_path,
             location=location,
             sample_rate=sample_rate,
-            params=params,
-            **kwargs,
+            settings=settings,
         )
 
         def push_frame_wrapper(
@@ -59,7 +57,7 @@ class SegmentedGoogleSTTService(SegmentedSTTService):
 
         self._google.push_frame = push_frame_wrapper(self._google.push_frame)
 
-        super().__init__(sample_rate=sample_rate, **kwargs)
+        super().__init__(sample_rate=sample_rate)
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process frame with the selected service."""

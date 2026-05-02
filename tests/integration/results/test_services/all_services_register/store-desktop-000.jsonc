@@ -16,6 +16,7 @@
       "cerebras": false,
       "deepgram": false,
       "elevenlabs": false,
+      "generic_llm": false,
       "google": false,
       "google_cloud": false,
       "grok": false,
@@ -30,6 +31,7 @@
     "selected_llm": "ollama",
     "selected_models": {
       "cerebras": "qwen-3-235b-a22b-instruct-2507",
+      "generic_llm": "gpt-4.1",
       "google_vertex": "gemini-2.5-flash-preview-05-20",
       "grok": "grok-4-0709",
       "ollama": "gemma3:1b",
@@ -73,6 +75,16 @@
       "id": "envoy_grpc",
       "instructions": null,
       "label": "Envoy for gRPC",
+      "ports": [],
+      "status": "not_available"
+    },
+    "hermes": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "hermes",
+      "instructions": null,
+      "label": "Hermes Agent",
       "ports": [],
       "status": "not_available"
     },
@@ -143,6 +155,16 @@
       "id": "open_webui",
       "instructions": null,
       "label": "Open WebUI",
+      "ports": [],
+      "status": "not_available"
+    },
+    "openclaw": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "openclaw",
+      "instructions": null,
+      "label": "OpenClaw",
       "ports": [],
       "status": "not_available"
     },
@@ -226,6 +248,7 @@
     "apps_items_priorities": {
       "docker:_import": 1,
       "docker:envoy_grpc": null,
+      "docker:hermes": null,
       "docker:home_assistant": null,
       "docker:home_bridge": null,
       "docker:immich": null,
@@ -233,6 +256,7 @@
       "docker:ngrok": null,
       "docker:ollama": null,
       "docker:open_webui": null,
+      "docker:openclaw": null,
       "docker:pi_hole": null,
       "docker:portainer": null,
       "docker:twingate": null,
@@ -385,6 +409,16 @@
         "label": "Envoy for gRPC",
         "priority": null
       },
+      "docker:hermes": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:hermes",
+        "background_color": null,
+        "category": null,
+        "icon": "󱚣",
+        "key": "docker:hermes",
+        "label": "Hermes Agent",
+        "priority": null
+      },
       "docker:home_assistant": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:home_assistant",
@@ -410,7 +444,7 @@
         "action_id": "docker:open:immich",
         "background_color": null,
         "category": null,
-        "icon": "",
+        "icon": "󰣆",
         "key": "docker:immich",
         "label": "Immich",
         "priority": null
@@ -455,6 +489,16 @@
         "label": "Open WebUI",
         "priority": null
       },
+      "docker:openclaw": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:openclaw",
+        "background_color": null,
+        "category": null,
+        "icon": "󰒍",
+        "key": "docker:openclaw",
+        "label": "OpenClaw",
+        "priority": null
+      },
       "docker:pi_hole": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:pi_hole",
@@ -470,7 +514,7 @@
         "action_id": "docker:open:portainer",
         "background_color": null,
         "category": null,
-        "icon": "",
+        "icon": "",
         "key": "docker:portainer",
         "label": "Portainer",
         "priority": null

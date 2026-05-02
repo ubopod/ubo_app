@@ -8,6 +8,7 @@ from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.services.google.tts import GoogleTTSService
 from pipecat.services.openai.tts import OpenAITTSService
 from pipecat.services.rime.tts import RimeTTSService
+from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
 from ubo_bindings.client import UboRPCClient
@@ -127,9 +128,18 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         }
 
         UboSwitchService.__init__(self, client=client, selector=selector)
-        TTSService.__init__(self)
+        TTSService.__init__(
+            self,
+            settings=TTSSettings(model=None, voice='', language=None),
+        )
 
-    async def run_tts(self, text: str) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def run_tts(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        text: str,
+        context_id: str,
+    ) -> AsyncGenerator[Frame, None]:
         """Run TTS on the given text and yield frames."""
         _ = text
-        yield None
+        _ = context_id
+        if False:
+            yield Frame()

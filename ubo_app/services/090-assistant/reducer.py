@@ -94,7 +94,7 @@ def reducer(
                 state,
                 selected_models={
                     **state.selected_models,
-                    state.selected_llm: action.model,
+                    action.llm_name or state.selected_llm: action.model,
                 },
             )
 

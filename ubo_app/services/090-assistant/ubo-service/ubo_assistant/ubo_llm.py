@@ -1,6 +1,7 @@
 """LLM service that wraps multiple LLM services allowing switching between them."""
 
 import json
+import os
 from dataclasses import dataclass
 
 from loguru import logger
@@ -14,8 +15,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.cerebras.llm import CerebrasLLMService
-from pipecat.services.google.llm_vertex import GoogleVertexLLMService
-from pipecat.services.grok.llm import GrokLLMService
+from pipecat.services.google.vertex.llm import GoogleVertexLLMService
 from pipecat.services.llm_service import (
     FunctionCallHandler,
     FunctionCallParams,
@@ -23,6 +23,8 @@ from pipecat.services.llm_service import (
 )
 from pipecat.services.ollama.llm import OLLamaLLMService
 from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.settings import LLMSettings
+from pipecat.services.xai.llm import GrokLLMService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
@@ -32,6 +34,8 @@ from ubo_bindings.ubo.v1 import (
 from ubo_assistant.constants import IS_RPI
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.switch import UboSwitchService
+
+DEFAULT_GENERIC_LLM_MODEL = os.environ.get('DEFAULT_LLM_GENERIC_MODEL', 'gpt-4.1')
 
 
 @dataclass
@@ -43,9 +47,12 @@ class LLMServiceConfig:
     grok_api_key: str | None = None
     cerebras_api_key: str | None = None
     ollama_onprem_url: str | None = None
+    generic_llm_base_url: str | None = None
+    generic_llm_api_key: str | None = None
+    generic_llm_model: str | None = None
 
 
-class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
+class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
     """LLM service that wraps multiple LLM services allowing switching between them."""
 
     def __init__(
@@ -64,6 +71,7 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         self.cerebras_llm = self._create_cerebras_service()
         self.ollama_llm = self._create_ollama_service()
         self.ollama_onprem_llm = self._create_ollama_onprem_service()
+        self.generic_llm = self._create_generic_llm_service()
 
         # Build services dictionary
         self._services = {
@@ -73,14 +81,74 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             'cerebras': self.cerebras_llm,
             'ollama': self.ollama_llm,
             'ollama_onprem': self.ollama_onprem_llm,
+            'generic_llm': self.generic_llm,
         }
 
         # Initialize parent classes
         UboSwitchService.__init__(self, client=client, selector=selector)
-        LLMService.__init__(self)
+        LLMService.__init__(
+            self,
+            settings=LLMSettings(
+                model=None,
+                system_instruction=None,
+                temperature=None,
+                max_tokens=None,
+                top_p=None,
+                top_k=None,
+                frequency_penalty=None,
+                presence_penalty=None,
+                seed=None,
+                filter_incomplete_user_turns=None,
+                user_turn_completion_config=None,
+            ),
+        )
 
         # Register built-in functions
         self._register_builtin_functions()
+
+    async def _refresh_generic_llm_service(self) -> None:
+        """Refresh Generic LLM config from secrets before selecting it."""
+        generic_llm_base_url = await self.client.query_secret(
+            os.environ['GENERIC_LLM_BASE_URL_SECRET_ID'],
+        )
+        generic_llm_api_key = await self.client.query_secret(
+            os.environ['GENERIC_LLM_API_KEY_SECRET_ID'],
+        )
+        generic_llm_model = await self.client.query_secret(
+            os.environ['GENERIC_LLM_MODEL_SECRET_ID'],
+        )
+
+        self._config.generic_llm_base_url = generic_llm_base_url
+        self._config.generic_llm_api_key = generic_llm_api_key
+        self._config.generic_llm_model = generic_llm_model
+
+        generic_llm = self._create_generic_llm_service()
+        self.generic_llm = generic_llm
+        self._services['generic_llm'] = generic_llm
+
+        if generic_llm is None:
+            logger.warning('Generic LLM is not configured')
+            return
+
+        generic_llm.push_frame = self.push_frame
+        if self._processor_setup is not None:
+            await generic_llm.setup(self._processor_setup)
+        generic_llm.register_function('draw_image', self.draw_image)
+        generic_llm.register_function('get_image', self.get_image)
+        logger.info(
+            'Generic LLM service refreshed {extra}',
+            extra={
+                'base_url': generic_llm_base_url,
+                'model': generic_llm_model or DEFAULT_GENERIC_LLM_MODEL,
+                'has_api_key': bool(generic_llm_api_key),
+            },
+        )
+
+    async def set_selected_service(self, id: str) -> None:
+        """Set the selected service, refreshing Generic LLM secrets first."""
+        if id == 'generic_llm':
+            await self._refresh_generic_llm_service()
+        await super().set_selected_service(id)
 
     def _create_google_vertex_service(self) -> GoogleVertexLLMService | None:
         """Create Google Vertex LLM service if credentials are provided."""
@@ -107,8 +175,10 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
 
         try:
             return OpenAILLMService(
-                model='gpt-4o-mini',  # Vision-capable model for image_url support
                 api_key=self._config.openai_api_key,
+                settings=OpenAILLMService.Settings(
+                    model='gpt-4o-mini',  # Vision-capable model for image_url support
+                ),
             )
         except Exception:
             logger.exception('Error while initializing OpenAI LLM')
@@ -121,8 +191,8 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
 
         try:
             return GrokLLMService(
-                model='grok-4-0709',
                 api_key=self._config.grok_api_key,
+                settings=GrokLLMService.Settings(model='grok-4-0709'),
             )
         except Exception:
             logger.exception('Error while initializing Grok LLM')
@@ -136,8 +206,8 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         try:
             return CerebrasLLMService(
                 api_key=self._config.cerebras_api_key,
-                model='qwen-3-235b-a22b-instruct-2507',
-                params=CerebrasLLMService.InputParams(
+                settings=CerebrasLLMService.Settings(
+                    model='qwen-3-235b-a22b-instruct-2507',
                     temperature=0.7,
                     max_completion_tokens=1000,
                 ),
@@ -150,7 +220,9 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         """Create local Ollama LLM service."""
         try:
             return OLLamaLLMService(
-                model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
+                settings=OLLamaLLMService.Settings(
+                    model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
+                ),
             )
         except Exception:
             logger.exception('Error while initializing Ollama LLM')
@@ -165,13 +237,34 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             # Ollama's OpenAI-compatible API is at /v1 endpoint
             base_url = self._config.ollama_onprem_url.rstrip('/') + '/v1'
             return OLLamaLLMService(
-                model='granite3.3:8b',
                 base_url=base_url,
+                settings=OLLamaLLMService.Settings(model='granite3.3:8b'),
             )
         except Exception:
             logger.exception(
                 'Error while initializing remote Ollama LLM',
                 extra={'url': self._config.ollama_onprem_url},
+            )
+            return None
+
+    def _create_generic_llm_service(self) -> OpenAILLMService | None:
+        """Create a generic OpenAI-compatible LLM service if configured."""
+        if not self._config.generic_llm_base_url:
+            return None
+
+        try:
+            return OpenAILLMService(
+                api_key=self._config.generic_llm_api_key or 'not-needed',
+                base_url=self._config.generic_llm_base_url.rstrip('/'),
+                settings=OpenAILLMService.Settings(
+                    model=self._config.generic_llm_model
+                    or DEFAULT_GENERIC_LLM_MODEL,
+                ),
+            )
+        except Exception:
+            logger.exception(
+                'Error while initializing Generic LLM',
+                extra={'url': self._config.generic_llm_base_url},
             )
             return None
 
@@ -185,9 +278,9 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         self,
         function_name: str | None,
         handler: FunctionCallHandler,
-        start_callback=None,  # noqa: ANN001
         *,
         cancel_on_interruption: bool = True,
+        timeout_secs: float | None = None,
     ) -> None:
         """Register a function with all underlying LLM services.
 
@@ -196,8 +289,8 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
         super().register_function(
             function_name,
             handler,
-            start_callback,
             cancel_on_interruption=cancel_on_interruption,
+            timeout_secs=timeout_secs,
         )
 
         for service in self.services.values():
@@ -206,8 +299,8 @@ class UboLLMService(UboSwitchService[OpenAILLMService], OpenAILLMService):
             service.register_function(
                 function_name,
                 handler,
-                start_callback,
                 cancel_on_interruption=cancel_on_interruption,
+                timeout_secs=timeout_secs,
             )
 
     async def draw_image(self, params: FunctionCallParams) -> None:

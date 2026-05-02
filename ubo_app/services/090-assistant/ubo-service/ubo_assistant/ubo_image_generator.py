@@ -8,6 +8,7 @@ from pipecat.frames.frames import Frame
 from pipecat.services.google.image import GoogleImageGenService
 from pipecat.services.image_service import ImageGenService
 from pipecat.services.openai.image import OpenAIImageGenService
+from pipecat.services.settings import ImageGenSettings
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.switch import UboSwitchService
@@ -57,7 +58,10 @@ class UboImageGeneratorService(UboSwitchService[ImageGenService], ImageGenServic
         }
 
         UboSwitchService.__init__(self, client=client, selector=selector)
-        ImageGenService.__init__(self)
+        ImageGenService.__init__(
+            self,
+            settings=ImageGenSettings(model=None),
+        )
 
     async def run_image_gen(self, prompt: str) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Ignore this as child classes will handle audio processing."""

@@ -16,6 +16,7 @@ from pipecat.frames.frames import (
     StartFrame,
     TranscriptionFrame,
 )
+from pipecat.services.settings import STTSettings
 from pipecat.services.stt_service import STTService
 from pipecat.transcriptions.language import Language
 from pipecat.utils.time import time_now_iso8601
@@ -38,10 +39,14 @@ class VoskSTTService(STTService):
         self,
         audio_passthrough=True,  # noqa: ANN001, FBT002
         sample_rate: int | None = None,
-        **kwargs: object,
     ) -> None:
         """Initialize vosk speech to text service."""
-        super().__init__(audio_passthrough, sample_rate, **kwargs)
+        super().__init__(
+            audio_passthrough=audio_passthrough,
+            sample_rate=sample_rate,
+            settings=STTSettings(model=VOSK_MODEL, language=self.LANGUAGE_CODE),
+            ttfs_p99_latency=1.0,
+        )
         self._process_executor = ThreadPoolExecutor(max_workers=1)
         self._request_queue = asyncio.Queue()
         self._streaming_task = None

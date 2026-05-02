@@ -12,6 +12,7 @@ from redux import BaseAction, BaseEvent
 
 from ubo_app.constants.assistant import (
     DEFAULT_LLM_CEREBRAS_MODEL,
+    DEFAULT_LLM_GENERIC_MODEL,
     DEFAULT_LLM_GOOGLE_MODEL,
     DEFAULT_LLM_GROK_MODEL,
     DEFAULT_LLM_OLLAMA_MODEL,
@@ -44,6 +45,7 @@ class AssistantLLMName(StrEnum):
     OPENAI = 'openai'
     GROK = 'grok'
     CEREBRAS = 'cerebras'
+    GENERIC = 'generic_llm'
 
 
 DEFAULT_MODELS = {
@@ -53,7 +55,26 @@ DEFAULT_MODELS = {
     AssistantLLMName.OPENAI: DEFAULT_LLM_OPENAI_MODEL,
     AssistantLLMName.GROK: DEFAULT_LLM_GROK_MODEL,
     AssistantLLMName.CEREBRAS: DEFAULT_LLM_CEREBRAS_MODEL,
+    AssistantLLMName.GENERIC: DEFAULT_LLM_GENERIC_MODEL,
 }
+
+
+def _load_selected_models(value: str) -> dict[AssistantLLMName, str]:
+    """Load selected LLM models from persistent storage."""
+    try:
+        models = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return DEFAULT_MODELS.copy()
+    if not isinstance(models, dict):
+        return DEFAULT_MODELS.copy()
+    selected_models = DEFAULT_MODELS.copy()
+    for key, model in models.items():
+        try:
+            llm_name = AssistantLLMName(key)
+        except ValueError:
+            continue
+        selected_models[llm_name] = str(model)
+    return selected_models
 
 
 class AssistantTTSName(StrEnum):
@@ -151,6 +172,7 @@ class AssistantSetSelectedModelAction(AssistantAction):
     """Action to set the selected model."""
 
     model: str
+    llm_name: AssistantLLMName | None = None
 
 
 class AssistantDownloadOllamaModelAction(AssistantAction):
@@ -310,7 +332,7 @@ class AssistantState(Immutable):
         default_factory=lambda: read_from_persistent_store(
             'assistant:selected_llm_model',
             default=DEFAULT_MODELS,
-            mapper=json.loads,
+            mapper=_load_selected_models,
         ),
     )
     selected_tts: AssistantTTSName = field(

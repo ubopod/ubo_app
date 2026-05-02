@@ -12,9 +12,9 @@ from pipecat.frames.frames import (
     TTSStartedFrame,
     TTSStoppedFrame,
 )
+from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
-from pipecat.utils.text.base_text_aggregator import BaseTextAggregator
 from pipecat.utils.text.base_text_filter import BaseTextFilter
 from pipecat.utils.tracing.service_decorators import traced_stt
 
@@ -40,11 +40,8 @@ class PiperTTSService(TTSService):
         push_silence_after_stop: bool = False,
         silence_time_s: float = 2.0,
         pause_frame_processing: bool = False,
-        text_aggregator: BaseTextAggregator | None = None,
         text_filters: Sequence[BaseTextFilter] | None = None,
-        text_filter: BaseTextFilter | None = None,
         transport_destination: str | None = None,
-        **kwargs: object,
     ) -> None:
         """Initialize vosk speech to text service."""
         self._process_executor = ThreadPoolExecutor(max_workers=1)
@@ -65,11 +62,13 @@ class PiperTTSService(TTSService):
             silence_time_s=silence_time_s,
             pause_frame_processing=pause_frame_processing,
             sample_rate=self._client.config.sample_rate,
-            text_aggregator=text_aggregator,
             text_filters=text_filters,
-            text_filter=text_filter,
             transport_destination=transport_destination,
-            **kwargs,
+            settings=TTSSettings(
+                model=PIPER_MODEL,
+                voice='kristin',
+                language=self.LANGUAGE_CODE,
+            ),
         )
 
     def synthesize(self, text: str) -> None:
@@ -93,8 +92,13 @@ class PiperTTSService(TTSService):
         ]
 
     @traced_stt
-    async def run_tts(self, text: str) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def run_tts(
+        self,
+        text: str,
+        context_id: str,
+    ) -> AsyncGenerator[Frame, None]:
         """Process an audio chunk for STT transcription."""
+        _ = context_id
         try:
             await self.start_ttfb_metrics()
             await self.start_tts_usage_metrics(text)

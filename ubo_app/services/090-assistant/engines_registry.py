@@ -5,6 +5,7 @@ from ubo_app.engines.assemblyai import AssemblyAIEngine
 from ubo_app.engines.cerebras import CerebrasEngine
 from ubo_app.engines.deepgram import DeepgramEngine
 from ubo_app.engines.elevenlabs import ElevenLabsEngine
+from ubo_app.engines.generic_llm import GenericLLMEngine
 from ubo_app.engines.google import GoogleEngine
 from ubo_app.engines.google_cloud import GoogleCloudEngine
 from ubo_app.engines.grok import GrokEngine
@@ -37,6 +38,7 @@ LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.GROK: GrokEngine(),
     AssistantLLMName.CEREBRAS: CerebrasEngine(),
     AssistantLLMName.OPENAI: OpenAIEngine(),
+    AssistantLLMName.GENERIC: GenericLLMEngine(),
 }
 
 TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {

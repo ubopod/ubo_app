@@ -16,6 +16,7 @@
       "cerebras": false,
       "deepgram": false,
       "elevenlabs": false,
+      "generic_llm": false,
       "google": false,
       "google_cloud": false,
       "grok": false,
@@ -30,6 +31,7 @@
     "selected_llm": "ollama",
     "selected_models": {
       "cerebras": "qwen-3-235b-a22b-instruct-2507",
+      "generic_llm": "gpt-4.1",
       "google_vertex": "gemini-2.5-flash-preview-05-20",
       "grok": "grok-4-0709",
       "ollama": "gemma3:1b",

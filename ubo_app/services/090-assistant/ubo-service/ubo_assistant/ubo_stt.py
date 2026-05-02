@@ -3,11 +3,10 @@
 from collections.abc import AsyncGenerator, Callable  # noqa: I001
 
 from loguru import logger
-from deepgram import LiveOptions
 from pipecat.frames.frames import (
-    EmulateUserStartedSpeakingFrame,
     Frame,
     InterimTranscriptionFrame,
+    UserStartedSpeakingFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.assemblyai.stt import AssemblyAISTTService
@@ -15,6 +14,7 @@ from pipecat.services.assemblyai.models import AssemblyAIConnectionParams
 from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.google.stt import GoogleSTTService
 from pipecat.services.openai.stt import OpenAISTTService
+from pipecat.services.settings import STTSettings
 from pipecat.services.stt_service import STTService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
@@ -79,8 +79,8 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             lambda: (
                 SegmentedGoogleSTTService(
                     credentials=google_credentials,
-                    model='long',
                     sample_rate=16000,
+                    settings=GoogleSTTService.Settings(model='long'),
                 )
                 if google_credentials
                 else None
@@ -93,8 +93,8 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             lambda: (
                 GoogleSTTService(
                     credentials=google_credentials,
-                    model='long',
                     sample_rate=16000,
+                    settings=GoogleSTTService.Settings(model='long'),
                 )
                 if google_credentials
                 else None
@@ -120,7 +120,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             lambda: (
                 DeepgramSTTService(
                     api_key=deepgram_api_key,
-                    live_options=LiveOptions(
+                    settings=DeepgramSTTService.Settings(
                         model='nova-3',
                         language='multi',
                         smart_format=True,
@@ -159,7 +159,11 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         }
 
         UboSwitchService.__init__(self, client=client, selector=selector)
-        STTService.__init__(self)
+        STTService.__init__(
+            self,
+            settings=STTSettings(model=None, language=None),
+            ttfs_p99_latency=1.0,
+        )
 
     async def run_stt(self, audio: bytes) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Ignore this as child classes will handle audio processing."""
@@ -174,7 +178,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         """Dispatch the frame in ubo-app's redux bus if it's audio, image or text."""
         await super().push_frame(frame, direction)
 
-        if isinstance(frame, EmulateUserStartedSpeakingFrame):
+        if isinstance(frame, UserStartedSpeakingFrame):
             self._reset_assistance()
 
         if isinstance(frame, InterimTranscriptionFrame):

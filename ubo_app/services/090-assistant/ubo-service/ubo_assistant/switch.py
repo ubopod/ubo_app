@@ -58,6 +58,7 @@ class UboSwitchService(AIService, Generic[T]):
         self._started = False
         self._mcp_servers_data = {}
         self._enabled_mcp_servers = set()
+        self._processor_setup: FrameProcessorSetup | None = None
 
         for service in self.services.values():
             service.push_frame = self.push_frame
@@ -86,10 +87,11 @@ class UboSwitchService(AIService, Generic[T]):
             id: service for id, service in self._services.items() if service is not None
         }
 
-    def _start(self) -> None:
+    async def _start(self, frame: StartFrame) -> None:
         if self._started:
             return
         self._started = True
+        await super()._start(frame)
 
         # Autorun is called immediately with initial state value,
         # then again on changes. This handles all service types:
@@ -195,7 +197,7 @@ class UboSwitchService(AIService, Generic[T]):
                 extra={'class_name': self.__class__.__name__},
             )
             self._start_frame = frame
-            self._start()
+            await self._start(frame)
         if self.selected_service:
             await self.selected_service.process_frame(frame, direction)
         elif isinstance(frame, SystemFrame):
@@ -204,6 +206,7 @@ class UboSwitchService(AIService, Generic[T]):
     async def setup(self, setup: FrameProcessorSetup) -> None:
         """Set up all sub-services."""
         await super().setup(setup)
+        self._processor_setup = setup
         for service in self.services.values():
             await service.setup(setup)
 
@@ -346,8 +349,16 @@ class UboSwitchService(AIService, Generic[T]):
     async def set_selected_service(self, id: str) -> None:
         """Set the currently selected service."""
         if id not in self.services:
-            msg = f'Service {id} is not available in the switch service `{type(self)}`.'
-            raise ValueError(msg)
+            logger.warning(
+                'Selected service is not available',
+                extra={
+                    'service_id': id,
+                    'service_type': type(self).__name__,
+                },
+            )
+            self.selected_service = None
+            self._current_service_id = None
+            return
         if self.selected_service:
             try:
                 await self.selected_service.queue_frame(StopFrame())
@@ -407,6 +418,12 @@ class UboSwitchService(AIService, Generic[T]):
         self._current_service_id = id
         logger.info('Selected: {extra}',
             extra={
+                'service_id': id,
                 'selected_service': self.selected_service,
+                'model': getattr(
+                    getattr(self.selected_service, '_settings', None),
+                    'model',
+                    None,
+                ),
                     },
                 )
