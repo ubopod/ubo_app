@@ -35,6 +35,14 @@ class MCPServerMetadata:
     config: StdioMcpConfig | SseMcpConfig  # betterproto config from ubo_bindings
 
 
+@dataclass(frozen=True)
+class CombinedTools:
+    """Tools schema plus live MCP clients backing those tools."""
+
+    tools_schema: ToolsSchema
+    mcp_clients: list[MCPClient]
+
+
 def create_ubo_standard_tools() -> ToolsSchema:
     """Create and return standard tools for the assistant."""
     draw_image_function = FunctionSchema(
@@ -139,7 +147,7 @@ async def create_combined_tools(
     llm_service: LLMService,
     *,
     mcp_servers: list[MCPServerMetadata] | None = None,
-) -> ToolsSchema:
+) -> CombinedTools:
     """Create combined tools schema with standard and optionally MCP tools.
 
     Args:
@@ -147,17 +155,18 @@ async def create_combined_tools(
         mcp_servers: List of enabled MCP servers to load tools from
 
     Returns:
-        ToolsSchema with combined standard and MCP tools
+        Tools schema with combined standard and MCP tools, plus live MCP clients
 
     """
     # Get standard tools
     ubo_standard_tools = create_ubo_standard_tools()
     combined_tools: list[FunctionSchema | DirectFunction] = []
     combined_tools.extend(ubo_standard_tools.standard_tools)
+    mcp_clients: list[MCPClient] = []
 
     # If no MCP servers provided, return standard tools only
     if not mcp_servers:
-        return ubo_standard_tools
+        return CombinedTools(tools_schema=ubo_standard_tools, mcp_clients=[])
 
     # Load tools from each enabled MCP server
     for server in mcp_servers:
@@ -175,8 +184,15 @@ async def create_combined_tools(
                 continue
 
             # Register MCP tools
-            mcp_tools = await mcp_client.register_tools(llm_service)
+            try:
+                await mcp_client.start()
+                mcp_tools = await mcp_client.register_tools(llm_service)
+            except Exception:
+                await mcp_client.close()
+                raise
+
             combined_tools.extend(mcp_tools.standard_tools)
+            mcp_clients.append(mcp_client)
             logger.info(
                 'Registered MCP tools',
                 extra={
@@ -191,4 +207,7 @@ async def create_combined_tools(
                 extra={'server_id': server.server_id},
             )
 
-    return ToolsSchema(standard_tools=combined_tools)
+    return CombinedTools(
+        tools_schema=ToolsSchema(standard_tools=combined_tools),
+        mcp_clients=mcp_clients,
+    )

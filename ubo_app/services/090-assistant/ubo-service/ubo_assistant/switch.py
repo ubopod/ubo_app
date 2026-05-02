@@ -36,8 +36,10 @@ from ubo_assistant.tools import MCPServerMetadata
 
 if TYPE_CHECKING:
     from betterproto.lib.google.protobuf import StringValue
-    from pipecat.adapters.schemas.tools_schema import ToolsSchema
+    from pipecat.services.mcp_service import MCPClient
     from ubo_bindings.client import UboRPCClient
+
+    from ubo_assistant.tools import CombinedTools
 
 T = TypeVar('T', bound=FrameProcessor)
 
@@ -58,6 +60,8 @@ class UboSwitchService(AIService, Generic[T]):
         self._started = False
         self._mcp_servers_data = {}
         self._enabled_mcp_servers = set()
+        self._mcp_clients: list[MCPClient] = []
+        self._mcp_tools_update_lock = asyncio.Lock()
         self._processor_setup: FrameProcessorSetup | None = None
 
         for service in self.services.values():
@@ -210,6 +214,26 @@ class UboSwitchService(AIService, Generic[T]):
         for service in self.services.values():
             await service.setup(setup)
 
+    async def cleanup(self) -> None:
+        """Clean up switch service resources."""
+        await self._close_mcp_clients(self._mcp_clients)
+        self._mcp_clients = []
+        await super().cleanup()
+
+    async def _close_mcp_clients(self, clients: list[MCPClient]) -> None:
+        """Close MCP clients that are no longer backing registered tools."""
+        for client in clients:
+            try:
+                await client.close()
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    'Error closing MCP client {extra}',
+                    extra={
+                        'client': client,
+                        'error': e,
+                    },
+                )
+
     def _get_mcp_servers_from_state(self) -> list:
         """Get enabled MCP servers from stored state.
 
@@ -237,7 +261,7 @@ class UboSwitchService(AIService, Generic[T]):
         llm_service: LLMService,
         *,
         mcp_enabled: bool = True,
-    ) -> ToolsSchema:
+    ) -> CombinedTools:
         """Get combined tools with optional MCP tools.
 
         Args:
@@ -269,7 +293,7 @@ class UboSwitchService(AIService, Generic[T]):
         )
         logger.info(
             'Combined tools ready',
-            extra={'tool_count': len(combined_tools.standard_tools)},
+            extra={'tool_count': len(combined_tools.tools_schema.standard_tools)},
         )
         return combined_tools
 
@@ -304,47 +328,59 @@ class UboSwitchService(AIService, Generic[T]):
             service_id: Service ID to check tool support for
 
         """
-        if self.selected_service is None:
-            return
-        if not isinstance(self.selected_service, LLMService):
-            return
+        async with self._mcp_tools_update_lock:
+            if self.selected_service is None:
+                return
+            if not isinstance(self.selected_service, LLMService):
+                return
 
-        tools_supported = self._check_tools_support(service_id)
+            tools_supported = self._check_tools_support(service_id)
+            old_mcp_clients = self._mcp_clients
+            new_mcp_clients: list[MCPClient] = []
 
-        if tools_supported:
-            logger.info('Registering tools for: {extra}',
-                extra={'service': self.selected_service},
+            try:
+                if tools_supported:
+                    logger.info('Registering tools for: {extra}',
+                        extra={'service': self.selected_service},
+                    )
+                    combined_tools = await self._get_combined_tools(
+                        self.selected_service,
+                        mcp_enabled=True,
+                    )
+                    tools = combined_tools.tools_schema
+                    new_mcp_clients = combined_tools.mcp_clients
+                    system_message = DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE
+                    tool_count = len(tools.standard_tools)
+                else:
+                    logger.info('Not registering tools for: {extra}',
+                        extra={'service': self.selected_service},
+                    )
+                    tools = NOT_GIVEN
+                    system_message = DEFAULT_SYSTEM_MESSAGE
+                    tool_count = 0
+
+                await self.selected_service.queue_frame(
+                    LLMMessagesUpdateFrame(
+                        messages=[{'role': 'system', 'content': system_message}],
+                    ),
+                )
+
+                await self.selected_service.queue_frame(
+                    LLMSetToolsFrame(tools=tools),
+                )
+            except Exception:
+                await self._close_mcp_clients(new_mcp_clients)
+                raise
+
+            self._mcp_clients = new_mcp_clients
+            await self._close_mcp_clients(old_mcp_clients)
+            logger.info(
+                'Updated LLM tools',
+                extra={
+                    'tools_supported': tools_supported,
+                    'tool_count': tool_count,
+                },
             )
-            combined_tools = await self._get_combined_tools(
-                self.selected_service,
-                mcp_enabled=True,
-            )
-            system_message = DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE
-            tool_count = len(combined_tools.standard_tools)
-        else:
-            logger.info('Not registering tools for: {extra}',
-                extra={'service': self.selected_service},
-            )
-            combined_tools = NOT_GIVEN
-            system_message = DEFAULT_SYSTEM_MESSAGE
-            tool_count = 0
-
-        await self.selected_service.queue_frame(
-            LLMMessagesUpdateFrame(
-                messages=[{'role': 'system', 'content': system_message}],
-            ),
-        )
-
-        await self.selected_service.queue_frame(
-            LLMSetToolsFrame(tools=combined_tools),
-        )
-        logger.info(
-            'Updated LLM tools',
-            extra={
-                'tools_supported': tools_supported,
-                'tool_count': tool_count,
-            },
-        )
 
     async def set_selected_service(self, id: str) -> None:
         """Set the currently selected service."""
