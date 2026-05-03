@@ -168,6 +168,16 @@
       "ports": [],
       "status": "not_available"
     },
+    "pangolin": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "pangolin",
+      "instructions": null,
+      "label": "Pangolin",
+      "ports": [],
+      "status": "not_available"
+    },
     "pi_hole": {
       "_type": "ImageState",
       "container_ip": null,
@@ -257,6 +267,7 @@
       "docker:ollama": null,
       "docker:open_webui": null,
       "docker:openclaw": null,
+      "docker:pangolin": null,
       "docker:pi_hole": null,
       "docker:portainer": null,
       "docker:twingate": null,
@@ -497,6 +508,16 @@
         "icon": "󰒍",
         "key": "docker:openclaw",
         "label": "OpenClaw",
+        "priority": null
+      },
+      "docker:pangolin": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:pangolin",
+        "background_color": null,
+        "category": null,
+        "icon": "󱙱",
+        "key": "docker:pangolin",
+        "label": "Pangolin",
         "priority": null
       },
       "docker:pi_hole": {

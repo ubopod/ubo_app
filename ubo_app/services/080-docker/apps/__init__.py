@@ -9,6 +9,7 @@ from apps.immich import ENTRY as IMMICH_ENTRY
 from apps.n8n import ENTRY as N8N_ENTRY
 from apps.ngrok import ENTRY as NGROK_ENTRY
 from apps.openclaw import ENTRY as OPENCLAW_ENTRY
+from apps.pangolin import ENTRY as PANGOLIN_ENTRY
 from apps.simple import ENTRIES as SIMPLE_ENTRIES
 from apps.twingate import ENTRY as TWINGATE_ENTRY
 
@@ -23,6 +24,7 @@ IMAGES: dict[str, ContainerEntry] = {
         N8N_ENTRY,
         OPENCLAW_ENTRY,
         HERMES_ENTRY,
+        PANGOLIN_ENTRY,
         TWINGATE_ENTRY,
         ENVOY_ENTRY,
     ]
