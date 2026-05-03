@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Any, cast
 
 from apps._registry import ContainerEntry
-from ubo_app.constants import GRPC_ENVOY_LISTEN_PORT, GRPC_LISTEN_PORT
+from ubo_app.constants import (
+    GRPC_ENVOY_LISTEN_PORT,
+    GRPC_LISTEN_PORT,
+    WEB_UI_LISTEN_PORT,
+)
 from ubo_app.utils import IS_RPI
 
 ENVOY_TEMPLATE_PATH = Path(__file__).parent.parent / 'assets' / 'envoy.yaml.tmpl'
@@ -17,13 +21,16 @@ ENVOY_CONFIG_PATH = Path(__file__).parent.parent / 'assets' / 'envoy.yaml'
 
 async def prepare_envoy() -> bool:
     """Prepare Envoy for gRPC."""
+    server_host = '127.0.0.1' if IS_RPI else 'host.docker.internal'
     process = await asyncio.create_subprocess_exec(
         '/usr/bin/env',
         'envsubst',
         env={
             'GRPC_ENVOY_LISTEN_PORT': f'{GRPC_ENVOY_LISTEN_PORT}',
             'GRPC_LISTEN_PORT': f'{GRPC_LISTEN_PORT}',
-            'GRPC_SERVER_HOST': '127.0.0.1' if IS_RPI else 'host.docker.internal',
+            'GRPC_SERVER_HOST': server_host,
+            'WEB_UI_LISTEN_PORT': f'{WEB_UI_LISTEN_PORT}',
+            'WEB_UI_SERVER_HOST': server_host,
             **os.environ,
         },
         stdin=ENVOY_TEMPLATE_PATH.open(),

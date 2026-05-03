@@ -31,6 +31,13 @@ function triggerDownloads(
   }
 }
 
+function getGrpcWebBaseUrl(): string {
+  if (window.location.port === window.WEB_UI_CONFIG.webUiListenPort) {
+    return `${window.location.protocol}//${window.location.hostname}:${window.WEB_UI_CONFIG.grpcEnvoyListenPort}/grpc`;
+  }
+  return `${window.location.origin}/grpc`;
+}
+
 export function Root({ state }: { state: string }) {
   const [status, setStatus] = useState<StatusType | undefined>();
   const inputDescriptions = WebUIState.deserializeBinary(
@@ -43,7 +50,7 @@ export function Root({ state }: { state: string }) {
   const store = useMemo<StoreServiceClient | null>(
     () =>
       new StoreServiceClient(
-        `${window.location.protocol}//${window.location.hostname}:${window.GRPC_ENVOY_LISTEN_PORT}`,
+        getGrpcWebBaseUrl(),
         null,
         null,
       ),

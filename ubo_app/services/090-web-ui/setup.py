@@ -345,6 +345,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
             state=state(),
             re=re,
             GRPC_ENVOY_LISTEN_PORT=GRPC_ENVOY_LISTEN_PORT,
+            WEB_UI_LISTEN_PORT=WEB_UI_LISTEN_PORT,
             cache_bust=_cache_bust,
         )
 

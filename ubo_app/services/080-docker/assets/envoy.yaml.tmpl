@@ -16,13 +16,14 @@ static_resources:
                 route_config:
                   name: local_route
                   virtual_hosts:
-                    - name: grpc_service
+                    - name: ubo_web_ui
                       domains: ['*']
                       routes:
                         - match:
-                            prefix: '/'
+                            prefix: '/grpc/'
                           route:
                             cluster: grpc_service_cluster
+                            prefix_rewrite: '/'
                             timeout: 0s
                           typed_per_filter_config:
                             envoy.filters.http.cors:
@@ -35,6 +36,11 @@ static_resources:
                               allow_headers: 'Content-Type,Authorization,X-User-Agent,X-Grpc-Web' # Added X-Grpc-Web
                               expose_headers: 'Content-Type,Authorization'
                               allow_credentials: { value: true }
+                        - match:
+                            prefix: '/'
+                          route:
+                            cluster: web_ui_cluster
+                            timeout: 0s
                 http_filters:
                   - name: envoy.filters.http.cors # Ensure CORS filter comes first
                     typed_config:
@@ -68,3 +74,17 @@ static_resources:
           healthy_threshold: 1
           grpc_health_check: {}
           no_traffic_interval: 5s
+    - name: web_ui_cluster
+      connect_timeout: 5s
+      type: logical_dns
+      lb_policy: round_robin
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: web_ui_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: $WEB_UI_SERVER_HOST
+                      port_value: $WEB_UI_LISTEN_PORT

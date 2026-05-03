@@ -10,7 +10,10 @@
   </head>
 
   <script type="module">
-    window.GRPC_ENVOY_LISTEN_PORT = "{{ GRPC_ENVOY_LISTEN_PORT }}";
+    window.WEB_UI_CONFIG = {
+      grpcEnvoyListenPort: "{{ GRPC_ENVOY_LISTEN_PORT }}",
+      webUiListenPort: "{{ WEB_UI_LISTEN_PORT }}",
+    };
 
     import { init } from "{{ url_for('static', filename='main.js') }}?v={{ cache_bust }}";
     init({{ state | tojson }});

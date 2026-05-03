@@ -509,7 +509,7 @@ The following is a summary of key architecture components.
 
 -  <b>Hardware Abstraction Layer</b>: Comprehensive abstraction for Raspberry Pi components (ST7789 LCD, WM8960 audio, GPIO keypad, sensors, camera, RGB ring) with automatic environment detection and mock implementations for development on non-RPi systems.
 
--  <b>Multi-Interface Access</b>: Supports web browser access (port 4321), gRPC API (port 50051), SSH access, and direct hardware interaction, with a web UI service providing hotspot configuration and dashboard functionality.
+-  <b>Multi-Interface Access</b>: Supports web browser access (port 4321 for direct bootstrap/recovery, Envoy's gRPC-web frontend port for the full live UI), gRPC API (port 50051), SSH access, and direct hardware interaction, with a web UI service providing hotspot configuration and dashboard functionality.
 
 -  <b>System Integration</b>: Integrates with `systemd` and `d-bus` for service management, Docker for container runtime, and `NetworkManager` for network configuration, with a separate system manager process handling root-privilege operations via Unix sockets.
 
