@@ -18,6 +18,9 @@ async def setup(register_reducer: ReducerRegistrar) -> None:
 
 
 def binary_env_provider() -> dict[str, str]:
+    import os
+    from pathlib import Path
+
     from ubo_app.constants.assistant import (
         ASSEMBLYAI_API_KEY_SECRET_ID,
         CEREBRAS_API_KEY_SECRET_ID,
@@ -38,6 +41,14 @@ def binary_env_provider() -> dict[str, str]:
 
     return {
         'ASSEMBLYAI_API_KEY_SECRET_ID': ASSEMBLYAI_API_KEY_SECRET_ID,
+        'UBO_ASSISTANT_LOG_LEVEL': os.environ.get(
+            'UBO_ASSISTANT_LOG_LEVEL',
+            'INFO',
+        ),
+        'UBO_ASSISTANT_LOG_PATH': os.environ.get(
+            'UBO_ASSISTANT_LOG_PATH',
+            str(Path.cwd() / 'ubo-assistant.log'),
+        ),
         'GOOGLE_API_KEY_SECRET_ID': GOOGLE_API_KEY_SECRET_ID,
         'GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID': (
             GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID

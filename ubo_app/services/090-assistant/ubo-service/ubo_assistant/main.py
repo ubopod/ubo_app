@@ -28,6 +28,7 @@ from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
 from ubo_assistant.image_frame import ImageGenFrame
+from ubo_assistant.logging import setup_file_logging
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
@@ -244,6 +245,7 @@ class Assistant:
 
 def main() -> None:
     try:
+        setup_file_logging()
         assistant = Assistant()
         asyncio.get_event_loop().run_until_complete(assistant.run())
     except Exception as exception:
