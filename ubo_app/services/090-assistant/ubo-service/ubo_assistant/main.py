@@ -19,16 +19,11 @@ from pipecat.processors.aggregators.llm_context import (
 )
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
-    LLMUserAggregatorParams,
 )
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.consumer_processor import ConsumerProcessor
 from pipecat.processors.producer_processor import ProducerProcessor
 from pipecat.transports.base_transport import TransportParams
-from pipecat.turns.user_stop.speech_timeout_user_turn_stop_strategy import (
-    SpeechTimeoutUserTurnStopStrategy,
-)
-from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
@@ -166,14 +161,7 @@ class Assistant:
 
         tools = ToolsSchema(standard_tools=[])
         context = LLMContext(messages, tools)
-        context_aggregator = LLMContextAggregatorPair(
-            context,
-            user_params=LLMUserAggregatorParams(
-                user_turn_strategies=UserTurnStrategies(
-                    stop=[SpeechTimeoutUserTurnStopStrategy()],
-                ),
-            ),
-        )
+        context_aggregator = LLMContextAggregatorPair(context)
         user_aggregator = context_aggregator.user()
         assistant_aggregator = context_aggregator.assistant()
 
