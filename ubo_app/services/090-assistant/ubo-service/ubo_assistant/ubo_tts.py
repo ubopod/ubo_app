@@ -127,10 +127,14 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             'rime': self.rime_tts,
         }
 
-        UboSwitchService.__init__(self, client=client, selector=selector)
-        TTSService.__init__(
+        UboSwitchService.__init__(
             self,
-            settings=TTSSettings(model=None, voice='', language=None),
+            client=client,
+            selector=selector,
+            # `voice` is annotated `str | _NotGiven`, but pipecat's docstring
+            # says to use None for unsupported fields in store mode and the
+            # runtime check (`validate_complete`) only rejects _NotGiven.
+            settings=TTSSettings(model=None, voice=None, language=None),  # pyright: ignore[reportArgumentType]
         )
 
     async def run_tts(  # pyright: ignore[reportIncompatibleMethodOverride]

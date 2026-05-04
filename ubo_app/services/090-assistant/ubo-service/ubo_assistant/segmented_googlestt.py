@@ -7,6 +7,7 @@ from typing import Protocol
 from pipecat.frames.frames import Frame, SystemFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
 from pipecat.services.google.stt import GoogleSTTService
+from pipecat.services.settings import STTSettings
 from pipecat.services.stt_service import SegmentedSTTService
 
 
@@ -57,7 +58,10 @@ class SegmentedGoogleSTTService(SegmentedSTTService):
 
         self._google.push_frame = push_frame_wrapper(self._google.push_frame)
 
-        super().__init__(sample_rate=sample_rate)
+        super().__init__(
+            sample_rate=sample_rate,
+            settings=STTSettings(model=None, language=None),
+        )
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Process frame with the selected service."""

@@ -19,11 +19,16 @@ from pipecat.processors.aggregators.llm_context import (
 )
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
 )
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.consumer_processor import ConsumerProcessor
 from pipecat.processors.producer_processor import ProducerProcessor
 from pipecat.transports.base_transport import TransportParams
+from pipecat.turns.user_stop.speech_timeout_user_turn_stop_strategy import (
+    SpeechTimeoutUserTurnStopStrategy,
+)
+from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
@@ -161,7 +166,16 @@ class Assistant:
 
         tools = ToolsSchema(standard_tools=[])
         context = LLMContext(messages, tools)
-        context_aggregator = LLMContextAggregatorPair(context)
+        context_aggregator = LLMContextAggregatorPair(
+            context,
+            user_params=LLMUserAggregatorParams(
+                user_turn_strategies=UserTurnStrategies(
+                    stop=[SpeechTimeoutUserTurnStopStrategy()],
+                ),
+            ),
+        )
+        user_aggregator = context_aggregator.user()
+        assistant_aggregator = context_aggregator.assistant()
 
         async def g() -> None:
             while True:
@@ -218,7 +232,7 @@ class Assistant:
                     [
                         vad_processor,
                         ubo_stt_service,
-                        context_aggregator.user(),
+                        user_aggregator,
                         ubo_llm_service,
                         image_producer,
                         ubo_tts_service,
@@ -229,7 +243,7 @@ class Assistant:
                     ],
                 ),
                 ubo_output_transport,
-                context_aggregator.assistant(),
+                assistant_aggregator,
             ],
         )
 

@@ -11,9 +11,11 @@ from pipecat.frames.frames import (
     LLMFullResponseStartFrame,
     LLMTextFrame,
     OutputImageRawFrame,
+    StartFrame,
+    SystemFrame,
     UserImageRequestFrame,
 )
-from pipecat.processors.frame_processor import FrameDirection
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
 from pipecat.services.cerebras.llm import CerebrasLLMService
 from pipecat.services.google.vertex.llm import GoogleVertexLLMService
 from pipecat.services.llm_service import (
@@ -23,7 +25,6 @@ from pipecat.services.llm_service import (
 )
 from pipecat.services.ollama.llm import OLLamaLLMService
 from pipecat.services.openai.llm import OpenAILLMService
-from pipecat.services.settings import LLMSettings
 from pipecat.services.xai.llm import GrokLLMService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
@@ -33,7 +34,7 @@ from ubo_bindings.ubo.v1 import (
 
 from ubo_assistant.constants import IS_RPI
 from ubo_assistant.image_frame import ImageGenFrame
-from ubo_assistant.switch import UboSwitchService
+from ubo_assistant.switch import UboLLMSwitchService, make_empty_llm_settings
 
 DEFAULT_GENERIC_LLM_MODEL = os.environ.get('DEFAULT_LLM_GENERIC_MODEL', 'gpt-4.1')
 
@@ -52,7 +53,99 @@ class LLMServiceConfig:
     generic_llm_model: str | None = None
 
 
-class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
+class GenericLLMProxy(LLMService):
+    """Stable switcher branch for a dynamically refreshed generic LLM."""
+
+    def __init__(self) -> None:
+        """Initialize the proxy."""
+        super().__init__(settings=make_empty_llm_settings())
+        self._service: LLMService | None = None
+        self._processor_setup: FrameProcessorSetup | None = None
+        self._start_frame: StartFrame | None = None
+        self._registered_functions: list[
+            tuple[str | None, FunctionCallHandler, bool, float | None]
+        ] = []
+
+    @property
+    def service(self) -> LLMService | None:
+        """Current underlying LLM service."""
+        return self._service
+
+    async def setup(self, setup: FrameProcessorSetup) -> None:
+        """Set up the proxy and current underlying LLM."""
+        await super().setup(setup)
+        self._processor_setup = setup
+        if self._service is not None:
+            await self._service.setup(setup)
+
+    async def cleanup(self) -> None:
+        """Clean up the current underlying LLM."""
+        if self._service is not None:
+            await self._service.cleanup()
+        await super().cleanup()
+
+    def register_function(
+        self,
+        function_name: str | None,
+        handler: FunctionCallHandler,
+        *,
+        cancel_on_interruption: bool = True,
+        timeout_secs: float | None = None,
+    ) -> None:
+        """Register a function on the proxy and current underlying service."""
+        super().register_function(
+            function_name,
+            handler,
+            cancel_on_interruption=cancel_on_interruption,
+            timeout_secs=timeout_secs,
+        )
+        self._registered_functions.append(
+            (function_name, handler, cancel_on_interruption, timeout_secs),
+        )
+        if self._service is not None:
+            self._service.register_function(
+                function_name,
+                handler,
+                cancel_on_interruption=cancel_on_interruption,
+                timeout_secs=timeout_secs,
+            )
+
+    async def set_service(self, service: LLMService | None) -> None:
+        """Replace the underlying generic LLM implementation."""
+        if self._service is not None:
+            await self._service.cleanup()
+
+        self._service = service
+        if self._service is None:
+            return
+
+        self._service.push_frame = self.push_frame
+        for function_name, handler, cancel_on_interruption, timeout_secs in (
+            self._registered_functions
+        ):
+            self._service.register_function(
+                function_name,
+                handler,
+                cancel_on_interruption=cancel_on_interruption,
+                timeout_secs=timeout_secs,
+            )
+        if self._processor_setup is not None:
+            await self._service.setup(self._processor_setup)
+        if self._start_frame is not None:
+            await self._service.queue_frame(self._start_frame)
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        """Forward frames to the current underlying LLM when configured."""
+        await super().process_frame(frame, direction)
+        if isinstance(frame, StartFrame):
+            self._start_frame = frame
+        if self._service is not None:
+            await self._service.queue_frame(frame, direction)
+        elif isinstance(frame, SystemFrame):
+            await self.push_frame(frame, direction)
+
+
+class UboLLMService(UboLLMSwitchService):
     """LLM service that wraps multiple LLM services allowing switching between them."""
 
     def __init__(
@@ -71,7 +164,7 @@ class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
         self.cerebras_llm = self._create_cerebras_service()
         self.ollama_llm = self._create_ollama_service()
         self.ollama_onprem_llm = self._create_ollama_onprem_service()
-        self.generic_llm = self._create_generic_llm_service()
+        self.generic_llm = GenericLLMProxy()
 
         # Build services dictionary
         self._services = {
@@ -85,22 +178,11 @@ class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
         }
 
         # Initialize parent classes
-        UboSwitchService.__init__(self, client=client, selector=selector)
-        LLMService.__init__(
+        UboLLMSwitchService.__init__(
             self,
-            settings=LLMSettings(
-                model=None,
-                system_instruction=None,
-                temperature=None,
-                max_tokens=None,
-                top_p=None,
-                top_k=None,
-                frequency_penalty=None,
-                presence_penalty=None,
-                seed=None,
-                filter_incomplete_user_turns=None,
-                user_turn_completion_config=None,
-            ),
+            client=client,
+            selector=selector,
+            settings=make_empty_llm_settings(),
         )
 
         # Register built-in functions
@@ -123,18 +205,13 @@ class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
         self._config.generic_llm_model = generic_llm_model
 
         generic_llm = self._create_generic_llm_service()
-        self.generic_llm = generic_llm
-        self._services['generic_llm'] = generic_llm
 
         if generic_llm is None:
             logger.warning('Generic LLM is not configured')
+            await self.generic_llm.set_service(None)
             return
 
-        generic_llm.push_frame = self.push_frame
-        if self._processor_setup is not None:
-            await generic_llm.setup(self._processor_setup)
-        generic_llm.register_function('draw_image', self.draw_image)
-        generic_llm.register_function('get_image', self.get_image)
+        await self.generic_llm.set_service(generic_llm)
         logger.info(
             'Generic LLM service refreshed {extra}',
             extra={
@@ -270,7 +347,7 @@ class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
 
     def _register_builtin_functions(self) -> None:
         """Register built-in functions with all services."""
-        for service in self.services.values():
+        for service in self.service_map.values():
             service.register_function('draw_image', self.draw_image)
             service.register_function('get_image', self.get_image)
 
@@ -286,14 +363,7 @@ class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
 
         This method is called by MCP clients to register external tools.
         """
-        super().register_function(
-            function_name,
-            handler,
-            cancel_on_interruption=cancel_on_interruption,
-            timeout_secs=timeout_secs,
-        )
-
-        for service in self.services.values():
+        for service in self.service_map.values():
             if service is None:
                 continue
             service.register_function(
@@ -343,8 +413,6 @@ class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
         direction: FrameDirection = FrameDirection.DOWNSTREAM,
     ) -> None:
         """Dispatch the frame in ubo-app's redux bus if it's audio, image or text."""
-        await super().push_frame(frame, direction)
-
         if isinstance(frame, LLMFullResponseStartFrame):
             self._reset_assistance()
 
@@ -359,3 +427,5 @@ class UboLLMService(UboSwitchService[LLMService], OpenAILLMService):
                     ),
                 ),
             )
+
+        await super().push_frame(frame, direction)

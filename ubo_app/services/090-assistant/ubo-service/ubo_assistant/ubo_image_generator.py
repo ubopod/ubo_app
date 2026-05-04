@@ -57,9 +57,10 @@ class UboImageGeneratorService(UboSwitchService[ImageGenService], ImageGenServic
             'openai': self.openai_image_generator,
         }
 
-        UboSwitchService.__init__(self, client=client, selector=selector)
-        ImageGenService.__init__(
+        UboSwitchService.__init__(
             self,
+            client=client,
+            selector=selector,
             settings=ImageGenSettings(model=None),
         )
 

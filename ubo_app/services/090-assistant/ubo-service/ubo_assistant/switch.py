@@ -1,30 +1,30 @@
-"""Implementation of switch service for the pipecat pipeline."""
+"""Ubo adapters for Pipecat's native service switchers."""
 
 from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from loguru import logger
 from pipecat.frames.frames import (
     Frame,
     LLMMessagesUpdateFrame,
     LLMSetToolsFrame,
+    ManuallySwitchServiceFrame,
     StartFrame,
-    StopFrame,
     SystemFrame,
 )
+from pipecat.pipeline.llm_switcher import LLMSwitcher
+from pipecat.pipeline.service_switcher import ServiceSwitcher
 from pipecat.processors.aggregators.llm_context import NOT_GIVEN
 from pipecat.processors.frame_processor import (
     FrameDirection,
     FrameProcessor,
     FrameProcessorSetup,
 )
-from pipecat.services.ai_service import AIService
 from pipecat.services.llm_service import LLMService
-from pipecat.services.stt_service import STTService
-from pipecat.services.tts_service import TTSService
+from pipecat.services.settings import LLMSettings, ServiceSettings
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
     Action,
@@ -43,31 +43,101 @@ if TYPE_CHECKING:
 
 T = TypeVar('T', bound=FrameProcessor)
 
-class UboSwitchService(AIService, Generic[T]):
-    """Switch service for pipecat, altering between sub services.
 
-    Allows switching between different pipecat services in the pipeline.
+class UboNoopService(FrameProcessor):
+    """Inactive switch target that preserves lifecycle frames and swallows data."""
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        """Process lifecycle frames without invoking a provider."""
+        await super().process_frame(frame, direction)
+        if isinstance(frame, SystemFrame):
+            await self.push_frame(frame, direction)
+
+
+def make_empty_llm_settings() -> LLMSettings:
+    """Build an LLMSettings with every field set to None (store-mode placeholder).
+
+    Pipecat 1.0's ``ServiceSettings.validate_complete()`` rejects the default
+    ``NOT_GIVEN`` sentinel, so wrappers that don't own any provider state still
+    have to construct a fully-populated settings object. ``None`` means
+    "unsupported" in store mode.
     """
+    return LLMSettings(
+        model=None,
+        system_instruction=None,
+        temperature=None,
+        max_tokens=None,
+        top_p=None,
+        top_k=None,
+        frequency_penalty=None,
+        presence_penalty=None,
+        seed=None,
+        filter_incomplete_user_turns=None,
+        user_turn_completion_config=None,
+    )
 
-    # Subclasses must define this before calling parent __init__
+
+class UboNoopLLMService(LLMService):
+    """LLM-shaped no-op target for LLMSwitcher."""
+
+    def __init__(self) -> None:
+        """Initialize the no-op LLM."""
+        super().__init__(settings=make_empty_llm_settings())
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        """Process lifecycle frames without invoking an LLM."""
+        await super().process_frame(frame, direction)
+        if isinstance(frame, SystemFrame):
+            await self.push_frame(frame, direction)
+
+
+class UboSwitchMixin(Generic[T]):
+    """Store-driven behavior shared by native Pipecat switcher adapters."""
+
     _services: dict[str, T | None]
+    _ubo_services: dict[str, T | None]
+    _noop_service: T
 
-    def __init__(self, client: UboRPCClient, *, selector: str) -> None:
-        """Initialize the ubo switch service."""
+    def _initialize_ubo_switch(self, client: UboRPCClient, *, selector: str) -> None:
         self._reset_assistance()
         self.client = client
         self._store_selector = selector
-        self._started = False
-        self._mcp_servers_data = {}
-        self._enabled_mcp_servers = set()
+        self._autoruns_started = False
+        self._mcp_servers_data: dict[str, MCPServerMetadata] = {}
+        self._enabled_mcp_servers: set[str] = set()
         self._mcp_clients: list[MCPClient] = []
         self._mcp_tools_update_lock = asyncio.Lock()
         self._processor_setup: FrameProcessorSetup | None = None
-
-        for service in self.services.values():
-            service.push_frame = self.push_frame
-        self.selected_service: T | None = None
         self._current_service_id: str | None = None
+        self.selected_service: T | None = None
+
+        # Pipecat switcher events are async by default. Ubo's selected-service
+        # bookkeeping is local and quick, so keep it in the switching path.
+        native_switcher = cast('ServiceSwitcher', self)
+        native_switcher.strategy._event_handlers[  # noqa: SLF001
+            'on_service_switched'
+        ].is_sync = True
+
+        @native_switcher.strategy.event_handler('on_service_switched')
+        def on_service_switched(
+            _strategy: object,
+            service: FrameProcessor,
+        ) -> None:
+            self._handle_service_switched(service)
+
+    @property
+    def service_map(self) -> dict[str, T]:
+        """Initialized Ubo services keyed by store service id."""
+        return {
+            id: service
+            for id, service in self._ubo_services.items()
+            if service is not None
+        }
+
+    @property
+    def switcher_services(self) -> list[T]:
+        """Services passed to the native Pipecat switcher."""
+        return [self._noop_service, *self.service_map.values()]
 
     def _reset_assistance(self) -> None:
         self._assistance_id = uuid.uuid4().hex
@@ -84,40 +154,87 @@ class UboSwitchService(AIService, Generic[T]):
         )
         self._assistance_index += 1
 
-    @property
-    def services(self) -> dict[str, T]:
-        """List of initialized services."""
-        return {
-            id: service for id, service in self._services.items() if service is not None
-        }
+    def _service_id_for(self, service: FrameProcessor) -> str | None:
+        for service_id, candidate in self.service_map.items():
+            if candidate is service:
+                return service_id
+        return None
 
-    async def _start(self, frame: StartFrame) -> None:
-        if self._started:
+    def _handle_service_switched(self, service: FrameProcessor) -> None:
+        service_id = self._service_id_for(service)
+        self.selected_service = cast('T', service) if service_id is not None else None
+        self._current_service_id = service_id
+
+        logger.info(
+            'Selected: {extra}',
+            extra={
+                'service_id': service_id,
+                'selected_service': self.selected_service,
+                'model': getattr(
+                    getattr(self.selected_service, '_settings', None),
+                    'model',
+                    None,
+                ),
+            },
+        )
+
+        if (
+            service_id is not None
+            and isinstance(service, LLMService)
+            and self._processor_setup is not None
+        ):
+            cast('ServiceSwitcher', self).create_task(
+                self._update_llm_tools(service_id=service_id, llm_service=service),
+            )
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        """Start Ubo autoruns, then delegate routing to Pipecat."""
+        if isinstance(frame, StartFrame):
+            logger.info(
+                'Ubo native switcher received StartFrame',
+                extra={'class_name': self.__class__.__name__},
+            )
+            self._start_frame = frame
+            self._ensure_autoruns_started()
+        await super().process_frame(frame, direction)  # pyright: ignore[reportAttributeAccessIssue]
+
+    async def setup(self, setup: FrameProcessorSetup) -> None:
+        """Store setup for dynamic services, then set up Pipecat branches."""
+        await super().setup(setup)  # pyright: ignore[reportAttributeAccessIssue]
+        self._processor_setup = setup
+
+    async def cleanup(self) -> None:
+        """Clean up switcher resources."""
+        await self._close_mcp_clients(self._mcp_clients)
+        self._mcp_clients = []
+        await super().cleanup()  # pyright: ignore[reportAttributeAccessIssue]
+
+    def _ensure_autoruns_started(self) -> None:
+        if self._autoruns_started:
             return
-        self._started = True
-        await super()._start(frame)
+        self._autoruns_started = True
 
-        # Autorun is called immediately with initial state value,
-        # then again on changes. This handles all service types:
-        # STT, LLM, TTS, and Image Generator
         @self.client.autorun([self._store_selector])
         def handle_service_change(data: list[StringValue]) -> None:
             selected_service_id = data[0].value
-            logger.info('Service selection changed via autorun {extra}',
+            logger.info(
+                'Service selection changed via autorun {extra}',
                 extra={
                     'service_id': selected_service_id,
                     'selector': self._store_selector,
                 },
             )
-            self.create_task(self.set_selected_service(selected_service_id))
+            cast('ServiceSwitcher', self).create_task(
+                self.set_selected_service(selected_service_id),
+            )
 
-        # Only LLM services need to react to MCP server state changes
-        if isinstance(self, LLMService):
-            logger.info('Service is LLMService, subscribing to MCP state changes')
+        if isinstance(self, UboLLMSwitchService):
+            logger.info('Service is LLMSwitcher, subscribing to MCP state changes')
             self._setup_mcp_autorun()
 
     def _setup_mcp_autorun(self) -> None:
         """Set up autorun subscription for MCP server state changes."""
+
         @self.client.autorun([
             'state.assistant.enabled_mcp_servers_with_metadata',
         ])
@@ -128,13 +245,11 @@ class UboSwitchService(AIService, Generic[T]):
     def _process_mcp_servers_data(self, data: list) -> None:
         """Process MCP servers data from autorun callback."""
         try:
-            # Data is a list containing a betterproto message (wrapper)
-            # Already unpacked by _unpack_from_any in UboRPCClient
             enabled_with_metadata_wrapper = data[0]
-
-            # Access the nested items structure
             items_wrapper = getattr(
-                enabled_with_metadata_wrapper, 'items', None,
+                enabled_with_metadata_wrapper,
+                'items',
+                None,
             )
             if items_wrapper is None:
                 enabled_with_metadata = []
@@ -143,12 +258,10 @@ class UboSwitchService(AIService, Generic[T]):
             if not isinstance(enabled_with_metadata, list):
                 enabled_with_metadata = []
 
-            # Convert list to dict for internal use (O(1) lookups)
             mcp_servers_dict = {}
             enabled_servers_set = set()
             for server_metadata in enabled_with_metadata:
                 server_id = server_metadata.server_id
-                # Get the actual config from the oneof wrapper
                 config_wrapper = server_metadata.config
                 stdio_cfg = getattr(config_wrapper, 'stdio_mcp_config', None)
                 sse_cfg = getattr(config_wrapper, 'sse_mcp_config', None)
@@ -157,8 +270,7 @@ class UboSwitchService(AIService, Generic[T]):
                 elif sse_cfg:
                     config = sse_cfg
                 else:
-                    config = config_wrapper  # fallback
-                # Convert to local MCPServerMetadata for compatibility
+                    config = config_wrapper
                 mcp_servers_dict[server_id] = MCPServerMetadata(
                     server_id=server_id,
                     name=server_metadata.name,
@@ -176,15 +288,25 @@ class UboSwitchService(AIService, Generic[T]):
                 },
             )
 
-            # Update internal state
             self._mcp_servers_data = mcp_servers_dict
             self._enabled_mcp_servers = enabled_servers_set
 
-            # Schedule async tool update with current service ID
-            if self._current_service_id:
-                self.create_task(
+            if (
+                self._current_service_id is not None
+                and isinstance(
+                    cast('ServiceSwitcher', self).strategy.active_service,
+                    LLMService,
+                )
+            ):
+                native_switcher = cast('ServiceSwitcher', self)
+                active_service = cast(
+                    'LLMService',
+                    native_switcher.strategy.active_service,
+                )
+                native_switcher.create_task(
                     self._update_llm_tools(
                         service_id=self._current_service_id,
+                        llm_service=active_service,
                     ),
                 )
 
@@ -192,33 +314,6 @@ class UboSwitchService(AIService, Generic[T]):
             logger.exception('Error handling MCP servers state change')
             self._mcp_servers_data = {}
             self._enabled_mcp_servers = set()
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
-        """Process frame with the selected service."""
-        if isinstance(frame, StartFrame):
-            logger.info(
-                'UboSwitchService received StartFrame',
-                extra={'class_name': self.__class__.__name__},
-            )
-            self._start_frame = frame
-            await self._start(frame)
-        if self.selected_service:
-            await self.selected_service.process_frame(frame, direction)
-        elif isinstance(frame, SystemFrame):
-            await super().process_frame(frame, direction)
-
-    async def setup(self, setup: FrameProcessorSetup) -> None:
-        """Set up all sub-services."""
-        await super().setup(setup)
-        self._processor_setup = setup
-        for service in self.services.values():
-            await service.setup(setup)
-
-    async def cleanup(self) -> None:
-        """Clean up switch service resources."""
-        await self._close_mcp_clients(self._mcp_clients)
-        self._mcp_clients = []
-        await super().cleanup()
 
     async def _close_mcp_clients(self, clients: list[MCPClient]) -> None:
         """Close MCP clients that are no longer backing registered tools."""
@@ -235,13 +330,7 @@ class UboSwitchService(AIService, Generic[T]):
                 )
 
     def _get_mcp_servers_from_state(self) -> list:
-        """Get enabled MCP servers from stored state.
-
-        Returns:
-            List of enabled MCP server metadata
-
-        """
-        # Filter to only enabled servers from stored data
+        """Get enabled MCP servers from stored state."""
         enabled_servers = [
             server
             for server_id, server in self._mcp_servers_data.items()
@@ -262,21 +351,10 @@ class UboSwitchService(AIService, Generic[T]):
         *,
         mcp_enabled: bool = True,
     ) -> CombinedTools:
-        """Get combined tools with optional MCP tools.
-
-        Args:
-            llm_service: LLM service to register tools with
-            mcp_enabled: Whether to include MCP tools (default: True)
-
-        Returns:
-            Combined tools schema
-
-        """
+        """Get combined tools with optional MCP tools."""
         from ubo_assistant.tools import create_combined_tools
 
         logger.info('Starting to get combined tools')
-
-        # Get enabled MCP servers if MCP is enabled
         mcp_servers = self._get_mcp_servers_from_state() if mcp_enabled else None
 
         logger.info(
@@ -298,53 +376,35 @@ class UboSwitchService(AIService, Generic[T]):
         return combined_tools
 
     def _check_tools_support(self, service_id: str | None) -> bool:
-        """Check if the given service supports tools.
-
-        Args:
-            service_id: Service identifier ('ollama', 'ollama_onprem', etc.)
-
-        Returns:
-            True if tools are supported, False otherwise
-
-        """
-        # Cerebras does not supports tools (known limitation with JSON schema)
-        # Ollama and Ollama OnPrem do not support tools
+        """Check if the given service supports tools."""
         if service_id in ['cerebras', 'ollama', 'ollama_onprem']:
-            logger.info('{extra} does not support tools',
-                        extra={'service_id': service_id},
-                        )
+            logger.info(
+                '{extra} does not support tools',
+                extra={'service_id': service_id},
+            )
             return False
-        # All other services (OpenAI, Google Vertex, Grok) support tools by default
         return True
 
     async def _update_llm_tools(
         self,
         *,
         service_id: str,
+        llm_service: LLMService,
     ) -> None:
-        """Update LLM tools and optionally messages.
-
-        Args:
-            service_id: Service ID to check tool support for
-
-        """
+        """Update LLM tools and optionally messages."""
         async with self._mcp_tools_update_lock:
-            if self.selected_service is None:
-                return
-            if not isinstance(self.selected_service, LLMService):
-                return
-
             tools_supported = self._check_tools_support(service_id)
             old_mcp_clients = self._mcp_clients
             new_mcp_clients: list[MCPClient] = []
 
             try:
                 if tools_supported:
-                    logger.info('Registering tools for: {extra}',
-                        extra={'service': self.selected_service},
+                    logger.info(
+                        'Registering tools for: {extra}',
+                        extra={'service': llm_service},
                     )
                     combined_tools = await self._get_combined_tools(
-                        self.selected_service,
+                        llm_service,
                         mcp_enabled=True,
                     )
                     tools = combined_tools.tools_schema
@@ -352,22 +412,20 @@ class UboSwitchService(AIService, Generic[T]):
                     system_message = DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE
                     tool_count = len(tools.standard_tools)
                 else:
-                    logger.info('Not registering tools for: {extra}',
-                        extra={'service': self.selected_service},
+                    logger.info(
+                        'Not registering tools for: {extra}',
+                        extra={'service': llm_service},
                     )
                     tools = NOT_GIVEN
                     system_message = DEFAULT_SYSTEM_MESSAGE
                     tool_count = 0
 
-                await self.selected_service.queue_frame(
+                await llm_service.queue_frame(
                     LLMMessagesUpdateFrame(
                         messages=[{'role': 'system', 'content': system_message}],
                     ),
                 )
-
-                await self.selected_service.queue_frame(
-                    LLMSetToolsFrame(tools=tools),
-                )
+                await llm_service.queue_frame(LLMSetToolsFrame(tools=tools))
             except Exception:
                 await self._close_mcp_clients(new_mcp_clients)
                 raise
@@ -383,8 +441,9 @@ class UboSwitchService(AIService, Generic[T]):
             )
 
     async def set_selected_service(self, id: str) -> None:
-        """Set the currently selected service."""
-        if id not in self.services:
+        """Queue a native Pipecat service switch from a Ubo service id."""
+        target = self.service_map.get(id)
+        if target is None:
             logger.warning(
                 'Selected service is not available',
                 extra={
@@ -392,74 +451,53 @@ class UboSwitchService(AIService, Generic[T]):
                     'service_type': type(self).__name__,
                 },
             )
-            self.selected_service = None
-            self._current_service_id = None
-            return
-        if self.selected_service:
-            try:
-                await self.selected_service.queue_frame(StopFrame())
-            except Exception as e:  # noqa: BLE001
-                logger.warning('Error stopping service {extra}',
-                extra={
-                    'stopped_service': self.selected_service,
-                    'error': e,
-                },
-                )
-        newly_selected_service = self.services.get(id, None)
-        logger.info('Stopped: {extra}',
-            extra={
-                'stopped_service': self.selected_service,
-            },
+            target = self._noop_service
+
+        await cast('ServiceSwitcher', self).process_frame(
+            ManuallySwitchServiceFrame(service=target),
+            FrameDirection.DOWNSTREAM,
         )
-        if newly_selected_service and self._start_frame:
-            # Set selected_service so _update_llm_tools can queue frames
-            self.selected_service = newly_selected_service
 
-            try:
-                await newly_selected_service.queue_frame(self._start_frame)
-                if isinstance(newly_selected_service, LLMService):
-                    # Update tools and messages for LLM service
-                    await self._update_llm_tools(service_id=id)
 
-                # Add a small delay for STT and TTS services
-                # to establish WebSocket connections.
-                # This prevents the NoneType has no attribute 'send'
-                # error with AssemblyAI.
-                # This also prevents silent audio frames with services like Rime TTS.
-                if isinstance(newly_selected_service, (STTService, TTSService)):
-                    logger.info('Waiting for STT service {id} \
-                        to establish connection...', id=id)
-                    await asyncio.sleep(0.2)  # 800ms delay for connection establishment
+class UboSwitchService(UboSwitchMixin[T], ServiceSwitcher):
+    """Native ServiceSwitcher with Ubo store integration."""
 
-                logger.info('Started: {extra}',
-                    extra={
-                        'started_service': newly_selected_service,
-                    },
-                )
-            except Exception as e:
-                logger.exception('Error starting service {extra}',
-                    extra={
-                        'started_service': newly_selected_service,
-                        'error': e,
-                    },
-                )
-                # Don't set the service if starting failed
-                self.selected_service = None
-                self._current_service_id = None
-                return
-        else:
-            self.selected_service = newly_selected_service
+    def __init__(
+        self,
+        client: UboRPCClient,
+        *,
+        selector: str,
+        settings: ServiceSettings | None = None,
+    ) -> None:
+        """Initialize the Ubo service switcher."""
+        self._noop_service = cast(
+            'T',
+            UboNoopService(name=f'{type(self).__name__}:noop'),
+        )
+        self._ubo_services = self._services
+        ServiceSwitcher.__init__(
+            self,
+            services=cast('list[FrameProcessor]', self.switcher_services),
+        )
+        if settings is not None:
+            self._settings = settings
+        self._initialize_ubo_switch(client=client, selector=selector)
 
-        # Track the service ID for MCP updates
-        self._current_service_id = id
-        logger.info('Selected: {extra}',
-            extra={
-                'service_id': id,
-                'selected_service': self.selected_service,
-                'model': getattr(
-                    getattr(self.selected_service, '_settings', None),
-                    'model',
-                    None,
-                ),
-                    },
-                )
+
+class UboLLMSwitchService(UboSwitchMixin[LLMService], LLMSwitcher):
+    """Native LLMSwitcher with Ubo store integration."""
+
+    def __init__(
+        self,
+        client: UboRPCClient,
+        *,
+        selector: str,
+        settings: LLMSettings | None = None,
+    ) -> None:
+        """Initialize the Ubo LLM switcher."""
+        self._noop_service = UboNoopLLMService()
+        self._ubo_services = self._services
+        LLMSwitcher.__init__(self, llms=self.switcher_services)
+        if settings is not None:
+            self._settings = settings
+        self._initialize_ubo_switch(client=client, selector=selector)

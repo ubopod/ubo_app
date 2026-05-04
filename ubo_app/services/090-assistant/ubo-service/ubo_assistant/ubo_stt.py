@@ -160,11 +160,11 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             'assemblyai': self.assemblyai_stt,
         }
 
-        UboSwitchService.__init__(self, client=client, selector=selector)
-        STTService.__init__(
+        UboSwitchService.__init__(
             self,
+            client=client,
+            selector=selector,
             settings=STTSettings(model=None, language=None),
-            ttfs_p99_latency=1.0,
         )
 
     async def run_stt(self, audio: bytes) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
