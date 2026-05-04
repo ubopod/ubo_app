@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     )
     from tests.fixtures.menu import WaitForMenuItem
     from ubo_app.store.main import RootState
+    from ubo_app.store.services.file_system import FileSystemState
 
 from tests.fixtures.dispatch import DIRECT, GRPC_MENU
 
@@ -46,7 +47,7 @@ def _snapshot_selector(state: RootState) -> dict:
             }
             for n in state.notifications.notifications
         ]
-    fs_state: object = None
+    fs_state: FileSystemState | None = None
     if hasattr(state, 'file_system'):
         fs_state = state.file_system  # pyright: ignore[reportAttributeAccessIssue]
     return {
@@ -190,11 +191,13 @@ async def test_move_copy_remove(  # noqa: C901
     store_snapshot.take(selector=_snapshot_selector)
 
     # ── Phase 1: Navigate to file browser ────────────────────────────────
-    # Home → Main Menu → Apps → File System → TEST_DIR → dir_a
+    # Home → Main Menu → Apps → Files → File System → TEST_DIR → dir_a
 
     await dispatcher.choose_by_icon('󰍜', via=DIRECT)
     await wait_for_menu_item(label='Apps')
     await dispatcher.choose_by_label('Apps', via=GRPC_MENU)
+    await wait_for_menu_item(label='Files')
+    await dispatcher.choose_by_label('Files', via=GRPC_MENU)
     await wait_for_menu_item(label='File System')
 
     # Open file browser at TEST_DIR (only direct call — simulates app open)

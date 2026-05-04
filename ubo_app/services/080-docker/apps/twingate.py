@@ -115,6 +115,7 @@ ENTRY = ContainerEntry(
     path='twingate/connector:latest',
     registry='docker.io',
     prepare=prepare_twingate,
+    category='Remote Access',
     menu_actions=_menu_actions,
     secret_keys=TWINGATE_SECRET_KEYS,
     environment_vairables={

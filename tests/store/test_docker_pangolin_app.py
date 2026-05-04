@@ -5,12 +5,11 @@ from __future__ import annotations
 import sys
 from importlib import import_module
 from pathlib import Path
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Protocol, cast
 
 import pytest
 
-from ubo_app.store.input.types import InputMethod
+from ubo_app.store.input.types import InputMethod, InputResult
 from ubo_app.utils import secrets
 
 if TYPE_CHECKING:
@@ -20,10 +19,17 @@ if TYPE_CHECKING:
 DOCKER_SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app' / 'services' / '080-docker'
 
 
+class SecretsModule(Protocol):
+    """Protocol for the secrets module attributes patched by these tests."""
+
+    SECRETS_PATH: Path
+
+
 class PangolinModule(Protocol):
     """Protocol for the Pangolin module members used by these tests."""
 
     COMPOSITIONS_PATH: Path
+    secrets: SecretsModule
 
     async def prepare_pangolin(self) -> bool:
         """Prepare Pangolin composition files."""
@@ -32,23 +38,30 @@ class PangolinModule(Protocol):
 
 def _import_pangolin() -> PangolinModule:
     """Import the Pangolin module as the Docker service would."""
-    if str(DOCKER_SERVICE_PATH) not in sys.path:
-        sys.path.insert(0, str(DOCKER_SERVICE_PATH))
+    docker_path = str(DOCKER_SERVICE_PATH)
+    if docker_path not in sys.path:
+        sys.path.insert(0, docker_path)
 
-    return cast('PangolinModule', import_module('apps.pangolin'))
+    try:
+        return cast('PangolinModule', import_module('apps.pangolin'))
+    finally:
+        if docker_path in sys.path:
+            sys.path.remove(docker_path)
 
 
 def _use_temp_secrets(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    pangolin: PangolinModule,
 ) -> None:
     fake_path = tmp_path / '.secrets.env'
     fake_path.write_text('')
     monkeypatch.setattr(secrets, 'SECRETS_PATH', fake_path)
+    monkeypatch.setattr(pangolin.secrets, 'SECRETS_PATH', fake_path)
 
 
-def _input_result(data: Mapping[str, str]) -> SimpleNamespace:
-    return SimpleNamespace(
+def _input_result(data: Mapping[str, str]) -> InputResult:
+    return InputResult(
         data=data,
         files={},
         method=InputMethod.WEB_DASHBOARD,
@@ -85,11 +98,14 @@ async def test_prepare_pangolin_writes_compose_from_webui_input(
 ) -> None:
     """The prepare phase writes a complete Newt compose file."""
     pangolin = _import_pangolin()
-    _use_temp_secrets(monkeypatch, tmp_path)
+    _use_temp_secrets(monkeypatch, tmp_path, pangolin)
     monkeypatch.setattr(pangolin, 'COMPOSITIONS_PATH', tmp_path)
 
-    async def fake_ubo_input(*_args: object, **_kwargs: object) -> tuple[None, object]:
-        return None, _input_result(form_data)
+    async def fake_ubo_input(
+        *_args: object,
+        **_kwargs: object,
+    ) -> tuple[str, InputResult]:
+        return '', _input_result(form_data)
 
     monkeypatch.setattr(pangolin, 'ubo_input', fake_ubo_input)
 
@@ -111,11 +127,14 @@ async def test_prepare_pangolin_rejects_missing_custom_endpoint(
 ) -> None:
     """Selecting Other requires a custom endpoint value."""
     pangolin = _import_pangolin()
-    _use_temp_secrets(monkeypatch, tmp_path)
+    _use_temp_secrets(monkeypatch, tmp_path, pangolin)
     monkeypatch.setattr(pangolin, 'COMPOSITIONS_PATH', tmp_path)
 
-    async def fake_ubo_input(*_args: object, **_kwargs: object) -> tuple[None, object]:
-        return None, _input_result(
+    async def fake_ubo_input(
+        *_args: object,
+        **_kwargs: object,
+    ) -> tuple[str, InputResult]:
+        return '', _input_result(
             {
                 'PANGOLIN_ENDPOINT_MODE': 'Other',
                 'NEWT_ID': 'site-id',
@@ -135,7 +154,7 @@ async def test_prepare_pangolin_skips_prompt_when_configured(
 ) -> None:
     """An existing configured Pangolin composition does not prompt again."""
     pangolin = _import_pangolin()
-    _use_temp_secrets(monkeypatch, tmp_path)
+    _use_temp_secrets(monkeypatch, tmp_path, pangolin)
     monkeypatch.setattr(pangolin, 'COMPOSITIONS_PATH', tmp_path)
 
     composition_path = tmp_path / 'pangolin'
@@ -145,7 +164,10 @@ async def test_prepare_pangolin_skips_prompt_when_configured(
     secrets.write_secret(key='NEWT_ID', value='site-id')
     secrets.write_secret(key='NEWT_SECRET', value='site-secret')
 
-    async def fail_ubo_input(*_args: object, **_kwargs: object) -> tuple[None, object]:
+    async def fail_ubo_input(
+        *_args: object,
+        **_kwargs: object,
+    ) -> tuple[str, InputResult]:
         pytest.fail('ubo_input should not be called')
 
     monkeypatch.setattr(pangolin, 'ubo_input', fail_ubo_input)

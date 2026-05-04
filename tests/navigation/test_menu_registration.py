@@ -13,13 +13,16 @@ from ubo_app.store.core.menu_registration import (
     deregister_regular_app,
     register_regular_app,
     register_setting_app,
+    update_service_status,
 )
 from ubo_app.store.core.types import (
     DeregisterRegularAppAction,
     RegisterRegularAppAction,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPushMenuAction,
 )
+from ubo_app.store.settings.types import SettingsServiceSetStatusAction
 
 if TYPE_CHECKING:
     from tests.navigation.conftest import ReducerRunner
@@ -44,6 +47,22 @@ class TestRegisterRegularApp:
         assert entry.label == 'Test App'
         assert entry.icon == 'T'
         assert entry.category is None  # Regular app, not settings
+        assert entry.app_category is None
+
+    def test_regular_app_category_is_recorded(self, nav: ReducerRunner) -> None:
+        """Verify registering a regular app records its Apps category."""
+        action = RegisterRegularAppAction(
+            label='Home Assistant',
+            icon='H',
+            service='docker',
+            key='home_assistant',
+            app_category='Home Automation',
+        )
+        new_state = register_regular_app(nav.state, action)
+
+        entry = new_state.registered_apps['docker:home_assistant']
+        assert entry.category is None
+        assert entry.app_category == 'Home Automation'
 
     def test_priority_ordering(self, nav: ReducerRunner) -> None:
         """Higher priority items are recorded in priorities dict."""
@@ -131,6 +150,32 @@ class TestDeregisterRegularApp:
         assert result is nav.state
         assert events == []
 
+    def test_pops_nested_categorized_app_menu(self, nav: ReducerRunner) -> None:
+        """Verify deregistering exits an app nested under a category."""
+        state = register_regular_app(
+            nav.state,
+            RegisterRegularAppAction(
+                label='Categorized App',
+                icon='C',
+                service='svc',
+                key='app',
+                app_category='Tools',
+            ),
+        )
+        nav.state = state
+        nav.dispatch(StackPushMenuAction(menu_key='main'))
+        nav.dispatch(StackPushMenuAction(menu_key='apps'))
+        nav.dispatch(StackPushMenuAction(menu_key='tools'))
+        nav.dispatch(StackPushMenuAction(menu_key='svc:app'))
+
+        new_state, events = deregister_regular_app(
+            nav.state,
+            DeregisterRegularAppAction(service='svc', key='app'),
+        )
+
+        assert new_state.path == ('main', 'apps', 'tools')
+        assert events
+
 
 class TestRegisterSettingApp:
     """Tests for registering settings apps."""
@@ -151,3 +196,40 @@ class TestRegisterSettingApp:
         entry = new_state.registered_apps['wifi-service:settings']
         assert entry.label == 'Wi-Fi Settings'
         assert entry.category == SettingsCategory.NETWORK.value
+
+
+class TestServiceStatusCleanup:
+    """Tests for removing app entries when a service becomes inactive."""
+
+    def test_pops_nested_categorized_service_app_menu(
+        self,
+        nav: ReducerRunner,
+    ) -> None:
+        """Verify inactive services exit open app menus nested in categories."""
+        state = register_regular_app(
+            nav.state,
+            RegisterRegularAppAction(
+                label='Docker App',
+                icon='D',
+                service='docker',
+                key='home_assistant',
+                app_category='Home Automation',
+            ),
+        )
+        nav.state = state
+        nav.dispatch(StackPushMenuAction(menu_key='main'))
+        nav.dispatch(StackPushMenuAction(menu_key='apps'))
+        nav.dispatch(StackPushMenuAction(menu_key='home_automation'))
+        nav.dispatch(StackPushMenuAction(menu_key='docker:home_assistant'))
+
+        new_state, events = update_service_status(
+            nav.state,
+            SettingsServiceSetStatusAction(
+                service_id='docker',
+                is_active=False,
+            ),
+        )
+
+        assert new_state.path == ('main', 'apps', 'home_automation')
+        assert 'docker:home_assistant' not in new_state.registered_apps
+        assert events

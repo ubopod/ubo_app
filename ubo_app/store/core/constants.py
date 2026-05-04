@@ -50,6 +50,7 @@ NOTIFICATION_CUSTOM_PREFIX = 'notification:custom:'
 NOTIFICATION_DISPLAY_PREFIX = 'notification:display:'
 MENU_SELECT_PREFIX = 'menu:select:'
 MENU_NAVIGATE_PREFIX = 'menu:navigate:'
+APPS_ROOT_CATEGORY = '__apps_root__'
 
 # Note: Path-to-menu mappings and menu IDs are registered dynamically by
 # the application via register_path_menu_matcher() in view_registry.py.

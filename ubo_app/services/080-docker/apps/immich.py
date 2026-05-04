@@ -108,11 +108,12 @@ and videos.""",
 ENTRY = ContainerEntry(
     id='immich',
     label='Immich',
-    icon='',
+    icon='',
     path='immich-app/immich-server:release',
     registry='ghcr.io',
     prepare=prepare_immich,
     is_composition=True,
+    category='Files',
     ports={'2283/tcp': 2283},
     secret_keys=(
         'IMMICH_DB_PASSWORD',

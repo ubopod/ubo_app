@@ -5,8 +5,8 @@ from __future__ import annotations
 import contextlib
 import ipaddress
 import threading
-from asyncio import iscoroutine
-from typing import TYPE_CHECKING, Any, overload
+from inspect import isawaitable
+from typing import TYPE_CHECKING, overload
 
 import docker
 import docker.errors
@@ -51,7 +51,7 @@ def _start_event_monitor(image_id: str, get_docker_id: Callable[[], str]) -> Non
     thread.start()
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Awaitable, Callable
 
 
 def find_container(client: docker.DockerClient, *, image_path: str) -> Container | None:
@@ -81,41 +81,41 @@ def find_container(client: docker.DockerClient, *, image_path: str) -> Container
 @overload
 async def _process_str(
     value: str
-    | Callable[[], str | Coroutine[Any, Any, str]]
-    | Coroutine[Any, Any, str],
+    | Callable[[], str | Awaitable[str]]
+    | Awaitable[str],
 ) -> str: ...
 @overload
 async def _process_str(
     value: str
-    | Callable[[], str | Coroutine[Any, Any, str | None] | None]
-    | Coroutine[Any, Any, str | None]
+    | Callable[[], str | Awaitable[str | None] | None]
+    | Awaitable[str | None]
     | None,
 ) -> str | None: ...
 @overload
 async def _process_str(
     value: str
     | list[str]
-    | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str]]]
-    | Coroutine[Any, Any, str | list[str]],
+    | Callable[[], str | list[str] | Awaitable[str | list[str]]]
+    | Awaitable[str | list[str]],
 ) -> str | list[str]: ...
 @overload
 async def _process_str(
     value: str
     | list[str]
-    | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str] | None] | None]
-    | Coroutine[Any, Any, str | list[str] | None]
+    | Callable[[], str | list[str] | Awaitable[str | list[str] | None] | None]
+    | Awaitable[str | list[str] | None]
     | None,
 ) -> str | list[str] | None: ...
 async def _process_str(
     value: str
     | list[str]
-    | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str] | None] | None]
-    | Coroutine[Any, Any, str | list[str] | None]
+    | Callable[[], str | list[str] | Awaitable[str | list[str] | None] | None]
+    | Awaitable[str | list[str] | None]
     | None,
 ) -> str | list[str] | None:
     if callable(value):
         value = value()
-    if iscoroutine(value):
+    if isawaitable(value):
         value = await value
     return value
 

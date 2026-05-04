@@ -14,6 +14,9 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from immutable import Immutable
+    from redux.basic_types import SnapshotAtom
+
 originals = {}
 
 
@@ -353,7 +356,12 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(ubo_app.constants, 'STORE_GRACE_PERIOD', 0.1)
     monkeypatch.setattr(ubo_app.constants, 'NOTIFICATIONS_FLASH_TIME', 1000)
-    monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', lambda _, obj: obj)
+    def snapshot_type_field(_: Immutable, serialized: SnapshotAtom) -> SnapshotAtom:
+        return serialized
+
+    monkeypatch.setattr(ubo_app.utils.serializer, 'add_type_field', snapshot_type_field)
+    if store_main := sys.modules.get('ubo_app.store.main'):
+        monkeypatch.setattr(store_main, 'add_type_field', snapshot_type_field)
     monkeypatch.setattr(
         ubo_app.utils.server,
         'send_command',

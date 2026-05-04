@@ -122,6 +122,7 @@ ENTRY = ContainerEntry(
     registry='docker.n8n.io',
     prepare=prepare_n8n,
     is_composition=True,
+    category='AI Agents',
     ports={'5678/tcp': 5678},
     secret_keys=(
         'N8N_DB_PASSWORD',

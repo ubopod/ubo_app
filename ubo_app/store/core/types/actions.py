@@ -56,6 +56,7 @@ class RegisterRegularAppAction(RegisterAppAction):
     """Action to register a regular app in the Apps menu."""
 
     priority: int | None = None
+    app_category: str | None = None
 
 
 class DeregisterRegularAppAction(MainAction):

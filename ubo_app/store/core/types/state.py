@@ -24,6 +24,7 @@ class RegisteredAppEntry(Immutable):
     background_color: str | None = None
     priority: int | None = None
     category: str | None = None  # SettingsCategory value, None for regular apps
+    app_category: str | None = None  # Regular Apps category, None for settings
 
 
 class MainState(Immutable):

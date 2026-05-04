@@ -13,6 +13,7 @@ ENTRIES: list[ContainerEntry] = [
         path='homeassistant/home-assistant:stable',
         registry='docker.io',
         ports={'8123/tcp': 8123},
+        category='Home Automation',
     ),
     ContainerEntry(
         id='home_bridge',
@@ -20,14 +21,16 @@ ENTRIES: list[ContainerEntry] = [
         icon='󰘘',
         path='homebridge/homebridge:latest',
         registry='docker.io',
+        category='Home Automation',
     ),
     ContainerEntry(
         id='portainer',
         label='Portainer',
-        icon='',
+        icon='',
         path='portainer/portainer-ce:latest',
         registry='docker.io',
         volumes=['/var/run/docker.sock:/var/run/docker.sock'],
+        category='Container Management',
     ),
     ContainerEntry(
         id='pi_hole',
@@ -44,6 +47,7 @@ ENTRIES: list[ContainerEntry] = [
         },
         dns=['127.0.0.1', '1.1.1.1'],
         registry='docker.io',
+        category='Networking',
     ),
     ContainerEntry(
         id='ollama',
@@ -52,6 +56,7 @@ ENTRIES: list[ContainerEntry] = [
         path='ollama/ollama:latest',
         registry='docker.io',
         ports={'11434/tcp': 11434},
+        category='AI Engines',
     ),
     ContainerEntry(
         id='open_webui',
@@ -62,6 +67,7 @@ ENTRIES: list[ContainerEntry] = [
         dependencies=['ollama'],
         ports={'8080/tcp': 8080},
         hosts={'host.docker.internal': 'host-gateway'},
+        category='AI Engines',
     ),
     *(
         [
@@ -71,6 +77,7 @@ ENTRIES: list[ContainerEntry] = [
                 icon='',
                 path='alpine:latest',
                 registry='docker.io',
+                category='Other',
             ),
         ]
         if DEBUG_DOCKER

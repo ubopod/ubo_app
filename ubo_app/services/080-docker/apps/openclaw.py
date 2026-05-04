@@ -650,6 +650,7 @@ ENTRY = ContainerEntry(
     registry='ghcr.io',
     prepare=prepare_openclaw,
     is_composition=True,
+    category='AI Agents',
     ports={
         f'{OPENCLAW_GATEWAY_PORT}/tcp': OPENCLAW_GATEWAY_PORT,
         f'{OPENCLAW_BRIDGE_PORT}/tcp': OPENCLAW_BRIDGE_PORT,

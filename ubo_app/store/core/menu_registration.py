@@ -119,6 +119,7 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
         background_color=action.background_color,
         priority=action.priority,
         category=None,
+        app_category=action.app_category,
     )
 
     return replace(
@@ -155,8 +156,8 @@ def deregister_regular_app(
 
     # Pop stack if we're inside the app's menu
     path = state.path
-    if path[:3] == ('main', 'apps', key):
-        n_pops = len(path) - 2
+    if path[:2] == ('main', 'apps') and key in path[2:]:
+        n_pops = len(path) - path.index(key)
         for _ in range(n_pops):
             result = pop_stack(state)
             if result is not None:
@@ -206,9 +207,17 @@ def update_service_status(
     if (
         path[:2] == ('main', 'apps')
         and len(path) > 2  # noqa: PLR2004
-        and path[2].startswith(f'{action.service_id}:')
+        and any(
+            element.startswith(f'{action.service_id}:')
+            for element in path[2:]
+        )
     ):
-        n_pops = len(path) - 2
+        n_pops = len(path) - next(
+            index
+            for index, element in enumerate(path)
+            if index >= 2  # noqa: PLR2004
+            and element.startswith(f'{action.service_id}:')
+        )
     if (
         path[:2] == ('main', 'settings')
         and len(path) > 3  # noqa: PLR2004

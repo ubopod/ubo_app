@@ -65,6 +65,7 @@ def init_service() -> None:  # noqa: C901, PLR0915
             icon='󰉋',
             action_id='file-system:open',
             key='file-system',
+            app_category='Files',
         ),
     )
 

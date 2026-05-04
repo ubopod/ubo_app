@@ -186,6 +186,7 @@ ENTRY = ContainerEntry(
     registry='ghcr.io',
     prepare=prepare_hermes,
     is_composition=True,
+    category='AI Agents',
     ports={
         f'{HERMES_GATEWAY_PORT}/tcp': HERMES_GATEWAY_PORT,
         f'{HERMES_DASHBOARD_PORT}/tcp': HERMES_DASHBOARD_PORT,

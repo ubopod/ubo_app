@@ -28,18 +28,31 @@ class EnvoyModule(Protocol):
 
     ENVOY_CONFIG_PATH: Path
     ENVOY_TEMPLATE_PATH: Path
+    ENTRY: DockerEntry
 
     async def prepare_envoy(self) -> bool:
         """Prepare Envoy configuration."""
         ...
 
 
+class DockerEntry(Protocol):
+    """Protocol for Docker entry fields used by these tests."""
+
+    label: str
+    category: str | None
+
+
 def _import_envoy() -> EnvoyModule:
     """Import the Envoy module as the Docker service would."""
-    if str(DOCKER_SERVICE_PATH) not in sys.path:
-        sys.path.insert(0, str(DOCKER_SERVICE_PATH))
+    docker_path = str(DOCKER_SERVICE_PATH)
+    if docker_path not in sys.path:
+        sys.path.insert(0, docker_path)
 
-    return cast('EnvoyModule', import_module('apps.envoy'))
+    try:
+        return cast('EnvoyModule', import_module('apps.envoy'))
+    finally:
+        if docker_path in sys.path:
+            sys.path.remove(docker_path)
 
 
 async def test_prepare_envoy_renders_combined_webui_and_grpc_routes(
@@ -73,3 +86,11 @@ def test_web_ui_grpc_client_uses_same_origin_grpc_path() -> None:
     )
     assert 'window.WEB_UI_CONFIG.grpcEnvoyListenPort' in client_source
     assert '`${window.location.origin}/grpc`' in client_source
+
+
+def test_envoy_entry_uses_networking_category_and_proxy_label() -> None:
+    """Envoy appears as a networking proxy in Apps."""
+    envoy = _import_envoy()
+
+    assert envoy.ENTRY.label == 'Envoy proxy'
+    assert envoy.ENTRY.category == 'Networking'

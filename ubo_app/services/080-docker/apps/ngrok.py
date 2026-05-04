@@ -17,6 +17,7 @@ ENTRY = ContainerEntry(
     network_mode='host',
     path='ngrok/ngrok:latest',
     registry='docker.io',
+    category='Remote Access',
     environment_vairables={
         'NGROK_AUTHTOKEN': lambda: ubo_input(
             resolver=lambda code, _: code,

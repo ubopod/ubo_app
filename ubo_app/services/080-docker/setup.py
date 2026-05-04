@@ -10,7 +10,7 @@ import math
 import re
 import uuid
 from io import BytesIO
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import docker
 import docker.errors
@@ -34,6 +34,7 @@ from redux import CombineReducerRegisterAction
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
 from ubo_app.logger import logger
+from ubo_app.store.core.constants import APPS_ROOT_CATEGORY
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterRegularAppAction,
@@ -94,6 +95,58 @@ from ubo_app.utils.server import send_command
 # Dynamic menu IDs for dumb UI architecture
 DOCKER_SETUP_MENU_ID = 'docker:setup'
 DOCKER_REGISTRIES_MENU_ID = 'docker:registries'
+DEFAULT_APP_CATEGORY = 'Other'
+DOCKER_APP_CATEGORY_ORDER = (
+    'Home Automation',
+    'Networking',
+    'AI Agents',
+    'AI Engines',
+    'Remote Access',
+    'Files',
+    'Container Management',
+    DEFAULT_APP_CATEGORY,
+)
+
+
+class DockerStatusMenuData(TypedDict):
+    """Static menu data for one Docker service status."""
+
+    title: str
+    heading: str
+    sub_heading: str
+    items: tuple[MenuItemData, ...]
+    placeholder: str
+
+
+def _normalize_category(category: str | None) -> str:
+    """Return a display-safe app category."""
+    return category.strip() if category and category.strip() else DEFAULT_APP_CATEGORY
+
+
+def _category_sort_key(category: str) -> tuple[int, str]:
+    """Sort known app categories first, then custom categories by label."""
+    try:
+        return (DOCKER_APP_CATEGORY_ORDER.index(category), category.lower())
+    except ValueError:
+        return (len(DOCKER_APP_CATEGORY_ORDER), category.lower())
+
+
+def _docker_app_category_options() -> list[str]:
+    """Return existing Docker app categories for import selection."""
+    categories = {
+        *(entry.category for entry in IMAGES.values() if entry.category),
+        *DOCKER_APP_CATEGORY_ORDER,
+    }
+    return sorted(
+        (_normalize_category(category) for category in categories),
+        key=_category_sort_key,
+    )
+
+
+def _resolve_category(selected: str | None, custom: str | None) -> str:
+    """Resolve the selected or user-defined category from import input."""
+    custom_category = custom.strip() if custom else ''
+    return _normalize_category(custom_category or selected)
 
 
 def _docker_path_matcher(path: tuple[str, ...]) -> str | None:
@@ -242,8 +295,7 @@ async def check_docker() -> None:
         store.dispatch(DockerSetStatusAction(status=DockerStatus.NOT_INSTALLED))
 
 
-# Menu data for each Docker status (dumb UI architecture)
-_DOCKER_STATUS_MENU_DATA: dict[DockerStatus, dict[str, object]] = {
+_DOCKER_STATUS_MENU_DATA: dict[DockerStatus, DockerStatusMenuData] = {
     DockerStatus.UNKNOWN: {
         'title': 'Setup Docker',
         'heading': 'Checking',
@@ -349,10 +401,10 @@ def update_docker_setup_dynamic_menu(status: DockerStatus) -> None:
         UpdateDynamicMenuAction(
             menu_id=DOCKER_SETUP_MENU_ID,
             title=str(menu_data['title']),
-            heading=str(menu_data.get('heading', '')),
-            sub_heading=str(menu_data.get('sub_heading', '')),
-            items=menu_data['items'],  # type: ignore[arg-type]
-            placeholder=str(menu_data['placeholder']),
+            heading=menu_data['heading'],
+            sub_heading=menu_data['sub_heading'],
+            items=menu_data['items'],
+            placeholder=menu_data['placeholder'],
         ),
     )
 
@@ -510,6 +562,22 @@ def input_docker_composition() -> None:
                                 required=True,
                             ),
                             InputFieldDescription(
+                                name='category',
+                                label='Category',
+                                type=InputFieldType.SELECT,
+                                description='Where this app appears in Apps',
+                                options=_docker_app_category_options(),
+                                default_value=DEFAULT_APP_CATEGORY,
+                                required=False,
+                            ),
+                            InputFieldDescription(
+                                name='new-category',
+                                label='New category',
+                                type=InputFieldType.TEXT,
+                                description='Optional category name to create',
+                                required=False,
+                            ),
+                            InputFieldDescription(
                                 name='yaml-config',
                                 label='Compose YAML',
                                 type=InputFieldType.LONG,
@@ -547,10 +615,18 @@ supported""",
                 ],
             )
 
+            if not result:
+                return
+
             data = dict(result.data)
 
-            if not result or not data['yaml-config'] or not data['label']:
+            if not data.get('yaml-config') or not data.get('label'):
                 return
+
+            data['category'] = _resolve_category(
+                selected=data.get('category'),
+                custom=data.get('new-category'),
+            )
 
             # Generate a user-friendly ID: slugified_label_uuid
             label_slug = _slugify(data['label'])
@@ -561,6 +637,7 @@ supported""",
                 file.write(data['yaml-config'])
             with (composition_path / 'metadata.json').open('w') as file:
                 data.pop('yaml-config')
+                data.pop('new-category', None)
                 file.write(json.dumps(data))
 
             content_upload_id = result.data.get('content_upload_id')
@@ -593,6 +670,7 @@ supported""",
                 path=str(composition_path),
                 registry='docker.io',
                 is_composition=True,
+                category=data['category'],
             )
 
             store.dispatch(
@@ -730,6 +808,7 @@ def _register_composition_entry(image_id: str) -> None:
             icon=image_entry.icon or '󰣆',
             action_id=action_id,
             key=image_id,
+            app_category=image_entry.category,
         ),
     )
     setup_docker_image_dynamic_menu(image_id)
@@ -750,6 +829,7 @@ def _register_container_entry(image_id: str) -> None:
             icon=IMAGES[image_id].icon,
             action_id=action_id,
             key=image_id,
+            app_category=IMAGES[image_id].category,
         ),
     )
     setup_docker_image_dynamic_menu(image_id)
@@ -785,6 +865,7 @@ def _load_images() -> None:
                 path=str(item),
                 registry='docker.io',
                 is_composition=True,
+                category=metadata.get('category', DEFAULT_APP_CATEGORY),
             )
         except Exception:
             logger.exception(
@@ -816,7 +897,7 @@ def _load_images() -> None:
 async def init_service() -> Subscriptions:
     """Initialize the service."""
     # Register apps menu title
-    unregister_title = register_apps_menu_title('󰀻Docker Apps')
+    unregister_title = register_apps_menu_title('Apps')
 
     # Register path matcher for Docker navigation (apps and settings)
     unregister_path_matcher = register_path_menu_matcher(
@@ -835,11 +916,12 @@ async def init_service() -> Subscriptions:
     store.dispatch(
         RegisterRegularAppAction(
             priority=1,
-            label='Import YAML file',
+            label='Add New App',
             icon='󰋺',
             background_color=WARNING_COLOR,
             action_id='docker:import_composition',
             key='_import',
+            app_category=APPS_ROOT_CATEGORY,
         ),
         RegisterSettingAppAction(
             priority=1,

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 
 from ubo_app.constants import CONFIG_PATH
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Awaitable, Callable
 
     from ubo_app.store.core.types import MenuItemData
 
@@ -36,8 +36,8 @@ class ContainerEntry(Immutable):
         dict[
             str,
             str
-            | Coroutine[Any, Any, str]
-            | Callable[[], str | Coroutine[Any, Any, str]],
+            | Awaitable[str]
+            | Callable[[], str | Awaitable[str]],
         ]
         | None
     ) = None
@@ -47,10 +47,11 @@ class ContainerEntry(Immutable):
     command: (
         str
         | list[str]
-        | Callable[[], str | list[str] | Coroutine[Any, Any, str | list[str]]]
+        | Callable[[], str | list[str] | Awaitable[str | list[str]]]
         | None
     ) = None
-    prepare: Callable[[], Coroutine[Any, Any, bool] | bool] | None = None
+    category: str | None = None
+    prepare: Callable[[], Awaitable[bool] | bool] | None = None
     is_composition: bool = False
     secret_keys: tuple[str, ...] = ()
     menu_actions: (

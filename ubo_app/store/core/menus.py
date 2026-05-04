@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from typing import TYPE_CHECKING
 
@@ -9,6 +10,7 @@ from redux import AutorunOptions
 
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import (
+    APPS_ROOT_CATEGORY,
     MENU_NAVIGATE_PREFIX,
     MENU_SELECT_PREFIX,
     NOTIFICATION_DISPLAY_PREFIX,
@@ -39,6 +41,56 @@ MAIN_MENU_ID = 'main:menu'
 APPS_MENU_ID = 'apps:list'
 SETTINGS_MENU_ID = 'settings:categories'
 POWER_MENU_ID = 'power:options'
+
+DEFAULT_APP_CATEGORY = 'Other'
+APP_CATEGORY_MENU_PREFIX = 'apps:category:'
+APP_CATEGORY_NAVIGATE_PREFIX = f'{MENU_NAVIGATE_PREFIX}apps:category:'
+APP_CATEGORY_PATH_LENGTH = 3
+APP_CATEGORY_ORDER = (
+    'Home Automation',
+    'Networking',
+    'AI Agents',
+    'AI Engines',
+    'Remote Access',
+    'Files',
+    'Container Management',
+    DEFAULT_APP_CATEGORY,
+)
+APP_CATEGORY_ICONS = {
+    'Home Automation': '',
+    'Networking': '󰛳',
+    'AI Agents': '󰚩',
+    'AI Engines': '󰇺',
+    'Remote Access': '',
+    'Files': '󰉋',
+    'Container Management': '󰡨',
+    DEFAULT_APP_CATEGORY: '󰀻',
+}
+_app_category_menu_ids: set[str] = set()
+
+
+def normalize_app_category(category: str | None) -> str:
+    """Return a display-safe Apps category name."""
+    return category.strip() if category and category.strip() else DEFAULT_APP_CATEGORY
+
+
+def slugify_app_category(category: str | None) -> str:
+    """Return the menu-key slug for an Apps category."""
+    slug = re.sub(r'[^a-z0-9]+', '_', normalize_app_category(category).lower())
+    return re.sub(r'_+', '_', slug).strip('_') or 'other'
+
+
+def _app_category_sort_key(category: str) -> tuple[int, str]:
+    """Sort known categories first, then user-defined categories by label."""
+    try:
+        return (APP_CATEGORY_ORDER.index(category), category.lower())
+    except ValueError:
+        return (len(APP_CATEGORY_ORDER), category.lower())
+
+
+def _app_category_icon(category: str) -> str:
+    """Return a display icon for an Apps category."""
+    return APP_CATEGORY_ICONS.get(category, '󰀻')
 
 
 @store.autorun(
@@ -267,11 +319,19 @@ def _register_navigation_action_handlers() -> None:
     def _navigate_to_power() -> None:
         store.dispatch(StackPushMenuAction(menu_key='power'))
 
+    def _navigate_to_app_category(action_id: str) -> None:
+        store.dispatch(
+            StackPushMenuAction(
+                menu_key=action_id.removeprefix(APP_CATEGORY_NAVIGATE_PREFIX),
+            ),
+        )
+
     register_action(f'{MENU_NAVIGATE_PREFIX}apps', _navigate_to_apps)
     register_action(f'{MENU_NAVIGATE_PREFIX}settings', _navigate_to_settings)
     register_action(f'{MENU_NAVIGATE_PREFIX}main', _navigate_to_main)
     register_action(f'{MENU_NAVIGATE_PREFIX}notifications', _navigate_to_notifications)
     register_action(f'{MENU_NAVIGATE_PREFIX}power', _navigate_to_power)
+    register_action(f'{APP_CATEGORY_NAVIGATE_PREFIX}*', _navigate_to_app_category)
 
 
 def _make_category_handler(cat: SettingsCategory) -> Callable[[], None]:
@@ -344,6 +404,8 @@ def _register_core_path_matchers() -> None:
         )
 
     def _core_path_matcher(path: tuple[str, ...]) -> str | None:
+        if len(path) == APP_CATEGORY_PATH_LENGTH and path[:2] == ('main', 'apps'):
+            return f'{APP_CATEGORY_MENU_PREFIX}{path[2]}'
         return core_path_mappings.get(path)
 
     # Register with high priority so core paths are matched first
@@ -389,7 +451,7 @@ def setup_core_dynamic_menus() -> None:
     _setup_registered_apps_autoruns()
 
 
-def _setup_registered_apps_autoruns() -> None:
+def _setup_registered_apps_autoruns() -> None:  # noqa: C901, PLR0915
     """Set up autoruns that keep dynamic menus in sync with registered_apps.
 
     Watches `state.main.registered_apps` and auto-populates the apps menu
@@ -426,13 +488,31 @@ def _setup_registered_apps_autoruns() -> None:
             if isinstance(entry, RegisteredAppEntry) and entry.category is None
         ]
 
-        # Sort by priority (descending) then key
         def sort_key(pair: tuple[str, RegisteredAppEntry]) -> tuple[int, str]:
             return (-(priorities.get(pair[0], 0) or 0), pair[0])
 
-        app_entries.sort(key=sort_key)
+        app_entries_by_category_slug: dict[
+            str,
+            list[tuple[str, RegisteredAppEntry]],
+        ] = {}
+        category_labels_by_slug: dict[str, str] = {}
+        for key, entry in app_entries:
+            if entry.app_category == APPS_ROOT_CATEGORY:
+                continue
+            category_label = normalize_app_category(entry.app_category)
+            category_slug = slugify_app_category(category_label)
+            category_labels_by_slug.setdefault(category_slug, category_label)
+            app_entries_by_category_slug.setdefault(category_slug, []).append(
+                (key, entry),
+            )
 
-        items = tuple(
+        root_entries = [
+            (key, entry)
+            for key, entry in app_entries
+            if entry.app_category == APPS_ROOT_CATEGORY
+        ]
+        root_entries.sort(key=sort_key)
+        category_items: list[MenuItemData] = [
             MenuItemData(
                 key=key,
                 label=entry.label,
@@ -440,17 +520,67 @@ def _setup_registered_apps_autoruns() -> None:
                 action_id=entry.action_id or f'{MENU_SELECT_PREFIX}{key}',
                 background_color=entry.background_color,
             )
-            for key, entry in app_entries
-        )
+            for key, entry in root_entries
+        ]
+        current_category_menu_ids: set[str] = set()
+        for category_slug, entries in sorted(
+            app_entries_by_category_slug.items(),
+            key=lambda item: _app_category_sort_key(category_labels_by_slug[item[0]]),
+        ):
+            entries.sort(key=sort_key)
+            category_label = category_labels_by_slug[category_slug]
+            category_menu_id = f'{APP_CATEGORY_MENU_PREFIX}{category_slug}'
+
+            app_items = tuple(
+                MenuItemData(
+                    key=key,
+                    label=entry.label,
+                    icon=entry.icon,
+                    action_id=entry.action_id or f'{MENU_SELECT_PREFIX}{key}',
+                    background_color=entry.background_color,
+                )
+                for key, entry in entries
+            )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=category_menu_id,
+                    title=category_label,
+                    items=app_items,
+                    placeholder='No apps in this category',
+                ),
+            )
+            current_category_menu_ids.add(category_menu_id)
+
+            action_id = f'{APP_CATEGORY_NAVIGATE_PREFIX}{category_slug}'
+            category_items.append(
+                MenuItemData(
+                    key=category_slug,
+                    label=category_label,
+                    icon=_app_category_icon(category_label),
+                    action_id=action_id,
+                ),
+            )
 
         store.dispatch(
             UpdateDynamicMenuAction(
                 menu_id=APPS_MENU_ID,
                 title=get_apps_menu_title(),
-                items=items,
+                items=tuple(category_items),
                 placeholder='No apps',
             ),
         )
+
+        for stale_menu_id in _app_category_menu_ids - current_category_menu_ids:
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=stale_menu_id,
+                    items=(),
+                    placeholder='No apps in this category',
+                ),
+            )
+        _app_category_menu_ids.clear()
+        _app_category_menu_ids.update(current_category_menu_ids)
 
     # Cache of last-dispatched items per settings category so we only
     # dispatch UpdateDynamicMenuAction for categories that actually changed.

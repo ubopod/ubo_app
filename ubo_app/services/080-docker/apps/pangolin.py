@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 PANGOLIN_COMPOSITION_ID = 'pangolin'
 PANGOLIN_LABEL = 'Pangolin'
-PANGOLIN_ICON = '󱙱'
+PANGOLIN_ICON = ''
 PANGOLIN_CLOUD_ENDPOINT = 'https://app.pangolin.net'
 PANGOLIN_OTHER_ENDPOINT = 'Other'
 PANGOLIN_SECRET_KEYS = (
@@ -222,6 +222,7 @@ ENTRY = ContainerEntry(
     registry='docker.io',
     prepare=prepare_pangolin,
     is_composition=True,
+    category='Remote Access',
     secret_keys=PANGOLIN_SECRET_KEYS,
     menu_actions=_menu_actions,
 )
