@@ -102,3 +102,6 @@ ubo_app/_version.py
 # Claude Code
 .claude/
 CLAUDE.md
+
+# Pipecat
+whisker.bin

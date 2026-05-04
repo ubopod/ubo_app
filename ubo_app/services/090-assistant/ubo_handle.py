@@ -49,6 +49,14 @@ def binary_env_provider() -> dict[str, str]:
             'UBO_ASSISTANT_LOG_PATH',
             str(Path.cwd() / 'ubo-assistant.log'),
         ),
+        'UBO_ASSISTANT_WHISKER_ENABLED': os.environ.get(
+            'UBO_ASSISTANT_WHISKER_ENABLED',
+            '',
+        ),
+        'UBO_ASSISTANT_WHISKER_FILE': os.environ.get(
+            'UBO_ASSISTANT_WHISKER_FILE',
+            '',
+        ),
         'GOOGLE_API_KEY_SECRET_ID': GOOGLE_API_KEY_SECRET_ID,
         'GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID': (
             GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID

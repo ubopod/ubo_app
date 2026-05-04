@@ -29,6 +29,7 @@ from ubo_bindings.client import UboRPCClient
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.logging import setup_file_logging
+from ubo_assistant.pipecat_debug import attach_whisker_observer
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
@@ -240,6 +241,7 @@ class Assistant:
             params=PipelineParams(audio_in_sample_rate=16000),
             cancel_on_idle_timeout=False,
         )
+        attach_whisker_observer(task)
         runner = PipelineRunner(handle_sigint=True)
 
         await runner.run(task)

@@ -60,3 +60,19 @@ def test_assistant_subprocess_log_env_respects_overrides(
 
     assert env['UBO_ASSISTANT_LOG_PATH'] == str(log_path)
     assert env['UBO_ASSISTANT_LOG_LEVEL'] == 'DEBUG'
+
+
+def test_assistant_subprocess_whisker_env_respects_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Explicit Whisker debug env values pass through to the subprocess."""
+    whisker_file = tmp_path / 'whisker.bin'
+    monkeypatch.setenv('UBO_ASSISTANT_WHISKER_ENABLED', 'true')
+    monkeypatch.setenv('UBO_ASSISTANT_WHISKER_FILE', str(whisker_file))
+    ubo_handle = _load_ubo_handle(monkeypatch)
+
+    env = cast('dict[str, str]', ubo_handle.binary_env_provider())
+
+    assert env['UBO_ASSISTANT_WHISKER_ENABLED'] == 'true'
+    assert env['UBO_ASSISTANT_WHISKER_FILE'] == str(whisker_file)
