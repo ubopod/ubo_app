@@ -2,6 +2,9 @@
 
 ## Upcoming
 
+- feat(assistant): attach trigger source metadata to `AssistantStartListeningAction` and `AssistantStopListeningAction` (wake phrase, keypad, IR, desktop, gRPC); per-trigger policy table on `AssistantState.policies` with sensible defaults selectable by source
+- feat(assistant): pipecat pipeline now dispatches stop on long silence (policy-driven `UboPolicyAwareUserTurnStopStrategy`, subclassing pipecat's built-in `SpeechTimeoutUserTurnStopStrategy`) and on end-of-turn phrase match (`EndOfTurnPhraseDetector`), both driven by the active policy. Default conversation wake phrase `"let's have a conversation"` uses end-of-turn phrases (`i'm done`, `that's it`, …); short wake phrase uses 2 s VAD silence. Configurable via `UBO_ASSISTANT_CONVERSATION_WAKE_WORD`, `UBO_ASSISTANT_CONVERSATION_END_PHRASES` (pipe-separated), `UBO_ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS`
+
 ## Version 1.7.0
 
 - feat(audio): add audio sample recorder and player, it can be used to quickly test audio input/output devices

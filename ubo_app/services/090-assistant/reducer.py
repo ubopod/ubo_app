@@ -38,6 +38,8 @@ from ubo_app.store.services.assistant import (
     AssistantToggleListeningAction,
     AssistantToggleMcpServerAction,
     AssistantUpdateProvidersAction,
+    UserStopReason,
+    resolve_policy,
 )
 from ubo_app.store.services.audio import (
     AudioAction,
@@ -153,22 +155,50 @@ def reducer(
                         ),
                     ],
                 )
+            if action.source is None:
+                logger.warning(
+                    'AssistantStartListeningAction dispatched without a source; '
+                    'no per-trigger policy will apply',
+                )
             return CompleteReducerResult(
-                state=state(is_listening=True),
+                state=state(
+                    is_listening=True,
+                    active_source=action.source,
+                    active_policy=resolve_policy(state.policies, action.source),
+                ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
             )
 
         case AssistantStopListeningAction():
+            if action.reason is None:
+                logger.warning(
+                    'AssistantStopListeningAction dispatched without a reason',
+                )
             return CompleteReducerResult(
-                state=state(is_listening=False),
+                state=state(
+                    is_listening=False,
+                    active_source=None,
+                    active_policy=None,
+                    last_stop_reason=action.reason,
+                ),
                 actions=[RgbRingBlankAction()],
             )
 
         case AssistantToggleListeningAction():
             if state.is_listening:
-                # Currently listening, stop it
+                # Currently listening, stop it.
+                stop_reason = (
+                    UserStopReason(source=action.source)
+                    if action.source is not None
+                    else None
+                )
                 return CompleteReducerResult(
-                    state=state(is_listening=False),
+                    state=state(
+                        is_listening=False,
+                        active_source=None,
+                        active_policy=None,
+                        last_stop_reason=stop_reason,
+                    ),
                     actions=[RgbRingBlankAction()],
                 )
             # Not listening, start it (with mute check)
@@ -189,7 +219,11 @@ def reducer(
                     ],
                 )
             return CompleteReducerResult(
-                state=state(is_listening=True),
+                state=state(
+                    is_listening=True,
+                    active_source=action.source,
+                    active_policy=resolve_policy(state.policies, action.source),
+                ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
             )
 

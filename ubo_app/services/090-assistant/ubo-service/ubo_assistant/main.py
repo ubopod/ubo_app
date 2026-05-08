@@ -19,17 +19,24 @@ from pipecat.processors.aggregators.llm_context import (
 )
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
 )
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.consumer_processor import ConsumerProcessor
 from pipecat.processors.producer_processor import ProducerProcessor
 from pipecat.transports.base_transport import TransportParams
+from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
+from ubo_assistant.end_of_turn import EndOfTurnPhraseDetector
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.logging import setup_file_logging
 from ubo_assistant.pipecat_debug import attach_whisker_observer
+from ubo_assistant.policy_watcher import PolicyWatcher
+from ubo_assistant.silence_user_turn_stop import (
+    UboPolicyAwareUserTurnStopStrategy,
+)
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
@@ -45,7 +52,7 @@ class Assistant:
     def __del__(self) -> None:
         self.client.channel.close()
 
-    async def run(self) -> None:
+    async def run(self) -> None:  # noqa: PLR0915
         vad_processor = VADProcessor(
             vad_analyzer=SileroVADAnalyzer(sample_rate=16000),
         )
@@ -140,6 +147,16 @@ class Assistant:
             selector='state.assistant.selected_stt',
         )
 
+        policy_watcher = PolicyWatcher(self.client)
+        end_of_turn_detector = EndOfTurnPhraseDetector(
+            client=self.client,
+            policy_watcher=policy_watcher,
+        )
+        silence_user_turn_stop_strategy = UboPolicyAwareUserTurnStopStrategy(
+            client=self.client,
+            policy_watcher=policy_watcher,
+        )
+
         ubo_llm_service = UboLLMService(
             client=self.client,
             config=LLMServiceConfig(
@@ -162,7 +179,14 @@ class Assistant:
 
         tools = ToolsSchema(standard_tools=[])
         context = LLMContext(messages, tools)
-        context_aggregator = LLMContextAggregatorPair(context)
+        context_aggregator = LLMContextAggregatorPair(
+            context,
+            user_params=LLMUserAggregatorParams(
+                user_turn_strategies=UserTurnStrategies(
+                    stop=[silence_user_turn_stop_strategy],
+                ),
+            ),
+        )
         user_aggregator = context_aggregator.user()
         assistant_aggregator = context_aggregator.assistant()
 
@@ -221,6 +245,7 @@ class Assistant:
                     [
                         vad_processor,
                         ubo_stt_service,
+                        end_of_turn_detector,
                         user_aggregator,
                         ubo_llm_service,
                         image_producer,

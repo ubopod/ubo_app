@@ -11,6 +11,10 @@ from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
 from ubo_app.constants.assistant import (
+    ASSISTANT_CONVERSATION_END_PHRASES,
+    ASSISTANT_CONVERSATION_WAKE_WORD,
+    ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
+    ASSISTANT_WAKE_WORD,
     DEFAULT_LLM_CEREBRAS_MODEL,
     DEFAULT_LLM_GENERIC_MODEL,
     DEFAULT_LLM_GOOGLE_MODEL,
@@ -19,6 +23,7 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OLLAMA_ONPREM_MODEL,
     DEFAULT_LLM_OPENAI_MODEL,
 )
+from ubo_app.store.services.keypad import Key
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
@@ -134,6 +139,208 @@ class EnabledMcpServersWithMetadata(Immutable):
     items: list[McpServerMetadata] = field(default_factory=list)
 
 
+class AssistantTriggerSource(Immutable):
+    """Base class identifying how the assistant was asked to start listening."""
+
+
+class WakePhraseTriggerSource(AssistantTriggerSource):
+    """Listening was triggered by a recognised wake phrase."""
+
+    phrase: str
+    detector: str = 'vosk'
+
+
+class KeypadTriggerSource(AssistantTriggerSource):
+    """Listening was triggered by a physical keypad key."""
+
+    key: Key
+    mode: str = 'press'  # 'press' (depth=1 home) or 'hold' (in-menu hold)
+
+
+class InfraredTriggerSource(AssistantTriggerSource):
+    """Listening was triggered by an infrared remote code."""
+
+    protocol: str
+    scancode: str
+    label: str | None = None
+
+
+class GrpcTriggerSource(AssistantTriggerSource):
+    """Listening was triggered programmatically over gRPC."""
+
+
+class DesktopTriggerSource(AssistantTriggerSource):
+    """Listening was triggered by the desktop GUI client (e.g. V key)."""
+
+
+AssistantTriggerSourceUnion: TypeAlias = (
+    WakePhraseTriggerSource
+    | KeypadTriggerSource
+    | InfraredTriggerSource
+    | GrpcTriggerSource
+    | DesktopTriggerSource
+)
+
+
+class AssistantStopReason(Immutable):
+    """Base class explaining why a listening session is ending."""
+
+
+class UserStopReason(AssistantStopReason):
+    """Stop initiated by the user via the same family as the start trigger."""
+
+    source: AssistantTriggerSourceUnion
+
+
+class SilenceTimeoutStopReason(AssistantStopReason):
+    """Stop dispatched by the pipeline after a configured silence window."""
+
+    silence_seconds: float
+
+
+class EndOfTurnPhraseStopReason(AssistantStopReason):
+    """Stop dispatched by the pipeline after detecting an end-of-turn phrase."""
+
+    phrase: str
+    matched_text: str
+
+
+class ExternalStopReason(AssistantStopReason):
+    """Stop initiated by something outside the user/pipeline taxonomy."""
+
+
+AssistantStopReasonUnion: TypeAlias = (
+    UserStopReason
+    | SilenceTimeoutStopReason
+    | EndOfTurnPhraseStopReason
+    | ExternalStopReason
+)
+
+
+class AssistantTriggerPolicyMatcher(Immutable):
+    """Base class for matchers that select a policy for a trigger source."""
+
+
+class WakePhraseMatcher(AssistantTriggerPolicyMatcher):
+    """Match a wake-phrase trigger by phrase string (case-insensitive equality)."""
+
+    phrase: str
+
+
+class KeypadMatcher(AssistantTriggerPolicyMatcher):
+    """Match a keypad trigger optionally narrowed by key."""
+
+    key: Key | None = None
+
+
+class InfraredMatcher(AssistantTriggerPolicyMatcher):
+    """Match an infrared trigger optionally narrowed by protocol/scancode."""
+
+    protocol: str | None = None
+    scancode: str | None = None
+
+
+class AnySourceMatcher(AssistantTriggerPolicyMatcher):
+    """Fallback matcher — always matches. Use last in the policy list."""
+
+
+AssistantTriggerPolicyMatcherUnion: TypeAlias = (
+    WakePhraseMatcher | KeypadMatcher | InfraredMatcher | AnySourceMatcher
+)
+
+
+class AssistantTriggerPolicy(Immutable):
+    """Controls how the pipeline decides the user has stopped speaking."""
+
+    silence_timeout_seconds: float | None = None
+    end_of_turn_phrases: tuple[str, ...] = ()
+    requires_phrase_for_stop: bool = False
+
+
+class AssistantTriggerPolicyEntry(Immutable):
+    """A (matcher, policy) pair in the per-trigger policy table."""
+
+    matcher: AssistantTriggerPolicyMatcherUnion
+    policy: AssistantTriggerPolicy
+
+
+def _default_policies() -> tuple[AssistantTriggerPolicyEntry, ...]:
+    """Build the default policy table.
+
+    Resolved at runtime so wake-phrase env-var overrides are picked up.
+    Order is most-specific-first; ``AnySourceMatcher`` must remain last.
+    """
+    return (
+        AssistantTriggerPolicyEntry(
+            matcher=WakePhraseMatcher(phrase=ASSISTANT_CONVERSATION_WAKE_WORD),
+            policy=AssistantTriggerPolicy(
+                end_of_turn_phrases=ASSISTANT_CONVERSATION_END_PHRASES,
+                requires_phrase_for_stop=True,
+            ),
+        ),
+        AssistantTriggerPolicyEntry(
+            matcher=WakePhraseMatcher(phrase=ASSISTANT_WAKE_WORD),
+            policy=AssistantTriggerPolicy(
+                silence_timeout_seconds=ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
+            ),
+        ),
+        AssistantTriggerPolicyEntry(
+            matcher=KeypadMatcher(),
+            policy=AssistantTriggerPolicy(),
+        ),
+        AssistantTriggerPolicyEntry(
+            matcher=InfraredMatcher(),
+            policy=AssistantTriggerPolicy(),
+        ),
+        AssistantTriggerPolicyEntry(
+            matcher=AnySourceMatcher(),
+            policy=AssistantTriggerPolicy(),
+        ),
+    )
+
+
+def _matcher_matches(
+    matcher: AssistantTriggerPolicyMatcherUnion,
+    source: AssistantTriggerSourceUnion,
+) -> bool:
+    """Return True if *matcher* applies to *source*."""
+    if isinstance(matcher, AnySourceMatcher):
+        return True
+    if isinstance(matcher, WakePhraseMatcher):
+        return (
+            isinstance(source, WakePhraseTriggerSource)
+            and matcher.phrase.casefold() == source.phrase.casefold()
+        )
+    if isinstance(matcher, KeypadMatcher):
+        if not isinstance(source, KeypadTriggerSource):
+            return False
+        return matcher.key is None or matcher.key == source.key
+    if isinstance(matcher, InfraredMatcher):
+        if not isinstance(source, InfraredTriggerSource):
+            return False
+        if matcher.protocol is not None and matcher.protocol != source.protocol:
+            return False
+        return matcher.scancode is None or matcher.scancode == source.scancode
+    return False
+
+
+def resolve_policy(
+    policies: tuple[AssistantTriggerPolicyEntry, ...],
+    source: AssistantTriggerSourceUnion | None,
+) -> AssistantTriggerPolicy | None:
+    """Walk *policies* and return the first matching policy for *source*.
+
+    Returns ``None`` when *source* is ``None`` (legacy callers) or when no
+    matcher matches.
+    """
+    if source is None:
+        return None
+    for entry in policies:
+        if _matcher_matches(entry.matcher, source):
+            return entry.policy
+    return None
+
+
 class AssistantAction(BaseAction):
     """Base class for assistant actions."""
 
@@ -225,15 +432,34 @@ class AssistantReportAction(AssistantAction):
 
 
 class AssistantStartListeningAction(AssistantAction):
-    """Action to start listening for the assistant."""
+    """Action to start listening for the assistant.
+
+    The optional ``source`` field carries structured metadata about *what*
+    triggered the request (wake phrase, keypad button, infrared remote, …).
+    Pipeline behaviour is selected per-source via ``AssistantState.policies``.
+    """
+
+    source: AssistantTriggerSourceUnion | None = None
 
 
 class AssistantStopListeningAction(AssistantAction):
-    """Action to stop listening for the assistant."""
+    """Action to stop listening for the assistant.
+
+    The optional ``reason`` field describes why listening is ending — either
+    a user-initiated stop mirroring the start trigger, or a pipeline-internal
+    stop (silence timeout, end-of-turn phrase).
+    """
+
+    reason: AssistantStopReasonUnion | None = None
 
 
 class AssistantToggleListeningAction(AssistantAction):
-    """Action to toggle listening state for the assistant."""
+    """Action to toggle listening state for the assistant.
+
+    Source is forwarded to whichever direction the toggle resolves to.
+    """
+
+    source: AssistantTriggerSourceUnion | None = None
 
 
 class AssistantUpdateProvidersAction(AssistantAction):
@@ -369,3 +595,10 @@ class AssistantState(Immutable):
     )
     # Setup status for all provider engines - source of truth for UI
     provider_setup_status: dict[str, bool] = field(default_factory=dict)
+    # Trigger source / policy carried during the active listening session.
+    active_source: AssistantTriggerSourceUnion | None = None
+    active_policy: AssistantTriggerPolicy | None = None
+    last_stop_reason: AssistantStopReasonUnion | None = None
+    policies: tuple[AssistantTriggerPolicyEntry, ...] = field(
+        default_factory=_default_policies,
+    )

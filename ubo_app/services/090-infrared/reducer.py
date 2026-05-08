@@ -1,6 +1,9 @@
 """Reducer for infrared actions."""
 
+from __future__ import annotations
+
 from dataclasses import replace
+from typing import TYPE_CHECKING
 
 from redux import (
     CompleteReducerResult,
@@ -14,6 +17,8 @@ from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantStopListeningAction,
     AssistantToggleListeningAction,
+    InfraredTriggerSource,
+    UserStopReason,
 )
 from ubo_app.store.services.infrared import (
     InfraredAction,
@@ -38,6 +43,15 @@ from ubo_app.store.services.keypad import (
     KeypadKeyReleaseAction,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingBlinkAction
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+AssistantListeningAction = (
+    AssistantStartListeningAction
+    | AssistantStopListeningAction
+    | AssistantToggleListeningAction
+)
 
 REGISTRATION_REPEAT_COUNT = 5
 
@@ -69,11 +83,46 @@ INFRARED_CODES_TO_KEY: dict[tuple[str, str], tuple[KeyActionType, Key]] = {
     for key, (protocol, scancode) in KEY_TO_INFRARED_CODES[action_type].items()
 }
 
-# Define mappings for IR codes that should trigger Assistant actions
-ASSISTANT_IR_CODES = {
-    ('necx', '0xbf04'): AssistantStartListeningAction,
-    ('necx', '0xbf06'): AssistantStopListeningAction,
-    ('nec', '0xa01b'): AssistantToggleListeningAction,
+
+def _infrared_assistant_start(
+    protocol: str,
+    scancode: str,
+) -> AssistantListeningAction:
+    return AssistantStartListeningAction(
+        source=InfraredTriggerSource(protocol=protocol, scancode=scancode),
+    )
+
+
+def _infrared_assistant_stop(
+    protocol: str,
+    scancode: str,
+) -> AssistantListeningAction:
+    return AssistantStopListeningAction(
+        reason=UserStopReason(
+            source=InfraredTriggerSource(protocol=protocol, scancode=scancode),
+        ),
+    )
+
+
+def _infrared_assistant_toggle(
+    protocol: str,
+    scancode: str,
+) -> AssistantListeningAction:
+    return AssistantToggleListeningAction(
+        source=InfraredTriggerSource(protocol=protocol, scancode=scancode),
+    )
+
+
+# IR codes that should trigger Assistant listening actions. Each entry is a
+# factory that builds the action with the originating IR code as the trigger
+# source so per-source policies can dispatch on it.
+ASSISTANT_IR_CODES: dict[
+    tuple[str, str],
+    'Callable[[str, str], AssistantListeningAction]',
+] = {
+    ('necx', '0xbf04'): _infrared_assistant_start,
+    ('necx', '0xbf06'): _infrared_assistant_stop,
+    ('nec', '0xa01b'): _infrared_assistant_toggle,
 }
 
 
@@ -86,7 +135,10 @@ def reducer(
     | KeypadKeyPressAction
     | KeypadKeyReleaseAction
     | RgbRingBlinkAction
-    | RgbRingBlankAction,
+    | RgbRingBlankAction
+    | AssistantStartListeningAction
+    | AssistantStopListeningAction
+    | AssistantToggleListeningAction,
     InfraredSendCodeEvent
     | InfraredDeviceRegistrationStartedEvent
     | InfraredDeviceRegistrationCompleteEvent,
@@ -334,16 +386,15 @@ def reducer(
             )
             ir_code = (action.protocol, action.scancode)
             if ir_code in ASSISTANT_IR_CODES:
-                action_class = ASSISTANT_IR_CODES[ir_code]
+                factory = ASSISTANT_IR_CODES[ir_code]
+                triggered_action = factory(action.protocol, action.scancode)
                 logger.info(
                     'Triggered Assistant action: %s',
-                    action_class,
+                    type(triggered_action).__name__,
                 )
                 return CompleteReducerResult(
                     state=state,
-                    actions=[
-                        action_class(),
-                    ],
+                    actions=[triggered_action],
                 )
             if ir_code not in INFRARED_CODES_TO_KEY:
                 return state

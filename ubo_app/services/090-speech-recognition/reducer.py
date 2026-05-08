@@ -22,6 +22,7 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
+    WakePhraseTriggerSource,
 )
 from ubo_app.store.services.audio import (
     AudioChangeVolumeAction,
@@ -311,7 +312,11 @@ def reducer(
             ):
                 return CompleteReducerResult(
                     state=replace(state, status=SpeechRecognitionStatus.IDLE),
-                    actions=[AssistantStartListeningAction()],
+                    actions=[
+                        AssistantStartListeningAction(
+                            source=WakePhraseTriggerSource(phrase=wake_word),
+                        ),
+                    ],
                 )
             return CompleteReducerResult(
                 state=replace(state, status=SpeechRecognitionStatus.IDLE),

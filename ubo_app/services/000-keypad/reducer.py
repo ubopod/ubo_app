@@ -33,6 +33,8 @@ from ubo_app.store.services.assistant import (
     AssistantAction,
     AssistantStartListeningAction,
     AssistantStopListeningAction,
+    KeypadTriggerSource,
+    UserStopReason,
 )
 from ubo_app.store.services.audio import (
     AudioChangeVolumeAction,
@@ -218,7 +220,9 @@ def reducer(
                 state=state,
                 actions=[
                     DisplayUpdateActivityAction(),
-                    AssistantStartListeningAction(),
+                    AssistantStartListeningAction(
+                        source=KeypadTriggerSource(key=Key.HOME, mode='press'),
+                    ),
                 ],
             )
         case KeypadKeyReleaseAction(pressed_keys=(), key=Key.HOME) if (
@@ -227,7 +231,14 @@ def reducer(
             return CompleteReducerResult(
                 state=state,
                 actions=[
-                    AssistantStopListeningAction(),
+                    AssistantStopListeningAction(
+                        reason=UserStopReason(
+                            source=KeypadTriggerSource(
+                                key=Key.HOME,
+                                mode='press',
+                            ),
+                        ),
+                    ),
                 ],
             )
         case KeypadKeyPressAction(key=Key.L1) if (
@@ -397,13 +408,26 @@ def reducer(
         ):
             return CompleteReducerResult(
                 state=state(is_consumed=True),
-                actions=[AssistantStartListeningAction()],
+                actions=[
+                    AssistantStartListeningAction(
+                        source=KeypadTriggerSource(key=Key.HOME, mode='hold'),
+                    ),
+                ],
             )
 
         case KeypadKeyUnholdAction(key=Key.HOME):
             return CompleteReducerResult(
                 state=state(is_consumed=True),
-                actions=[AssistantStopListeningAction()],
+                actions=[
+                    AssistantStopListeningAction(
+                        reason=UserStopReason(
+                            source=KeypadTriggerSource(
+                                key=Key.HOME,
+                                mode='hold',
+                            ),
+                        ),
+                    ),
+                ],
             )
 
         case KeypadKeyReleaseAction() if state.is_consumed:
@@ -417,7 +441,17 @@ def reducer(
         case KeypadKeyReleaseAction(pressed_keys=(), key=Key.HOME):
             return CompleteReducerResult(
                 state=state,
-                actions=[AssistantStopListeningAction(), MenuGoHomeAction()],
+                actions=[
+                    AssistantStopListeningAction(
+                        reason=UserStopReason(
+                            source=KeypadTriggerSource(
+                                key=Key.HOME,
+                                mode='press',
+                            ),
+                        ),
+                    ),
+                    MenuGoHomeAction(),
+                ],
             )
 
         case _:

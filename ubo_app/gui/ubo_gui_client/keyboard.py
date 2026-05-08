@@ -127,6 +127,10 @@ def setup_keyboard(  # noqa: C901, PLR0915
         Action,
         AssistantStartListeningAction,
         AssistantStopListeningAction,
+        AssistantStopReasonUnion,
+        AssistantTriggerSourceUnion,
+        DesktopTriggerSource,
+        UserStopReason,
     )
 
     no_mod_map, ctrl_map, shift_map = _build_key_maps()
@@ -278,7 +282,11 @@ def setup_keyboard(  # noqa: C901, PLR0915
             v_key_held = True
             client.dispatch_raw(
                 Action(
-                    assistant_start_listening_action=AssistantStartListeningAction(),
+                    assistant_start_listening_action=AssistantStartListeningAction(
+                        source=AssistantTriggerSourceUnion(
+                            desktop_trigger_source=DesktopTriggerSource(),
+                        ),
+                    ),
                 ),
             )
 
@@ -295,7 +303,15 @@ def setup_keyboard(  # noqa: C901, PLR0915
             v_key_held = False
             client.dispatch_raw(
                 Action(
-                    assistant_stop_listening_action=AssistantStopListeningAction(),
+                    assistant_stop_listening_action=AssistantStopListeningAction(
+                        reason=AssistantStopReasonUnion(
+                            user_stop_reason=UserStopReason(
+                                source=AssistantTriggerSourceUnion(
+                                    desktop_trigger_source=DesktopTriggerSource(),
+                                ),
+                            ),
+                        ),
+                    ),
                 ),
             )
 
