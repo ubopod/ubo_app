@@ -525,6 +525,18 @@ wheels = [
 ]
 
 [[package]]
+name = "qrcode"
+version = "8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/b2/7fc2931bfae0af02d5f53b174e9cf701adbb35f39d69c2af63d4a39f81a9/qrcode-8.2.tar.gz", hash = "sha256:35c3f2a4172b33136ab9f6b3ef1c00260dd2f66f858f24d88418a015f446506c", size = 43317 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/b8/d2d6d731733f51684bbf76bf34dab3b70a9148e8f2cef2bb544fccec681a/qrcode-8.2-py3-none-any.whl", hash = "sha256:16e64e0716c14960108e85d853062c9e8bba5ca8252c0b4d0231b9df4060ff4f", size = 45986 },
+]
+
+[[package]]
 name = "rich"
 version = "14.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -574,7 +586,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "1.6.1.dev10525122610397539951"
+version = "1.7.1.dev260415103101521015"
 source = { editable = "../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
@@ -586,7 +598,7 @@ requires-dist = [{ name = "betterproto", extras = ["compiler"], specifier = "==2
 [package.metadata.requires-dev]
 dev = [
     { name = "poethepoet", specifier = ">=0.36.0" },
-    { name = "pyright", specifier = ">=1.1.402" },
+    { name = "pyright", specifier = ">=1.1.408" },
     { name = "ruff", specifier = ">=0.12.1" },
 ]
 
@@ -596,6 +608,7 @@ source = { editable = "." }
 dependencies = [
     { name = "betterproto" },
     { name = "grpclib" },
+    { name = "qrcode" },
     { name = "textual" },
     { name = "ubo-app-raw-bindings" },
 ]
@@ -610,6 +623,7 @@ dev = [
 requires-dist = [
     { name = "betterproto", specifier = ">=2.0.0b7" },
     { name = "grpclib", specifier = ">=0.4.7" },
+    { name = "qrcode", specifier = ">=7.4" },
     { name = "textual", specifier = ">=0.52.0" },
     { name = "ubo-app-raw-bindings", editable = "../rpc" },
 ]

@@ -102,6 +102,11 @@ class MenuView(BaseView):
     .menu-items {
         height: 1fr;
         overflow-y: auto;
+        scrollbar-size-vertical: 1;
+        scrollbar-background: #1a1a2e;
+        scrollbar-color: #5f87ff;
+        scrollbar-color-hover: #87afff;
+        scrollbar-color-active: #87afff;
     }
 
     .menu-item {
@@ -164,6 +169,16 @@ class MenuView(BaseView):
             return self._item_labels[index]
         return None
 
+    def _format_title(self) -> str:
+        """Format the menu title with a position indicator when paginated."""
+        total = len(self._items)
+        if total <= 1:
+            return self._title
+        # Clamp to valid range — the selected index can briefly drift while the
+        # view is being torn down/replaced.
+        position = max(0, min(self._selected_index, total - 1)) + 1
+        return f"{self._title}  [{position}/{total}]"
+
     def compose(self) -> ComposeResult:
         """Create child widgets."""
         logger.info(
@@ -173,7 +188,7 @@ class MenuView(BaseView):
             self._sub_heading,
             len(self._items),
         )
-        yield Label(self._title, classes="menu-title")
+        yield Label(self._format_title(), classes="menu-title", id="menu-title")
 
         # Display heading and sub_heading for HeadedMenu
         if self._heading:
@@ -242,3 +257,8 @@ class MenuView(BaseView):
                     item.remove_class("selected")
             except Exception:  # noqa: BLE001
                 pass
+        try:
+            title_label = self.query_one("#menu-title", Label)
+            title_label.update(self._format_title())
+        except Exception:  # noqa: BLE001
+            pass

@@ -11,6 +11,7 @@ dependencies = [
     "textual>=0.52.0",
     "grpclib>=0.4.7",
     "betterproto>=2.0.0b7",
+    "qrcode>=7.4",
     "ubo-app-raw-bindings",
 ]
 

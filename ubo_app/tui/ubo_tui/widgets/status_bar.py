@@ -60,6 +60,46 @@ def convert_status_icon(symbol: str) -> str:
     return symbol
 
 
+# Progress bar rendering width (number of cells between the brackets).
+PROGRESS_BAR_WIDTH = 10
+
+
+def _render_progress_bar(progress: float | None, *, width: int = PROGRESS_BAR_WIDTH) -> str:
+    """Render a single inline ASCII progress bar.
+
+    Determinate (``0.0 <= progress <= 1.0``) → ``[██████░░░░] 60%``.
+    Indeterminate (``progress is None``)     → ``[··········]`` (no percent).
+    """
+    if width <= 0:
+        return ""
+    if progress is None:
+        return "[" + ("·" * width) + "]"
+    # Clamp + ignore NaN (proto field can be float NaN).
+    if progress != progress:  # NaN check
+        return "[" + ("·" * width) + "]"
+    clamped = max(0.0, min(1.0, progress))
+    filled = int(round(clamped * width))
+    bar = "█" * filled + "░" * (width - filled)
+    return f"[{bar}] {int(round(clamped * 100))}%"
+
+
+def _render_progress_label(progress_notifications: list) -> str:
+    """Render the footer's progress portion from a list of ProgressNotificationData.
+
+    Shows the first entry; for >1 entries, appends ``(+N more)`` to keep the
+    footer to a single line.
+    """
+    if not progress_notifications:
+        return ""
+    first = progress_notifications[0]
+    progress = getattr(first, "progress", None)
+    text = _render_progress_bar(progress)
+    extras = len(progress_notifications) - 1
+    if extras > 0:
+        text = f"{text} (+{extras} more)"
+    return text
+
+
 class HeaderBar(Static):
     """Header bar with title and indicators."""
 
@@ -142,6 +182,11 @@ class FooterBar(Static):
         margin-right: 2;
     }
 
+    .progress {
+        width: auto;
+        margin-right: 2;
+    }
+
     .icons {
         width: 1fr;
         text-align: right;
@@ -157,6 +202,7 @@ class FooterBar(Static):
         with Horizontal(classes="footer-content"):
             yield Label("--:--", classes="clock", id="footer-clock")
             yield Label("--.-C", classes="temp", id="footer-temp")
+            yield Label("", classes="progress", id="footer-progress")
             yield Label("", classes="icons", id="footer-icons")
 
     def update_data(self, data: Any) -> None:
@@ -174,6 +220,17 @@ class FooterBar(Static):
                 temp_label = self.query_one("#footer-temp", Label)
                 temp = getattr(data, "temperature", None)
                 temp_label.update(f"{temp:.1f}C" if temp else "--.-C")
+            except Exception:  # noqa: BLE001
+                pass
+
+            try:
+                progress_label = self.query_one("#footer-progress", Label)
+                progress_container = getattr(data, "progress_notifications", None)
+                if progress_container is not None:
+                    items = list(getattr(progress_container, "items", []) or [])
+                else:
+                    items = []
+                progress_label.update(_render_progress_label(items))
             except Exception:  # noqa: BLE001
                 pass
 

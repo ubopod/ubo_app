@@ -10,10 +10,15 @@ from textual.containers import Container
 
 from ubo_tui.client import TUIClient
 from ubo_tui.views.application import ApplicationView
+from ubo_tui.views.download_modal import DownloadModal
 from ubo_tui.views.home import HomeView
+from ubo_tui.views.input_form import InputForm
+from ubo_tui.views.instruction import InstructionView
 from ubo_tui.views.loading import LoadingView
 from ubo_tui.views.menu import MenuView
 from ubo_tui.views.notification import NotificationView
+from ubo_tui.views.prompt import PromptView
+from ubo_tui.views.render import RenderView
 from ubo_tui.widgets.status_bar import FooterBar, HeaderBar
 
 # Set up logging to file
@@ -47,25 +52,32 @@ class UboTUI(App):
         ("backspace", "go_back", "Back"),
         ("up", "move_up", "Up"),
         ("down", "move_down", "Down"),
+        ("pageup", "page_up", "PgUp"),
+        ("pagedown", "page_down", "PgDn"),
         ("enter", "select", "Select"),
         ("h", "go_home", "Home"),
         ("plus", "volume_up", "Vol+"),
         ("minus", "volume_down", "Vol-"),
     ]
 
+    PAGE_STEP = 5
+
     def __init__(
         self,
         host: str = "localhost",
         port: int = 50051,
+        web_port: int = 4321,
     ) -> None:
         super().__init__()
-        self.client = TUIClient(host, port)
+        self.client = TUIClient(host, port, web_port=web_port)
         self._current_view: str = "loading"
         self._selected_index: int = 0
         self._item_count: int = 0
         self._is_home: bool = False  # Will be set when actual view arrives
         self._subscription_task: Any = None
+        self._event_subscription_task: Any = None  # FileDownloadReadyEvent stream
         self._notification_id: str | None = None  # Track current notification
+        self._displayed_input_id: str | None = None  # Track open InputForm modal
 
     def compose(self) -> ComposeResult:
         """Create application layout with header, view, and footer."""
@@ -86,9 +98,12 @@ class UboTUI(App):
         )
         try:
             self.client.connect()
-            logger.info("Client connected, starting subscription task")
-            # Create the subscription task in the current event loop
+            logger.info("Client connected, starting subscription tasks")
+            # Create the subscription tasks in the current event loop.
             self._subscription_task = asyncio.create_task(self._run_subscription())
+            self._event_subscription_task = asyncio.create_task(
+                self._run_event_subscription(),
+            )
             self.notify("Connected to Ubo", severity="information")
         except Exception as e:
             logger.exception("Connection failed")
@@ -114,7 +129,16 @@ class UboTUI(App):
 
             try:
                 request = SubscribeStoreRequest(
-                    selectors=["state.main.current_view", "state.main.status_bar"],
+                    selectors=[
+                        "state.main.current_view",
+                        "state.main.status_bar",
+                        # NOTE: subscribe to state.web_ui (a WebUiState
+                        # message) rather than state.web_ui.active_inputs
+                        # directly — the gRPC store-subscribe layer rejects
+                        # Sequence return types from selectors. We extract
+                        # the list locally via _extract_active_inputs.
+                        "state.web_ui",
+                    ],
                 )
                 attempt = retry_count + 1
                 logger.info("Sending SubscribeStore request (attempt %d)", attempt)
@@ -132,13 +156,20 @@ class UboTUI(App):
                         results = [_unpack_from_any(item) for item in response.results]
                         current_view = results[0] if len(results) > 0 else None
                         status_bar = results[1] if len(results) > 1 else None
+                        web_ui_state = results[2] if len(results) > 2 else None
                         logger.info(
-                            "Got state: view=%s, status=%s",
+                            "Got state: view=%s, status=%s, web_ui=%s",
                             type(current_view).__name__ if current_view else None,
                             type(status_bar).__name__ if status_bar else None,
+                            type(web_ui_state).__name__ if web_ui_state else None,
                         )
                         if current_view is not None:
                             await self._process_view_change(current_view, status_bar)
+                        # web_ui_state may be the WebUiState message or just
+                        # the active_inputs list, depending on how the server
+                        # serializes the selector path. Extract defensively.
+                        active_inputs = self._extract_active_inputs(web_ui_state)
+                        await self._process_input_queue(active_inputs)
 
             except Exception as e:  # noqa: BLE001
                 retry_count += 1
@@ -156,9 +187,127 @@ class UboTUI(App):
         logger.error("Max retries reached, subscription task stopping")
         self.notify("Connection failed after retries", severity="error")
 
+    async def _run_event_subscription(self) -> None:
+        """Stream FileDownloadReadyEvent and push DownloadModal on each."""
+        import asyncio
+
+        from ubo_bindings.store.v1 import SubscribeEventRequest
+        from ubo_bindings.ubo.v1 import Event, FileDownloadReadyEvent
+
+        retry_count = 0
+        max_retries = 10
+        base_delay = 1.0
+
+        while retry_count < max_retries:
+            if not self.client._client:  # noqa: SLF001
+                logger.error("Event subscription: client not connected")
+                return
+
+            try:
+                request = SubscribeEventRequest(
+                    events=[
+                        Event(file_download_ready_event=FileDownloadReadyEvent()),
+                    ],
+                )
+                logger.info(
+                    "Sending SubscribeEvent request (FileDownloadReadyEvent)",
+                )
+                async for response in (
+                    self.client._client.store_service.subscribe_event(  # noqa: SLF001
+                        request,
+                    )
+                ):
+                    retry_count = 0
+                    event = response.event
+                    download_event = getattr(
+                        event,
+                        "file_download_ready_event",
+                        None,
+                    )
+                    if download_event is None:
+                        continue
+                    token = getattr(download_event, "download_token", "") or ""
+                    filename = getattr(download_event, "filename", "") or ""
+                    if not token:
+                        continue
+                    logger.info(
+                        "FileDownloadReadyEvent: token=%s filename=%r",
+                        token,
+                        filename,
+                    )
+                    self._show_download_modal(token, filename)
+
+            except Exception as e:  # noqa: BLE001
+                retry_count += 1
+                delay = base_delay * (2 ** (retry_count - 1))
+                logger.warning(
+                    "Event subscription error (attempt %d/%d): %s",
+                    retry_count,
+                    max_retries,
+                    e,
+                )
+                await asyncio.sleep(delay)
+
+        logger.error("Event subscription: max retries reached, stopping")
+
+    def _show_download_modal(self, token: str, filename: str) -> None:
+        """Push the DownloadModal for a ready download."""
+        try:
+            self.push_screen(DownloadModal(self.client, token, filename))
+        except Exception:
+            logger.exception("Failed to push DownloadModal")
+
     async def on_unmount(self) -> None:
         """Clean up gRPC connection."""
+        if self._event_subscription_task is not None:
+            self._event_subscription_task.cancel()
         self.client.disconnect()
+
+    @staticmethod
+    def _extract_active_inputs(web_ui_state: Any) -> list[Any]:
+        """Pull the active_inputs list from a WebUiState (or list/None)."""
+        if web_ui_state is None:
+            return []
+        # If the server returns the state object directly, drill into it.
+        active = getattr(web_ui_state, "active_inputs", None)
+        if active is not None:
+            return list(active)
+        # Fallback: assume the server returned just the list.
+        if isinstance(web_ui_state, list):
+            return web_ui_state
+        return []
+
+    async def _process_input_queue(self, active_inputs: list[Any]) -> None:
+        """Show or dismiss the InputForm modal based on the queue head."""
+        head_id = ""
+        head: Any = None
+        if active_inputs:
+            head = active_inputs[0]
+            head_id = getattr(head, "id", "") or ""
+
+        if head_id == self._displayed_input_id:
+            return
+
+        # The displayed input was resolved (or replaced): pop it.
+        if self._displayed_input_id is not None:
+            try:
+                if isinstance(self.screen, InputForm):
+                    self.pop_screen()
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to pop InputForm")
+            self._displayed_input_id = None
+
+        if not head_id or head is None:
+            return
+
+        # Push a new InputForm for the new head.
+        try:
+            self._displayed_input_id = head_id
+            self.push_screen(InputForm(head, self.client))
+            logger.info("Pushed InputForm for id=%s", head_id)
+        except Exception:
+            logger.exception("Failed to push InputForm")
+            self._displayed_input_id = None
 
     async def _process_view_change(self, view_data: Any, status_bar: Any) -> None:
         """Process view change."""
@@ -183,17 +332,36 @@ class UboTUI(App):
         elif (
             class_name == "ApplicationViewData"
             or getattr(view_data, "type", "") == "application"
-            or class_name == "RenderViewData"
-            or getattr(view_data, "type", "") == "render"
         ):
             view_type = "application"
             self._is_home = False
-            app_id = getattr(
-                actual_view,
-                "application_id",
-                getattr(actual_view, "kind", "?"),
-            )
+            app_id = getattr(actual_view, "application_id", "?")
             logger.info("Detected APPLICATION view: %s", app_id)
+        elif (
+            class_name == "RenderViewData"
+            or getattr(view_data, "type", "") == "render"
+        ):
+            view_type = "render"
+            self._is_home = False
+            kind = getattr(actual_view, "kind", "?")
+            logger.info("Detected RENDER view: kind=%s", kind)
+        elif (
+            class_name == "PromptViewData"
+            or getattr(view_data, "type", "") == "prompt"
+        ):
+            view_type = "prompt"
+            self._is_home = False
+            logger.info("Detected PROMPT view: %s", getattr(actual_view, "title", "?"))
+        elif (
+            class_name == "InstructionViewData"
+            or getattr(view_data, "type", "") == "instruction"
+        ):
+            view_type = "instruction"
+            self._is_home = False
+            logger.info(
+                "Detected INSTRUCTION view: %s",
+                getattr(actual_view, "title", "?"),
+            )
         elif (
             class_name == "NotificationViewData"
             or getattr(view_data, "type", "") == "notification"
@@ -275,6 +443,9 @@ class UboTUI(App):
                 "menu": MenuView,
                 "application": ApplicationView,
                 "notification": NotificationView,
+                "prompt": PromptView,
+                "instruction": InstructionView,
+                "render": RenderView,
             }
 
             view_class = view_classes.get(view_type, HomeView)
@@ -286,12 +457,13 @@ class UboTUI(App):
             self._current_view = view_type
             self._selected_index = 0
 
-            # Track item count for menu, home, and notification views
+            # Track item count for navigable views (menu/home/notification/prompt)
             is_menu = view_type == "menu" and isinstance(new_view, MenuView)
             is_home = view_type == "home" and isinstance(new_view, HomeView)
             is_notif = view_type == "notification"
             is_notif = is_notif and isinstance(new_view, NotificationView)
-            has_items = is_menu or is_home or is_notif
+            is_prompt = view_type == "prompt" and isinstance(new_view, PromptView)
+            has_items = is_menu or is_home or is_notif or is_prompt
             self._item_count = new_view.item_count if has_items else 0
         except Exception as e:
             logger.exception("View update failed")
@@ -312,7 +484,7 @@ class UboTUI(App):
         """Move selection up."""
         idx, count = self._selected_index, self._item_count
         logger.info("action_move_up (index=%d, count=%d)", idx, count)
-        navigable_views = ("menu", "home", "notification")
+        navigable_views = ("menu", "home", "notification", "prompt")
         if self._current_view in navigable_views and self._selected_index > 0:
             self._selected_index -= 1
             self._update_view_selection()
@@ -321,13 +493,36 @@ class UboTUI(App):
         """Move selection down."""
         idx, count = self._selected_index, self._item_count
         logger.info("action_move_down (index=%d, count=%d)", idx, count)
-        navigable_views = ("menu", "home", "notification")
+        navigable_views = ("menu", "home", "notification", "prompt")
         can_move = (
             self._current_view in navigable_views
             and self._selected_index < self._item_count - 1
         )
         if can_move:
             self._selected_index += 1
+            self._update_view_selection()
+
+    def action_page_up(self) -> None:
+        """Jump selection up by PAGE_STEP, clamped to 0."""
+        navigable_views = ("menu", "home", "notification", "prompt")
+        if self._current_view not in navigable_views or self._item_count <= 0:
+            return
+        new_index = max(0, self._selected_index - self.PAGE_STEP)
+        if new_index != self._selected_index:
+            self._selected_index = new_index
+            self._update_view_selection()
+
+    def action_page_down(self) -> None:
+        """Jump selection down by PAGE_STEP, clamped to item_count - 1."""
+        navigable_views = ("menu", "home", "notification", "prompt")
+        if self._current_view not in navigable_views or self._item_count <= 0:
+            return
+        new_index = min(
+            self._item_count - 1,
+            self._selected_index + self.PAGE_STEP,
+        )
+        if new_index != self._selected_index:
+            self._selected_index = new_index
             self._update_view_selection()
 
     def action_volume_up(self) -> None:
@@ -384,6 +579,17 @@ class UboTUI(App):
         if is_notification and self._handle_notification_select(idx):
             return
 
+        if self._current_view == "prompt":
+            try:
+                view = self.query_one("#view", PromptView)
+                label = view.get_item_label(idx)
+                if label:
+                    logger.info("action_select prompt: select_by_label(%r)", label)
+                    self.client.select_by_label(label)
+                    return
+            except Exception:
+                logger.exception("action_select prompt: exception")
+
         if self._current_view in ("menu", "home"):
             # Select by label (works with any index, not just 0-2)
             try:
@@ -414,6 +620,9 @@ class UboTUI(App):
                 view.update_selection(self._selected_index)
             elif self._current_view == "notification":
                 view = self.query_one("#view", NotificationView)
+                view.update_selection(self._selected_index)
+            elif self._current_view == "prompt":
+                view = self.query_one("#view", PromptView)
                 view.update_selection(self._selected_index)
         except Exception:  # noqa: BLE001
             pass
