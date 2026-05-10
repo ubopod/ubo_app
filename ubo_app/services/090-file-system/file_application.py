@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     _SelectFn = Callable[[Path], None]
 
 FILE_VIEWER_SIZE_LIMIT = 2**11  # 2 KiB
-IMAGE_VIEWER_PIXEL_LIMIT = 1024 * 1024
+IMAGE_VIEWER_MAX_DIMENSION = 1024
 
 
 @dataclass
@@ -448,37 +448,27 @@ def _show_file(path: Path) -> None:
 
             try:
                 with Image.open(path) as image:
-                    width, height = image.size
-                    if width * height > IMAGE_VIEWER_PIXEL_LIMIT:
-                        view_action = NotificationDispatchItem(
-                            key='view',
-                            label='View File Content',
-                            icon='󰦪',
-                            store_action=OpenRenderAction(
-                                kind='text_viewer',
-                                props={
-                                    'text': '[i][Image is too large to preview.][/i]',
-                                },
-                            ),
-                            close_notification=False,
+                    image_rgb = image.convert('RGB')
+                    if max(image_rgb.size) > IMAGE_VIEWER_MAX_DIMENSION:
+                        image_rgb.thumbnail(
+                            (IMAGE_VIEWER_MAX_DIMENSION, IMAGE_VIEWER_MAX_DIMENSION),
                         )
-                    else:
-                        image_rgb = image.convert('RGB')
-                        image_bytes = image_rgb.tobytes()
-                        view_action = NotificationDispatchItem(
-                            key='view',
-                            label='Open Image',
-                            icon='󰋩',
-                            store_action=OpenRenderAction(
-                                kind='image_viewer',
-                                props={
-                                    'image': image_bytes,
-                                    'width': width,
-                                    'height': height,
-                                },
-                            ),
-                            close_notification=False,
-                        )
+                    width, height = image_rgb.size
+                    image_bytes = image_rgb.tobytes()
+                    view_action = NotificationDispatchItem(
+                        key='view',
+                        label='Open Image',
+                        icon='󰋩',
+                        store_action=OpenRenderAction(
+                            kind='image_viewer',
+                            props={
+                                'image': image_bytes,
+                                'width': width,
+                                'height': height,
+                            },
+                        ),
+                        close_notification=False,
+                    )
             except (OSError, ValueError):
                 view_action = NotificationDispatchItem(
                     key='view',
