@@ -25,6 +25,12 @@ from ubo_app.utils.input import ubo_input
 class AnthropicEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Anthropic engine."""
 
+    CURATED_MODELS = (
+        'claude-sonnet-4-5',
+        'claude-haiku-4-5',
+        'claude-opus-4-7',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the Anthropic engine."""

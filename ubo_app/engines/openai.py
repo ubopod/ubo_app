@@ -25,6 +25,17 @@ from ubo_app.utils.input import ubo_input
 class OpenAIEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """OpenAI engine."""
 
+    CURATED_MODELS = (
+        'gpt-4o',
+        'gpt-4o-mini',
+        'gpt-4-turbo',
+        'gpt-4.1',
+        'gpt-4.1-mini',
+        'o1',
+        'o1-mini',
+        'o3-mini',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the OpenAI engine."""

@@ -25,6 +25,14 @@ from ubo_app.utils.input import ubo_input
 class CerebrasEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Cerebras engine."""
 
+    CURATED_MODELS = (
+        'qwen-3-235b-a22b-instruct-2507',
+        'llama3.1-8b',
+        'llama3.1-70b',
+        'llama-3.3-70b',
+        'llama-4-scout-17b-16e-instruct',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the Cerebras engine."""

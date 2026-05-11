@@ -63,6 +63,7 @@ def build_engine_menu(  # noqa: PLR0913
     action_prefix: str,
     select_action_factory: Callable[[str], Callable[[], None]],
     action_ids_list: list[str],
+    extra_row_factory: Callable[[str, object], MenuItemData | None] | None = None,
 ) -> None:
     """Build and dispatch a dynamic menu for an engine category.
 
@@ -76,6 +77,10 @@ def build_engine_menu(  # noqa: PLR0913
             a callable that dispatches the selection action.
         action_ids_list: Mutable list to track registered action IDs
             (cleaned up before each rebuild).
+        extra_row_factory: Optional callback that receives ``(engine_name,
+            engine)`` and may return an extra ``MenuItemData`` to insert
+            directly below the primary row. Used for the LLM "Model: …"
+            sub-item; STT/TTS/ImageGen pass ``None``.
 
     """
     # Clean up old actions
@@ -121,6 +126,11 @@ def build_engine_menu(  # noqa: PLR0913
                 action_id=action_id,
             ),
         )
+
+        if extra_row_factory is not None:
+            extra = extra_row_factory(str(engine_name), engine)
+            if extra is not None:
+                items.append(extra)
 
     store.dispatch(
         UpdateDynamicMenuAction(

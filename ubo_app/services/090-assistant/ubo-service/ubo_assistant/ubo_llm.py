@@ -2,7 +2,8 @@
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, cast
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -41,7 +42,22 @@ from ubo_assistant.constants import IS_RPI
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.switch import UboLLMSwitchService, make_empty_llm_settings
 
+if TYPE_CHECKING:
+    from pipecat.pipeline.service_switcher import ServiceSwitcher
+
 DEFAULT_GENERIC_LLM_MODEL = os.environ.get('DEFAULT_LLM_GENERIC_MODEL', 'gpt-4.1')
+DEFAULT_OPENAI_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_OPENAI_MODEL',
+    'gpt-4o-mini',
+)
+DEFAULT_GROK_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_GROK_MODEL',
+    'grok-4-0709',
+)
+DEFAULT_CEREBRAS_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_CEREBRAS_MODEL',
+    'qwen-3-235b-a22b-instruct-2507',
+)
 DEFAULT_ANTHROPIC_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_ANTHROPIC_MODEL',
     'claude-sonnet-4-5',
@@ -63,6 +79,17 @@ DEFAULT_MISTRAL_MODEL = os.environ.get(
     'mistral-small-latest',
 )
 
+_DEFAULT_MODELS: dict[str, str] = {
+    'openai': DEFAULT_OPENAI_MODEL,
+    'grok': DEFAULT_GROK_MODEL,
+    'cerebras': DEFAULT_CEREBRAS_MODEL,
+    'anthropic': DEFAULT_ANTHROPIC_MODEL,
+    'qwen': DEFAULT_QWEN_MODEL,
+    'deepseek': DEFAULT_DEEPSEEK_MODEL,
+    'openrouter': DEFAULT_OPENROUTER_MODEL,
+    'mistral': DEFAULT_MISTRAL_MODEL,
+}
+
 
 @dataclass
 class LLMServiceConfig:
@@ -81,6 +108,11 @@ class LLMServiceConfig:
     generic_llm_base_url: str | None = None
     generic_llm_api_key: str | None = None
     generic_llm_model: str | None = None
+    # User-selected model per provider, keyed by Ubo service id
+    # (e.g. ``'openai' -> 'gpt-4o-mini'``). Refreshed from the store via an
+    # autorun in UboLLMService so that picking a new model takes effect on
+    # the next service refresh without restarting the subprocess.
+    selected_models: dict[str, str] = field(default_factory=dict)
 
 
 class GenericLLMProxy(LLMService):
@@ -234,6 +266,44 @@ class UboLLMService(UboLLMSwitchService):
         # Register built-in functions
         self._register_builtin_functions()
 
+    def _ensure_autoruns_started(self) -> None:
+        """Start parent autoruns then subscribe to user-selected model changes."""
+        if self._autoruns_started:
+            return
+        super()._ensure_autoruns_started()
+
+        @self.client.autorun(['state.assistant.selected_models'])
+        def handle_selected_models_change(data: list) -> None:
+            """Cache models and refresh active provider when its model changed."""
+            payload = data[0] if data else None
+            new_models: dict[str, str] = (
+                dict(payload.items)
+                if payload is not None and hasattr(payload, 'items')
+                else {}
+            )
+            previous = self._config.selected_models
+            if new_models == previous:
+                return
+            self._config.selected_models = new_models
+
+            current_id = self._current_service_id
+            if (
+                current_id
+                and current_id in self._API_KEY_PROVIDERS
+                and previous.get(current_id) != new_models.get(current_id)
+            ):
+                logger.info(
+                    'Selected model changed for active provider; refreshing',
+                    extra={
+                        'service_id': current_id,
+                        'previous_model': previous.get(current_id),
+                        'new_model': new_models.get(current_id),
+                    },
+                )
+                cast('ServiceSwitcher', self).create_task(
+                    self._refresh_api_key_service(current_id),
+                )
+
     # Cloud LLM providers whose only runtime input is a single API key. Each
     # entry maps a service id to (env var holding the secret id, config attr
     # storing the value, factory method building the real Pipecat service,
@@ -373,6 +443,18 @@ class UboLLMService(UboLLMSwitchService):
             )
             return None
 
+    def _resolve_model(self, service_id: str) -> str:
+        """Return the model the user has selected for *service_id*.
+
+        Falls back to ``_DEFAULT_MODELS[service_id]`` when ``selected_models``
+        has no entry yet (e.g. before the autorun has fired or when the user
+        has never picked a model for the provider).
+        """
+        return (
+            self._config.selected_models.get(service_id)
+            or _DEFAULT_MODELS[service_id]
+        )
+
     def _create_openai_service(self) -> OpenAILLMService | None:
         """Create OpenAI LLM service if API key is provided."""
         if not self._config.openai_api_key:
@@ -381,9 +463,7 @@ class UboLLMService(UboLLMSwitchService):
         try:
             return OpenAILLMService(
                 api_key=self._config.openai_api_key,
-                settings=OpenAILLMService.Settings(
-                    model='gpt-4o-mini',  # Vision-capable model for image_url support
-                ),
+                settings=OpenAILLMService.Settings(model=self._resolve_model('openai')),
             )
         except Exception:
             logger.exception('Error while initializing OpenAI LLM')
@@ -397,7 +477,7 @@ class UboLLMService(UboLLMSwitchService):
         try:
             return GrokLLMService(
                 api_key=self._config.grok_api_key,
-                settings=GrokLLMService.Settings(model='grok-4-0709'),
+                settings=GrokLLMService.Settings(model=self._resolve_model('grok')),
             )
         except Exception:
             logger.exception('Error while initializing Grok LLM')
@@ -412,7 +492,7 @@ class UboLLMService(UboLLMSwitchService):
             return CerebrasLLMService(
                 api_key=self._config.cerebras_api_key,
                 settings=CerebrasLLMService.Settings(
-                    model='qwen-3-235b-a22b-instruct-2507',
+                    model=self._resolve_model('cerebras'),
                     temperature=0.7,
                     max_completion_tokens=1000,
                 ),
@@ -429,7 +509,9 @@ class UboLLMService(UboLLMSwitchService):
         try:
             return AnthropicLLMService(
                 api_key=self._config.anthropic_api_key,
-                settings=AnthropicLLMService.Settings(model=DEFAULT_ANTHROPIC_MODEL),
+                settings=AnthropicLLMService.Settings(
+                    model=self._resolve_model('anthropic'),
+                ),
             )
         except Exception:
             logger.exception('Error while initializing Anthropic LLM')
@@ -443,7 +525,7 @@ class UboLLMService(UboLLMSwitchService):
         try:
             return QwenLLMService(
                 api_key=self._config.qwen_api_key,
-                settings=QwenLLMService.Settings(model=DEFAULT_QWEN_MODEL),
+                settings=QwenLLMService.Settings(model=self._resolve_model('qwen')),
             )
         except Exception:
             logger.exception('Error while initializing Qwen LLM')
@@ -457,7 +539,9 @@ class UboLLMService(UboLLMSwitchService):
         try:
             return DeepSeekLLMService(
                 api_key=self._config.deepseek_api_key,
-                settings=DeepSeekLLMService.Settings(model=DEFAULT_DEEPSEEK_MODEL),
+                settings=DeepSeekLLMService.Settings(
+                    model=self._resolve_model('deepseek'),
+                ),
             )
         except Exception:
             logger.exception('Error while initializing DeepSeek LLM')
@@ -471,7 +555,9 @@ class UboLLMService(UboLLMSwitchService):
         try:
             return OpenRouterLLMService(
                 api_key=self._config.openrouter_api_key,
-                settings=OpenRouterLLMService.Settings(model=DEFAULT_OPENROUTER_MODEL),
+                settings=OpenRouterLLMService.Settings(
+                    model=self._resolve_model('openrouter'),
+                ),
             )
         except Exception:
             logger.exception('Error while initializing OpenRouter LLM')
@@ -485,7 +571,9 @@ class UboLLMService(UboLLMSwitchService):
         try:
             return MistralLLMService(
                 api_key=self._config.mistral_api_key,
-                settings=MistralLLMService.Settings(model=DEFAULT_MISTRAL_MODEL),
+                settings=MistralLLMService.Settings(
+                    model=self._resolve_model('mistral'),
+                ),
             )
         except Exception:
             logger.exception('Error while initializing Mistral LLM')

@@ -25,6 +25,16 @@ from ubo_app.utils.input import ubo_input
 class MistralEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Mistral engine."""
 
+    CURATED_MODELS = (
+        'mistral-small-latest',
+        'mistral-medium-latest',
+        'mistral-large-latest',
+        'codestral-latest',
+        'ministral-3b-latest',
+        'ministral-8b-latest',
+        'pixtral-large-latest',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the Mistral engine."""

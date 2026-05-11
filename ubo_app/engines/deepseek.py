@@ -25,6 +25,11 @@ from ubo_app.utils.input import ubo_input
 class DeepSeekEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """DeepSeek engine."""
 
+    CURATED_MODELS = (
+        'deepseek-chat',
+        'deepseek-reasoner',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the DeepSeek engine."""

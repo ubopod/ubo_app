@@ -25,6 +25,14 @@ from ubo_app.utils.input import ubo_input
 class GrokEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Grok engine."""
 
+    CURATED_MODELS = (
+        'grok-4-0709',
+        'grok-3',
+        'grok-3-mini',
+        'grok-2-1212',
+        'grok-2-vision-1212',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the Grok engine."""

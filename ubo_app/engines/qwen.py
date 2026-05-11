@@ -25,6 +25,15 @@ from ubo_app.utils.input import ubo_input
 class QwenEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Qwen (Alibaba DashScope) engine."""
 
+    CURATED_MODELS = (
+        'qwen-max',
+        'qwen-plus',
+        'qwen-turbo',
+        'qwen2.5-72b-instruct',
+        'qwen2.5-32b-instruct',
+        'qwen2.5-coder-32b-instruct',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the Qwen engine."""

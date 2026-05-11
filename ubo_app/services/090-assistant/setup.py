@@ -58,6 +58,7 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
+    DEFAULT_MODELS,
     AssistanceAudioFrame,
     AssistanceImageFrame,
     AssistantAddMcpServerEvent,
@@ -67,6 +68,7 @@ from ubo_app.store.services.assistant import (
     AssistantLLMName,
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedLLMAction,
+    AssistantSetSelectedModelAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
     AssistantSTTName,
@@ -84,6 +86,7 @@ from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
     ItemParameters,
+    build_selection_menu,
 )
 from ubo_app.utils.persistent_store import register_persistent_store
 
@@ -300,6 +303,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     _provider_action_ids: list[str] = []
     _stt_action_ids: list[str] = []
     _llm_action_ids: list[str] = []
+    _llm_model_open_action_ids: list[str] = []
+    _llm_model_select_action_ids: list[str] = []
     _tts_action_ids: list[str] = []
     _img_gen_action_ids: list[str] = []
     _mcp_action_ids: list[str] = []
@@ -439,13 +444,63 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.selected_llm,
             secrets_monitor.value,
             state.assistant.provider_setup_status,
+            state.assistant.selected_models,
         ),
     )
     def llm_providers(
-        data: tuple[AssistantLLMName, dict[str, str | None], dict[str, bool]],
+        data: tuple[
+            AssistantLLMName,
+            dict[str, str | None],
+            dict[str, bool],
+            dict[AssistantLLMName, str],
+        ],
     ) -> None:
         """Update dynamic menu for LLM engine selection."""
         from engine_menu_builder import build_engine_menu
+
+        selected_models = data[3]
+
+        for action_id in _llm_model_open_action_ids:
+            unregister_action(action_id)
+        _llm_model_open_action_ids.clear()
+
+        def _llm_extra_row_factory(
+            engine_name: str,
+            engine: object,
+        ) -> MenuItemData | None:
+            """Render the 'Model: <current>' sub-item for an LLM engine."""
+            curated = getattr(engine, 'CURATED_MODELS', ())
+            if not curated:
+                return None
+            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
+                return None
+
+            try:
+                llm_name = AssistantLLMName(engine_name)
+            except ValueError:
+                return None
+
+            current_model = selected_models.get(
+                llm_name,
+                DEFAULT_MODELS.get(llm_name, ''),
+            )
+            action_id = f'assistant:open-llm-model:{engine_name}'
+            _llm_model_open_action_ids.append(action_id)
+            register_action(
+                action_id,
+                lambda en=engine_name: store.dispatch(
+                    StackPushMenuAction(menu_key=f'models:{en}'),
+                ),
+                allow_reregister=True,
+            )
+            return MenuItemData(
+                key=f'model:{engine_name}',
+                label=f'  Model: {current_model}',
+                icon='󰧑',
+                color=INFO_COLOR,
+                action_id=action_id,
+                is_short=True,
+            )
 
         build_engine_menu(
             engines=LLM_ENGINES,
@@ -461,7 +516,63 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 )
             ),
             action_ids_list=_llm_action_ids,
+            extra_row_factory=_llm_extra_row_factory,
         )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_models,
+            state.assistant.provider_setup_status,
+        ),
+    )
+    def llm_model_pickers(
+        data: tuple[dict[AssistantLLMName, str], dict[str, bool]],
+    ) -> None:
+        """Build per-provider model-selection submenus."""
+        selected_models = data[0]
+
+        for action_id in _llm_model_select_action_ids:
+            unregister_action(action_id)
+        _llm_model_select_action_ids.clear()
+
+        for llm_name, engine in LLM_ENGINES.items():
+            curated = getattr(engine, 'CURATED_MODELS', ())
+            if not curated:
+                continue
+
+            selected_model = selected_models.get(
+                llm_name,
+                DEFAULT_MODELS.get(llm_name, ''),
+            )
+
+            options: list[tuple[str, str, str]] = []
+            for model in curated:
+                action_id = f'assistant:select-llm-model:{llm_name.value}:{model}'
+                _llm_model_select_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    lambda ln=llm_name, m=model: (
+                        store.dispatch(
+                            AssistantSetSelectedModelAction(
+                                llm_name=ln,
+                                model=m,
+                            ),
+                            MenuGoBackAction(),
+                        )
+                    ),
+                    allow_reregister=True,
+                )
+                options.append((model, model, action_id))
+
+            engine_label = getattr(engine, 'label', llm_name.value)
+            build_selection_menu(
+                options=options,
+                selected_key=selected_model,
+                menu_id=f'assistant:llm:models:{llm_name.value}',
+                title='Select Model',
+                heading=engine_label,
+                sub_heading=f'Pick a model for {engine_label}.',
+            )
 
     @store.autorun(
         lambda state: (
@@ -718,6 +829,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         providers,
         stt_providers,
         llm_providers,
+        llm_model_pickers,
         tts_providers,
         image_generator_providers,
         mcp_servers_menu,
@@ -755,6 +867,16 @@ def _register_assistant_path_matchers() -> None:
             if len(path) >= 5 and menu_key == 'assistant:mcp_tools':  # noqa: PLR2004
                 server_id = path[4]
                 return f'assistant:mcp:{server_id}'
+            # LLM model picker pages
+            # Path: ('main', 'settings', 'Assistant', 'assistant:llm',
+            #   'models:{provider}')
+            if (
+                len(path) >= 5  # noqa: PLR2004
+                and menu_key == 'assistant:llm'
+                and path[4].startswith('models:')
+            ):
+                provider = path[4][len('models:') :]
+                return f'assistant:llm:models:{provider}'
             if menu_key in assistant_menus:
                 return assistant_menus[menu_key]
         return None
@@ -773,8 +895,17 @@ async def init_service() -> None:
     )
     register_menu_content_dependency(
         'assistant:llm',
-        lambda s: s.assistant.selected_llm,
+        lambda s: (
+            s.assistant.selected_llm,
+            tuple(sorted(s.assistant.selected_models.items())),
+        ),
     )
+    # Model picker submenus depend on the user's per-provider selection
+    for _llm_name in LLM_ENGINES:
+        register_menu_content_dependency(
+            f'assistant:llm:models:{_llm_name.value}',
+            lambda s, ln=_llm_name: s.assistant.selected_models.get(ln, ''),
+        )
     register_menu_content_dependency(
         'assistant:tts',
         lambda s: s.assistant.selected_tts,
@@ -801,6 +932,7 @@ async def init_service() -> None:
         _providers,
         _stt_providers,
         _llm_providers,
+        _llm_model_pickers,
         _tts_providers,
         _image_generator_providers,
         _mcp_servers_menu,

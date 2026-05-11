@@ -25,6 +25,19 @@ from ubo_app.utils.input import ubo_input
 class OpenRouterEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """OpenRouter engine."""
 
+    CURATED_MODELS = (
+        'openrouter/auto',
+        'openai/gpt-4o',
+        'openai/gpt-4o-mini',
+        'anthropic/claude-sonnet-4-5',
+        'anthropic/claude-haiku-4-5',
+        'google/gemini-2.5-flash',
+        'meta-llama/llama-3.3-70b-instruct',
+        'mistralai/mistral-large-2411',
+        'deepseek/deepseek-chat',
+        'qwen/qwen-2.5-72b-instruct',
+    )
+
     @property
     def name(self) -> str:
         """The internal name of the OpenRouter engine."""
