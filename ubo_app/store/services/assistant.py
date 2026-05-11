@@ -526,6 +526,19 @@ class AssistantUpdateProvidersEvent(AssistantEvent):
     """Event to signal change in the state of available providers."""
 
 
+class AssistantModelChangedEvent(AssistantEvent):
+    """Event signalling that the user picked a new model for an LLM provider.
+
+    Emitted by the reducer in response to ``AssistantSetSelectedModelAction``
+    so the assistant subprocess can hot-swap the active provider's Pipecat
+    service. Goes through events because gRPC autorun cannot serialise the
+    raw ``selected_models`` dict.
+    """
+
+    llm_name: AssistantLLMName
+    model: str
+
+
 class AssistantAddMcpServerEvent(AssistantEvent):
     """Event to add a new MCP server."""
 

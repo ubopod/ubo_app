@@ -95,24 +95,34 @@ def test_set_generic_llm_model_without_selecting_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Provider setup can store Generic LLM model independent of current selection."""
+    from redux import CompleteReducerResult
+
     reducer = _load_assistant_reducer(monkeypatch)
     assistant_types = _assistant_types()
     state = cast('AssistantState', reducer(None, _init_action(reducer)))
 
-    next_state = cast(
-        'AssistantState',
-        reducer(
-            state,
-            assistant_types.AssistantSetSelectedModelAction(
-                llm_name=assistant_types.AssistantLLMName.GENERIC,
-                model='provider/model',
-            ),
+    result = reducer(
+        state,
+        assistant_types.AssistantSetSelectedModelAction(
+            llm_name=assistant_types.AssistantLLMName.GENERIC,
+            model='provider/model',
         ),
     )
+    # Reducer emits AssistantModelChangedEvent alongside the state update,
+    # so it returns a CompleteReducerResult wrapping both.
+    assert isinstance(result, CompleteReducerResult)
+    next_state = cast('AssistantState', result.state)
 
     assert isinstance(next_state, assistant_types.AssistantState)
     assert next_state.selected_llm == assistant_types.AssistantLLMName.OLLAMA
     assert (
         next_state.selected_models[assistant_types.AssistantLLMName.GENERIC]
         == 'provider/model'
+    )
+    assert result.events is not None
+    assert any(
+        isinstance(e, assistant_types.AssistantModelChangedEvent)
+        and e.llm_name == assistant_types.AssistantLLMName.GENERIC
+        and e.model == 'provider/model'
+        for e in result.events
     )

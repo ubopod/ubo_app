@@ -28,6 +28,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'AssistantHandleReportEvent': 'ubo_app.store.services.assistant',
     'AssistantImageGeneratorName': 'ubo_app.store.services.assistant',
     'AssistantLLMName': 'ubo_app.store.services.assistant',
+    'AssistantModelChangedEvent': 'ubo_app.store.services.assistant',
     'AssistantReportAction': 'ubo_app.store.services.assistant',
     'AssistantSTTName': 'ubo_app.store.services.assistant',
     'AssistantSetIsActiveAction': 'ubo_app.store.services.assistant',

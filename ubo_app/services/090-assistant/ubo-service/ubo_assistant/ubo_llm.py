@@ -36,6 +36,9 @@ from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
     AssistanceTextFrame,
+    AssistantLlmName,
+    AssistantModelChangedEvent,
+    Event,
 )
 
 from ubo_assistant.constants import IS_RPI
@@ -272,37 +275,48 @@ class UboLLMService(UboLLMSwitchService):
             return
         super()._ensure_autoruns_started()
 
-        @self.client.autorun(['state.assistant.selected_models'])
-        def handle_selected_models_change(data: list) -> None:
-            """Cache models and refresh active provider when its model changed."""
-            payload = data[0] if data else None
-            new_models: dict[str, str] = (
-                dict(payload.items)
-                if payload is not None and hasattr(payload, 'items')
-                else {}
-            )
-            previous = self._config.selected_models
-            if new_models == previous:
-                return
-            self._config.selected_models = new_models
+        # Subscribe to AssistantModelChangedEvent instead of running an autorun
+        # on state.assistant.selected_models — the autorun path can't serialise
+        # the raw dict, so the reducer emits an event whenever the user picks
+        # a new model and we react to that here.
+        self.client.subscribe_event(
+            event_type=Event(
+                assistant_model_changed_event=AssistantModelChangedEvent(),
+            ),
+            callback=self._handle_model_changed_event,
+        )
 
-            current_id = self._current_service_id
-            if (
-                current_id
-                and current_id in self._API_KEY_PROVIDERS
-                and previous.get(current_id) != new_models.get(current_id)
-            ):
-                logger.info(
-                    'Selected model changed for active provider; refreshing',
-                    extra={
-                        'service_id': current_id,
-                        'previous_model': previous.get(current_id),
-                        'new_model': new_models.get(current_id),
-                    },
-                )
-                cast('ServiceSwitcher', self).create_task(
-                    self._refresh_api_key_service(current_id),
-                )
+    def _handle_model_changed_event(self, event: Event) -> None:
+        """Cache the user's new model and refresh the active provider."""
+        payload = event.assistant_model_changed_event
+        if payload is None:
+            return
+        # The pipecat-side Event wrappers come through as betterproto enums
+        # whose ``.name`` is upper-cased; map back to the lowercase service id.
+        llm_enum: AssistantLlmName = payload.llm_name
+        if llm_enum.name is None:
+            return
+        service_id = llm_enum.name.lower()
+        new_model = payload.model
+
+        previous = self._config.selected_models.get(service_id)
+        self._config.selected_models[service_id] = new_model
+        if previous == new_model:
+            return
+
+        current_id = self._current_service_id
+        if current_id == service_id and current_id in self._API_KEY_PROVIDERS:
+            logger.info(
+                'Selected model changed for active provider; refreshing',
+                extra={
+                    'service_id': current_id,
+                    'previous_model': previous,
+                    'new_model': new_model,
+                },
+            )
+            cast('ServiceSwitcher', self).create_task(
+                self._refresh_api_key_service(current_id),
+            )
 
     # Cloud LLM providers whose only runtime input is a single API key. Each
     # entry maps a service id to (env var holding the secret id, config attr

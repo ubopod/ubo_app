@@ -24,6 +24,7 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadOllamaModelEvent,
     AssistantEvent,
     AssistantHandleReportEvent,
+    AssistantModelChangedEvent,
     AssistantReportAction,
     AssistantSetIsActiveAction,
     AssistantSetSelectedImageGeneratorAction,
@@ -92,12 +93,22 @@ def reducer(
             return replace(state, selected_image_generator=action.image_generator_name)
 
         case AssistantSetSelectedModelAction():
-            return replace(
+            llm_name = action.llm_name or state.selected_llm
+            new_state = replace(
                 state,
                 selected_models={
                     **state.selected_models,
-                    action.llm_name or state.selected_llm: action.model,
+                    llm_name: action.model,
                 },
+            )
+            return CompleteReducerResult(
+                state=new_state,
+                events=[
+                    AssistantModelChangedEvent(
+                        llm_name=llm_name,
+                        model=action.model,
+                    ),
+                ],
             )
 
         case AssistantDownloadOllamaModelAction():
