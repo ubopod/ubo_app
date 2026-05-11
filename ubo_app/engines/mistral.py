@@ -94,3 +94,8 @@ class MistralEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=MISTRAL_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the Mistral API key."""
+        secrets.clear_secret(MISTRAL_API_KEY_SECRET_ID)

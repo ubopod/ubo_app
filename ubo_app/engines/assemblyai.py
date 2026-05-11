@@ -84,3 +84,8 @@ class AssemblyAIEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=ASSEMBLYAI_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the AssemblyAI API key."""
+        secrets.clear_secret(ASSEMBLYAI_API_KEY_SECRET_ID)

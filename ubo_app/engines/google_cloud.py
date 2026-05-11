@@ -103,3 +103,8 @@ class GoogleCloudEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
             value=file_content.decode('utf-8'),
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the Google Cloud service-account credentials."""
+        secrets.clear_secret(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID)

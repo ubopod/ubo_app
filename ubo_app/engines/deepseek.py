@@ -89,3 +89,8 @@ class DeepSeekEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=DEEPSEEK_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the DeepSeek API key."""
+        secrets.clear_secret(DEEPSEEK_API_KEY_SECRET_ID)

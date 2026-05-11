@@ -92,3 +92,8 @@ class QwenEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=QWEN_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the Qwen API key."""
+        secrets.clear_secret(QWEN_API_KEY_SECRET_ID)

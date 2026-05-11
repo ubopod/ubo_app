@@ -92,3 +92,8 @@ class GoogleEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=GOOGLE_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the Google API key."""
+        secrets.clear_secret(GOOGLE_API_KEY_SECRET_ID)

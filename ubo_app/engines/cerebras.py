@@ -98,3 +98,8 @@ class CerebrasEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=CEREBRAS_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the Cerebras API key."""
+        secrets.clear_secret(CEREBRAS_API_KEY_SECRET_ID)

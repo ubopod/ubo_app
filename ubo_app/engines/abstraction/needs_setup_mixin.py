@@ -59,6 +59,24 @@ class NeedsSetupMixin(EngineMixin, abc.ABC):
         else:
             create_task(self._setup())
 
+    def _clear_credentials(self) -> None:
+        """Engine-specific credential cleanup.
+
+        Override in subclasses that persist credentials. Default is a no-op
+        for engines whose setup does not store secrets (e.g. download-based
+        local engines like Vosk or Piper).
+        """
+
+    @final
+    def clear_credentials(self) -> None:
+        """Remove this engine's stored credentials and refresh provider state."""
+        self._clear_credentials()
+        if isinstance(self, AIProviderMixin):
+            from ubo_app.store.main import store
+            from ubo_app.store.services.assistant import AssistantUpdateProvidersAction
+
+            store.dispatch(AssistantUpdateProvidersAction())
+
     def _checked_run(self) -> bool:
         """Check if the engine is set up before running."""
         if isinstance(self, BackgroundRunningMixin) and not self.is_setup:

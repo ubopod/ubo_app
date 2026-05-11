@@ -323,3 +323,8 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                 ),
             )
             await self.event.wait()
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the Ollama on-prem base URL."""
+        secrets.clear_secret(OLLAMA_ONPREM_URL_SECRET_ID)

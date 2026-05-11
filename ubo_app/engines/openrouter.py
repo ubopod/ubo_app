@@ -97,3 +97,8 @@ class OpenRouterEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=OPENROUTER_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the OpenRouter API key."""
+        secrets.clear_secret(OPENROUTER_API_KEY_SECRET_ID)

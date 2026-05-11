@@ -109,3 +109,9 @@ class ElevenLabsEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=ELEVENLABS_VOICE_ID,
             value=result.data['voice_id'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the ElevenLabs API key and voice id."""
+        secrets.clear_secret(ELEVENLABS_API_KEY_SECRET_ID)
+        secrets.clear_secret(ELEVENLABS_VOICE_ID)

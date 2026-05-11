@@ -101,3 +101,8 @@ class OpenAIEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=OPENAI_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the OpenAI API key."""
+        secrets.clear_secret(OPENAI_API_KEY_SECRET_ID)

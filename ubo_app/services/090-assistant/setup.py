@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+
 from engines_registry import (
     IMAGE_GENERATOR_ENGINES,
     LLM_ENGINES,
@@ -303,8 +305,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     _provider_action_ids: list[str] = []
     _stt_action_ids: list[str] = []
     _llm_action_ids: list[str] = []
-    _llm_model_open_action_ids: list[str] = []
     _llm_model_select_action_ids: list[str] = []
+    _provider_detail_action_ids: list[str] = []
     _tts_action_ids: list[str] = []
     _img_gen_action_ids: list[str] = []
     _mcp_action_ids: list[str] = []
@@ -341,19 +343,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             'rime': secrets.read_secret(RIME_API_KEY_SECRET_ID),
         }
 
-    @store.autorun(
-        lambda state: (
-            secrets_monitor.value,
-            state.assistant.provider_setup_status,
-        ),
-    )
-    def providers(_: tuple[dict[str, str | None], dict[str, bool]]) -> None:
-        """Update dynamic menu for provider management."""
-        for action_id in _provider_action_ids:
-            unregister_action(action_id)
-        _provider_action_ids.clear()
-
-        providers_list = sorted(
+    def _deduped_providers() -> list[AIProviderMixin]:
+        """Return all engines deduplicated by class, sorted for display."""
+        return sorted(
             {
                 type(engine): engine
                 for engine in {
@@ -370,17 +362,43 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             ),
         )
 
+    @store.autorun(
+        lambda state: (
+            secrets_monitor.value,
+            state.assistant.provider_setup_status,
+        ),
+    )
+    def providers(_: tuple[dict[str, str | None], dict[str, bool]]) -> None:
+        """Update dynamic menu for provider management."""
+        for action_id in _provider_action_ids:
+            unregister_action(action_id)
+        _provider_action_ids.clear()
+
         items: list[MenuItemData] = []
-        for provider in providers_list:
+        for provider in _deduped_providers():
             if isinstance(provider, NeedsSetupMixin):
-                action_id = f'assistant:setup-provider:{provider.name}'
-                _provider_action_ids.append(action_id)
-                register_action(action_id, provider.setup, allow_reregister=True)
-                params = (
-                    _get_setup_item_parameters()
-                    if provider.is_setup
-                    else _get_not_setup_item_parameters()
-                )
+                if provider.is_setup:
+                    # Drill into a per-provider detail menu with manage options
+                    action_id = f'assistant:open-provider:{provider.name}'
+                    _provider_action_ids.append(action_id)
+                    register_action(
+                        action_id,
+                        lambda p=provider: store.dispatch(
+                            StackPushMenuAction(menu_key=f'provider:{p.name}'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    params = _get_setup_item_parameters()
+                else:
+                    # Not configured — tap to launch setup flow
+                    action_id = f'assistant:setup-provider:{provider.name}'
+                    _provider_action_ids.append(action_id)
+                    register_action(
+                        action_id,
+                        provider.setup,
+                        allow_reregister=True,
+                    )
+                    params = _get_not_setup_item_parameters()
                 items.append(
                     MenuItemData(
                         key=provider.name,
@@ -409,6 +427,119 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 items=tuple(items),
             ),
         )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.provider_setup_status,
+            state.assistant.selected_models,
+        ),
+    )
+    def provider_details(
+        data: tuple[dict[str, bool], dict[AssistantLLMName, str]],
+    ) -> None:
+        """Build per-provider detail menus reachable from Manage Providers."""
+        selected_models = data[1]
+
+        for action_id in _provider_detail_action_ids:
+            unregister_action(action_id)
+        _provider_detail_action_ids.clear()
+
+        for provider in _deduped_providers():
+            if not isinstance(provider, NeedsSetupMixin):
+                continue
+            if not provider.is_setup:
+                continue
+
+            items: list[MenuItemData] = []
+
+            # "Select Model" — only when this engine is registered as an LLM
+            # provider and exposes a curated model list.
+            llm_name: AssistantLLMName | None = next(
+                (
+                    name
+                    for name, eng in LLM_ENGINES.items()
+                    if eng is provider
+                ),
+                None,
+            )
+            curated = getattr(provider, 'CURATED_MODELS', ())
+            if llm_name is not None and curated:
+                select_model_action = (
+                    f'assistant:provider-detail:select-model:{provider.name}'
+                )
+                _provider_detail_action_ids.append(select_model_action)
+                register_action(
+                    select_model_action,
+                    lambda ln=llm_name: store.dispatch(
+                        StackPushMenuAction(menu_key=f'models:{ln.value}'),
+                    ),
+                    allow_reregister=True,
+                )
+                current_model = selected_models.get(
+                    llm_name,
+                    DEFAULT_MODELS.get(llm_name, ''),
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-model',
+                        label=f'Model: {current_model}',
+                        icon='󰧑',
+                        action_id=select_model_action,
+                    ),
+                )
+
+            # "Re-enter Credentials" — re-runs the setup flow
+            setup_action = f'assistant:provider-detail:setup:{provider.name}'
+            _provider_detail_action_ids.append(setup_action)
+            register_action(
+                setup_action,
+                provider.setup,
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key='setup',
+                    label='Re-enter Credentials',
+                    icon='󰒓',
+                    action_id=setup_action,
+                ),
+            )
+
+            # "Delete Credentials" — clears the secret and goes back
+            delete_action = f'assistant:provider-detail:delete:{provider.name}'
+            _provider_detail_action_ids.append(delete_action)
+
+            def _make_delete_handler(p: NeedsSetupMixin) -> Callable[[], None]:
+                def _handler() -> None:
+                    p.clear_credentials()
+                    store.dispatch(MenuGoBackAction())
+
+                return _handler
+
+            register_action(
+                delete_action,
+                _make_delete_handler(provider),
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key='delete',
+                    label='Delete Credentials',
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=delete_action,
+                ),
+            )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:provider:{provider.name}',
+                    title=provider.label,
+                    heading=provider.label,
+                    sub_heading='Manage this provider',
+                    items=tuple(items),
+                ),
+            )
 
     @store.autorun(
         lambda state: (
@@ -444,63 +575,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.selected_llm,
             secrets_monitor.value,
             state.assistant.provider_setup_status,
-            state.assistant.selected_models,
         ),
     )
     def llm_providers(
-        data: tuple[
-            AssistantLLMName,
-            dict[str, str | None],
-            dict[str, bool],
-            dict[AssistantLLMName, str],
-        ],
+        data: tuple[AssistantLLMName, dict[str, str | None], dict[str, bool]],
     ) -> None:
         """Update dynamic menu for LLM engine selection."""
         from engine_menu_builder import build_engine_menu
-
-        selected_models = data[3]
-
-        for action_id in _llm_model_open_action_ids:
-            unregister_action(action_id)
-        _llm_model_open_action_ids.clear()
-
-        def _llm_extra_row_factory(
-            engine_name: str,
-            engine: object,
-        ) -> MenuItemData | None:
-            """Render the 'Model: <current>' sub-item for an LLM engine."""
-            curated = getattr(engine, 'CURATED_MODELS', ())
-            if not curated:
-                return None
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
-                return None
-
-            try:
-                llm_name = AssistantLLMName(engine_name)
-            except ValueError:
-                return None
-
-            current_model = selected_models.get(
-                llm_name,
-                DEFAULT_MODELS.get(llm_name, ''),
-            )
-            action_id = f'assistant:open-llm-model:{engine_name}'
-            _llm_model_open_action_ids.append(action_id)
-            register_action(
-                action_id,
-                lambda en=engine_name: store.dispatch(
-                    StackPushMenuAction(menu_key=f'models:{en}'),
-                ),
-                allow_reregister=True,
-            )
-            return MenuItemData(
-                key=f'model:{engine_name}',
-                label=f'  Model: {current_model}',
-                icon='󰧑',
-                color=INFO_COLOR,
-                action_id=action_id,
-                is_short=True,
-            )
 
         build_engine_menu(
             engines=LLM_ENGINES,
@@ -516,7 +597,6 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 )
             ),
             action_ids_list=_llm_action_ids,
-            extra_row_factory=_llm_extra_row_factory,
         )
 
     @store.autorun(
@@ -827,6 +907,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     return (
         secrets_monitor,
         providers,
+        provider_details,
         stt_providers,
         llm_providers,
         llm_model_pickers,
@@ -859,6 +940,11 @@ def _register_assistant_path_matchers() -> None:
             and path[:3] == ('main', 'settings', 'Assistant')
         ):
             menu_key = path[3]
+            # Generic "models:<provider>" tail — reached from anywhere under
+            # Assistant (LLM menu, Manage Providers detail, etc.).
+            if len(path) >= 5 and path[-1].startswith('models:'):  # noqa: PLR2004
+                provider = path[-1][len('models:') :]
+                return f'assistant:llm:models:{provider}'
             # MCP server detail pages must be checked BEFORE the general
             # assistant_menus lookup, otherwise 'assistant:mcp_tools' matches
             # the list menu and the detail path is never reached.
@@ -867,16 +953,16 @@ def _register_assistant_path_matchers() -> None:
             if len(path) >= 5 and menu_key == 'assistant:mcp_tools':  # noqa: PLR2004
                 server_id = path[4]
                 return f'assistant:mcp:{server_id}'
-            # LLM model picker pages
-            # Path: ('main', 'settings', 'Assistant', 'assistant:llm',
-            #   'models:{provider}')
+            # Provider detail page reached from Manage Providers.
+            # Path: ('main', 'settings', 'Assistant', 'assistant:providers',
+            #   'provider:{name}')
             if (
                 len(path) >= 5  # noqa: PLR2004
-                and menu_key == 'assistant:llm'
-                and path[4].startswith('models:')
+                and menu_key == 'assistant:providers'
+                and path[4].startswith('provider:')
             ):
-                provider = path[4][len('models:') :]
-                return f'assistant:llm:models:{provider}'
+                provider_name = path[4][len('provider:') :]
+                return f'assistant:provider:{provider_name}'
             if menu_key in assistant_menus:
                 return assistant_menus[menu_key]
         return None
@@ -895,16 +981,34 @@ async def init_service() -> None:
     )
     register_menu_content_dependency(
         'assistant:llm',
-        lambda s: (
-            s.assistant.selected_llm,
-            tuple(sorted(s.assistant.selected_models.items())),
-        ),
+        lambda s: s.assistant.selected_llm,
     )
     # Model picker submenus depend on the user's per-provider selection
     for _llm_name in LLM_ENGINES:
         register_menu_content_dependency(
             f'assistant:llm:models:{_llm_name.value}',
             lambda s, ln=_llm_name: s.assistant.selected_models.get(ln, ''),
+        )
+    # Provider-detail menus depend on the provider's setup status (so the
+    # "Re-enter" / "Delete" rows refresh) and on the active model for the
+    # "Model: <current>" line when the provider is also an LLM.
+    _dedup_engines: dict[type, AIProviderMixin] = {
+        type(engine): engine
+        for engine in {
+            *STT_ENGINES.values(),
+            *LLM_ENGINES.values(),
+            *TTS_ENGINES.values(),
+            *IMAGE_GENERATOR_ENGINES.values(),
+        }
+        if engine is not None and isinstance(engine, NeedsSetupMixin)
+    }
+    for _engine in _dedup_engines.values():
+        register_menu_content_dependency(
+            f'assistant:provider:{_engine.name}',
+            lambda s, e=_engine: (
+                s.assistant.provider_setup_status.get(str(e.name), False),
+                tuple(sorted(s.assistant.selected_models.items())),
+            ),
         )
     register_menu_content_dependency(
         'assistant:tts',
@@ -930,6 +1034,7 @@ async def init_service() -> None:
     (
         _secrets_monitor,
         _providers,
+        _provider_details,
         _stt_providers,
         _llm_providers,
         _llm_model_pickers,

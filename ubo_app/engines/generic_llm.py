@@ -192,3 +192,10 @@ class GenericLLMEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
         store.dispatch(
             AssistantSetSelectedLLMAction(llm_name=AssistantLLMName.GENERIC),
         )
+
+    @override
+    def _clear_credentials(self) -> None:
+        """Forget the Generic LLM endpoint, key and model."""
+        secrets.clear_secret(GENERIC_LLM_BASE_URL_SECRET_ID)
+        secrets.clear_secret(GENERIC_LLM_API_KEY_SECRET_ID)
+        secrets.clear_secret(GENERIC_LLM_MODEL_SECRET_ID)
