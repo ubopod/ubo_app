@@ -26,6 +26,7 @@ from ubo_app.constants.assistant import (
     CEREBRAS_API_KEY_SECRET_ID,
     DEEPGRAM_API_KEY_SECRET_ID,
     DEEPSEEK_API_KEY_SECRET_ID,
+    DEFAULT_LLM_OLLAMA_MODEL,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
     GENERIC_LLM_API_KEY_SECRET_ID,
@@ -34,6 +35,7 @@ from ubo_app.constants.assistant import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
     GROK_API_KEY_SECRET_ID,
     MISTRAL_API_KEY_SECRET_ID,
+    OLLAMA_RAM_LIMIT_NOTIFICATION_ID,
     OPENAI_API_KEY_SECRET_ID,
     OPENROUTER_API_KEY_SECRET_ID,
     QWEN_API_KEY_SECRET_ID,
@@ -41,6 +43,14 @@ from ubo_app.constants.assistant import (
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
+from ubo_app.engines.ollama import OllamaEngine
+from ubo_app.engines.ollama_catalog import (
+    OLLAMA_CATALOG,
+    fits_in_ram,
+    format_size,
+    normalize_model_tag,
+    required_ram_bytes,
+)
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
@@ -66,9 +76,12 @@ from ubo_app.store.services.assistant import (
     AssistanceImageFrame,
     AssistantAddMcpServerEvent,
     AssistantDeleteMcpServerEvent,
+    AssistantDownloadOllamaModelAction,
+    AssistantDownloadOllamaModelEvent,
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
+    AssistantSetOllamaThinkingAction,
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
@@ -82,6 +95,11 @@ from ubo_app.store.services.assistant import (
     McpServerType,
 )
 from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
+from ubo_app.store.services.notifications import (
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
@@ -133,6 +151,22 @@ def _get_not_setup_item_parameters(*, is_offline: bool | None = None) -> ItemPar
 def secrets_modification_time() -> float:
     """Return the modification time of the secrets file."""
     return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
+
+
+def _total_ram_bytes() -> int:
+    """Return total device RAM in bytes; ``0`` if it can't be determined."""
+    try:
+        import psutil
+
+        return int(psutil.virtual_memory().total)
+    except Exception:
+        logger.exception('Failed to read total RAM via psutil')
+        return 0
+
+
+def _format_ram_gb(bytes_: int) -> str:
+    """Render a byte count as a short GB label."""
+    return f'{bytes_ / (1024**3):.1f} GB'
 
 
 def input_mcp_server() -> None:
@@ -289,6 +323,10 @@ def _register_persistent_stores() -> None:
         lambda state: json.dumps(state.assistant.selected_models),
     )
     register_persistent_store(
+        'assistant:ollama_thinking_enabled',
+        lambda state: json.dumps(state.assistant.ollama_thinking_enabled),
+    )
+    register_persistent_store(
         'assistant:enabled_mcp_servers',
         lambda state: json.dumps(list(state.assistant.enabled_mcp_servers)),
     )
@@ -397,6 +435,36 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
         items: list[MenuItemData] = []
         for provider in _deduped_providers():
+            if isinstance(provider, OllamaEngine):
+                # Ollama is a special case: the catalog picker is both the
+                # setup path *and* the day-to-day model picker, so we always
+                # offer the drill-in regardless of whether a model is
+                # downloaded yet.
+                action_id = f'assistant:open-provider:{provider.name}'
+                _provider_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    lambda p=provider: store.dispatch(
+                        StackPushMenuAction(menu_key=f'provider:{p.name}'),
+                    ),
+                    allow_reregister=True,
+                )
+                params = (
+                    _get_setup_item_parameters()
+                    if provider.is_setup
+                    else _get_not_setup_item_parameters()
+                )
+                items.append(
+                    MenuItemData(
+                        key=provider.name,
+                        label=provider.label,
+                        icon=params.get('icon', ''),
+                        color=params.get('color', '#ffffff'),
+                        background_color=params.get('background_color'),
+                        action_id=action_id,
+                    ),
+                )
+                continue
             if isinstance(provider, NeedsSetupMixin):
                 action_id: str | None
                 if provider.is_setup:
@@ -465,17 +533,23 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.provider_setup_status,
             state.assistant.selected_models,
             secrets_monitor.value,
+            state.assistant.ollama_model_capabilities,
+            state.assistant.ollama_thinking_enabled,
         ),
     )
-    def provider_details(  # noqa: C901
+    def provider_details(  # noqa: C901, PLR0915
         data: tuple[
             dict[str, bool],
             dict[AssistantLLMName, str],
             dict[str, str | None],
+            dict[str, tuple[str, ...]],
+            dict[str, bool],
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
         selected_models = data[1]
+        ollama_caps = data[3]
+        ollama_thinking = data[4]
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -484,10 +558,77 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         for provider in _deduped_providers():
             if not isinstance(provider, NeedsSetupMixin):
                 continue
-            if not provider.is_setup:
+            if not provider.is_setup and not isinstance(provider, OllamaEngine):
                 continue
 
             items: list[MenuItemData] = []
+
+            # Ollama (local) gets a categorised picker rather than the generic
+            # flat CURATED_MODELS list, plus an optional thinking toggle when
+            # the selected model advertises that capability via `show()`.
+            if isinstance(provider, OllamaEngine):
+                current_model = selected_models.get(
+                    AssistantLLMName.OLLAMA,
+                    DEFAULT_LLM_OLLAMA_MODEL,
+                )
+                categories_action = (
+                    'assistant:provider-detail:ollama-categories'
+                )
+                _provider_detail_action_ids.append(categories_action)
+                register_action(
+                    categories_action,
+                    lambda: store.dispatch(
+                        StackPushMenuAction(
+                            menu_key='ollama:categories',
+                        ),
+                    ),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-model',
+                        label=f'Model: {current_model}',
+                        icon='󰧑',
+                        action_id=categories_action,
+                    ),
+                )
+
+                caps = ollama_caps.get(current_model, ())
+                if 'thinking' in caps:
+                    enabled = ollama_thinking.get(current_model, False)
+                    toggle_action = (
+                        'assistant:provider-detail:ollama-toggle-thinking'
+                    )
+                    _provider_detail_action_ids.append(toggle_action)
+                    register_action(
+                        toggle_action,
+                        lambda m=current_model, e=enabled: store.dispatch(
+                            AssistantSetOllamaThinkingAction(
+                                model=m,
+                                enabled=not e,
+                            ),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='ollama-thinking',
+                            label=f'Thinking: {"On" if enabled else "Off"}',
+                            icon='󰈸',
+                            action_id=toggle_action,
+                        ),
+                    )
+
+                store.dispatch(
+                    UpdateDynamicMenuAction(
+                        menu_id=f'assistant:provider:{provider.name}',
+                        title=provider.label,
+                        heading=provider.label,
+                        sub_heading='Manage this provider',
+                        items=tuple(items),
+                    ),
+                )
+                continue
 
             # "Select Model" — only when this engine is registered as an LLM
             # provider and exposes a curated model list.
@@ -736,6 +877,223 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 heading=engine_label,
                 sub_heading=f'Pick a model for {engine_label}.',
             )
+
+    _ollama_categories_action_ids: list[str] = []
+    _ollama_models_action_ids: list[str] = []
+
+    @store.autorun(
+        lambda state: state.assistant.selected_models.get(
+            AssistantLLMName.OLLAMA,
+            DEFAULT_LLM_OLLAMA_MODEL,
+        ),
+    )
+    def ollama_categories_menu(current_model: str) -> None:
+        """Build the top-level Ollama category list."""
+        from ubo_app.engines.ollama_catalog import category_of
+
+        # Whenever the selection changes (and once at startup), kick off a
+        # capability probe for the active model so the "Thinking: On/Off"
+        # item appears for models that advertise it. The probe is no-op if
+        # the daemon is down or the model isn't downloaded yet.
+        engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA)
+        if isinstance(engine, OllamaEngine):
+            create_task(engine._probe_and_dispatch_capabilities(current_model))  # noqa: SLF001
+
+        for action_id in _ollama_categories_action_ids:
+            unregister_action(action_id)
+        _ollama_categories_action_ids.clear()
+
+        selected_category = category_of(current_model)
+        items: list[MenuItemData] = []
+
+        for category in OLLAMA_CATALOG:
+            action_id = (
+                f'assistant:ollama:open-category:{category.id}'
+            )
+            _ollama_categories_action_ids.append(action_id)
+            register_action(
+                action_id,
+                lambda cid=category.id: store.dispatch(
+                    StackPushMenuAction(menu_key=f'ollama:models:{cid}'),
+                ),
+                allow_reregister=True,
+            )
+            is_current = (
+                selected_category is not None
+                and selected_category.id == category.id
+            )
+            items.append(
+                MenuItemData(
+                    key=category.id,
+                    label=category.label,
+                    icon='󰄬' if is_current else '󰍳',
+                    background_color=INFO_COLOR if is_current else None,
+                    action_id=action_id,
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:ollama:categories',
+                title='Ollama Models',
+                heading='Ollama',
+                sub_heading='Pick a model family',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(
+        lambda state: state.assistant.selected_models.get(
+            AssistantLLMName.OLLAMA,
+            DEFAULT_LLM_OLLAMA_MODEL,
+        ),
+    )
+    def ollama_models_menus(current_model: str) -> None:
+        """Build a per-category Ollama model submenu with RAM gating."""
+        import ollama as ollama_sdk
+
+        for action_id in _ollama_models_action_ids:
+            unregister_action(action_id)
+        _ollama_models_action_ids.clear()
+
+        total_ram = _total_ram_bytes()
+
+        try:
+            downloaded_models = {
+                normalize_model_tag(m.model)
+                for m in ollama_sdk.list().models
+                if m.model is not None
+            }
+        except Exception:  # noqa: BLE001
+            # The local Ollama daemon may simply be down; treat as "nothing
+            # downloaded" rather than blocking the menu render.
+            downloaded_models = set()
+
+        for category in OLLAMA_CATALOG:
+            items: list[MenuItemData] = []
+            for entry in category.models:
+                feasible = total_ram == 0 or fits_in_ram(entry, total_ram)
+                is_downloaded = (
+                    normalize_model_tag(entry.id) in downloaded_models
+                )
+                is_selected = entry.id == current_model
+                label = f'{entry.label}  {format_size(entry.size_bytes)}'
+                if is_downloaded and not is_selected:
+                    label = f'{label}  •'
+
+                if feasible:
+                    action_id = (
+                        f'assistant:ollama:select-model:{entry.id}'
+                    )
+                    _ollama_models_action_ids.append(action_id)
+
+                    def _make_select_handler(
+                        mid: str,
+                        *,
+                        downloaded: bool,
+                    ) -> Callable[[], None]:
+                        def _handler() -> None:
+                            if downloaded:
+                                store.dispatch(
+                                    AssistantSetSelectedModelAction(
+                                        llm_name=AssistantLLMName.OLLAMA,
+                                        model=mid,
+                                    ),
+                                    MenuGoBackAction(),
+                                    MenuGoBackAction(),
+                                )
+                            else:
+                                store.dispatch(
+                                    AssistantDownloadOllamaModelAction(
+                                        model=mid,
+                                    ),
+                                    MenuGoBackAction(),
+                                    MenuGoBackAction(),
+                                )
+
+                        return _handler
+
+                    register_action(
+                        action_id,
+                        _make_select_handler(
+                            entry.id,
+                            downloaded=is_downloaded,
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key=entry.id,
+                            label=label,
+                            icon='󰄬' if is_selected else (
+                                '󰇚' if not is_downloaded else '󰧑'
+                            ),
+                            background_color=(
+                                INFO_COLOR if is_selected else None
+                            ),
+                            action_id=action_id,
+                        ),
+                    )
+                else:
+                    required_gb = _format_ram_gb(required_ram_bytes(entry))
+                    total_gb = _format_ram_gb(total_ram) if total_ram else 'unknown'
+                    disabled_action = (
+                        f'assistant:ollama:ram-limit:{entry.id}'
+                    )
+                    _ollama_models_action_ids.append(disabled_action)
+                    register_action(
+                        disabled_action,
+                        lambda mid=entry.id, req=required_gb, tot=total_gb: (
+                            store.dispatch(
+                                NotificationsAddAction(
+                                    notification=Notification(
+                                        id=OLLAMA_RAM_LIMIT_NOTIFICATION_ID,
+                                        title='Insufficient RAM',
+                                        content=(
+                                            f'Cannot run {mid}. '
+                                            f'Needs ~{req} free RAM, '
+                                            f'device has {tot} total.'
+                                        ),
+                                        icon='󰀦',
+                                        color=WARNING_COLOR,
+                                        display_type=(
+                                            NotificationDisplayType.FLASH
+                                        ),
+                                    ),
+                                ),
+                            )
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key=entry.id,
+                            label=label,
+                            icon='󰗖',
+                            color='#666666',
+                            action_id=disabled_action,
+                        ),
+                    )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:ollama:models:{category.id}',
+                    title=category.label,
+                    heading=category.label,
+                    sub_heading=(
+                        f'Device RAM: {_format_ram_gb(total_ram)}'
+                        if total_ram
+                        else 'Pick a model'
+                    ),
+                    items=tuple(items),
+                ),
+            )
+
+    def _handle_ollama_download(event: AssistantDownloadOllamaModelEvent) -> None:
+        """Run the local Ollama download flow for the requested model."""
+        engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA)
+        if isinstance(engine, OllamaEngine):
+            engine.download_model(event.model)
 
     @store.autorun(
         lambda state: (
@@ -994,11 +1352,14 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         stt_providers,
         llm_providers,
         llm_model_pickers,
+        ollama_categories_menu,
+        ollama_models_menus,
         tts_providers,
         image_generator_providers,
         mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
+        _handle_ollama_download,
     )
 
 
@@ -1023,6 +1384,13 @@ def _register_assistant_path_matchers() -> None:
             and path[:3] == ('main', 'settings', 'Assistant')
         ):
             menu_key = path[3]
+            # Ollama categorised picker reached from the Ollama provider-detail
+            # menu. Two-level: 'ollama:categories' → 'ollama:models:<cat>'.
+            if path[-1] == 'ollama:categories':
+                return 'assistant:ollama:categories'
+            if path[-1].startswith('ollama:models:'):
+                category_id = path[-1][len('ollama:models:') :]
+                return f'assistant:ollama:models:{category_id}'
             # Generic "models:<provider>" tail — reached from anywhere under
             # Assistant (LLM menu, Manage Providers detail, etc.).
             if len(path) >= 5 and path[-1].startswith('models:'):  # noqa: PLR2004
@@ -1094,6 +1462,26 @@ async def init_service() -> None:
             lambda s, e=_engine: (
                 s.assistant.provider_setup_status.get(str(e.name), False),
                 tuple(sorted(s.assistant.selected_models.items())),
+                tuple(sorted(s.assistant.ollama_thinking_enabled.items())),
+                tuple(sorted(s.assistant.ollama_model_capabilities.items())),
+            ),
+        )
+    # Ollama categorised picker depends on the current selection so the
+    # checkmark on the current category re-renders when the user picks a new
+    # model.
+    register_menu_content_dependency(
+        'assistant:ollama:categories',
+        lambda s: s.assistant.selected_models.get(
+            AssistantLLMName.OLLAMA,
+            '',
+        ),
+    )
+    for _category in OLLAMA_CATALOG:
+        register_menu_content_dependency(
+            f'assistant:ollama:models:{_category.id}',
+            lambda s: s.assistant.selected_models.get(
+                AssistantLLMName.OLLAMA,
+                '',
             ),
         )
     register_menu_content_dependency(
@@ -1124,11 +1512,14 @@ async def init_service() -> None:
         _stt_providers,
         _llm_providers,
         _llm_model_pickers,
+        _ollama_categories_menu,
+        _ollama_models_menus,
         _tts_providers,
         _image_generator_providers,
         _mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
+        handle_ollama_download,
     ) = _setup_autorun_and_handlers()
 
     store.dispatch(
@@ -1182,6 +1573,10 @@ async def init_service() -> None:
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
     store.subscribe_event(AssistantAddMcpServerEvent, handle_add_mcp_server)
     store.subscribe_event(AssistantDeleteMcpServerEvent, handle_delete_mcp_server)
+    store.subscribe_event(
+        AssistantDownloadOllamaModelEvent,
+        handle_ollama_download,
+    )
 
     store.dispatch(AssistantUpdateProvidersAction())
     store.dispatch(AssistantSyncMcpServersAction())

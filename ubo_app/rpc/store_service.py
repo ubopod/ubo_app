@@ -20,6 +20,11 @@ from ubo_app.store.core.types import (
     ViewChangedEvent as CoreViewChangedEvent,
 )
 from ubo_app.store.main import RootState, UboAction, UboEvent, store
+from ubo_app.store.services.assistant import (
+    AssistantLLMName,
+    AssistantModelChangedEvent,
+    AssistantOllamaThinkingChangedEvent,
+)
 from ubo_app.utils.error_handlers import report_service_error
 
 from ubo_bindings.store.v1 import (
@@ -128,7 +133,7 @@ def _should_log_dispatched_action(action: object) -> bool:
     return type(action).__name__ != 'AssistantReportAction'
 
 
-def _send_initial_state(
+def _send_initial_state(  # noqa: C901
     event_class: type[UboEvent],
     queue_event: Callable[[UboEvent], None],
 ) -> None:
@@ -161,6 +166,43 @@ def _send_initial_state(
                 )
 
         _send_initial_stack()
+
+    if event_class is AssistantModelChangedEvent:
+        # Replay the persisted per-LLM model selections so a freshly-subscribed
+        # client (e.g. the assistant subprocess on startup) doesn't have to
+        # wait for the user to re-select a model — its cache is populated
+        # from the parent's on-disk state immediately.
+        @store.with_state(lambda state: dict(state.assistant.selected_models))
+        def _send_initial_selected_models(
+            selected_models: dict[AssistantLLMName, str],
+        ) -> None:
+            for llm_name, model in selected_models.items():
+                queue_event(
+                    AssistantModelChangedEvent(
+                        llm_name=llm_name,
+                        model=model,
+                    ),
+                )
+
+        _send_initial_selected_models()
+
+    if event_class is AssistantOllamaThinkingChangedEvent:
+        # Same replay pattern for the per-model Ollama thinking flags.
+        @store.with_state(
+            lambda state: dict(state.assistant.ollama_thinking_enabled),
+        )
+        def _send_initial_ollama_thinking(
+            thinking_flags: dict[str, bool],
+        ) -> None:
+            for model, enabled in thinking_flags.items():
+                queue_event(
+                    AssistantOllamaThinkingChangedEvent(
+                        model=model,
+                        enabled=enabled,
+                    ),
+                )
+
+        _send_initial_ollama_thinking()
 
 
 def _make_queue_event(

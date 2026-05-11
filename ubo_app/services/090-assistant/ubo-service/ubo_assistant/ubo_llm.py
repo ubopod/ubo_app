@@ -38,6 +38,7 @@ from ubo_bindings.ubo.v1 import (
     AssistanceTextFrame,
     AssistantLlmName,
     AssistantModelChangedEvent,
+    AssistantOllamaThinkingChangedEvent,
     Event,
 )
 
@@ -81,6 +82,10 @@ DEFAULT_MISTRAL_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_MISTRAL_MODEL',
     'mistral-small-latest',
 )
+DEFAULT_OLLAMA_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_OLLAMA_MODEL',
+    'gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
+)
 
 _DEFAULT_MODELS: dict[str, str] = {
     'openai': DEFAULT_OPENAI_MODEL,
@@ -91,6 +96,7 @@ _DEFAULT_MODELS: dict[str, str] = {
     'deepseek': DEFAULT_DEEPSEEK_MODEL,
     'openrouter': DEFAULT_OPENROUTER_MODEL,
     'mistral': DEFAULT_MISTRAL_MODEL,
+    'ollama': DEFAULT_OLLAMA_MODEL,
 }
 
 
@@ -116,6 +122,12 @@ class LLMServiceConfig:
     # autorun in UboLLMService so that picking a new model takes effect on
     # the next service refresh without restarting the subprocess.
     selected_models: dict[str, str] = field(default_factory=dict)
+    # Per-Ollama-model thinking flag. Populated by
+    # ``_handle_ollama_thinking_changed_event``; used when (re)creating the
+    # local Ollama service so the right ``think`` flag is passed to Pipecat.
+    # Persistent across restarts but the subprocess starts empty and gets
+    # re-populated by the first event after restart.
+    ollama_thinking_enabled: dict[str, bool] = field(default_factory=dict)
 
 
 class GenericLLMProxy(LLMService):
@@ -238,7 +250,9 @@ class UboLLMService(UboLLMSwitchService):
         self.deepseek_llm = GenericLLMProxy()
         self.openrouter_llm = GenericLLMProxy()
         self.mistral_llm = GenericLLMProxy()
-        self.ollama_llm = self._create_ollama_service()
+        # Local Ollama goes behind a GenericLLMProxy so we can hot-swap it when
+        # the user picks a new curated model or toggles thinking mode.
+        self.ollama_llm = GenericLLMProxy()
         self.ollama_onprem_llm = self._create_ollama_onprem_service()
         self.generic_llm = GenericLLMProxy()
 
@@ -275,15 +289,28 @@ class UboLLMService(UboLLMSwitchService):
             return
         super()._ensure_autoruns_started()
 
-        # Subscribe to AssistantModelChangedEvent instead of running an autorun
-        # on state.assistant.selected_models — the autorun path can't serialise
-        # the raw dict, so the reducer emits an event whenever the user picks
-        # a new model and we react to that here.
+        # Subscribe to AssistantModelChangedEvent for both:
+        #   (a) the imperative "swap the active provider now" path on user
+        #       change of model, and
+        #   (b) the cold-start seed: the parent's gRPC ``_send_initial_state``
+        #       replays one event per persisted ``selected_models`` entry as
+        #       soon as we subscribe, so this handler populates
+        #       ``self._config.selected_models`` with the on-disk values.
         self.client.subscribe_event(
             event_type=Event(
                 assistant_model_changed_event=AssistantModelChangedEvent(),
             ),
             callback=self._handle_model_changed_event,
+        )
+        # Same pattern for Ollama thinking toggle (covers both runtime toggles
+        # and the cold-start replay of ``ollama_thinking_enabled``).
+        self.client.subscribe_event(
+            event_type=Event(
+                assistant_ollama_thinking_changed_event=(
+                    AssistantOllamaThinkingChangedEvent()
+                ),
+            ),
+            callback=self._handle_ollama_thinking_changed_event,
         )
 
     def _handle_model_changed_event(self, event: Event) -> None:
@@ -305,7 +332,9 @@ class UboLLMService(UboLLMSwitchService):
             return
 
         current_id = self._current_service_id
-        if current_id == service_id and current_id in self._API_KEY_PROVIDERS:
+        if current_id == service_id and (
+            current_id in self._API_KEY_PROVIDERS or current_id == 'ollama'
+        ):
             logger.info(
                 'Selected model changed for active provider; refreshing',
                 extra={
@@ -314,9 +343,29 @@ class UboLLMService(UboLLMSwitchService):
                     'new_model': new_model,
                 },
             )
-            cast('ServiceSwitcher', self).create_task(
-                self._refresh_api_key_service(current_id),
-            )
+            task_runner = cast('ServiceSwitcher', self).create_task
+            if current_id == 'ollama':
+                task_runner(self._refresh_ollama_service())
+            else:
+                task_runner(self._refresh_api_key_service(current_id))
+
+    def _handle_ollama_thinking_changed_event(self, event: Event) -> None:
+        """Cache thinking-toggle changes and refresh the Ollama service."""
+        payload = event.assistant_ollama_thinking_changed_event
+        if payload is None:
+            return
+        self._config.ollama_thinking_enabled[payload.model] = payload.enabled
+
+        if self._current_service_id != 'ollama':
+            return
+        if self._config.selected_models.get('ollama') != payload.model:
+            # Toggle applied to a non-active model; nothing to refresh now.
+            return
+        logger.info(
+            'Ollama thinking toggled; refreshing service',
+            extra={'model': payload.model, 'enabled': payload.enabled},
+        )
+        cast('ServiceSwitcher', self).create_task(self._refresh_ollama_service())
 
     # Cloud LLM providers whose only runtime input is a single API key. Each
     # entry maps a service id to (env var holding the secret id, config attr
@@ -435,6 +484,8 @@ class UboLLMService(UboLLMSwitchService):
         """Set the selected service, refreshing dynamic-config providers first."""
         if id == 'generic_llm':
             await self._refresh_generic_llm_service()
+        elif id == 'ollama':
+            await self._refresh_ollama_service()
         elif id in self._API_KEY_PROVIDERS:
             await self._refresh_api_key_service(id)
         await super().set_selected_service(id)
@@ -594,16 +645,43 @@ class UboLLMService(UboLLMSwitchService):
             return None
 
     def _create_ollama_service(self) -> OLLamaLLMService | None:
-        """Create local Ollama LLM service."""
+        """Create the local Ollama LLM service using the current selection.
+
+        Reads the user-selected model from ``selected_models['ollama']`` and
+        the per-model thinking flag from ``ollama_thinking_enabled``. Pipecat
+        hits Ollama's OpenAI-compatible endpoint (``/v1``), so we control
+        thinking via ``reasoning_effort`` rather than the native ``think``
+        boolean — the latter is silently ignored on the OpenAI-compatible
+        endpoint. We send ``reasoning_effort`` in both states so toggling
+        "off" actually disables thinking (the default for qwen3 etc. is on).
+        """
         try:
+            model = self._resolve_model('ollama')
+            think = self._config.ollama_thinking_enabled.get(model, False)
             return OLLamaLLMService(
                 settings=OLLamaLLMService.Settings(
-                    model='gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
+                    model=model,
+                    extra={'reasoning_effort': 'high' if think else 'none'},
                 ),
             )
         except Exception:
             logger.exception('Error while initializing Ollama LLM')
             return None
+
+    async def _refresh_ollama_service(self) -> None:
+        """Re-create the local Ollama service after a model or thinking change."""
+        real_service = self._create_ollama_service()
+        proxy: GenericLLMProxy = self.ollama_llm
+        if proxy.service is real_service:
+            return
+        await proxy.set_service(real_service)
+        logger.info(
+            'Ollama service refreshed',
+            extra={
+                'model': self._resolve_model('ollama'),
+                'has_service': real_service is not None,
+            },
+        )
 
     def _create_ollama_onprem_service(self) -> OLLamaLLMService | None:
         """Create remote Ollama LLM service if URL is provided."""

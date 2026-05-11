@@ -12,6 +12,7 @@ from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.constants.assistant import OLLAMA_SETUP_NOTIFICATION_ID
 from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
+from ubo_app.engines.ollama_catalog import normalize_model_tag
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
@@ -64,13 +65,14 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
         except ConnectionError:
             return False
         else:
-            return any(m.model == model for m in models)
+            target = normalize_model_tag(model)
+            return any(
+                m.model is not None and normalize_model_tag(m.model) == target
+                for m in models
+            )
 
-    @store.with_state(
-        lambda state: state.assistant.selected_models[AssistantLLMName.OLLAMA],
-    )
-    def _download_model(self, model: str) -> None:
-        """Download the specified Ollama model."""
+    def download_model(self, model: str) -> None:
+        """Download *model* on the local Ollama daemon and update the store."""
 
         async def download_ollama_model() -> None:
             """Download Ollama model."""
@@ -122,13 +124,61 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                             progress=None,
                         ),
                     ),
-                    AssistantSetSelectedModelAction(model=model),
+                    AssistantSetSelectedModelAction(
+                        llm_name=AssistantLLMName.OLLAMA,
+                        model=model,
+                    ),
                     AssistantUpdateProvidersAction(),
                 )
+                create_task(self._probe_and_dispatch_capabilities(model))
             finally:
-                self.event.set()
+                event = getattr(self, 'event', None)
+                if event is not None:
+                    event.set()
 
         create_task(download_ollama_model())
+
+    async def _probe_and_dispatch_capabilities(self, model: str) -> None:
+        """Probe `client.show()` for *model* and cache its capability set."""
+        try:
+            info = await ollama.AsyncClient().show(model)
+        except Exception:
+            logger.exception(
+                'Failed to probe Ollama model capabilities',
+                extra={'model': model},
+            )
+            capabilities: tuple[str, ...] = ()
+        else:
+            raw = getattr(info, 'capabilities', None)
+            if raw is None and isinstance(info, dict):
+                raw = info.get('capabilities')
+            capabilities = (
+                tuple(str(c) for c in raw)
+                if isinstance(raw, (list, tuple))
+                else ()
+            )
+
+        from ubo_app.store.services.assistant import (
+            AssistantSetOllamaModelCapabilitiesAction,
+        )
+
+        store.dispatch(
+            AssistantSetOllamaModelCapabilitiesAction(
+                model=model,
+                capabilities=capabilities,
+            ),
+        )
+
+    @store.with_state(
+        lambda state: state.assistant.selected_models.get(
+            AssistantLLMName.OLLAMA,
+            '',
+        ),
+    )
+    def _download_selected_model(self, model: str) -> None:
+        """Notification-button entry point; downloads the currently-selected model."""
+        if model:
+            self.download_model(model)
 
     @override
     @store.with_state(
@@ -152,7 +202,7 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                             create_notification_action(
                                 label='Download Model',
                                 icon='󰇚',
-                                action=self._download_model,
+                                action=self._download_selected_model,
                             ),
                         ],
                     ),

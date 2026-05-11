@@ -112,6 +112,7 @@ VOSK_DOWNLOAD_PATH = VOSK_MODEL_PATH.with_suffix('.zip')
 VOSK_DOWNLOAD_NOTIFICATION_ID = 'assistant:download-vosk'
 
 OLLAMA_SETUP_NOTIFICATION_ID = 'assistant:ollama:setup'
+OLLAMA_RAM_LIMIT_NOTIFICATION_ID = 'assistant:ollama:ram-limit'
 
 OLLAMA_ONPREM_URL_SECRET_ID = 'ollama_onprem_url'  # noqa: S105
 OLLAMA_ONPREM_URL_PATTERN = r'^https?://[a-zA-Z0-9.-]+(:[0-9]+)?/?$'

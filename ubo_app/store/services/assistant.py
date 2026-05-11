@@ -28,11 +28,11 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OPENROUTER_MODEL,
     DEFAULT_LLM_QWEN_MODEL,
 )
-from ubo_app.store.services.keypad import Key
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
     from ubo_app.store.services.audio import AudioSample
+    from ubo_app.store.services.keypad import Key
 
 
 class AssistantSTTName(StrEnum):
@@ -95,6 +95,17 @@ def _load_selected_models(value: str) -> dict[AssistantLLMName, str]:
             continue
         selected_models[llm_name] = str(model)
     return selected_models
+
+
+def _load_ollama_thinking_enabled(value: str) -> dict[str, bool]:
+    """Load per-model Ollama thinking flags from persistent storage."""
+    try:
+        flags = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    if not isinstance(flags, dict):
+        return {}
+    return {str(k): bool(v) for k, v in flags.items()}
 
 
 class AssistantTTSName(StrEnum):
@@ -403,6 +414,25 @@ class AssistantDownloadOllamaModelAction(AssistantAction):
     model: str
 
 
+class AssistantSetOllamaModelCapabilitiesAction(AssistantAction):
+    """Cache the result of ``ollama.Client.show(model).capabilities``."""
+
+    model: str
+    capabilities: tuple[str, ...]
+
+
+class AssistantSetOllamaThinkingAction(AssistantAction):
+    """Toggle thinking mode for a local Ollama model.
+
+    Per-model and persisted. The reducer also emits
+    ``AssistantOllamaThinkingChangedEvent`` so the subprocess can refresh
+    its Pipecat service with the new ``think`` flag.
+    """
+
+    model: str
+    enabled: bool
+
+
 class AssistanceFrame(Immutable):
     """An assistance frame."""
 
@@ -539,6 +569,17 @@ class AssistantModelChangedEvent(AssistantEvent):
     model: str
 
 
+class AssistantOllamaThinkingChangedEvent(AssistantEvent):
+    """Event signalling that the user toggled Ollama thinking for a model.
+
+    Sent so the assistant subprocess re-creates its local Ollama service
+    with the new ``think`` flag.
+    """
+
+    model: str
+    enabled: bool
+
+
 class AssistantAddMcpServerEvent(AssistantEvent):
     """Event to add a new MCP server."""
 
@@ -587,6 +628,21 @@ class AssistantState(Immutable):
             'assistant:selected_llm_model',
             default=DEFAULT_MODELS,
             mapper=_load_selected_models,
+        ),
+    )
+    # Cached `ollama.Client.show(model).capabilities` per model id. Populated
+    # lazily after a model is downloaded or selected. Empty tuple means "probe
+    # failed / N/A".
+    ollama_model_capabilities: dict[str, tuple[str, ...]] = field(
+        default_factory=dict,
+    )
+    # Per-Ollama-model thinking flag. Persisted across restarts; only meaningful
+    # for models whose capability set includes ``'thinking'``.
+    ollama_thinking_enabled: dict[str, bool] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:ollama_thinking_enabled',
+            default={},
+            mapper=_load_ollama_thinking_enabled,
         ),
     )
     selected_tts: AssistantTTSName = field(
