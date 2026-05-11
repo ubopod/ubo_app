@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+import contextlib
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.mark.asyncio
@@ -37,11 +40,9 @@ async def test_file_picker_typed_path_returns_path(tmp_path: Any) -> None:
         # to the directory tree by default, so use the input's own submit.
         # Press Enter inside the input field to confirm the typed path.
         # First, ensure focus is on the input.
-        try:
+        with contextlib.suppress(Exception):
             input_widget = pilot.app.query_one("#picker-input")
             input_widget.focus()
-        except Exception:  # noqa: BLE001
-            pass
         await pilot.press("enter")
         await pilot.pause()
 
@@ -103,11 +104,9 @@ async def test_file_picker_typed_missing_path_does_not_dismiss(
 
     async with _App().run_test() as pilot:
         await pilot.pause()
-        try:
+        with contextlib.suppress(Exception):
             input_widget = pilot.app.query_one("#picker-input")
             input_widget.focus()
-        except Exception:  # noqa: BLE001
-            pass
         await pilot.press("enter")
         await pilot.pause()
         # Modal should still be open; cancel to clean up.

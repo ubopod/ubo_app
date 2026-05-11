@@ -10,10 +10,12 @@ from __future__ import annotations
 import http.server
 import socket
 import threading
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Self
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _free_port() -> int:
@@ -32,7 +34,7 @@ class _DownloadServer:
         outer = self
 
         class _Handler(http.server.BaseHTTPRequestHandler):
-            def do_GET(self) -> None:  # noqa: N802
+            def do_GET(self) -> None:
                 if not self.path.startswith("/download/"):
                     self.send_error(404)
                     return
@@ -62,11 +64,11 @@ class _DownloadServer:
             daemon=True,
         )
 
-    def __enter__(self) -> _DownloadServer:
+    def __enter__(self) -> Self:
         self._thread.start()
         return self
 
-    def __exit__(self, *_: Any) -> None:
+    def __exit__(self, *_: object) -> None:
         self._server.shutdown()
         self._server.server_close()
         self._thread.join(timeout=2)
@@ -114,7 +116,7 @@ async def test_download_falls_back_to_target_name_when_no_disposition(
             self.port = _free_port()
 
             class _H(http.server.BaseHTTPRequestHandler):
-                def do_GET(self) -> None:  # noqa: N802
+                def do_GET(self) -> None:
                     self.send_response(200)
                     self.send_header("Content-Length", "3")
                     self.end_headers()
@@ -133,7 +135,7 @@ async def test_download_falls_back_to_target_name_when_no_disposition(
             self._thread.start()
             return self
 
-        def __exit__(self, *_: Any) -> None:
+        def __exit__(self, *_: object) -> None:
             self._server.shutdown()
             self._server.server_close()
             self._thread.join(timeout=2)
@@ -144,7 +146,7 @@ async def test_download_falls_back_to_target_name_when_no_disposition(
         filename, written = await client.download_file("tok", target)
 
     assert filename == "fallback.bin"
-    assert written == 3
+    assert written == len(b"abc")
 
 
 @pytest.mark.asyncio
@@ -192,7 +194,9 @@ async def test_download_modal_save_button_streams_file(tmp_path: Path) -> None:
 
         async with _App().run_test() as pilot:
             await pilot.pause()
-            save_btn = pilot.app.screen.query_one("#download-save")
+            from textual.widgets import Button
+
+            save_btn = pilot.app.screen.query_one("#download-save", Button)
             save_btn.press()
             for _ in range(20):
                 if target.exists():

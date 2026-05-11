@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from ubo_tui.client import TUIClient
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +21,33 @@ RETRY_DELAY_SECONDS = 1.0
 ProgressCallback = Callable[[int, int], Awaitable[None] | None]
 
 
+class UploadClient(Protocol):
+    """Minimal client surface used by chunked upload (real or fake)."""
+
+    def upload_file_start(
+        self,
+        *,
+        upload_id: str,
+        filename: str,
+        total_size: int,
+        total_chunks: int,
+        chunk_size: int,
+        target_directory: str | None = None,
+    ) -> None: ...
+
+    def upload_file_chunk(
+        self,
+        *,
+        upload_id: str,
+        chunk_index: int,
+        data: bytes,
+    ) -> None: ...
+
+    def upload_file_complete(self, *, upload_id: str) -> None: ...
+
+
 async def upload_file(
-    client: TUIClient,
+    client: UploadClient,
     upload_id: str,
     path: Path,
     *,
@@ -78,7 +102,7 @@ async def upload_file(
 
 
 async def _dispatch_chunk_with_retries(
-    client: TUIClient,
+    client: UploadClient,
     upload_id: str,
     chunk_index: int,
     data: bytes,

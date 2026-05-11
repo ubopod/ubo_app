@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, TextArea
 
-from ubo_tui.upload import upload_file
+from ubo_tui.upload import UploadClient, upload_file
 from ubo_tui.views.input_widgets import (
     build_widget,
     widget_is_valid,
@@ -24,7 +25,18 @@ if TYPE_CHECKING:
     from textual.app import ComposeResult
     from textual.widget import Widget
 
-    from ubo_tui.client import TUIClient
+
+class InputFormClient(UploadClient, Protocol):
+    """Subset of TUIClient methods used by ``InputForm``."""
+
+    def cancel_input(self, input_id: str) -> None: ...
+
+    def provide_input(
+        self,
+        input_id: str,
+        value: str,
+        data: dict[str, str],
+    ) -> None: ...
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +107,7 @@ class InputForm(ModalScreen[None]):
     def __init__(
         self,
         description: Any,
-        client: TUIClient,
+        client: InputFormClient,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -104,6 +116,7 @@ class InputForm(ModalScreen[None]):
         self._fields: list[Any] = self._extract_fields(description)
         self._widgets: dict[str, Widget] = {}
         self.input_id: str = getattr(description, "id", "") or ""
+        self._upload_tasks: set[asyncio.Task[None]] = set()
 
     @staticmethod
     def _extract_fields(description: Any) -> list[Any]:
@@ -159,11 +172,8 @@ class InputForm(ModalScreen[None]):
     def on_mount(self) -> None:
         """Auto-focus the first interactive widget."""
         for widget in self._widgets.values():
-            try:
+            with contextlib.suppress(Exception):
                 widget.focus()
-            except Exception:  # noqa: BLE001
-                continue
-            else:
                 return
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -190,9 +200,8 @@ class InputForm(ModalScreen[None]):
         # screen when the server clears the input. Pop here only if the
         # client dispatch raised; otherwise we'd race with the subscription.
 
-    def action_submit(self) -> None:
-        logger.info("InputForm submit: id=%s", self.input_id)
-        # Validate every field first; bail out on the first invalid one.
+    def _validate_all_fields(self) -> bool:
+        """Return True if every field passes validation; notify and stop otherwise."""
         for field in self._fields:
             name = getattr(field, "name", "") or ""
             widget = self._widgets.get(name)
@@ -204,13 +213,13 @@ class InputForm(ModalScreen[None]):
                     f"Invalid value for '{label}'",
                     severity="error",
                 )
-                return
+                return False
+        return True
 
-        # Walk fields once: collect non-file values directly, and for FILE
-        # fields gather pending uploads and emit upload_id/name placeholders
-        # into ``data`` (matching webUI inputs.tsx:232-252 contract).
+    def _collect_field_values(self) -> tuple[dict[str, str], list[tuple[str, Any]]]:
+        """Gather non-file values and pending FILE-field uploads from widgets."""
         data: dict[str, str] = {}
-        pending_uploads: list[tuple[str, Any]] = []  # (upload_id, path)
+        pending_uploads: list[tuple[str, Any]] = []
         for field in self._fields:
             name = getattr(field, "name", "") or ""
             widget = self._widgets.get(name)
@@ -220,7 +229,6 @@ class InputForm(ModalScreen[None]):
             if type_name == "FILE" and isinstance(widget, FilePathInput):
                 path = widget.get_path()
                 if path is None:
-                    # Optional, empty FILE field — skip.
                     continue
                 upload_id = uuid.uuid4().hex
                 data[f"{name}_upload_id"] = upload_id
@@ -228,21 +236,30 @@ class InputForm(ModalScreen[None]):
                 pending_uploads.append((upload_id, path))
             else:
                 data[name] = widget_value(widget)
-
         if not self._fields:
             widget = self._widgets.get("value")
             if widget is not None:
                 data["value"] = widget_value(widget)
+        return data, pending_uploads
 
-        # Primary value: first non-FILE field, else "value" if present.
-        primary_value = ""
+    def _primary_value(self, data: dict[str, str]) -> str:
+        """First non-FILE field value, falling back to ``value`` if present."""
         for field in self._fields:
             if _field_type_name(field) == "FILE":
                 continue
-            primary_value = data.get(getattr(field, "name", "") or "", "")
-            break
-        if not primary_value:
-            primary_value = data.get("value", "")
+            return data.get(getattr(field, "name", "") or "", "")
+        return data.get("value", "")
+
+    def action_submit(self) -> None:
+        logger.info("InputForm submit: id=%s", self.input_id)
+        if not self._validate_all_fields():
+            return
+
+        # ``data`` follows the webUI inputs.tsx:232-252 contract: FILE fields
+        # contribute ``<name>_upload_id`` / ``<name>_name`` placeholders while
+        # uploads stream in the background.
+        data, pending_uploads = self._collect_field_values()
+        primary_value = self._primary_value(data)
 
         try:
             self._client.provide_input(self.input_id, primary_value, data)
@@ -251,9 +268,8 @@ class InputForm(ModalScreen[None]):
             self.app.notify("Failed to submit input", severity="error")
             return
 
-        # Kick off chunked uploads in the background. The modal pops via the
-        # queue subscription once the server processes InputProvideAction;
-        # uploads continue independently and notify on completion/failure.
+        # The modal pops via the queue subscription once the server processes
+        # InputProvideAction; uploads continue and notify on completion/failure.
         for upload_id, path in pending_uploads:
             self._launch_upload(upload_id, path)
 
@@ -265,14 +281,16 @@ class InputForm(ModalScreen[None]):
                     f"Uploaded {path.name}",
                     severity="information",
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.exception("Upload failed: id=%s", upload_id)
                 self.app.notify(
                     f"Upload of {path.name} failed: {exc}",
                     severity="error",
                 )
 
-        asyncio.create_task(_run())
+        task = asyncio.create_task(_run())
+        self._upload_tasks.add(task)
+        task.add_done_callback(self._upload_tasks.discard)
 
 
 class _PlainField:

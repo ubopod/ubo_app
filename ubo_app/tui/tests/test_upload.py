@@ -54,7 +54,8 @@ async def test_upload_dispatches_start_chunks_complete(tmp_path: Any) -> None:
     assert start["upload_id"] == "upload-1"
     assert start["filename"] == "big.bin"
     assert start["total_size"] == len(payload)
-    assert start["total_chunks"] == 2
+    expected_total_chunks = 2
+    assert start["total_chunks"] == expected_total_chunks
     assert start["chunk_size"] == CHUNK_SIZE
 
     assert [c["chunk_index"] for c in client.chunk_calls] == [0, 1]

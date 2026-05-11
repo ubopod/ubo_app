@@ -49,7 +49,8 @@ async def test_prompt_view_exposes_item_labels() -> None:
         pass
 
     view = captured["view"]
-    assert view.item_count == 2
+    expected_item_count = 2
+    assert view.item_count == expected_item_count
     assert view.get_item_label(0) == "Yes"
     assert view.get_item_label(1) == "No"
     assert view.get_item_label(99) is None

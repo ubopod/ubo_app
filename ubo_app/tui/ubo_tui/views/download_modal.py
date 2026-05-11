@@ -90,6 +90,7 @@ class DownloadModal(ModalScreen[None]):
         self._filename = filename
         self._default_dir = default_dir or (Path.home() / "Downloads")
         self._in_progress = False
+        self._download_task: asyncio.Task[None] | None = None
 
     def compose(self) -> ComposeResult:
         default_path = str(self._default_dir / self._filename)
@@ -157,7 +158,7 @@ class DownloadModal(ModalScreen[None]):
 
         self._in_progress = True
         self._set_status(f"Downloading to {target} ...")
-        asyncio.create_task(self._run_download(target))
+        self._download_task = asyncio.create_task(self._run_download(target))
 
     async def _run_download(self, target: Path) -> None:
         try:
@@ -165,7 +166,7 @@ class DownloadModal(ModalScreen[None]):
                 self._token,
                 target,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("Download failed")
             self._in_progress = False
             self._set_status(f"Failed: {exc}")

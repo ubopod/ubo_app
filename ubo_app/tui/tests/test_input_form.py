@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import pytest
@@ -223,8 +223,10 @@ async def test_submit_with_file_field_emits_upload_id_and_runs_upload(
     upload_id = data["attachment_upload_id"]
 
     # The chunked upload should have run with the same upload_id.
-    assert client.upload_starts and client.upload_starts[0]["upload_id"] == upload_id
-    assert client.upload_chunks and client.upload_chunks[0]["data"] == b"hello world"
+    assert client.upload_starts
+    assert client.upload_starts[0]["upload_id"] == upload_id
+    assert client.upload_chunks
+    assert client.upload_chunks[0]["data"] == b"hello world"
     assert client.upload_completes == [{"upload_id": upload_id}]
 
 

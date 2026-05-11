@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from textual.validation import Regex
@@ -48,79 +49,77 @@ def _field_options(field: Any) -> list[str]:
     return [str(o) for o in items]
 
 
-def build_widget(field: Any) -> Widget:
-    """Create a Textual widget for the given InputFieldDescription.
+def _build_select(field: Any, default: str, validators: list[Any]) -> Widget:
+    choices = _field_options(field)
+    select_options = [(o, o) for o in choices]
+    if select_options:
+        initial = default if default in choices else select_options[0][1]
+        return Select(select_options, value=initial, allow_blank=False)
+    # Empty options: degrade gracefully to a text input so the form remains
+    # usable rather than crashing on construction.
+    return Input(value=default, validators=validators or None)
 
-    Returns an FILE placeholder for FILE fields; the actual file path
-    composite widget is provided by Phase 3 and is not wired here yet.
-    """
+
+def _build_color(default: str, pattern: str) -> Widget:
+    color_validators = [Regex(HEX_COLOR_PATTERN)]
+    if pattern:
+        color_validators.append(Regex(pattern))
+    return Input(value=default, placeholder="#RRGGBB", validators=color_validators)
+
+
+def _build_file(field: Any, default: str) -> Widget:
+    mimetype = getattr(field, "file_mimetype", None) or ""
+    placeholder = (
+        f"Type a path or press F2 to browse ({mimetype})"
+        if mimetype
+        else "Type a path or press F2 to browse"
+    )
+    return FilePathInput(
+        value=default,
+        placeholder=placeholder,
+        title=getattr(field, "label", "") or "Select a file",
+    )
+
+
+def build_widget(field: Any) -> Widget:
+    """Create a Textual widget for the given InputFieldDescription."""
     field_type = _field_type_name(field)
     default = getattr(field, "default_value", "") or ""
     pattern = getattr(field, "pattern", None) or ""
-    validators: list[Any] = []
-    if pattern:
-        validators.append(Regex(pattern))
+    validators: list[Any] = [Regex(pattern)] if pattern else []
 
-    if field_type == "PASSWORD":
-        return Input(value=default, password=True, validators=validators or None)
-
-    if field_type == "NUMBER":
-        return Input(value=default, type="number", validators=validators or None)
-
-    if field_type == "LONG":
-        return TextArea(text=default)
-
-    if field_type == "CHECKBOX":
-        return Switch(value=default in TRUTHY)
-
-    if field_type == "SELECT":
-        choices = _field_options(field)
-        # Each option is shown to the user and submitted as the same string
-        select_options = [(o, o) for o in choices]
-        if select_options:
-            initial = default if default in choices else select_options[0][1]
-            return Select(select_options, value=initial, allow_blank=False)
-        # Empty options: degrade gracefully to a text input so the form
-        # remains usable rather than crashing on construction.
-        return Input(value=default, validators=validators or None)
-
-    if field_type == "COLOR":
-        color_validators = [Regex(HEX_COLOR_PATTERN)]
-        if pattern:
-            color_validators.append(Regex(pattern))
-        return Input(
+    simple_builders: dict[str, Any] = {
+        "PASSWORD": lambda: Input(
             value=default,
-            placeholder="#RRGGBB",
-            validators=color_validators,
-        )
-
-    if field_type == "DATE":
-        return MaskedInput(
+            password=True,
+            validators=validators or None,
+        ),
+        "NUMBER": lambda: Input(
+            value=default,
+            type="number",
+            validators=validators or None,
+        ),
+        "LONG": lambda: TextArea(text=default),
+        "CHECKBOX": lambda: Switch(value=default in TRUTHY),
+        "DATE": lambda: MaskedInput(
             template=DATE_TEMPLATE,
             value=default,
             validators=validators or None,
-        )
-
-    if field_type == "TIME":
-        return MaskedInput(
+        ),
+        "TIME": lambda: MaskedInput(
             template=TIME_TEMPLATE,
             value=default,
             validators=validators or None,
-        )
-
+        ),
+    }
+    if field_type in simple_builders:
+        return simple_builders[field_type]()
+    if field_type == "SELECT":
+        return _build_select(field, default, validators)
+    if field_type == "COLOR":
+        return _build_color(default, pattern)
     if field_type == "FILE":
-        mimetype = getattr(field, "file_mimetype", None) or ""
-        placeholder = (
-            f"Type a path or press F2 to browse ({mimetype})"
-            if mimetype
-            else "Type a path or press F2 to browse"
-        )
-        return FilePathInput(
-            value=default,
-            placeholder=placeholder,
-            title=getattr(field, "label", "") or "Select a file",
-        )
-
+        return _build_file(field, default)
     # TEXT and any unknown type fall through to a plain text input.
     return Input(value=default, validators=validators or None)
 
@@ -133,15 +132,28 @@ def widget_value(widget: Widget) -> str:
         return widget.text
     if isinstance(widget, Select):
         value = widget.value
-        if value is None or value is Select.BLANK:
-            return ""
-        return str(value)
-    if isinstance(widget, FilePathInput):
-        return widget.value
-    if isinstance(widget, (Input, MaskedInput)):
+        return "" if value is None or value is Select.BLANK else str(value)
+    if isinstance(widget, (FilePathInput, Input, MaskedInput)):
         return widget.value
     # Defensive fallback for unknown widget types.
     return str(getattr(widget, "value", ""))
+
+
+def _file_field_path(widget: Widget) -> Path | None:
+    if isinstance(widget, FilePathInput):
+        return widget.get_path()
+    text = widget_value(widget).strip()
+    return Path(text).expanduser() if text else None
+
+
+def _file_field_is_valid(widget: Widget, *, required: bool) -> bool:
+    path = _file_field_path(widget)
+    if path is None:
+        return not required
+    try:
+        return path.is_file()
+    except OSError:
+        return False
 
 
 def widget_is_valid(widget: Widget, field: Any) -> bool:
@@ -154,33 +166,12 @@ def widget_is_valid(widget: Widget, field: Any) -> bool:
         return True
 
     if field_type == "FILE":
-        # File fields validate by checking that the path exists and is a
-        # readable regular file when required. An empty path is fine for
-        # optional fields.
-        if isinstance(widget, FilePathInput):
-            path = widget.get_path()
-        else:
-            text = widget_value(widget).strip()
-            from pathlib import Path  # local import to keep top tidy
-
-            path = Path(text).expanduser() if text else None
-
-        if path is None:
-            return not required
-        try:
-            return path.is_file()
-        except OSError:
-            return False
+        return _file_field_is_valid(widget, required=required)
 
     value = widget_value(widget)
-
     if required and not value.strip():
         return False
-
-    if isinstance(widget, (Input, MaskedInput)):
-        # Textual exposes the live validation state via Input.is_valid.
-        is_valid = getattr(widget, "is_valid", True)
-        if not is_valid:
-            return False
-
-    return True
+    return not (
+        isinstance(widget, (Input, MaskedInput))
+        and not getattr(widget, "is_valid", True)
+    )

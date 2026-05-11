@@ -6,6 +6,9 @@ from typing import Any
 
 import pytest
 
+ITEM_COUNT = 9
+LAST_INDEX = ITEM_COUNT - 1
+
 
 @pytest.mark.asyncio
 async def test_page_down_jumps_by_page_step() -> None:
@@ -14,12 +17,12 @@ async def test_page_down_jumps_by_page_step() -> None:
 
     app = UboTUI()
     app._current_view = "menu"  # noqa: SLF001
-    app._item_count = 9  # noqa: SLF001
+    app._item_count = ITEM_COUNT  # noqa: SLF001
     app._selected_index = 0  # noqa: SLF001
 
     # Stub out _update_view_selection — it queries widgets that aren't
     # mounted in this minimal harness.
-    app._update_view_selection = lambda: None  # type: ignore[method-assign]
+    app._update_view_selection = lambda: None  # type: ignore[method-assign]  # noqa: SLF001
 
     app.action_page_down()
     assert app._selected_index == UboTUI.PAGE_STEP  # noqa: SLF001
@@ -32,12 +35,12 @@ async def test_page_down_clamps_to_last_index() -> None:
 
     app = UboTUI()
     app._current_view = "menu"  # noqa: SLF001
-    app._item_count = 9  # noqa: SLF001
+    app._item_count = ITEM_COUNT  # noqa: SLF001
     app._selected_index = UboTUI.PAGE_STEP  # already past page step  # noqa: SLF001
-    app._update_view_selection = lambda: None  # type: ignore[method-assign]
+    app._update_view_selection = lambda: None  # type: ignore[method-assign]  # noqa: SLF001
 
     app.action_page_down()
-    assert app._selected_index == 8  # 9 items, last index is 8  # noqa: SLF001
+    assert app._selected_index == LAST_INDEX  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -47,12 +50,12 @@ async def test_page_up_jumps_back_by_page_step() -> None:
 
     app = UboTUI()
     app._current_view = "menu"  # noqa: SLF001
-    app._item_count = 9  # noqa: SLF001
-    app._selected_index = 8  # noqa: SLF001
-    app._update_view_selection = lambda: None  # type: ignore[method-assign]
+    app._item_count = ITEM_COUNT  # noqa: SLF001
+    app._selected_index = LAST_INDEX  # noqa: SLF001
+    app._update_view_selection = lambda: None  # type: ignore[method-assign]  # noqa: SLF001
 
     app.action_page_up()
-    assert app._selected_index == 8 - UboTUI.PAGE_STEP  # noqa: SLF001
+    assert app._selected_index == LAST_INDEX - UboTUI.PAGE_STEP  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -62,9 +65,9 @@ async def test_page_up_clamps_to_zero() -> None:
 
     app = UboTUI()
     app._current_view = "menu"  # noqa: SLF001
-    app._item_count = 9  # noqa: SLF001
+    app._item_count = ITEM_COUNT  # noqa: SLF001
     app._selected_index = 2  # noqa: SLF001
-    app._update_view_selection = lambda: None  # type: ignore[method-assign]
+    app._update_view_selection = lambda: None  # type: ignore[method-assign]  # noqa: SLF001
 
     app.action_page_up()
     assert app._selected_index == 0  # noqa: SLF001
@@ -80,7 +83,9 @@ async def test_page_navigation_no_op_in_non_navigable_views() -> None:
     app._item_count = 0  # noqa: SLF001
     app._selected_index = 0  # noqa: SLF001
     calls: list[str] = []
-    app._update_view_selection = lambda: calls.append("call")  # type: ignore[method-assign]
+    app._update_view_selection = (  # type: ignore[method-assign]  # noqa: SLF001
+        lambda: calls.append("call")
+    )
 
     app.action_page_down()
     app.action_page_up()
@@ -95,10 +100,12 @@ async def test_page_navigation_calls_update_view_selection() -> None:
 
     app = UboTUI()
     app._current_view = "menu"  # noqa: SLF001
-    app._item_count = 9  # noqa: SLF001
+    app._item_count = ITEM_COUNT  # noqa: SLF001
     app._selected_index = 0  # noqa: SLF001
     calls: list[str] = []
-    app._update_view_selection = lambda: calls.append("update")  # type: ignore[method-assign]
+    app._update_view_selection = (  # type: ignore[method-assign]  # noqa: SLF001
+        lambda: calls.append("update")
+    )
 
     app.action_page_down()
     assert calls == ["update"]
@@ -111,11 +118,13 @@ async def test_page_down_no_op_when_already_at_end() -> None:
 
     app = UboTUI()
     app._current_view = "menu"  # noqa: SLF001
-    app._item_count = 9  # noqa: SLF001
-    app._selected_index = 8  # noqa: SLF001
+    app._item_count = ITEM_COUNT  # noqa: SLF001
+    app._selected_index = LAST_INDEX  # noqa: SLF001
     calls: list[Any] = []
-    app._update_view_selection = lambda: calls.append("update")  # type: ignore[method-assign]
+    app._update_view_selection = (  # type: ignore[method-assign]  # noqa: SLF001
+        lambda: calls.append("update")
+    )
 
     app.action_page_down()
-    assert app._selected_index == 8  # noqa: SLF001
+    assert app._selected_index == LAST_INDEX  # noqa: SLF001
     assert calls == []

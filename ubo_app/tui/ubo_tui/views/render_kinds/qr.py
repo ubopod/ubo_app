@@ -5,10 +5,6 @@ from __future__ import annotations
 import io
 import logging
 import os
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +39,7 @@ def render_qr_text(value: str, *, columns: int | None = None) -> str:
 
     try:
         import qrcode
+        import qrcode.constants
     except ImportError:
         logger.warning("qrcode library not installed; falling back to URL text")
         return value

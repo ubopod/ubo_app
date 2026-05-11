@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import TYPE_CHECKING, Any
 
 from textual.containers import Horizontal
@@ -64,7 +65,11 @@ def convert_status_icon(symbol: str) -> str:
 PROGRESS_BAR_WIDTH = 10
 
 
-def _render_progress_bar(progress: float | None, *, width: int = PROGRESS_BAR_WIDTH) -> str:
+def _render_progress_bar(
+    progress: float | None,
+    *,
+    width: int = PROGRESS_BAR_WIDTH,
+) -> str:
     """Render a single inline ASCII progress bar.
 
     Determinate (``0.0 <= progress <= 1.0``) → ``[██████░░░░] 60%``.
@@ -72,15 +77,13 @@ def _render_progress_bar(progress: float | None, *, width: int = PROGRESS_BAR_WI
     """
     if width <= 0:
         return ""
-    if progress is None:
-        return "[" + ("·" * width) + "]"
-    # Clamp + ignore NaN (proto field can be float NaN).
-    if progress != progress:  # NaN check
+    # Indeterminate or NaN (proto field can be float NaN).
+    if progress is None or math.isnan(progress):
         return "[" + ("·" * width) + "]"
     clamped = max(0.0, min(1.0, progress))
-    filled = int(round(clamped * width))
+    filled = round(clamped * width)
     bar = "█" * filled + "░" * (width - filled)
-    return f"[{bar}] {int(round(clamped * 100))}%"
+    return f"[{bar}] {round(clamped * 100)}%"
 
 
 def _render_progress_label(progress_notifications: list) -> str:

@@ -27,23 +27,25 @@ class _Menu:
     items: Any = None
 
 
+APPS_MENU_ITEMS = (
+    "Add New App",
+    "Home Automation",
+    "Networking",
+    "AI Agents",
+    "AI Engines",
+    "Remote Access",
+    "Files",
+    "Container Management",
+    "Other",
+)
+APPS_MENU_ITEM_COUNT = len(APPS_MENU_ITEMS)
+
+
 def _make_apps_menu() -> _Menu:
     """9-item menu mimicking the real Apps menu (last item = 'Other')."""
     return _Menu(
         title="Apps",
-        items=_Items(
-            items=[
-                _Item(label="Add New App"),
-                _Item(label="Home Automation"),
-                _Item(label="Networking"),
-                _Item(label="AI Agents"),
-                _Item(label="AI Engines"),
-                _Item(label="Remote Access"),
-                _Item(label="Files"),
-                _Item(label="Container Management"),
-                _Item(label="Other"),
-            ],
-        ),
+        items=_Items(items=[_Item(label=label) for label in APPS_MENU_ITEMS]),
     )
 
 
@@ -145,6 +147,6 @@ async def test_menu_view_keeps_all_items_no_truncation() -> None:
         pass
 
     view = captured["view"]
-    assert view.item_count == 9
-    assert view.get_item_label(0) == "Add New App"
-    assert view.get_item_label(8) == "Other"
+    assert view.item_count == APPS_MENU_ITEM_COUNT
+    assert view.get_item_label(0) == APPS_MENU_ITEMS[0]
+    assert view.get_item_label(APPS_MENU_ITEM_COUNT - 1) == APPS_MENU_ITEMS[-1]

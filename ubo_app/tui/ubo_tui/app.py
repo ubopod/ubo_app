@@ -156,7 +156,9 @@ class UboTUI(App):
                         results = [_unpack_from_any(item) for item in response.results]
                         current_view = results[0] if len(results) > 0 else None
                         status_bar = results[1] if len(results) > 1 else None
-                        web_ui_state = results[2] if len(results) > 2 else None
+                        web_ui_state = (
+                            results[2] if len(results) > 2 else None  # noqa: PLR2004
+                        )
                         logger.info(
                             "Got state: view=%s, status=%s, web_ui=%s",
                             type(current_view).__name__ if current_view else None,
@@ -293,7 +295,7 @@ class UboTUI(App):
             try:
                 if isinstance(self.screen, InputForm):
                     self.pop_screen()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("Failed to pop InputForm")
             self._displayed_input_id = None
 
@@ -309,81 +311,54 @@ class UboTUI(App):
             logger.exception("Failed to push InputForm")
             self._displayed_input_id = None
 
+    _VIEW_TYPES = (
+        ("HomeViewData", "home"),
+        ("MenuViewData", "menu"),
+        ("ApplicationViewData", "application"),
+        ("RenderViewData", "render"),
+        ("PromptViewData", "prompt"),
+        ("InstructionViewData", "instruction"),
+        ("NotificationViewData", "notification"),
+    )
+
+    def _classify_view(self, view_data: Any) -> str | None:
+        """Map a server-side view payload to a local view-type string."""
+        class_name = type(view_data).__name__
+        type_attr = getattr(view_data, "type", "")
+        for expected_class, view_type in self._VIEW_TYPES:
+            if class_name == expected_class or type_attr == view_type:
+                return view_type
+        return None
+
     async def _process_view_change(self, view_data: Any, status_bar: Any) -> None:
         """Process view change."""
         logger.info("_process_view_change called")
-        # The unpacked data is already the specific view type (e.g., HomeViewData),
-        # not a ViewData wrapper. Check the class name or 'type' attribute.
-        view_type = None
-        actual_view = view_data  # The data IS the view, not a wrapper
-
-        # Get the class name to determine view type
         class_name = type(view_data).__name__
         logger.info("View class name: %s", class_name)
+        actual_view = view_data
+        view_type = self._classify_view(view_data)
 
-        if class_name == "HomeViewData" or getattr(view_data, "type", "") == "home":
-            view_type = "home"
-            self._is_home = True
-            logger.info("Detected HOME view")
-        elif class_name == "MenuViewData" or getattr(view_data, "type", "") == "menu":
-            view_type = "menu"
-            self._is_home = False
-            logger.info("Detected MENU view: %s", getattr(actual_view, "title", "?"))
-        elif (
-            class_name == "ApplicationViewData"
-            or getattr(view_data, "type", "") == "application"
-        ):
-            view_type = "application"
-            self._is_home = False
-            app_id = getattr(actual_view, "application_id", "?")
-            logger.info("Detected APPLICATION view: %s", app_id)
-        elif (
-            class_name == "RenderViewData"
-            or getattr(view_data, "type", "") == "render"
-        ):
-            view_type = "render"
-            self._is_home = False
-            kind = getattr(actual_view, "kind", "?")
-            logger.info("Detected RENDER view: kind=%s", kind)
-        elif (
-            class_name == "PromptViewData"
-            or getattr(view_data, "type", "") == "prompt"
-        ):
-            view_type = "prompt"
-            self._is_home = False
-            logger.info("Detected PROMPT view: %s", getattr(actual_view, "title", "?"))
-        elif (
-            class_name == "InstructionViewData"
-            or getattr(view_data, "type", "") == "instruction"
-        ):
-            view_type = "instruction"
-            self._is_home = False
-            logger.info(
-                "Detected INSTRUCTION view: %s",
-                getattr(actual_view, "title", "?"),
+        if view_type is None:
+            logger.warning(
+                "Could not determine view type from view_data: class=%s, type=%s",
+                class_name,
+                getattr(view_data, "type", "N/A"),
             )
-        elif (
-            class_name == "NotificationViewData"
-            or getattr(view_data, "type", "") == "notification"
-        ):
-            # Check if notification has meaningful content
+        elif view_type == "notification":
             # Skip empty notifications (race condition where notification is cleared
-            # from state but stack still has NotificationStackItem)
+            # from state but stack still has NotificationStackItem).
             title = getattr(actual_view, "title", "") or ""
             items_container = getattr(actual_view, "items", None)
             has_items = bool(
                 items_container and getattr(items_container, "items", None),
             )
-
             if not title and not has_items:
                 notification_id = getattr(actual_view, "notification_id", None)
                 logger.info(
                     "Skipping empty notification view: id=%s (no title, no items)",
                     notification_id,
                 )
-                return  # Skip this empty notification
-
-            view_type = "notification"
+                return
             self._is_home = False
             self._notification_id = getattr(actual_view, "notification_id", None)
             logger.info(
@@ -391,11 +366,8 @@ class UboTUI(App):
                 self._notification_id,
             )
         else:
-            logger.warning(
-                "Could not determine view type from view_data: class=%s, type=%s",
-                class_name,
-                getattr(view_data, "type", "N/A"),
-            )
+            self._is_home = view_type == "home"
+            logger.info("Detected %s view", view_type.upper())
 
         if view_type and actual_view:
             await self._update_view(view_type, actual_view)
