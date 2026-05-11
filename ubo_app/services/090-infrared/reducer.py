@@ -118,7 +118,7 @@ def _infrared_assistant_toggle(
 # source so per-source policies can dispatch on it.
 ASSISTANT_IR_CODES: dict[
     tuple[str, str],
-    'Callable[[str, str], AssistantListeningAction]',
+    Callable[[str, str], AssistantListeningAction],
 ] = {
     ('necx', '0xbf04'): _infrared_assistant_start,
     ('necx', '0xbf06'): _infrared_assistant_stop,
