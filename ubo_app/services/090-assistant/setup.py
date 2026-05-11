@@ -19,9 +19,11 @@ from redux import AutorunOptions
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
 from ubo_app.constants.assistant import (
+    ANTHROPIC_API_KEY_SECRET_ID,
     ASSEMBLYAI_API_KEY_SECRET_ID,
     CEREBRAS_API_KEY_SECRET_ID,
     DEEPGRAM_API_KEY_SECRET_ID,
+    DEEPSEEK_API_KEY_SECRET_ID,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
     GENERIC_LLM_API_KEY_SECRET_ID,
@@ -29,7 +31,10 @@ from ubo_app.constants.assistant import (
     GENERIC_LLM_MODEL_SECRET_ID,
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
     GROK_API_KEY_SECRET_ID,
+    MISTRAL_API_KEY_SECRET_ID,
     OPENAI_API_KEY_SECRET_ID,
+    OPENROUTER_API_KEY_SECRET_ID,
+    QWEN_API_KEY_SECRET_ID,
     RIME_API_KEY_SECRET_ID,
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
@@ -316,6 +321,11 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             'elevenlabs_key': secrets.read_secret(ELEVENLABS_API_KEY_SECRET_ID),
             'elevenlabs_voice': secrets.read_secret(ELEVENLABS_VOICE_ID),
             'cerebras': secrets.read_secret(CEREBRAS_API_KEY_SECRET_ID),
+            'anthropic': secrets.read_secret(ANTHROPIC_API_KEY_SECRET_ID),
+            'qwen': secrets.read_secret(QWEN_API_KEY_SECRET_ID),
+            'deepseek': secrets.read_secret(DEEPSEEK_API_KEY_SECRET_ID),
+            'openrouter': secrets.read_secret(OPENROUTER_API_KEY_SECRET_ID),
+            'mistral': secrets.read_secret(MISTRAL_API_KEY_SECRET_ID),
             'generic_llm_base_url': secrets.read_secret(
                 GENERIC_LLM_BASE_URL_SECRET_ID,
             ),

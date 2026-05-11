@@ -15,13 +15,18 @@ from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_WAKE_WORD,
     ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
     ASSISTANT_WAKE_WORD,
+    DEFAULT_LLM_ANTHROPIC_MODEL,
     DEFAULT_LLM_CEREBRAS_MODEL,
+    DEFAULT_LLM_DEEPSEEK_MODEL,
     DEFAULT_LLM_GENERIC_MODEL,
     DEFAULT_LLM_GOOGLE_MODEL,
     DEFAULT_LLM_GROK_MODEL,
+    DEFAULT_LLM_MISTRAL_MODEL,
     DEFAULT_LLM_OLLAMA_MODEL,
     DEFAULT_LLM_OLLAMA_ONPREM_MODEL,
     DEFAULT_LLM_OPENAI_MODEL,
+    DEFAULT_LLM_OPENROUTER_MODEL,
+    DEFAULT_LLM_QWEN_MODEL,
 )
 from ubo_app.store.services.keypad import Key
 from ubo_app.utils.persistent_store import read_from_persistent_store
@@ -50,6 +55,11 @@ class AssistantLLMName(StrEnum):
     OPENAI = 'openai'
     GROK = 'grok'
     CEREBRAS = 'cerebras'
+    ANTHROPIC = 'anthropic'
+    QWEN = 'qwen'
+    DEEPSEEK = 'deepseek'
+    OPENROUTER = 'openrouter'
+    MISTRAL = 'mistral'
     GENERIC = 'generic_llm'
 
 
@@ -60,6 +70,11 @@ DEFAULT_MODELS = {
     AssistantLLMName.OPENAI: DEFAULT_LLM_OPENAI_MODEL,
     AssistantLLMName.GROK: DEFAULT_LLM_GROK_MODEL,
     AssistantLLMName.CEREBRAS: DEFAULT_LLM_CEREBRAS_MODEL,
+    AssistantLLMName.ANTHROPIC: DEFAULT_LLM_ANTHROPIC_MODEL,
+    AssistantLLMName.QWEN: DEFAULT_LLM_QWEN_MODEL,
+    AssistantLLMName.DEEPSEEK: DEFAULT_LLM_DEEPSEEK_MODEL,
+    AssistantLLMName.OPENROUTER: DEFAULT_LLM_OPENROUTER_MODEL,
+    AssistantLLMName.MISTRAL: DEFAULT_LLM_MISTRAL_MODEL,
     AssistantLLMName.GENERIC: DEFAULT_LLM_GENERIC_MODEL,
 }
 

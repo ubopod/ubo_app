@@ -102,6 +102,26 @@ class Assistant:
             os.environ['CEREBRAS_API_KEY_SECRET_ID'],
         )
 
+        anthropic_api_key = await self.client.query_secret(
+            os.environ['ANTHROPIC_API_KEY_SECRET_ID'],
+        )
+
+        qwen_api_key = await self.client.query_secret(
+            os.environ['QWEN_API_KEY_SECRET_ID'],
+        )
+
+        deepseek_api_key = await self.client.query_secret(
+            os.environ['DEEPSEEK_API_KEY_SECRET_ID'],
+        )
+
+        openrouter_api_key = await self.client.query_secret(
+            os.environ['OPENROUTER_API_KEY_SECRET_ID'],
+        )
+
+        mistral_api_key = await self.client.query_secret(
+            os.environ['MISTRAL_API_KEY_SECRET_ID'],
+        )
+
         elevenlabs_api_key = await self.client.query_secret(
             os.environ['ELEVENLABS_API_KEY_SECRET_ID'],
         )
@@ -164,6 +184,11 @@ class Assistant:
                 openai_api_key=openai_api_key,
                 grok_api_key=grok_api_key,
                 cerebras_api_key=cerebras_api_key,
+                anthropic_api_key=anthropic_api_key,
+                qwen_api_key=qwen_api_key,
+                deepseek_api_key=deepseek_api_key,
+                openrouter_api_key=openrouter_api_key,
+                mistral_api_key=mistral_api_key,
                 ollama_onprem_url=ollama_onprem_url,
                 generic_llm_base_url=generic_llm_base_url,
                 generic_llm_api_key=generic_llm_api_key,

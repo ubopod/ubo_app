@@ -51,6 +51,26 @@ DEFAULT_LLM_GENERIC_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_GENERIC_LLM_MODEL',
     'gpt-4.1',
 )
+DEFAULT_LLM_ANTHROPIC_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_ANTHROPIC_MODEL',
+    'claude-sonnet-4-5',
+)
+DEFAULT_LLM_QWEN_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_QWEN_MODEL',
+    'qwen-plus',
+)
+DEFAULT_LLM_DEEPSEEK_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_DEEPSEEK_MODEL',
+    'deepseek-chat',
+)
+DEFAULT_LLM_OPENROUTER_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_OPENROUTER_MODEL',
+    'openai/gpt-4o-mini',
+)
+DEFAULT_LLM_MISTRAL_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_MISTRAL_MODEL',
+    'mistral-small-latest',
+)
 
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
 GOOGLE_API_KEY_PATTERN = '^AIza[0-9A-Za-z\\-_]{35}$'
@@ -119,6 +139,21 @@ DEEPGRAM_API_KEY_PATTERN = '^[a-f0-9]{40}$'
 
 CEREBRAS_API_KEY_SECRET_ID = 'cerebras_api_key'  # noqa: S105
 CEREBRAS_API_KEY_PATTERN = '^csk-[a-zA-Z0-9-_]{40,}$'
+
+ANTHROPIC_API_KEY_SECRET_ID = 'anthropic_api_key'  # noqa: S105
+ANTHROPIC_API_KEY_PATTERN = r'^sk-ant-[a-zA-Z0-9_-]{40,}$'
+
+QWEN_API_KEY_SECRET_ID = 'qwen_api_key'  # noqa: S105
+QWEN_API_KEY_PATTERN = r'^sk-[a-zA-Z0-9]{32,}$'
+
+DEEPSEEK_API_KEY_SECRET_ID = 'deepseek_api_key'  # noqa: S105
+DEEPSEEK_API_KEY_PATTERN = r'^sk-[a-zA-Z0-9]{32,}$'
+
+OPENROUTER_API_KEY_SECRET_ID = 'openrouter_api_key'  # noqa: S105
+OPENROUTER_API_KEY_PATTERN = r'^sk-or-v1-[a-f0-9]{64}$'
+
+MISTRAL_API_KEY_SECRET_ID = 'mistral_api_key'  # noqa: S105
+MISTRAL_API_KEY_PATTERN = r'^[a-zA-Z0-9]{32}$'
 
 ASSEMBLYAI_API_KEY_SECRET_ID = 'assemblyai_api_key'  # noqa: S105
 ASSEMBLYAI_API_KEY_PATTERN = '^[a-f0-9]{32}$'

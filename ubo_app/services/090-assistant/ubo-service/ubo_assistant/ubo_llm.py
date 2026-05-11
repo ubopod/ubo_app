@@ -16,15 +16,20 @@ from pipecat.frames.frames import (
     UserImageRequestFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
+from pipecat.services.anthropic.llm import AnthropicLLMService
 from pipecat.services.cerebras.llm import CerebrasLLMService
+from pipecat.services.deepseek.llm import DeepSeekLLMService
 from pipecat.services.google.vertex.llm import GoogleVertexLLMService
 from pipecat.services.llm_service import (
     FunctionCallHandler,
     FunctionCallParams,
     LLMService,
 )
+from pipecat.services.mistral.llm import MistralLLMService
 from pipecat.services.ollama.llm import OLLamaLLMService
 from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.openrouter.llm import OpenRouterLLMService
+from pipecat.services.qwen.llm import QwenLLMService
 from pipecat.services.xai.llm import GrokLLMService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
@@ -37,6 +42,26 @@ from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.switch import UboLLMSwitchService, make_empty_llm_settings
 
 DEFAULT_GENERIC_LLM_MODEL = os.environ.get('DEFAULT_LLM_GENERIC_MODEL', 'gpt-4.1')
+DEFAULT_ANTHROPIC_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_ANTHROPIC_MODEL',
+    'claude-sonnet-4-5',
+)
+DEFAULT_QWEN_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_QWEN_MODEL',
+    'qwen-plus',
+)
+DEFAULT_DEEPSEEK_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_DEEPSEEK_MODEL',
+    'deepseek-chat',
+)
+DEFAULT_OPENROUTER_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_OPENROUTER_MODEL',
+    'openai/gpt-4o-mini',
+)
+DEFAULT_MISTRAL_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_MISTRAL_MODEL',
+    'mistral-small-latest',
+)
 
 
 @dataclass
@@ -47,6 +72,11 @@ class LLMServiceConfig:
     openai_api_key: str | None = None
     grok_api_key: str | None = None
     cerebras_api_key: str | None = None
+    anthropic_api_key: str | None = None
+    qwen_api_key: str | None = None
+    deepseek_api_key: str | None = None
+    openrouter_api_key: str | None = None
+    mistral_api_key: str | None = None
     ollama_onprem_url: str | None = None
     generic_llm_base_url: str | None = None
     generic_llm_api_key: str | None = None
@@ -157,11 +187,22 @@ class UboLLMService(UboLLMSwitchService):
         """Initialize LLM service with various services including remote Ollama."""
         self._config = config
 
-        # Initialize all services
+        # Initialize all services. Cloud providers that take a runtime API key
+        # are wrapped in GenericLLMProxy so they always live in Pipecat's
+        # ServiceSwitcher init list. The underlying real Pipecat service is
+        # created/refreshed on demand in ``_refresh_api_key_service`` whenever
+        # the user switches to that provider — see Phase 1.5 design notes for
+        # why the proxy pattern is required (Pipecat 1.0 freezes its services
+        # list at __init__).
         self.google_vertex_llm = self._create_google_vertex_service()
-        self.openai_llm = self._create_openai_service()
-        self.grok_llm = self._create_grok_service()
-        self.cerebras_llm = self._create_cerebras_service()
+        self.openai_llm = GenericLLMProxy()
+        self.grok_llm = GenericLLMProxy()
+        self.cerebras_llm = GenericLLMProxy()
+        self.anthropic_llm = GenericLLMProxy()
+        self.qwen_llm = GenericLLMProxy()
+        self.deepseek_llm = GenericLLMProxy()
+        self.openrouter_llm = GenericLLMProxy()
+        self.mistral_llm = GenericLLMProxy()
         self.ollama_llm = self._create_ollama_service()
         self.ollama_onprem_llm = self._create_ollama_onprem_service()
         self.generic_llm = GenericLLMProxy()
@@ -172,6 +213,11 @@ class UboLLMService(UboLLMSwitchService):
             'openai': self.openai_llm,
             'grok': self.grok_llm,
             'cerebras': self.cerebras_llm,
+            'anthropic': self.anthropic_llm,
+            'qwen': self.qwen_llm,
+            'deepseek': self.deepseek_llm,
+            'openrouter': self.openrouter_llm,
+            'mistral': self.mistral_llm,
             'ollama': self.ollama_llm,
             'ollama_onprem': self.ollama_onprem_llm,
             'generic_llm': self.generic_llm,
@@ -187,6 +233,86 @@ class UboLLMService(UboLLMSwitchService):
 
         # Register built-in functions
         self._register_builtin_functions()
+
+    # Cloud LLM providers whose only runtime input is a single API key. Each
+    # entry maps a service id to (env var holding the secret id, config attr
+    # storing the value, factory method building the real Pipecat service,
+    # proxy attribute on this instance). The proxies are stable members of
+    # Pipecat's switcher init list; the underlying real services get
+    # created/swapped here when the user picks the provider.
+    _API_KEY_PROVIDERS: dict[str, tuple[str, str, str, str]] = {  # noqa: RUF012
+        'openai': (
+            'OPENAI_API_KEY_SECRET_ID',
+            'openai_api_key',
+            '_create_openai_service',
+            'openai_llm',
+        ),
+        'grok': (
+            'GROK_API_KEY_SECRET_ID',
+            'grok_api_key',
+            '_create_grok_service',
+            'grok_llm',
+        ),
+        'cerebras': (
+            'CEREBRAS_API_KEY_SECRET_ID',
+            'cerebras_api_key',
+            '_create_cerebras_service',
+            'cerebras_llm',
+        ),
+        'anthropic': (
+            'ANTHROPIC_API_KEY_SECRET_ID',
+            'anthropic_api_key',
+            '_create_anthropic_service',
+            'anthropic_llm',
+        ),
+        'qwen': (
+            'QWEN_API_KEY_SECRET_ID',
+            'qwen_api_key',
+            '_create_qwen_service',
+            'qwen_llm',
+        ),
+        'deepseek': (
+            'DEEPSEEK_API_KEY_SECRET_ID',
+            'deepseek_api_key',
+            '_create_deepseek_service',
+            'deepseek_llm',
+        ),
+        'openrouter': (
+            'OPENROUTER_API_KEY_SECRET_ID',
+            'openrouter_api_key',
+            '_create_openrouter_service',
+            'openrouter_llm',
+        ),
+        'mistral': (
+            'MISTRAL_API_KEY_SECRET_ID',
+            'mistral_api_key',
+            '_create_mistral_service',
+            'mistral_llm',
+        ),
+    }
+
+    async def _refresh_api_key_service(self, id: str) -> None:
+        """Re-query the API key for *id* and (re)build its underlying service."""
+        env_var, config_attr, factory_name, proxy_attr = self._API_KEY_PROVIDERS[id]
+        api_key = await self.client.query_secret(os.environ[env_var])
+        setattr(self._config, config_attr, api_key)
+
+        factory = getattr(self, factory_name)
+        real_service: LLMService | None = factory()
+
+        proxy: GenericLLMProxy = getattr(self, proxy_attr)
+        if proxy.service is real_service:
+            return
+        await proxy.set_service(real_service)
+
+        logger.info(
+            '{extra} service refreshed',
+            extra={
+                'service_id': id,
+                'has_api_key': bool(api_key),
+                'has_service': real_service is not None,
+            },
+        )
 
     async def _refresh_generic_llm_service(self) -> None:
         """Refresh Generic LLM config from secrets before selecting it."""
@@ -222,9 +348,11 @@ class UboLLMService(UboLLMSwitchService):
         )
 
     async def set_selected_service(self, id: str) -> None:
-        """Set the selected service, refreshing Generic LLM secrets first."""
+        """Set the selected service, refreshing dynamic-config providers first."""
         if id == 'generic_llm':
             await self._refresh_generic_llm_service()
+        elif id in self._API_KEY_PROVIDERS:
+            await self._refresh_api_key_service(id)
         await super().set_selected_service(id)
 
     def _create_google_vertex_service(self) -> GoogleVertexLLMService | None:
@@ -291,6 +419,76 @@ class UboLLMService(UboLLMSwitchService):
             )
         except Exception:
             logger.exception('Error while initializing Cerebras LLM')
+            return None
+
+    def _create_anthropic_service(self) -> AnthropicLLMService | None:
+        """Create Anthropic LLM service if API key is provided."""
+        if not self._config.anthropic_api_key:
+            return None
+
+        try:
+            return AnthropicLLMService(
+                api_key=self._config.anthropic_api_key,
+                settings=AnthropicLLMService.Settings(model=DEFAULT_ANTHROPIC_MODEL),
+            )
+        except Exception:
+            logger.exception('Error while initializing Anthropic LLM')
+            return None
+
+    def _create_qwen_service(self) -> QwenLLMService | None:
+        """Create Qwen LLM service if API key is provided."""
+        if not self._config.qwen_api_key:
+            return None
+
+        try:
+            return QwenLLMService(
+                api_key=self._config.qwen_api_key,
+                settings=QwenLLMService.Settings(model=DEFAULT_QWEN_MODEL),
+            )
+        except Exception:
+            logger.exception('Error while initializing Qwen LLM')
+            return None
+
+    def _create_deepseek_service(self) -> DeepSeekLLMService | None:
+        """Create DeepSeek LLM service if API key is provided."""
+        if not self._config.deepseek_api_key:
+            return None
+
+        try:
+            return DeepSeekLLMService(
+                api_key=self._config.deepseek_api_key,
+                settings=DeepSeekLLMService.Settings(model=DEFAULT_DEEPSEEK_MODEL),
+            )
+        except Exception:
+            logger.exception('Error while initializing DeepSeek LLM')
+            return None
+
+    def _create_openrouter_service(self) -> OpenRouterLLMService | None:
+        """Create OpenRouter LLM service if API key is provided."""
+        if not self._config.openrouter_api_key:
+            return None
+
+        try:
+            return OpenRouterLLMService(
+                api_key=self._config.openrouter_api_key,
+                settings=OpenRouterLLMService.Settings(model=DEFAULT_OPENROUTER_MODEL),
+            )
+        except Exception:
+            logger.exception('Error while initializing OpenRouter LLM')
+            return None
+
+    def _create_mistral_service(self) -> MistralLLMService | None:
+        """Create Mistral LLM service if API key is provided."""
+        if not self._config.mistral_api_key:
+            return None
+
+        try:
+            return MistralLLMService(
+                api_key=self._config.mistral_api_key,
+                settings=MistralLLMService.Settings(model=DEFAULT_MISTRAL_MODEL),
+            )
+        except Exception:
+            logger.exception('Error while initializing Mistral LLM')
             return None
 
     def _create_ollama_service(self) -> OLLamaLLMService | None:
