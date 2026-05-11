@@ -50,6 +50,7 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
     StackPushMenuAction,
+    StackPushPromptAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_menu_content_dependency
@@ -312,6 +313,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     _mcp_action_ids: list[str] = []
     _mcp_server_unsubscribers: dict[str, Callable] = {}
 
+    # Generic "cancel/dismiss prompt" — dispatched by the Cancel button in
+    # the delete-credentials confirmation prompt. Registered once for the
+    # service lifetime.
+    register_action(
+        'assistant:provider-detail:cancel',
+        lambda: store.dispatch(MenuGoBackAction()),
+        allow_reregister=True,
+    )
+
     # Secrets file monitor - tracks API key changes
     @store.autorun(
         lambda _: secrets_modification_time(),
@@ -505,20 +515,67 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 ),
             )
 
-            # "Delete Credentials" — clears the secret and goes back
+            # "Delete Credentials" — push a confirmation prompt first.
+            # The Yes button on the prompt invokes the actual clear action
+            # which pops both the prompt and the provider-detail page so the
+            # user lands back on the Manage Providers list.
+            confirm_action = (
+                f'assistant:provider-detail:confirm-delete:{provider.name}'
+            )
+            _provider_detail_action_ids.append(confirm_action)
+
+            def _make_confirm_delete_handler(
+                p: NeedsSetupMixin,
+            ) -> Callable[[], None]:
+                def _handler() -> None:
+                    p.clear_credentials()
+                    # Pop prompt + provider-detail in one dispatch
+                    store.dispatch(MenuGoBackAction(), MenuGoBackAction())
+
+                return _handler
+
+            register_action(
+                confirm_action,
+                _make_confirm_delete_handler(provider),
+                allow_reregister=True,
+            )
+
             delete_action = f'assistant:provider-detail:delete:{provider.name}'
             _provider_detail_action_ids.append(delete_action)
 
-            def _make_delete_handler(p: NeedsSetupMixin) -> Callable[[], None]:
+            def _make_delete_prompt_handler(
+                p: NeedsSetupMixin,
+                confirm_id: str,
+            ) -> Callable[[], None]:
                 def _handler() -> None:
-                    p.clear_credentials()
-                    store.dispatch(MenuGoBackAction())
+                    store.dispatch(
+                        StackPushPromptAction(
+                            title='Delete Credentials',
+                            prompt=f'Forget {p.label} credentials?',
+                            icon='󰆴',
+                            items=(
+                                MenuItemData(
+                                    key='yes',
+                                    label='Delete',
+                                    icon='󰆴',
+                                    color=DANGER_COLOR,
+                                    action_id=confirm_id,
+                                ),
+                                MenuItemData(
+                                    key='cancel',
+                                    label='Cancel',
+                                    icon='󰜺',
+                                    action_id='assistant:provider-detail:cancel',
+                                ),
+                            ),
+                        ),
+                    )
 
                 return _handler
 
             register_action(
                 delete_action,
-                _make_delete_handler(provider),
+                _make_delete_prompt_handler(provider, confirm_action),
                 allow_reregister=True,
             )
             items.append(
