@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class DeepSeekEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """DeepSeek engine."""
 
+    credential_secret_ids = (DEEPSEEK_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'deepseek-chat',
         'deepseek-reasoner',

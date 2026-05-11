@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class DeepgramEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Deepgram engine."""
 
+    credential_secret_ids = (DEEPGRAM_API_KEY_SECRET_ID,)
+
     @property
     def name(self) -> str:
         """The internal name of the Deepgram engine."""

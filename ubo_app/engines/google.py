@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class GoogleEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Google engine."""
 
+    credential_secret_ids = (GOOGLE_API_KEY_SECRET_ID,)
+
     @property
     def name(self) -> str:
         """The name of the Google engine."""

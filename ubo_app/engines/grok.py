@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class GrokEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Grok engine."""
 
+    credential_secret_ids = (GROK_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'grok-4-0709',
         'grok-3',

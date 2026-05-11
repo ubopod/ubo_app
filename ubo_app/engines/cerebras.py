@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class CerebrasEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Cerebras engine."""
 
+    credential_secret_ids = (CEREBRAS_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'qwen-3-235b-a22b-instruct-2507',
         'llama3.1-8b',

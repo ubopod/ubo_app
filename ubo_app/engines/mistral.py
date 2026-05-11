@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class MistralEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Mistral engine."""
 
+    credential_secret_ids = (MISTRAL_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'mistral-small-latest',
         'mistral-medium-latest',

@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class RimeEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Rime TTS engine."""
 
+    credential_secret_ids = (RIME_API_KEY_SECRET_ID,)
+
     @property
     def name(self) -> str:
         """The internal name of the Rime engine."""

@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class OpenAIEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """OpenAI engine."""
 
+    credential_secret_ids = (OPENAI_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'gpt-4o',
         'gpt-4o-mini',

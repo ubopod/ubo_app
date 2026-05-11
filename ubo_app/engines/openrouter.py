@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class OpenRouterEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """OpenRouter engine."""
 
+    credential_secret_ids = (OPENROUTER_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'openrouter/auto',
         'openai/gpt-4o',

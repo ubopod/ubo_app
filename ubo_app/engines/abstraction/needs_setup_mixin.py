@@ -19,6 +19,13 @@ ENGINE_ERROR_NOTIFICATION_ID = 'ubo:engine-error:{engine}'
 class NeedsSetupMixin(EngineMixin, abc.ABC):
     """Base class for engines that require setup."""
 
+    # Secret keys this engine reads from / writes to the secrets file. Engines
+    # whose setup persists no credentials (e.g. download-only engines such as
+    # Piper, Vosk, local Ollama) keep this empty; the UI uses this to decide
+    # whether to show "Update / Delete Credentials" entries. The secrets file
+    # itself is the source of truth — `has_stored_credentials` checks it.
+    credential_secret_ids: tuple[str, ...] = ()
+
     @override
     def __init__(self, *, label: str | None = None) -> None:
         """Initialize the NeedsSetupMixin."""
@@ -42,6 +49,13 @@ class NeedsSetupMixin(EngineMixin, abc.ABC):
     async def _setup(self) -> None:
         """Perform the setup for the engine."""
         raise NotImplementedError
+
+    @final
+    def has_stored_credentials(self) -> bool:
+        """Return True iff any declared secret currently has a value on disk."""
+        from ubo_app.utils import secrets
+
+        return any(secrets.read_secret(sid) for sid in self.credential_secret_ids)
 
     @final
     def setup(self) -> None:

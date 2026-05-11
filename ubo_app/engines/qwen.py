@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class QwenEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Qwen (Alibaba DashScope) engine."""
 
+    credential_secret_ids = (QWEN_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'qwen-max',
         'qwen-plus',

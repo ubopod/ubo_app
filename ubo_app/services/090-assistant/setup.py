@@ -372,6 +372,17 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             ),
         )
 
+    def _llm_name_for(provider: NeedsSetupMixin) -> AssistantLLMName | None:
+        return next(
+            (name for name, eng in LLM_ENGINES.items() if eng is provider),
+            None,
+        )
+
+    def _has_model_picker(provider: NeedsSetupMixin) -> bool:
+        return _llm_name_for(provider) is not None and bool(
+            getattr(provider, 'CURATED_MODELS', ()),
+        )
+
     @store.autorun(
         lambda state: (
             secrets_monitor.value,
@@ -387,18 +398,29 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         items: list[MenuItemData] = []
         for provider in _deduped_providers():
             if isinstance(provider, NeedsSetupMixin):
+                action_id: str | None
                 if provider.is_setup:
-                    # Drill into a per-provider detail menu with manage options
-                    action_id = f'assistant:open-provider:{provider.name}'
-                    _provider_action_ids.append(action_id)
-                    register_action(
-                        action_id,
-                        lambda p=provider: store.dispatch(
-                            StackPushMenuAction(menu_key=f'provider:{p.name}'),
-                        ),
-                        allow_reregister=True,
-                    )
                     params = _get_setup_item_parameters()
+                    # Only drill into a detail menu when there is something to
+                    # manage — credentials in the secrets file (source of
+                    # truth) and/or a curated model picker. Local engines
+                    # without either (e.g. Piper, Vosk) get a status-only
+                    # row.
+                    if (
+                        provider.has_stored_credentials()
+                        or _has_model_picker(provider)
+                    ):
+                        action_id = f'assistant:open-provider:{provider.name}'
+                        _provider_action_ids.append(action_id)
+                        register_action(
+                            action_id,
+                            lambda p=provider: store.dispatch(
+                                StackPushMenuAction(menu_key=f'provider:{p.name}'),
+                            ),
+                            allow_reregister=True,
+                        )
+                    else:
+                        action_id = None
                 else:
                     # Not configured — tap to launch setup flow
                     action_id = f'assistant:setup-provider:{provider.name}'
@@ -442,10 +464,15 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         lambda state: (
             state.assistant.provider_setup_status,
             state.assistant.selected_models,
+            secrets_monitor.value,
         ),
     )
-    def provider_details(
-        data: tuple[dict[str, bool], dict[AssistantLLMName, str]],
+    def provider_details(  # noqa: C901
+        data: tuple[
+            dict[str, bool],
+            dict[AssistantLLMName, str],
+            dict[str, str | None],
+        ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
         selected_models = data[1]
@@ -464,14 +491,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
             # "Select Model" — only when this engine is registered as an LLM
             # provider and exposes a curated model list.
-            llm_name: AssistantLLMName | None = next(
-                (
-                    name
-                    for name, eng in LLM_ENGINES.items()
-                    if eng is provider
-                ),
-                None,
-            )
+            llm_name = _llm_name_for(provider)
             curated = getattr(provider, 'CURATED_MODELS', ())
             if llm_name is not None and curated:
                 select_model_action = (
@@ -498,95 +518,101 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                     ),
                 )
 
-            # "Re-enter Credentials" — re-runs the setup flow
-            setup_action = f'assistant:provider-detail:setup:{provider.name}'
-            _provider_detail_action_ids.append(setup_action)
-            register_action(
-                setup_action,
-                provider.setup,
-                allow_reregister=True,
-            )
-            items.append(
-                MenuItemData(
-                    key='setup',
-                    label='Re-enter Credentials',
-                    icon='󰒓',
-                    action_id=setup_action,
-                ),
-            )
+            # The secrets file is the source of truth for whether credential
+            # management options apply to this provider. Local engines such
+            # as Piper / Vosk / local Ollama have no `credential_secret_ids`
+            # so this is always False for them — no "Update Credentials" /
+            # "Delete Credentials" items appear.
+            if provider.has_stored_credentials():
+                # "Update Credentials" — re-runs the setup flow
+                setup_action = f'assistant:provider-detail:setup:{provider.name}'
+                _provider_detail_action_ids.append(setup_action)
+                register_action(
+                    setup_action,
+                    provider.setup,
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='setup',
+                        label='Update Credentials',
+                        icon='󰒓',
+                        action_id=setup_action,
+                    ),
+                )
 
-            # "Delete Credentials" — push a confirmation prompt first.
-            # The Yes button on the prompt invokes the actual clear action
-            # which pops both the prompt and the provider-detail page so the
-            # user lands back on the Manage Providers list.
-            confirm_action = (
-                f'assistant:provider-detail:confirm-delete:{provider.name}'
-            )
-            _provider_detail_action_ids.append(confirm_action)
+                # "Delete Credentials" — push a confirmation prompt first.
+                # The Yes button on the prompt invokes the actual clear action
+                # which pops both the prompt and the provider-detail page so
+                # the user lands back on the Manage Providers list.
+                confirm_action = (
+                    f'assistant:provider-detail:confirm-delete:{provider.name}'
+                )
+                _provider_detail_action_ids.append(confirm_action)
 
-            def _make_confirm_delete_handler(
-                p: NeedsSetupMixin,
-            ) -> Callable[[], None]:
-                def _handler() -> None:
-                    p.clear_credentials()
-                    # Pop prompt + provider-detail in one dispatch
-                    store.dispatch(MenuGoBackAction(), MenuGoBackAction())
+                def _make_confirm_delete_handler(
+                    p: NeedsSetupMixin,
+                ) -> Callable[[], None]:
+                    def _handler() -> None:
+                        p.clear_credentials()
+                        # Pop prompt + provider-detail in one dispatch
+                        store.dispatch(MenuGoBackAction(), MenuGoBackAction())
 
-                return _handler
+                    return _handler
 
-            register_action(
-                confirm_action,
-                _make_confirm_delete_handler(provider),
-                allow_reregister=True,
-            )
+                register_action(
+                    confirm_action,
+                    _make_confirm_delete_handler(provider),
+                    allow_reregister=True,
+                )
 
-            delete_action = f'assistant:provider-detail:delete:{provider.name}'
-            _provider_detail_action_ids.append(delete_action)
+                delete_action = f'assistant:provider-detail:delete:{provider.name}'
+                _provider_detail_action_ids.append(delete_action)
 
-            def _make_delete_prompt_handler(
-                p: NeedsSetupMixin,
-                confirm_id: str,
-            ) -> Callable[[], None]:
-                def _handler() -> None:
-                    store.dispatch(
-                        StackPushPromptAction(
-                            title='Delete Credentials',
-                            prompt=f'Forget {p.label} credentials?',
-                            icon='󰆴',
-                            items=(
-                                MenuItemData(
-                                    key='yes',
-                                    label='Delete',
-                                    icon='󰆴',
-                                    color=DANGER_COLOR,
-                                    action_id=confirm_id,
-                                ),
-                                MenuItemData(
-                                    key='cancel',
-                                    label='Cancel',
-                                    icon='󰜺',
-                                    action_id='assistant:provider-detail:cancel',
+                def _make_delete_prompt_handler(
+                    p: NeedsSetupMixin,
+                    confirm_id: str,
+                ) -> Callable[[], None]:
+                    def _handler() -> None:
+                        store.dispatch(
+                            StackPushPromptAction(
+                                title='Delete Credentials',
+                                prompt=f'Forget {p.label} credentials?',
+                                icon='󰆴',
+                                items=(
+                                    MenuItemData(
+                                        key='yes',
+                                        label='Delete',
+                                        icon='󰆴',
+                                        color=DANGER_COLOR,
+                                        action_id=confirm_id,
+                                    ),
+                                    MenuItemData(
+                                        key='cancel',
+                                        label='Cancel',
+                                        icon='󰜺',
+                                        action_id='assistant:provider-detail:cancel',
+                                    ),
                                 ),
                             ),
-                        ),
-                    )
+                        )
 
-                return _handler
+                    return _handler
 
-            register_action(
-                delete_action,
-                _make_delete_prompt_handler(provider, confirm_action),
-                allow_reregister=True,
-            )
-            items.append(
-                MenuItemData(
-                    key='delete',
-                    label='Delete Credentials',
-                    icon='󰆴',
-                    color=DANGER_COLOR,
-                    action_id=delete_action,
-                ),
-            )
+                register_action(
+                    delete_action,
+                    _make_delete_prompt_handler(provider, confirm_action),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='delete',
+                        label='Delete Credentials',
+                        icon='󰆴',
+                        color=DANGER_COLOR,
+                        action_id=delete_action,
+                    ),
+                )
 
             store.dispatch(
                 UpdateDynamicMenuAction(
@@ -1047,8 +1073,11 @@ async def init_service() -> None:
             lambda s, ln=_llm_name: s.assistant.selected_models.get(ln, ''),
         )
     # Provider-detail menus depend on the provider's setup status (so the
-    # "Re-enter" / "Delete" rows refresh) and on the active model for the
-    # "Model: <current>" line when the provider is also an LLM.
+    # "Update" / "Delete" rows refresh) and the active model for the
+    # "Model: <current>" line when the provider is also an LLM. Changes to
+    # the secrets file are captured by the `provider_details` autorun (which
+    # keys on `secrets_monitor.value` and re-dispatches the dynamic menu),
+    # so we don't probe the filesystem here on every state tick.
     _dedup_engines: dict[type, AIProviderMixin] = {
         type(engine): engine
         for engine in {

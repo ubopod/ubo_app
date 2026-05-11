@@ -47,6 +47,8 @@ from ubo_app.utils.input import ubo_input
 class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Ollama on-premise (remote) assistant engine."""
 
+    credential_secret_ids = (OLLAMA_ONPREM_URL_SECRET_ID,)
+
     @property
     def name(self) -> AssistantLLMName:
         """Returns the name identifier for the Ollama on-premise assistant."""

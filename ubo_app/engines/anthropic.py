@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class AnthropicEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Anthropic engine."""
 
+    credential_secret_ids = (ANTHROPIC_API_KEY_SECRET_ID,)
+
     CURATED_MODELS = (
         'claude-sonnet-4-5',
         'claude-haiku-4-5',

@@ -25,6 +25,8 @@ from ubo_app.utils.input import ubo_input
 class AssemblyAIEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """AssemblyAI engine."""
 
+    credential_secret_ids = (ASSEMBLYAI_API_KEY_SECRET_ID,)
+
     @property
     def name(self) -> str:
         """The internal name of the AssemblyAI engine."""

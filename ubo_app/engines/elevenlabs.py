@@ -27,6 +27,8 @@ from ubo_app.utils.input import ubo_input
 class ElevenLabsEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """ElevenLabs engine."""
 
+    credential_secret_ids = (ELEVENLABS_API_KEY_SECRET_ID, ELEVENLABS_VOICE_ID)
+
     @property
     def name(self) -> str:
         """The internal name of the ElevenLabs engine."""

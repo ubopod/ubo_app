@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 import dotenv
@@ -15,6 +16,12 @@ gid = os.getgid()
 os.chown(SECRETS_PATH, uid, gid)
 
 SECRETS_PATH.chmod(0o600)
+
+# `dotenv.get_key` warns once per missing key. Reading a non-existent secret
+# is a normal, expected condition for us (e.g. probing whether a provider has
+# been configured), so silence that specific logger to avoid spamming the
+# console.
+logging.getLogger('dotenv.main').setLevel(logging.ERROR)
 
 
 def write_secret(*, key: str, value: str) -> None:

@@ -49,6 +49,12 @@ GENERIC_LLM_PROBE_TIMEOUT_SECONDS = 15
 class GenericLLMEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     """Generic OpenAI-compatible LLM engine."""
 
+    credential_secret_ids = (
+        GENERIC_LLM_BASE_URL_SECRET_ID,
+        GENERIC_LLM_API_KEY_SECRET_ID,
+        GENERIC_LLM_MODEL_SECRET_ID,
+    )
+
     @property
     def name(self) -> AssistantLLMName:
         """The internal name of the Generic LLM engine."""
