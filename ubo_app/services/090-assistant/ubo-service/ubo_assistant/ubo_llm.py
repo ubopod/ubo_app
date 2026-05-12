@@ -222,6 +222,31 @@ class GenericLLMProxy(LLMService):
             await self.push_frame(frame, direction)
 
 
+# Maps the proto enum (which only carries the upper-cased member name) to the
+# string service id used as a key in ``self._services``. We can't derive this
+# from ``.name.lower()`` because two StrEnum members on the parent side use
+# values that don't match their lowercased name:
+#   GOOGLE  -> 'google_vertex'   ('google' != value)
+#   GENERIC -> 'generic_llm'     ('generic' != value)
+# Mapping miss => the change event is silently ignored, which makes the
+# user-visible "model picked for Google/Generic has no effect" bug loud and
+# quick to spot if a new LLM is added without updating this dict.
+_SERVICE_ID_BY_LLM_NAME: dict[AssistantLlmName, str] = {
+    AssistantLlmName.OLLAMA: 'ollama',
+    AssistantLlmName.OLLAMA_ONPREM: 'ollama_onprem',
+    AssistantLlmName.GOOGLE: 'google_vertex',
+    AssistantLlmName.OPENAI: 'openai',
+    AssistantLlmName.GROK: 'grok',
+    AssistantLlmName.CEREBRAS: 'cerebras',
+    AssistantLlmName.ANTHROPIC: 'anthropic',
+    AssistantLlmName.QWEN: 'qwen',
+    AssistantLlmName.DEEPSEEK: 'deepseek',
+    AssistantLlmName.OPENROUTER: 'openrouter',
+    AssistantLlmName.MISTRAL: 'mistral',
+    AssistantLlmName.GENERIC: 'generic_llm',
+}
+
+
 class UboLLMService(UboLLMSwitchService):
     """LLM service that wraps multiple LLM services allowing switching between them."""
 
@@ -318,12 +343,9 @@ class UboLLMService(UboLLMSwitchService):
         payload = event.assistant_model_changed_event
         if payload is None:
             return
-        # The pipecat-side Event wrappers come through as betterproto enums
-        # whose ``.name`` is upper-cased; map back to the lowercase service id.
-        llm_enum: AssistantLlmName = payload.llm_name
-        if llm_enum.name is None:
+        service_id = _SERVICE_ID_BY_LLM_NAME.get(payload.llm_name)
+        if service_id is None:
             return
-        service_id = llm_enum.name.lower()
         new_model = payload.model
 
         previous = self._config.selected_models.get(service_id)

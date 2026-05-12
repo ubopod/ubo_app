@@ -360,10 +360,20 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         allow_reregister=True,
     )
 
-    # Secrets file monitor - tracks API key changes
+    # Secrets file monitor - tracks API key changes.
+    #
+    # Memoisation MUST stay on: the selector returns the secrets-file mtime,
+    # which only changes when the file is actually written via
+    # ``secrets.write_secret`` / ``clear_secret``. With memoisation off the
+    # autorun would re-run on every store dispatch, re-reading the secrets
+    # file 17 times per dispatch — and because the returned dict is a fresh
+    # object each time, every downstream autorun that includes
+    # ``secrets_monitor.value`` in its selector tuple (llm_providers /
+    # provider_details / tts_providers / ...) would re-fire too, each calling
+    # ``is_setup`` on every engine which opens the secrets file again. That
+    # cascade is enough to exhaust the process FD limit on macOS.
     @store.autorun(
         lambda _: secrets_modification_time(),
-        options=AutorunOptions(memoization=False),
     )
     def secrets_monitor(_: float) -> dict[str, str | None]:
         """Monitor secrets file changes and return current API keys."""
@@ -894,10 +904,14 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         # Whenever the selection changes (and once at startup), kick off a
         # capability probe for the active model so the "Thinking: On/Off"
         # item appears for models that advertise it. The probe is no-op if
-        # the daemon is down or the model isn't downloaded yet.
+        # the daemon is down or the model isn't downloaded yet. Same pass
+        # also refreshes the cached downloaded-models set so the catalog
+        # dot indicator picks up any pulls made outside the app (e.g. via
+        # `ollama pull` from a shell).
         engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA)
         if isinstance(engine, OllamaEngine):
             create_task(engine._probe_and_dispatch_capabilities(current_model))  # noqa: SLF001
+            create_task(engine.refresh_downloaded_models())
 
         for action_id in _ollama_categories_action_ids:
             unregister_action(action_id)
@@ -943,31 +957,31 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         )
 
     @store.autorun(
-        lambda state: state.assistant.selected_models.get(
-            AssistantLLMName.OLLAMA,
-            DEFAULT_LLM_OLLAMA_MODEL,
+        lambda state: (
+            state.assistant.selected_models.get(
+                AssistantLLMName.OLLAMA,
+                DEFAULT_LLM_OLLAMA_MODEL,
+            ),
+            state.assistant.ollama_downloaded_models,
         ),
     )
-    def ollama_models_menus(current_model: str) -> None:
-        """Build a per-category Ollama model submenu with RAM gating."""
-        import ollama as ollama_sdk
+    def ollama_models_menus(data: tuple[str, tuple[str, ...]]) -> None:
+        """Build a per-category Ollama model submenu with RAM gating.
+
+        Reads ``ollama_downloaded_models`` from cached state — never calls the
+        Ollama daemon synchronously, since this autorun fires on the redux
+        dispatch path and any HTTP latency here would freeze menu rendering.
+        ``OllamaEngine.refresh_downloaded_models`` is what keeps the cache
+        warm (kicked off from ``init_service``, after every download, and from
+        ``ollama_categories_menu`` so user-driven navigation gets fresh data).
+        """
+        current_model, downloaded_models = data
 
         for action_id in _ollama_models_action_ids:
             unregister_action(action_id)
         _ollama_models_action_ids.clear()
 
         total_ram = _total_ram_bytes()
-
-        try:
-            downloaded_models = {
-                normalize_model_tag(m.model)
-                for m in ollama_sdk.list().models
-                if m.model is not None
-            }
-        except Exception:  # noqa: BLE001
-            # The local Ollama daemon may simply be down; treat as "nothing
-            # downloaded" rather than blocking the menu render.
-            downloaded_models = set()
 
         for category in OLLAMA_CATALOG:
             items: list[MenuItemData] = []
@@ -1580,3 +1594,10 @@ async def init_service() -> None:
 
     store.dispatch(AssistantUpdateProvidersAction())
     store.dispatch(AssistantSyncMcpServersAction())
+
+    # Warm the cached Ollama downloaded-models set so `is_setup` and the
+    # catalog dot indicator reflect reality without blocking the reducer
+    # path on a synchronous `ollama.list()` call.
+    _ollama_engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA)
+    if isinstance(_ollama_engine, OllamaEngine):
+        create_task(_ollama_engine.refresh_downloaded_models())

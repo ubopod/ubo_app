@@ -28,6 +28,7 @@ from ubo_app.store.services.assistant import (
     AssistantOllamaThinkingChangedEvent,
     AssistantReportAction,
     AssistantSetIsActiveAction,
+    AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
     AssistantSetSelectedImageGeneratorAction,
@@ -127,6 +128,13 @@ def reducer(
                     **state.ollama_model_capabilities,
                     action.model: tuple(action.capabilities),
                 },
+            )
+
+        case AssistantSetOllamaDownloadedModelsAction():
+            return replace(
+                state,
+                ollama_downloaded_models=tuple(action.models),
+                ollama_downloaded_models_refreshed=True,
             )
 
         case AssistantSetOllamaThinkingAction():

@@ -414,6 +414,17 @@ class AssistantDownloadOllamaModelAction(AssistantAction):
     model: str
 
 
+class AssistantSetOllamaDownloadedModelsAction(AssistantAction):
+    """Replace the cached set of locally-downloaded Ollama models.
+
+    Tags are stored **normalised** (lowercase + explicit ``:tag``) via
+    ``normalize_model_tag()`` so consumers don't need to normalise on every
+    render.
+    """
+
+    models: tuple[str, ...]
+
+
 class AssistantSetOllamaModelCapabilitiesAction(AssistantAction):
     """Cache the result of ``ollama.Client.show(model).capabilities``."""
 
@@ -636,6 +647,18 @@ class AssistantState(Immutable):
     ollama_model_capabilities: dict[str, tuple[str, ...]] = field(
         default_factory=dict,
     )
+    # Cached set of locally-downloaded Ollama model tags, stored **normalised**
+    # (lowercase + explicit ``:tag``). Populated by
+    # ``OllamaEngine.refresh_downloaded_models()`` — never read by calling
+    # ``ollama.list()`` from a store dispatch path, since that would block the
+    # reducer thread when the daemon is slow / down.
+    ollama_downloaded_models: tuple[str, ...] = field(default_factory=tuple)
+    # Becomes True after the first ``refresh_downloaded_models`` completes
+    # (success or daemon-down). While False, ``is_setup`` is optimistic and
+    # trusts the user's selected model rather than reporting "not set up" for
+    # the duration of the first daemon round-trip on every cold boot. Not
+    # persisted — process-local truth.
+    ollama_downloaded_models_refreshed: bool = False
     # Per-Ollama-model thinking flag. Persisted across restarts; only meaningful
     # for models whose capability set includes ``'thinking'``.
     ollama_thinking_enabled: dict[str, bool] = field(

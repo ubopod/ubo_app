@@ -17,6 +17,7 @@ from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistantLLMName,
+    AssistantSetOllamaDownloadedModelsAction,
     AssistantSetSelectedModelAction,
     AssistantUpdateProvidersAction,
 )
@@ -39,6 +40,11 @@ from ubo_app.utils.error_handlers import report_service_error
 class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
     """Ollama assistant engine."""
 
+    # Shared async client. Reused across probes / refreshes / downloads so we
+    # don't churn a fresh httpx connection pool (and the FDs it holds) on
+    # every call.
+    _async_client: ollama.AsyncClient | None = None
+
     @property
     def name(self) -> AssistantLLMName:
         """Returns the name identifier for the Ollama assistant."""
@@ -57,26 +63,100 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
     @property
     @override
     @store.with_state(
-        lambda state: state.assistant.selected_models[AssistantLLMName.OLLAMA],
+        lambda state: (
+            state.assistant.selected_models[AssistantLLMName.OLLAMA],
+            state.assistant.ollama_downloaded_models,
+            state.assistant.ollama_downloaded_models_refreshed,
+        ),
     )
-    def is_setup(self, model: str) -> bool:  # noqa: PLR0206
+    def is_setup(  # noqa: PLR0206
+        self,
+        data: tuple[str, tuple[str, ...], bool],
+    ) -> bool:
+        """Return True iff the selected model is in the cached download set.
+
+        The cache is populated asynchronously by ``refresh_downloaded_models``
+        — we deliberately don't call ``ollama.list()`` here because this
+        property runs on the redux dispatch path (via ``@store.with_state``)
+        and would block reducer + autorun work if the daemon were slow or
+        unreachable.
+
+        Before the first refresh completes (``refreshed=False``) we have no
+        ground truth, so we trust the user's selection and report
+        setup-complete. The next refresh dispatches
+        ``AssistantUpdateProvidersAction`` which forces the icon autorun to
+        re-evaluate against real data — avoiding a visible "not set up"
+        flicker on every cold boot.
+        """
+        model, downloaded, refreshed = data
+        if not refreshed:
+            return bool(model)
+        return normalize_model_tag(model) in downloaded
+
+    def _client(self) -> ollama.AsyncClient:
+        if OllamaEngine._async_client is None:
+            OllamaEngine._async_client = ollama.AsyncClient()
+        return OllamaEngine._async_client
+
+    async def refresh_downloaded_models(self) -> None:
+        """Poll the local daemon and cache its model set into the store.
+
+        Safe to call from any context: never raises. Idempotent — only
+        dispatches when the resulting set actually differs from what's
+        already in the store, because every redundant dispatch otherwise
+        cascades through the credential autoruns (each fire opens the
+        secrets file once per credential-based engine on macOS) and pushes
+        the process toward its FD limit.
+        """
         try:
-            models = ollama.list().models
-        except ConnectionError:
-            return False
+            result = await self._client().list()
+        except Exception:
+            logger.exception('Failed to query local Ollama daemon')
+            normalised: tuple[str, ...] = ()
         else:
-            target = normalize_model_tag(model)
-            return any(
-                m.model is not None and normalize_model_tag(m.model) == target
-                for m in models
+            normalised = tuple(
+                normalize_model_tag(m.model)
+                for m in result.models
+                if m.model is not None
             )
+
+        cached_models = self._cached_downloaded_models()
+        cached_refreshed = self._cached_refreshed_flag()
+        if cached_refreshed and frozenset(cached_models) == frozenset(normalised):
+            return
+        # Bundle the providers refresh with the cache update so the
+        # ``provider_setup_status`` reducer re-evaluates ``is_setup`` against
+        # the new cache — otherwise the gear→checkmark transition wouldn't
+        # happen until the user incidentally triggered another
+        # ``AssistantUpdateProvidersAction`` (e.g. by re-selecting the
+        # provider).
+        store.dispatch(
+            AssistantSetOllamaDownloadedModelsAction(models=normalised),
+            AssistantUpdateProvidersAction(),
+        )
+
+    @store.with_state(lambda state: state.assistant.ollama_downloaded_models)
+    def _cached_downloaded_models(
+        self,
+        models: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        return models
+
+    @store.with_state(
+        lambda state: state.assistant.ollama_downloaded_models_refreshed,
+    )
+    def _cached_refreshed_flag(
+        self,
+        refreshed: bool,  # noqa: FBT001
+    ) -> bool:
+        return refreshed
 
     def download_model(self, model: str) -> None:
         """Download *model* on the local Ollama daemon and update the store."""
 
         async def download_ollama_model() -> None:
             """Download Ollama model."""
-            client = ollama.AsyncClient()
+            client = self._client()
             progress_notification = Notification(
                 id=OLLAMA_SETUP_NOTIFICATION_ID,
                 title='Ollama',
@@ -131,6 +211,7 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                     AssistantUpdateProvidersAction(),
                 )
                 create_task(self._probe_and_dispatch_capabilities(model))
+                create_task(self.refresh_downloaded_models())
             finally:
                 event = getattr(self, 'event', None)
                 if event is not None:
@@ -139,9 +220,14 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
         create_task(download_ollama_model())
 
     async def _probe_and_dispatch_capabilities(self, model: str) -> None:
-        """Probe `client.show()` for *model* and cache its capability set."""
+        """Probe `client.show()` for *model* and cache its capability set.
+
+        Idempotent: skips the dispatch entirely when the cached capability
+        set already matches, for the same FD-pressure reasons as
+        :meth:`refresh_downloaded_models`.
+        """
         try:
-            info = await ollama.AsyncClient().show(model)
+            info = await self._client().show(model)
         except Exception:
             logger.exception(
                 'Failed to probe Ollama model capabilities',
@@ -158,6 +244,10 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                 else ()
             )
 
+        cached = self._cached_capabilities().get(model)
+        if cached is not None and frozenset(cached) == frozenset(capabilities):
+            return
+
         from ubo_app.store.services.assistant import (
             AssistantSetOllamaModelCapabilitiesAction,
         )
@@ -168,6 +258,13 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
                 capabilities=capabilities,
             ),
         )
+
+    @store.with_state(lambda state: state.assistant.ollama_model_capabilities)
+    def _cached_capabilities(
+        self,
+        caps: dict[str, tuple[str, ...]],
+    ) -> dict[str, tuple[str, ...]]:
+        return caps
 
     @store.with_state(
         lambda state: state.assistant.selected_models.get(

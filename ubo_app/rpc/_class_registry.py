@@ -33,6 +33,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'AssistantReportAction': 'ubo_app.store.services.assistant',
     'AssistantSTTName': 'ubo_app.store.services.assistant',
     'AssistantSetIsActiveAction': 'ubo_app.store.services.assistant',
+    'AssistantSetOllamaDownloadedModelsAction': 'ubo_app.store.services.assistant',
     'AssistantSetOllamaModelCapabilitiesAction': 'ubo_app.store.services.assistant',
     'AssistantSetOllamaThinkingAction': 'ubo_app.store.services.assistant',
     'AssistantSetSelectedImageGeneratorAction': 'ubo_app.store.services.assistant',
