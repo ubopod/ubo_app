@@ -10,6 +10,7 @@ from ubo_app.store.core.stack_ops import (
     create_root_stack_item,
     derive_path_from_stack,
     pop_item,
+    pop_notification,
     pop_stack,
     pop_to_root,
     push_application,
@@ -304,6 +305,70 @@ class TestPushNotification:
         original_path = state.path
         new_state = push_notification(state, 'notif-1')
         assert new_state.path == original_path
+
+    def test_is_idempotent_for_same_notification_id(self) -> None:
+        """Pushing an already-present notification id is a no-op.
+
+        Guards the stale-read race: notification download flows fire
+        many ``StackPushNotificationAction``s; the reducer must dedup so
+        a notification never lands on the stack twice.
+        """
+        state = _make_state()
+        once = push_notification(state, 'notif-1')
+        twice = push_notification(once, 'notif-1')
+        assert twice is once
+        assert (
+            sum(
+                isinstance(item, NotificationStackItem)
+                and item.notification_id == 'notif-1'
+                for item in twice.stack
+            )
+            == 1
+        )
+
+
+class TestPopNotification:
+    """Tests for pop_notification."""
+
+    def test_removes_matching_notification(self) -> None:
+        """Verify pop_notification removes the NotificationStackItem by id."""
+        state = _make_state()
+        state = push_notification(state, 'notif-1')
+        new_state = pop_notification(state, 'notif-1')
+        assert not any(
+            isinstance(item, NotificationStackItem)
+            and item.notification_id == 'notif-1'
+            for item in new_state.stack
+        )
+
+    def test_noop_when_not_present(self) -> None:
+        """Popping a notification that isn't on the stack is a no-op."""
+        state = _make_state()
+        state = push_menu(state, 'main')
+        assert pop_notification(state, 'missing') is state
+
+    def test_path_unchanged(self) -> None:
+        """Verify pop_notification does not change the path."""
+        state = _make_state()
+        state = push_menu(state, 'main')
+        original_path = state.path
+        state = push_notification(state, 'notif-1')
+        new_state = pop_notification(state, 'notif-1')
+        assert new_state.path == original_path
+
+    def test_leaves_other_items_intact(self) -> None:
+        """Only the matching notification is removed; siblings stay."""
+        state = _make_state()
+        state = push_menu(state, 'main')
+        state = push_notification(state, 'keep')
+        state = push_notification(state, 'drop')
+        new_state = pop_notification(state, 'drop')
+        notification_ids = {
+            item.notification_id
+            for item in new_state.stack
+            if isinstance(item, NotificationStackItem)
+        }
+        assert notification_ids == {'keep'}
 
 
 class TestPopStack:

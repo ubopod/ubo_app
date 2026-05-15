@@ -12,6 +12,10 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.store.core.types import (
+    StackPopNotificationAction,
+    StackPushNotificationAction,
+)
 from ubo_app.store.services.audio import AudioPlayChimeAction
 from ubo_app.store.services.notifications import (
     Importance,
@@ -29,7 +33,24 @@ from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
 from ubo_app.utils.color import hex_to_rgb
 
 Action = InitAction | NotificationsAction
-ResultAction = RgbRingBlinkAction | AudioPlayChimeAction
+# Stack push/pop is returned here — from the reducer, on the *ordered*
+# action queue — rather than from a NotificationsDisplayEvent handler.
+# Event handlers run in concurrent worker threads, so the dispatches
+# would otherwise land out of order.
+#
+# ``NotificationsAddAction`` *always* pushes (idempotently): a
+# notification's ``NotificationStackItem`` stays on the stack for its
+# whole lifecycle, and the view computation decides whether to render it
+# from ``display_type`` (BACKGROUND overlays are filtered out, STICKY /
+# FLASH own the screen). That keeps the stack stable across the
+# STICKY → BACKGROUND → FLASH lifecycle — no push/pop churn. The pop only
+# happens when the notification is actually cleared/dismissed.
+ResultAction = (
+    RgbRingBlinkAction
+    | AudioPlayChimeAction
+    | StackPushNotificationAction
+    | StackPopNotificationAction
+)
 
 
 def reducer(
@@ -48,8 +69,15 @@ def reducer(
         case NotificationsAddAction():
             events = []
             events.append(NotificationsDisplayEvent(notification=action.notification))
+            stack_action = StackPushNotificationAction(
+                notification_id=action.notification.id,
+            )
             if action.notification in state.notifications:
-                return CompleteReducerResult(state=state, events=events)
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[stack_action],
+                    events=events,
+                )
             rgb_color = hex_to_rgb(action.notification.color)
             new_notifications = (
                 [
@@ -85,6 +113,7 @@ def reducer(
                     else None,
                 ),
                 actions=[
+                    stack_action,
                     *(
                         [
                             RgbRingBlinkAction(
@@ -138,6 +167,11 @@ def reducer(
                         if not notification.is_read
                     ),
                 ),
+                actions=[
+                    StackPopNotificationAction(
+                        notification_id=action.notification.id,
+                    ),
+                ],
                 events=[NotificationsClearEvent(notification=action.notification)],
             )
 
@@ -162,6 +196,7 @@ def reducer(
                         if not notification.is_read
                     ),
                 ),
+                actions=[StackPopNotificationAction(notification_id=action.id)],
                 events=[
                     NotificationsClearEvent(notification=notification)
                     for notification in to_be_removed
@@ -171,6 +206,10 @@ def reducer(
         case NotificationsClearAllAction() | FinishAction():
             return CompleteReducerResult(
                 state=replace(state, notifications=[], unread_count=0),
+                actions=[
+                    StackPopNotificationAction(notification_id=notification.id)
+                    for notification in state.notifications
+                ],
                 events=[
                     NotificationsClearEvent(notification=notification)
                     for notification in state.notifications

@@ -179,7 +179,25 @@ class StackPushRenderAction(StackAction):
 
 
 class StackPushNotificationAction(StackAction):
-    """Push a notification overlay onto the navigation stack."""
+    """Push a notification overlay onto the navigation stack.
+
+    Idempotent: if a notification with the same ``notification_id`` is
+    already on the stack, the reducer leaves it in place rather than
+    pushing a duplicate.
+    """
+
+    notification_id: str
+
+
+class StackPopNotificationAction(StackAction):
+    """Pop a notification overlay from the navigation stack by id.
+
+    Removes the ``NotificationStackItem`` whose ``notification_id``
+    matches. No-op when the notification isn't on the stack. Unlike
+    ``StackPopItemAction`` (which keys on the stack item's UUID, forcing
+    callers to read the stack first and risk acting on a stale view),
+    this is evaluated entirely at reducer time against current state.
+    """
 
     notification_id: str
 

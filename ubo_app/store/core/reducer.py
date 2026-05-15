@@ -20,6 +20,7 @@ from ubo_app.store.core.stack_ops import (
     create_root_stack_item,
     derive_path_from_stack,
     pop_item,
+    pop_notification,
     pop_stack,
     pop_to_root,
     push_application,
@@ -80,6 +81,7 @@ from ubo_app.store.core.types import (
     StackPageIndexChangedEvent,
     StackPopAction,
     StackPopItemAction,
+    StackPopNotificationAction,
     StackPopToRootAction,
     StackPushApplicationAction,
     StackPushInstructionAction,
@@ -236,6 +238,10 @@ def reducer(
 
         case StackPushNotificationAction():
             new_state = push_notification(state, action.notification_id)
+            return _complete_stack_result(new_state, fallback=state)
+
+        case StackPopNotificationAction():
+            new_state = pop_notification(state, action.notification_id)
             return _complete_stack_result(new_state, fallback=state)
 
         case StackPushInstructionAction():

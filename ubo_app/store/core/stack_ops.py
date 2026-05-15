@@ -141,19 +141,64 @@ def push_render(  # noqa: PLR0913
 def push_notification(state: MainState, notification_id: str) -> MainState:
     """Push a notification overlay onto the navigation stack.
 
+    Idempotent: if a ``NotificationStackItem`` with the same
+    ``notification_id`` is already on the stack, the state is returned
+    unchanged. This lets callers fire ``StackPushNotificationAction``
+    freely (e.g. on every progress update) without reading the stack
+    first — the reducer dedups against current state, avoiding the
+    stale-read races that arise when many notification actions batch.
+
     Args:
         state: Current main state.
         notification_id: ID of the notification to display.
 
     Returns:
-        New state with the notification pushed onto the stack.
+        New state with the notification pushed onto the stack, or the
+        unchanged state if it is already present.
 
     """
+    if any(
+        isinstance(item, NotificationStackItem)
+        and item.notification_id == notification_id
+        for item in state.stack
+    ):
+        return state
     new_item = NotificationStackItem(
         id=uuid.uuid4().hex,
         notification_id=notification_id,
     )
     new_stack = (*state.stack, new_item)
+    # Path unchanged - notifications don't contribute to path
+    return replace(state, stack=new_stack)
+
+
+def pop_notification(state: MainState, notification_id: str) -> MainState:
+    """Remove a notification overlay from the navigation stack by id.
+
+    Removes the ``NotificationStackItem`` whose ``notification_id``
+    matches. No-op when it isn't on the stack. Evaluated entirely
+    against the passed-in state, so it is safe to dispatch even when
+    other stack mutations are still queued.
+
+    Args:
+        state: Current main state.
+        notification_id: ID of the notification to remove.
+
+    Returns:
+        New state with the notification removed, or the unchanged state
+        if it was not present.
+
+    """
+    new_stack = tuple(
+        item
+        for item in state.stack
+        if not (
+            isinstance(item, NotificationStackItem)
+            and item.notification_id == notification_id
+        )
+    )
+    if new_stack == state.stack:
+        return state
     # Path unchanged - notifications don't contribute to path
     return replace(state, stack=new_stack)
 

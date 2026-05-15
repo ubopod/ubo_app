@@ -30,19 +30,18 @@ from ubo_app.store.core.types import (
     MenuChooseByLabelEvent,
     NotificationStackItem,
     StackPopAction,
-    StackPopItemAction,
+    StackPopNotificationAction,
     StackPushMenuAction,
     StackPushNotificationAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     NotificationDisplayType,
-    NotificationsClearEvent,
     NotificationsDisplayEvent,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Sequence
 
     from ubo_app.store.core.types import (
         ApplicationStackItem,
@@ -51,25 +50,9 @@ if TYPE_CHECKING:
         MenuItemData,
         MenuViewData,
         PromptStackItem,
-        StackItemType,
     )
     from ubo_app.store.main import RootState
     from ubo_app.utils.types import Subscriptions
-
-
-def _pop_stack_item(
-    predicate: Callable[[StackItemType], bool],
-) -> None:
-    """Pop the first stack item matching predicate."""
-
-    @store.with_state(lambda state: state.main.stack)
-    def _pop(stack: Sequence[StackItemType]) -> None:
-        for item in stack:
-            if predicate(item):
-                store.dispatch(StackPopItemAction(item_id=item.id))
-                return
-
-    _pop()
 
 
 def _dispatch_original_notification_action(
@@ -239,10 +222,7 @@ def _dismiss_notification(notification_id: str) -> None:
         NotificationsClearAction,
     )
 
-    _pop_stack_item(
-        lambda item: isinstance(item, NotificationStackItem)
-        and item.notification_id == notification_id,
-    )
+    store.dispatch(StackPopNotificationAction(notification_id=notification_id))
 
     @store.with_state(lambda state: state.notifications.notifications)
     def clear_notification(
@@ -560,60 +540,56 @@ def _handle_execute_menu_action(event: ExecuteMenuActionEvent) -> None:
 
 
 def _handle_notification_display(event: NotificationsDisplayEvent) -> None:
-    """Handle notification display by pushing it onto the stack."""
+    """Schedule the auto-dismiss timer for FLASH notifications.
+
+    Pushing/popping the notification's stack item is *not* done here.
+    Event handlers run in concurrent worker threads, so deciding stack
+    membership from this handler raced — out-of-order push/pop dispatches
+    made the first STICKY and the terminal FLASH vanish. Stack
+    reconciliation now happens in the notifications reducer
+    (``_stack_action_for``), on the ordered action queue. This handler
+    only owns the FLASH auto-dismiss timer, which is purely time-based
+    and has no ordering sensitivity.
+    """
     notification = event.notification
     notification_id = getattr(notification, 'id', None)
     if not notification_id:
         logger.warning('NotificationsDisplayEvent with no notification ID')
         return
 
-    # BACKGROUND notifications only show in the header (progress bar) and
-    # should not take over the screen by pushing a stack item.
-    if notification.display_type is NotificationDisplayType.BACKGROUND:
+    if notification.display_type is not NotificationDisplayType.FLASH:
         return
 
-    # Don't push a duplicate if this notification is already on the stack
-    @store.with_state(lambda state: state.main.stack)
-    def _push_if_needed(stack: Sequence[StackItemType]) -> None:
-        if any(
-            isinstance(item, NotificationStackItem)
-            and item.notification_id == notification_id
-            for item in stack
-        ):
-            logger.debug(
-                'NotificationStackItem for %s already on stack, skipping push',
-                notification_id,
+    import asyncio
+
+    from ubo_app.store.services.notifications import Notification
+    from ubo_app.utils.async_ import create_task
+
+    async def _auto_dismiss() -> None:
+        await asyncio.sleep(notification.flash_time)
+
+        # Re-check the *current* notification before dismissing. A
+        # notification can be updated from FLASH back to STICKY/BACKGROUND
+        # and multiple FLASH updates each schedule their own timer.
+        # Without this guard a stale timer would close an active
+        # notification.
+        @store.with_state(lambda state: state.notifications.notifications)
+        def _dismiss_if_still_flash(
+            notifications: Sequence[Notification],
+        ) -> None:
+            current = next(
+                (n for n in notifications if n.id == notification_id),
+                None,
             )
-        else:
-            store.dispatch(
-                StackPushNotificationAction(notification_id=notification_id),
-            )
+            if (
+                current is not None
+                and current.display_type is NotificationDisplayType.FLASH
+            ):
+                _dismiss_notification(notification_id)
 
-    _push_if_needed()
+        _dismiss_if_still_flash()
 
-    # Schedule auto-dismiss for FLASH notifications
-    if notification.display_type is NotificationDisplayType.FLASH:
-        import asyncio
-
-        from ubo_app.utils.async_ import create_task
-
-        async def _auto_dismiss() -> None:
-            await asyncio.sleep(notification.flash_time)
-            _dismiss_notification(notification_id)
-
-        create_task(_auto_dismiss())
-
-
-def _handle_notification_clear(event: NotificationsClearEvent) -> None:
-    """Handle notification clear by popping the matching stack item."""
-    notification_id = getattr(event.notification, 'id', None)
-    if not notification_id:
-        return
-
-    _pop_stack_item(
-        lambda item: isinstance(item, NotificationStackItem)
-        and item.notification_id == notification_id,
-    )
+    create_task(_auto_dismiss())
 
 
 def setup_menu_event_handlers() -> Subscriptions:
@@ -626,10 +602,9 @@ def setup_menu_event_handlers() -> Subscriptions:
             ExecuteMenuActionEvent,
             _handle_execute_menu_action,
         ),
-        store.subscribe_event(
-            NotificationsClearEvent,
-            _handle_notification_clear,
-        ),
+        # Notification stack push/pop is reconciled by the notifications
+        # reducer (ordered action queue); this handler only schedules the
+        # FLASH auto-dismiss timer.
         store.subscribe_event(
             NotificationsDisplayEvent,
             _handle_notification_display,
