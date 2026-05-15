@@ -1,8 +1,10 @@
-"""Vosk speech to text service for pipecat."""
+"""Piper text-to-speech service for pipecat."""
+
+from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncGenerator, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -15,17 +17,32 @@ from pipecat.frames.frames import (
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
-from pipecat.utils.text.base_text_filter import BaseTextFilter
 from pipecat.utils.tracing.service_decorators import traced_stt
 
 from ubo_assistant.constants import DATA_PATH
 
-PIPER_MODEL = 'en/en_US/kristin/medium/en_US-kristin-medium'
-PIPER_MODEL_PATH = (DATA_PATH / PIPER_MODEL).with_suffix('.onnx')
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Sequence
+    from pathlib import Path
+
+    from pipecat.utils.text.base_text_filter import BaseTextFilter
+
+DEFAULT_PIPER_VOICE_ID = 'en/en_US/kristin/medium/en_US-kristin-medium'
+
+
+def _voice_path(voice_id: str) -> Path:
+    """Build the on-disk path for *voice_id*'s ``.onnx`` model file."""
+    return (DATA_PATH / voice_id).with_suffix('.onnx')
+
+
+def _speaker_for(voice_id: str) -> str:
+    """Extract a display-style speaker name from a HuggingFace voice id."""
+    parts = voice_id.split('/')
+    return parts[2] if len(parts) >= 3 else voice_id  # noqa: PLR2004
 
 
 class PiperTTSService(TTSService):
-    """Vosk speech to text service for pipecat."""
+    """Piper text-to-speech service for pipecat."""
 
     STREAMING_LIMIT = 120000  # 2 minutes in milliseconds
     LANGUAGE_CODE: Language = Language.EN_US
@@ -33,6 +50,7 @@ class PiperTTSService(TTSService):
     def __init__(  # noqa: PLR0913
         self,
         *,
+        voice_id: str = DEFAULT_PIPER_VOICE_ID,
         aggregate_sentences: bool = True,
         push_text_frames: bool = True,
         push_stop_frames: bool = False,
@@ -43,13 +61,25 @@ class PiperTTSService(TTSService):
         text_filters: Sequence[BaseTextFilter] | None = None,
         transport_destination: str | None = None,
     ) -> None:
-        """Initialize vosk speech to text service."""
+        """Initialize the Piper service with *voice_id* loaded from disk."""
         self._process_executor = ThreadPoolExecutor(max_workers=1)
         self._sample_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
+        # Lock serialises model loads against in-flight synthesis so a
+        # mid-utterance voice switch never tears the queue.
+        self._reload_lock = asyncio.Lock()
 
         from piper.voice import PiperVoice
 
-        self._client = PiperVoice.load(PIPER_MODEL_PATH)
+        # ``_requested_voice_id`` is the voice the user wants (updated by
+        # ``request_voice`` from the store autorun callback — possibly on
+        # a foreign thread, so it's a plain attribute write and nothing
+        # more). ``_loaded_voice_id`` is what's actually in ``_client``.
+        # ``run_tts`` reconciles the two before every utterance, so a
+        # missed signal or a not-yet-downloaded voice self-heals on the
+        # next turn instead of needing the user to toggle repeatedly.
+        self._requested_voice_id = voice_id
+        self._loaded_voice_id = voice_id
+        self._client = PiperVoice.load(_voice_path(voice_id))
 
         self.tasks: list[asyncio.Handle] = []
 
@@ -65,10 +95,73 @@ class PiperTTSService(TTSService):
             text_filters=text_filters,
             transport_destination=transport_destination,
             settings=TTSSettings(
-                model=PIPER_MODEL,
-                voice='kristin',
+                model=voice_id,
+                voice=_speaker_for(voice_id),
                 language=self.LANGUAGE_CODE,
             ),
+        )
+
+    def request_voice(self, voice_id: str) -> None:
+        """Record the voice the user selected.
+
+        Deliberately does no work beyond a single attribute write so it
+        is safe to call from any thread (the store autorun callback runs
+        off the pipeline event loop). The model load itself is deferred
+        to ``_ensure_voice_loaded``, which ``run_tts`` invokes before
+        every utterance.
+        """
+        if not voice_id:
+            return
+        self._requested_voice_id = voice_id
+
+    async def _ensure_voice_loaded(self) -> None:
+        """Load ``_requested_voice_id`` if it differs from what's loaded.
+
+        Must be called while holding ``_reload_lock``. No-op when the
+        requested voice is already current, or when it isn't on disk yet
+        (the core process downloads it; the next utterance retries).
+        """
+        voice_id = self._requested_voice_id
+        if voice_id == self._loaded_voice_id:
+            return
+
+        model_path = _voice_path(voice_id)
+        if not model_path.exists():
+            logger.warning(
+                'Requested Piper voice not downloaded yet; keeping current',
+                extra={
+                    'requested_voice_id': voice_id,
+                    'loaded_voice_id': self._loaded_voice_id,
+                    'path': str(model_path),
+                },
+            )
+            return
+
+        from piper.voice import PiperVoice
+
+        try:
+            new_client = await asyncio.get_running_loop().run_in_executor(
+                self._process_executor,
+                lambda: PiperVoice.load(model_path),
+            )
+        except Exception:
+            logger.exception(
+                'Failed to load Piper voice',
+                extra={'voice_id': voice_id, 'path': str(model_path)},
+            )
+            return
+
+        self._client = new_client
+        self._loaded_voice_id = voice_id
+        self._sample_rate = new_client.config.sample_rate
+        self._settings = TTSSettings(  # pyright: ignore[reportAttributeAccessIssue]
+            model=voice_id,
+            voice=_speaker_for(voice_id),
+            language=self.LANGUAGE_CODE,
+        )
+        logger.info(
+            'Loaded Piper voice',
+            extra={'voice_id': voice_id},
         )
 
     def synthesize(self, text: str) -> None:
@@ -97,7 +190,7 @@ class PiperTTSService(TTSService):
         text: str,
         context_id: str,
     ) -> AsyncGenerator[Frame, None]:
-        """Process an audio chunk for STT transcription."""
+        """Process a text chunk for TTS synthesis."""
         _ = context_id
         try:
             await self.start_ttfb_metrics()
@@ -108,23 +201,31 @@ class PiperTTSService(TTSService):
             audio_buffer = b''
             first_chunk_for_ttfb = False
 
-            self.get_event_loop().run_in_executor(
-                self._process_executor,
-                self.synthesize,
-                text,
-            )
+            async with self._reload_lock:
+                # Reconcile the loaded model with the user's selection
+                # *before* synthesizing — this is the single point where
+                # a voice switch actually takes effect, guaranteeing the
+                # utterance uses the requested voice (or the current one
+                # if the new model isn't downloaded yet).
+                await self._ensure_voice_loaded()
 
-            while (chunk := await self._sample_queue.get()) is not None:
-                if not first_chunk_for_ttfb:
-                    await self.stop_ttfb_metrics()
-                    first_chunk_for_ttfb = True
+                self.get_event_loop().run_in_executor(
+                    self._process_executor,
+                    self.synthesize,
+                    text,
+                )
 
-                audio_buffer += chunk
+                while (chunk := await self._sample_queue.get()) is not None:
+                    if not first_chunk_for_ttfb:
+                        await self.stop_ttfb_metrics()
+                        first_chunk_for_ttfb = True
 
-                while len(audio_buffer) >= self.chunk_size:
-                    piece = audio_buffer[: self.chunk_size]
-                    audio_buffer = audio_buffer[self.chunk_size :]
-                    yield TTSAudioRawFrame(piece, self.sample_rate, 1)
+                    audio_buffer += chunk
+
+                    while len(audio_buffer) >= self.chunk_size:
+                        piece = audio_buffer[: self.chunk_size]
+                        audio_buffer = audio_buffer[self.chunk_size :]
+                        yield TTSAudioRawFrame(piece, self.sample_rate, 1)
 
             yield TTSStoppedFrame()
 

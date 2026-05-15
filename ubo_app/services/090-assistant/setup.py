@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+    from ubo_app.store.services.localization import LanguageCode
 
 from engines_registry import (
     IMAGE_GENERATOR_ENGINES,
@@ -51,6 +52,15 @@ from ubo_app.engines.ollama_catalog import (
     normalize_model_tag,
     required_ram_bytes,
 )
+from ubo_app.engines.piper import PiperEngine
+from ubo_app.engines.piper_catalog import (
+    DEFAULT_PIPER_VOICE_ID,
+    PIPER_LANGUAGES,
+    language_for,
+    visible_languages,
+    voice_for,
+    voice_label,
+)
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
@@ -78,6 +88,8 @@ from ubo_app.store.services.assistant import (
     AssistantDeleteMcpServerEvent,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
+    AssistantDownloadPiperVoiceAction,
+    AssistantDownloadPiperVoiceEvent,
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
@@ -85,6 +97,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
     AssistantSTTName,
@@ -330,6 +343,10 @@ def _register_persistent_stores() -> None:
         'assistant:enabled_mcp_servers',
         lambda state: json.dumps(list(state.assistant.enabled_mcp_servers)),
     )
+    register_persistent_store(
+        'assistant:selected_piper_voice',
+        lambda state: state.assistant.selected_piper_voice,
+    )
 
 
 def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
@@ -445,11 +462,11 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
         items: list[MenuItemData] = []
         for provider in _deduped_providers():
-            if isinstance(provider, OllamaEngine):
-                # Ollama is a special case: the catalog picker is both the
-                # setup path *and* the day-to-day model picker, so we always
-                # offer the drill-in regardless of whether a model is
-                # downloaded yet.
+            if isinstance(provider, (OllamaEngine, PiperEngine)):
+                # Ollama and Piper share the pattern: the catalog picker
+                # is both the setup path *and* the day-to-day picker, so
+                # we always offer the drill-in regardless of whether the
+                # current selection has been downloaded yet.
                 action_id = f'assistant:open-provider:{provider.name}'
                 _provider_action_ids.append(action_id)
                 register_action(
@@ -545,6 +562,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             secrets_monitor.value,
             state.assistant.ollama_model_capabilities,
             state.assistant.ollama_thinking_enabled,
+            state.assistant.selected_piper_voice,
         ),
     )
     def provider_details(  # noqa: C901, PLR0915
@@ -554,12 +572,14 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             dict[str, str | None],
             dict[str, tuple[str, ...]],
             dict[str, bool],
+            str,
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
         selected_models = data[1]
         ollama_caps = data[3]
         ollama_thinking = data[4]
+        selected_piper_voice = data[5] or DEFAULT_PIPER_VOICE_ID
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -568,7 +588,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         for provider in _deduped_providers():
             if not isinstance(provider, NeedsSetupMixin):
                 continue
-            if not provider.is_setup and not isinstance(provider, OllamaEngine):
+            if not provider.is_setup and not isinstance(
+                provider,
+                (OllamaEngine, PiperEngine),
+            ):
                 continue
 
             items: list[MenuItemData] = []
@@ -629,6 +652,45 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         ),
                     )
 
+                store.dispatch(
+                    UpdateDynamicMenuAction(
+                        menu_id=f'assistant:provider:{provider.name}',
+                        title=provider.label,
+                        heading=provider.label,
+                        sub_heading='Manage this provider',
+                        items=tuple(items),
+                    ),
+                )
+                continue
+
+            # Piper exposes a Language → Voice drill-down driven by the
+            # curated catalog. Always rendered, even before any voice is
+            # downloaded, so the user can pick a voice that triggers its
+            # first download.
+            if isinstance(provider, PiperEngine):
+                current_voice = voice_for(selected_piper_voice)
+                current_label = (
+                    voice_label(current_voice)
+                    if current_voice is not None
+                    else selected_piper_voice
+                )
+                voice_action = 'assistant:provider-detail:piper-languages'
+                _provider_detail_action_ids.append(voice_action)
+                register_action(
+                    voice_action,
+                    lambda: store.dispatch(
+                        StackPushMenuAction(menu_key='piper:languages'),
+                    ),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-voice',
+                        label=f'Voice: {current_label}',
+                        icon='󰔊',
+                        action_id=voice_action,
+                    ),
+                )
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -1109,6 +1171,160 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         if isinstance(engine, OllamaEngine):
             engine.download_model(event.model)
 
+    _piper_language_action_ids: list[str] = []
+    _piper_voice_action_ids: list[str] = []
+
+    def _piper_engine() -> PiperEngine | None:
+        engine = TTS_ENGINES.get(AssistantTTSName.PIPER)
+        return engine if isinstance(engine, PiperEngine) else None
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_piper_voice,
+            state.localization.language,
+        ),
+    )
+    def piper_languages_menu(
+        data: tuple[str, LanguageCode],
+    ) -> None:
+        """Build the Piper language picker (English + system language)."""
+        selected_voice, system_language = data
+        selected_voice = selected_voice or DEFAULT_PIPER_VOICE_ID
+
+        for action_id in _piper_language_action_ids:
+            unregister_action(action_id)
+        _piper_language_action_ids.clear()
+
+        # Refresh the downloaded-voices cache so the per-voice indicators
+        # are accurate. No-op when nothing changed (set comparison).
+        engine = _piper_engine()
+        if engine is not None:
+            create_task(engine.refresh_downloaded_voices())
+
+        current_language = language_for(selected_voice)
+        languages = visible_languages(system_language)
+        items: list[MenuItemData] = []
+        for language in languages:
+            action_id = f'assistant:piper:open-language:{language.code.value}'
+            _piper_language_action_ids.append(action_id)
+            register_action(
+                action_id,
+                lambda code=language.code: store.dispatch(
+                    StackPushMenuAction(
+                        menu_key=f'piper:voices:{code.value}',
+                    ),
+                ),
+                allow_reregister=True,
+            )
+            is_current = (
+                current_language is not None
+                and current_language.code == language.code
+            )
+            items.append(
+                MenuItemData(
+                    key=language.code.value,
+                    label=language.label,
+                    icon='󰄬' if is_current else '󰗊',
+                    background_color=INFO_COLOR if is_current else None,
+                    action_id=action_id,
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:piper:languages',
+                title='Piper Languages',
+                heading='Piper',
+                sub_heading='Pick a language',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_piper_voice,
+            state.assistant.piper_downloaded_voices,
+        ),
+    )
+    def piper_voices_menus(data: tuple[str, tuple[str, ...]]) -> None:
+        """Build per-language Piper voice submenus."""
+        selected_voice, downloaded_voices = data
+        selected_voice = selected_voice or DEFAULT_PIPER_VOICE_ID
+        downloaded_set = set(downloaded_voices)
+
+        for action_id in _piper_voice_action_ids:
+            unregister_action(action_id)
+        _piper_voice_action_ids.clear()
+
+        def _make_voice_handler(
+            voice_id: str,
+            *,
+            downloaded: bool,
+        ) -> Callable[[], None]:
+            def _handler() -> None:
+                if downloaded:
+                    store.dispatch(
+                        AssistantSetSelectedPiperVoiceAction(voice_id=voice_id),
+                        MenuGoBackAction(),
+                        MenuGoBackAction(),
+                    )
+                else:
+                    store.dispatch(
+                        AssistantSetSelectedPiperVoiceAction(voice_id=voice_id),
+                        AssistantDownloadPiperVoiceAction(voice_id=voice_id),
+                        MenuGoBackAction(),
+                        MenuGoBackAction(),
+                    )
+
+            return _handler
+
+        for language in PIPER_LANGUAGES:
+            items: list[MenuItemData] = []
+            for voice in language.voices:
+                is_selected = voice.id == selected_voice
+                is_downloaded = voice.id in downloaded_set
+                label = voice_label(voice)
+                if is_downloaded and not is_selected:
+                    label = f'{label}  •'
+
+                action_id = f'assistant:piper:select-voice:{voice.id}'
+                _piper_voice_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    _make_voice_handler(voice.id, downloaded=is_downloaded),
+                    allow_reregister=True,
+                )
+
+                items.append(
+                    MenuItemData(
+                        key=voice.id,
+                        label=label,
+                        icon='󰄬' if is_selected else (
+                            '󰇚' if not is_downloaded else '󰔊'
+                        ),
+                        background_color=(
+                            INFO_COLOR if is_selected else None
+                        ),
+                        action_id=action_id,
+                    ),
+                )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:piper:voices:{language.code.value}',
+                    title=language.label,
+                    heading=language.label,
+                    sub_heading='Pick a voice',
+                    items=tuple(items),
+                ),
+            )
+
+    def _handle_piper_download(event: AssistantDownloadPiperVoiceEvent) -> None:
+        """Run the Piper download flow for the requested voice."""
+        engine = _piper_engine()
+        if engine is not None:
+            engine.download_voice(event.voice_id)
+
     @store.autorun(
         lambda state: (
             state.assistant.selected_tts,
@@ -1368,16 +1584,19 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         llm_model_pickers,
         ollama_categories_menu,
         ollama_models_menus,
+        piper_languages_menu,
+        piper_voices_menus,
         tts_providers,
         image_generator_providers,
         mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
         _handle_ollama_download,
+        _handle_piper_download,
     )
 
 
-def _register_assistant_path_matchers() -> None:
+def _register_assistant_path_matchers() -> None:  # noqa: C901
     """Register path matchers for assistant sub-pages."""
     from ubo_app.store.core.view_registry import register_path_menu_matcher
 
@@ -1391,6 +1610,18 @@ def _register_assistant_path_matchers() -> None:
         'assistant:mcp_tools': 'assistant:mcp_tools',
     }
 
+    def _match_catalog_tail(tail: str) -> str | None:
+        """Match leaf segments owned by Ollama / Piper drill-downs."""
+        if tail == 'ollama:categories':
+            return 'assistant:ollama:categories'
+        if tail.startswith('ollama:models:'):
+            return f'assistant:ollama:models:{tail[len("ollama:models:") :]}'
+        if tail == 'piper:languages':
+            return 'assistant:piper:languages'
+        if tail.startswith('piper:voices:'):
+            return f'assistant:piper:voices:{tail[len("piper:voices:") :]}'
+        return None
+
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:
         # Paths like ('main', 'settings', 'Assistant', 'assistant:stt')
         if (
@@ -1398,13 +1629,9 @@ def _register_assistant_path_matchers() -> None:
             and path[:3] == ('main', 'settings', 'Assistant')
         ):
             menu_key = path[3]
-            # Ollama categorised picker reached from the Ollama provider-detail
-            # menu. Two-level: 'ollama:categories' → 'ollama:models:<cat>'.
-            if path[-1] == 'ollama:categories':
-                return 'assistant:ollama:categories'
-            if path[-1].startswith('ollama:models:'):
-                category_id = path[-1][len('ollama:models:') :]
-                return f'assistant:ollama:models:{category_id}'
+            catalog = _match_catalog_tail(path[-1])
+            if catalog is not None:
+                return catalog
             # Generic "models:<provider>" tail — reached from anywhere under
             # Assistant (LLM menu, Manage Providers detail, etc.).
             if len(path) >= 5 and path[-1].startswith('models:'):  # noqa: PLR2004
@@ -1478,6 +1705,7 @@ async def init_service() -> None:
                 tuple(sorted(s.assistant.selected_models.items())),
                 tuple(sorted(s.assistant.ollama_thinking_enabled.items())),
                 tuple(sorted(s.assistant.ollama_model_capabilities.items())),
+                s.assistant.selected_piper_voice,
             ),
         )
     # Ollama categorised picker depends on the current selection so the
@@ -1502,6 +1730,24 @@ async def init_service() -> None:
         'assistant:tts',
         lambda s: s.assistant.selected_tts,
     )
+    # Piper picker depends on the current voice selection (for the
+    # checkmark) and on the system language (for which non-English
+    # languages are visible in the picker).
+    register_menu_content_dependency(
+        'assistant:piper:languages',
+        lambda s: (
+            s.assistant.selected_piper_voice,
+            s.localization.language,
+        ),
+    )
+    for _language in PIPER_LANGUAGES:
+        register_menu_content_dependency(
+            f'assistant:piper:voices:{_language.code.value}',
+            lambda s: (
+                s.assistant.selected_piper_voice,
+                tuple(s.assistant.piper_downloaded_voices),
+            ),
+        )
     register_menu_content_dependency(
         'assistant:image_gen',
         lambda s: s.assistant.selected_image_generator,
@@ -1528,12 +1774,15 @@ async def init_service() -> None:
         _llm_model_pickers,
         _ollama_categories_menu,
         _ollama_models_menus,
+        _piper_languages_menu,
+        _piper_voices_menus,
         _tts_providers,
         _image_generator_providers,
         _mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
         handle_ollama_download,
+        handle_piper_download,
     ) = _setup_autorun_and_handlers()
 
     store.dispatch(
@@ -1591,6 +1840,10 @@ async def init_service() -> None:
         AssistantDownloadOllamaModelEvent,
         handle_ollama_download,
     )
+    store.subscribe_event(
+        AssistantDownloadPiperVoiceEvent,
+        handle_piper_download,
+    )
 
     store.dispatch(AssistantUpdateProvidersAction())
     store.dispatch(AssistantSyncMcpServersAction())
@@ -1601,3 +1854,10 @@ async def init_service() -> None:
     _ollama_engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA)
     if isinstance(_ollama_engine, OllamaEngine):
         create_task(_ollama_engine.refresh_downloaded_models())
+
+    # Same idea for Piper: scan the data dir once so the catalog dot
+    # indicator reflects voices the user already downloaded in previous
+    # sessions.
+    _piper_engine_instance = TTS_ENGINES.get(AssistantTTSName.PIPER)
+    if isinstance(_piper_engine_instance, PiperEngine):
+        create_task(_piper_engine_instance.refresh_downloaded_voices())

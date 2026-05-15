@@ -22,6 +22,8 @@ from ubo_app.store.services.assistant import (
     AssistantDeleteMcpServerEvent,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
+    AssistantDownloadPiperVoiceAction,
+    AssistantDownloadPiperVoiceEvent,
     AssistantEvent,
     AssistantHandleReportEvent,
     AssistantModelChangedEvent,
@@ -31,9 +33,11 @@ from ubo_app.store.services.assistant import (
     AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
+    AssistantSetPiperDownloadedVoicesAction,
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
     AssistantStartListeningAction,
@@ -152,6 +156,27 @@ def reducer(
                         enabled=action.enabled,
                     ),
                 ],
+            )
+
+        case AssistantSetSelectedPiperVoiceAction():
+            # Plain state update — the assistant subprocess tracks
+            # ``selected_piper_voice`` via a gRPC autorun, and
+            # ``PiperTTSService.run_tts`` reconciles the loaded model with
+            # the selection before each utterance, so no event is needed.
+            return replace(state, selected_piper_voice=action.voice_id)
+
+        case AssistantDownloadPiperVoiceAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDownloadPiperVoiceEvent(voice_id=action.voice_id),
+                ],
+            )
+
+        case AssistantSetPiperDownloadedVoicesAction():
+            return replace(
+                state,
+                piper_downloaded_voices=tuple(action.voices),
             )
 
         case AssistantUpdateProvidersAction():

@@ -131,7 +131,15 @@ PIPER_MODEL_URL = (
 PIPER_MODEL_HASH = '5849957f929cbf720c258f8458692d6103fff2f0e3d3b19c8259474bb06a18d4'
 PIPER_MODEL_PATH = (DATA_PATH / PIPER_MODEL).with_suffix('.onnx')
 PIPER_MODEL_JSON_PATH = (DATA_PATH / PIPER_MODEL).with_suffix('.onnx.json')
+# The Piper download flow uses two notification ids:
+#  * NOTIFICATION — the on-screen notification. STICKY while the download
+#    runs, overwritten in place by the FLASH on completion (sticky and
+#    flash deliberately share this id). Both are user-dismissable.
+#  * PROGRESS — the BACKGROUND status-bar progress wheel. Its own id so it
+#    survives the user dismissing the sticky / navigating away, and keeps
+#    advancing until the download finishes.
 PIPER_DOWNLOAD_NOTIFICATION_ID = 'speech_synthesis:download-piper'
+PIPER_DOWNLOAD_PROGRESS_NOTIFICATION_ID = 'speech_synthesis:download-piper:progress'
 
 PICOVOICE_ACCESS_KEY_SECRET_ID = 'picovoice_access_key'  # noqa: S105
 

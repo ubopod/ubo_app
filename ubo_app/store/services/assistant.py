@@ -108,6 +108,18 @@ def _load_ollama_thinking_enabled(value: str) -> dict[str, bool]:
     return {str(k): bool(v) for k, v in flags.items()}
 
 
+# Hard-coded fallback. The full catalog lives in
+# ``ubo_app/engines/piper_catalog.py`` — kept out of this module to avoid
+# pulling the localization import into the state-schema layer.
+DEFAULT_PIPER_VOICE_ID = 'en/en_US/kristin/medium/en_US-kristin-medium'
+
+
+def _load_piper_voice(value: object) -> str:
+    if isinstance(value, str) and value:
+        return value
+    return DEFAULT_PIPER_VOICE_ID
+
+
 class AssistantTTSName(StrEnum):
     """Available assistant text-to-speech engines."""
 
@@ -444,6 +456,29 @@ class AssistantSetOllamaThinkingAction(AssistantAction):
     enabled: bool
 
 
+class AssistantSetSelectedPiperVoiceAction(AssistantAction):
+    """Action to pick a Piper voice (path-style HuggingFace id).
+
+    No event is emitted: the assistant subprocess tracks
+    ``selected_piper_voice`` via a gRPC autorun and ``PiperTTSService``
+    reconciles the loaded model before each utterance.
+    """
+
+    voice_id: str
+
+
+class AssistantDownloadPiperVoiceAction(AssistantAction):
+    """Action requesting download of a Piper voice's ``.onnx`` + JSON files."""
+
+    voice_id: str
+
+
+class AssistantSetPiperDownloadedVoicesAction(AssistantAction):
+    """Replace the cached set of locally-downloaded Piper voice ids."""
+
+    voices: tuple[str, ...]
+
+
 class AssistanceFrame(Immutable):
     """An assistance frame."""
 
@@ -591,6 +626,22 @@ class AssistantOllamaThinkingChangedEvent(AssistantEvent):
     enabled: bool
 
 
+class AssistantPiperVoiceChangedEvent(AssistantEvent):
+    """Event signalling that the user picked a new Piper voice.
+
+    Carries the voice id; the subprocess derives the on-disk model path
+    itself so the event stays serialisable across the gRPC boundary.
+    """
+
+    voice_id: str
+
+
+class AssistantDownloadPiperVoiceEvent(AssistantEvent):
+    """Event requesting download of a Piper voice in the core process."""
+
+    voice_id: str
+
+
 class AssistantAddMcpServerEvent(AssistantEvent):
     """Event to add a new MCP server."""
 
@@ -677,6 +728,19 @@ class AssistantState(Immutable):
             else AssistantTTSName.PIPER,
         ),
     )
+    # Currently selected Piper voice id (HuggingFace path without
+    # extension). Backs both the assistant subprocess TTS and the
+    # standalone speech-synthesis service.
+    selected_piper_voice: str = field(
+        default=read_from_persistent_store(
+            'assistant:selected_piper_voice',
+            default=DEFAULT_PIPER_VOICE_ID,
+            mapper=_load_piper_voice,
+        ),
+    )
+    # Cached set of locally-downloaded Piper voice ids. Process-local;
+    # refreshed by ``PiperEngine.refresh_downloaded_voices()``.
+    piper_downloaded_voices: tuple[str, ...] = field(default_factory=tuple)
     selected_image_generator: AssistantImageGeneratorName = field(
         default=read_from_persistent_store(
             'assistant:selected_image_generator',

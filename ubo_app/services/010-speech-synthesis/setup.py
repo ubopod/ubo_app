@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import struct
 from asyncio import CancelledError
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import fasteners
@@ -11,11 +12,14 @@ import pvorca
 from piper.voice import AudioChunk, PiperVoice
 from redux import AutorunOptions
 
-from ubo_app.constants.assistant import (
-    PICOVOICE_ACCESS_KEY_SECRET_ID,
-    PIPER_MODEL_PATH,
-)
+from ubo_app.constants.assistant import PICOVOICE_ACCESS_KEY_SECRET_ID
 from ubo_app.engines.piper import PiperEngine
+from ubo_app.engines.piper_catalog import (
+    DEFAULT_PIPER_VOICE_ID,
+    model_path_for,
+    voice_for,
+    voice_label,
+)
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
@@ -59,9 +63,15 @@ if TYPE_CHECKING:
 _piper_engine = PiperEngine()
 
 
+@store.with_state(lambda state: state.assistant.selected_piper_voice)
+def _selected_voice_id(voice_id: str) -> str:
+    return voice_id or DEFAULT_PIPER_VOICE_ID
+
+
 class _Context:
     picovoice_instance: pvorca.Orca | None = None
     piper_voice: PiperVoice | None = None
+    piper_voice_id: str | None = None
     picovoice_lock = fasteners.ReaderWriterLock()
 
     def cleanup(self: _Context) -> None:
@@ -80,8 +90,17 @@ class _Context:
                 self.picovoice_instance = pvorca.create(access_key)
 
     def load_piper(self: _Context) -> None:
-        if _piper_engine.is_setup:
-            self.piper_voice = PiperVoice.load(PIPER_MODEL_PATH)
+        if not _piper_engine.is_setup:
+            return
+        voice_id = _selected_voice_id()
+        if self.piper_voice is not None and self.piper_voice_id == voice_id:
+            return
+        path = Path(str(model_path_for(voice_id)))
+        if not path.exists():
+            return
+        self.piper_voice = PiperVoice.load(path)
+        self.piper_voice_id = voice_id
+        piper_cache.clear()
 
 
 _context = _Context()
@@ -299,26 +318,38 @@ def _register_speech_synthesis_action_handlers() -> None:
     lambda state: (
         state.speech_synthesis.selected_engine,
         state.assistant.provider_setup_status,
+        state.assistant.selected_piper_voice,
     ),
     options=AutorunOptions(memoization=False),
 )
 def update_speech_synthesis_dynamic_menu(
-    _data: tuple[SpeechSynthesisEngineName, object],
+    data: tuple[SpeechSynthesisEngineName, object, str],
 ) -> None:
     """Update the dynamic menu for speech synthesis (dumb UI)."""
     _register_speech_synthesis_action_handlers()
 
-    if _piper_engine.is_setup and _context.piper_voice is None:
+    selected_voice_id = data[2] or DEFAULT_PIPER_VOICE_ID
+
+    if _piper_engine.is_setup and (
+        _context.piper_voice is None
+        or _context.piper_voice_id != selected_voice_id
+    ):
         to_thread(_context.load_piper)
 
     items: list[MenuItemData] = []
 
     # Add download option if Piper not downloaded
     if not _piper_engine.is_setup:
+        voice = voice_for(selected_voice_id)
+        download_label = (
+            f'Download Voice: {voice_label(voice)}'
+            if voice is not None
+            else 'Download Piper Voice'
+        )
         items.append(
             MenuItemData(
                 key='download',
-                label='Download Piper Model',
+                label=download_label,
                 icon='󰇚',
                 action_id='speech-synthesis:download_piper',
             ),

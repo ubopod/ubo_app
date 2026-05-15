@@ -1,6 +1,8 @@
 """TTS service that wraps multiple TTS services allowing switching between them."""
 
-from collections.abc import AsyncGenerator, Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from pipecat.frames.frames import Frame
@@ -11,10 +13,15 @@ from pipecat.services.rime.tts import RimeTTSService
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
-from ubo_bindings.client import UboRPCClient
 
-from ubo_assistant.piper import PiperTTSService
+from ubo_assistant.piper import DEFAULT_PIPER_VOICE_ID, PiperTTSService
 from ubo_assistant.switch import UboSwitchService
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable
+
+    from betterproto.lib.google.protobuf import StringValue
+    from ubo_bindings.client import UboRPCClient
 
 
 class UboTTSService(UboSwitchService[TTSService], TTSService):
@@ -92,10 +99,15 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             ),
         )
 
-        # Initialize Piper TTS
+        # Initialize Piper TTS with the default voice — the store autorun
+        # registered in `_ensure_autoruns_started` reconciles it to the
+        # user's persisted voice (it fires once on subscription with the
+        # current value, then on every change).
         self.piper_tts = self._initialize_service(
             'Piper',
-            lambda: PiperTTSService() if PiperTTSService else None,
+            lambda: PiperTTSService(voice_id=DEFAULT_PIPER_VOICE_ID)
+            if PiperTTSService
+            else None,
         )
 
         # Initialize Rime TTS
@@ -147,3 +159,24 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         _ = context_id
         if False:
             yield Frame()
+
+    def _ensure_autoruns_started(self) -> None:
+        """Start the parent autoruns then track the selected Piper voice."""
+        if self._autoruns_started:
+            return
+        super()._ensure_autoruns_started()
+
+        # A store autorun — not an event subscription — is the reliable
+        # primitive here: it fires once on registration with the current
+        # persisted voice (cold-start) and again on every change, and the
+        # client schedules the callback on the pipeline loop itself. The
+        # earlier event-based approach hopped from a gRPC callback thread
+        # into `create_task`, which raced and silently dropped switches.
+        # The callback only records the request; `PiperTTSService.run_tts`
+        # does the actual load before each utterance.
+        @self.client.autorun(['state.assistant.selected_piper_voice'])
+        def _handle_piper_voice_change(data: list[StringValue]) -> None:
+            voice_id = data[0].value
+            target = self.piper_tts
+            if isinstance(target, PiperTTSService):
+                target.request_voice(voice_id)
