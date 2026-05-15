@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 import contextlib
 from asyncio import AbstractEventLoop, Queue, QueueFull, get_running_loop
 from collections.abc import Callable, Sequence
@@ -342,8 +343,18 @@ class StoreService(StoreServiceBase):
         self,
         subscribe_store_request: SubscribeStoreRequest,
     ) -> AsyncIterator[SubscribeStoreResponse]:
-        """Subscribe to the changes of selected parts of the store."""
-        queue: Queue[Sequence[GRPCSerializable]] = Queue(30)
+        """Subscribe to the changes of selected parts of the store.
+
+        Latest-wins coalescing: the consumer wants the *current value* of
+        the selectors, not a log of every intermediate value. A fixed-size
+        queue here would either drop newest events (losing the latest
+        state) or back up under a state-change flood (e.g. a download
+        progress notification updating dozens of times a second), making
+        the client lag seconds behind reality. Instead we keep a single
+        pending snapshot — a new arrival overwrites it — and the producer
+        never blocks or drops. The consumer always processes the latest
+        state, with intermediate states silently coalesced away.
+        """
         loop = get_running_loop()
 
         selectors = [
@@ -369,28 +380,35 @@ class StoreService(StoreServiceBase):
             subscribe_store_request.selectors,
         )
 
+        # Single-slot latest-value primitive: ``latest[0]`` holds the most
+        # recent ``partial_state`` not yet delivered; ``has_update`` wakes
+        # the consumer. Both are touched only from the asyncio loop (the
+        # producer marshals via ``call_soon_threadsafe``), so no lock is
+        # needed.
+        latest: list[Sequence[GRPCSerializable] | None] = [None]
+        has_update = asyncio.Event()
+
         @store.autorun(parent_selector)
         def queue_change(partial_state: Sequence[GRPCSerializable]) -> None:
-            """Put the change in the queue (thread-safe)."""
+            """Replace the pending snapshot with the latest (thread-safe)."""
 
             def _put() -> None:
-                try:
-                    queue.put_nowait(partial_state)
-                except QueueFull:
-                    logger.debug(
-                        'Subscription store queue is full, dropping change',
-                        extra={
-                            'partial_state': partial_state,
-                            'queue_size': queue.qsize(),
-                        },
-                    )
+                latest[0] = partial_state
+                has_update.set()
 
             with contextlib.suppress(RuntimeError):
                 loop.call_soon_threadsafe(_put)
 
         try:
             while True:
-                change = await queue.get()
+                await has_update.wait()
+                has_update.clear()
+                change = latest[0]
+                if change is None:
+                    # Spurious wakeup (producer set the event then we
+                    # cleared it before reading): wait for the next one.
+                    continue
+                latest[0] = None
                 yield SubscribeStoreResponse(
                     results=[_pack_to_any(partial_state) for partial_state in change],
                 )
