@@ -103,6 +103,11 @@ if TYPE_CHECKING:
     from ubo_app.store.services.ip import IpAction, IpEvent, IpState
     from ubo_app.store.services.keypad import KeypadAction, KeypadState
     from ubo_app.store.services.lightdm import LightDMAction, LightDMState
+    from ubo_app.store.services.localization import (
+        LocalizationAction,
+        LocalizationEvent,
+        LocalizationState,
+    )
     from ubo_app.store.services.notifications import (
         NotificationsAction,
         NotificationsEvent,
@@ -154,6 +159,7 @@ UboAction: TypeAlias = Union[
     'IpAction',
     'KeypadAction',
     'LightDMAction',
+    'LocalizationAction',
     'NotificationsAction',
     'RgbRingAction',
     'RPiConnectAction',
@@ -178,6 +184,7 @@ UboEvent: TypeAlias = Union[
     'FileSystemEvent',
     'InfraredEvent',
     'IpEvent',
+    'LocalizationEvent',
     'NotificationsEvent',
     'SpeechRecognitionEvent',
     'UsersEvent',
@@ -205,6 +212,7 @@ class RootState(BaseCombineReducerState):
     ip: IpState
     keypad: KeypadState
     lightdm: LightDMState
+    localization: LocalizationState
     notifications: NotificationsState
     rgb_ring: RgbRingState
     rpi_connect: RPiConnectState

@@ -15,6 +15,7 @@ class SettingsCategory(StrEnum):
     ASSISTANT = 'Assistant'
     DOCKER = 'Docker'
     ACCESSIBILITY = 'Accessibility'
+    LOCALIZATION = 'Localization'
 
 
 class MenuScrollDirection(StrEnum):

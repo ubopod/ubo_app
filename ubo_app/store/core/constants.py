@@ -39,6 +39,7 @@ SETTINGS_CATEGORY_ICONS: dict[SettingsCategory, str] = {
     SettingsCategory.ASSISTANT: '󰚩',
     SettingsCategory.DOCKER: '󰡨',
     SettingsCategory.ACCESSIBILITY: '󰙋',
+    SettingsCategory.LOCALIZATION: '󰵅',
 }
 
 # Action ID prefixes — single source of truth for stringly-typed prefixes
