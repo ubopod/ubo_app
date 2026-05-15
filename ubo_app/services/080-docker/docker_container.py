@@ -37,8 +37,17 @@ from ubo_app.utils.async_ import to_thread
 _active_monitors: set[str] = set()
 
 
-def _start_event_monitor(image_id: str, get_docker_id: Callable[[], str]) -> None:
-    """Run the long-lived docker event monitor outside the shared thread pool."""
+def start_event_monitor(image_id: str) -> None:
+    """Bootstrap the long-lived docker event monitor for an image (idempotent)."""
+    if image_id in _active_monitors:
+        return
+    _active_monitors.add(image_id)
+    logger.debug('Starting event monitor', extra={'image_id': image_id})
+
+    @store.autorun(lambda state: getattr(state.docker, image_id).docker_id)
+    def get_docker_id(docker_id: str) -> str:
+        return docker_id
+
     thread = threading.Thread(
         target=_monitor_events,
         kwargs={
@@ -49,6 +58,7 @@ def _start_event_monitor(image_id: str, get_docker_id: Callable[[], str]) -> Non
         daemon=True,
     )
     thread.start()
+
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -267,7 +277,7 @@ def update_container(*, image_id: str, container: Container) -> None:
     )
 
 
-def _monitor_events(  # noqa: C901, PLR0912
+def _monitor_events(  # noqa: C901, PLR0912, PLR0915
     image_id: str,
     get_docker_id: Callable[[], str],
 ) -> None:
@@ -276,11 +286,19 @@ def _monitor_events(  # noqa: C901, PLR0912
         'Starting event monitor',
         extra={'image_id': image_id, 'path': path},
     )
-    docker_client = docker.from_env()
-    events = docker_client.events(
-        decode=True,
-        filters={'type': ['image', 'container']},
-    )
+    try:
+        docker_client = docker.from_env()
+        events = docker_client.events(
+            decode=True,
+            filters={'type': ['image', 'container']},
+        )
+    except docker.errors.DockerException:
+        logger.warning(
+            'Event monitor connect failed; will retry on next bootstrap',
+            extra={'image_id': image_id},
+        )
+        _active_monitors.discard(image_id)
+        return
     store.subscribe_event(
         FinishEvent,
         events.close,
@@ -358,6 +376,12 @@ def _monitor_events(  # noqa: C901, PLR0912
             if event_image != path:
                 continue
 
+            # Healthcheck/exec events fire on every HEALTHCHECK interval and
+            # are not state transitions; ignore them to avoid expensive
+            # find_container scans per healthcheck cycle.
+            if status.startswith(('exec_create', 'exec_start', 'exec_die')):
+                continue
+
             logger.debug(
                 'Container event received',
                 extra={
@@ -367,9 +391,7 @@ def _monitor_events(  # noqa: C901, PLR0912
                 },
             )
 
-            if status == 'start' or status.startswith(
-                ('exec_create', 'exec_start'),
-            ):
+            if status == 'start':
                 container = find_container(
                     docker_client,
                     image_path=IMAGES[image_id].path,
@@ -475,24 +497,5 @@ def check_container(*, image_id: str) -> None:
             raise
         finally:
             docker_client.close()
-
-            # Only start event monitor if not already running for this image
-            if image_id not in _active_monitors:
-                _active_monitors.add(image_id)
-                logger.debug(
-                    'Starting event monitor',
-                    extra={'image_id': image_id},
-                )
-
-                @store.autorun(lambda state: getattr(state.docker, image_id).docker_id)
-                def get_docker_id(docker_id: str) -> str:
-                    return docker_id
-
-                _start_event_monitor(image_id, get_docker_id)
-            else:
-                logger.debug(
-                    'Event monitor already running, skipping',
-                    extra={'image_id': image_id},
-                )
 
     to_thread(act)

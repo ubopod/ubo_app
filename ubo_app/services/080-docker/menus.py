@@ -405,14 +405,6 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
         if image is None:
             return
 
-        # Check status if not in middle of an operation
-        if image.status not in (DockerItemStatus.FETCHING, DockerItemStatus.PROCESSING):
-            is_composition = image_id in IMAGES and IMAGES[image_id].is_composition
-            if is_composition:
-                create_task(check_composition(id=image_id))
-            else:
-                check_container(image_id=image_id)
-
         @store.with_state(
             lambda state: state.ip.interfaces if hasattr(state, 'ip') else None,
         )
@@ -453,5 +445,9 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
 
 
 def docker_item_menu(image_id: str) -> None:
-    """Navigate to the Docker image menu."""
+    """Navigate to the Docker image menu and refresh its container state."""
+    if image_id in IMAGES and IMAGES[image_id].is_composition:
+        create_task(check_composition(id=image_id))
+    else:
+        check_container(image_id=image_id)
     store.dispatch(StackPushMenuAction(menu_key=f'docker:{image_id}'))

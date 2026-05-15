@@ -25,7 +25,12 @@ from docker_composition import (
     run_composition,
     stop_composition,
 )
-from docker_container import remove_container, run_container, stop_container
+from docker_container import (
+    remove_container,
+    run_container,
+    start_event_monitor,
+    stop_container,
+)
 from docker_image import fetch_image, remove_image
 from menus import docker_item_menu, setup_docker_image_dynamic_menu
 from reducer import image_reducer, reducer_id
@@ -274,6 +279,13 @@ async def sync_docker_containers() -> None:
                         update_container(image_id=image_id, container=container)
 
         docker_client.close()
+
+    # Bootstrap event monitors for all non-composition images so we get
+    # live state updates without polling. start_event_monitor is idempotent.
+    for image_id, image_description in IMAGES.items():
+        if image_description.is_composition:
+            continue
+        start_event_monitor(image_id)
 
 
 async def check_docker() -> None:
@@ -833,6 +845,9 @@ def _register_container_entry(image_id: str) -> None:
         ),
     )
     setup_docker_image_dynamic_menu(image_id)
+    # Idempotent; safe to call when docker is down — the monitor thread
+    # cleans up after a failed connect so a later call retries.
+    start_event_monitor(image_id)
 
 
 def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
