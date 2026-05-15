@@ -44,12 +44,41 @@ from ubo_app.store.core.view_registry import (
     get_registered_dependencies,
     get_registered_status_bar_dependencies,
 )
+from ubo_app.store.services.notifications import NotificationDisplayType
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_app.store.core.types import ViewData
+    from ubo_app.store.core.types import StackItemType, ViewData
     from ubo_app.store.main import RootState
+
+
+def _is_background_notification(state: RootState, item: StackItemType) -> bool:
+    """Return True iff *item* is a non-screen-owning notification overlay.
+
+    A BACKGROUND notification lives only in the status-bar progress
+    wheel; a notification whose backing entry has already been cleared
+    from the list is mid-dismissal. Neither should be rendered as the
+    current view, even while its ``NotificationStackItem`` is still on
+    the navigation stack. Keeping the stack item in place (instead of
+    popping it on every progress update) avoids push/pop churn that
+    races the view autorun.
+    """
+    if not isinstance(item, NotificationStackItem):
+        return False
+    notifications = (
+        state.notifications.notifications
+        if hasattr(state, 'notifications')
+        else ()
+    )
+    notification = next(
+        (n for n in notifications if n.id == item.notification_id),
+        None,
+    )
+    return (
+        notification is None
+        or notification.display_type is NotificationDisplayType.BACKGROUND
+    )
 
 # Cache hostname at module load — it doesn't change at runtime
 _HOSTNAME_TITLE = f'󰋜{socket.gethostname()}.local'
@@ -289,6 +318,10 @@ def _notification_view_dependency(notification: object) -> tuple[object, ...]:
         getattr(notification, 'icon', ''),
         getattr(notification, 'color', ''),
         getattr(notification, 'progress', None),
+        # display_type drives whether the overlay is rendered on screen
+        # at all (STICKY/FLASH) or filtered out (BACKGROUND), so the view
+        # autorun must recompute when it changes.
+        getattr(notification, 'display_type', None),
         getattr(notification, 'show_dismiss_action', True),
         getattr(extra_information, 'text', None),
         tuple(
@@ -307,7 +340,7 @@ def _notification_view_dependency(notification: object) -> tuple[object, ...]:
     )
 
 
-def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901
+def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, PLR0912
     """Compute ViewData from the full RootState, using dynamic menus.
 
     This is the dumb UI architecture's view computation function. It uses
@@ -325,6 +358,20 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901
     main_state = state.main
     dynamic_menus_state = state.dynamic_menus
     stack = main_state.stack
+
+    if not stack:
+        return HomeViewData()
+
+    # Drop BACKGROUND (and mid-dismissal) notification overlays — they
+    # belong in the status-bar progress wheel, not on screen. The stack
+    # item stays put; this filter is what makes the
+    # STICKY → BACKGROUND → FLASH lifecycle work without popping and
+    # re-pushing the notification (which raced the view autorun).
+    stack = tuple(
+        item
+        for item in stack
+        if not _is_background_notification(state, item)
+    )
 
     if not stack:
         return HomeViewData()
@@ -511,23 +558,28 @@ def _dispatch_view_update(state: RootState) -> None:
 
 
 def _dispatch_status_bar_update(state: RootState) -> None:
-    """Compute status bar (and home view if visible), dispatch if changed."""
+    """Compute status bar and view freshly, dispatch if either changed.
+
+    The view is recomputed from scratch via ``compute_view_from_root_state``
+    rather than snapshotting ``state.main.current_view``. Snapshotting the
+    *output* (``current_view``) is unsafe: this autorun runs as a synchronous
+    listener while the action queue is still draining, so the snapshot lags
+    behind any pending view change. Re-dispatching that stale snapshot makes
+    the reducer clobber the newer view back to the old one — the notification
+    ⇄ menu flicker seen during Piper voice downloads (the status-bar autorun
+    fires dozens of times a second on progress updates). Recomputing from the
+    *inputs* (stack, notifications, dynamic menus) is always correct, and the
+    ``UpdateCurrentViewAction`` reducer dedupes redundant dispatches.
+    """
     if not hasattr(state, 'main'):
         return
     from ubo_app.store.core.types import UpdateCurrentViewAction
     from ubo_app.store.main import store
 
     computed_status_bar = compute_status_bar_data(state)
+    computed_view = compute_view_from_root_state(state)
     status_bar_changed = state.main.status_bar != computed_status_bar
-
-    # When on the home screen, CPU/RAM/volume gauges are part of the
-    # view, not just the status bar - recompute the view too.
-    current_view = state.main.current_view
-    view_changed = False
-    computed_view = current_view
-    if isinstance(current_view, HomeViewData):
-        computed_view = compute_view_from_root_state(state)
-        view_changed = current_view != computed_view
+    view_changed = state.main.current_view != computed_view
 
     if view_changed or status_bar_changed:
         logger.debug(
@@ -538,7 +590,7 @@ def _dispatch_status_bar_update(state: RootState) -> None:
         )
         store.dispatch(
             UpdateCurrentViewAction(
-                view=computed_view or HomeViewData(),
+                view=computed_view,
                 status_bar=computed_status_bar,
             ),
         )
