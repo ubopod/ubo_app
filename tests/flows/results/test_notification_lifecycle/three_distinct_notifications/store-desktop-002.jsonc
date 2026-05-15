@@ -1,0 +1,62 @@
+// store-desktop-002
+{
+  "current_view_id": "lifecycle-test:sticky",
+  "current_view_type": "NotificationViewData",
+  "notifications": [
+    {
+      "_type": "Notification",
+      "actions": [],
+      "blink": false,
+      "chime": null,
+      "color": "#2196F3",
+      "content": "Mock download in progress.",
+      "dismiss_on_close": false,
+      "display_type": "background",
+      "expiration_timestamp": null,
+      "extra_information": null,
+      "flash_time": 1000,
+      "icon": "󰌶",
+      "id": "lifecycle-test:progress",
+      "importance": "low",
+      "is_read": false,
+      "on_close_id": null,
+      "progress": 0.25,
+      "progress_weight": 1,
+      "sender": null,
+      "show_dismiss_action": true,
+      "timestamp": 0,
+      "title": "Downloading"
+    },
+    {
+      "_type": "Notification",
+      "actions": [],
+      "blink": false,
+      "chime": null,
+      "color": "#2196F3",
+      "content": "This sticky notification owns the screen.",
+      "dismiss_on_close": false,
+      "display_type": "sticky",
+      "expiration_timestamp": null,
+      "extra_information": null,
+      "flash_time": 1000,
+      "icon": "󰌶",
+      "id": "lifecycle-test:sticky",
+      "importance": "low",
+      "is_read": false,
+      "on_close_id": null,
+      "progress": null,
+      "progress_weight": 1,
+      "sender": null,
+      "show_dismiss_action": true,
+      "timestamp": 0,
+      "title": "Sticky Notification"
+    }
+  ],
+  "progress": 0.25,
+  "stack": [
+    "MenuStackItem",
+    "NotificationStackItem",
+    "NotificationStackItem"
+  ],
+  "unread_count": 2
+}
