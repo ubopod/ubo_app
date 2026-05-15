@@ -19,6 +19,26 @@ if TYPE_CHECKING:
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')
 
+# Redirect the persistent store to a throwaway location BEFORE any ubo_app
+# store module is imported. Several ``Immutable`` state classes call
+# ``read_from_persistent_store()`` at class-definition time to seed field
+# defaults; without this redirect those defaults would be read from — and
+# the test suite would later write to — the developer's real
+# ``~/Library/Application Support/ubo/state.json``. The throwaway file is
+# intentionally absent so the reads fall through to the true code defaults,
+# keeping ``reducer(None, InitAction())`` deterministic across machines.
+# The per-test ``_persistent_store`` fixture monkey-patches this again to a
+# per-test ``tmp_path`` for write isolation; monkeypatch then reverts to
+# this session path (never the production one).
+import tempfile as _tempfile  # noqa: E402
+
+import ubo_app.constants as _ubo_constants  # noqa: E402
+import ubo_app.utils.persistent_store as _ubo_persistent_store  # noqa: E402
+
+_SESSION_STATE_PATH = Path(_tempfile.mkdtemp()) / 'state.json'
+_ubo_constants.PERSISTENT_STORE_PATH = _SESSION_STATE_PATH
+_ubo_persistent_store.PERSISTENT_STORE_PATH = _SESSION_STATE_PATH
+
 pytest.register_assert_rewrite('tests.fixtures')
 
 from tests.fixtures import (  # noqa: E402, I001
@@ -101,8 +121,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _persistent_store(request: SubRequest) -> None:
-    """Set defaults for app-context for tests."""
+def _persistent_store(
+    request: SubRequest,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Set defaults for app-context for tests.
+
+    Crucially, this redirects ``PERSISTENT_STORE_PATH`` to a per-test
+    ``tmp_path`` so the test suite never writes to the production
+    ``~/Library/Application Support/ubo/state.json`` (or the equivalent
+    on other platforms). Without this, running the test suite on the
+    same machine that runs the real app would silently wipe the user's
+    persisted settings on every test.
+    """
     persistent_store_marker = request.node.get_closest_marker('persistent_store')
     persistent_store_data = {
         'wifi_has_visited_onboarding': True,
@@ -115,10 +147,24 @@ def _persistent_store(request: SubRequest) -> None:
             **persistent_store_marker.args[0],
         }
 
-    from ubo_app.constants import PERSISTENT_STORE_PATH
+    test_state_path = tmp_path / 'state.json'
+    # ``register_persistent_store`` reads ``PERSISTENT_STORE_PATH`` from
+    # ``ubo_app.constants`` at call time; ``read_from_persistent_store``
+    # references the alias bound in ``ubo_app.utils.persistent_store`` at
+    # module import. Both need redirecting so the autorun write path and
+    # the dataclass-default read path land on the isolated tmp file.
+    import ubo_app.constants
+    import ubo_app.utils.persistent_store
 
-    PERSISTENT_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PERSISTENT_STORE_PATH.write_text(json.dumps(persistent_store_data))
+    monkeypatch.setattr(ubo_app.constants, 'PERSISTENT_STORE_PATH', test_state_path)
+    monkeypatch.setattr(
+        ubo_app.utils.persistent_store,
+        'PERSISTENT_STORE_PATH',
+        test_state_path,
+    )
+
+    test_state_path.parent.mkdir(parents=True, exist_ok=True)
+    test_state_path.write_text(json.dumps(persistent_store_data))
 
 
 @pytest.fixture(autouse=True)
