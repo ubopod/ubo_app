@@ -499,8 +499,6 @@ def _patch_switch_to_on_class() -> None:
     ) -> None:
         import time
 
-        from kivy.clock import Clock
-
         if screen is self.screen_manager.current_screen:
             return
         if duration is None:
@@ -508,35 +506,39 @@ def _patch_switch_to_on_class() -> None:
                 0 if transition is self._no_transition else 0.3
             )
         with self._transition_progress_lock:
+            # Latest-wins: a newly requested view supersedes any in-flight
+            # or queued transition. The original ``_switch_to`` queued the
+            # new switch behind the running transition and only drained the
+            # queue when that transition's ``_handle_transition_complete``
+            # fired — but a transition can be orphaned (e.g. its screens
+            # are torn out from under it by a stack mutation in
+            # ``replace_top_with_application``), so ``on_complete`` never
+            # fires and the queue stalls forever, freezing the UI on a
+            # stale view. Instead: finalize the running transition's screen
+            # opacities, drop the now-stale queue, and perform the new
+            # switch immediately, so the widget always converges on the
+            # most recently requested view.
             if self._running_transition_end_time is not None:
-                self.transition_queue.append(
-                    (screen, transition, direction, duration),
-                )
-                if self._running_transition_end_time < time.time():
-
-                    def _guarded_complete(
-                        _: object,
-                        _self: TransitionsMixin = self,
-                    ) -> None:
-                        if _self.transition_queue:
-                            _self._handle_transition_complete(  # noqa: SLF001
-                                _self.transition_queue[0][1],
-                            )
-
-                    Clock.schedule_once(_guarded_complete)
-            else:
-                self._running_transition_end_time = (
-                    time.time() + duration + 2
-                    if transition is not self._no_transition
-                    else None
-                )
-                self._is_preparation_in_progress = True
-                self._perform_switch(
-                    screen,
-                    transition=transition,
-                    duration=duration,
-                    direction=direction,
-                )
+                running = getattr(self.screen_manager, 'transition', None)
+                screen_out = getattr(running, 'screen_out', None)
+                if screen_out is not None:
+                    screen_out.opacity = 0
+                screen_in = getattr(running, 'screen_in', None)
+                if screen_in is not None:
+                    screen_in.opacity = 1
+                self.transition_queue = []
+            self._running_transition_end_time = (
+                time.time() + duration + 2
+                if transition is not self._no_transition
+                else None
+            )
+            self._is_preparation_in_progress = True
+            self._perform_switch(
+                screen,
+                transition=transition,
+                duration=duration,
+                direction=direction,
+            )
 
     TransitionsMixin._switch_to = _safe_switch_to  # type: ignore[assignment]  # noqa: SLF001
 
