@@ -37,6 +37,7 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.notifications import (
     NotificationDisplayType,
+    NotificationsClearEvent,
     NotificationsDisplayEvent,
 )
 
@@ -592,6 +593,30 @@ def _handle_notification_display(event: NotificationsDisplayEvent) -> None:
     create_task(_auto_dismiss())
 
 
+def _handle_notification_clear_callback(event: NotificationsClearEvent) -> None:
+    """Fire a cleared notification's ``on_close_id`` callback.
+
+    Producers (e.g. ``InputDemand``-driven flows in the camera,
+    file-system and web-ui services) register a callback via
+    ``register_auto_callback`` and stash its id on the notification so
+    the cancel signal fires when the notification leaves state. The old
+    GUI's client-side ``MenuNotificationHandler.close()`` did this hop;
+    in the headless / view-renderer architecture the trigger has to be
+    server-side, otherwise the callbacks become silently dead and any
+    downstream cleanup (e.g. draining the camera's input queue) stalls.
+    """
+    on_close_id = getattr(event.notification, 'on_close_id', None)
+    if not on_close_id:
+        return
+    from ubo_app.store.core.callback_registry import (
+        execute_callback,
+        unregister_callback,
+    )
+
+    execute_callback(on_close_id)
+    unregister_callback(on_close_id)
+
+
 def setup_menu_event_handlers() -> Subscriptions:
     """Subscribe to menu events and wire them to stack actions."""
     return [
@@ -608,5 +633,9 @@ def setup_menu_event_handlers() -> Subscriptions:
         store.subscribe_event(
             NotificationsDisplayEvent,
             _handle_notification_display,
+        ),
+        store.subscribe_event(
+            NotificationsClearEvent,
+            _handle_notification_clear_callback,
         ),
     ]

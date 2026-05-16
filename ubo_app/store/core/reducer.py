@@ -100,13 +100,18 @@ from ubo_app.store.core.types import (
     UpdateRenderPropsAction,
     ViewChangedEvent,
 )
+from ubo_app.store.services.notifications import NotificationsClearByIdAction
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
 
 
 def reducer(
     state: MainState | None,
     action: MainAction,
-) -> ReducerResult[MainState, None, InitEvent | MainEvent]:
+) -> ReducerResult[
+    MainState,
+    NotificationsClearByIdAction,
+    InitEvent | MainEvent,
+]:
     if state is None:
         if isinstance(action, InitAction):
             return MainState(
@@ -129,11 +134,11 @@ def reducer(
     match action:
         case MenuGoBackAction():
             result = pop_stack(state)
-            return _complete_stack_result(result, fallback=state)
+            return _complete_stack_pop_result(result, fallback=state)
 
         case MenuGoHomeAction():
             result = pop_to_root(state)
-            return _complete_stack_result(result, fallback=state)
+            return _complete_stack_pop_result(result, fallback=state)
 
         case MenuChooseByIconAction():
             return CompleteReducerResult(
@@ -296,15 +301,15 @@ def reducer(
 
         case StackPopAction():
             result = pop_stack(state, action.count)
-            return _complete_stack_result(result, fallback=state)
+            return _complete_stack_pop_result(result, fallback=state)
 
         case StackPopToRootAction():
             result = pop_to_root(state)
-            return _complete_stack_result(result, fallback=state)
+            return _complete_stack_pop_result(result, fallback=state)
 
         case StackPopItemAction():
             result = pop_item(state, action.item_id)
-            return _complete_stack_result(result, fallback=state)
+            return _complete_stack_pop_result(result, fallback=state)
 
         case StackSetPageIndexAction():
             result = set_page_index(state, action.page_index)
@@ -550,11 +555,60 @@ def _complete_stack_result(
     state: MainState | None,
     *,
     fallback: MainState,
-) -> MainState | CompleteReducerResult[MainState, None, MainEvent]:
+) -> (
+    MainState
+    | CompleteReducerResult[MainState, NotificationsClearByIdAction, MainEvent]
+):
     """Return a standard stack-change reducer result."""
     if state is None:
         return fallback
     return CompleteReducerResult(
         state=state,
+        events=[StackChangedEvent(stack=state.stack)],
+    )
+
+
+def _complete_stack_pop_result(
+    state: MainState | None,
+    *,
+    fallback: MainState,
+) -> (
+    MainState
+    | CompleteReducerResult[MainState, NotificationsClearByIdAction, MainEvent]
+):
+    """Return a stack-pop result, clearing notifications removed from the stack.
+
+    Generic pop paths (``MenuGoBack``, ``StackPop``, ``StackPopToRoot``,
+    ``StackPopItem``) can remove a ``NotificationStackItem`` whose
+    backing entry is still in ``state.notifications`` — e.g. the user
+    presses ``back`` on a notification rather than dismissing it via its
+    own dismiss button. Without this, ``state.notifications`` drifts out
+    of sync with the navigation stack and the notification's
+    ``on_close_id`` callback (fired by the ``NotificationsClearEvent``
+    handler in ``menu_event_handlers``) never runs, so downstream
+    services that rely on it for cleanup (e.g. the camera service's
+    input queue) stall.
+
+    The dedicated ``NotificationsClearAction`` / ``ClearByIdAction``
+    paths don't use this helper — they already update
+    ``state.notifications`` before dispatching their stack pop.
+    """
+    if state is None:
+        return fallback
+    removed_notification_ids = {
+        item.notification_id
+        for item in fallback.stack
+        if isinstance(item, NotificationStackItem)
+    } - {
+        item.notification_id
+        for item in state.stack
+        if isinstance(item, NotificationStackItem)
+    }
+    return CompleteReducerResult(
+        state=state,
+        actions=[
+            NotificationsClearByIdAction(id=notification_id)
+            for notification_id in removed_notification_ids
+        ],
         events=[StackChangedEvent(stack=state.stack)],
     )
