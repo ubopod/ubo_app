@@ -7,6 +7,8 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
+from ubo_app.utils import IS_RPI
+
 if TYPE_CHECKING:
     import pytest
 
@@ -69,7 +71,13 @@ async def test_prepare_envoy_renders_combined_webui_and_grpc_routes(
     config = config_path.read_text()
     assert 'port_value: 50052' in config
     assert 'name: web_ui_cluster' in config
-    assert 'address: host.docker.internal' in config
+    # On the Pi the envoy container runs with ``network_mode='host'`` so it
+    # reaches the gRPC server over loopback; off-device it lives on a
+    # bridge network and reaches the host via the docker-magic DNS name.
+    # ``apps/envoy.py:prepare_envoy`` branches on ``IS_RPI`` for this — the
+    # assertion has to follow.
+    expected_server_host = '127.0.0.1' if IS_RPI else 'host.docker.internal'
+    assert f'address: {expected_server_host}' in config
     assert 'port_value: 4321' in config
     assert 'name: grpc_service_cluster' in config
     assert "prefix: '/grpc/'" in config

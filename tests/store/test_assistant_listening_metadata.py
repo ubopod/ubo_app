@@ -87,8 +87,13 @@ def _load_assistant(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
 
-def _unwrap(ns: SimpleNamespace, result: object) -> Any:
-    """Unwrap a reducer result that may be a CompleteReducerResult."""
+def _unwrap(ns: SimpleNamespace, result: object) -> Any:  # noqa: ANN401
+    """Unwrap a reducer result that may be a CompleteReducerResult.
+
+    Returns ``Any`` because the underlying ``AssistantState`` class object
+    is the freshly-reloaded one resolved through the namespace at test
+    time, not the stale module-level import — there's no static type for it.
+    """
     state = getattr(result, 'state', result)
     if isinstance(state, ns.AssistantState):
         return state
@@ -99,11 +104,11 @@ def _step(
     ns: SimpleNamespace,
     state: object,
     action: BaseAction,
-) -> Any:
+) -> Any:  # noqa: ANN401
     return _unwrap(ns, ns.reducer(state, action))
 
 
-def _init_state(ns: SimpleNamespace) -> Any:
+def _init_state(ns: SimpleNamespace) -> Any:  # noqa: ANN401
     init_action_type = cast(
         'type[BaseAction]',
         ns.reducer.__globals__['InitAction'],

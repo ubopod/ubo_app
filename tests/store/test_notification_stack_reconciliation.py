@@ -86,8 +86,14 @@ def _load_notifications(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
 
-def _init_state(ns: SimpleNamespace) -> Any:
-    """Initialise the reducer with the InitAction from its own globals."""
+def _init_state(ns: SimpleNamespace) -> Any:  # noqa: ANN401
+    """Initialise the reducer with the InitAction from its own globals.
+
+    Returns ``Any`` because the underlying ``NotificationsState`` class
+    object is the freshly-reloaded one resolved through the namespace at
+    test time, not the stale module-level import — there's no static
+    type for it.
+    """
     init_action_type = cast(
         'type[BaseAction]',
         ns.reducer.__globals__['InitAction'],
