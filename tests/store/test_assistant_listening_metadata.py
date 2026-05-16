@@ -314,10 +314,10 @@ def test_stop_clears_active_session_and_records_reason(
     assert next_state.last_stop_reason == reason
 
 
-def test_stop_talking_emits_event_without_state_change(
+def test_stop_talking_emits_event_and_dispatches_stop_listening(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """AssistantStopTalkingAction emits event + purple blink; state intact."""
+    """AssistantStopTalkingAction emits event, blinks LED, stops audio + listening."""
     ns = _load_assistant(monkeypatch)
     state = _init_state(ns)
     listening_state = _step(
@@ -331,7 +331,9 @@ def test_stop_talking_emits_event_without_state_change(
     result = ns.reducer(listening_state, ns.AssistantStopTalkingAction())
     next_state = _unwrap(ns, result)
 
-    # State is unchanged — listening is still active, no policy mutation.
+    # The reducer doesn't mutate state directly — listening is ended via the
+    # follow-up AssistantStopListeningAction which is processed in the next
+    # reducer cycle. So at this point listening_state is unchanged.
     assert next_state.is_listening == listening_state.is_listening
     assert next_state.active_source == listening_state.active_source
     assert next_state.active_policy == listening_state.active_policy
@@ -342,6 +344,7 @@ def test_stop_talking_emits_event_without_state_change(
     assert isinstance(events[0], ns.AssistantStopTalkingEvent)
 
     # The LED ring flashes purple once to acknowledge the stop-talking signal.
+    from ubo_app.store.services.assistant import StopTalkingPhraseStopReason
     from ubo_app.store.services.audio import AudioStopPlaybackAction
     from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
 
@@ -356,6 +359,17 @@ def test_stop_talking_emits_event_without_state_change(
     # AudioStopPlaybackAction clears the audio_manager queue so the speaker
     # falls silent immediately instead of after the buffered TTS audio plays.
     assert any(isinstance(a, AudioStopPlaybackAction) for a in actions)
+
+    # AssistantStopListeningAction ends any active listening session so any
+    # subsequent words don't get captured as a follow-up turn.
+    stop_listen_actions = [
+        a for a in actions if isinstance(a, ns.AssistantStopListeningAction)
+    ]
+    assert len(stop_listen_actions) == 1
+    assert isinstance(
+        stop_listen_actions[0].reason,
+        StopTalkingPhraseStopReason,
+    )
 
 
 def test_stop_with_end_of_turn_reason_preserved(

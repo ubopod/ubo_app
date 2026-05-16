@@ -49,6 +49,7 @@ from ubo_app.store.services.assistant import (
     AssistantToggleListeningAction,
     AssistantToggleMcpServerAction,
     AssistantUpdateProvidersAction,
+    StopTalkingPhraseStopReason,
     UserStopReason,
     resolve_policy,
 )
@@ -86,7 +87,7 @@ def reducer(
     action: AssistantAction | AudioAction,
 ) -> ReducerResult[
     AssistantState,
-    RgbRingAction | NotificationsAction | AudioAction,
+    RgbRingAction | NotificationsAction | AudioAction | AssistantAction,
     AssistantEvent,
 ]:
     if state is None:
@@ -283,6 +284,12 @@ def reducer(
                     # clears that queue and stops the current PCM stream so the
                     # speaker falls silent immediately.
                     AudioStopPlaybackAction(),
+                    # The user wants to fully exit the interaction — silence
+                    # the bot AND end any active listening session, so any
+                    # subsequent words don't get captured as a follow-up turn.
+                    AssistantStopListeningAction(
+                        reason=StopTalkingPhraseStopReason(),
+                    ),
                 ],
                 events=[AssistantStopTalkingEvent()],
             )

@@ -247,11 +247,22 @@ class ExternalStopReason(AssistantStopReason):
     """Stop initiated by something outside the user/pipeline taxonomy."""
 
 
+class StopTalkingPhraseStopReason(AssistantStopReason):
+    """Stop dispatched after the user said the always-on stop-talking phrase.
+
+    Distinct from :class:`EndOfTurnPhraseStopReason` (which is detected inside
+    the Pipecat pipeline by the configured end-of-turn phrases) — this reason
+    fires when the Vosk-side always-on stop phrase ("okay enough" by default)
+    is heard and the user wants to fully exit the interaction.
+    """
+
+
 AssistantStopReasonUnion: TypeAlias = (
     UserStopReason
     | SilenceTimeoutStopReason
     | EndOfTurnPhraseStopReason
     | ExternalStopReason
+    | StopTalkingPhraseStopReason
 )
 
 

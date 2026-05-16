@@ -446,6 +446,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'StatusIconsRegisterAction': 'ubo_app.store.status_icons.types',
     'StatusIconsState': 'ubo_app.store.status_icons.types',
     'StdioMcpConfig': 'ubo_app.store.services.assistant',
+    'StopTalkingPhraseStopReason': 'ubo_app.store.services.assistant',
     'StoreRecordedSequenceEvent': 'ubo_app.store.core.types.events',
     'SubMenuItem': 'ubo_gui.menu.types',
     'SystemAction': 'ubo_app.store.services.system',
