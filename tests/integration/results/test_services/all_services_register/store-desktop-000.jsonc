@@ -2,6 +2,8 @@
 {
   "assistant": {
     "_type": "AssistantState",
+    "active_policy": null,
+    "active_source": null,
     "enabled_mcp_servers": [],
     "enabled_mcp_servers_with_metadata": {
       "_type": "EnabledMcpServersWithMetadata",
@@ -10,34 +12,125 @@
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": true,
+    "last_stop_reason": null,
     "mcp_servers": {},
+    "ollama_downloaded_models": [],
+    "ollama_downloaded_models_refreshed": true,
+    "ollama_model_capabilities": {
+      "gemma3:1b": []
+    },
+    "ollama_thinking_enabled": {},
+    "piper_downloaded_voices": [],
+    "policies": [
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "WakePhraseMatcher",
+          "phrase": "let's have a conversation"
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [
+            "i'm done",
+            "that's it",
+            "that's all",
+            "thanks bye"
+          ],
+          "requires_phrase_for_stop": true,
+          "silence_timeout_seconds": null
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "WakePhraseMatcher",
+          "phrase": "can you help me"
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": 2.0
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "KeypadMatcher",
+          "key": null
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": null
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "InfraredMatcher",
+          "protocol": null,
+          "scancode": null
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": null
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "AnySourceMatcher"
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": null
+        }
+      }
+    ],
     "provider_setup_status": {
+      "anthropic": false,
       "assemblyai": false,
       "cerebras": false,
       "deepgram": false,
+      "deepseek": false,
       "elevenlabs": false,
       "generic_llm": false,
       "google": false,
       "google_cloud": false,
       "grok": false,
+      "mistral": false,
       "ollama": false,
       "ollama_onprem": false,
       "openai": false,
+      "openrouter": false,
       "piper": false,
+      "qwen": false,
       "rime": false,
       "vosk": false
     },
     "selected_image_generator": "google",
     "selected_llm": "ollama",
     "selected_models": {
+      "anthropic": "claude-sonnet-4-5",
       "cerebras": "qwen-3-235b-a22b-instruct-2507",
+      "deepseek": "deepseek-chat",
       "generic_llm": "gpt-4.1",
       "google_vertex": "gemini-2.5-flash-preview-05-20",
       "grok": "grok-4-0709",
+      "mistral": "mistral-small-latest",
       "ollama": "gemma3:1b",
       "ollama_onprem": "granite3.3:8b",
-      "openai": "gpt-4o"
+      "openai": "gpt-4o",
+      "openrouter": "openai/gpt-4o-mini",
+      "qwen": "qwen-plus"
     },
+    "selected_piper_voice": "en/en_US/kristin/medium/en_US-kristin-medium",
     "selected_stt": "vosk",
     "selected_tts": "piper"
   },

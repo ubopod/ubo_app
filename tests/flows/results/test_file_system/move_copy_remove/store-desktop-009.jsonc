@@ -5,14 +5,5 @@
     "queue": [],
     "selector_depth": 0
   },
-  "notifications": [
-    {
-      "content": "Are you sure you want to remove \"<TEST>/dir_a/test_file.txt\"?",
-      "title": "Confirm Removal"
-    },
-    {
-      "content": "[b]Type:[/b] File\n[b]Path:[/b] <TEST>/dir_b/test_file.txt\n[b]Size:[/b] 11 bytes\n[b]Owner:[/b] <USER>\n[b]Group:[/b] <USER>\n[b]Permissions:[/b] -rw-r--r--",
-      "title": "test_file.txt"
-    }
-  ]
+  "notifications": []
 }
