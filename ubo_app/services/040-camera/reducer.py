@@ -13,7 +13,6 @@ from redux import (
 )
 
 from ubo_app.store.core.callback_registry import register_auto_callback
-from ubo_app.store.core.types import StackPopAction
 from ubo_app.store.input.types import (
     InputAction,
     InputCancelAction,
@@ -55,10 +54,7 @@ from ubo_app.utils.persistent_store import read_from_persistent_store
 
 Action = InitAction | CameraAction | InputAction | KeypadKeyPressAction
 DispatchAction = (
-    NotificationsAddAction
-    | NotificationsClearByIdAction
-    | InputResolveAction
-    | StackPopAction
+    NotificationsAddAction | NotificationsClearByIdAction | InputResolveAction
 )
 
 
@@ -112,10 +108,20 @@ def pop_queue(
     actions = actions or []
     events = events or []
 
+    # Clear the on-screen QR notification (clearing it also pops its
+    # ``NotificationStackItem`` via ``StackPopNotificationAction``).
+    # Intentionally do NOT dispatch ``StackPopAction`` here — that would
+    # blindly pop the top of stack, which is only the viewfinder in the
+    # success/scan path. When the cancel comes from ``on_close_id``
+    # (user pressed back on the notification, or back-out of the
+    # viewfinder via the camera setup's ``_handle_stack_changed``), the
+    # top of stack is the menu the user is returning to, and popping
+    # that would over-pop one level. The viewfinder, when open and the
+    # input is being *provided* (scan success), is closed by the
+    # ``InputProvideEvent`` handler in ``services/040-camera/setup.py``.
     actions.append(
         NotificationsClearByIdAction(id=f'camera:qrcode:{state.queue[0].id}'),
     )
-    actions.append(StackPopAction())
     _, *queue = state.queue
     if queue:
         actions.append(prompt_notification(queue[0]))

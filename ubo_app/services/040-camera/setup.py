@@ -174,8 +174,27 @@ def start_camera_viewfinder_session() -> None:
     )
 
     def _handle_stack_changed(event: StackChangedEvent) -> None:
-        if session.is_running and not _is_viewfinder_on_stack(event.stack):
-            session.cleanup(timer)
+        if not (session.is_running and not _is_viewfinder_on_stack(event.stack)):
+            return
+        session.cleanup(timer)
+
+        # If the user backed out of the viewfinder without scanning or
+        # cancelling, the camera reducer's queue still holds the pending
+        # input description and a follow-up `InputDemandAction` would be
+        # silently appended without re-prompting. Cancelling here drains
+        # the queue (via the reducer's `InputResolveAction` match) and
+        # clears the matching `camera:qrcode:*` notification. A successful
+        # scan dispatches `InputProvideAction` *before* the viewfinder
+        # leaves the stack, so the post-cleanup queue is already empty
+        # and this read no-ops.
+        from ubo_app.store.input.types import InputCancelAction, QRCodeInputDescription
+
+        @store.with_state(lambda state: state.camera.queue)
+        def _cancel_if_pending(queue: list[QRCodeInputDescription]) -> None:
+            if queue:
+                store.dispatch(InputCancelAction(id=queue[0].id))
+
+        _cancel_if_pending()
 
     session._stack_unsubscribe = store.subscribe_event(  # noqa: SLF001
         StackChangedEvent,
@@ -442,6 +461,41 @@ def start_camera_viewfinder() -> None:
     start_camera_viewfinder_session()
 
 
+def _close_camera_viewfinder_on_input_resolved(_: object) -> None:
+    """Close the camera viewfinder once an input demand resolves.
+
+    Fires on ``InputProvideEvent`` (successful scan) — the
+    ``pop_queue`` path inside the camera reducer no longer pops the
+    stack itself (doing so blindly over-popped when the cancel arrived
+    from ``on_close_id`` instead of a scan), so the viewfinder needs
+    an explicit close here. Identifies the viewfinder by its
+    ``stream_id`` so we can't accidentally pop the wrong stack item.
+    No-op when the viewfinder isn't on the stack (the input may have
+    been provided by a different service — file-system, web-ui, etc.).
+    """
+    from ubo_app.store.core.types import StackPopItemAction
+    from ubo_app.store.core.types.stack_items import (
+        RenderStackItem,
+        StackItemType,
+    )
+
+    @store.with_state(lambda state: state.main.stack)
+    def _pop_viewfinder(stack: tuple[StackItemType, ...]) -> None:
+        viewfinder = next(
+            (
+                item
+                for item in stack
+                if isinstance(item, RenderStackItem)
+                and item.stream_id == 'camera:viewfinder'
+            ),
+            None,
+        )
+        if viewfinder is not None:
+            store.dispatch(StackPopItemAction(item_id=viewfinder.id))
+
+    _pop_viewfinder()
+
+
 async def detect_and_update_cameras() -> None:
     """Detect available cameras and update state."""
     try:
@@ -609,6 +663,8 @@ def init_service() -> Subscriptions:
         lambda state: state.camera.camera_type,
     )
 
+    from ubo_app.store.input.types import InputProvideEvent
+
     return [
         store.subscribe_event(
             CameraStartViewfinderEvent,
@@ -625,5 +681,9 @@ def init_service() -> Subscriptions:
         store.subscribe_event(
             CameraRestoreDefaultEvent,
             _restore_default_camera,
+        ),
+        store.subscribe_event(
+            InputProvideEvent,
+            _close_camera_viewfinder_on_input_resolved,
         ),
     ]
