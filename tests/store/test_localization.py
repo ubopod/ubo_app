@@ -15,11 +15,15 @@ import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     import pytest
     from redux import BaseAction
+
+    # Static-only — see ``_load_localization`` for why we don't bind the
+    # state class at module top level at runtime.
+    from ubo_app.store.services.localization import LocalizationState
 
 
 SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app/services/010-localization'
@@ -121,7 +125,7 @@ def test_reducer_sets_language(monkeypatch: pytest.MonkeyPatch) -> None:
     from redux import CompleteReducerResult
 
     ns = _load_localization(monkeypatch)
-    state = cast('Any', ns.reducer(None, _init_action(ns)))
+    state = cast('LocalizationState', ns.reducer(None, _init_action(ns)))
 
     # Pick any language other than the current one. The field default is
     # seeded from the on-disk persisted value at module-import time, so the
@@ -131,14 +135,14 @@ def test_reducer_sets_language(monkeypatch: pytest.MonkeyPatch) -> None:
 
     result = ns.reducer(state, ns.LocalizationSetLanguageAction(language=target))
     assert isinstance(result, CompleteReducerResult)
-    new_state = cast('Any', result.state)
+    new_state = cast('LocalizationState', result.state)
     assert new_state.language == target
 
 
 def test_reducer_noop_when_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
     """Setting the same language is a no-op — no event is emitted."""
     ns = _load_localization(monkeypatch)
-    state = cast('Any', ns.reducer(None, _init_action(ns)))
+    state = cast('LocalizationState', ns.reducer(None, _init_action(ns)))
 
     result = ns.reducer(
         state,

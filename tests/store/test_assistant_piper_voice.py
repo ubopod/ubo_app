@@ -15,11 +15,15 @@ import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     import pytest
     from redux import BaseAction
+
+    # Static-only — see ``_load_assistant`` for why we don't bind the
+    # state class at module top level at runtime.
+    from ubo_app.store.services.assistant import AssistantState
 
 
 SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app/services/090-assistant'
@@ -86,7 +90,7 @@ def _init_action(ns: SimpleNamespace) -> BaseAction:
 def test_initial_piper_state(monkeypatch: pytest.MonkeyPatch) -> None:
     """Initial state has a non-empty Piper voice and an empty downloaded set."""
     ns = _load_assistant(monkeypatch)
-    state = cast('Any', ns.reducer(None, _init_action(ns)))
+    state = cast('AssistantState', ns.reducer(None, _init_action(ns)))
     assert state.selected_piper_voice
     assert state.piper_downloaded_voices == ()
 
@@ -100,11 +104,11 @@ def test_set_selected_piper_voice_updates_state(
     autorun and reconciles the loaded model in ``run_tts``.
     """
     ns = _load_assistant(monkeypatch)
-    state = cast('Any', ns.reducer(None, _init_action(ns)))
+    state = cast('AssistantState', ns.reducer(None, _init_action(ns)))
     target_voice = 'es/es_ES/davefx/medium/es_ES-davefx-medium'
 
     new_state = cast(
-        'Any',
+        'AssistantState',
         ns.reducer(
             state,
             ns.AssistantSetSelectedPiperVoiceAction(voice_id=target_voice),
@@ -120,7 +124,7 @@ def test_download_piper_voice_emits_event(
     from redux import CompleteReducerResult
 
     ns = _load_assistant(monkeypatch)
-    state = cast('Any', ns.reducer(None, _init_action(ns)))
+    state = cast('AssistantState', ns.reducer(None, _init_action(ns)))
     target_voice = 'de/de_DE/thorsten/medium/de_DE-thorsten-medium'
 
     result = ns.reducer(
@@ -141,14 +145,14 @@ def test_set_piper_downloaded_voices_updates_cache(
 ) -> None:
     """Refreshing the cached downloaded set replaces it on state."""
     ns = _load_assistant(monkeypatch)
-    state = cast('Any', ns.reducer(None, _init_action(ns)))
+    state = cast('AssistantState', ns.reducer(None, _init_action(ns)))
     voices = (
         ns.DEFAULT_PIPER_VOICE_ID,
         'fr/fr_FR/siwis/medium/fr_FR-siwis-medium',
     )
 
     new_state = cast(
-        'Any',
+        'AssistantState',
         ns.reducer(
             state,
             ns.AssistantSetPiperDownloadedVoicesAction(voices=voices),

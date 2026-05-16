@@ -25,11 +25,18 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     import pytest
     from redux import BaseAction
+
+    # Static-only: never executed at runtime, so doesn't trigger a fresh
+    # ``ubo_app.store.services.notifications`` import that would break
+    # the class-identity discipline. Production code paths use
+    # ``ns.NotificationsState`` (the freshly-reloaded class) — these
+    # imports give pyright/ruff the structural type to validate against.
+    from ubo_app.store.services.notifications import NotificationsState
 
 
 SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app/services/010-notifications'
@@ -86,19 +93,13 @@ def _load_notifications(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
 
-def _init_state(ns: SimpleNamespace) -> Any:  # noqa: ANN401
-    """Initialise the reducer with the InitAction from its own globals.
-
-    Returns ``Any`` because the underlying ``NotificationsState`` class
-    object is the freshly-reloaded one resolved through the namespace at
-    test time, not the stale module-level import — there's no static
-    type for it.
-    """
+def _init_state(ns: SimpleNamespace) -> NotificationsState:
+    """Initialise the reducer with the InitAction from its own globals."""
     init_action_type = cast(
         'type[BaseAction]',
         ns.reducer.__globals__['InitAction'],
     )
-    return ns.reducer(None, init_action_type())
+    return cast('NotificationsState', ns.reducer(None, init_action_type()))
 
 
 def _actions_of(result: object) -> list[object]:

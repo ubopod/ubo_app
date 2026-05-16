@@ -17,11 +17,21 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     import pytest
     from redux import BaseAction
+
+    # Static-only: never executed at runtime, so doesn't break the
+    # class-identity discipline enforced by ``_load_assistant``'s
+    # ``importlib.reload``. Production code paths use ``ns.AssistantState``
+    # (the freshly-reloaded class); these imports are purely for static
+    # validation of the helpers' return type and field access.
+    from ubo_app.store.services.assistant import (
+        AssistantState,
+        WakePhraseMatcher,
+    )
 
 
 SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app/services/090-assistant'
@@ -87,28 +97,23 @@ def _load_assistant(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
 
-def _unwrap(ns: SimpleNamespace, result: object) -> Any:  # noqa: ANN401
-    """Unwrap a reducer result that may be a CompleteReducerResult.
-
-    Returns ``Any`` because the underlying ``AssistantState`` class object
-    is the freshly-reloaded one resolved through the namespace at test
-    time, not the stale module-level import — there's no static type for it.
-    """
+def _unwrap(ns: SimpleNamespace, result: object) -> AssistantState:
+    """Unwrap a reducer result that may be a CompleteReducerResult."""
     state = getattr(result, 'state', result)
     if isinstance(state, ns.AssistantState):
-        return state
-    return state
+        return cast('AssistantState', state)
+    return cast('AssistantState', state)
 
 
 def _step(
     ns: SimpleNamespace,
-    state: object,
+    state: AssistantState | None,
     action: BaseAction,
-) -> Any:  # noqa: ANN401
+) -> AssistantState:
     return _unwrap(ns, ns.reducer(state, action))
 
 
-def _init_state(ns: SimpleNamespace) -> Any:  # noqa: ANN401
+def _init_state(ns: SimpleNamespace) -> AssistantState:
     init_action_type = cast(
         'type[BaseAction]',
         ns.reducer.__globals__['InitAction'],
@@ -116,7 +121,7 @@ def _init_state(ns: SimpleNamespace) -> Any:  # noqa: ANN401
     state = _step(ns, None, init_action_type())
     # Service unmutes during init for these reducer-level tests so listening
     # actions don't all early-exit on the mute notification path.
-    return state(is_microphone_mute=False)
+    return cast('AssistantState', state(is_microphone_mute=False))
 
 
 # ---------- resolve_policy ----------
@@ -227,7 +232,9 @@ def test_start_writes_active_source_and_policy(
 
     matcher = state.policies[0].matcher
     assert isinstance(matcher, ns.WakePhraseMatcher)
-    source = ns.WakePhraseTriggerSource(phrase=matcher.phrase)
+    source = ns.WakePhraseTriggerSource(
+        phrase=cast('WakePhraseMatcher', matcher).phrase,
+    )
     next_state = _step(ns, state, ns.AssistantStartListeningAction(source=source))
 
     assert next_state.is_listening is True
