@@ -41,10 +41,16 @@ class FakePolicyWatcher:
 def _build(
     *,
     silence_timeout_seconds: float | None,
+    requires_phrase_for_stop: bool = False,
+    end_of_turn_phrases: tuple[str, ...] = (),
 ) -> tuple[Any, MagicMock, FakePolicyWatcher]:
     client = MagicMock()
     watcher = FakePolicyWatcher(
-        PolicyContext(silence_timeout_seconds=silence_timeout_seconds),
+        PolicyContext(
+            silence_timeout_seconds=silence_timeout_seconds,
+            requires_phrase_for_stop=requires_phrase_for_stop,
+            end_of_turn_phrases=end_of_turn_phrases,
+        ),
     )
     strategy = UboPolicyAwareUserTurnStopStrategy(
         client=client,
@@ -107,6 +113,46 @@ class PolicyAwareUserTurnStopTests(unittest.IsolatedAsyncioTestCase):
         ):
             await strategy.trigger_user_turn_stopped()
 
+        self.assertEqual(client.dispatch.call_count, 0)  # noqa: PT009
+
+    async def test_silence_trigger_suppressed_when_requires_phrase_for_stop(
+        self,
+    ) -> None:
+        """Conversation mode: silence neither fires super() nor dispatches."""
+        strategy, client, _ = _build(
+            silence_timeout_seconds=None,
+            requires_phrase_for_stop=True,
+            end_of_turn_phrases=("i'm done",),
+        )
+
+        parent_trigger = AsyncMock()
+        with patch.object(
+            UboPolicyAwareUserTurnStopStrategy.__mro__[1],
+            'trigger_user_turn_stopped',
+            new=parent_trigger,
+        ):
+            await strategy.trigger_user_turn_stopped()
+
+        self.assertEqual(parent_trigger.await_count, 0)  # noqa: PT009
+        self.assertEqual(client.dispatch.call_count, 0)  # noqa: PT009
+
+    async def test_phrase_trigger_fires_super_regardless_of_policy(self) -> None:
+        """trigger_phrase_end_of_turn always fires the parent user-turn-stop."""
+        strategy, client, _ = _build(
+            silence_timeout_seconds=None,
+            requires_phrase_for_stop=True,
+            end_of_turn_phrases=("i'm done",),
+        )
+
+        parent_trigger = AsyncMock()
+        with patch.object(
+            UboPolicyAwareUserTurnStopStrategy.__mro__[1],
+            'trigger_user_turn_stopped',
+            new=parent_trigger,
+        ):
+            await strategy.trigger_phrase_end_of_turn()
+
+        self.assertEqual(parent_trigger.await_count, 1)  # noqa: PT009
         self.assertEqual(client.dispatch.call_count, 0)  # noqa: PT009
 
     async def test_cleanup_unsubscribes_from_watcher(self) -> None:

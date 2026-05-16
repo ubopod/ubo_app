@@ -5,19 +5,25 @@ import os
 from ubo_app.constants import CONFIG_PATH, DATA_PATH
 
 INTENTS_WAKE_WORD = os.environ.get('UBO_INTENTS_WAKE_WORD', 'short voice command')
-ASSISTANT_WAKE_WORD = os.environ.get('UBO_ASSISTANT_WAKE_WORD', 'can you help me')
+ASSISTANT_QUICK_CHAT_WAKE_PHRASE = os.environ.get(
+    'UBO_ASSISTANT_QUICK_CHAT_WAKE_PHRASE',
+    'hey quick question',
+)
 ASSISTANT_CONVERSATION_WAKE_WORD = os.environ.get(
     'UBO_ASSISTANT_CONVERSATION_WAKE_WORD',
     "let's have a conversation",
 )
-ASSISTANT_END_WORD = os.environ.get('UBO_ASSISTANT_END_WORD', 'roger that')
 ASSISTANT_CONVERSATION_END_PHRASES: tuple[str, ...] = tuple(
     phrase.strip()
     for phrase in os.environ.get(
         'UBO_ASSISTANT_CONVERSATION_END_PHRASES',
-        "i'm done|that's it|that's all|thanks bye",
+        "i am done|i'm done|that's it|that's all|thanks bye",
     ).split('|')
     if phrase.strip()
+)
+ASSISTANT_STOP_TALKING_PHRASE = os.environ.get(
+    'UBO_ASSISTANT_STOP_TALKING_PHRASE',
+    'okay enough',
 )
 ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS: float = float(
     os.environ.get('UBO_ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS', '2.0'),

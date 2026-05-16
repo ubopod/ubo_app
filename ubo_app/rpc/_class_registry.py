@@ -50,6 +50,8 @@ CLASS_REGISTRY: dict[str, str] = {
     'AssistantState': 'ubo_app.store.services.assistant',
     'AssistantStopListeningAction': 'ubo_app.store.services.assistant',
     'AssistantStopReason': 'ubo_app.store.services.assistant',
+    'AssistantStopTalkingAction': 'ubo_app.store.services.assistant',
+    'AssistantStopTalkingEvent': 'ubo_app.store.services.assistant',
     'AssistantSyncMcpServersAction': 'ubo_app.store.services.assistant',
     'AssistantTTSName': 'ubo_app.store.services.assistant',
     'AssistantToggleListeningAction': 'ubo_app.store.services.assistant',

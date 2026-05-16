@@ -43,6 +43,8 @@ from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantState,
     AssistantStopListeningAction,
+    AssistantStopTalkingAction,
+    AssistantStopTalkingEvent,
     AssistantSyncMcpServersAction,
     AssistantToggleListeningAction,
     AssistantToggleMcpServerAction,
@@ -54,6 +56,7 @@ from ubo_app.store.services.audio import (
     AudioAction,
     AudioDevice,
     AudioSetMuteStatusAction,
+    AudioStopPlaybackAction,
 )
 from ubo_app.store.services.notifications import (
     Chime,
@@ -62,7 +65,11 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingRainbowAction
+from ubo_app.store.services.rgb_ring import (
+    RgbRingBlankAction,
+    RgbRingBlinkAction,
+    RgbRingRainbowAction,
+)
 
 if TYPE_CHECKING:
     from redux import ReducerResult
@@ -77,7 +84,11 @@ _MCP_SERVER_ID_PARTS = 2
 def reducer(
     state: AssistantState | None,
     action: AssistantAction | AudioAction,
-) -> ReducerResult[AssistantState, RgbRingAction | NotificationsAction, AssistantEvent]:
+) -> ReducerResult[
+    AssistantState,
+    RgbRingAction | NotificationsAction | AudioAction,
+    AssistantEvent,
+]:
     if state is None:
         if isinstance(action, InitAction):
             return AssistantState()
@@ -255,6 +266,25 @@ def reducer(
                     last_stop_reason=action.reason,
                 ),
                 actions=[RgbRingBlankAction()],
+            )
+
+        case AssistantStopTalkingAction():
+            return CompleteReducerResult(
+                state=state,
+                actions=[
+                    RgbRingBlinkAction(
+                        color=(255, 0, 255),
+                        repetitions=1,
+                        wait=200,
+                    ),
+                    # Pipecat's InterruptionFrame stops the TTS service, but the
+                    # core's audio_manager has a multi-second queue of already-
+                    # dispatched AudioSample chunks. AudioStopPlaybackAction
+                    # clears that queue and stops the current PCM stream so the
+                    # speaker falls silent immediately.
+                    AudioStopPlaybackAction(),
+                ],
+                events=[AssistantStopTalkingEvent()],
             )
 
         case AssistantToggleListeningAction():

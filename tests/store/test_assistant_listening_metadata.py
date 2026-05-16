@@ -66,6 +66,12 @@ def _load_assistant(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         AssistantStopListeningAction=(
             assistant_module.AssistantStopListeningAction
         ),
+        AssistantStopTalkingAction=(
+            assistant_module.AssistantStopTalkingAction
+        ),
+        AssistantStopTalkingEvent=(
+            assistant_module.AssistantStopTalkingEvent
+        ),
         AssistantToggleListeningAction=(
             assistant_module.AssistantToggleListeningAction
         ),
@@ -306,6 +312,50 @@ def test_stop_clears_active_session_and_records_reason(
     assert next_state.active_source is None
     assert next_state.active_policy is None
     assert next_state.last_stop_reason == reason
+
+
+def test_stop_talking_emits_event_without_state_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AssistantStopTalkingAction emits event + purple blink; state intact."""
+    ns = _load_assistant(monkeypatch)
+    state = _init_state(ns)
+    listening_state = _step(
+        ns,
+        state,
+        ns.AssistantStartListeningAction(
+            source=ns.WakePhraseTriggerSource(phrase='boot'),
+        ),
+    )
+
+    result = ns.reducer(listening_state, ns.AssistantStopTalkingAction())
+    next_state = _unwrap(ns, result)
+
+    # State is unchanged — listening is still active, no policy mutation.
+    assert next_state.is_listening == listening_state.is_listening
+    assert next_state.active_source == listening_state.active_source
+    assert next_state.active_policy == listening_state.active_policy
+
+    events = getattr(result, 'events', None)
+    assert events is not None
+    assert len(events) == 1
+    assert isinstance(events[0], ns.AssistantStopTalkingEvent)
+
+    # The LED ring flashes purple once to acknowledge the stop-talking signal.
+    from ubo_app.store.services.audio import AudioStopPlaybackAction
+    from ubo_app.store.services.rgb_ring import RgbRingBlinkAction
+
+    actions = getattr(result, 'actions', None)
+    assert actions is not None
+    blink_actions = [a for a in actions if isinstance(a, RgbRingBlinkAction)]
+    assert len(blink_actions) == 1
+    blink = blink_actions[0]
+    assert blink.color == (255, 0, 255)
+    assert blink.repetitions == 1
+
+    # AudioStopPlaybackAction clears the audio_manager queue so the speaker
+    # falls silent immediately instead of after the buffered TTS audio plays.
+    assert any(isinstance(a, AudioStopPlaybackAction) for a in actions)
 
 
 def test_stop_with_end_of_turn_reason_preserved(

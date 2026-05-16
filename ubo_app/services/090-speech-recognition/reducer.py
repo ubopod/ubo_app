@@ -11,7 +11,12 @@ from redux import (
     InitializationActionError,
 )
 
-from ubo_app.constants.assistant import ASSISTANT_WAKE_WORD, INTENTS_WAKE_WORD
+from ubo_app.constants.assistant import (
+    ASSISTANT_CONVERSATION_WAKE_WORD,
+    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
+    ASSISTANT_STOP_TALKING_PHRASE,
+    INTENTS_WAKE_WORD,
+)
 from ubo_app.store.core.types import (
     MenuChooseByIndexAction,
     MenuGoBackAction,
@@ -22,6 +27,7 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
+    AssistantStopTalkingAction,
     WakePhraseTriggerSource,
 )
 from ubo_app.store.services.audio import (
@@ -307,7 +313,11 @@ def reducer(
                     actions=[RgbRingSetAllAction(color=(0, 0, 255))],
                 )
             if (
-                wake_word == ASSISTANT_WAKE_WORD
+                wake_word
+                in (
+                    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
+                    ASSISTANT_CONVERSATION_WAKE_WORD,
+                )
                 and state.status is SpeechRecognitionStatus.IDLE
             ):
                 return CompleteReducerResult(
@@ -317,6 +327,11 @@ def reducer(
                             source=WakePhraseTriggerSource(phrase=wake_word),
                         ),
                     ],
+                )
+            if wake_word == ASSISTANT_STOP_TALKING_PHRASE:
+                return CompleteReducerResult(
+                    state=state,
+                    actions=[AssistantStopTalkingAction()],
                 )
             return CompleteReducerResult(
                 state=replace(state, status=SpeechRecognitionStatus.IDLE),

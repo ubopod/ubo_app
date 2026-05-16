@@ -7,6 +7,7 @@ from pipecat.audio.resamplers.base_audio_resampler import BaseAudioResampler
 from pipecat.audio.utils import create_stream_resampler
 from pipecat.frames.frames import (
     Frame,
+    InterruptionFrame,
     OutputAudioRawFrame,
     OutputImageRawFrame,
     StartFrame,
@@ -50,6 +51,15 @@ class UboOutputTransport(BaseOutputTransport):
 
     async def _handle_frame(self, frame: Frame) -> None:
         """Override frame handling to manage audio resampling properly."""
+        if isinstance(frame, InterruptionFrame):
+            # Bot was interrupted (barge-in or "okay enough"). Start a fresh
+            # assistance stream so the next utterance's chunks don't collide
+            # with the cleared buffer state in ubo-core's audio_manager —
+            # which resets its sequence head to 0 while our index keeps
+            # incrementing, deadlocking the play loop waiting for index 0.
+            self._assistance_id = uuid.uuid4().hex
+            self._audio_assistance_index = 0
+            self._video_assistance_index = 0
         if isinstance(frame, OutputAudioRawFrame):
             # Handle audio frames directly to avoid resampler conflicts
             target_sample_rate = 48000  # UBO target sample rate

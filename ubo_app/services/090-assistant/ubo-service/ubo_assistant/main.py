@@ -28,6 +28,7 @@ from pipecat.transports.base_transport import TransportParams
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from ubo_bindings.client import UboRPCClient
 
+from ubo_assistant.barge_in import BargeInOnListenSignal
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
 from ubo_assistant.end_of_turn import EndOfTurnPhraseDetector
 from ubo_assistant.image_frame import ImageGenFrame
@@ -37,6 +38,7 @@ from ubo_assistant.policy_watcher import PolicyWatcher
 from ubo_assistant.silence_user_turn_stop import (
     UboPolicyAwareUserTurnStopStrategy,
 )
+from ubo_assistant.stop_talking import StopTalkingOnSignal
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
@@ -168,14 +170,17 @@ class Assistant:
         )
 
         policy_watcher = PolicyWatcher(self.client)
-        end_of_turn_detector = EndOfTurnPhraseDetector(
-            client=self.client,
-            policy_watcher=policy_watcher,
-        )
         silence_user_turn_stop_strategy = UboPolicyAwareUserTurnStopStrategy(
             client=self.client,
             policy_watcher=policy_watcher,
         )
+        end_of_turn_detector = EndOfTurnPhraseDetector(
+            client=self.client,
+            policy_watcher=policy_watcher,
+            user_turn_stop_strategy=silence_user_turn_stop_strategy,
+        )
+        barge_in_on_listen = BargeInOnListenSignal(client=self.client)
+        stop_talking_on_signal = StopTalkingOnSignal(client=self.client)
 
         ubo_llm_service = UboLLMService(
             client=self.client,
@@ -269,6 +274,8 @@ class Assistant:
                 ParallelPipeline(
                     [
                         vad_processor,
+                        barge_in_on_listen,
+                        stop_talking_on_signal,
                         ubo_stt_service,
                         end_of_turn_detector,
                         user_aggregator,

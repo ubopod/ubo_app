@@ -292,7 +292,15 @@ class AudioManager:
         with self.audio_buffers_lock:
             if not (already_playing := id in self.audio_buffers):
                 self.audio_buffers[id] = {}
-                self.audio_heads[id] = 0
+                # Start the head at the FIRST received index, not 0.
+                # If AudioStopPlaybackAction cleared the buffer mid-stream
+                # (e.g. on "okay enough"), the next chunk for the same id
+                # arrives at a high index — Pipecat's UboOutputTransport
+                # ratchets ``_audio_assistance_index`` across utterances.
+                # Anchoring the head to ``index`` avoids the loop hanging on
+                # ``await asyncio.sleep(0.05)`` forever waiting for an index 0
+                # sample that will never arrive.
+                self.audio_heads[id] = index
 
         buffer = self.audio_buffers[id]
         buffer[index] = sample

@@ -14,7 +14,7 @@ from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_END_PHRASES,
     ASSISTANT_CONVERSATION_WAKE_WORD,
     ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
-    ASSISTANT_WAKE_WORD,
+    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
     DEFAULT_LLM_ANTHROPIC_MODEL,
     DEFAULT_LLM_CEREBRAS_MODEL,
     DEFAULT_LLM_DEEPSEEK_MODEL,
@@ -317,7 +317,7 @@ def _default_policies() -> tuple[AssistantTriggerPolicyEntry, ...]:
             ),
         ),
         AssistantTriggerPolicyEntry(
-            matcher=WakePhraseMatcher(phrase=ASSISTANT_WAKE_WORD),
+            matcher=WakePhraseMatcher(phrase=ASSISTANT_QUICK_CHAT_WAKE_PHRASE),
             policy=AssistantTriggerPolicy(
                 silence_timeout_seconds=ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
             ),
@@ -581,8 +581,26 @@ class AssistantSyncMcpServersAction(AssistantAction):
     """Action to sync MCP servers from filesystem."""
 
 
+class AssistantStopTalkingAction(AssistantAction):
+    """Action to silence the assistant immediately.
+
+    Differs from a wake-phrase barge-in (``AssistantStartListeningAction``):
+    this action stops the in-flight TTS playback and LLM response but does
+    NOT start a new listening session — the user explicitly asked for quiet.
+    """
+
+
 class AssistantEvent(BaseEvent):
     """Base class for assistant events."""
+
+
+class AssistantStopTalkingEvent(AssistantEvent):
+    """Event fired when the assistant should stop talking right now.
+
+    Emitted by the assistant reducer in response to
+    ``AssistantStopTalkingAction``. Consumed by the assistant subprocess to
+    broadcast a Pipecat ``InterruptionFrame``.
+    """
 
 
 class AssistantDownloadOllamaModelEvent(AssistantEvent):

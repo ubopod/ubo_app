@@ -9,8 +9,9 @@ from google_engine import GoogleSpeechRecognitionEngine
 from vosk_engine import VoskEngine
 
 from ubo_app.constants.assistant import (
-    ASSISTANT_END_WORD,
-    ASSISTANT_WAKE_WORD,
+    ASSISTANT_CONVERSATION_WAKE_WORD,
+    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
+    ASSISTANT_STOP_TALKING_PHRASE,
     INTENTS_WAKE_WORD,
 )
 from ubo_app.logger import logger
@@ -123,7 +124,15 @@ class EnginesManager:
             self.engines['wake_word'].set_wake_words(
                 [
                     *((INTENTS_WAKE_WORD,) if is_intents_active else ()),
-                    *((ASSISTANT_WAKE_WORD,) if is_assistant_active else ()),
+                    *(
+                        (
+                            ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
+                            ASSISTANT_CONVERSATION_WAKE_WORD,
+                            ASSISTANT_STOP_TALKING_PHRASE,
+                        )
+                        if is_assistant_active
+                        else ()
+                    ),
                 ],
             )
         else:
@@ -163,9 +172,7 @@ class EnginesManager:
                 ],
             )
         elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
-            await self.engines['speech'].activate_speech_recognition(
-                end_phrase=ASSISTANT_END_WORD,
-            )
+            await self.engines['speech'].deactivate_speech_recognition()
 
     @store.with_state(
         lambda state: (

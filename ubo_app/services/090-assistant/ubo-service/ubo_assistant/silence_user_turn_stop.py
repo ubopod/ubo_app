@@ -59,10 +59,22 @@ class UboPolicyAwareUserTurnStopStrategy(SpeechTimeoutUserTurnStopStrategy):
             self._user_speech_timeout = self._fallback_timeout
 
     async def trigger_user_turn_stopped(self) -> None:
-        """Fire the user-turn-stop signal, then optionally end the session."""
-        captured_timeout = self._user_speech_timeout
-        policy = self._policy_watcher.context
+        """Fire the user-turn-stop signal, then optionally end the session.
 
+        When the active policy requires an explicit end-of-turn phrase, this
+        silence-driven trigger is suppressed entirely so the LLM only responds
+        once :meth:`trigger_phrase_end_of_turn` is called by the end-of-turn
+        phrase detector.
+        """
+        policy = self._policy_watcher.context
+        if policy.requires_phrase_for_stop:
+            logger.debug(
+                'Silence-driven turn-stop suppressed; policy requires '
+                'an end-of-turn phrase to end the user turn',
+            )
+            return
+
+        captured_timeout = self._user_speech_timeout
         await super().trigger_user_turn_stopped()
 
         if (
@@ -84,6 +96,17 @@ class UboPolicyAwareUserTurnStopStrategy(SpeechTimeoutUserTurnStopStrategy):
                     ),
                 ),
             )
+
+    async def trigger_phrase_end_of_turn(self) -> None:
+        """Force the user-turn-stop signal from an end-of-turn phrase match.
+
+        Called by :class:`~ubo_assistant.end_of_turn.EndOfTurnPhraseDetector`
+        when the user's transcript ends with one of the policy's end phrases.
+        Unconditionally invokes the parent's ``trigger_user_turn_stopped`` so
+        the user aggregator emits ``UserStoppedSpeakingFrame`` and pushes the
+        accumulated context to the LLM, regardless of policy.
+        """
+        await super().trigger_user_turn_stopped()
 
     async def cleanup(self) -> None:
         """Unsubscribe from the policy watcher on teardown."""

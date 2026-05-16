@@ -28,6 +28,9 @@ if TYPE_CHECKING:
     from ubo_bindings.client import UboRPCClient
 
     from ubo_assistant.policy_watcher import PolicyWatcher
+    from ubo_assistant.silence_user_turn_stop import (
+        UboPolicyAwareUserTurnStopStrategy,
+    )
 
 
 _PUNCTUATION_TRANSLATION = str.maketrans('', '', string.punctuation)
@@ -65,11 +68,13 @@ class EndOfTurnPhraseDetector(FrameProcessor):
         *,
         client: UboRPCClient,
         policy_watcher: PolicyWatcher,
+        user_turn_stop_strategy: UboPolicyAwareUserTurnStopStrategy,
     ) -> None:
-        """Wire the detector to its UBO RPC client and policy watcher."""
+        """Wire the detector to its UBO RPC client, policy watcher, strategy."""
         super().__init__()
         self._client = client
         self._policy_watcher = policy_watcher
+        self._user_turn_stop_strategy = user_turn_stop_strategy
 
     async def process_frame(
         self,
@@ -90,6 +95,7 @@ class EndOfTurnPhraseDetector(FrameProcessor):
                     'End-of-turn phrase matched',
                     extra={'phrase': phrase, 'text': frame.text},
                 )
+                await self._user_turn_stop_strategy.trigger_phrase_end_of_turn()
                 self._client.dispatch(
                     action=Action(
                         assistant_stop_listening_action=AssistantStopListeningAction(
