@@ -9,12 +9,7 @@ message DispatchActionRequest {
   ubo.v1.Action action = 1;
 }
 
-message DispatchEventRequest {
-  ubo.v1.Event event = 1;
-}
-
 message DispatchActionResponse {}
-message DispatchEventResponse {}
 
 message SubscribeEventRequest {
   repeated ubo.v1.Event events = 2;
@@ -34,7 +29,6 @@ message SubscribeStoreResponse {
 
 service StoreService {
   rpc DispatchAction(DispatchActionRequest) returns (DispatchActionResponse);
-  rpc DispatchEvent(DispatchEventRequest) returns (DispatchEventResponse);
   rpc SubscribeEvent(SubscribeEventRequest) returns (stream SubscribeEventResponse);
   rpc SubscribeStore(SubscribeStoreRequest) returns (stream SubscribeStoreResponse);
 }

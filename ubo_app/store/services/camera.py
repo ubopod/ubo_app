@@ -17,8 +17,29 @@ class CameraType(StrEnum):
     AUTOFOCUS = 'autofocus'
     FIXED_FOCUS = 'fixed-focus'
 
+
+class CameraSourceKind(StrEnum):
+    """Whether a camera source is hardware on this device or a remote client."""
+
+    LOCAL = 'local'
+    REMOTE = 'remote'
+
+
 if TYPE_CHECKING:
     from ubo_app.store.input.types import QRCodeInputDescription
+
+
+class CameraSource(Immutable):
+    """A selectable camera source.
+
+    Local sources are USB / picamera devices probed by the camera service;
+    remote sources are clients (iOS, web, etc.) that registered themselves
+    via `CameraRegisterRemoteAction` after a `CameraDetectAdvertiseEvent`.
+    """
+
+    id: str  # 'local:<index>' or 'remote:<client-uuid>'
+    label: str
+    kind: CameraSourceKind
 
 
 class CameraAction(BaseAction): ...
@@ -30,6 +51,23 @@ class CameraStartViewfinderAction(CameraAction):
 
 class CameraReportBarcodeAction(CameraAction):
     codes: list[str]
+
+
+class CameraReportImageAction(CameraAction):
+    """A single camera frame pushed by a remote camera source over gRPC.
+
+    Remote clients (iOS, web, etc.) cannot dispatch events directly — events
+    are emitted only from reducers. So a remote source dispatches this action
+    with the frame payload; the reducer translates it into a
+    `CameraReportImageEvent` that downstream subscribers consume (QR decode,
+    display mirror).
+    """
+
+    timestamp: float
+    data: bytes
+    width: int
+    height: int
+    source_id: str = ''
 
 
 class CameraInstallDriverAction(CameraAction):
@@ -61,34 +99,66 @@ class CameraRestoreDefaultEvent(CameraEvent):
 
 class CameraStartViewfinderEvent(CameraEvent):
     pattern: str | None
+    source_id: str = ''  # which source should start capturing; empty == any
 
 
 class CameraReportImageEvent(CameraEvent):
-    """Event for reporting an image from the camera."""
+    """A single camera frame.
+
+    Dispatched both by the local capture loop and by remote clients pushing
+    frames over gRPC. The `source_id` field lets the Pi-side handler accept
+    only frames from the currently selected source.
+    """
 
     timestamp: float
     data: bytes
     width: int
     height: int
+    source_id: str = ''
 
 
 class CameraStopViewfinderEvent(CameraEvent): ...
 
 
 class CameraSetIndexAction(CameraAction):
-    """Action to set the selected camera index."""
+    """Deprecated shim — prefer `CameraSetSelectedSourceAction`.
+
+    Kept so that older clients dispatching this action still work. The
+    reducer translates `index=N` to `selected_source_id='local:N'`.
+    """
 
     index: int
+
+
+class CameraSetSelectedSourceAction(CameraAction):
+    """Select which source (local or remote) feeds the viewfinder."""
+
+    source_id: str
 
 
 class CameraDetectAction(CameraAction):
     """Action to trigger camera detection."""
 
 
-class CameraSetAvailableCamerasAction(CameraAction):
-    """Action to set available cameras."""
+class CameraDetectAdvertiseEvent(CameraEvent):
+    """Broadcast when detection starts.
 
-    available_cameras: list[int]
+    Subscribed clients (iOS, web, etc.) should respond with a
+    `CameraRegisterRemoteAction` if they can provide a camera stream.
+    """
+
+
+class CameraRegisterRemoteAction(CameraAction):
+    """Dispatched by a remote client in response to `CameraDetectAdvertiseEvent`."""
+
+    source_id: str
+    label: str
+
+
+class CameraSetAvailableCamerasAction(CameraAction):
+    """Set the merged local + remote camera source list."""
+
+    available_cameras: list[CameraSource]
 
 
 class CameraDetectEvent(CameraEvent):
@@ -98,7 +168,7 @@ class CameraDetectEvent(CameraEvent):
 class CameraDetectedEvent(CameraEvent):
     """Event fired when cameras are detected."""
 
-    available_cameras: list[int]
+    available_cameras: list[CameraSource]
 
 
 class CameraReinitializeEvent(CameraEvent):
@@ -107,8 +177,9 @@ class CameraReinitializeEvent(CameraEvent):
 
 class CameraState(Immutable):
     queue: list[QRCodeInputDescription]
-    selected_camera_index: int = 0
-    available_cameras: tuple[int, ...] = ()
+    selected_source_id: str = 'local:0'
+    available_cameras: tuple[CameraSource, ...] = ()
+    pending_remote_registrations: tuple[CameraSource, ...] = ()
     camera_type: CameraType = read_from_persistent_store(
         'camera_type',
         default=CameraType.DEFAULT,

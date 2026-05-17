@@ -27,13 +27,16 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraDetectAction,
+    CameraDetectAdvertiseEvent,
     CameraDetectEvent,
     CameraInstallDriverEvent,
     CameraReportBarcodeAction,
     CameraReportImageEvent,
     CameraRestoreDefaultEvent,
     CameraSetAvailableCamerasAction,
-    CameraSetIndexAction,
+    CameraSetSelectedSourceAction,
+    CameraSource,
+    CameraSourceKind,
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
@@ -55,6 +58,9 @@ if TYPE_CHECKING:
 
 THROTTL_TIME = 0.5
 VIEWFINDER_INTERVAL = 0.04
+# How long to wait for remote clients to (re-)register after a detect cycle
+# starts before we finalise the camera list.
+REMOTE_REGISTRATION_WINDOW = 1.5
 
 
 def resize_image(
@@ -78,6 +84,17 @@ def resize_image(
 )
 def check_codes(codes: list[str]) -> None:
     store.dispatch(CameraReportBarcodeAction(codes=codes))
+
+
+def _parse_local_index(source_id: str) -> int | None:
+    """Return the integer index from a `local:N` source id, or None for remote."""
+    prefix = 'local:'
+    if not source_id.startswith(prefix):
+        return None
+    try:
+        return int(source_id.removeprefix(prefix))
+    except ValueError:
+        return None
 
 
 class _RepeatingTimer:
@@ -109,24 +126,33 @@ class _ViewfinderSession:
         self.camera: CameraBackend | None = None
         self.is_running = True
         self.fs_lock = Lock()
+        self.current_source_id: str = ''
         self._event_unsubscribe: Callable[[], None] = lambda: None
         self._stack_unsubscribe: Callable[[], None] = lambda: None
 
-    def handle_camera_change(self, index: int) -> None:
-        """Reinitialize camera when selected index changes."""
+    def handle_source_change(self, source_id: str) -> None:
+        """Switch the local backend to match the selected source.
+
+        Remote sources push frames over gRPC — there's no local backend to
+        spin up, so we just tear down whatever we had.
+        """
         if not self.is_running:
             return
+        self.current_source_id = source_id
         if self.camera:
             self.camera.stop()
             self.camera.close()
-        self.camera = initialize_camera(index)
+            self.camera = None
+        local_index = _parse_local_index(source_id)
+        if local_index is not None:
+            self.camera = initialize_camera(local_index)
 
     def feed_locked(self, _: object) -> None:
         """Feed viewfinder under lock."""
         with self.fs_lock:
             if not self.is_running:
                 return
-            feed_viewfinder(self.camera)
+            feed_viewfinder(self.camera, self.current_source_id)
 
     def cleanup(self, timer: _RepeatingTimer) -> None:
         """Shut down the viewfinder session and release the camera."""
@@ -159,9 +185,9 @@ def start_camera_viewfinder_session() -> None:
 
     session = _ViewfinderSession()
 
-    @store.autorun(lambda state: state.camera.selected_camera_index)
-    def _handle_camera_change(index: int) -> None:
-        session.handle_camera_change(index)
+    @store.autorun(lambda state: state.camera.selected_source_id)
+    def _handle_source_change(source_id: str) -> None:
+        session.handle_source_change(source_id)
 
     timer = _RepeatingTimer(VIEWFINDER_INTERVAL, session.feed_locked)
     timer.start()
@@ -250,7 +276,14 @@ def initialize_camera(camera_index: int = 0) -> CameraBackend | None:
         return camera
 
 
-def feed_viewfinder(camera: CameraBackend | None) -> None:
+def feed_viewfinder(camera: CameraBackend | None, source_id: str) -> None:
+    """Pull a frame from the local backend and emit a CameraReportImageEvent.
+
+    Frame post-processing (QR decode + display mirror) lives in
+    `_handle_report_image` so remote-pushed frames go through the same path.
+    Tagging the event with `source_id` lets the handler accept only frames
+    from the selected source.
+    """
     width = WIDTH
     height = HEIGHT
 
@@ -276,20 +309,6 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
         data = None
 
     if data is not None:
-        from pyzbar.pyzbar import decode
-
-        barcodes = decode(data)
-        decoded_codes = [barcode.data.decode() for barcode in barcodes]
-        logger.debug(
-            '[camera] pyzbar decoded %d barcode(s): %r (data shape=%s)',
-            len(decoded_codes),
-            decoded_codes,
-            getattr(data, 'shape', 'N/A'),
-        )
-        create_task(
-            check_codes(codes=decoded_codes),
-        )
-
         data = resize_image(data, new_size=(width, height))
 
         # Mirror the image
@@ -302,15 +321,80 @@ def feed_viewfinder(camera: CameraBackend | None) -> None:
                     data=data.tobytes(),
                     width=width,
                     height=height,
-                ),
-                FrameStreamDataEvent(
-                    stream_id='camera:viewfinder',
-                    data=data.tobytes(),
-                    width=width,
-                    height=height,
+                    source_id=source_id,
                 ),
             ],
         )
+
+
+@store.with_state(lambda state: state.camera.selected_source_id)
+def _selected_source_id(source_id: str) -> str:
+    return source_id
+
+
+@store.with_state(lambda state: state.camera.pending_remote_registrations)
+def _snapshot_pending_remote_registrations(
+    pending: tuple[CameraSource, ...],
+) -> tuple[CameraSource, ...]:
+    return pending
+
+
+def _handle_report_image(event: CameraReportImageEvent) -> None:
+    """Decode QR codes + forward to the display mirror.
+
+    Runs for every CameraReportImageEvent regardless of origin (local timer
+    or remote gRPC dispatch). Frames whose `source_id` doesn't match the
+    currently selected source are dropped — only the active camera should
+    drive QR scanning and display.
+    """
+    selected = _selected_source_id()
+    if event.source_id and event.source_id != selected:
+        return
+    if event.width <= 0 or event.height <= 0 or not event.data:
+        return
+
+    expected_size = event.width * event.height * 3
+    if len(event.data) != expected_size:
+        logger.warning(
+            '[camera] dropping frame with unexpected payload size '
+            '(got %d bytes, expected %d for %dx%d RGB)',
+            len(event.data),
+            expected_size,
+            event.width,
+            event.height,
+        )
+        return
+
+    try:
+        from pyzbar.pyzbar import decode
+
+        frame = np.frombuffer(event.data, dtype=np.uint8).reshape(
+            event.height,
+            event.width,
+            3,
+        )
+        barcodes = decode(frame)
+        decoded_codes = [barcode.data.decode() for barcode in barcodes]
+        if decoded_codes:
+            logger.debug(
+                '[camera] pyzbar decoded %d barcode(s): %r',
+                len(decoded_codes),
+                decoded_codes,
+            )
+            create_task(check_codes(codes=decoded_codes))
+    except Exception:
+        logger.exception('[camera] pyzbar decode failed')
+
+    store._dispatch(  # noqa: SLF001
+        [
+            FrameStreamDataEvent(
+                stream_id='camera:viewfinder',
+                data=event.data,
+                width=event.width,
+                height=event.height,
+            ),
+        ],
+    )
 
 
 async def _install_camera_driver(event: CameraInstallDriverEvent) -> None:
@@ -496,25 +580,58 @@ def _close_camera_viewfinder_on_input_resolved(_: object) -> None:
     _pop_viewfinder()
 
 
+def _local_label(index: int) -> str:
+    return f'Local Camera {index}'
+
+
 async def detect_and_update_cameras() -> None:
-    """Detect available cameras and update state."""
+    """Run a detection cycle.
+
+    Probe local hardware, wait for remote clients to (re-)register, then
+    publish the merged source list.
+    """
     try:
         if IS_RPI:
             from utils import detect_available_cameras_picamera2
 
             logger.info('Starting Picamera2 camera detection...')
-            available = detect_available_cameras_picamera2()
+            available_local_indices = detect_available_cameras_picamera2()
         else:
             from utils import detect_available_cameras
 
             logger.info('Starting OpenCV camera detection...')
-            available = detect_available_cameras()
+            available_local_indices = detect_available_cameras()
 
         logger.info(
-            'Camera detection complete: {count} camera(s) found',
-            extra={'count': len(available), 'indices': available},
+            'Local camera detection found %d device(s); waiting %ss for '
+            'remote registrations...',
+            len(available_local_indices),
+            REMOTE_REGISTRATION_WINDOW,
         )
-        store.dispatch(CameraSetAvailableCamerasAction(available_cameras=available))
+
+        await asyncio.sleep(REMOTE_REGISTRATION_WINDOW)
+
+        local_sources = tuple(
+            CameraSource(
+                id=f'local:{index}',
+                label=_local_label(index),
+                kind=CameraSourceKind.LOCAL,
+            )
+            for index in available_local_indices
+        )
+        # Snapshot pending registrations after the window closes; the reducer
+        # clears the staging area on CameraSetAvailableCamerasAction.
+        remote_sources = _snapshot_pending_remote_registrations()
+        merged = [*local_sources, *remote_sources]
+
+        logger.info(
+            'Camera detection complete: %d local + %d remote source(s)',
+            len(local_sources),
+            len(remote_sources),
+        )
+        store.dispatch(
+            CameraSetAvailableCamerasAction(available_cameras=merged),
+        )
     except Exception:
         logger.exception('Error during camera detection')
         store.dispatch(CameraSetAvailableCamerasAction(available_cameras=[]))
@@ -551,8 +668,8 @@ def _register_camera_action_handlers() -> None:
     )
 
 
-def _register_camera_index_actions(available_cameras: tuple[int, ...]) -> None:
-    """Register action handlers for each camera index."""
+def _register_source_actions(available: tuple[CameraSource, ...]) -> None:
+    """Register one menu-action per available source so the user can pick it."""
     from ubo_app.store.core.action_registry import (
         get_registered_actions,
         register_action,
@@ -563,32 +680,41 @@ def _register_camera_index_actions(available_cameras: tuple[int, ...]) -> None:
         if action_id.startswith('camera:select:'):
             unregister_action(action_id)
 
-    for index in available_cameras:
-        def _make_handler(i: int) -> Callable[[], None]:
+    for source in available:
+        def _make_handler(source_id: str) -> Callable[[], None]:
             def _handler() -> None:
-                store.dispatch(CameraSetIndexAction(index=i))
+                store.dispatch(CameraSetSelectedSourceAction(source_id=source_id))
 
             return _handler
 
-        register_action(f'camera:select:{index}', _make_handler(index))
+        register_action(f'camera:select:{source.id}', _make_handler(source.id))
+
+
+def _short_label_for(source: CameraSource) -> str:
+    """Trim the label so it fits in the dynamic menu's narrow rows."""
+    return source.label
 
 
 @store.autorun(lambda state: state.camera)
 def update_camera_dynamic_menu(state: CameraState) -> None:
     """Update the dynamic menu for camera settings."""
     _register_camera_action_handlers()
-    _register_camera_index_actions(state.available_cameras)
+    _register_source_actions(state.available_cameras)
 
     items: list[MenuItemData] = []
+    selected_label = ''
 
-    for index in state.available_cameras:
-        is_selected = index == state.selected_camera_index
+    for source in state.available_cameras:
+        is_selected = source.id == state.selected_source_id
+        if is_selected:
+            selected_label = source.label
+        icon = '' if source.kind is CameraSourceKind.LOCAL else '󰀂'
         items.append(
             MenuItemData(
-                key=f'camera:index:{index}',
-                label=f'Camera {index}',
-                icon='\uf030',
-                action_id=f'camera:select:{index}',
+                key=f'camera:source:{source.id}',
+                label=_short_label_for(source),
+                icon=icon,
+                action_id=f'camera:select:{source.id}',
                 background_color='#00ff00' if is_selected else None,
             ),
         )
@@ -611,14 +737,16 @@ def update_camera_dynamic_menu(state: CameraState) -> None:
         ),
     )
 
+    sub_heading = f'Current: {selected_label}' if selected_label else (
+        'No cameras detected' if not state.available_cameras else 'No source selected'
+    )
+
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=CAMERA_MENU_ID,
             title='Camera Settings',
-            heading='Select Camera Device',
-            sub_heading=f'Current: Camera {state.selected_camera_index}'
-            if state.available_cameras
-            else 'No cameras detected',
+            heading='Select Camera Source',
+            sub_heading=sub_heading,
             items=tuple(items),
             placeholder='No cameras detected. Click "Detect Cameras" to scan.'
             if not state.available_cameras
@@ -634,7 +762,7 @@ def init_service() -> Subscriptions:
             priority=1,
             category=SettingsCategory.HARDWARE,
             label='Camera',
-            icon='',
+            icon='',
         ),
     )
 
@@ -651,10 +779,12 @@ def init_service() -> Subscriptions:
     # Detect cameras on startup
     create_task(detect_and_update_cameras())
 
-    # Register persistent storage for selected camera index
+    # Register persistent storage for selected source id (replaces the
+    # legacy `camera_selected_index` int key; the reducer migrates old
+    # values on first init).
     register_persistent_store(
-        'camera_selected_index',
-        lambda state: state.camera.selected_camera_index,
+        'camera_selected_source_id',
+        lambda state: state.camera.selected_source_id,
     )
 
     # Register persistent storage for camera type
@@ -673,6 +803,14 @@ def init_service() -> Subscriptions:
         store.subscribe_event(
             CameraDetectEvent,
             handle_camera_detect,
+        ),
+        store.subscribe_event(
+            CameraDetectAdvertiseEvent,
+            lambda _event: None,
+        ),
+        store.subscribe_event(
+            CameraReportImageEvent,
+            _handle_report_image,
         ),
         store.subscribe_event(
             CameraInstallDriverEvent,

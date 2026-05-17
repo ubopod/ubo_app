@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, cast, overload
+from typing import TYPE_CHECKING, cast
 
 from betterproto.lib.std.google import protobuf as betterproto_protobuf
 from grpclib.client import Channel
@@ -13,7 +13,6 @@ import ubo_bindings.ubo.v1
 from ubo_bindings.secrets.v1 import QuerySecretRequest, SecretsServiceStub
 from ubo_bindings.store.v1 import (
     DispatchActionRequest,
-    DispatchEventRequest,
     StoreServiceStub,
     SubscribeEventRequest,
     SubscribeStoreRequest,
@@ -68,27 +67,19 @@ class UboRPCClient:
         """Close the channel."""
         self.channel.close()
 
-    @overload
-    def dispatch(self, *, action: Action) -> None: ...
-    @overload
-    def dispatch(self, *, event: Event) -> None: ...
-    def dispatch(
-        self,
-        *,
-        action: Action | None = None,
-        event: Event | None = None,
-    ) -> None:
-        """Dispatch an operation to the remote store."""
-        if action is not None:
-            self.event_loop.create_task(
-                self.store_service.dispatch_action(
-                    DispatchActionRequest(action=action),
-                ),
-            )
-        if event is not None:
-            self.event_loop.create_task(
-                self.store_service.dispatch_event(DispatchEventRequest(event=event)),
-            )
+    def dispatch(self, *, action: Action) -> None:
+        """Dispatch an action to the remote store.
+
+        Events are emitted only from reducers; remote clients can only
+        dispatch actions. To deliver data that needs to surface as an event,
+        define an action whose reducer emits the event in
+        ``CompleteReducerResult.events``.
+        """
+        self.event_loop.create_task(
+            self.store_service.dispatch_action(
+                DispatchActionRequest(action=action),
+            ),
+        )
 
     def subscribe_event(
         self,

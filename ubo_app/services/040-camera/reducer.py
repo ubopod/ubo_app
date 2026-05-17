@@ -27,16 +27,23 @@ from ubo_app.store.main import store
 from ubo_app.store.services.camera import (
     CameraAction,
     CameraDetectAction,
+    CameraDetectAdvertiseEvent,
     CameraDetectedEvent,
     CameraDetectEvent,
     CameraEvent,
     CameraInstallDriverAction,
     CameraInstallDriverEvent,
+    CameraRegisterRemoteAction,
     CameraReportBarcodeAction,
+    CameraReportImageAction,
+    CameraReportImageEvent,
     CameraRestoreDefaultAction,
     CameraRestoreDefaultEvent,
     CameraSetAvailableCamerasAction,
     CameraSetIndexAction,
+    CameraSetSelectedSourceAction,
+    CameraSource,
+    CameraSourceKind,
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
@@ -132,6 +139,50 @@ def pop_queue(
     )
 
 
+def _resolve_initial_source_id() -> str:
+    """Pick the initial selected-source id, migrating from the old int key.
+
+    Older releases persisted `camera_selected_index` (int). Newer state lives
+    under `camera_selected_source_id` (str). If only the old key is present,
+    we synthesise `local:<index>` so the user's previous choice survives.
+    """
+    new_value = read_from_persistent_store(
+        'camera_selected_source_id',
+        default=None,
+        output_type=str,
+    )
+    if new_value:
+        return new_value
+    legacy_index = read_from_persistent_store(
+        'camera_selected_index',
+        default=None,
+        output_type=int,
+    )
+    if legacy_index is not None:
+        return f'local:{legacy_index}'
+    return 'local:0'
+
+
+def _ensure_selection_valid(
+    available: tuple[CameraSource, ...],
+    selected_source_id: str,
+) -> str:
+    """Keep the current selection if still available, else pick the first."""
+    if not available:
+        return selected_source_id
+    if any(source.id == selected_source_id for source in available):
+        return selected_source_id
+    return available[0].id
+
+
+def _merge_remote_registration(
+    pending: tuple[CameraSource, ...],
+    incoming: CameraSource,
+) -> tuple[CameraSource, ...]:
+    """Add or update a remote registration in `pending_remote_registrations`."""
+    return (*tuple(s for s in pending if s.id != incoming.id), incoming)
+
+
 def reducer(
     state: CameraState | None,
     action: Action,
@@ -142,15 +193,9 @@ def reducer(
 ]:
     if state is None:
         if isinstance(action, InitAction):
-            # Load persisted camera index
-            selected_camera_index = read_from_persistent_store(
-                'camera_selected_index',
-                default=0,
-                output_type=int,
-            )
             return CameraState(
                 queue=[],
-                selected_camera_index=selected_camera_index,
+                selected_source_id=_resolve_initial_source_id(),
             )
         raise InitializationActionError(action)
 
@@ -191,42 +236,63 @@ def reducer(
         case CameraStartViewfinderAction(pattern=pattern):
             return CompleteReducerResult(
                 state=state,
-                events=[CameraStartViewfinderEvent(pattern=pattern)],
+                events=[
+                    CameraStartViewfinderEvent(
+                        pattern=pattern,
+                        source_id=state.selected_source_id,
+                    ),
+                ],
             )
 
         case CameraSetIndexAction(index=index):
-            return state(selected_camera_index=index)
+            return state(selected_source_id=f'local:{index}')
+
+        case CameraSetSelectedSourceAction(source_id=source_id):
+            return state(selected_source_id=source_id)
+
+        case CameraRegisterRemoteAction(source_id=source_id, label=label):
+            registration = CameraSource(
+                id=source_id,
+                label=label,
+                kind=CameraSourceKind.REMOTE,
+            )
+            return state(
+                pending_remote_registrations=_merge_remote_registration(
+                    state.pending_remote_registrations,
+                    registration,
+                ),
+            )
 
         case CameraSetAvailableCamerasAction(available_cameras=available_cameras):
-            # If current selection is not in available cameras, select first available
-            new_index = state.selected_camera_index
-            if (
-                available_cameras
-                and state.selected_camera_index not in available_cameras
-            ):
-                new_index = available_cameras[0]
+            available = tuple(available_cameras)
             return state(
-                available_cameras=tuple(available_cameras),
-                selected_camera_index=new_index,
+                available_cameras=available,
+                selected_source_id=_ensure_selection_valid(
+                    available,
+                    state.selected_source_id,
+                ),
+                pending_remote_registrations=(),
             )
 
         case CameraDetectAction():
+            # Clear staging so a fresh detection cycle starts from a known
+            # state, then fan out: CameraDetectEvent triggers the local
+            # hardware probe, CameraDetectAdvertiseEvent invites remote
+            # clients to (re-)register.
             return CompleteReducerResult(
-                state=state,
-                events=[CameraDetectEvent()],
+                state=state(pending_remote_registrations=()),
+                events=[CameraDetectEvent(), CameraDetectAdvertiseEvent()],
             )
 
         case CameraDetectedEvent(available_cameras=available_cameras):
-            # If current selection is not in available cameras, select first available
-            new_index = state.selected_camera_index
-            if (
-                available_cameras
-                and state.selected_camera_index not in available_cameras
-            ):
-                new_index = available_cameras[0]
+            available = tuple(available_cameras)
             return state(
-                available_cameras=tuple(available_cameras),
-                selected_camera_index=new_index,
+                available_cameras=available,
+                selected_source_id=_ensure_selection_valid(
+                    available,
+                    state.selected_source_id,
+                ),
+                pending_remote_registrations=(),
             )
 
         case CameraReportBarcodeAction(codes=codes) if state.queue:
@@ -267,6 +333,24 @@ def reducer(
 
         case CameraReportBarcodeAction(codes=codes):
             return state
+
+        case CameraReportImageAction():
+            # Remote camera sources (iPhone, web) can only dispatch actions
+            # over gRPC; the corresponding event is emitted here so the
+            # existing `_handle_report_image` subscriber can decode QR codes
+            # and forward the frame to the viewfinder display.
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    CameraReportImageEvent(
+                        timestamp=action.timestamp,
+                        data=action.data,
+                        width=action.width,
+                        height=action.height,
+                        source_id=action.source_id,
+                    ),
+                ],
+            )
 
         case _:
             return state
