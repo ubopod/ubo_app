@@ -1,5 +1,13 @@
 .DS_Store
 
+# Sibling client repos. Each lives in its own independent GitHub repo
+# (ubopod/ubo-{swift,kotlin}-{grpc,app[s]}) and is only present locally
+# as a side-by-side checkout — never tracked by this parent repo.
+ubo-swift-grpc/
+ubo-swift-app/
+ubo-kotlin-grpc/
+ubo-kotlin-apps/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

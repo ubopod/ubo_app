@@ -163,6 +163,23 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 
 "proto" = ["proto:generate", "proto:compile"]
 
+# Swift / Kotlin client bindings live in sibling repos (ubo-swift-grpc,
+# ubo-kotlin-grpc) and aren't always checked out — keep them off the
+# umbrella `proto` task so a fresh clone without the sibling dirs can
+# still regenerate the Python bindings. Invoke explicitly when needed.
+"proto:swift:raw" = "sh -c 'cd ubo-swift-grpc && ./generate-protos.sh'"
+"proto:swift" = ["proto:generate", "proto:swift:raw"]
+"proto:swift:check" = "sh -c 'cd ubo-swift-grpc && ./generate-protos.sh --check'"
+
+"proto:kotlin:raw" = "sh -c 'cd ubo-kotlin-grpc && ./generate-protos.sh'"
+"proto:kotlin" = ["proto:generate", "proto:kotlin:raw"]
+"proto:kotlin:check" = "sh -c 'cd ubo-kotlin-grpc && ./generate-protos.sh --check'"
+
+# Full regen — Python bindings + Swift + Kotlin. Assumes both sibling
+# repos are present; fails fast if either ubo-swift-grpc or
+# ubo-kotlin-grpc is missing.
+"proto:complete" = ["proto:generate", "proto:compile", "proto:swift:raw", "proto:kotlin:raw"]
+
 
 "device:deploy" = "poe deploy-to-device"
 "device:deploy:skip-deps" = "poe deploy-to-device --skip_deps"
