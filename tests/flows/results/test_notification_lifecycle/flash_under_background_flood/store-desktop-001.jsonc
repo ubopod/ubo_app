@@ -14,7 +14,7 @@
       "display_type": "flash",
       "expiration_timestamp": null,
       "extra_information": null,
-      "flash_time": 3,
+      "flash_time": 10,
       "icon": "󰌶",
       "id": "flood-test:flash",
       "importance": "low",

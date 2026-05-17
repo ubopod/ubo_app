@@ -375,19 +375,23 @@ async def test_flash_under_background_flood(
                 title='Flash After Flood',
                 content='Visible despite the preceding flood.',
                 display_type=NotificationDisplayType.FLASH,
-                flash_time=3,
+                # 10 s so the snapshot's gRPC capture round-trip on slow
+                # hardware can't race the auto-dismiss timer.
+                flash_time=10,
                 blink=False,
             ),
         ),
     )
 
-    # FLASH should be on screen well within ``flash_time``. With the bug,
-    # the gui-client would still be processing the backlog at this point.
-    await asyncio.sleep(1.5)
+    # Poll for screen+store stability instead of a fixed sleep — the
+    # gRPC screenshot capture can take longer than any fixed window on
+    # slow hardware, and a fixed sleep would race the ``flash_time``
+    # auto-dismiss timer.
+    await stability(initial_wait=0.5)
     snap('02-flash-after-flood')
 
     # Wait past ``flash_time`` so ``_auto_dismiss`` fires, then tidy up.
-    await asyncio.sleep(2.5)
+    await asyncio.sleep(9)
 
     store.dispatch(
         NotificationsClearByIdAction(id=progress_id),

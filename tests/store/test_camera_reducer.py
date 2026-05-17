@@ -7,7 +7,10 @@ viewfinder display.
 
 NOTE: The camera service uses relative imports inside its directory, so we
 add the service path to ``sys.path`` before importing the reducer — same
-pattern as ``test_file_system_reducer.py``.
+pattern as ``test_file_upload.py``. We also load the action/event/state
+classes inside the same loader so the reducer's match-case and the test's
+constructed action always reference the *same* class object, even if an
+integration test in between has cleared ``sys.modules``.
 """
 
 from __future__ import annotations
@@ -18,17 +21,27 @@ from typing import TYPE_CHECKING, Any
 
 from redux import CompleteReducerResult
 
-from ubo_app.store.services.camera import (
-    CameraReportImageAction,
-    CameraReportImageEvent,
-    CameraState,
-)
-
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def _load_reducer() -> Callable[[CameraState, Any], Any]:
+def _import_store_types_and_reducer() -> tuple[Any, Any, Any, Callable[..., Any]]:
+    """Load camera store types and the camera reducer together.
+
+    Records sys.modules before import and cleans up newly loaded modules
+    afterwards so that integration/flow tests are not affected by leftover
+    module state. Returning the freshly-imported classes alongside the
+    reducer guarantees both sides agree on the same class object even if
+    other tests subsequently reload ``ubo_app.store.services.camera``.
+    """
+    modules_before = set(sys.modules)
+
+    from ubo_app.store.services.camera import (
+        CameraReportImageAction,
+        CameraReportImageEvent,
+        CameraState,
+    )
+
     service_dir = str(
         Path(__file__).resolve().parents[2]
         / 'ubo_app'
@@ -37,9 +50,26 @@ def _load_reducer() -> Callable[[CameraState, Any], Any]:
     )
     if service_dir not in sys.path:
         sys.path.insert(0, service_dir)
+
     from reducer import reducer  # type: ignore[import-not-found]
 
-    return reducer
+    for mod in set(sys.modules) - modules_before:
+        del sys.modules[mod]
+
+    return (
+        CameraReportImageAction,
+        CameraReportImageEvent,
+        CameraState,
+        reducer,
+    )
+
+
+(
+    CameraReportImageAction,
+    CameraReportImageEvent,
+    CameraState,
+    reducer,
+) = _import_store_types_and_reducer()
 
 
 def test_camera_report_image_action_emits_event_with_matching_fields() -> None:
@@ -53,7 +83,7 @@ def test_camera_report_image_action_emits_event_with_matching_fields() -> None:
         source_id='remote:iphone-uuid',
     )
 
-    result = _load_reducer()(state, action)
+    result = reducer(state, action)
 
     assert isinstance(result, CompleteReducerResult)
     assert result.state is state  # pure pass-through, no state mutation
@@ -79,7 +109,7 @@ def test_camera_report_image_action_preserves_empty_source_id() -> None:
         source_id='',
     )
 
-    result = _load_reducer()(state, action)
+    result = reducer(state, action)
 
     assert isinstance(result, CompleteReducerResult)
     events = list(result.events or [])

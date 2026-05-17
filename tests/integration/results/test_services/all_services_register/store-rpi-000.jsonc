@@ -2,6 +2,8 @@
 {
   "assistant": {
     "_type": "AssistantState",
+    "active_policy": null,
+    "active_source": null,
     "enabled_mcp_servers": [],
     "enabled_mcp_servers_with_metadata": {
       "_type": "EnabledMcpServersWithMetadata",
@@ -10,34 +12,125 @@
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": true,
+    "last_stop_reason": null,
     "mcp_servers": {},
+    "ollama_downloaded_models": [],
+    "ollama_downloaded_models_refreshed": true,
+    "ollama_model_capabilities": {
+      "gemma3:1b": []
+    },
+    "ollama_thinking_enabled": {},
+    "piper_downloaded_voices": [],
+    "policies": [
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "WakePhraseMatcher",
+          "phrase": "let's have a conversation"
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [
+            "i'm done",
+            "that's it",
+            "that's all",
+            "thanks bye"
+          ],
+          "requires_phrase_for_stop": true,
+          "silence_timeout_seconds": null
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "WakePhraseMatcher",
+          "phrase": "can you help me"
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": 2.0
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "KeypadMatcher",
+          "key": null
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": null
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "InfraredMatcher",
+          "protocol": null,
+          "scancode": null
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": null
+        }
+      },
+      {
+        "_type": "AssistantTriggerPolicyEntry",
+        "matcher": {
+          "_type": "AnySourceMatcher"
+        },
+        "policy": {
+          "_type": "AssistantTriggerPolicy",
+          "end_of_turn_phrases": [],
+          "requires_phrase_for_stop": false,
+          "silence_timeout_seconds": null
+        }
+      }
+    ],
     "provider_setup_status": {
+      "anthropic": false,
       "assemblyai": false,
       "cerebras": false,
       "deepgram": false,
+      "deepseek": false,
       "elevenlabs": false,
       "generic_llm": false,
       "google": false,
       "google_cloud": false,
       "grok": false,
+      "mistral": false,
       "ollama": false,
       "ollama_onprem": false,
       "openai": false,
+      "openrouter": false,
       "piper": false,
+      "qwen": false,
       "rime": false,
       "vosk": false
     },
     "selected_image_generator": "google",
     "selected_llm": "ollama",
     "selected_models": {
+      "anthropic": "claude-sonnet-4-5",
       "cerebras": "qwen-3-235b-a22b-instruct-2507",
+      "deepseek": "deepseek-chat",
       "generic_llm": "gpt-4.1",
       "google_vertex": "gemini-2.5-flash-preview-05-20",
       "grok": "grok-4-0709",
+      "mistral": "mistral-small-latest",
       "ollama": "gemma3:1b",
       "ollama_onprem": "granite3.3:8b",
-      "openai": "gpt-4o"
+      "openai": "gpt-4o",
+      "openrouter": "openai/gpt-4o-mini",
+      "qwen": "qwen-plus"
     },
+    "selected_piper_voice": "en/en_US/kristin/medium/en_US-kristin-medium",
     "selected_stt": "vosk",
     "selected_tts": "piper"
   },
@@ -76,7 +169,17 @@
       "docker_id": null,
       "id": "envoy_grpc",
       "instructions": null,
-      "label": "Envoy for gRPC",
+      "label": "Envoy proxy",
+      "ports": [],
+      "status": "not_available"
+    },
+    "hermes": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "hermes",
+      "instructions": null,
+      "label": "Hermes Agent",
       "ports": [],
       "status": "not_available"
     },
@@ -147,6 +250,26 @@
       "id": "open_webui",
       "instructions": null,
       "label": "Open WebUI",
+      "ports": [],
+      "status": "not_available"
+    },
+    "openclaw": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "openclaw",
+      "instructions": null,
+      "label": "OpenClaw",
+      "ports": [],
+      "status": "not_available"
+    },
+    "pangolin": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "pangolin",
+      "instructions": null,
+      "label": "Pangolin",
       "ports": [],
       "status": "not_available"
     },
@@ -230,6 +353,7 @@
     "apps_items_priorities": {
       "docker:_import": 1,
       "docker:envoy_grpc": null,
+      "docker:hermes": null,
       "docker:home_assistant": null,
       "docker:home_bridge": null,
       "docker:immich": null,
@@ -237,6 +361,8 @@
       "docker:ngrok": null,
       "docker:ollama": null,
       "docker:open_webui": null,
+      "docker:openclaw": null,
+      "docker:pangolin": null,
       "docker:pi_hole": null,
       "docker:portainer": null,
       "docker:twingate": null,
@@ -292,6 +418,7 @@
       "assistant:image_generator": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Assistant",
         "icon": "󰹉",
@@ -302,6 +429,7 @@
       "assistant:llm": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Assistant",
         "icon": "󰁤",
@@ -312,6 +440,7 @@
       "assistant:mcp_tools": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Assistant",
         "icon": "󰒋",
@@ -322,6 +451,7 @@
       "assistant:providers": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Assistant",
         "icon": "󰶗",
@@ -332,6 +462,7 @@
       "assistant:stt": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Assistant",
         "icon": "",
@@ -342,6 +473,7 @@
       "assistant:tts": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Assistant",
         "icon": "󰔊",
@@ -352,6 +484,7 @@
       "camera:": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Hardware",
         "icon": "",
@@ -362,6 +495,7 @@
       "display:": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Hardware",
         "icon": "󰍹",
@@ -372,26 +506,40 @@
       "docker:_import": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:import_composition",
+        "app_category": "__apps_root__",
         "background_color": "#FFC107",
         "category": null,
         "icon": "󰋺",
         "key": "docker:_import",
-        "label": "Import YAML file",
+        "label": "Add New App",
         "priority": 1
       },
       "docker:envoy_grpc": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:envoy_grpc",
+        "app_category": "Networking",
         "background_color": null,
         "category": null,
         "icon": "󱂇",
         "key": "docker:envoy_grpc",
-        "label": "Envoy for gRPC",
+        "label": "Envoy proxy",
+        "priority": null
+      },
+      "docker:hermes": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:hermes",
+        "app_category": "AI Agents",
+        "background_color": null,
+        "category": null,
+        "icon": "󱚣",
+        "key": "docker:hermes",
+        "label": "Hermes Agent",
         "priority": null
       },
       "docker:home_assistant": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:home_assistant",
+        "app_category": "Home Automation",
         "background_color": null,
         "category": null,
         "icon": "󰟐",
@@ -402,6 +550,7 @@
       "docker:home_bridge": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:home_bridge",
+        "app_category": "Home Automation",
         "background_color": null,
         "category": null,
         "icon": "󰘘",
@@ -412,6 +561,7 @@
       "docker:immich": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:immich",
+        "app_category": "Files",
         "background_color": null,
         "category": null,
         "icon": "",
@@ -422,6 +572,7 @@
       "docker:n8n": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:n8n",
+        "app_category": "AI Agents",
         "background_color": null,
         "category": null,
         "icon": "󱂚",
@@ -432,6 +583,7 @@
       "docker:ngrok": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:ngrok",
+        "app_category": "Remote Access",
         "background_color": null,
         "category": null,
         "icon": "󰛶",
@@ -442,6 +594,7 @@
       "docker:ollama": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:ollama",
+        "app_category": "AI Engines",
         "background_color": null,
         "category": null,
         "icon": "󰳆",
@@ -452,6 +605,7 @@
       "docker:open_webui": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:open_webui",
+        "app_category": "AI Engines",
         "background_color": null,
         "category": null,
         "icon": "󰾔",
@@ -459,9 +613,32 @@
         "label": "Open WebUI",
         "priority": null
       },
+      "docker:openclaw": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:openclaw",
+        "app_category": "AI Agents",
+        "background_color": null,
+        "category": null,
+        "icon": "󰒍",
+        "key": "docker:openclaw",
+        "label": "OpenClaw",
+        "priority": null
+      },
+      "docker:pangolin": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:pangolin",
+        "app_category": "Remote Access",
+        "background_color": null,
+        "category": null,
+        "icon": "",
+        "key": "docker:pangolin",
+        "label": "Pangolin",
+        "priority": null
+      },
       "docker:pi_hole": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:pi_hole",
+        "app_category": "Networking",
         "background_color": null,
         "category": null,
         "icon": "󰇖",
@@ -472,9 +649,10 @@
       "docker:portainer": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:portainer",
+        "app_category": "Container Management",
         "background_color": null,
         "category": null,
-        "icon": "",
+        "icon": "",
         "key": "docker:portainer",
         "label": "Portainer",
         "priority": null
@@ -482,6 +660,7 @@
       "docker:registries": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Docker",
         "icon": "󱥉",
@@ -492,6 +671,7 @@
       "docker:service": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Docker",
         "icon": "",
@@ -502,6 +682,7 @@
       "docker:twingate": {
         "_type": "RegisteredAppEntry",
         "action_id": "docker:open:twingate",
+        "app_category": "Remote Access",
         "background_color": null,
         "category": null,
         "icon": "󰒄",
@@ -512,6 +693,7 @@
       "file_system:file-system": {
         "_type": "RegisteredAppEntry",
         "action_id": "file-system:open",
+        "app_category": "Files",
         "background_color": null,
         "category": null,
         "icon": "󰉋",
@@ -522,6 +704,7 @@
       "infrared:infrared": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Hardware",
         "icon": "󰻅",
@@ -532,6 +715,7 @@
       "ip:": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Network",
         "icon": "󰩟",
@@ -542,6 +726,7 @@
       "lightdm:": {
         "_type": "RegisteredAppEntry",
         "action_id": "lightdm:open_menu",
+        "app_category": null,
         "background_color": null,
         "category": "System",
         "icon": "󰍹",
@@ -552,6 +737,7 @@
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
         "action_id": "rpi-connect:open_menu",
+        "app_category": null,
         "background_color": null,
         "category": "Remote",
         "icon": "󰌕",
@@ -562,6 +748,7 @@
       "speech_recognition:": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Accessibility",
         "icon": "",
@@ -572,6 +759,7 @@
       "speech_synthesis:engines": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Accessibility",
         "icon": "󰔊",
@@ -582,6 +770,7 @@
       "speech_synthesis:settings": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Accessibility",
         "icon": "PV",
@@ -592,6 +781,7 @@
       "ssh:": {
         "_type": "RegisteredAppEntry",
         "action_id": "ssh:open_menu",
+        "app_category": null,
         "background_color": null,
         "category": "Remote",
         "icon": "󰣀",
@@ -602,6 +792,7 @@
       "users:": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "System",
         "icon": "󰡉",
@@ -612,6 +803,7 @@
       "vscode:": {
         "_type": "RegisteredAppEntry",
         "action_id": "vscode:open_menu",
+        "app_category": null,
         "background_color": null,
         "category": "Remote",
         "icon": "󰨞",
@@ -622,6 +814,7 @@
       "wifi:": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
+        "app_category": null,
         "background_color": null,
         "category": "Network",
         "icon": "󰖩",
