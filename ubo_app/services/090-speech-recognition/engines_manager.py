@@ -6,8 +6,10 @@ import asyncio
 from typing import TYPE_CHECKING, TypedDict, cast
 
 from google_engine import GoogleSpeechRecognitionEngine
+from mic_buffer import MicBuffer
 from vosk_engine import VoskEngine
 
+from ubo_app.constants import DATA_PATH
 from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_WAKE_WORD,
     ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
@@ -49,6 +51,17 @@ def _running_engines(engines: _Engines) -> set[BaseSpeechRecognitionEngine]:
     )
 
 
+_MIC_BUFFER_DURATION_SECONDS = 5.0
+_MIC_BUFFER_OUTPUT_DIR = DATA_PATH / 'wake_phrase_recordings'
+_PHRASES_THAT_TRIGGER_BUFFER_DUMP = frozenset(
+    {
+        ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
+        ASSISTANT_CONVERSATION_WAKE_WORD,
+        ASSISTANT_STOP_TALKING_PHRASE,
+    },
+)
+
+
 class EnginesManager:
     """Manager for speech recognition engines."""
 
@@ -64,6 +77,10 @@ class EnginesManager:
             SpeechRecognitionEngineName.GOOGLE: google_engine,
         }
         self.engines: _Engines = {'wake_word': vosk_engine, 'speech': vosk_engine}
+        self.mic_buffer = MicBuffer(
+            duration_seconds=_MIC_BUFFER_DURATION_SECONDS,
+            output_dir=_MIC_BUFFER_OUTPUT_DIR,
+        )
         store.autorun(lambda state: state.speech_recognition.selected_engine)(
             self._sync_selected_engine,
         )
@@ -95,6 +112,7 @@ class EnginesManager:
 
     async def _queue_chunk(self, event: AudioReportSampleEvent) -> None:
         """Queue audio chunk to all running speech recognition engines."""
+        self.mic_buffer.add(event.timestamp, event.sample)
         for engine in _running_engines(self.engines):
             await engine.queue_audio_chunk(event.sample_speech_recognition)
 
@@ -232,6 +250,16 @@ class EnginesManager:
         """Monitor wake word recognitions and dispatch events."""
         while True:
             async for wake_word in self.engines['wake_word'].wake_word_recogntions():
+                if wake_word in _PHRASES_THAT_TRIGGER_BUFFER_DUMP:
+                    # Persist the rolling mic buffer so the audio leading up
+                    # to the trigger phrase is available for review. Run the
+                    # synchronous WAV write off the event loop so the dispatch
+                    # below isn't delayed.
+                    await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        self.mic_buffer.dump,
+                        wake_word,
+                    )
                 store.dispatch(
                     SpeechRecognitionReportWakeWordDetectionAction(wake_word=wake_word),
                 )
