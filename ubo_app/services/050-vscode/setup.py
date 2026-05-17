@@ -15,6 +15,7 @@ from ubo_app.store.core.types import (
     OpenRenderAction,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPopAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.main import store
@@ -86,6 +87,9 @@ async def _perform_login() -> None:
                 ),
             )
             await _login_process.wait()
+            # Pop both the QR view and the "Logging in..." status view that
+            # `start_login` pushed, returning to the VSCode menu.
+            store.dispatch(StackPopAction(count=2))
         else:
             logger.error(
                 'VSCode: Failed to login: invalid output',

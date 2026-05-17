@@ -44,53 +44,27 @@ async def check_status() -> None:
     is_binary_installed = CODE_BINARY_PATH.exists()
     status_data: TunnelServiceStatus | None = None
     is_logged_in = False
-    try:
-        if is_binary_installed:
+    if is_binary_installed:
+        # `user show` first: fast, deterministic, and the only safe gate before
+        # calling `tunnel status` — `code tunnel status` busy-loops forever
+        # waiting on a tunnel daemon socket in /tmp when no tunnel is running.
+        try:
             process = await asyncio.create_subprocess_exec(
                 CODE_BINARY_PATH.as_posix(),
                 'tunnel',
                 '--accept-server-license-terms',
-                'status',
-                stdout=asyncio.subprocess.PIPE,
+                'user',
+                'show',
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            await asyncio.wait_for(process.wait(), timeout=3)
-            if process.returncode is None:
+            try:
+                await asyncio.wait_for(process.communicate(), timeout=3)
+            except TimeoutError:
                 process.kill()
-            if process.stdout and process.returncode == 0:
-                output = await process.stdout.read()
-                status_data = json.loads(output)
-    except (subprocess.CalledProcessError, TimeoutError):
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id='vscode:error:status',
-                    title='VSCode',
-                    content='Failed to get status: "status" subcommand',
-                    display_type=NotificationDisplayType.STICKY,
-                    color=DANGER_COLOR,
-                    icon='󰜺',
-                    chime=Chime.FAILURE,
-                ),
-            ),
-        )
-        raise
-    else:
-        try:
-            if is_binary_installed:
-                process = await asyncio.create_subprocess_exec(
-                    CODE_BINARY_PATH.as_posix(),
-                    'tunnel',
-                    '--accept-server-license-terms',
-                    'user',
-                    'show',
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await asyncio.wait_for(process.wait(), timeout=3)
-                if process.returncode is None:
-                    process.kill()
-                is_logged_in = process.returncode == 0
+                raise
+            is_logged_in = process.returncode == 0
         except (subprocess.CalledProcessError, TimeoutError):
             store.dispatch(
                 NotificationsAddAction(
@@ -106,6 +80,43 @@ async def check_status() -> None:
                 ),
             )
             raise
+
+        if is_logged_in:
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    CODE_BINARY_PATH.as_posix(),
+                    'tunnel',
+                    '--accept-server-license-terms',
+                    'status',
+                    stdin=asyncio.subprocess.DEVNULL,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                try:
+                    stdout_bytes, _ = await asyncio.wait_for(
+                        process.communicate(),
+                        timeout=3,
+                    )
+                except TimeoutError:
+                    process.kill()
+                    raise
+                if process.returncode == 0 and stdout_bytes:
+                    status_data = json.loads(stdout_bytes)
+            except (subprocess.CalledProcessError, TimeoutError):
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            id='vscode:error:status',
+                            title='VSCode',
+                            content='Failed to get status: "status" subcommand',
+                            display_type=NotificationDisplayType.STICKY,
+                            color=DANGER_COLOR,
+                            icon='󰜺',
+                            chime=Chime.FAILURE,
+                        ),
+                    ),
+                )
+                raise
     logger.debug(
         'Checked VSCode Tunnel Status',
         extra={
