@@ -72,6 +72,15 @@ from ubo_app.engines.piper_catalog import (
     voice_for,
     voice_label,
 )
+from ubo_app.engines.vosk import VoskEngine
+from ubo_app.engines.vosk_catalog import (
+    DEFAULT_VOSK_MODEL_ID,
+    VOSK_LANGUAGES,
+)
+from ubo_app.engines.vosk_catalog import language_for as vosk_language_for
+from ubo_app.engines.vosk_catalog import model_for as vosk_model_for
+from ubo_app.engines.vosk_catalog import model_label as vosk_model_label
+from ubo_app.engines.vosk_catalog import visible_languages as vosk_visible_languages
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
@@ -103,6 +112,8 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
     AssistantDownloadPiperVoiceEvent,
+    AssistantDownloadVoskModelAction,
+    AssistantDownloadVoskModelEvent,
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
@@ -114,6 +125,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
+    AssistantSetSelectedVoskModelAction,
     AssistantSTTName,
     AssistantSyncMcpServersAction,
     AssistantTTSName,
@@ -480,8 +492,11 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
         items: list[MenuItemData] = []
         for provider in _deduped_providers():
-            if isinstance(provider, (OllamaEngine, PiperEngine, KokoroEngine)):
-                # Ollama, Piper and Kokoro share the pattern: the
+            if isinstance(
+                provider,
+                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine),
+            ):
+                # Ollama, Piper, Kokoro, and Vosk share the pattern: the
                 # catalog picker is both the setup path *and* the
                 # day-to-day picker, so we always offer the drill-in
                 # regardless of whether the current selection has been
@@ -583,6 +598,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.ollama_thinking_enabled,
             state.assistant.selected_piper_voice,
             state.assistant.selected_kokoro_voice,
+            state.assistant.selected_vosk_model,
         ),
     )
     def provider_details(  # noqa: C901, PLR0915
@@ -594,6 +610,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             dict[str, bool],
             str,
             str,
+            str,
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -602,6 +619,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         ollama_thinking = data[4]
         selected_piper_voice = data[5] or DEFAULT_PIPER_VOICE_ID
         selected_kokoro_voice = data[6] or DEFAULT_KOKORO_VOICE_ID
+        selected_vosk_model = data[7] or DEFAULT_VOSK_MODEL_ID
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -612,7 +630,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 continue
             if not provider.is_setup and not isinstance(
                 provider,
-                (OllamaEngine, PiperEngine, KokoroEngine),
+                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine),
             ):
                 continue
 
@@ -750,6 +768,45 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         label=f'Voice: {current_label_k}',
                         icon='󰔊',
                         action_id=kokoro_voice_action,
+                    ),
+                )
+                store.dispatch(
+                    UpdateDynamicMenuAction(
+                        menu_id=f'assistant:provider:{provider.name}',
+                        title=provider.label,
+                        heading=provider.label,
+                        sub_heading='Manage this provider',
+                        items=tuple(items),
+                    ),
+                )
+                continue
+
+            # Vosk exposes a Language → Model drill-down driven by the
+            # curated catalog. Always rendered, even before any model is
+            # downloaded, so the user can pick a model that triggers its
+            # first download.
+            if isinstance(provider, VoskEngine):
+                current_model_entry = vosk_model_for(selected_vosk_model)
+                current_label = (
+                    vosk_model_label(current_model_entry)
+                    if current_model_entry is not None
+                    else selected_vosk_model
+                )
+                model_action = 'assistant:provider-detail:vosk-languages'
+                _provider_detail_action_ids.append(model_action)
+                register_action(
+                    model_action,
+                    lambda: store.dispatch(
+                        StackPushMenuAction(menu_key='vosk:languages'),
+                    ),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-model',
+                        label=f'Model: {current_label}',
+                        icon='󰧑',
+                        action_id=model_action,
                     ),
                 )
                 store.dispatch(
@@ -1544,6 +1601,160 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         if engine is not None:
             engine.download_voice(event.voice_id)
 
+    _vosk_language_action_ids: list[str] = []
+    _vosk_model_action_ids: list[str] = []
+
+    def _vosk_engine() -> VoskEngine | None:
+        engine = STT_ENGINES.get(AssistantSTTName.VOSK)
+        return engine if isinstance(engine, VoskEngine) else None
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_vosk_model,
+            state.localization.language,
+        ),
+    )
+    def vosk_languages_menu(
+        data: tuple[str, LanguageCode],
+    ) -> None:
+        """Build the Vosk language picker (English + system language)."""
+        selected_model, system_language = data
+        selected_model = selected_model or DEFAULT_VOSK_MODEL_ID
+
+        for action_id in _vosk_language_action_ids:
+            unregister_action(action_id)
+        _vosk_language_action_ids.clear()
+
+        # Refresh the downloaded-models cache so per-model indicators are
+        # accurate. No-op when nothing changed (set comparison).
+        engine = _vosk_engine()
+        if engine is not None:
+            create_task(engine.refresh_downloaded_models())
+
+        current_language = vosk_language_for(selected_model)
+        languages = vosk_visible_languages(system_language)
+        items: list[MenuItemData] = []
+        for language in languages:
+            action_id = f'assistant:vosk:open-language:{language.code.value}'
+            _vosk_language_action_ids.append(action_id)
+            register_action(
+                action_id,
+                lambda code=language.code: store.dispatch(
+                    StackPushMenuAction(
+                        menu_key=f'vosk:models:{code.value}',
+                    ),
+                ),
+                allow_reregister=True,
+            )
+            is_current = (
+                current_language is not None
+                and current_language.code == language.code
+            )
+            items.append(
+                MenuItemData(
+                    key=language.code.value,
+                    label=language.label,
+                    icon='󰄬' if is_current else '󰗊',
+                    background_color=INFO_COLOR if is_current else None,
+                    action_id=action_id,
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:vosk:languages',
+                title='Vosk Languages',
+                heading='Vosk',
+                sub_heading='Pick a language',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_vosk_model,
+            state.assistant.vosk_downloaded_models,
+        ),
+    )
+    def vosk_models_menus(data: tuple[str, tuple[str, ...]]) -> None:
+        """Build per-language Vosk model submenus."""
+        selected_model, downloaded_models = data
+        selected_model = selected_model or DEFAULT_VOSK_MODEL_ID
+        downloaded_set = set(downloaded_models)
+
+        for action_id in _vosk_model_action_ids:
+            unregister_action(action_id)
+        _vosk_model_action_ids.clear()
+
+        def _make_model_handler(
+            model_id: str,
+            *,
+            downloaded: bool,
+        ) -> Callable[[], None]:
+            def _handler() -> None:
+                if downloaded:
+                    store.dispatch(
+                        AssistantSetSelectedVoskModelAction(model_id=model_id),
+                        MenuGoBackAction(),
+                        MenuGoBackAction(),
+                    )
+                else:
+                    store.dispatch(
+                        AssistantSetSelectedVoskModelAction(model_id=model_id),
+                        AssistantDownloadVoskModelAction(model_id=model_id),
+                        MenuGoBackAction(),
+                        MenuGoBackAction(),
+                    )
+
+            return _handler
+
+        for language in VOSK_LANGUAGES:
+            items: list[MenuItemData] = []
+            for model in language.models:
+                is_selected = model.id == selected_model
+                is_downloaded = model.id in downloaded_set
+                label = vosk_model_label(model)
+                if is_downloaded and not is_selected:
+                    label = f'{label}  •'
+
+                action_id = f'assistant:vosk:select-model:{model.id}'
+                _vosk_model_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    _make_model_handler(model.id, downloaded=is_downloaded),
+                    allow_reregister=True,
+                )
+
+                items.append(
+                    MenuItemData(
+                        key=model.id,
+                        label=label,
+                        icon='󰄬' if is_selected else (
+                            '󰇚' if not is_downloaded else '󰧑'
+                        ),
+                        background_color=(
+                            INFO_COLOR if is_selected else None
+                        ),
+                        action_id=action_id,
+                    ),
+                )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:vosk:models:{language.code.value}',
+                    title=language.label,
+                    heading=language.label,
+                    sub_heading='Pick a model',
+                    items=tuple(items),
+                ),
+            )
+
+    def _handle_vosk_download(event: AssistantDownloadVoskModelEvent) -> None:
+        """Run the Vosk download flow for the requested model."""
+        engine = _vosk_engine()
+        if engine is not None:
+            engine.download_model(event.model_id)
+
     @store.autorun(
         lambda state: (
             state.assistant.selected_tts,
@@ -1807,6 +2018,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         piper_voices_menus,
         kokoro_languages_menu,
         kokoro_voices_menus,
+        vosk_languages_menu,
+        vosk_models_menus,
         tts_providers,
         image_generator_providers,
         mcp_servers_menu,
@@ -1815,6 +2028,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         _handle_ollama_download,
         _handle_piper_download,
         _handle_kokoro_download,
+        _handle_vosk_download,
     )
 
 
@@ -1833,7 +2047,7 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
     }
 
     def _match_catalog_tail(tail: str) -> str | None:
-        """Match leaf segments owned by Ollama / Piper drill-downs."""
+        """Leaf segments owned by Ollama / Piper / Kokoro / Vosk drill-downs."""
         if tail == 'ollama:categories':
             return 'assistant:ollama:categories'
         if tail.startswith('ollama:models:'):
@@ -1846,6 +2060,10 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:kokoro:languages'
         if tail.startswith('kokoro:voices:'):
             return f'assistant:kokoro:voices:{tail[len("kokoro:voices:") :]}'
+        if tail == 'vosk:languages':
+            return 'assistant:vosk:languages'
+        if tail.startswith('vosk:models:'):
+            return f'assistant:vosk:models:{tail[len("vosk:models:") :]}'
         return None
 
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:
@@ -2025,6 +2243,8 @@ async def init_service() -> None:
         _piper_voices_menus,
         _kokoro_languages_menu,
         _kokoro_voices_menus,
+        _vosk_languages_menu,
+        _vosk_models_menus,
         _tts_providers,
         _image_generator_providers,
         _mcp_servers_menu,
@@ -2033,6 +2253,7 @@ async def init_service() -> None:
         handle_ollama_download,
         handle_piper_download,
         handle_kokoro_download,
+        handle_vosk_download,
     ) = _setup_autorun_and_handlers()
 
     store.dispatch(
@@ -2098,6 +2319,10 @@ async def init_service() -> None:
         AssistantDownloadKokoroEvent,
         handle_kokoro_download,
     )
+    store.subscribe_event(
+        AssistantDownloadVoskModelEvent,
+        handle_vosk_download,
+    )
 
     store.dispatch(AssistantUpdateProvidersAction())
     store.dispatch(AssistantSyncMcpServersAction())
@@ -2121,3 +2346,9 @@ async def init_service() -> None:
     _kokoro_engine_instance = TTS_ENGINES.get(AssistantTTSName.KOKORO)
     if isinstance(_kokoro_engine_instance, KokoroEngine):
         create_task(_kokoro_engine_instance.refresh_downloaded_state())
+
+    # And for Vosk: scan the data dir once so the catalog dot indicator
+    # reflects STT models the user already downloaded in previous sessions.
+    _vosk_engine_instance = STT_ENGINES.get(AssistantSTTName.VOSK)
+    if isinstance(_vosk_engine_instance, VoskEngine):
+        create_task(_vosk_engine_instance.refresh_downloaded_models())

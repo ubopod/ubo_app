@@ -111,10 +111,6 @@ ELEVENLABS_VOICE_ID_PATTERN = '^[a-zA-Z0-9-_]{20,}$'
 BRAVE_SEARCH_API_KEY_SECRET_ID = 'brave_search_api_key'  # noqa: S105
 BRAVE_SEARCH_API_KEY_PATTERN = '^BS[a-zA-Z0-9-_]{20,}$'
 
-VOSK_MODEL = 'vosk-model-small-en-us-0.15'
-VOSK_MODEL_URL = f'https://alphacephei.com/vosk/models/{VOSK_MODEL}.zip'
-VOSK_MODEL_PATH = DATA_PATH / VOSK_MODEL
-VOSK_DOWNLOAD_PATH = VOSK_MODEL_PATH.with_suffix('.zip')
 VOSK_DOWNLOAD_NOTIFICATION_ID = 'assistant:download-vosk'
 
 OLLAMA_SETUP_NOTIFICATION_ID = 'assistant:ollama:setup'

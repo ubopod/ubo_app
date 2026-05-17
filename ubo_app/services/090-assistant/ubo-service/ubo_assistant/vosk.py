@@ -5,6 +5,7 @@ import json
 import time
 from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -25,8 +26,12 @@ from vosk import KaldiRecognizer, Model
 
 from ubo_assistant.constants import DATA_PATH
 
-VOSK_MODEL = 'vosk-model-small-en-us-0.15'
-VOSK_MODEL_PATH = DATA_PATH / VOSK_MODEL
+DEFAULT_VOSK_MODEL_ID = 'vosk-model-small-en-us-0.15'
+
+
+def _model_path(model_id: str) -> Path:
+    """Build the on-disk path for *model_id*'s expanded model directory."""
+    return DATA_PATH / model_id
 
 
 class VoskSTTService(STTService):
@@ -39,22 +44,91 @@ class VoskSTTService(STTService):
         self,
         audio_passthrough=True,  # noqa: ANN001, FBT002
         sample_rate: int | None = None,
+        model_id: str = DEFAULT_VOSK_MODEL_ID,
     ) -> None:
         """Initialize vosk speech to text service."""
         super().__init__(
             audio_passthrough=audio_passthrough,
             sample_rate=sample_rate,
-            settings=STTSettings(model=VOSK_MODEL, language=self.LANGUAGE_CODE),
+            settings=STTSettings(model=model_id, language=self.LANGUAGE_CODE),
             ttfs_p99_latency=1.0,
         )
         self._process_executor = ThreadPoolExecutor(max_workers=1)
         self._request_queue = asyncio.Queue()
         self._streaming_task = None
-        model = Model(
-            model_path=VOSK_MODEL_PATH.as_posix(),
-            lang='en-us',
-        )
+        # Lock serialises model loads against in-flight transcription so a
+        # mid-stream model switch never tears the queue.
+        self._reload_lock = asyncio.Lock()
+        # ``_requested_model_id`` is the model the user wants (updated by
+        # ``request_model`` from the store autorun callback — possibly on a
+        # foreign thread, so it's a plain attribute write and nothing more).
+        # ``_loaded_model_id`` is what's actually in ``_client``. ``run_stt``
+        # reconciles the two before every chunk, so a missed signal or a
+        # not-yet-downloaded model self-heals on the next utterance instead
+        # of needing the user to toggle repeatedly.
+        self._requested_model_id = model_id
+        self._loaded_model_id = model_id
+        model = Model(model_path=_model_path(model_id).as_posix())
         self._client = KaldiRecognizer(model, 16000)
+
+    def request_model(self, model_id: str) -> None:
+        """Record the Vosk model the user selected.
+
+        Deliberately does no work beyond a single attribute write so it
+        is safe to call from any thread (the store autorun callback runs
+        off the pipeline event loop). The model load itself is deferred
+        to ``_ensure_model_loaded``, which ``run_stt`` invokes before
+        every audio chunk.
+        """
+        if not model_id:
+            return
+        self._requested_model_id = model_id
+
+    async def _ensure_model_loaded(self) -> None:
+        """Load ``_requested_model_id`` if it differs from what's loaded.
+
+        Must be called while holding ``_reload_lock``. No-op when the
+        requested model is already current, or when it isn't on disk yet
+        (the core process downloads it; the next chunk retries).
+        """
+        model_id = self._requested_model_id
+        if model_id == self._loaded_model_id:
+            return
+
+        path = _model_path(model_id)
+        if not path.exists():
+            logger.warning(
+                'Requested Vosk model not downloaded yet; keeping current',
+                extra={
+                    'requested_model_id': model_id,
+                    'loaded_model_id': self._loaded_model_id,
+                    'path': str(path),
+                },
+            )
+            return
+
+        try:
+            new_model = await asyncio.get_running_loop().run_in_executor(
+                self._process_executor,
+                lambda: Model(model_path=path.as_posix()),
+            )
+        except Exception:
+            logger.exception(
+                'Failed to load Vosk model',
+                extra={'model_id': model_id, 'path': str(path)},
+            )
+            return
+
+        self._client = KaldiRecognizer(new_model, 16000)
+        self._loaded_model_id = model_id
+        self._settings = STTSettings(  # pyright: ignore[reportAttributeAccessIssue]
+            model=model_id,
+            language=self.LANGUAGE_CODE,
+        )
+        logger.info(
+            'Loaded Vosk model',
+            extra={'model_id': model_id},
+        )
 
     async def start(self, frame: StartFrame) -> None:
         """Start the background running engine task."""
@@ -80,6 +154,11 @@ class VoskSTTService(STTService):
     async def run_stt(self, audio: bytes) -> AsyncGenerator[Frame | None, None]:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Process an audio chunk for STT transcription."""
         if self._streaming_task:
+            # Reconcile the loaded model with the user's selection *before*
+            # queueing — this is the single point where a model switch
+            # actually takes effect.
+            async with self._reload_lock:
+                await self._ensure_model_loaded()
             # Queue the audio data
             await self.start_ttfb_metrics()
             await self.start_processing_metrics()

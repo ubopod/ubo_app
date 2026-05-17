@@ -25,7 +25,9 @@ from ubo_bindings.ubo.v1 import (
 
 from ubo_assistant.segmented_googlestt import SegmentedGoogleSTTService
 from ubo_assistant.switch import UboSwitchService
-from ubo_assistant.vosk import VoskSTTService
+from ubo_assistant.vosk import DEFAULT_VOSK_MODEL_ID, VoskSTTService
+
+from betterproto.lib.google.protobuf import StringValue
 
 
 class UboSTTService(UboSwitchService[STTService], STTService):
@@ -110,10 +112,15 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                     openai_api_key else None,
         )
 
-        # Initialize Vosk STT
+        # Initialize Vosk STT with the default model — the store autorun
+        # registered in `_ensure_autoruns_started` reconciles it to the
+        # user's persisted model id (fires once on subscription with the
+        # current value, then on every change).
         self.vosk_stt = self._initialize_service(
             'Vosk',
-            lambda: VoskSTTService() if VoskSTTService else None,
+            lambda: VoskSTTService(model_id=DEFAULT_VOSK_MODEL_ID)
+            if VoskSTTService
+            else None,
         )
 
         # Initialize Deepgram STT
@@ -171,6 +178,24 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         """Ignore this as child classes will handle audio processing."""
         _ = audio
         yield None
+
+    def _ensure_autoruns_started(self) -> None:
+        """Start the parent autoruns then track the selected Vosk model."""
+        if self._autoruns_started:
+            return
+        super()._ensure_autoruns_started()
+
+        # A store autorun — not an event subscription — is the reliable
+        # primitive here: it fires once on registration with the current
+        # persisted model id (cold-start) and again on every change. The
+        # callback only records the request; ``VoskSTTService.run_stt``
+        # does the actual load before each audio chunk.
+        @self.client.autorun(['state.assistant.selected_vosk_model'])
+        def _handle_vosk_model_change(data: list[StringValue]) -> None:
+            model_id = data[0].value
+            target = self.vosk_stt
+            if isinstance(target, VoskSTTService):
+                target.request_model(model_id)
 
     def _log_transcription(self, text: str) -> None:
         """Log newly transcribed text for assistant debugging."""

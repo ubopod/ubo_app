@@ -6,6 +6,7 @@ import asyncio
 import json
 from asyncio import get_event_loop
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from abstraction.speech_recognition_mixin import (
     PhraseRecognition,
@@ -13,17 +14,22 @@ from abstraction.speech_recognition_mixin import (
     SpeechRecognitionMixin,
 )
 from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
-from constants import VOSK_MODEL_PATH
 from typing_extensions import override
 
 from ubo_app.constants import SPEECH_RECOGNITION_FRAME_RATE
 from ubo_app.engines.vosk import VoskEngine as BaseVosk
+from ubo_app.engines.vosk_catalog import DEFAULT_VOSK_MODEL_ID, model_path_for
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportTextEvent,
 )
 from ubo_app.utils import IS_RPI
+
+
+@store.with_state(lambda state: state.assistant.selected_vosk_model)
+def _read_selected_model(selected_model: str) -> str:
+    return selected_model or DEFAULT_VOSK_MODEL_ID
 
 
 class VoskEngine(
@@ -45,15 +51,17 @@ class VoskEngine(
         from vosk import KaldiRecognizer, Model
 
         phrases = self._phrases
+        current_model_id = _read_selected_model()
+        model_dir = Path(str(model_path_for(current_model_id)))
         model = Model(
-            model_path=VOSK_MODEL_PATH.resolve().as_posix(),
-            lang='en-us',
+            model_path=model_dir.resolve().as_posix(),
         )
         logger.debug(
             'Vosk - Starting recognition loop',
             extra={
                 'engine_name': self.name,
                 'phrases': phrases,
+                'model_id': current_model_id,
             },
         )
         recognizer = KaldiRecognizer(
@@ -94,6 +102,32 @@ class VoskEngine(
                 self.ongoing_recognition.append_voice(data)
 
             async with self.grammar_lock:
+                requested_model_id = _read_selected_model()
+                if requested_model_id != current_model_id:
+                    logger.debug(
+                        'Vosk - Switching model',
+                        extra={
+                            'old_model_id': current_model_id,
+                            'new_model_id': requested_model_id,
+                        },
+                    )
+                    current_model_id = requested_model_id
+                    model_dir = Path(str(model_path_for(current_model_id)))
+                    if not model_dir.exists():
+                        logger.warning(
+                            'Vosk - Requested model not on disk, staying on '
+                            'previous model',
+                            extra={'model_id': current_model_id},
+                        )
+                    else:
+                        model = Model(model_path=model_dir.resolve().as_posix())
+                        recognizer = KaldiRecognizer(
+                            model,
+                            SPEECH_RECOGNITION_FRAME_RATE,
+                            *([json.dumps(phrases)] if phrases else []),
+                        )
+                        continue
+
                 if (_phrases := self._phrases) != phrases:
                     phrases = _phrases
                     logger.debug(

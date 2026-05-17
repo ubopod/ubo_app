@@ -26,6 +26,8 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
     AssistantDownloadPiperVoiceEvent,
+    AssistantDownloadVoskModelAction,
+    AssistantDownloadVoskModelEvent,
     AssistantEvent,
     AssistantHandleReportEvent,
     AssistantModelChangedEvent,
@@ -44,6 +46,8 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
+    AssistantSetSelectedVoskModelAction,
+    AssistantSetVoskDownloadedModelsAction,
     AssistantStartListeningAction,
     AssistantState,
     AssistantStopListeningAction,
@@ -212,6 +216,27 @@ def reducer(
 
         case AssistantSetKokoroDownloadedAction():
             return replace(state, kokoro_is_downloaded=action.downloaded)
+
+        case AssistantSetSelectedVoskModelAction():
+            # Plain state update — the assistant subprocess tracks
+            # ``selected_vosk_model`` via a gRPC autorun and the
+            # speech-recognition VoskEngine reloads the model on the next
+            # recognizer reset, so no event is needed here.
+            return replace(state, selected_vosk_model=action.model_id)
+
+        case AssistantDownloadVoskModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDownloadVoskModelEvent(model_id=action.model_id),
+                ],
+            )
+
+        case AssistantSetVoskDownloadedModelsAction():
+            return replace(
+                state,
+                vosk_downloaded_models=tuple(action.models),
+            )
 
         case AssistantUpdateProvidersAction():
             all_engines = {

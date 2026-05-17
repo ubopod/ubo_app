@@ -113,6 +113,10 @@ def _load_ollama_thinking_enabled(value: str) -> dict[str, bool]:
 # pulling the localization import into the state-schema layer.
 DEFAULT_PIPER_VOICE_ID = 'en/en_US/kristin/medium/en_US-kristin-medium'
 
+# Hard-coded fallback. The full catalog lives in
+# ``ubo_app/engines/vosk_catalog.py``.
+DEFAULT_VOSK_MODEL_ID = 'vosk-model-small-en-us-0.15'
+
 
 def _load_piper_voice(value: object) -> str:
     if isinstance(value, str) and value:
@@ -130,6 +134,12 @@ def _load_kokoro_voice(value: object) -> str:
     if isinstance(value, str) and value:
         return value
     return DEFAULT_KOKORO_VOICE_ID
+
+
+def _load_vosk_model(value: object) -> str:
+    if isinstance(value, str) and value:
+        return value
+    return DEFAULT_VOSK_MODEL_ID
 
 
 class AssistantTTSName(StrEnum):
@@ -532,6 +542,29 @@ class AssistantSetKokoroDownloadedAction(AssistantAction):
     downloaded: bool
 
 
+class AssistantSetSelectedVoskModelAction(AssistantAction):
+    """Action to pick a Vosk STT model (alphacephei model id).
+
+    The assistant subprocess tracks ``selected_vosk_model`` via a gRPC
+    autorun and re-points its ``VoskSTTService`` before the next
+    utterance.
+    """
+
+    model_id: str
+
+
+class AssistantDownloadVoskModelAction(AssistantAction):
+    """Action requesting download of a Vosk model archive."""
+
+    model_id: str
+
+
+class AssistantSetVoskDownloadedModelsAction(AssistantAction):
+    """Replace the cached set of locally-downloaded Vosk model ids."""
+
+    models: tuple[str, ...]
+
+
 class AssistanceFrame(Immutable):
     """An assistance frame."""
 
@@ -719,6 +752,12 @@ class AssistantDownloadKokoroEvent(AssistantEvent):
     voice_id: str
 
 
+class AssistantDownloadVoskModelEvent(AssistantEvent):
+    """Event requesting download of a Vosk model in the core process."""
+
+    model_id: str
+
+
 class AssistantAddMcpServerEvent(AssistantEvent):
     """Event to add a new MCP server."""
 
@@ -836,6 +875,19 @@ class AssistantState(Immutable):
     # bundle is all-or-nothing — unlike Piper there are no per-voice
     # files to track.
     kokoro_is_downloaded: bool = False
+    # Currently selected Vosk STT model id (alphacephei model id, e.g.
+    # ``vosk-model-small-en-us-0.15``). Backs both the speech-recognition
+    # service and the assistant subprocess STT.
+    selected_vosk_model: str = field(
+        default=read_from_persistent_store(
+            'assistant:selected_vosk_model',
+            default=DEFAULT_VOSK_MODEL_ID,
+            mapper=_load_vosk_model,
+        ),
+    )
+    # Cached set of locally-downloaded Vosk model ids. Process-local;
+    # refreshed by ``VoskEngine.refresh_downloaded_models()``.
+    vosk_downloaded_models: tuple[str, ...] = field(default_factory=tuple)
     selected_image_generator: AssistantImageGeneratorName = field(
         default=read_from_persistent_store(
             'assistant:selected_image_generator',

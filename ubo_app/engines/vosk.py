@@ -4,20 +4,28 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
-from ubo_app.constants.assistant import (
-    VOSK_DOWNLOAD_NOTIFICATION_ID,
-    VOSK_DOWNLOAD_PATH,
-    VOSK_MODEL_PATH,
-    VOSK_MODEL_URL,
-)
+from ubo_app.constants.assistant import VOSK_DOWNLOAD_NOTIFICATION_ID
 from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
+from ubo_app.engines.vosk_catalog import (
+    DEFAULT_VOSK_MODEL_ID,
+    VOSK_LANGUAGES,
+    download_url_for,
+    model_for,
+    model_path_for,
+)
+from ubo_app.logger import logger
 from ubo_app.store.main import store
-from ubo_app.store.services.assistant import AssistantUpdateProvidersAction
+from ubo_app.store.services.assistant import (
+    AssistantSetVoskDownloadedModelsAction,
+    AssistantUpdateProvidersAction,
+)
 from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
     Chime,
@@ -31,6 +39,28 @@ from ubo_app.store.services.speech_recognition import (
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.download import download_file
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+def _model_dir(model_id: str) -> Path:
+    return Path(str(model_path_for(model_id)))
+
+
+def _download_zip(model_id: str) -> Path:
+    return _model_dir(model_id).with_suffix('.zip')
+
+
+def _model_is_setup(model_id: str) -> bool:
+    """Return True iff *model_id* has been extracted to disk."""
+    return _model_dir(model_id).exists()
+
+
+@store.with_state(lambda state: state.assistant.selected_vosk_model)
+def _read_selected_model(selected_model: str) -> str:
+    """Read the user's currently selected Vosk model id from the store."""
+    return selected_model or DEFAULT_VOSK_MODEL_ID
 
 
 class VoskEngine(NeedsSetupMixin, AIProviderMixin):
@@ -48,21 +78,39 @@ class VoskEngine(NeedsSetupMixin, AIProviderMixin):
 
     @property
     def not_setup_message(self) -> str:
-        """Message shown when the Vosk service API key is not set."""
-        return 'Vosk model path does not exist. Please download it in the settings.'
+        """Message shown when the selected Vosk model is missing."""
+        return 'Vosk model not found. Pick a model in Settings to download it.'
 
-    def _update_download_notification(self, *, progress: float) -> None:
+    @property
+    @override
+    @store.with_state(lambda state: state.assistant.selected_vosk_model)
+    def is_setup(  # noqa: PLR0206
+        self,
+        selected_model: str,
+    ) -> bool:
+        """Return True iff the currently selected Vosk model exists on disk."""
+        model_id = selected_model or DEFAULT_VOSK_MODEL_ID
+        return _model_is_setup(model_id)
+
+    def _update_download_notification(
+        self,
+        *,
+        model_id: str,
+        progress: float,
+    ) -> None:
         extra_information = ReadableInformation(
             text="""\
 The download progress is shown in the radial progress bar at the top left corner of \
 the screen.""",
         )
+        entry = model_for(model_id)
+        label = entry.id if entry is not None else model_id
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     id=VOSK_DOWNLOAD_NOTIFICATION_ID,
                     title='Downloading',
-                    content='Vosk speech recognition model',
+                    content=f'Vosk model: {label}',
                     extra_information=extra_information,
                     display_type=NotificationDisplayType.FLASH
                     if progress == 1
@@ -78,7 +126,7 @@ the screen.""",
             ),
         )
 
-    def _handle_error(self) -> None:
+    def _handle_error(self, model_id: str) -> None:
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
@@ -92,41 +140,68 @@ the screen.""",
                 ),
             ),
         )
-        shutil.rmtree(VOSK_MODEL_PATH, ignore_errors=True)
+        shutil.rmtree(_model_dir(model_id), ignore_errors=True)
 
-    def _download_vosk_model(self) -> None:
-        """Download Vosk model."""
-        shutil.rmtree(VOSK_MODEL_PATH, ignore_errors=True)
+    def download_model(
+        self,
+        model_id: str | None = None,
+        *,
+        on_complete: Callable[[], None] | None = None,
+    ) -> None:
+        """Download Vosk *model_id* archive and extract it under ``DATA_PATH``.
 
-        self._update_download_notification(progress=0)
+        Mirrors ``PiperEngine.download_voice``: ``on_complete`` is invoked
+        once after the task settles — used by the initial setup flow to
+        unblock ``_setup``'s ``await event.wait()``.
+        """
+        target_model = model_id or _read_selected_model()
+        model_dir = _model_dir(target_model)
+        zip_path = _download_zip(target_model)
+
+        shutil.rmtree(model_dir, ignore_errors=True)
+        try:
+            zip_path.unlink(missing_ok=True)
+        except OSError:
+            logger.exception(
+                'Failed to remove stale Vosk archive',
+                extra={'model_id': target_model, 'path': str(zip_path)},
+            )
+
+        self._update_download_notification(model_id=target_model, progress=0)
 
         async def download() -> None:
             try:
-                VOSK_DOWNLOAD_PATH.parent.mkdir(parents=True, exist_ok=True)
-                VOSK_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+                zip_path.parent.mkdir(parents=True, exist_ok=True)
+                model_dir.parent.mkdir(parents=True, exist_ok=True)
 
                 async for downloaded_bytes, size in download_file(
-                    url=VOSK_MODEL_URL,
-                    path=VOSK_DOWNLOAD_PATH,
+                    url=download_url_for(target_model),
+                    path=zip_path,
                 ):
                     if size:
                         self._update_download_notification(
+                            model_id=target_model,
                             progress=min(1.0, downloaded_bytes / size),
                         )
 
-                self._update_download_notification(progress=1.0)
+                self._update_download_notification(
+                    model_id=target_model,
+                    progress=1.0,
+                )
 
                 process = await asyncio.create_subprocess_exec(
                     '/usr/bin/env',
                     'unzip',
                     '-o',
-                    VOSK_DOWNLOAD_PATH,
+                    str(zip_path),
                     '-d',
-                    VOSK_MODEL_PATH.parent,
+                    str(model_dir.parent),
                     stdout=asyncio.subprocess.DEVNULL,
                     stderr=asyncio.subprocess.DEVNULL,
                 )
                 await process.wait()
+
+                await self.refresh_downloaded_models()
                 store.dispatch(
                     SpeechRecognitionSetIsIntentsActiveAction(is_active=True),
                     AssistantUpdateProvidersAction(),
@@ -135,11 +210,18 @@ the screen.""",
                 if decide is not None:
                     decide()
             except Exception:
-                self._handle_error()
+                self._handle_error(target_model)
                 raise
             finally:
-                VOSK_DOWNLOAD_PATH.unlink(missing_ok=True)
-                self.event.set()
+                try:
+                    zip_path.unlink(missing_ok=True)
+                except OSError:
+                    logger.exception(
+                        'Failed to remove Vosk archive after extraction',
+                        extra={'model_id': target_model, 'path': str(zip_path)},
+                    )
+                if on_complete is not None:
+                    on_complete()
 
         create_task(download())
 
@@ -147,29 +229,39 @@ the screen.""",
     async def _setup(self) -> None:
         if self.is_setup:
             return
-        from ubo_app.store.main import store
 
-        self.event = asyncio.Event()
+        target_model = _read_selected_model()
+        event = asyncio.Event()
+
+        def _trigger_download() -> None:
+            self.download_model(target_model, on_complete=event.set)
+
         store.dispatch(
             NotificationsAddAction(
                 notification=Notification(
                     title='Vosk Engine Setup',
-                    content='Download the Vosk model.',
+                    content=f'Download model: {target_model}',
                     color=WARNING_COLOR,
                     actions=[
                         create_notification_action(
                             label='Download Model',
                             icon='󰇚',
-                            action=self._download_vosk_model,
+                            action=_trigger_download,
                         ),
                     ],
                 ),
             ),
         )
-        await self.event.wait()
+        await event.wait()
 
-    @property
-    @override
-    def is_setup(self) -> bool:
-        """Check if the Vosk model is set up."""
-        return VOSK_MODEL_PATH.exists()
+    async def refresh_downloaded_models(self) -> None:
+        """Scan the catalog for already-downloaded models and cache the set."""
+        downloaded = tuple(
+            model.id
+            for language in VOSK_LANGUAGES
+            for model in language.models
+            if _model_is_setup(model.id)
+        )
+        store.dispatch(
+            AssistantSetVoskDownloadedModelsAction(models=downloaded),
+        )
